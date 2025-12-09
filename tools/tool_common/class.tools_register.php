@@ -548,10 +548,8 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			$tool_object->name = $value;
 
 		// label
@@ -565,16 +563,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= $component->get_dato_full();
-			$value	= [];
-			if (!empty($dato)) {
-				foreach ($dato as $current_lang => $current_value) {
-					$value[] = (object)[
-						'lang'	=> $current_lang,
-						'value'	=> reset($current_value)
-					];
-				}
-			}
+			$value	= $component->get_data();			
 			$tool_object->label = $value;
 
 		// version
@@ -585,13 +574,11 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			$tool_object->version = $value;
 
 		// dedalo version (minimal requirement)
@@ -602,13 +589,11 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato 	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data 	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			$tool_object->dd_version = $value;
 
 		// description
@@ -622,16 +607,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= $component->get_dato_full();
-			$value	= [];
-			if (!empty($dato)) {
-				foreach ($dato as $current_lang => $current_value) {
-					$value[] = (object)[
-						'lang'	=> $current_lang,
-						'value'	=> $current_value
-					];
-				}
-			}
+			$value	= $component->get_data();			
 			$tool_object->description = $value;
 
 		// developer
@@ -642,19 +618,11 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato	= $component->get_dato_full();
-			$value	= [];
-			if (!empty($dato)) {
-				foreach ($dato as $current_lang => $current_value) {
-					$value[] = (object)[
-						'lang'	=> $current_lang,
-						'value'	=> $current_value
-					];
-				}
-			}
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			$tool_object->developer = $value;
 
 		// affected components (models)
@@ -669,12 +637,15 @@ class tools_register {
 				$component_lang,
 				$section_tipo
 			);
-			$ar_value			= $component->get_valor(DEDALO_DATA_LANG, 'array'); // array|null
-			$affected_models	= (!empty($ar_value))
-				? array_map(function($el){
-					return strip_tags($el); // strip possible mark tags (e.g. <mark>section</mark>)
-				  }, $ar_value)
-				: $ar_value;
+			$data = $component->get_data();
+			$affected_models = [];
+			foreach ( $data as $locator ) {
+				$current_value = component_relation_common::get_locator_value( $locator, DEDALO_DATA_NOLAN, false, ['dd1345'] );
+				if( isset($current_value[0]) ){
+					strip_tags( $current_value[0] );
+					$affected_models = array_merge( $affected_models, $current_value );
+				}
+			}		
 			$tool_object->affected_models = $affected_models;
 
 		// affected tipos (components)
@@ -685,55 +656,47 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
-			// empty object case check
-			if (empty((array)$value)) {
-				$value = null;
-			}
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;			
 			$tool_object->affected_tipos = $value; // array
 
 		// show in inspector
 			$component_tipo	= 'dd1331';
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
 				$section_id,
 				'list',
-				$component_lang,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$dato_ref	= !empty($dato)
-				? reset($dato)->section_id
+			$data		= $component->get_data();
+			$data_ref	= !empty($data)
+				? $data[0]->section_id
 				: null;
-			$value		= $dato_ref == '1' ? true : false;
+			$value		= $data_ref == '1' ? true : false;
 			$tool_object->show_in_inspector = $value; // bool
 
 		// show in component
 			$component_tipo	= 'dd1332';
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
 				$section_id,
 				'list',
-				$component_lang,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$dato_ref	= !empty($dato)
-				? reset($dato)->section_id
+			$data		= $component->get_data();
+			$data_ref	= !empty($data)
+				? $data[0]->section_id
 				: null;
-			$value		= $dato_ref == '1' ? true : false;
+			$value		= $data_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
 
 		// always active
@@ -744,31 +707,32 @@ class tools_register {
 				$component_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= (array)$component->get_dato();
-			$dato_ref	= !empty($dato)
-				? reset($dato)->section_id
+			$data		= $component->get_data();
+			$data_ref	= !empty($data)
+				? $data[0]->section_id
 				: null;
-			$value		= $dato_ref=='1' ? true : false;
+			$value		= $data_ref == '1' ? true : false;
 			$tool_object->always_active = $value;
 
 		// requirement translatable
 			$component_tipo	= 'dd1333';
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-			$component_lang	= ontology_node::get_translatable($component_tipo)===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$component		= component_common::get_instance(
 				$model,
 				$component_tipo,
 				$section_id,
 				'list',
-				$component_lang,
+				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$dato_ref	= empty($dato) ? '0' : (reset($dato)->section_id);
-			$value		= $dato_ref=='1' ? true : false;
+			$data		= $component->get_data();
+			$data_ref	= !empty($data)
+				? $data[0]->section_id
+				: null;
+			$value		= $data_ref == '1' ? true : false;
 			$tool_object->requirement_translatable = $value;
 
 		// ontology -component_json-
@@ -782,12 +746,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			// empty object case check
-			if (empty($value) || empty((array)$value)) {
+			if ( $value !== null && empty($value) ) {
 				$value = null;
 			}
 			$tool_object->ontology = $value;
@@ -803,12 +765,10 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			// empty object case check
-			if (empty($value) || empty((array)$value)) {
+			if ( $value !== null && empty($value) ) {
 				$value = null;
 			}
 			$tool_object->properties = $value;
@@ -824,10 +784,8 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato	= $component->get_dato();
-			$value	= is_array($dato) && isset($dato[0])
-				? $dato[0]
-				: null;
+			$data	= $component->get_data();
+			$value	= $data[0]->value ?? null;
 			// empty object case check
 			if (empty($value) || empty((array)$value)) {
 				$value = null;
@@ -907,13 +865,14 @@ class tools_register {
 				$component_tipo_tool_name	= self::$tipo_tool_name; // 'dd1326';
 				// get the register tool
 				$reg_sqo = json_decode('{
-					   "typo": "sqo",
-					   "id": "temp",
-					   "section_tipo": [
-						  "'.$section_tools_reg_tipo.'"
-					   ],
-					   "filter": {
-						  "$and": [
+					"select": [],
+					"typo": "sqo",
+					"id": "temp",
+					"section_tipo": [
+						"'.$section_tools_reg_tipo.'"
+					],
+					"filter": {
+						"$and": [
 							 {
 								"q": [
 								   "'.$tool_name.'"
@@ -929,19 +888,16 @@ class tools_register {
 								],
 								"type": "jsonb"
 							 }
-						  ]
-					   },
-					   "select": [],
-					   "limit": 1,
-					   "offset": 0,
-					   "full_count": false
-				   }');
+						]
+					},
+					"limit": 1,
+					"offset": null,
+					"full_count": false
+				}');
 				$reg_search	= search::get_instance($reg_sqo);
-				$reg_result	= $reg_search->search();
-
-				if (!empty($reg_result->ar_records)) {
-
-					$reg_record = reset($reg_result->ar_records);
+				$db_result = $reg_search->search();
+				$reg_record = $db_result->fetch_one(); // get the first record if exists
+				if (!empty($reg_record)) {
 
 					// set section data from DDBB record
 					$reg_section = section::get_instance($reg_record->section_id, $reg_record->section_tipo);
@@ -991,7 +947,7 @@ class tools_register {
 				}else{
 					return false;
 				}
-			}//end if(empty($tool_by_name))
+			}//end if (!empty($reg_record))
 
 
 		return true;
@@ -1026,11 +982,11 @@ class tools_register {
 
 		// search
 			$config_search	= search::get_instance( $sqo_config_tool_active );
-			$config_result	= $config_search->search();
-			$ar_records		= $config_result->ar_records ?? [];
+			$db_result		= $config_search->search();
 
 		// map result as ar_config
-			$ar_config = array_map( function($record) use($name_tipo, $config_tipo) {
+			$ar_config = [];
+			foreach( $db_result as $record ) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
@@ -1066,8 +1022,8 @@ class tools_register {
 					'config'	=> $config
 				];
 
-				return $value;
-			}, $ar_records);
+				$ar_config[] = $value;
+			}
 
 		// cache. save the result into the cache
 			$cache_all_config_tool = $ar_config;
@@ -1105,67 +1061,67 @@ class tools_register {
 
 		// search
 			$config_search	= search::get_instance($sqo_config_tool_active);
-			$config_result	= $config_search->search();
-			$ar_records		= $config_result->ar_records ?? [];
-
+			$db_result	= $config_search->search();
+		
 		// map result as ar_config
-			$ar_config = array_map(function($record) use($name_tipo, $config_tipo){
+			
+			foreach ($db_result as $record) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
 
 				// name
-					$model = ontology_node::get_model_by_tipo($name_tipo,true);
-					if (empty($model)) {
-						$name	= null;
-						debug_log(__METHOD__
-							. " Invalid model (empty) is ignored! " . PHP_EOL
-							. ' tipo: ' . to_string($config_tipo)
-							, logger::ERROR
-						);
-					}else{
-						$component	= component_common::get_instance(
-							$model,
-							$name_tipo,
-							$record->section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$record->section_tipo
-						);
-						$data	= $component->get_data_lang();
-						$name	= $data[0]->value ?? null;
-					}
+				$model = ontology_node::get_model_by_tipo($name_tipo,true);
+				if (empty($model)) {
+					$name	= null;
+					debug_log(__METHOD__
+						. " Invalid model (empty) is ignored! " . PHP_EOL
+						. ' tipo: ' . to_string($config_tipo)
+						, logger::ERROR
+					);
+				}else{
+					$component	= component_common::get_instance(
+						$model,
+						$name_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$data	= $component->get_data_lang();
+					$name	= $data[0]->value ?? null;
+				}
 
 				// config
-					$model = ontology_node::get_model_by_tipo($config_tipo,true);
-					if (empty($model)) {
-						$config	= null;
-						debug_log(__METHOD__
-							. " Invalid model (empty) is ignored! " . PHP_EOL
-							. ' tipo: ' . to_string($config_tipo)
-							, logger::ERROR
-						);
-					}else{
-						$component	= component_common::get_instance(
-							$model,
-							$config_tipo,
-							$record->section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$record->section_tipo
-						);
-						$data	= $component->get_data_lang();
-						$config	= $data[0]->value ?? null;
-					}
+				$model = ontology_node::get_model_by_tipo($config_tipo,true);
+				if (empty($model)) {
+					$config	= null;
+					debug_log(__METHOD__
+						. " Invalid model (empty) is ignored! " . PHP_EOL
+						. ' tipo: ' . to_string($config_tipo)
+						, logger::ERROR
+					);
+				}else{
+					$component	= component_common::get_instance(
+						$model,
+						$config_tipo,
+						$record->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$record->section_tipo
+					);
+					$data	= $component->get_data_lang();
+					$config	= $data[0]->value ?? null;
+				}
 
-				// value
-					$value = (object)[
-						'name'		=> $name,
-						'config'	=> $config
-					];
-
-				return $value;
-			}, $ar_records);
+				// value object
+				$value = new stdclass();
+				$value->name = $name;
+				$value->config = $config;
+				
+				// add to ar_config
+				$ar_config[] = $value;
+			}
 
 		// cache. save the result into the cache
 			$cache_all_default_config = $ar_config;
