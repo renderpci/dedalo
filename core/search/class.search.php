@@ -1119,7 +1119,21 @@ class search {
 
 
 
+	/**
+	* IS_SEARCH_OPERATOR
+	* @param object $search_object
+	* @return bool
+	*/
+	public static function is_search_operator(object $search_object) : bool {
 
+		foreach ($search_object as $key => $value) {
+			if (strpos($key, '$')!==false) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end is_search_operator
 
 
 
