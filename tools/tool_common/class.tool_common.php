@@ -69,7 +69,7 @@ class tool_common {
 	* Used when tools area loaded from different window
 	* like time_machine do
 	* The context data is stored in section 'dd1324' (Registered tools)
-	* preparsed into the component_json 'dd1353' as JSON 'simple_tool_obj'
+	* pre-parsed into the component_json 'dd1353' as JSON 'simple_tool_obj'
 	* when tools are registered
 	* @return dd_object $dd_object
 	*/
@@ -84,18 +84,20 @@ class tool_common {
 			$name = $this->name;
 
 		// component dato simple_tool_obj (dd1353)
-			$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
-			$model					= ontology_node::get_model_by_tipo($component_tipo,true);
-			$simple_tool_component	= component_common::get_instance(
-				$model,
-				$component_tipo,
-				$this->section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$this->section_tipo
-			);
-			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
-			$tool_object			= $simple_tool_obj_dato[0] ?? null;
+			// $component_tipo			= tools_register::$simple_tool_obj_component_tipo;
+			// $model					= ontology_node::get_model_by_tipo($component_tipo,true);
+			// $simple_tool_component	= component_common::get_instance(
+			// 	$model,
+			// 	$component_tipo,
+			// 	$this->section_id,
+			// 	'list',
+			// 	DEDALO_DATA_NOLAN,
+			// 	$this->section_tipo
+			// );
+			// $simple_tool_obj_data	= $simple_tool_component->get_data();
+			// $tool_object			= $simple_tool_obj_data[0] ?? null;
+
+			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id);
 
 			// sample tool object
 				// {
@@ -159,7 +161,7 @@ class tool_common {
 					. ' section_tipo: '.to_string($this->section_tipo) .PHP_EOL
 					. ' section_id: '.to_string($this->section_id) .PHP_EOL
 					. ' tool name: '.to_string($name) .PHP_EOL
-					. ' dato: ' .json_encode($simple_tool_obj_dato)
+					. ' dato: ' .json_encode($simple_tool_obj_data)
 					, logger::ERROR
 				);
 			}
@@ -185,12 +187,7 @@ class tool_common {
 			}
 
 		// developer
-			$developer_data = array_find($tool_object->developer ?? [], function($el){
-				return $el->lang===DEDALO_DATA_NOLAN;
-			});
-			$developer = is_object($developer_data) && !empty($developer_data->value)
-				? $developer_data->value[0]
-				: null;
+			$developer = $tool_object->developer;
 
 		// description. (text_area) Try match current lang else use the first lang value
 			$ar_description = $tool_object->description ?? [];
@@ -286,7 +283,7 @@ class tool_common {
 				'name'				=> $name,
 				'label'				=> $tool_label,
 				'developer'			=> $developer,
-				'tipo'				=> $component_tipo,
+				'tipo'				=> tools_register::$simple_tool_obj_component_tipo,
 				'section_tipo'		=> $tool_object->section_tipo ?? 'Unknown',
 				'model'				=> $name,
 				'lang'				=> $lang,
@@ -494,8 +491,7 @@ class tool_common {
 			$ar_config = tools_register::get_all_config_tool_client();
 
 		// get the simple_tool_object
-			// foreach ($all_registered_tools_records as $record) {
-			while ($record = pg_fetch_object($all_registered_tools_records)) {
+			foreach ($all_registered_tools_records as $record) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
@@ -521,16 +517,10 @@ class tool_common {
 					);
 					continue;
 				}
-
 				// append config
 					$current_config	= array_find($ar_config, function($el) use($current_value) {
 						return $el->name===$current_value->name;
 					});
-					// $current_config = array_filter($ar_config, function($item) use($current_value){
-					// 	if($item->name === $current_value->name) {
-					// 		return $item;
-					// 	}
-					// });
 
 					if(!is_object($current_config)){
 						$ar_config		= tools_register::get_all_default_config_tool_client();
