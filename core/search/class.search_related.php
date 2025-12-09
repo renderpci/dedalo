@@ -235,16 +235,14 @@ class search_related extends search {
 
 
 			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
-			// fix result ar_records as dato
-			$result	= $rows_data->ar_records;
+			$db_result	= $search->search();
 
 			// Note that row relations contains all relations and not just searched, because we need
 			// to filter the relationship array for each record to get only the desired matches
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$total_records	= count($result);
+				$total_records	= $db_result->row_count();
 				$time_ms		= exec_time_unit($start_time, 'ms');
 				debug_log(__METHOD__
 					. " Calculated referenced_locators step 1 (total: $total_records)" . PHP_EOL
@@ -258,7 +256,7 @@ class search_related extends search {
 		$ar_inverse_locators = [];
 
 		// set the results as the inverse_locator
-		foreach ($result as $row) {
+		foreach ($db_result as $row) {
 
 			$current_locator = $row->locator_data;
 
