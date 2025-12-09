@@ -84,15 +84,18 @@ trait order {
 			}
 
 			$this->sql_obj->order[] = $sql_query_order;
-		}else{
-			// default order
-			$section_tipo				= $this->main_section_tipo;
-			$default_order				= ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
-			$sql_query_order_default	= $this->main_section_tipo_alias.'.section_id '.$default_order;
-
-			$this->sql_obj->order_default[] = $sql_query_order_default;
 		}
+
+		// default order
+		$section_tipo				= $this->main_section_tipo;
+		$default_order				= ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
+		$sql_query_order_default	= $this->main_section_tipo_alias.'.section_id '.$default_order;
 		
+		$sentence = SHOW_DEBUG 
+			? '-- order by default: ' . PHP_EOL . $sql_query_order_default 
+			: $sql_query_order_default;	
+
+		$this->sql_obj->order_default[] = PHP_EOL. $sentence;		
 
 		return;
 	}//end build_sql_query_order
