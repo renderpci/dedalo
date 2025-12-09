@@ -160,11 +160,15 @@ final class dd_manager {
 						'matrix load',
 						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
 						'--> matrix_total_calls: '. metrics::$matrix_total_calls,
+						// exec_search stats
+						'Search exec_search (matrix_db_manager)',
+						'--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms',
+						'--> exec_search_total_calls: '. metrics::$exec_search_total_calls,
 						// search_free stats
-						'Search free',
+						'Search free (JSON_RecordDataBounceObject)',
 						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
 						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
-						// get_tools stats
+						// section_save stats
 						'section_save',
 						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
 						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
@@ -184,6 +188,7 @@ final class dd_manager {
 						'Summary',
 						'time: ' . (
 							metrics::$security_permissions_total_time +
+							metrics::$exec_search_total_time +
 							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
 							metrics::$matrix_total_time +
