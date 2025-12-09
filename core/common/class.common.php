@@ -4296,7 +4296,6 @@ abstract class common {
 
 			// create the section instance and get the context_simple
 				$dd_section = section::get_instance(
-					null, // string|null section_tipo
 					$section_tipo, // string section_tipo
 					'list', // string list
 					true // bool cache
