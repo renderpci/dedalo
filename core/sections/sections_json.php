@@ -10,64 +10,14 @@
 
 
 
-// context
-
-	// DES
-		// if($options->get_context===true){
-		// 	switch ($options->context_type) {
-		// 		case 'simple':
-		// 			// Component structure context_simple (tipo, relations, properties, etc.)
-		// 			$context[] = $this->get_structure_context_simple($permissions);
-		// 			break;
-
-		// 		default:
-		// 			foreach ((array)$ar_section_tipo as $current_section_tipo) {
-
-		// 				$section = $section_class::get_instance(null, $current_section_tipo, $mode);
-
-		// 				// set dd_request always to allow components know request context
-		// 					// $section->set_dd_request( $this->get_dd_request() ); // inject dd_request
-
-		// 				// pagination. fix pagination vars (defined in class component_common)
-		// 					$limit	= $this->search_query_object->limit;
-		// 					$offset	= $this->search_query_object->offset;
-		// 					$pagination = new stdClass();
-		// 						$pagination->limit	= $limit;
-		// 						$pagination->offset	= $offset;
-		// 					$section->pagination = $pagination;
-
-		// 				// section JSON context
-		// 					$section_options = new stdClass();
-		// 						$section_options->get_context	= true;
-		// 						$section_options->get_data 	 	= false;
-		// 					$section_json = $section->get_json($section_options);
-
-		// 				$context = array_merge($context, $section_json->context);
-		// 			}
-
-		// 			// $dd_request = dd_core_api::$dd_request;
-		// 			// $request_ddo = array_find($dd_request, function($item){
-		// 			// 	return $item->typo==='request_ddo';
-		// 			// });
-		// 			// // when no empty request_ddo->value
-		// 			// if ($request_ddo && !empty($request_ddo->value)) {
-		// 			// 	dd_core_api::$context_dd_objects = $request_ddo->value;
-		// 			// 	$context						 = $request_ddo->value;
-		// 			// }
-		// 			break;
-		// 	}
-		// }//end if($options->get_context===true)
-
-
-
-// data
+// context and data
 	$context	= [];
 	$data		= [];
 
 	// dato is the full result of a search using the search_query_object
-	$dato = $this->get_dato();
+	$sections_data = $this->get_data();
 
-	if (empty($dato)) {
+	if (empty($sections_data)) {
 
 		$ar_section_tipo = $this->get_ar_section_tipo();
 
@@ -115,8 +65,16 @@
 			// 	$pagination->limit	= $limit;
 			// 	$pagination->offset	= $offset;
 
-			$grouped_sections = [];
-			foreach ($dato as $key => $current_record) {
+			// $grouped_sections = [];
+			// sections
+		
+			$section_instances = []; // O(1) lookup instead of O(n) in_array
+			$key = 0;
+			$section = null;
+			$context_index = [];
+			$rejected_sections = [];
+
+			foreach ($sections_data as $current_record) {
 
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
@@ -125,63 +83,81 @@
 					$section_record = section_record::get_instance( $section_tipo, $section_id );
 					$section_record->set_data( $current_record );
 
-					$grouped_sections[$section_tipo][] = $section_record;
-			}
+				// create or reuse cached section instance
+					if ( !isset($section_instances[$section_tipo]) && !isset($rejected_sections[$section_tipo]) ) {
 
-		// subdatum
-			foreach ($grouped_sections as $section_tipo => $section_records) {
+						// mark section_tipo as seen
+						// get or create cached section instance				
+						$section = $section_class::get_instance(
+							$section_tipo,
+							$mode,
+							true // bool cache
+						);						
 
-				// section instance
-					$section = $section_class::get_instance(
-						$section_tipo,
-						$mode,
-						true // bool cache
-					);
+						// permissions check: skip section and its all section_records without at least read access
+						// Only sections with at least read access are included in the result
+						$permissions = $section->get_section_permissions();
+						if ($permissions < 1) {
+							$rejected_sections[$section_tipo] = true;
+							continue; // skip this section and its records
+						}
 
-				// permissions check
-					$permissions = $section->get_section_permissions();
+						// set section instance in cache
+						$section_instances[$section_tipo] = $section;
+					}					
 
-					// check if the permissions permit the access to this information.
-					if($permissions<1){
-						// in any other cases stop the process
-						continue;
-					}
+					// Adding section record instances
+					$section->add_section_record( $section_record );
 
-				// Adding section record instances
-					foreach ($section_records as $current_section_record) {
-						$section->add_section_record( $current_section_record );
-					}
-
-				// properties optional
+					// properties optional
 					if (!empty($this->properties)){
 						$section->set_properties($this->properties);
 					}
 
-				// pagination. fix pagination vars (defined in class component_common)
-					// $section->pagination = $pagination;
-
-				// view fix. Section instance inherits the view (from API request)
+					// view fix. Section instance inherits the view (from API request)
 					if (isset($this->view)) {
 						$section->set_view($this->view);
 					}
 
-				// set dato
+					// set dato
 					if ($mode==='tm') {
 						$section->set_record($current_record); // inject whole db record as var
-					}
-					// else{
-						// inject dato to section when the dato come from db and set as loaded
-						// $datos = $current_record->datos ?? null;
-						// if (!is_null($datos)) {
-						// 	$section->set_dato($datos);
-						// }else{
-						// 	// inject dato when the dato comes from ar_locators
-						// 	// $section->set_dato($current_record);
-						// }
-					// }
+					}					
 
-				// get the instance JSON context and data
-					$section_json = $section->get_json();
+					// item sections value. Update in each iteration
+					$current_value = new stdClass();
+						$current_value->section_tipo	= $section_tipo;
+						$current_value->section_id		= $section_id;
+					
+					// // section info (information about creation, modification and publication of current section)
+					// 	$section_info = $section->get_section_info();
+					// 	if (!empty($section_info)) {
+					// 		foreach ($section_info as $si_key => $si_value) {
+					// 			$current_value->{$si_key} = $si_value;
+					// 		}
+					// 	}
+					
+					// paginated_key
+						$current_value->paginated_key = $key + $offset;
+						$key++;
+					
+					// tm case: inject time machine record metadata
+						if ($mode === 'tm') {
+							$current_value->matrix_id		= $current_record->id ?? null;
+							$current_value->timestamp		= $current_record->timestamp ?? null;
+							$current_value->state			= $current_record->state ?? null;
+							$current_value->bulk_process_id	= (int)($current_record->bulk_process_id ?? 0);
+							$current_value->user_id			= $current_record->userID ?? null;
+						}
+					
+					// add value to item
+						$item->value[] = $current_value;					
+			}
+
+		// subdatum
+			foreach ($section_instances as $section_tipo => $section) {				
+
+				$section_json = $section->get_json();
 
 				// CONTEXT. prevent duplicated context. Get the unique context and subcontext that will be need to used in client.
 				// it's necessary to have all context called but only one it's necessary, in a list the context its calculated for every row and column, getting duplicated context and subcontext
@@ -201,34 +177,9 @@
 
 				// data
 					$data = array_merge($data, $section_json->data);
+			}
 
-				// item sections value. Update in each iteration
-					$current_value = new stdClass();
-						$current_value->section_tipo	= $section_tipo;
-						$current_value->section_id		= $section_id;
-					// section info (information about creation, modification and publication of current section)
-						$section_info = $section->get_section_info();
-						foreach ($section_info as $si_key => $si_value) {
-							$current_value->{$si_key} = $si_value;
-						}
-					// paginated_key
-						$current_value->paginated_key = $key + $offset;
-					// tm case
-						if($mode==='tm'){
-							$current_value->matrix_id		= $current_record->id;
-							$current_value->timestamp		= $current_record->timestamp;
-							$current_value->state			= $current_record->state;
-							$current_value->bulk_process_id	= (int)$current_record->bulk_process_id;
-							$current_value->user_id			= $current_record->userID;
-						}
-					// add value
-						$item->value[] = $current_value;
-					// add section_tipo if not already exists
-						if (!in_array($section_tipo, $item->section_tipo)) {
-							$item->section_tipo[] = $section_tipo;
-						}
-			}//end foreach ($dato as $current_record)
-	}//end if (empty($dato))
+	}//end if (empty($sections_data))
 
 
 
