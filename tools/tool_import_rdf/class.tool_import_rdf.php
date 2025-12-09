@@ -672,9 +672,8 @@ class tool_import_rdf extends tool_common {
 
 		// search
 			$search			= search::get_instance($sqo);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
-			$count			= count($ar_records);
+			$db_result		= $search->search();
+			$count			= $db_result->row_count();
 
 		if($count>1) {
 
@@ -688,19 +687,18 @@ class tool_import_rdf extends tool_common {
 				);
 
 			// use the first one
-				$section_id = reset($ar_records)->section_id;
+				$section_id = $db_result->fetch_one()->section_id;
 
 		}elseif ($count===1) {
 
 			// founded. Already created record
-				$section_id = reset($ar_records)->section_id;
+				$section_id = $db_result->fetch_one()->section_id;
 
 		}elseif ($count===0) {
 
 			// no found. Create a new empty record
-				$section	= section::get_instance(null, $section_tipo);
-				$section->Save();
-				$section_id	= $section->get_section_id();
+				$section	= section::get_instance($section_tipo);
+				$section_id	= $section->create_record();
 
 				if($model_name==='component_iri'){
 					$dato = new stdClass();
@@ -722,8 +720,8 @@ class tool_import_rdf extends tool_common {
 					$section_tipo
 				);
 				$dato = is_array($value) ? $value : [$value];
-				$code_component->set_dato( $dato );
-				$code_component->Save();
+				$code_component->set_data( $dato );
+				$code_component->save();
 
 			// debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
 		}
@@ -908,16 +906,15 @@ class tool_import_rdf extends tool_common {
 
 		// search
 			$search			= search::get_instance($sqo);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
-			$count			= count($ar_records);
+			$db_result		= $search->search();
+			$count			= $db_result->row_count();
 
 		if($count >= 1){
 			return null;
 		}
 
-		$model			= ontology_node::get_model_by_tipo($component_tipo);
-		$lang			= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+		$model	= ontology_node::get_model_by_tipo($component_tipo);
+		$lang	= ontology_node::get_translatable( $component_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 		// component
 		$component = component_common::get_instance(
@@ -931,10 +928,8 @@ class tool_import_rdf extends tool_common {
 		$data = $component->get_dato();
 
 		// no found. Create a new empty record
-		$section = section::get_instance(null, $target_ddo->section_tipo);
-		$section->Save();
-		$section_id	= $section->get_section_id();
-
+		$section = section::get_instance($target_ddo->section_tipo);
+		$section_id	= $section->create_record();
 
 		$new_locator = new locator();
 			$new_locator->set_section_tipo($target_ddo->section_tipo);
@@ -943,8 +938,8 @@ class tool_import_rdf extends tool_common {
 
 		// save new value
 		$new_data = array_merge($data, [$new_locator]);
-		$component->set_dato( $new_data );
-		$component->Save();
+		$component->set_data( $new_data );
+		$component->save();
 
 
 		return $new_locator;

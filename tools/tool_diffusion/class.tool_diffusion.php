@@ -457,15 +457,15 @@ class tool_diffusion extends tool_common {
 				while (true) {
 
 					// search
-					$rows_data		= $search->search();
-					$found_records	= count($rows_data->ar_records);
+					$db_result		= $search->search();
+					$found_records	= $db_result->row_count();
 					if ($found_records<1) {
 						break;
 					}
 
 					// iterate chunk of <=1000 records
 					$chunk_response = tool_diffusion::iterate_rows(
-						$rows_data->ar_records, // rows
+						$db_result->fetch_all(), // rows
 						$diffusion_element_tipo,
 						$diffusion_class_name,
 						$counter, // passed by reference
@@ -667,7 +667,7 @@ class tool_diffusion extends tool_common {
 				// send to output
 				print_cli($pdata);
 			}
-		}//end foreach ((array)$rows_data->ar_records as $row)
+		}//end foreach ($rows as $row)
 
 		// response object
 		$response = new stdClass();

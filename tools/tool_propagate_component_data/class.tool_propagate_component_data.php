@@ -57,11 +57,11 @@ class tool_propagate_component_data extends tool_common {
 
 		// search
 			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
+			$db_result	= $search->search();
 
 		// short vars
 			$counter			= 0;
-			$total_records		= count($rows_data->ar_records);
+			$total_records		= $db_result->row_count();
 			$section_label		= ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 			$component_label	= ontology_node::get_term_by_tipo($component_tipo, DEDALO_APPLICATION_LANG, true);
 
@@ -109,7 +109,7 @@ class tool_propagate_component_data extends tool_common {
 				$bulk_process_label_component->Save();
 
 		// result records iterate
-			foreach ($rows_data->ar_records as $row) {
+			foreach ($db_result as $row) {
 
 				$counter++;
 
@@ -198,7 +198,7 @@ class tool_propagate_component_data extends tool_common {
 							, logger::DEBUG
 						);
 					}
-			}//end foreach ($records_data->result as $key => $ar_value)
+			}//end foreach ($db_result as $row)
 
 		// response
 			$response->result			= true;

@@ -475,13 +475,13 @@ class tool_import_marc21 extends tool_common {
 
 		// search the sections that has this title
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result	= $search->search();
 
 		// section_id
 			$section_id = null; // Default
-			if (!empty($result->ar_records[0])) {
+			if ($db_result->row_count() > 0) {
 				// Found it in database
-				$section_id = (int)$result->ar_records[0]->section_id;
+				$section_id = (int)$db_result->fetch_one()->section_id;
 
 				debug_log(__METHOD__
 					." Record found successfully [$section_id] with requested code: ".to_string($marc21_id)
@@ -534,13 +534,13 @@ class tool_import_marc21 extends tool_common {
 
 		// search the sections that has this title
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result	= $search->search();
 
 		// section_id
 			$section_id = null; // Default
-			if (!empty($result->ar_records[0])) {
+			if ($db_result->row_count() > 0) {
 				// Found it in database
-				$section_id = (int)$result->ar_records[0]->section_id;
+				$section_id = (int)$db_result->fetch_one()->section_id;
 
 				debug_log(__METHOD__
 					." Successful Founded record [$section_id] with requested code: ".to_string($collection_title)

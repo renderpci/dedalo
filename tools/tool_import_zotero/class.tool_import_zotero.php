@@ -830,12 +830,12 @@ class tool_import_zotero extends tool_common {
 
 		// search the sections that has this title
 			$search		= search::get_instance($sqo);
-			$result		= $search->search();
+			$db_result	= $search->search();
 
 		$section_id = null; // Default
-		if (!empty($result->ar_records[0])) {
+		if ($db_result->row_count() > 0) {
 			// Found it in database
-			$section_id = (int)$result->ar_records[0]->section_id;
+			$section_id = (int)$db_result->fetch_one()->section_id;
 
 			debug_log(__METHOD__."Record founded successfully [$section_id] with requested code: ".to_string($zotero_id), logger::DEBUG);
 		}
@@ -864,6 +864,7 @@ class tool_import_zotero extends tool_common {
 		$sqo = json_decode('
 		{
 			"id": "get_section_id_from_zotero_container_title",
+			"select": [],
 			"section_tipo": "'.$section_tipo.'",
 			"limit": 1,
 			"filter": {
@@ -883,16 +884,14 @@ class tool_import_zotero extends tool_common {
 			}
 		}');
 
-
 		// search the sections that has this title
-			$search		= search::get_instance($sqo);
-			$result		= $search->search();
-			$ar_section	= $result->ar_records;
+		$search		= search::get_instance($sqo);
+		$db_result	= $search->search();		
 
 		$section_id = null; // Default
-		if (!empty($result->ar_records[0])) {
+		if ($db_result->row_count() > 0) {
 			// Found it in database
-			$section_id = (int)$result->ar_records[0]->section_id;
+			$section_id = (int)$db_result->fetch_one()->section_id;
 
 			debug_log(__METHOD__." Successfull Founded record [$section_id] with requested code: ".to_string($zotero_container_title), logger::DEBUG);
 		}

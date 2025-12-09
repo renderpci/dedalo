@@ -1037,15 +1037,13 @@ class tool_import_files extends tool_common {
 				$sqo->set_skip_projects_filter(true);
 				$sqo->set_filter($filter);
 
-
 		// search exec
-			$search				= search::get_instance($sqo);
-			$records_data		= $search->search();
-			$ar_current_dato	= $records_data->ar_records;
-
+			$search		= search::get_instance($sqo);
+			$db_result	= $search->search();
+		
 		// stored the section_id of the match sections.
 		$match_section_id = [];
-		foreach ($ar_current_dato as $section_data) {
+		foreach ($db_result as $section_data) {
 			$match_section_id[] = $section_data->section_id;
 		}
 
