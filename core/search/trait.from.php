@@ -7,6 +7,7 @@
 trait from {
 
 
+
 	/**
 	* BUILD_MAIN_FROM_SQL
 	* @return void
@@ -20,6 +21,7 @@ trait from {
 
 		return;
 	}//end build_main_from_sql
+
 
 
 }//end from

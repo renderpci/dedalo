@@ -279,3 +279,44 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
+
+		// Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data. 
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'remove_tm_created_sections',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// Recreate the tm table in PostgreSQL. 
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Recreate the tm table in PostgreSQL. ',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'recreate_tm_table',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// Fill the new  columns `user_id`, `bulk_process` and `data` with its previous column data. 
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Fill the new  columns "user_id", "bulk_process" and "data" with its previous column data. ',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'fill_new_columns_in_tm',
+				'stop_on_error'	=> true,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// Delete old "section_id_key" and "state" tm columns in PostgreSQL.
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Delete old "section_id_key" and "state" tm columns in PostgreSQL.',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'delete_tm_columns',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+

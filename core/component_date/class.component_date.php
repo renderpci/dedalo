@@ -597,6 +597,12 @@ class component_date extends component_common {
 			if (empty($query_object->q) && empty($query_object->q_operator)) {
 				return $query_object;
 			}
+		
+		// column
+			$column = section_record_data::get_column_name( get_called_class() );
+		
+		//table_alias
+			$table_alias	= $query_object->table_alias;
 
 		// q_object
 			$q_object = $query_object->q ?? null;
@@ -653,7 +659,7 @@ class component_date extends component_common {
 			$ontology_node					= ontology_node::get_instance($component_tipo);
 			$properties						= $ontology_node->get_properties();
 			$date_mode						= isset($properties->date_mode) ? $properties->date_mode : 'date';
-			$query_object->component_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
+			$query_object->data_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
 			$query_object->type				= 'jsonb';
 
 		// shared resolution functions
@@ -717,10 +723,10 @@ class component_date extends component_common {
 					case '<':
 					case '>=':
 						$query1 = new stdClass();
-							$query1->component_path		= ['start','time'];
-							$query1->operator			= $operator;
-							$query1->q_parsed			= '\''.$q_clean.'\'';
-							$query1->type				= 'jsonb';
+							$query1->data_path	= ['start','time'];
+							$query1->operator	= $operator;
+							$query1->q_parsed	= '\''.$q_clean.'\'';
+							$query1->type		= 'jsonb';
 
 						$group_op_name = '$or';
 						$group_array_elements = new stdClass();
@@ -741,10 +747,10 @@ class component_date extends component_common {
 						$final_range = self::get_final_search_range_seconds($dd_date);
 
 						$query1 = new stdClass();
-							$query1->component_path		= ['start','time'];
-							$query1->operator			= $operator;
-							$query1->q_parsed			= '\''.$final_range.'\'';
-							$query1->type				= 'jsonb';
+							$query1->data_path	= ['start','time'];
+							$query1->operator	= $operator;
+							$query1->q_parsed	= '\''.$final_range.'\'';
+							$query1->type		= 'jsonb';
 
 						$group_op_name = '$or';
 						$group_array_elements = new stdClass();
@@ -768,6 +774,8 @@ class component_date extends component_common {
 					case '*':
 						// set final_query_object
 						$final_query_object = $is_not_empty( $query_object );
+
+						$query_object->sentence = "date @? '$.{$component_tipo}[*]";
 						break;
 
 					case '=':
@@ -775,53 +783,69 @@ class component_date extends component_common {
 						$final_range = self::get_final_search_range_seconds($dd_date);
 						// array elements subgroups
 						// array elements sub_group1
-						$query1 = new stdClass();
-							$query1->component_path	= ['start','time'];
-							$query1->operator		= '<=';
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
+					// 	$query1 = new stdClass();
+					// 		$query1->data_path	= ['start','time'];
+					// 		$query1->operator	= '<=';
+					// 		$query1->q_parsed	= '\''.$q_clean.'\'';
+					// 		$query1->type		= 'jsonb';
 
-						$query2 = new stdClass();
-							$query2->component_path	= ['end','time'];
-							$query2->operator		= '>=';
-							$query2->q_parsed		= '\''.$q_clean.'\'';
-							$query2->type			= 'jsonb';
+					// 	$query2 = new stdClass();
+					// 		$query2->data_path	= ['end','time'];
+					// 		$query2->operator	= '>=';
+					// 		$query2->q_parsed	= '\''.$q_clean.'\'';
+					// 		$query2->type		= 'jsonb';
 
-						# Add to sub_group1
-						$sub_group1 = new stdClass();
-							$sub_name1 = '$and';
-							$sub_group1->$sub_name1 = [$query1,$query2];
+					// 	# Add to sub_group1
+					// 	$sub_group1 = new stdClass();
+					// 		$sub_name1 = '$and';
+					// 		$sub_group1->$sub_name1 = [$query1,$query2];
 
-					// array elements sub_group2
-						$query1 = new stdClass();
-							$query1->component_path	= ['start','time'];
-							$query1->operator		= '>=';
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
+					// // array elements sub_group2
+					// 	$query1 = new stdClass();
+					// 		$query1->data_path	= ['start','time'];
+					// 		$query1->operator	= '>=';
+					// 		$query1->q_parsed	= '\''.$q_clean.'\'';
+					// 		$query1->type		= 'jsonb';
 
-						$query2 = new stdClass();
-							$query2->component_path	= ['start','time'];
-							$query2->operator		= '<=';
-							$query2->q_parsed		= '\''.$final_range.'\'';
-							$query2->type			= 'jsonb';
+					// 	$query2 = new stdClass();
+					// 		$query2->data_path	= ['start','time'];
+					// 		$query2->operator	= '<=';
+					// 		$query2->q_parsed	= '\''.$final_range.'\'';
+					// 		$query2->type		= 'jsonb';
 
-						// Add to sub_group2
-						$sub_group2 = new stdClass();
-							$sub_name2 = '$and';
-							$sub_group2->$sub_name2 = [$query1,$query2];
+					// 	// Add to sub_group2
+					// 	$sub_group2 = new stdClass();
+					// 		$sub_name2 = '$and';
+					// 		$sub_group2->$sub_name2 = [$query1,$query2];
 
-					// Group array elements
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
+					// // Group array elements
+					// 	$group_op_name = '$or';
+					// 	$group_array_elements = new stdClass();
+					// 		$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
 
-					// query_object config
-						$query_object->q_parsed			= null;
-						$query_object->format			= 'array_elements';
-						$query_object->array_elements	= $group_array_elements;
+					// // query_object config
+					// 	$query_object->q_parsed			= null;
+					// 	$query_object->format			= 'array_elements';
+					// 	$query_object->array_elements	= $group_array_elements;
 
-					// set final_query_object
-					$final_query_object = $query_object;
+					// // set final_query_object
+					// $final_query_object = $query_object;
+
+
+					
+					// SELECT section_id, section_tipo, date
+					// FROM matrix
+					// WHERE date @? '$.mdcat1968[*] ? (
+					// (@.start.time <= 62322912000 && @.end.time >= 62322912000) ||
+					// (@.start.time >= 62322912000 && @.start.time <= 62322912000 + 3600)
+					// )';
+
+					$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (". PHP_EOL.
+						'(@.start.time <= _Q1_ && @.end.time >= _Q1_) ||'.PHP_EOL.
+						'(@.start.time >= _Q1_ && @.start.time <= _Q2_)'.PHP_EOL.
+					')\'';
+
+					$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
 					break;
 				}
 				break;
@@ -832,7 +856,7 @@ class component_date extends component_common {
 				$operator = isset($q_object->op) ? $q_object->op : '=';
 
 				$query1 = new stdClass();
-					$query1->component_path 	= ['period','time'];
+					$query1->data_path 	= ['period','time'];
 					$query1->operator 			= $operator;
 					$query1->q_parsed 					= '\''.$q_clean.'\'';
 					$query1->type 				= 'jsonb';
@@ -860,7 +884,7 @@ class component_date extends component_common {
 				switch ($operator) {
 					case '=':
 						$query1 = new stdClass();
-							$query1->component_path	= ['start','time'];
+							$query1->data_path		= ['start','time'];
 							$query1->operator		= '>=';
 							$query1->q_parsed		= '\''.$q_clean.'\'';
 							$query1->type			= 'jsonb';
@@ -868,7 +892,7 @@ class component_date extends component_common {
 						// $dd_date = new dd_date($q_object->start);
 						$final_range = $q_clean + self::get_final_search_range_seconds($dd_date);
 						$query2 = new stdClass();
-							$query2->component_path	= ['start','time'];
+							$query2->data_path		= ['start','time'];
 							$query2->operator		= '<=';
 							$query2->q_parsed		= '\''.$final_range.'\'';
 							$query2->type			= 'jsonb';
@@ -889,7 +913,7 @@ class component_date extends component_common {
 
 					default:
 						$query1 = new stdClass();
-							$query1->component_path	= ['start','time'];
+							$query1->data_path		= ['start','time'];
 							$query1->operator		= $operator;
 							$query1->q_parsed		= '\''.$q_clean.'\'';
 							$query1->type			= 'jsonb';
@@ -940,10 +964,10 @@ class component_date extends component_common {
 					case '>=':
 						// array elements sub_group2
 						$query1 = new stdClass();
-							$query1->component_path		= ['start','time'];
-							$query1->operator			= $operator;
-							$query1->q_parsed			= '\''.$q_clean.'\'';
-							$query1->type				= 'jsonb';
+							$query1->data_path		= ['start','time'];
+							$query1->operator		= $operator;
+							$query1->q_parsed		= '\''.$q_clean.'\'';
+							$query1->type			= 'jsonb';
 
 						$group_op_name = '$or';
 						$group_array_elements = new stdClass();
@@ -963,10 +987,10 @@ class component_date extends component_common {
 					case '<=':
 						// array elements sub_group2
 						$query1 = new stdClass();
-							$query1->component_path		= ['start','time'];
-							$query1->operator			= $operator;
-							$query1->q_parsed			= '\''.$final_range.'\'';
-							$query1->type				= 'jsonb';
+							$query1->data_path		= ['start','time'];
+							$query1->operator		= $operator;
+							$query1->q_parsed		= '\''.$final_range.'\'';
+							$query1->type			= 'jsonb';
 
 						$group_op_name = '$or';
 						$group_array_elements = new stdClass();
@@ -986,16 +1010,16 @@ class component_date extends component_common {
 					default:
 						// array elements sub_group2
 						$query1 = new stdClass();
-							$query1->component_path	= ['start','time'];
-							$query1->operator		= '>=';
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
+							$query1->data_path	= ['start','time'];
+							$query1->operator	= '>=';
+							$query1->q_parsed	= '\''.$q_clean.'\'';
+							$query1->type		= 'jsonb';
 
 						$query2 = new stdClass();
-							$query2->component_path	= ['start','time'];
-							$query2->operator		= '<=';
-							$query2->q_parsed		= '\''.$final_range.'\'';
-							$query2->type			= 'jsonb';
+							$query2->data_path	= ['start','time'];
+							$query2->operator	= '<=';
+							$query2->q_parsed	= '\''.$final_range.'\'';
+							$query2->type		= 'jsonb';
 
 						// Add to sub_group2
 						$sub_group2 = new stdClass();

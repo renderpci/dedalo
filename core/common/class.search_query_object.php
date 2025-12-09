@@ -27,7 +27,9 @@
 										unaccent : true || false // bool, define if the q will us the unaccent function in WHERE
 										type : 'jsonb' || 'string' // define the type of data to be searched
 										lang : string || null  // defines if the search will be lang selective. If not defined lang = all langs, if defined lang = the lang sent as `lg-eng
-									}]
+										column: string, // mandatory a data type column name ('relation', 'string', 'date', 'number', 'iri', 'geo', 'media', 'misc', 'meta')
+										tipo : string // mandatory component tipo
+										data_path : array // the component path to find the data, defined by component, for string it will be 'value', for date it would be: 'start', 'end'
 							  } || null
 	select					: [{	// array of objects optional
 								section_tipo

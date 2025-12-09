@@ -330,12 +330,12 @@ class transform_data {
 
 			// overwrite relations
 			$datos->relations = $clean_relations;
-
+			
 			$section_data_encoded = json_handler::encode($datos);
 
 			// save record
-			$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+			$sql	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+			$result = matrix_db_manager::exec_search($sql, [$section_data_encoded, $id]);
 			if($result===false) {
 				$msg = "Failed Update section_data id: $id ($section_tipo-$section_id)";
 				debug_log(__METHOD__
@@ -484,78 +484,6 @@ class transform_data {
 	}//end fix_dataframe_action
 
 
-
-	/**
-	* FIX_DATAFRAME_TM
-	* Updates time_machine rows for current element
-	* @param string|int $section_id
-	* @param string $section_tipo
-	* @param string $component_tipo
-	* @param string|int $section_id_key
-	* @param string|int $new_target_section_id
-	*
-	* @return array|null $tm_ar_changed
-	*/
-	public function fix_dataframe_tm(string|int $section_id, string $section_tipo, $old_locator, $locator) : array {
-
-		$tm_ar_changed = [];
-
-		$component_tipo			= (string) $old_locator->from_component_tipo;
-		$section_id_key			= (int) $old_locator->section_id_key;
-		$new_target_section_id	= (int) $locator->section_id;
-
-		$strQuery = "
-			SELECT * FROM matrix_time_machine
-			WHERE section_id = '$section_id'
-			AND section_tipo = '$section_tipo'
-			AND tipo = '$component_tipo'
-			ORDER BY id ASC
-		";
-		$result = JSON_RecordDataBoundObject::search_free($strQuery);
-		// query error case
-		if($result===false){
-			return $tm_ar_changed;
-		}
-		// empty records case
-		$n_rows = pg_num_rows($result);
-		if ($n_rows<1) {
-			return $tm_ar_changed;
-		}
-
-		while($row = pg_fetch_assoc($result)) {
-
-			$id			= $row['id'];
-			$section_id	= $row['section_id'];
-			$dato		= json_decode($row['dato']);
-
-			if (isset($dato[0])) {
-				$dato[0]->section_id = $new_target_section_id;
-			}
-
-			// data_encoded : JSON ENCODE ALWAYS !!!
-			$data_encoded = json_handler::encode($dato);
-			// prevent null encoded errors
-			$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
-
-			$strQuery2	= "UPDATE matrix_time_machine SET dato = $1, section_id_key = $2 WHERE id = $3 ";
-			$result2	= pg_query_params(DBi::_getConnection(), $strQuery2, [$safe_data, $section_id, $id]);
-			if($result2===false) {
-				$msg = "Failed Update section_data $id";
-				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					.' strQuery: ' . $strQuery
-					, logger::ERROR
-				);
-				continue;
-			}
-
-			$tm_ar_changed[] = $id;
-		}
-
-		return $tm_ar_changed;
-	}//end fix_dataframe_tm
-
-
 	/**
 	* GET_TM_DATA_FROM_TIPO
 	* Return all Time Machine records of the given component for specific section (section_id and section_tipo)
@@ -568,13 +496,13 @@ class transform_data {
 	public static function get_tm_data_from_tipo(string|int $section_id, string $section_tipo, string $tipo) : \PgSql\Result|false {
 
 		// get all records of the time_machine for the given component
-		$query = "
+		$sql = "
 			SELECT * FROM matrix_time_machine
 			WHERE section_id = $1
 			AND section_tipo = $2
 			AND tipo = $3
 		";
-		$result	= pg_query_params(DBi::_getConnection(), $query, [$section_id, $section_tipo, $tipo]);
+		$result = matrix_db_manager::exec_search($sql, [$section_id, $section_tipo, $tipo]);
 
 		return $result;
 	}//end get_tm_data_from_tipo

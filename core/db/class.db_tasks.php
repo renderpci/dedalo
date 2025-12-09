@@ -24,7 +24,7 @@ class db_tasks {
 
 			// SHOW server_version;
 			$sql					= " SHOW server_version; ";
-			$result_v				= JSON_RecordObj_matrix::search_free($sql);
+			$result_v 				= matrix_db_manager::exec_search($sql, []);
 			$server_version			= pg_fetch_result($result_v, 0, 'server_version');
 			$ar_parts				= explode('.', $server_version);
 			$server_major_version	= (int)$ar_parts[0];
@@ -38,7 +38,8 @@ class db_tasks {
 
 			// Find and iterate all db tables
 			$sql	= " SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name ASC ";
-			$result	= JSON_RecordObj_matrix::search_free($sql);
+			$result	= matrix_db_manager::exec_search($sql, []);			
+
 			while ($rows = pg_fetch_assoc($result)) {
 
 				$table_name = $rows['table_name'];
@@ -58,7 +59,8 @@ class db_tasks {
 
 				# Find last id in table
 				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
-				$result2	= JSON_RecordObj_matrix::search_free($sql);
+				$result2	= matrix_db_manager::exec_search($sql, []);
+				
 				if (!$result2) {
 					continue;
 				}
@@ -76,7 +78,7 @@ class db_tasks {
 					$search_table	= $table_name."_id_seq";
 					$sql			= " SELECT last_value, start_value FROM $search_table ; ";
 				}
-				$result_seq = JSON_RecordObj_matrix::search_free($sql);
+				$result_seq = matrix_db_manager::exec_search($sql, []);
 				if (pg_num_rows($result_seq) === 0) {
 					debug_log(__METHOD__
 						." Warning. {$table_name}_id_seq not found in $search_table "
@@ -110,7 +112,8 @@ class db_tasks {
 					#$response->msg .= "Use: <pre>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</pre>";
 
 					$sql2 	 = "SELECT setval('public.{$table_name}_id_seq', $last_id, true);";
-					$result2 = JSON_RecordObj_matrix::search_free($sql2);
+					$result2 = matrix_db_manager::exec_search($sql2, []);
+					
 					if (!$result2) {
 						$response->msg .= "Use: <b>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</b>";
 					}

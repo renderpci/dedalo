@@ -842,14 +842,9 @@ abstract class RecordDataBoundObject {
 
 			if($this->blForDeletion===true) {
 
-				$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $1";
+				$sql = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $1";
 
-				// $result = JSON_RecordObj_matrix::search_free($strQuery);
-				$result = pg_query_params(
-					$this->get_connection(),
-					$strQuery,
-					[$this->ID]
-				);
+				$result	= matrix_db_manager::exec_search($sql, [$this->ID]);				
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
 						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID";
@@ -859,7 +854,7 @@ abstract class RecordDataBoundObject {
 					trigger_error($msg);
 					debug_log(__METHOD__
 						. ' ' . $msg .PHP_EOL
-						. 'strQuery: ' . to_string($strQuery)
+						. ' sql: ' . to_string($sql)
 						, logger::ERROR
 					);
 					throw new Exception($msg, 1);

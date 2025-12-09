@@ -489,6 +489,13 @@ class component_string_common extends component_common {
 			$component_tipo = $path_end->component_tipo;
 			$translatable = ontology_node::get_translatable($component_tipo);
 
+		
+		// column
+			$column = section_record_data::get_column_name( get_called_class() );
+		
+		//table_alias
+			$table_alias	= $query_object->table_alias;
+
 		// escape q string for DB
 			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
@@ -715,11 +722,19 @@ class component_string_common extends component_common {
 
 			// DEFAULT CONTAINS
 			default:
-				$operator = '~*'; // case insensitive regular expression matching
+				// $operator = '~*'; // case insensitive regular expression matching
 				$q_clean  = str_replace('+', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
+				// $query_object->operator		= $operator;
+				// $query_object->q_parsed		= '\'.*\[".*'.$q_clean.'.*\'';
+				// $query_object->unaccent		= true;
+				// $query_object->data_path	= ['value'];
+				$query_object->sentence = trim("
+					{$table_alias}.{$column} @? '$.{$component_tipo}[*].value ? (@ like_regex \"_Q1_\" flag \"i\")'
+				");
+
+				// $query_object->sentence = 'search_string LIKE f_unaccent(lower(\'%_Q1_%\'))';
+				$query_object->params = ['_Q1_' => $q_clean];
+
 				break;
 		}//end switch (true)
 

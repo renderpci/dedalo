@@ -603,8 +603,15 @@ class v6_to_v7 {
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
 													}
-
-													$column_misc->{$literal_tipo}[] = $new_literal_obj;
+													if($model==='component_security_access'){
+														if(is_object($value)){
+															$literal_misc 		= $value;
+															$literal_misc->id	= $value_key;
+															$column_misc->{$literal_tipo}[] = $literal_misc;
+														}
+													}else{
+														$column_misc->{$literal_tipo}[] = $new_literal_obj;
+													}
 													break;
 
 												case DEDALO_VALUE_TYPE_DATE:
@@ -1140,6 +1147,140 @@ class v6_to_v7 {
 
 		return $response;
 	}//end recreate_db_assets
+
+
+
+	/**
+	 * REMOVE_TM_CREATED_SECTIONS
+	 * Remove time machine created sections that are not deleted
+	 * Time machine has not stored new section, only deleted ones.
+	 * The historic of the data is stored by the components not by sections.
+	 * @return bool
+	 */
+	public static function remove_tm_created_sections() : bool {
+		
+		$sql_query = sanitize_query ('
+			DELETE FROM "matrix_time_machine"
+			WHERE "section_tipo" = "tipo"
+				AND ("state" != \'deleted\' OR "state" IS NULL)
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed to remove tm created sections ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end remove_tm_created_sections
+
+
+	/**
+	 * RECREATE_TM_TABLE
+	 * Add new columns to matrix_time_machine table
+	 * @return bool
+	 */
+	public static function recreate_tm_table() : bool {
+		
+		$sql_query = sanitize_query ('
+			ALTER TABLE "matrix_time_machine"
+				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
+				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
+				ADD COLUMN IF NOT EXISTS "data" jsonb NULL,
+				
+			COMMENT ON TABLE "matrix_time_machine" IS  \'Time Machine\';
+
+			COMMENT ON COLUMN matrix_time_machine.section_id IS \'section_id when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.section_tipo IS \'section_tipo when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.tipo IS \'component tipo or section tipo when the change was made\';
+			COMMENT ON COLUMN matrix_time_machine.lang IS \'component data lang of the change\';
+			COMMENT ON COLUMN matrix_time_machine.timestamp IS \'timestamp of the change\';
+			COMMENT ON COLUMN matrix_time_machine.user_id IS \'User section_id that made the change\';
+			COMMENT ON COLUMN matrix_time_machine.bulk_process IS \'Bulk process id that identify a bulk change\';
+			COMMENT ON COLUMN matrix_time_machine.data IS \'JSONB data representing the change\';
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed Update jer_dd with a new schema ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end recreate_tm_table
+
+
+
+	/**
+	* FILL_NEW_COLUMNS_IN_TM
+	* Set the new columns `user_id`, `bulk_process` and `data` with its previous column data
+	* New columns data is compatible with previous column data.
+	*/
+	public static function fill_new_columns_in_tm() :bool {
+		
+		$sql_query = sanitize_query('
+			UPDATE "matrix_time_machine"
+				SET user_id 		= "userID",
+					bulk_process 	= bulk_process_id,
+					data			= dato;					
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed Update matrix_time_machine new columns with its data";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end fill_new_columns_in_tm
+
+
+
+	/**
+	 * DELETE_TM_COLUMNS
+	 * Delete obsolete columns to matrix_time_machine table
+	 * @return bool
+	 */
+	public static function delete_tm_columns() : bool {
+		
+		$sql_query = sanitize_query ('
+			ALTER TABLE "matrix_time_machine"
+				DROP COLUMN IF EXISTS "section_id_key",
+				DROP COLUMN IF EXISTS "state";
+		');
+
+		$result = pg_query(DBi::_getConnection(), $sql_query);
+
+		if($result===false) {
+			$msg = "Failed to delete tm section_id_key and state columns ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		
+		return true;
+	}//end delete_tm_columns
 
 
 
