@@ -933,9 +933,6 @@ abstract class component_common extends common {
 					// fix dato
 					$this->dato = $dato_tm;
 
-					// set as already loaded to prevent load again
-					$this->is_loaded_matrix_data = true;
-
 					// inject dato to component
 					$this->data_resolved = $dato_tm;
 
@@ -1040,7 +1037,7 @@ abstract class component_common extends common {
 				return false;
 			}
 
-		if($this->is_loaded_matrix_data!==true) {
+
 
 			// section create
 				$section_record = $this->get_my_section_record();
@@ -1051,9 +1048,7 @@ abstract class component_common extends common {
 					$this->data_column_name
 				);
 
-			// Set as loaded
-				$this->is_loaded_matrix_data = true;
-		}
+		// }
 
 		return true;
 	}//end load_component_data
