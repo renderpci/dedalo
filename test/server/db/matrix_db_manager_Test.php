@@ -75,8 +75,8 @@ final class matrix_db_manager_test extends TestCase {
 	{
 
 		// matrix_tables
-		$matrix_tables = matrix_db_manager::$matrix_tables;
-		$eq = $matrix_tables === [
+		$tables = matrix_db_manager::$tables;
+		$eq = $tables === [
 			'matrix'				=> true,
 			'matrix_activities'		=> true,
 			'matrix_activity'		=> true,
@@ -104,12 +104,12 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				. 'matrix_tables: ' . to_string($matrix_tables)
+				. 'matrix_tables: ' . to_string($tables)
 		);
 
 		// matrix_columns
-		$matrix_columns = matrix_db_manager::$matrix_columns;
-		$eq = $matrix_columns === [
+		$columns = matrix_db_manager::$columns;
+		$eq = $columns === [
 			'section_id'		=> true,
 			'section_tipo'		=> true,
 			'datos'				=> true,
@@ -128,12 +128,12 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				. 'matrix_columns: ' . to_string($matrix_columns)
+				. 'matrix_columns: ' . to_string($columns)
 		);
 
 		// matrix_json_columns
-		$matrix_json_columns = matrix_db_manager::$matrix_json_columns;
-		$eq = $matrix_json_columns === [
+		$json_columns = matrix_db_manager::$json_columns;
+		$eq = $json_columns === [
 			'datos'				=> true,
 			'data'				=> true,
 			'relation'			=> true,
@@ -150,19 +150,19 @@ final class matrix_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				. 'matrix_json_columns: ' . to_string($matrix_json_columns)
+				. 'matrix_json_columns: ' . to_string($json_columns)
 		);
 
 		// matrix_int_columns
-		$matrix_int_columns = matrix_db_manager::$matrix_int_columns;
-		$eq = $matrix_int_columns === [
+		$int_columns = matrix_db_manager::$int_columns;
+		$eq = $int_columns === [
 			'id'				=> true,
 			'section_id'		=> true
 		];
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				. 'matrix_int_columns: ' . to_string($matrix_int_columns)
+				. 'matrix_int_columns: ' . to_string($int_columns)
 		);
 	}//end test_vars
 

@@ -866,10 +866,10 @@ final class search_test extends TestCase {
 
 
 	/**
-	* TEST_build_main_where_sql
+	* TEST_build_main_where
 	* @return void
 	*/
-	public function test_build_main_where_sql(): void {
+	public function test_build_main_where(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -930,7 +930,7 @@ final class search_test extends TestCase {
 					. 'expected: ' . $expected . PHP_EOL
 					. 'result:   ' . $result
 			);
-	}//end test_build_main_where_sql
+	}//end test_build_main_where
 
 
 

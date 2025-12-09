@@ -190,6 +190,20 @@ class section_record_data {
 				continue;
 			}
 
+			if ( is_string($value) ) {
+				$value = json_decode( $value );
+				if (json_last_error() !== JSON_ERROR_NONE) {
+					debug_log(__METHOD__
+						. " Abort. JSON decode error for column " . PHP_EOL
+						. "column: " . $column . PHP_EOL
+						. "value: " . $value . PHP_EOL
+						. "error: " . json_last_error_msg()
+						, logger::ERROR
+					);
+					throwException(new Exception("JSON decode error for column " . $column . ": " . json_last_error_msg()));
+				}
+			}
+
 			$this->set_column_data( $column, $value );
 		}
 

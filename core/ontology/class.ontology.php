@@ -346,14 +346,14 @@ class ontology {
 		$safe_tld = safe_tld( $tld );
 
 		// SQL query
-			$strQuery  = '-- '.__METHOD__;
-			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
-			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
-			$strQuery .= "\n (datos#>'{components,hierarchy6,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tld')";
-			$strQuery .= "\n LIMIT 1 ;";
+			$sql  = '-- '.__METHOD__;
+			$sql .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$sql .= "\n section_tipo = $1 AND";
+			$sql .= "\n (datos#>'{components,hierarchy6,dato,".DEDALO_DATA_NOLAN."}' ? $2)";
+			$sql .= "\n LIMIT 1 ;";
 
 		// search
-			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $safe_tld]);
 			while ($row = pg_fetch_object($result)) {
 
 				// decode JSON column 'datos'
@@ -383,14 +383,14 @@ class ontology {
 		$safe_tipo = safe_tipo( $target_section_tipo );
 
 		// SQL query
-			$strQuery  = '-- '.__METHOD__;
-			$strQuery .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
-			$strQuery .= "\n section_tipo = '".self::$main_section_tipo."' AND";
-			$strQuery .= "\n (datos#>'{components,hierarchy53,dato,".DEDALO_DATA_NOLAN."}' ? '$safe_tipo')";
-			$strQuery .= "\n LIMIT 1 ;";
+			$sql  = '-- '.__METHOD__;
+			$sql .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
+			$sql .= "\n section_tipo = $1 AND";
+			$sql .= "\n (datos#>'{components,hierarchy53,dato,".DEDALO_DATA_NOLAN."}' ? $2)";
+			$sql .= "\n LIMIT 1 ;";
 
 		// search
-			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $safe_tipo]);
 			while ($row = pg_fetch_object($result)) {
 
 				// decode JSON column 'datos'

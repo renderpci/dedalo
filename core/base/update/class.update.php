@@ -1169,9 +1169,9 @@ class update {
 				}
 
 			// Get last id in the table
-			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
-			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
-			$rows		= pg_fetch_assoc($result);
+			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+			$result 	= matrix_db_manager::exec_search($strQuery, []);
+			$rows 		= pg_fetch_assoc($result);
 			if (!$rows) {
 				continue;
 			}
@@ -1179,7 +1179,7 @@ class update {
 
 			// Get first id in the table
 			$min_strQuery	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
-			$min_result		= JSON_RecordDataBoundObject::search_free($min_strQuery);
+			$min_result		= matrix_db_manager::exec_search($min_strQuery, []);
 			$min_rows		= pg_fetch_assoc($min_result);
 			if (!$min_rows) {
 				continue;
@@ -1193,7 +1193,7 @@ class update {
 			for ($i=$min; $i<=$max; $i++) {
 
 				$strQuery	= "SELECT * FROM $table WHERE id = $i ORDER BY id ASC";
-				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+				$result		= matrix_db_manager::exec_search($strQuery, []);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__

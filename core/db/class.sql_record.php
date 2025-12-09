@@ -784,14 +784,9 @@ abstract class sql_record {
 		if( isset($this->ID) ) {
 
 			if($this->blForDeletion===true) {
-
-				if (is_int($this->ID)) {
-					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $this->ID";
-				}else{
-					$strQuery = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = '$this->ID' ";
-				}
-
-				$result = JSON_RecordObj_matrix::search_free($strQuery);
+				
+				$sql = "DELETE FROM \"$this->strTableName\" WHERE \"$this->strPrimaryKeyName\" = $1";			
+				$result	= matrix_db_manager::exec_search($sql, [$this->ID]);
 				if($result===false) {
 					if(SHOW_DEBUG===true) {
 						$msg = __METHOD__." Failed Delete record (RDBO) from {$this->strPrimaryKeyName}: $this->ID";
@@ -801,7 +796,7 @@ abstract class sql_record {
 					trigger_error($msg);
 					debug_log(__METHOD__
 						. ' ' . $msg .PHP_EOL
-						. 'strQuery: ' . to_string($strQuery)
+						. 'strQuery: ' . to_string($sql)
 						, logger::ERROR
 					);
 					throw new Exception($msg, 1);

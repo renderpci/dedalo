@@ -2157,11 +2157,10 @@ function get_current_data_version() : array {
 	try {
 
 		// Query all updates records
-			$strQuery = '
-				SELECT datos
-				FROM "matrix_updates"
-				-- ORDER BY datos->>\'dedalo_version\' DESC
-				-- LIMIT 1
+			$sql = sanitize_query('
+				SELECT datos FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;
+			');
+			$result = matrix_db_manager::exec_search($sql, []);
 			';
 			$result = JSON_RecordObj_matrix::search_free($strQuery);
 			if ($result!==false) {

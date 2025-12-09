@@ -251,7 +251,6 @@ class search {
 		$sql_query = $this->parse_sql_query();
 		if(SHOW_DEBUG===true) {
 			$parsed_time = round(start_time()-$start_time,3);
-			$this->sql_query = $sql_query;
 		}
 
 		// search

@@ -33,11 +33,12 @@ class matrix_activity_db_manager extends matrix_db_manager {
 	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
 
 		// Validate table
-		if ($table!=='matrix_activity') {
-			debug_log(__METHOD__
+		if (!isset(self::$tables[$table])) {
+			debug_log(
+				__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . 'matrix_activity'
+				. ' allowed_tables: ' . json_encode(self::$tables)
 				, logger::ERROR
 			);
 			return false;
@@ -56,13 +57,13 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		foreach ($values as $col => $value) {
 
 			// Columns. Only accepts normalized columns
-			if (!isset(self::$matrix_columns[$col])) {
+			if (!isset(self::$columns[$col])) {
 				throw new Exception("Invalid column name: $col");
 			}
 			$columns[] = pg_escape_identifier($conn, $col);
 
 			// Placeholders / Values
-			 if ($value !== null && isset(self::$matrix_json_columns[$col])) {
+			 if ($value !== null && isset(self::$json_columns[$col])) {
 				// Encode PHP array/object as JSON string
 				$params[]		= json_handler::encode($value);
 				$placeholders[]	= '$' . $param_index . '::jsonb';
