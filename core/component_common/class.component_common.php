@@ -45,6 +45,9 @@ abstract class component_common extends common {
 		public $dato_resolved;
 		public $data_resolved;
 
+		// db_data used to stored previous data before save it, to check if it has Time Machine
+		public $db_data;
+
 		// expected language for this component (used to verify that the structure is well formed)
 		public $expected_lang;
 
@@ -701,6 +704,13 @@ abstract class component_common extends common {
 
 		// resolved set
 			// $this->dato_resolved = $data;
+		
+		// db_data
+		// Store data before change it with new one.
+		if(!isset($this->db_data)) {
+			// clone the data array for safe.
+			$this->db_data = json_decode( json_encode($this->get_data()) );
+		}
 
 		// Counter
 			$data_to_set = [];
@@ -1653,11 +1663,13 @@ abstract class component_common extends common {
 			// We save only current component lang 'dato' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
-			$tm_save_options = new stdClass();
-				$tm_save_options->time_machine_data			= $this->get_time_machine_data_to_save();
-				$tm_save_options->time_machine_lang			= $lang;
-				$tm_save_options->time_machine_tipo			= $tipo;
-				$tm_save_options->time_machine_section_id	= (int)$this->section_id;
+			$tm_value = new stdClass();
+				$tm_value->data				= $this->get_time_machine_data_to_save();
+				$tm_value->lang				= $lang;
+				$tm_value->tipo				= $tipo;
+				$tm_value->section_tipo		= $section_tipo;
+				$tm_value->section_id		= (int)$this->section_id;
+				$tm_value->previous_data 	= $this->db_data ?? null;
 
 				// component_dataframe
 				// when the component is dataframe, save all information together
@@ -1665,20 +1677,21 @@ abstract class component_common extends common {
 				if ( $model==='component_dataframe' ) {
 					// use the main component
 					$main_tipo = $this->get_main_component_tipo();
-					$tm_save_options->time_machine_tipo	= $main_tipo;
+					$tm_value->tipo	= $main_tipo;
 				}
 				// bulk_process_id column
 				if( isset($this->bulk_process_id) ){
-					$tm_save_options->time_machine_bulk_process_id = $this->bulk_process_id;
+					$tm_value->bulk_process_id = $this->bulk_process_id;
 				}
 			//Save the time machine record
-			$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
-				common::get_matrix_table_from_tipo($this->section_tipo),
-				(int)$this->section_id, // int section_id
-				$this->tipo, // string section tipo
-				true // bool enable cache
-			);
-			$JSON_RecordObj_matrix->save_time_machine($tm_save_options);
+				$tm_result = tm_record::create( $tm_value );
+				if ($tm_result === false) {
+					debug_log(__METHOD__
+					   .' Error saving Time Machine data for'
+					   .' tm_value: ' . to_string($tm_value)
+					   , logger::ERROR
+					);					
+				}
 
 		// activity
 			$this->save_activity();
@@ -1714,8 +1727,6 @@ abstract class component_common extends common {
 						'tipo'				=> $this->tipo,
 						'section_id'		=> $this->section_id,
 						'lang'				=> $this->lang,
-						'top_id'			=> (TOP_ID ? TOP_ID : $this->section_id),
-						'top_tipo'			=> (TOP_TIPO ? TOP_TIPO : $this->section_tipo),
 						'component_name'	=> get_called_class(),
 						'table'				=> $matrix_table,
 						'section_tipo'		=> $this->section_tipo
