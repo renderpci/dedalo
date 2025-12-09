@@ -81,9 +81,11 @@ const get_content_data = function(self) {
 			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
+			// Gets value from inputs_value (note that inputs_value is an array of objects with the property 'value') 
+			const current_value = inputs_value[i]?.value || null
 			const content_value_node = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self)
-				: get_content_value(i, inputs_value[i], self)
+				? get_content_value_read(i, current_value, self)
+				: get_content_value(i, current_value, self)
 			content_data.appendChild(content_value_node)
 			// set pointers
 			content_data[i] = content_value_node
@@ -174,7 +176,7 @@ const get_content_value = (key, current_value, self) => {
 
 
 /**
-* GET_CONTENT_VALUE_read
+* GET_CONTENT_VALUE_READ
 * Render JSON editor for current value
 * @param int key
 * @param mixed current_value
