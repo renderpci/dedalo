@@ -242,9 +242,10 @@ class search {
 	/**
 	* SEARCH
 	* Parses the current sqo and exec a SQL query search against the database
-	* @return \PgSql\Result|false
+	* getting a db_result iterable object.
+	* @return db_result|false
 	*/
-	public function search() : \PgSql\Result|false {
+	public function search() : db_result|false {
 
 		// debug
 		if(SHOW_DEBUG===true) {
@@ -256,11 +257,8 @@ class search {
 
 		// parse SQO. Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_sql_query();
-		if(SHOW_DEBUG===true) {
-			$parsed_time = round(start_time()-$start_time,3);
-		}
-
-		// search
+		
+		// execute search. Perform a SQL query in DB using pg_execute and parameters.
 		$result	= matrix_db_manager::exec_search( $sql_query, $this->params );
 		if ($result===false) {
 			return false;
@@ -270,7 +268,7 @@ class search {
 		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
 			// Override result adding children.
 			$result	= $this->search_children_recursive( $result );
-		}//end if search_query_object->children_recursive===true
+		}
 
 		// debug
 		if(SHOW_DEBUG===true) {
@@ -295,8 +293,11 @@ class search {
 			metrics::$search_total_time += $exec_time;
 		}
 
+		// wrap result in db_result iterator
+		$db_result = new db_result($result);
 
-		return $result;
+
+		return $db_result;
 	}//end search
 
 
