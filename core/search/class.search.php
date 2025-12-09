@@ -1017,6 +1017,7 @@ class search {
 	}//end trim_tipo
 
 
+
 	/**
 	* GET_QUERY_PATH
 	* Recursive function to obtain final complete path of each element in json query object
@@ -1088,6 +1089,33 @@ class search {
 	}//end get_query_path
 
 
+
+
+	/**
+	* SEARCH_OPTIONS_TITLE
+	* Creates the search_operators_info of the components in search mode to draw the tool tip
+	* @param array $search_operators_info
+	*	Array of operator => label like: ... => between
+	* @return string $search_options_title
+	*/
+	public static function search_options_title( array $search_operators_info ) : string {
+
+		$search_options_title = '';
+
+		if (!empty($search_operators_info)) {
+
+			$search_options_title .= '<b>' . label::get_label('search_options') . ':</b>';
+			foreach ($search_operators_info as $ikey => $ivalue) {
+
+				$search_options_title .= '<div class="search_options_title_item">';
+				$search_options_title .= '<span>' . $ikey .'</span>';
+				$search_options_title .= '<span>'. label::get_label($ivalue).'</span>';
+				$search_options_title .= '</div>';
+			}
+		}
+
+		return $search_options_title;
+	}//end search_options_title
 
 
 
