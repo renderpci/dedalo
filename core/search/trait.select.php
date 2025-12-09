@@ -7,6 +7,7 @@
 trait select {
 
 
+
 	/**
 	* BUILD_SQL_QUERY_SELECT
 	* select_object sample:
@@ -22,7 +23,7 @@ trait select {
 
 		// Unique column for count
 		// If the SQO has active full_count set the SELECT with specific count for the section_id column
-		if ( $sqo->full_count===true ) {
+		if ( isset($sqo->full_count) && $sqo->full_count===true ) {
 			$this->sql_obj->select[] = 'count(DISTINCT '.$this->main_section_tipo_alias.'.section_id) as full_count';
 			return;
 		}
