@@ -144,7 +144,7 @@ class tool_update_cache extends tool_common {
 
 		// search
 			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
+			$db_result	= $search->search();
 
 		// CLI process data
 		if ( running_in_cli()===true ) {
@@ -157,7 +157,7 @@ class tool_update_cache extends tool_common {
 		}
 
 		// result records iterate
-			foreach ($rows_data->ar_records as $row) {
+			foreach ($db_result as $row) {
 
 				$section_id = $row->section_id;
 
@@ -235,21 +235,17 @@ class tool_update_cache extends tool_common {
 				, logger::DEBUG
 			);
 
-		// recursion
-			if (!empty($rows_data->ar_records)) {
+		// recursion			
+			if ($db_result->row_count() > 0) {
 
 				// Forces collection of any existing garbage cycles
-					unset($rows_data);  // ~ 40MB/1000
+					$db_result->free();  // ~ 40MB/1000
 					gc_collect_cycles();
 
 				$sqo->offset = $sqo->offset + $sqo->limit;
 
 				return tool_update_cache::process_chunk($sqo, $section_tipo, $components_selection, $bulk_process_id);
 			}
-
-		// Forces collection of any existing garbage cycles
-			unset($rows_data);  // ~ 40MB/1000
-			gc_collect_cycles();
 
 		// debug info
 			debug_log(__METHOD__
