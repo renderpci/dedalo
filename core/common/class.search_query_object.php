@@ -47,9 +47,6 @@
 										component_tipo
 									}]
 							  }]
-	order_custom 			: {
-								column_name : [values]
-							  }
 	filter_by_locators		: [{
 									section_tipo
 									component_tipo
@@ -80,7 +77,7 @@ class search_query_object extends stdClass {
 		public $full_count;
 		public $group_by;
 		public $order;
-		public $order_custom;
+
 		public $filter_by_locators;
 		public $filter_by_locators_op;
 		public $allow_sub_select_by_id;
@@ -333,30 +330,6 @@ class search_query_object extends stdClass {
 
 		return true;
 	}//end set_order
-
-
-
-	/**
-	* SET_ORDER_CUSTOM
-	* Used mainly in portals to preserve data order
-	* @param array of objects like
-	* [
-	*    {
-	*        "column_name": "section_id",
-	*        "column_values": [
-	*            1, 3, 84, 2
-	*        ]
-	*    }
-	* ]
-	* @return bool true
-	*/
-	public function set_order_custom(array $value) : true {
-
-		$this->order_custom = $value;
-
-		return true;
-	}//end set_order_custom
-
 
 
 	/**

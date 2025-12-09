@@ -69,7 +69,6 @@ Search Query Object is send as part of Request Query Object to be processed by s
 - **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
   - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
   - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
-- **order_custom** : `object` order by specific values **optional**, ex: `[{"section_tipo": section_tipo, "column_name": column_name, "column_values": [values]}}`
   - **section_tipo** : `string` name of section to be used to be ordered **optional**
   - **column_name** : `string` name of the column to be ordered **optional**
   - **column_values** : `array` the array defines the order of the values **optional**
@@ -118,9 +117,6 @@ order                   : [{
                                     component_tipo
                                 }]
                             }]
-order_custom            : {
-                            column_name : [values]
-                            }
 filter_by_locators      : [{
                                 section_tipo
                                 component_tipo
@@ -765,7 +761,7 @@ LIMIT 10
 
 ##### unaccent
 
-Defines if the unaccent function will be applied to the [q](#q). Unaccented function search without the accent and all letters will searched in lowercase (without match the case of the letter), by default text search set this parameter to true. THis function is ussed by languages as Spanish, Catalan or French that use accent letters suck as: àáäâéèëêìíïîòóöôùúüû etc.
+Defines if the unaccent function will be applied to the [q](#q). Unaccented function search without the accent and all letters will searched in lowercase (without match the case of the letter), by default text search set this parameter to true. This function is used by languages as Spanish, Catalan or French that use accent letters suck as: àáäâéèëêìíïîòóöôùúüû etc.
 
 Description: `bool` (true || false) defines if the q will us the unaccent function to remove accent characters in WHERE **optional**, ex: 'false'
 
@@ -866,7 +862,7 @@ Example: search interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh
 ##### lang
 
 Defines if the search will be language sensitive, searching in the specific language, or will be transversal to all languages.
-Used by translatable components as `component_input_text` or `compnent_text_area` to chain the query behavior.
+Used by translatable components as `component_input_text` or `component_text_area` to chain the query behavior.
 By default it is set as `null`.
 
 It can be defined with specific language as `lg-fra` to resting the query to this specific language.
@@ -1372,25 +1368,6 @@ ORDER BY rsc85_order ASC NULLS LAST , section_id ASC
 LIMIT 10;
 ```
 
-### order_custom
-
-Defines a specific order of the search. Sometimes is necessary order the query result in specific way, instead alphabetic order or numeric order used by the default [order](#order), order_custom could order by any other criteria. For example: order a list by the creation time.
-
-Definition: `array of objects` order by specific values **optional**, ex: `[{"section_tipo": section_tipo, "column_name": column_name, "column_values": [values]}}`
-
-Example: give the list of Numismatic object section [numisdata4](https://dedalo.dev/ontology/numisdata4) with odd section_id in descending order (5,3,1).
-
-```json
-{
-  "section_tipo": [ "numisdata4"],
-  "order_custom": [{
-    "section_tipo":"numisdata4",
-    "column_name": "section_id",
-    "column_values": [5,3,1]
-  }]
-}
-```
-
 The equivalent SQL:
 
 ```sql
@@ -1407,24 +1384,6 @@ LEFT JOIN (VALUES ('numisdata4',5,1),('numisdata4',3,2),('numisdata4',1,3)) as x
 ORDER BY x.ordering ASC
 LIMIT 10
 ```
-
-#### section_tipo
-
-Defines the section tipo of the colum that will used in the order_custom.
-
-Definition:  `string` name of section to be used to be ordered **optional**
-
-#### column_name
-
-Defines the name of the column to be ordered. The column name has to be defined the ontology inside the section_tipo.
-
-Definition: `string` name of the column to be ordered **optional**
-
-#### column_values
-
-Defines the values to be used in the custom order.
-
-Definition: `array` the array defines the order of the values **optional**
 
 ### filter_by_locators
 
