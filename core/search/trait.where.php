@@ -441,49 +441,9 @@ trait where {
 							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
 								$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
 							}
-							$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id>0 AND ';
+							$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id > 0 AND ';
 							$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
 							$sql_filter .= '((';
-
-							// areas. Iterate and clean array of authorized areas of this user like '[dd942-admin] => 2'
-								$security_areas_dato = security::get_ar_authorized_areas_for_user();
-								$ar_area_tipo = [];
-								foreach ($security_areas_dato as $item) {
-									if($item->value===2){
-										$ar_area_tipo[] = $item->tipo;
-									}
-								}
-								// check empty ar_area_tipo case
-									if (empty($ar_area_tipo)) {
-										dump($security_areas_dato, ' security_areas_dato +++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
-										debug_log(__METHOD__
-											." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed security_areas data!! "
-											, logger::ERROR
-										);
-										throw new Exception("Error Processing Request", 1);
-									}
-
-						# SEARCH PROFILES WITH CURRENT USER AREAS
-							$ar_profile_id = filter::get_profiles_for_areas( $ar_area_tipo );
-								// check empty ar_profile_id case
-								if (empty($ar_profile_id)) {
-									dump($ar_area_tipo, ' ar_area_tipo +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ '.to_string());
-									debug_log(__METHOD__
-										." ERROR STOP EXECUTION. Non global user id ($user_id) without any allowed profile data!! "
-										, logger::ERROR
-									);
-									throw new Exception("Error Processing Request", 1);
-								}
-							$ar_filter_profile = [];
-							foreach ($ar_profile_id as $current_profile_id) {
-								$search_locator = new locator();
-									$search_locator->set_section_tipo(DEDALO_SECTION_PROFILES_TIPO);
-									$search_locator->set_section_id($current_profile_id);
-									$search_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-								$ar_filter_profile[] = PHP_EOL . $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
-							}
-							$sql_filter .= implode(' OR ', $ar_filter_profile);
-							$sql_filter .= ')';
 
 						# PROJECTS FILTER
 							$component_filter_master_model	= ontology_node::get_model_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
