@@ -24,11 +24,9 @@ trait where {
 			: '(' . $this->main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
 
 		// avoid root user to be include in the results
-		$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id>0';
-
-		// Fix value
-		// $this->sql_obj->main_where = implode(' AND ', $sentences);
-
+		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO) {
+			$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id > 0';
+		}
 	}//end build_main_where
 
 
