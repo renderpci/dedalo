@@ -737,53 +737,43 @@ final class dd_core_api {
 		if (!empty($sqo)) {
 
 			// search exec
-				$search				= search::get_instance($sqo);
-				$search_response	= $search->search();
+				$search		= search::get_instance($sqo);
+				$db_result	= $search->search();
 
 			// check the type of the caller
 			switch ($type) {
 				case 'component':
-					// check if the component is a related or literal
-					$is_related = in_array( $model, component_relation_common::get_components_with_relations() );
-
-					if($is_related) {
-						// related cases
-						// foreach ($search_response->ar_records as $section_record) {
-						while ($section_record = search->fetch_row($result)) {
-							// get all data in relations
-							$relations_data = $section_record->datos->relations ?? [];
-							// get the component data
-							foreach ($relations_data as $current_locator) {
-								if($tipo === $current_locator->from_component_tipo){
-									$raw_data[] = $current_locator;
+					// component cases
+					// table to use
+					$column = section_record_data::get_column_name($model);
+					if (empty($column)) {
+						$response->msg = 'API Error: ('.__FUNCTION__.') Cannot resolve data column from model '.$model;
+						$response->errors[] = 'cannot resolve data column from model '.$model;
+						return $response;
 								}
-							}
+					
+					foreach ($db_result as $section_record) {
+						$raw_data[] = $section_record->$column->$tipo ?? null;
 						}
-					}else{
-						// literal cases
-						foreach ($search_response->ar_records as $section_record) {
-
-							$components_data = $section_record->datos->components ?? new stdClass();
-							// get full data of the component including all languages
-							$raw_data[] = $components_data->$tipo->dato ?? null;
-						}
-					}
+					
 					break;
 
 				case 'section':
-					$raw_data = $search_response->ar_records;
+					$raw_data = $db_result->fetch_all();
 					break;
 
 				case 'target_section':
 					// uses the relations to get all locators that call to target section given
 					// related cases
-					foreach ($search_response->ar_records as $section_record) {
+					foreach ($db_result as $section_record) {
 						// get all data in relations
-						$relations_data = $section_record->datos->relations ?? [];
+						$relations_data = $section_record->relation ?? new stdClass();
 						// get the component data
-						foreach ($relations_data as $current_locator) {
+						foreach ($relations_data as $component_data) {
+							foreach ($component_data as $current_locator) {
 							if($tipo === $current_locator->section_tipo){
 								$raw_data[] = $current_locator;
+								}
 							}
 						}
 					}
