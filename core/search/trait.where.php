@@ -79,6 +79,7 @@ trait where {
 
 	/**
 	* BUILD_SQL_FILTER
+	* Build and fix filter
 	* @return void
 	*/
 	public function build_sql_filter() : void {
@@ -95,7 +96,7 @@ trait where {
 			// Duplicated caller
 			// if the skip duplicated control is in true
 			// the caller is inside of the component with duplicated search operator(!!)
-			// the call is inside the build_search_object_sql() of the component
+			// the call is inside the parse_search_object_sql() of the component
 			// it need the filter of other components to be applied into the duplicated search
 			// but it can't include itself in the filter, so, here remove all duplicated search components
 			// it ensure that other search will applied to get the duplicates.
@@ -109,7 +110,6 @@ trait where {
 				// reset the skip control for the next calls.
 				$this->skip_duplicated = false;
 			}
-
 
 			$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);			
 		}
@@ -194,9 +194,9 @@ trait where {
 	*			"component_tipo": "dd62"
 	*		}
 	*	]
-	* @return bool true
+	* @return void
 	*/
-	public function build_sql_join(array $path) : bool {
+	public function build_sql_join(array $path) : void {
 
 		$ar_key_join	= [];
 		$base_key		= '';
@@ -251,10 +251,6 @@ trait where {
 				$this->sql_obj->join[] = $sql_lateral.PHP_EOL.$sql_join;
 			// }
 		}//end foreach ($path as $key => $step_object)
-
-
-
-		return true;
 	}//end build_sql_join
 
 
