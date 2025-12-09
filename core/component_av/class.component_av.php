@@ -1298,7 +1298,6 @@ class component_av extends component_media_common implements component_media_int
 					'tipo'		=> $this->tipo,
 					'parent'	=> $this->section_id,
 					'top_id'	=> TOP_ID ?? null,
-					'top_tipo'	=> TOP_TIPO ?? null,
 					'id'		=> $id,
 					'quality'	=> $quality
 				],

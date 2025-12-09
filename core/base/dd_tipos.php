@@ -237,27 +237,27 @@ define('DEDALO_COMPONENT_IRI_LABEL_DATAFRAME',	'dd560'); // dd560
 // }
 
 
-// TOP_TIPO
-	if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {
-		define('TOP_TIPO', $request_var_top_tipo);
-	}else if ( false !== ($request_var_t = get_request_var('t')) ) {
-		define('TOP_TIPO', $request_var_t);
-	}else if ( false !== ($request_var_t = get_request_var('json')) ) {
-		if ($json_obj = json_decode($request_var_t)) {
-			if (isset($json_obj->section_tipo)) {
-				define('TOP_TIPO', $json_obj->section_tipo);
-			}
-		}
-	}else if (isset($TOP_TIPO)) {
-		define('TOP_TIPO', $TOP_TIPO);
-	}else{
-		define('TOP_TIPO', false);
-	}
-	// TOP_ID
-	if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
-		define('TOP_ID', $request_var_top_id);
-	}else if ( false !== ($request_var_id = get_request_var('id')) ) {
-		define('TOP_ID', $request_var_id);
-	}else{
-		define('TOP_ID', false);
-	}
+// TOP_TIPO : (!) Deprecated
+	// if ( false !== ($request_var_top_tipo = get_request_var('top_tipo')) ) {
+	// 	define('TOP_TIPO', $request_var_top_tipo);
+	// }else if ( false !== ($request_var_t = get_request_var('t')) ) {
+	// 	define('TOP_TIPO', $request_var_t);
+	// }else if ( false !== ($request_var_t = get_request_var('json')) ) {
+	// 	if ($json_obj = json_decode($request_var_t)) {
+	// 		if (isset($json_obj->section_tipo)) {
+	// 			define('TOP_TIPO', $json_obj->section_tipo);
+	// 		}
+	// 	}
+	// }else if (isset($TOP_TIPO)) {
+	// 	define('TOP_TIPO', $TOP_TIPO);
+	// }else{
+	// 	define('TOP_TIPO', false);
+	// }
+	// // TOP_ID
+	// if ( false !== ($request_var_top_id = get_request_var('top_id')) ) {
+	// 	define('TOP_ID', $request_var_top_id);
+	// }else if ( false !== ($request_var_id = get_request_var('id')) ) {
+	// 	define('TOP_ID', $request_var_id);
+	// }else{
+	// 	define('TOP_ID', false);
+	// }
