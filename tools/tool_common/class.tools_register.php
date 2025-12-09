@@ -508,14 +508,14 @@ class tools_register {
 				},
 				"select": [],
 				"limit": 1,
-				"offset": 0,
+				"offset": null,
 				"full_count": false
 			}');
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result = $search->search();
 
 		// whole section record raw data
-		$tool_full_data = $result->ar_records[0] ?? null;
+		$tool_full_data = $db_result->fetch_one() ?? null;
 
 		return $tool_full_data;
 	}//end get_tool_data_by_name
