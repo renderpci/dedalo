@@ -52,11 +52,11 @@ class search {
 	// matrix_table : string
 	protected string $matrix_table;
 
+	// ar_matrix_tables : array
+	protected array $ar_matrix_tables;
+
 	// order_columns : array
 	protected array $order_columns;
-
-	// sql_query_order_custom
-	public $sql_query_order_custom;
 
 	// params counter for prepared statements
 	protected int $params_counter = 1;
@@ -133,7 +133,6 @@ class search {
 			$this->sql_obj->main_where		= [];
 			$this->sql_obj->where			= [];
 			$this->sql_obj->order			= [];
-			$this->sql_obj->order_custom	= [];
 			$this->sql_obj->order_default	= [];
 			$this->sql_obj->limit			= [];
 			$this->sql_obj->offset			= [];
@@ -209,7 +208,8 @@ class search {
 				? $search_query_object->remove_distinct
 				: false); // false is default
 
-		$this->sqo->skip_projects_filter = (in_array($this->matrix_table, search::$ar_tables_skip_projects, true))
+		// skip_projects_filter. Set based on matrix table and SQO definition
+		$this->sqo->skip_projects_filter = (!empty($this->matrix_table) && in_array($this->matrix_table, search::$ar_tables_skip_projects, true))
 			? true
 			: (isset($search_query_object->skip_projects_filter)
 				? $search_query_object->skip_projects_filter
@@ -298,7 +298,7 @@ class search {
 
 		$ar_row_children = [];
 		$ar_records = [];
-		while ($row = $this->fetch_row($main_result)) {
+		while ( $row = pg_fetch_object($main_result) ) {
 
 			// row expected an object as {section_tipo: oh1, section_id: 2} (select previously changed on parse sqo)
 			$ar_records[] = $row;
