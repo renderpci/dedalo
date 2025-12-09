@@ -330,14 +330,16 @@ class area_thesaurus extends area_common {
 
 		// Search records
 			$search			= search::get_instance($search_query_object);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
+			$db_result		= $search->search();
+
+		// total_records count
+			$total_records = $db_result->row_count();
 
 		// ar_path_mix . Calculate full path of each result
 			$ar_ts_objects	= [];
 			$found			= [];
 
-			foreach ($ar_records as $row) {
+			foreach ($db_result as $row) {
 
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
@@ -490,9 +492,6 @@ class area_thesaurus extends area_common {
 				}
 			}
 
-		// total_records count
-			$total_records = count($ar_records);
-
 		// response
 			$response->msg		= 'Records found: ' . $total_records;
 			$response->result	= $ar_ts_objects;
@@ -501,9 +500,9 @@ class area_thesaurus extends area_common {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$response->strQuery = $search_result->strQuery;
 				$response->debug[] = exec_time_unit($start_time);
 			}
+
 
 		return $response;
 	}//end search_thesaurus
