@@ -11,54 +11,6 @@ abstract class filter {
 	public static $user_projects_cache;
 
 
-
-	/**
-	* GET_PROFILES_FOR_AREAS
-	* @param array $ar_area_tipo
-	* @return array $ar_profile_id
-	*/
-	public static function get_profiles_for_areas(array $ar_area_tipo) : array {
-
-		// short vars
-			$tipo = DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
-			$lang = DEDALO_DATA_NOLAN;
-
-		// sql_filter
-			$ar_filter = [];
-			foreach ($ar_area_tipo as $area_tipo) {
-
-				// Reference:
-				// {
-				//	"tipo": "ich70",
-				//	"value": 2,
-				//	"section_tipo": "ich1"
-				// }
-
-				$sentences_sql = [];
-
-				// new v6 data format
-				$sentences_sql[] = 'datos#>\'{components,'.$tipo.',dato,'.$lang.'}\'@>\'[{"tipo":"'.$area_tipo.'","value":2}]\'';
-
-				$ar_filter[] = '('. implode(' OR ', $sentences_sql) .')';
-			}
-			$sql_filter = implode(' OR ', $ar_filter);
-
-		// search profiles with current user areas
-			$profile_sql	= 'SELECT section_id FROM "matrix_profiles" WHERE ' . $sql_filter;
-			$result			= JSON_RecordObj_matrix::search_free($profile_sql);
-
-		// ar_profile_id
-			$ar_profile_id = [];
-			while ($row = pg_fetch_assoc($result)) {
-				$ar_profile_id[] = $row['section_id'];
-			}
-
-
-		return $ar_profile_id;
-	}//end get_profiles_for_areas
-
-
-
 	/**
 	* GET_USER_PROJECTS
 	* Return all user active projects from user section data (component_filter_master)
