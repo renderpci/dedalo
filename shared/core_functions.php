@@ -2880,7 +2880,7 @@ function debug_prepared_statement( string $sql_template, array $params, $connect
     
     foreach ($params as $i => $param) {
         if ($connection) {
-            $value = pg_escape_literal($connection, $param);
+            $value = is_string($param) ? pg_escape_literal($connection, $param) : $param;
         } else {
             // Simple escaping for debugging only
             if (is_string($param)) {
@@ -2894,7 +2894,7 @@ function debug_prepared_statement( string $sql_template, array $params, $connect
             }
         }
         
-        $debug_sql = str_replace('$' . ($i + 1), $value, $debug_sql);
+        $debug_sql = str_replace('$' . ($i + 1), (string)$value, $debug_sql);
     }
     
     return $debug_sql;
