@@ -711,11 +711,6 @@ class section_record {
 	}//end update_modified_section_data
 
 
-
-	### INVERSE LOCATORS / REFERENCES #####################################################################################
-
-
-
 	/**
 	* GET_INVERSE_REFERENCES
 	* Get calculated inverse locators for all matrix tables
@@ -857,8 +852,9 @@ class section_record {
 			$section_tipo	= $this->section_tipo;
 			$section_id		= $this->section_id;
 			$data			= $this->get_data();
+			$column 		= 'media';
 
-			$media_data = $data['media'];
+			$media_data = $data->$column;
 
 			if( empty($media_data) ){
 				debug_log(__METHOD__." Nothing to remove ".to_string(), logger::DEBUG);
@@ -868,8 +864,7 @@ class section_record {
 			$media_component_models = component_media_common::get_media_components();
 
 		// components into section dato
-			$media_tipos = array_keys($media_data);
-			foreach( $media_tipos as $component_tipo ) {
+			foreach( $media_data as $component_tipo => $component_data) {
 
 				$model = ontology_node::get_model_by_tipo( $component_tipo, true );
 				if (!in_array($model, $media_component_models)) {
@@ -900,7 +895,7 @@ class section_record {
 					continue;
 				}
 
-				$ar_restored[] = (object)[
+				$ar_removed[] = (object)[
 					'tipo'	=> $component_tipo,
 					'model'	=> $model
 				];
