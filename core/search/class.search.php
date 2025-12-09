@@ -948,31 +948,48 @@ class search {
 	*/
 	public function parse_sql_filter_by_locators() : string {
 
-		$main_from_sql			= $this->build_main_from_sql();
-		$sql_offset				= $this->sqo->offset;
+		$this->build_main_from_sql();
+		$sql_offset = $this->sqo->offset;
 
-		$sql_filter_by_locators			= $this->build_sql_filter_by_locators();
-		$sql_filter_by_locators_order	= empty($this->sqo->order)
-			? $this->build_sql_filter_by_locators_order() // only if empty order
-			: 'ORDER BY ' . $this->build_sql_query_order();
+		$this->build_sql_filter_by_locators();
+		if ( empty($this->sqo->order) ) {
+			// $this->build_sql_filter_by_locators_order(); // only if empty order
+		} else {
+			$this->build_sql_query_order();
+		}
+
+		$sql_query = '';
 
 		// select
-			$sql_query = 'SELECT * FROM (';
-			$sql_query .= PHP_EOL . 'SELECT *';
-			$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-			$sql_query .= PHP_EOL . 'WHERE ' . $sql_filter_by_locators;
-			$sql_query .= PHP_EOL . ') main_select';
+		$sql_query .= 'SELECT * FROM (';
+		$sql_query .= PHP_EOL . 'SELECT *';
+		$sql_query .= PHP_EOL . 'FROM ' . implode(PHP_EOL, $this->sql_obj->from);
+		if (!empty($this->sql_obj->join) ){
+			$sql_query .= PHP_EOL . implode(PHP_EOL, $this->sql_obj->join);
+		}
+		$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL, $this->sql_obj->where);
+		$sql_query .= PHP_EOL . ') main_select';
+	
 		// order
-			$sql_query .= PHP_EOL . $sql_filter_by_locators_order;
+		if( !empty($this->sqo->order) ){
+			$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
+		}
+	
 		// limit
-			if (!empty($sql_limit)) {
-				$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
-			}
+		if (!empty($sql_limit)) {
+			$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+		}
+	
 		// offset
-			$sql_query .= !empty($this->sqo->offset)
-				? ' OFFSET ' . $sql_offset
-				: '';
+		$sql_query .= !empty($this->sqo->offset)
+			? ' OFFSET ' . $sql_offset
+			: '';
+
+
 		return $sql_query;
+	}//end parse_sql_filter_by_locators
+
+
 
 	/**
 	* TRIM_TIPO
