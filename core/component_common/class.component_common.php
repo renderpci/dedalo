@@ -1928,9 +1928,9 @@ abstract class component_common extends common {
 
 				// search the sections that has reference to the observable component, the component that had changed
 					$search		= search::get_instance($sqo);
-					$result		= $search->search();
+					$db_result	= $search->search();
 
-					$ar_section	= $result->ar_records;
+					$ar_section	= $db_result->fetch_all(); // Get iterator as array
 			}else{
 				// if observer don't has filter to get the sections to be updated, get the observable section to use
 				// the observe component will be created width this locator (observable section_id and section_tipo but with your own tipo)
@@ -4181,12 +4181,12 @@ abstract class component_common extends common {
 			}');
 
 		$search = search::get_instance($sqo);
-		$result = $search->search();
+		$db_result = $search->search();
 
-		$record = reset($result->ar_records);
+		$record = $db_result->fetch_one();
 
 		$tm_dato = !empty($record)
-			? $record->dato
+			? $record->data
 			: [];
 
 		// check bad data (old formats not array)
