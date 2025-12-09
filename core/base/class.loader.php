@@ -9,10 +9,12 @@ include DEDALO_CORE_PATH . '/base/class.system.php';
 include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
+// DB
 include DEDALO_CORE_PATH . '/db/class.DBi.php';
 include DEDALO_CORE_PATH . '/db/class.dd_ontology_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_activity_db_manager.php';
+include DEDALO_CORE_PATH . '/db/class.tm_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.db_result.php';
 // include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
 // include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';
@@ -38,6 +40,8 @@ include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06
 include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
 include DEDALO_CORE_PATH . '/section/class.section.php';
 include DEDALO_CORE_PATH . '/section_record/class.section_record_data.php';
+include DEDALO_CORE_PATH . '/tm_record/class.tm_record_data.php';
+include DEDALO_CORE_PATH . '/tm_record/class.tm_record.php';
 // Ontology
 include DEDALO_CORE_PATH . '/ontology/class.ontology_data_io.php';
 include DEDALO_CORE_PATH . '/ontology_engine/class.ontology_node.php';
