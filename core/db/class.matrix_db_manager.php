@@ -587,6 +587,17 @@ class matrix_db_manager {
 			);
 			return false;
 		}
+
+		// check data_to_save
+		if (empty($data_to_save)) {
+			debug_log(
+				__METHOD__
+					. " Wrong data_to_save. Expected non empty array:  " . PHP_EOL
+					. ' type: ' . gettype($data_to_save) . PHP_EOL
+					. ' table: ' . to_string($table) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
+					. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
 				logger::ERROR
 			);
 			return false;
@@ -701,6 +712,11 @@ class matrix_db_manager {
 
 			if (!pg_prepare($conn, $full_stmt_name, $sql)) {
 				debug_log(__METHOD__ . " Failed to prepare statement: " . pg_last_error($conn), logger::ERROR);
+				if (SHOW_DEBUG) {
+					$sql_debug = debug_prepared_statement($sql, $params, $conn);
+					debug_log(__METHOD__ . " sql_debug: " . $sql_debug, logger::ERROR);
+					debug_log(__METHOD__ . " data_to_save: " . json_encode($data_to_save, JSON_PRETTY_PRINT), logger::ERROR);
+				}
 				return false;
 			}
 			DBi::$prepared_statements[$full_stmt_name] = true;
@@ -826,6 +842,7 @@ class matrix_db_manager {
 	*
 	* @return array|false Returns an array of matching `section_id` values on success,
 	*                     or `false` if validation, query preparation, or execution fails.
+	* @DEPRECATED
 	*/
 	public static function search(string $table, array $filter, ?string $order = null, ?int $limit = null): array|false	{
 
@@ -953,34 +970,21 @@ class matrix_db_manager {
 
 	/**
 	* EXEC_SEARCH
-	* Perform a SQL query in DB.
+	* Perform a SQL query in DB using pg_execute and parameters.
 	* @param string $sql_query
 	* 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
 	* @param array $params = []
 	* 	Search parameters for pg_execute
-	* @return PgSql\Result|false $result
+	* @return \PgSql\Result|false $result
 	*/
-	public static function exec_search( string $sql_query, array $params=[] ) : PgSql\Result|false {
+	public static function exec_search( string $sql_query, array $params=[] ) : \PgSql\Result|false {
 
 		// debug
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 
 			// metrics
-			metrics::$search_free_total_calls++;
-
-			// query additional info
-				if (isset(debug_backtrace()[1]['function'])) {
-					$sql_prepend = '-- exec_search : ' ."\n";
-
-					foreach ([1,2,3,4,5,6,7,8] as $key) {
-						if (isset(debug_backtrace()[$key]['function'])) {
-							$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
-						}
-					}
-
-					$sql_query = $sql_prepend . trim($sql_query);
-				}
+			metrics::$exec_search_total_calls++;
 		}
 
 		// connection to DDBB
@@ -1017,7 +1021,9 @@ class matrix_db_manager {
 		if($result===false) {
 			debug_log(__METHOD__
 				." Error Processing exec_SEARCH Request. :". PHP_EOL
-				.' pg_last_error: ' . pg_last_error($conn)
+				.' pg_last_error: ' . pg_last_error($conn) . PHP_EOL
+				.' sql_query: ' . $sql_query . PHP_EOL
+				.' params: ' . json_encode($params) . PHP_EOL
 				, logger::ERROR
 			);
 			if(SHOW_DEBUG===true) {
@@ -1028,6 +1034,7 @@ class matrix_db_manager {
 
 		// debug
 		if(SHOW_DEBUG===true) {
+			// time
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 			if($total_time_ms>SLOW_QUERY_MS) {
 				debug_log(__METHOD__
@@ -1038,18 +1045,34 @@ class matrix_db_manager {
 			}
 
 			// metrics
-			metrics::$search_free_total_time += $total_time_ms;
+			metrics::$exec_search_total_time += $total_time_ms;
+			
+			// query additional info
+			if (isset(debug_backtrace()[1]['function'])) {
+				
+				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
 
-			// debug_log(__METHOD__
-			// 	.' exec_search: ' . PHP_EOL
-			// 	.' ' . to_string($sql_query) . PHP_EOL
-			// 	.' Search time ms: ' . $total_time_ms
-			// 	, logger::WARNING
-			// );
+				foreach ([1,2,3,4,5,6,7,8] as $key) {
+					if (isset(debug_backtrace()[$key]['function'])) {
+						$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
+					}
+				}
+				$sql_query = $sql_prepend . trim($sql_query);
+			}
+
+			// debug log sql query. See PHP log file
+			$sql_query = '-- exec_search: ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
+			$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
+			$level = $total_time_ms > 20 ? logger::ERROR : logger::DEBUG;
+			debug_log(__METHOD__
+				. ' sql_query_debug: ' . PHP_EOL
+				. PHP_EOL . $sql_query_debug . PHP_EOL
+				, $level
+			);
 		}
 
 
-		return $result; // PgSql\Result or false
+		return $result; // \PgSql\Result or false
 	}//end exec_search
 
 
