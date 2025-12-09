@@ -125,4 +125,30 @@ trait order {
 	}//end build_sql_query_order
 
 
+	/**
+	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
+	* @return void
+	*/
+	public function build_sql_filter_by_locators_order() : void {
+
+		if ( empty($this->sqo->filter_by_locators) ) {
+			return;
+		}
+
+		$ar_values = [];
+		foreach ($this->sqo->filter_by_locators as $key => $current_locator) {
+
+			$value  = '(\''.$current_locator->section_tipo.'\'';
+			$value .= ','.$current_locator->section_id;
+			$value .= ','.($key+1).')';
+
+			$ar_values[] = $value;
+		}
+
+		$string_query = 'LEFT JOIN (VALUES ' . implode(',', $ar_values) . ') as x(ordering_section, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section ORDER BY x.ordering ASC';
+
+		$this->sql_obj->join[] = $string_query;
+	}//end build_sql_filter_by_locators_order
+
+
 }//end order
