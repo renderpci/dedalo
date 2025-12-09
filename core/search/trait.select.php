@@ -35,11 +35,15 @@ trait select {
 			? $this->main_section_tipo_alias.'.section_id'
 			: 'DISTINCT ON ('.$this->main_section_tipo_alias.'.section_id) '.$this->main_section_tipo_alias.'.section_id';
 
-		// Select fallback to all matrix columns when $sqo->select is empty or unset
+		// section_tipo
+		// Mandatory in every sentence
+		$this->sql_obj->select[] = $this->main_section_tipo_alias.'.section_tipo';
+
+		// Select fallback to all matrix columns when $sqo->select is unset (null)
 		// Set the default with all columns
-		if ( empty($sqo->select) ) {
+		$select = $sqo->select ?? null;
+		if ( $select === null ) {
 			$sqo->select = [
-				(object)['column' => 'section_tipo'],
 				(object)['column' => 'data'],
 				(object)['column' => 'relation'],
 				(object)['column' => 'string'],
@@ -49,7 +53,6 @@ trait select {
 				(object)['column' => 'number'],
 				(object)['column' => 'media'],
 				(object)['column' => 'misc'],
-				(object)['column' => 'relation_search'],
 				(object)['column' => 'meta']
 			];
 		}
@@ -60,9 +63,9 @@ trait select {
 			$key	= $select_object->key ?? null;
 			$column	= $select_object->column;
 
-			// section_id is mandatory
+			// section_id and section_tipo is mandatory
 			// When it is set doesn't include again.
-			if( $column==='section_id' ){
+			if( $column==='section_id' || $column==='section_tipo' ){
 				continue;
 			}
 
@@ -72,6 +75,7 @@ trait select {
 
 			// key add as alias
 			if( !empty($key) ){
+				$sentence .= '->'.'\''.$key.'\''; // matrix.section_id->'oh62'
 				$sentence .= ' as '.$key; // DISTINCT ON (matrix.section_id) matrix.section_id as oh62
 			}
 
