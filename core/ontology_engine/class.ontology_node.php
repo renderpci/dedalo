@@ -339,7 +339,7 @@ class ontology_node {
 
 
 		return $model_map[$model] ?? $model;
-	}//end get_model_name
+	}//end get_model
 
 
 

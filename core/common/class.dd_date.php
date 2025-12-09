@@ -791,6 +791,8 @@ class dd_date extends stdClass {
 	* GET_TIMESTAMP_NOW_FOR_DB
 	* Build current time ready to save to SQL as timestamp field
 	* @param array|null $offset
+	* ['sub' => 'PT1M']; (-1 minute)
+	* ['add' =>'PT1H']; (+1 hour)
 	* @return string $timestamp
 	* 	current time formatted for saved to SQL timestamp field
 	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
@@ -804,8 +806,8 @@ class dd_date extends stdClass {
 
 			case !empty($offset):
 
-				$offset_key 	= key($offset);
-				$offset_value 	= $offset[$offset_key];
+				$offset_key 	= key($offset); // sub | add
+				$offset_value 	= $offset[$offset_key]; // P1D (+/- one day)
 				$date->$offset_key(new DateInterval($offset_value)); // Formatted like: P10D (10 days)
 				$timestamp = $date->format('Y-m-d H:i:s'); 	// Default as DB format
 				break;

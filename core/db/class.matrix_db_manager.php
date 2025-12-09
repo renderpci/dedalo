@@ -804,13 +804,12 @@ class matrix_db_manager {
 		}
 
 		return true;
-	}//end update
+	}//end delete
 
 
 
 	/**
 	* SEARCH
-	*
 	* Performs a filtered search on a specified PostgreSQL table and returns
 	* a list of matching `section_id` records.
 	*

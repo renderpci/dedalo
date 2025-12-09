@@ -258,7 +258,7 @@ class component_security_access extends component_common {
 		}
 
 		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, etc.)
-		$children_recursive = self::get_children_recursive_security_acces($section_tipo, $ar_tipo_to_be_exclude);
+		$children_recursive = self::get_children_recursive_security_access($section_tipo, $ar_tipo_to_be_exclude);
 
 		// v6
 		// see if the section has a ddo_map defined
@@ -338,13 +338,13 @@ class component_security_access extends component_common {
 
 
 	/**
-	 * GET_CHILDREN_RECURSIVE_SECURITY_ACCES
+	 * GET_CHILDREN_RECURSIVE_SECURITY_ACCESS
 	 * Custom recursive children resolve
 	 * @param string $tipo
 	 * @param array|null $ar_tipo_to_be_exclude
 	 * @return array $element_datalist
 	 */
-	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude = null): array
+	private static function get_children_recursive_security_access(string $tipo, ?array $ar_tipo_to_be_exclude = null): array
 	{
 
 		// static cache
@@ -440,7 +440,7 @@ class component_security_access extends component_common {
 				];
 				$ar_elements[] = $item;
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_acces($element_tipo, $ar_tipo_to_be_exclude) );
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_access($element_tipo, $ar_tipo_to_be_exclude) );
 		}
 
 		// STORE CACHE DATA
@@ -448,7 +448,7 @@ class component_security_access extends component_common {
 
 
 		return $ar_elements;
-	}//end get_children_recursive_security_acces
+	}//end get_children_recursive_security_access
 
 
 
