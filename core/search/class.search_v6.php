@@ -6,7 +6,7 @@
 * 	GROUP BY md1015.id
 * 	HAVING count(*) > 1
 */
-class search {
+class search_v6 {
 
 
 
