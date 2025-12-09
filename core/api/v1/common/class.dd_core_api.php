@@ -1347,6 +1347,8 @@ final class dd_core_api {
 			if ( !property_exists($sqo, 'filter_by_locators') && isset($sqo_session) && isset($sqo_session->filter_by_locators) ) {
 				$sqo->filter_by_locators = $sqo_session->filter_by_locators;
 			}
+		// full count
+			$sqo->full_count = true;
 
 		// search
 			if (!isset($result)) {
