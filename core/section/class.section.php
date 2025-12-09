@@ -1472,7 +1472,6 @@ class section extends common {
 	// }//end Save
 
 
-
 	/**
 	* CREATE_RECORD
 	* Create new record a section record in matrix
@@ -1571,24 +1570,7 @@ class section extends common {
 				'mode' => 'new_record'
 			]);
 
-		// 3. Save time machine data
-			// Save current new section in time machine (section info data will not change, only components can do changes)
-				$tm_save_options = new stdClass();
-					$tm_save_options->time_machine_data	= $section_data;
-					$tm_save_options->time_machine_lang	= DEDALO_DATA_NOLAN; // Always nolan for section
-					$tm_save_options->time_machine_tipo	= $tipo;
-					$tm_save_options->new_record		= true;
-
-			// Save the time machine record
-				$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
-					common::get_matrix_table_from_tipo($tipo),
-					(int)$section_id, // int section_id
-					$tipo, // string section tipo
-					true // bool enable cache
-				);
-				$JSON_RecordObj_matrix->save_time_machine($tm_save_options);
-
-		// 4. Log the creation process
+		// 3. Log the creation process
 			// Logger activity
 				logger::$obj['activity']->log_message(
 					'NEW', // string $message
@@ -1605,10 +1587,10 @@ class section extends common {
 					$user_id // int
 				);
 
-		// 5. Set defaults project data (dd153)
+		// 4. Set defaults project data (dd153)
 			$this->set_projects_to_new_section_record( $section_id, $component_filter_data );
 
-		// 6. Reset caches
+		// 5. Reset caches
 			switch ($tipo) {
 
 				case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO:
@@ -1631,7 +1613,7 @@ class section extends common {
 					break;
 			}
 
-		// 7. Debug
+		// 6. Debug
 			if(SHOW_DEBUG===true) {
 
 				$total_time_ms = exec_time_unit($start_time, 'ms');
@@ -4310,9 +4292,9 @@ class section extends common {
 											]
 										}');
 									$search = search::get_instance($sqo);
-									$result = $search->search();
+									$db_result = $search->search();
 
-									$note_section_id = $result->ar_records[0]->section_id ?? null;
+									$note_section_id = $db_result->fetch_one()->section_id ?? null;
 
 								// component
 									$note_model			= ontology_node::get_model_by_tipo($current_ddo_tipo,true);
