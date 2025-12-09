@@ -67,8 +67,6 @@ abstract class common {
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 		public $bl_loaded_structure_data;
-		//is_loaded_matrix_data. Set to true when element matrix data is loaded. Avoid reconnect to db data again
-		public $is_loaded_matrix_data = false;
 
 		// TABLE  matrix_table
 		// public $matrix_table;
@@ -323,32 +321,6 @@ abstract class common {
 
 		$this->permissions = (int)$number;
 	}//end set_permissions
-
-
-
-	/**
-	* SET_IS_LOADED_MATRIX_DATA
-	* @param bool $value
-	* @return bool
-	*/
-	public function set_is_loaded_matrix_data( bool $value ) : bool {
-
-		$this->is_loaded_matrix_data = $value;
-
-		return true;
-	}//end set_is_loaded_matrix_data
-
-
-
-	/**
-	* GET_IS_LOADED_MATRIX_DATA
-	* @return bool $value
-	*/
-	public function get_is_loaded_matrix_data() : bool {
-
-		return $this->is_loaded_matrix_data;
-	}//end get_is_loaded_matrix_data
-
 
 
 	/**
@@ -643,7 +615,6 @@ abstract class common {
 	/**
 	* SET_LANG
 	* When isset lang, valor and dato are cleaned
-	* and $this->is_loaded_matrix_data is reset to force load from database again
 	* @param string $lang
 	* @return bool
 	*/
@@ -691,8 +662,6 @@ abstract class common {
 				}
 			}
 
-		// force reload dato from database when dato is requested again
-		$this->set_is_loaded_matrix_data(false);
 	}//end set_to_force_reload_dato
 
 
