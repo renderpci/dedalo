@@ -84,15 +84,6 @@ class section_record {
 		// share the same cached instance of 'section_record_data', independent of the mode.
 		$this->data_instance->read();
 
-		/* TEST
-		$column = 'string';
-		$tipo = 'rsc21';
-		// $rsc21_data = $this->section_record_data->get_data()['string']->{$tipo} ?? null;
-		// $rsc21_data = $this->get_column('string')->{$tipo} ?? null;
-		$rsc21_data = $this->data_columns[$column]->{$tipo} ?? null;
-			dump($rsc21_data, ' rsc21_data ++ '.to_string());
-		*/
-
 		return true;
 	}//end load_data
 
@@ -213,14 +204,6 @@ class section_record {
 	*/
 	public function save_component_data( array $data_to_save ) : bool {
 
-		// Set the value into the whole section record data
-		// $this->data_instance->set_key_data(
-		//  	$column,
-		// 	$tipo,
-		// 	$value
-		// );
-
-
 		// Save into DB
 		$result = $this->data_instance->save_key_data(
 			$data_to_save
@@ -229,23 +212,6 @@ class section_record {
 		if( $result === false ){
 			return false;
 		}
-
-		// // Save its own counter
-		// $count_result = $this->data_instance->save_key_data(
-		// 	'counters',
-		// 	$tipo
-		// );
-
-		// // Check if the counter was saved. Alert if error.
-		// if( $count_result === false ){
-		// 	debug_log(__METHOD__
-		// 		. " Counter save fail for component" . PHP_EOL
-		// 		. " tipo: ".to_string( $tipo ). PHP_EOL
-		// 		. " section_tipo: " .to_string( $this->section_tipo ). PHP_EOL
-		// 		. " section_id: " .to_string( $this->section_id ). PHP_EOL
-		// 		, logger::ERROR
-		// 	);
-		// }
 
 		// section updates
 
