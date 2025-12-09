@@ -2497,6 +2497,7 @@ abstract class component_common extends common {
 
 			$result[] = $item;
 		}
+
 		// Sort result for easy user select
 			if(isset($this->properties->sort_by)){
 				$custom_sort = reset($this->properties->sort_by); // Only one at this time
@@ -2544,6 +2545,7 @@ abstract class component_common extends common {
 	* @return object $response
 	*/
 	public function get_list_of_values( string $lang ) : object {
+
 		$start_time = start_time();
 
 		// response

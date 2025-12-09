@@ -16,63 +16,6 @@ class component_select extends component_relation_common {
 
 
 
-	// /**
-	// * GET_VALOR
-	// * Get value . default is get dato . overwrite in every different specific component
-	// * @param string|null $lang = DEDALO_DATA_LANG
-	// * @return string|null $valor
-	// */
-	// public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
-
-	// 	$dato = $this->get_dato();
-
-	// 	// case user id root value
-	// 		if (isset($dato[0])
-	// 			&& $dato[0]->section_tipo===DEDALO_SECTION_USERS_TIPO
-	// 			&& $dato[0]->section_id==='-1') {
-
-	// 			return 'root';
-	// 		}
-
-	// 	// Test dato format (b4 changed to object)
-	// 		foreach ($dato as $current_value) {
-	// 			if (!is_object($current_value)) {
-	// 				if(SHOW_DEBUG) {
-	// 					dump($dato," actual invalid dato: ");
-	// 				}
-	// 				debug_log(__METHOD__
-	// 					. " Wrong dato format. OLD format dato in $this->label Expected object locator, but received:" . PHP_EOL
-	// 					. ' type: ' . gettype($current_value) . PHP_EOL
-	// 					. ' tipo: ' . $this->tipo . PHP_EOL
-	// 					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-	// 					. ' section_id: ' . $this->section_id . PHP_EOL
-	// 					. ' current_value: ' . to_string($current_value)
-	// 					, logger::ERROR
-	// 				);
-	// 				return null;
-	// 			}
-	// 		}
-
-	// 	$ar_list_of_values = $this->get_ar_list_of_values($lang, true); // Important: We are looking for the value in the current language.
-	// 	$ar_values = [];
-	// 	if (!empty($ar_list_of_values->result)) {
-	// 		foreach ($ar_list_of_values->result as $item) {
-
-	// 			$locator = $item->value;
-	// 			if ( true===locator::in_array_locator($locator, $dato, ['section_id','section_tipo']) ) {
-	// 				$ar_values[] = $item->label;
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// Set value
-	// 	$valor = implode(', ', $ar_values);
-
-	// 	return $valor;
-	// }//end get_valor
-
-
-
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method

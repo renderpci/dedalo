@@ -8,7 +8,7 @@ class search_tm extends search {
 
 
 
-	# matrix_table (fixed on get main select)
+	// matrix_table (fixed on get main select)
 	protected string $matrix_table = 'matrix_time_machine';
 
 

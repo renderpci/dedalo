@@ -255,7 +255,7 @@ abstract class filter {
 				debug_log(__METHOD__." Expected projects_name_tipo value was 'dd156' and received value is: ".to_string($projects_name_tipo), logger::ERROR);
 			}
 
-		// dato. Array of locators
+		// data. Array of locators
 			$is_global_admin = security::is_global_admin($user_id);
 			if ($is_global_admin===true) {
 

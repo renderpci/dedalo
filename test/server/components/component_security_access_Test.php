@@ -280,22 +280,22 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_children_recursive_security_acces
+	* TEST_get_children_recursive_security_access
 	* @return void
 	*/
-	public function test_get_children_recursive_security_acces() {
+	public function test_get_children_recursive_security_access() {
 
 		$component = $this->build_component_instance();
 
 		$tipo = 'test3';
 
-		// $result	= component_security_access::get_children_recursive_security_acces(
+		// $result	= component_security_access::get_children_recursive_security_access(
 		// 	$tipo
 		// );
 		// private method access. Note that this method saves !
 		$result	= PHPUnitUtil::callMethod(
 			$component,
-			'get_children_recursive_security_acces',
+			'get_children_recursive_security_access',
 			array(
 				$tipo
 			)
