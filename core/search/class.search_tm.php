@@ -53,7 +53,7 @@ class search_tm extends search {
 
 		// Unique column for count
 		// If the SQO has active full_count set the SELECT with specific count for the section_id column
-		if ( $this->sqo->full_count===true ) {
+		if ( isset($this->sqo->full_count) && $this->sqo->full_count===true ) {
 			$this->build_full_count_sql_query_select();
 			return;
 		}
