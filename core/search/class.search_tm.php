@@ -29,13 +29,13 @@ class search_tm extends search {
 
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* @return string $string_query
+	* @return void
 	*/
-	public function build_sql_filter_by_locators_order() : string {
+	public function build_sql_filter_by_locators_order() : void {
 
-		$string_query = 'ORDER BY id DESC';
+		$string_query = 'id DESC';
 
-		return $string_query;
+		$this->sql_obj->order[] = $string_query;
 	}//end build_sql_filter_by_locators_order
 
 
@@ -47,19 +47,20 @@ class search_tm extends search {
 	* 	"column" : "relation" string column name
 	* 	"key": "oh25" string|null component tipo
 	* }
-	* @return true
+	* @return void
 	*/
-	public function build_sql_query_select() : true {
+	public function build_sql_query_select() : void {
 
 		// Unique column for count
 		// If the SQO has active full_count set the SELECT with specific count for the section_id column
 		if ( $this->sqo->full_count===true ) {
 			$this->build_full_count_sql_query_select();
-
-			return true;
+			return;
 		}
 
 		$ar_sql_select = [];
+		
+		// Add all columns
 		$ar_sql_select[] = '*';
 
 		// Add order columns to select when needed
@@ -67,12 +68,8 @@ class search_tm extends search {
 			$ar_sql_select[] = $select_line;
 		}
 
-		# Join all
-			$this->sql_obj->select[] = implode(','.PHP_EOL, $ar_sql_select);
-
-
-
-		return true;
+		// Join all
+		$this->sql_obj->select[] = implode(','.PHP_EOL, $ar_sql_select);
 	}//end build_sql_query_select
 
 
