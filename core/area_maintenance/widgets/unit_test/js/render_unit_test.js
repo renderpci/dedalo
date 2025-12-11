@@ -90,7 +90,7 @@ const get_content_data_edit = async function(self) {
 			e.stopPropagation()
 
 			// url
-			const url = `${DEDALO_ROOT_WEB}/core/unit_test/`
+			const url = `${DEDALO_ROOT_WEB}/test/client/`
 
 			window.open(url)
 		}
