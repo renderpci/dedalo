@@ -3,49 +3,61 @@
 use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
+require_once dirname(__FILE__, 2) . '/class.BaseTestCase.php';
 
 
 
-final class dd_ontology_db_manager_test extends TestCase {
-
-
-
-	public static $last_id = 1;
+final class dd_ontology_db_manager_test extends BaseTestCase {
 
 
 
 	/**
-	* EXECUTION_TIMING
-	* @return
-	*/
-	protected function execution_timing( string $action, callable $callback, int|float $estimated_time, int $from=1, int $n=10000 ) {
+	 * SET_UP_BEFORE_CLASS
+	 * Create test table before running any tests
+	 * @return void
+	 */
+	public static function setUpBeforeClass(): void
+	{
+		// Force to change the table to use to prevent touching the working table
+		dd_ontology_db_manager::$table = 'dd_ontology_test';
 
-		$start_time=start_time();
+		$conn = DBi::_getConnection();
 
-		// $from = 1;
-		// $n = 1000000;
-		// return
+		// Create the test table if it doesn't exist
+		// Copy structure from dd_ontology table function
+		$sql = "
+			DROP TABLE IF EXISTS dd_ontology_test CASCADE;
+			DROP SEQUENCE IF EXISTS dd_ontology_test_id_seq;
+			SELECT duplicate_table_with_independent_sequences('dd_ontology', 'dd_ontology_test', true);
+		";
+		pg_query($conn, $sql);
 
-		$to = $from + $n;
-		for ($i=$from; $i < $to; $i++) {
-			$callback($i);
-			self::$last_id = $i;
-		}
-		// Check the time consuming. Expected value is around 2100 ms
-		$total_time = exec_time_unit($start_time);
-		$max_time = $estimated_time * 1.6;
-			debug_log(__METHOD__
-				. " [". strtoupper($action) ."] total_time ms: " . $total_time . " - average ms $total_time/$n = " . $total_time/$n
-				, logger::WARNING
-		);
-		$eq = $total_time < $max_time;
-		$this->assertTrue(
-			$eq,
-			"massive ($action) expected execution time rows bellow $max_time ms" . PHP_EOL
-				.'total_time ms: ' . $total_time . PHP_EOL
-				.'estimated_time ms: ' . $estimated_time
-		);
-	}//end execution_timing
+		echo " 🤞 Duplicated table dd_ontology => dd_ontology_test" . PHP_EOL . PHP_EOL;
+	}//end setUpBeforeClass
+
+
+
+	/**
+	 * TEAR_DOWN_AFTER_CLASS
+	 * Clean up test table after all tests complete
+	 * @return void
+	 */
+	public static function tearDownAfterClass(): void
+	{
+		$conn = DBi::_getConnection();
+		
+		// Drop test table and sequence
+		$sql = "
+			DROP TABLE IF EXISTS dd_ontology_test CASCADE;
+			DROP SEQUENCE IF EXISTS dd_ontology_test_id_seq;
+		";
+		pg_query($conn, $sql);
+
+		echo PHP_EOL. ". 🤞 Dropped table dd_ontology_test" . PHP_EOL . PHP_EOL;
+
+		// Reset to original table
+		dd_ontology_db_manager::$table = 'dd_ontology';
+	}//end tearDownAfterClass
 
 
 
@@ -73,18 +85,18 @@ final class dd_ontology_db_manager_test extends TestCase {
 	*/
 	public function test_vars(): void {
 
-		// ontology_table (should be test table after setUpBeforeClass)
-		$ontology_table = dd_ontology_db_manager::$ontology_table;
-		$eq = $ontology_table === 'dd_ontology_test';
+		// table (should be test table after setUpBeforeClass)
+		$table = dd_ontology_db_manager::$table;
+		$eq = $table === 'dd_ontology_test';
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'ontology_table: ' . to_string($ontology_table)
+				.'table: ' . to_string($table)
 		);
 
-		// ontology_columns
-		$ontology_columns = dd_ontology_db_manager::$ontology_columns;
-		$eq = $ontology_columns === [
+		// columns
+		$columns = dd_ontology_db_manager::$columns;
+		$eq = $columns === [
 			'tipo'				=> true,
 			'parent'			=> true,
 			'term'				=> true,
@@ -101,12 +113,12 @@ final class dd_ontology_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'ontology_columns: ' . to_string($ontology_columns)
+				.'columns: ' . to_string($columns)
 		);
 
-		// ontology_json_columns
-		$ontology_json_columns = dd_ontology_db_manager::$ontology_json_columns;
-		$eq = $ontology_json_columns === [
+		// json_columns
+		$json_columns = dd_ontology_db_manager::$json_columns;
+		$eq = $json_columns === [
 			'term'				=> true,
 			'relations'			=> true,
 			'properties'		=> true
@@ -114,30 +126,30 @@ final class dd_ontology_db_manager_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'ontology_json_columns: ' . to_string($ontology_json_columns)
+				.'json_columns: ' . to_string($json_columns)
 		);
 
-		// ontology_int_columns
-		$ontology_int_columns = dd_ontology_db_manager::$ontology_int_columns;
-		$eq = $ontology_int_columns === [
+		// int_columns
+		$int_columns = dd_ontology_db_manager::$int_columns;
+		$eq = $int_columns === [
 			'order_number'		=> true
 		];
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'ontology_int_columns: ' . to_string($ontology_int_columns)
+				.'int_columns: ' . to_string($int_columns)
 		);
 
-		// ontology_boolean_columns
-		$ontology_boolean_columns = dd_ontology_db_manager::$ontology_boolean_columns;
-		$eq = $ontology_boolean_columns === [
+		// boolean_columns
+		$boolean_columns = dd_ontology_db_manager::$boolean_columns;
+		$eq = $boolean_columns === [
 			'is_model'			=> true,
 			'is_translatable'	=> true
 		];
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'ontology_boolean_columns: ' . to_string($ontology_boolean_columns)
+				.'boolean_columns: ' . to_string($boolean_columns)
 		);
 
 		// load_cache
@@ -153,117 +165,16 @@ final class dd_ontology_db_manager_test extends TestCase {
 
 
 	/**
-	 * SET_UP_BEFORE_CLASS
-	 * Create test table before running any tests
-	 * @return void
-	 */
-	public static function setUpBeforeClass(): void
-	{
-		// Force to change the table to use to prevent touching the working table
-		dd_ontology_db_manager::$ontology_table = 'dd_ontology_test';
-
-		$conn = DBi::_getConnection();
-
-		// Create the test table if it doesn't exist
-		// Copy structure from dd_ontology table function
-		$sql = "
-			CREATE OR REPLACE FUNCTION duplicate_table_with_independent_sequences(
-			    source_table TEXT,
-			    target_table TEXT,
-			    reset_sequence BOOLEAN DEFAULT FALSE,
-			    start_value BIGINT DEFAULT 1
-			) RETURNS void AS $$
-			DECLARE
-			    col_record RECORD;
-			    max_val BIGINT;
-			    seq_name TEXT;
-			    new_seq_name TEXT;
-			    sequence_start BIGINT;
-			BEGIN
-			    -- Create the table structure without defaults
-			    EXECUTE format('CREATE TABLE %I (LIKE %I INCLUDING CONSTRAINTS INCLUDING INDEXES EXCLUDING DEFAULTS)',
-			                  target_table, source_table);
-
-			    -- Handle sequences for SERIAL columns
-			    FOR col_record IN
-			        SELECT
-			            column_name,
-			            column_default,
-			            REPLACE(SPLIT_PART(column_default, '''', 2), source_table || '_', '') as base_seq_name
-			        FROM information_schema.columns
-			        WHERE table_name = source_table
-			        AND column_default LIKE 'nextval%'
-			    LOOP
-			        -- Create new sequence name
-			        new_seq_name := target_table || '_' || col_record.base_seq_name;
-
-			        -- Determine sequence start value
-			        IF reset_sequence THEN
-			            sequence_start := start_value;
-			        ELSE
-			            -- Get current maximum value from source table
-			            EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I',
-			                          col_record.column_name, source_table) INTO max_val;
-			            sequence_start := max_val + 1;
-			        END IF;
-
-			        -- Create new sequence
-			        EXECUTE format('CREATE SEQUENCE %I START WITH %s', new_seq_name, sequence_start);
-
-			        -- Set new default
-			        EXECUTE format('ALTER TABLE %I ALTER COLUMN %I SET DEFAULT nextval(''%I''::regclass)',
-			                      target_table, col_record.column_name, new_seq_name);
-			    END LOOP;
-
-			    RAISE NOTICE 'Table % duplicated successfully with independent sequences', target_table;
-			END;
-			$$ LANGUAGE plpgsql;
-		";
-		pg_query($conn, $sql);
-
-		$sql = "
-			DROP TABLE IF EXISTS dd_ontology_test CASCADE;
-			DROP SEQUENCE IF EXISTS dd_ontology_test_id_seq;
-			SELECT duplicate_table_with_independent_sequences('dd_ontology', 'dd_ontology_test', true);
-		";
-		pg_query($conn, $sql);
-	}//end setUpBeforeClass
-
-
-
-	/**
-	 * TEAR_DOWN_AFTER_CLASS
-	 * Clean up test table after all tests complete
-	 * @return void
-	 */
-	public static function tearDownAfterClass(): void
-	{
-		$conn = DBi::_getConnection();
-		
-		// Drop test table and sequence
-		$sql = "
-			DROP TABLE IF EXISTS dd_ontology_test CASCADE;
-			DROP SEQUENCE IF EXISTS dd_ontology_test_id_seq;
-		";
-		pg_query($conn, $sql);
-
-		// Reset to original table
-		dd_ontology_db_manager::$ontology_table = 'dd_ontology';
-	}//end tearDownAfterClass
-
-
-
-	/**
 	 * TEST_table_setup
 	 * Verify test table was created correctly
 	 * @return void
 	 */
 	public function test_table_setup(): void
 	{
-		$ontology_table = dd_ontology_db_manager::$ontology_table;
+		$table = dd_ontology_db_manager::$table;
 		$this->assertEquals(
 			'dd_ontology_test',
-			$ontology_table,
+			$table,
 			'Expected test table to be set'
 		);
 	}//end test_table_setup
@@ -891,16 +802,29 @@ final class dd_ontology_db_manager_test extends TestCase {
 		$result_invalid = dd_ontology_db_manager::search([]);
 		$this->assertFalse($result_invalid, 'Expected false when searching with empty values');
 
-		// Test search with invalid column (should throw exception)
-		$exception_thrown = false;
-		try {
-			dd_ontology_db_manager::search([
-				'invalid_column_name' => 'value'
-			]);
-		} catch (Exception $e) {
-			$exception_thrown = true;
-		}
-		$this->assertTrue($exception_thrown, 'Expected exception for invalid column name');
+		// Test search with invalid column (should fail)		
+		$result = dd_ontology_db_manager::search([
+			'invalid_column_name' => 'value'
+		]);
+		$this->assertFalse($result, 'Expected false when searching with invalid column name');
+
+		
+		// massive seaech
+		$this->execution_timing(
+			'search',
+			function($i) {
+				return dd_ontology_db_manager::search(
+					[
+						'parent' => 'dd' . $i
+					],
+					true
+				);
+			},
+			35, // estimated time ms
+			1, // from sid
+			10000 // n records
+		);
+
 
 		// Clean up test records
 		dd_ontology_db_manager::delete($tipo1);
@@ -994,17 +918,11 @@ final class dd_ontology_db_manager_test extends TestCase {
 		$result_empty = dd_ontology_db_manager::update($tipo, []);
 		$this->assertFalse($result_empty, 'Expected false for empty values');
 
-		// Test 2: Update with invalid column (should throw exception)
-		$exception_thrown = false;
-		try {
-			dd_ontology_db_manager::update($tipo, [
-				'invalid_column' => 'value'
-			]);
-		} catch (Exception $e) {
-			$exception_thrown = true;
-			$this->assertStringContainsString('Invalid column name', $e->getMessage());
-		}
-		$this->assertTrue($exception_thrown, 'Expected exception for invalid column');
+		// Test 2: Update with invalid column (should fail)		
+		$result = dd_ontology_db_manager::update($tipo, [
+			'invalid_column' => 'value'
+		]);
+		$this->assertFalse($result, 'Expected false for invalid column');
 
 		// Test 3: Update with NULL to clear values
 		dd_ontology_db_manager::update($tipo, [
@@ -1072,17 +990,11 @@ final class dd_ontology_db_manager_test extends TestCase {
 		$result_empty = dd_ontology_db_manager::search([]);
 		$this->assertFalse($result_empty, 'Expected false for empty search values');
 
-		// Test 2: Search with invalid column (should throw exception)
-		$exception_thrown = false;
-		try {
-			dd_ontology_db_manager::search([
-				'invalid_column' => 'value'
-			]);
-		} catch (Exception $e) {
-			$exception_thrown = true;
-			$this->assertStringContainsString('Invalid column name', $e->getMessage());
-		}
-		$this->assertTrue($exception_thrown, 'Expected exception for invalid column');
+		// Test 2: Search with invalid column (should fail)
+		$result = dd_ontology_db_manager::search([
+			'invalid_column' => 'value'
+		]);
+		$this->assertFalse($result, 'Expected false for invalid column');
 
 		// Test 3: Search with no results
 		$result_no_match = dd_ontology_db_manager::search([
