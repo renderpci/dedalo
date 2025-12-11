@@ -435,7 +435,7 @@ component_text_area.prototype.tags_to_html = function(value) {
 	// fix bug legacy data ../../../inc/btn.php/[geo-n-1-] => ../component_text_area/tag/?id=[geo-n-1-]
 		const html_safe = html===null
 			? html
-			: html.replace('../../../inc/btn.php/', '../component_text_area/tag/?id=')
+			: html.replace('../../../inc/btn.php/', '../../core/component_text_area/tag/?id=')
 
 	// debug
 		if(SHOW_DEBUG===true) {
