@@ -72,20 +72,27 @@ class lang {
 	*/
 	public static function resolve_multiple(array $ar_lang_tld) : ?array {
 
+		// cache
+		static $resolve_multiple_lang_cache = [];
+		$cache_key = implode(',', $ar_lang_tld);
+		if (isset($resolve_multiple_lang_cache[$cache_key])) {
+			return $resolve_multiple_lang_cache[$cache_key];
+		}
+
 		// short vars
-			$tipo		= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 			$table		= lang::$langs_matrix_table;
 			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
+		$code_tipo	= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 
 		// query: (!) This is a temporal query until the search class is refactored (24/11/2025)
 		// to do: Refactor this query using search class
-			$strQuery	= '';
-			$strQuery	.= PHP_EOL . 'SELECT';
-			$strQuery	.= PHP_EOL . 'section_id, section_tipo,';
-			$strQuery	.= PHP_EOL . 'string->\''.$term_tipo.'\'->0->>\'value\' AS name,';
-			$strQuery	.= PHP_EOL . 'string->\'hierarchy41\'->0->>\'value\' AS code';
-			$strQuery	.= PHP_EOL . 'FROM "'.$table.'"';
-			$strQuery	.= PHP_EOL . 'WHERE';
+		$sql = '';
+		$sql .= PHP_EOL . 'SELECT';
+		$sql .= PHP_EOL . 'section_id, section_tipo,';
+		$sql .= PHP_EOL . 'string->\''.$term_tipo.'\'->0->>\'value\' AS name,';
+		$sql .= PHP_EOL . 'string->\''.$code_tipo.'\'->0->>\'value\' AS code';
+		$sql .= PHP_EOL . 'FROM "'.$table.'"';
+		$sql .= PHP_EOL . 'WHERE';
 
 		// ar_lang_tld_clean. Clean tld from 'lg-' prefix
 			$ar_lang_tld_clean = array_map(function($lang_tld){
@@ -97,20 +104,30 @@ class lang {
 			}, $ar_lang_tld);
 
 		// add
-		$strQuery .= PHP_EOL . "string->'hierarchy41'->0->>'value' IN ('". implode("','", $ar_lang_tld_clean) ."')";
+		$sql .= PHP_EOL . "string->'hierarchy41'->0->>'value' = ANY($1)"; // using ANY operator parametrized
+
+		// The parameters array must be an array of values to replace the placeholders.
+		// Since you only have one placeholder ($1), the parameters array has one element.
+		// IMPORTANT: pg_query_params() expects a string for the array parameter.
+		// The array should be passed as a PostgreSQL array literal string (e.g., '{"a", "b", "c"}').
+		$params = [
+			'{'. implode(',', array_map(function($v) {
+				return '"' . addslashes($v) . '"'; // Quote and escape each element
+			}, $ar_lang_tld_clean)) . '}'
+		];
 
 		// DB query exec
-			$result = JSON_RecordObj_matrix::search_free($strQuery);
+		$result = matrix_db_manager::exec_search($sql, $params);
 			if ($result===false) {
 				debug_log(__METHOD__
-					." Error on search_free. strQuery: " . PHP_EOL
-					.to_string($strQuery)
+				." Error on exec_search. strQuery: " . PHP_EOL
+				.to_string($sql)
 					, logger::ERROR
 				);
 				return null;
 			}
 
-		// response
+		// items
 			$items = [];
 			while ($rows = pg_fetch_assoc($result)) {
 
@@ -124,6 +141,9 @@ class lang {
 					'names'			=> [$names]
 				];
 			}
+
+		// cache
+		$resolve_multiple_lang_cache[$cache_key] = $items;
 
 
 		return $items;
