@@ -3075,7 +3075,7 @@ abstract class common {
 												['button_new'],
 												true, // bool from_cache
 												true, // bool resolve_virtual
-												true, // bool recursive
+												false, // bool recursive
 												true, // bool search_exact
 												false // array|bool $ar_tipo_exclude_elements
 											);
@@ -3091,7 +3091,7 @@ abstract class common {
 												['button_delete'],
 												true, // bool from_cache
 												true, // bool resolve_virtual
-												true, // bool recursive
+												false, // bool recursive
 												true, // bool search_exact
 												false // array|bool $ar_tipo_exclude_elements
 											);
@@ -3882,7 +3882,7 @@ abstract class common {
 										['button_new'],
 										true, // bool from_cache
 										true, // bool resolve_virtual
-										true, // bool recursive
+										false, // bool recursive
 										true, // bool search_exact
 										false // array|bool $ar_tipo_exclude_elements
 									);
@@ -3898,7 +3898,7 @@ abstract class common {
 										['button_delete'],
 										true, // bool from_cache
 										true, // bool resolve_virtual
-										true, // bool recursive
+										false, // bool recursive
 										true, // bool search_exact
 										false // array|bool $ar_tipo_exclude_elements
 									);
