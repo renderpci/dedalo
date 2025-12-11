@@ -145,7 +145,7 @@ export const tr = {
 			return text
 		}
 
-		const tag_url = '../component_text_area/tag/?id=';
+		const tag_url = '../../core/component_text_area/tag/?id=';
 
 		// INDEX IN
 			const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data

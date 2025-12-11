@@ -900,7 +900,7 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 		? self.tag_data_object_to_string(data_tag.data)
 		: null
 
-	const images_factory_url = '../component_text_area/tag/?id='
+	const images_factory_url = '../../core/component_text_area/tag/?id='
 
 	// Bracket_in is different for close tag
 	const bracket_in = (type.indexOf('Out')!==-1)
