@@ -2649,6 +2649,7 @@ abstract class component_common extends common {
 				$limit = 0;
 				// search_query_object
 				$sqo = new search_query_object();
+					$sqo->set_select([]);
 					$sqo->set_section_tipo($ar_sections_tipo);
 					$sqo->set_limit($limit);
 					if(!empty($dedalo_request_config->sqo->fixed_filter)){
