@@ -35,43 +35,43 @@ abstract class filter {
 		if ( abs($user_id)>0 ) {
 
 			// cache
-				$use_cache = (SHOW_DEVELOPER!==true);
-				if ($use_cache===true && isset(filter::$user_projects_cache[$user_id])) {
-					return filter::$user_projects_cache[$user_id];
-				}
+			$use_cache = (SHOW_DEVELOPER!==true);
+			if ($use_cache===true && isset(filter::$user_projects_cache[$user_id])) {
+				return filter::$user_projects_cache[$user_id];
+			}
 
 			// filter_master
-				$component_filter_master = component_common::get_instance(
-					'component_filter_master',
-					DEDALO_FILTER_MASTER_TIPO,
-					$user_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					DEDALO_SECTION_USERS_TIPO
-				);
-				$user_projects = $component_filter_master->get_dato();
+			$component_filter_master = component_common::get_instance(
+				'component_filter_master',
+				DEDALO_FILTER_MASTER_TIPO,
+				$user_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
+			$user_projects = $component_filter_master->get_dato();
 
 			// children
-				foreach ($user_projects as $current_locator) {
+			foreach ($user_projects as $current_locator) {
 
-					$children_data = component_relation_children::get_children_recursive(
-						$current_locator->section_id,
-						$current_locator->section_tipo,
-						DEDALO_PROJECTS_CHILDREN_TIPO
-					);
+				$children_data = component_relation_children::get_children_recursive(
+					$current_locator->section_id,
+					$current_locator->section_tipo,
+					DEDALO_PROJECTS_CHILDREN_TIPO
+				);
 
-					foreach ($children_data as $child_locator) {
-						// add if not already added
+				foreach ($children_data as $child_locator) {
+					// add if not already added
 					$key = $child_locator->section_id .'_'. $child_locator->section_tipo;
 					if(!isset($user_projects_keys[$key])) {
-							$user_projects[] = $child_locator;
+						$user_projects[] = $child_locator;
 						$user_projects_keys[$key] = true;
-						}
-					}
+					}						
 				}
+			}
 
 			// cache
-				filter::$user_projects_cache[$user_id] = $user_projects;
+			filter::$user_projects_cache[$user_id] = $user_projects;
 		}
 
 
@@ -149,7 +149,7 @@ abstract class filter {
 		$start_time = start_time();
 
 		// cache
-			$use_cache = true; // (SHOW_DEVELOPER!==true);
+			$use_cache = true;
 			if ($use_cache===true) {
 
 				// $cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
@@ -179,30 +179,37 @@ abstract class filter {
 		// projects_section_tipo
 			$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT; // Default is Projects but it can be another
 
-		// section map
+		// section map (expected 'dd267')
 			$ar_section_map = ontology_node::get_ar_tipo_by_model_and_relation(
 				$projects_section_tipo, // tipo
 				'section_map', // model name
 				'children', // relation_type
 				true // search_exact
 			);
-			$section_map = reset($ar_section_map); // expected 'dd267'
+			$section_map = $ar_section_map[0] ?? null; // expected 'dd267'
 			if ($section_map!=='dd267') {
 				debug_log(__METHOD__." Expected section_map value was 'dd267' and received value is: ".to_string($section_map), logger::ERROR);
+				return [];
 			}
 
-		// projects_name_tipo. Get ts_map for locate name component (for future )
+		// projects_name_tipo. Get ts_map for locate name component (for future use)
 			$ontology_node	= ontology_node::get_instance($section_map);
 			$properties		= $ontology_node->get_properties();
 			if (empty($properties)) {
-				dump($properties, ' properties ++ '.to_string($section_map));
-				// throw new Exception("Error Processing Request. properties for section_map: $section_map is empty !", 1);
-				debug_log(__METHOD__." Error Processing Request. properties for section_map: $section_map is EMPTY ! ".to_string($properties), logger::ERROR);
+				debug_log(__METHOD__
+					." Error Processing Request. properties for section_map: '$section_map' is EMPTY ! " . PHP_EOL
+					.' properties: ' . to_string($properties)
+					, logger::ERROR
+				);
 				return [];
 			}
 			$projects_name_tipo	= $properties->thesaurus->term; // dd156
 			if ($projects_name_tipo!=='dd156') {
-				debug_log(__METHOD__." Expected projects_name_tipo value was 'dd156' and received value is: ".to_string($projects_name_tipo), logger::ERROR);
+				debug_log(__METHOD__
+					." Expected projects_name_tipo value was 'dd156' and received value is: " . PHP_EOL
+					.' projects_name_tipo: ' . to_string($projects_name_tipo)
+					, logger::ERROR
+				);
 			}
 
 		// data. Array of locators
@@ -212,13 +219,9 @@ abstract class filter {
 				// global admin user case
 
 				// search all without limit
-				$search_query_object = json_decode('
-					{
-						"section_tipo": "'.$projects_section_tipo.'",
-						"limit": 0,
-						"filter": ""
-					}
-				');
+				$search_query_object = new search_query_object();
+					$search_query_object->set_section_tipo([$projects_section_tipo]);
+					$search_query_object->set_limit(0);
 
 				$search = search::get_instance($search_query_object);
 				$db_result = $search->search();
@@ -240,19 +243,23 @@ abstract class filter {
 			}//end if ($is_global_admin===false)
 
 		// resolve label and parent
+			// Cache model lookups outside loop for performance
+			$projects_model = ontology_node::get_model_by_tipo($projects_name_tipo);
+			$order_model_tipo = 'dd1631';
+			$order_model = ontology_node::get_model_by_tipo($order_model_tipo, true);
+
 			$ar_projects = [];
 			foreach ($data as $current_locator) {
 
 				$parent			= null;
-				$model			= ontology_node::get_model_by_tipo($projects_name_tipo);
 				$component_term	= component_common::get_instance(
-					$model, // string model
+					$projects_model, // string model
 					$projects_name_tipo, // string tipo
 					$current_locator->section_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_LANG, // string lang
 					$current_locator->section_tipo // string section_tipo
-				);
+				);				
 				$term_data = $component_term->get_data();			
 				$label = component_string_common::get_value_with_fallback_from_data(
 					$term_data,
@@ -262,8 +269,6 @@ abstract class filter {
 				);
 
 				// order
-				$order_model_tipo	= 'dd1631';
-				$order_model		= ontology_node::get_model_by_tipo($order_model_tipo,true);
 				$order_component	= component_common::get_instance(
 					$order_model, // string model
 					$order_model_tipo, // string tipo
@@ -299,8 +304,8 @@ abstract class filter {
 				}
 
 				$element = new stdClass();
-					$element->label		= $label[0] ?? null;
-					$element->locator	= json_decode( json_encode($current_locator) ); // converted to std class to allow session cache
+					$element->label		= $label;
+					$element->locator	= clone $current_locator; // Use clone instead of json encode/decode
 					$element->parent	= $parent;
 					$element->order		= $order_value;
 
