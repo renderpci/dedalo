@@ -110,12 +110,13 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input field
+		const fallback_value = self.data.fallback_value?.[i] || ''
 		const input = ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
 			class_name		: 'input_value',
 			value			: current_value,
-			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
+			placeholder		: (current_value ? '' : fallback_value),
 			parent			: content_value
 		})
 		// focus event
