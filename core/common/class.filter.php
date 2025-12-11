@@ -253,11 +253,13 @@ abstract class filter {
 					DEDALO_DATA_LANG, // string lang
 					$current_locator->section_tipo // string section_tipo
 				);
-
-				$label = $component_term->extract_component_data_fallback(
-					DEDALO_DATA_LANG, // lang
-					DEDALO_DATA_LANG_DEFAULT
-				); // main_lang
+				$term_data = $component_term->get_data();			
+				$label = component_string_common::get_value_with_fallback_from_data(
+					$term_data,
+					false,
+					DEDALO_DATA_LANG_DEFAULT,
+					DEDALO_DATA_LANG
+				);
 
 				// order
 				$order_model_tipo	= 'dd1631';
