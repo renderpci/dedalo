@@ -442,8 +442,8 @@ data_manager.request = async function(options) {
 			return json_response;
 		}
 
-		// cache_handler
-		if (cache_handler?.handler==='localdb') {
+		// cache_handler. Only cache api response if result is not false
+		if (cache_handler?.handler==='localdb' && json_response?.result !== false) {
 			dd_request_idle_callback(
 				() => {
 					self.set_local_db_data(
