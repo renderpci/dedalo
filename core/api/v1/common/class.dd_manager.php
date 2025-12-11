@@ -56,11 +56,11 @@ final class dd_manager {
 			}else{
 				if (login::is_logged()!==true) {
 
-					debug_log(__METHOD__." User is not logged [action:$rqo->action]", logger::ERROR);
+					debug_log(__METHOD__." Error. user is not logged !! [action:$rqo->action]", logger::ERROR);
 
 					$response = new stdClass();
 						$response->result	= false;
-						$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
+						$response->msg		= 'Error. user is not logged !! [action:'.$rqo->action.']';
 						$response->errors[]	= 'not_logged';
 					return $response;
 				}
