@@ -2502,7 +2502,11 @@ class section extends common {
 				$ar_exclude_elements_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
 					$this->tipo, // section_tipo
 					['exclude_elements'], // ar_model_name_required
-					true // from_cache
+					true, // from_cache
+					false, // resolve_virtual
+					false, // recursive
+					false, // search_exact
+					false // ar_tipo_exclude_elements
 				);
 				if (!isset($ar_exclude_elements_tipo[0])) {
 					debug_log(__METHOD__
