@@ -31,6 +31,7 @@ abstract class filter {
 			}
 
 		$user_projects = [];
+		$user_projects_keys = [];
 		if ( abs($user_id)>0 ) {
 
 			// cache
@@ -61,13 +62,10 @@ abstract class filter {
 
 					foreach ($children_data as $child_locator) {
 						// add if not already added
-						$found = locator::in_array_locator(
-							$child_locator,
-							$user_projects,
-							['section_tipo','section_id','from_component_tipo']
-						);
-						if(!empty($found)) {
+					$key = $child_locator->section_id .'_'. $child_locator->section_tipo;
+					if(!isset($user_projects_keys[$key])) {
 							$user_projects[] = $child_locator;
+						$user_projects_keys[$key] = true;
 						}
 					}
 				}
