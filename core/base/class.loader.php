@@ -2,10 +2,12 @@
 /*
 	FIXED CLASSES TO LOAD
 */
+// Base
 include DEDALO_CORE_PATH . '/base/class.Error.php';
 include DEDALO_CORE_PATH . '/base/class.dd_cache.php';
 include DEDALO_CORE_PATH . '/base/class.processes.php';
 include DEDALO_CORE_PATH . '/base/class.system.php';
+// Logger
 include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
@@ -22,7 +24,9 @@ include DEDALO_CORE_PATH . '/db/class.db_result.php';
 // include DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php';
 include DEDALO_CORE_PATH . '/db/class.json_handler.php';
 include DEDALO_CORE_PATH . '/db/class.db_tasks.php';
+
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
+// Common
 include DEDALO_CORE_PATH . '/common/class.common.php';
 include DEDALO_CORE_PATH . '/common/class.lang.php';
 include DEDALO_CORE_PATH . '/common/class.filter.php';
@@ -38,8 +42,10 @@ include DEDALO_CORE_PATH . '/common/class.request_query_object.php'; // new 16-0
 include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021
 include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
+// Section
 include DEDALO_CORE_PATH . '/section/class.section.php';
 include DEDALO_CORE_PATH . '/section_record/class.section_record_data.php';
+// Time machine
 include DEDALO_CORE_PATH . '/tm_record/class.tm_record_data.php';
 include DEDALO_CORE_PATH . '/tm_record/class.tm_record.php';
 // Ontology
@@ -49,18 +55,20 @@ include DEDALO_CORE_PATH . '/ontology_engine/class.ontology_utils.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';
 include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
-// Core
+// dd grid
 include DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'; // new 27-07-2021
 include DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'; // new 28-07-2021
+// component_common
 include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
 include DEDALO_CORE_PATH . '/component_common/class.lock_components.php';
 include DEDALO_CORE_PATH . '/component_media_common/class.component_media_common.php';
 include DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php';
+// Search
 include DEDALO_CORE_PATH . '/search/class.search.php';
 include DEDALO_CORE_PATH . '/search/class.search_tm.php';
 include DEDALO_CORE_PATH . '/search/class.search_related.php';
 include DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php';
-// diffusion
+// Diffusion
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_section_stats.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php';
@@ -68,7 +76,7 @@ include DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_object.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_data.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_data_object.php';
-// API
+// Dédalo API
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_manager.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_utils_api.php';
@@ -82,7 +90,7 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
-// include the shared classes
+// Shared
 include DEDALO_SHARED_PATH . '/class.TR.php';
 include DEDALO_SHARED_PATH . '/class.OptimizeTC.php';
 include DEDALO_SHARED_PATH . '/class.subtitles.php';
