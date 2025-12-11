@@ -54,13 +54,13 @@
 
 				case 'list':
 				case 'tm':
-					$value				= $this->get_list_value();
+					$value		= $this->get_list_value();					
 					break;
 
 				case 'edit':
 				default:
-					$value				= $this->get_data_lang();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$value		= $this->get_data_lang();
+					$datalist	= $this->get_datalist();
 					break;
 			}
 
@@ -68,8 +68,7 @@
 			$item = $this->get_data_item($value);
 
 		// datalist add if exits
-			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$datalist = $ar_list_of_values->result;
+			if (isset($datalist)) {
 				$item->datalist = $datalist;
 			}
 

@@ -2480,29 +2480,6 @@ abstract class component_common extends common {
 				$item->label		= $label;
 				$item->section_id	= $current_row->section_id;
 
-			// add tool information when the component is component_security_tools
-			// the component_security_tools is built as component_check_box and rendered as view
-			// this information is required to get specific tool information
-				if($this->tipo===DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO) {
-
-					// create the component of tool_simple_object_tipo and get his data
-					$component_tool_simple_object_tipo	= tools_register::$simple_tool_obj_component_tipo; // 'dd1353'
-					$model_name							= ontology_node::get_model_by_tipo($component_tool_simple_object_tipo, true);
-					$component_tool_name				= component_common::get_instance(
-						$model_name, // string model
-						$component_tool_simple_object_tipo, // string tipo
-						$current_row->section_id, // string section_id
-						'list', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$current_row->section_tipo // string section_tipo
-					);
-					$data = $component_tool_name->get_dato();
-
-					// add to the datalist the name and always_active
-					$item->tool_name		= $data[0]->name ?? '';
-					$item->always_active	= $data[0]->always_active ?? false;
-				}
-
 			$result[] = $item;
 		}
 
