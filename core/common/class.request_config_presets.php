@@ -24,7 +24,7 @@ class request_config_presets {
 
 		$active_request_config = [];
 
-		// OLD way
+		// search way
 			// // filter for active only
 			// $filter = json_decode('
 			// 	{
@@ -52,25 +52,29 @@ class request_config_presets {
 			// 	}
 			// ');
 
-			// // Search all records of request config section dd1244
-			// $search_query_object = (object)[
-			// 	'id'			=> 'search_active_request_config',
-			// 	'mode'			=> 'list',
-			// 	'section_tipo'	=> DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO, //'dd1244'
-			// 	'filter'		=> $filter,
-			// 	'limit'			=> 0,
-			// 	'full_count'	=> false
-			// ];
+			// // Search all records of request config section dd1244			
+			// $search_query_object = new search_query_object();
+			// 	$search_query_object->set_id('search_active_request_config');
+			// 	$search_query_object->set_mode('list');
+			// 	$search_query_object->set_section_tipo([DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO]);
+			// 	$search_query_object->set_filter($filter);
+			// 	$search_query_object->set_limit(0);
+			// 	$search_query_object->set_full_count(false);
+			// 	$search_query_object->set_select([
+			// 		(object)['column' => 'section_id']
+			// 	]);
 
 			// $search		= search::get_instance($search_query_object);
-		// direct way
-			$sql = "
-				SELECT section_id
-				FROM matrix_list
-				WHERE section_tipo = '".DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO."'
-				AND matrix_list.string::jsonb -> 'dd1566' @> $1
-				ORDER BY section_id ASC
-			";
+			// $db_result	= $search->search();
+
+		// direct way		
+			$sql = '';
+			$sql .= PHP_EOL . 'SELECT section_id';
+			$sql .= PHP_EOL . 'FROM matrix_list';
+			$sql .= PHP_EOL . "WHERE section_tipo = '".DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO."'";
+			$sql .= PHP_EOL . "AND matrix_list.string::jsonb -> 'dd1566' @> $1";
+			$sql .= PHP_EOL . "ORDER BY section_id ASC";
+			
 			$result = matrix_db_manager::exec_search($sql, [
 				'[{"section_tipo": "dd64", "section_id": "1"}]'
 			]);
@@ -102,13 +106,16 @@ class request_config_presets {
 			);
 			return $component->get_dato() ?? [];
 		};
-
-		foreach ($ar_section_id as $section_id) {
+	
+		// foreach($db_result as $row) {
+		while ($row = pg_fetch_object($result)) {
+			
+			$section_id = $row->section_id;
 
 			// Generate values
-			$tipo			= $get_component_value('dd1242', $section_id); // tipo
-			$section_tipo	= $get_component_value('dd642', $section_id);  // section_tipo
-			$mode			= $get_component_value('dd1246', $section_id);  // mode
+				$tipo			= $get_component_value('dd1242', $section_id); // tipo
+				$section_tipo	= $get_component_value('dd642', $section_id);  // section_tipo
+				$mode			= $get_component_value('dd1246', $section_id);  // mode
 
 			// Get user_id (dd654)
 				$user_id_data	= $get_component_data('dd654', $section_id);

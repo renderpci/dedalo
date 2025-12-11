@@ -1,18 +1,16 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT FILTER
-
-1 - Get the section_id of the user
-2 - With the user:
-	1 - get the user section_id
-	2 - withe the user section_id build the component_filter_master
-	3 - check the admin user with component-security-administrator (value 1)
-	4 - if the user is not admin, get the data of the component_filter_master and his tipo for get the label
-	5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
-	6 - Save the array of the projects for this section inside the user projects (in the user section)
-
-NOTE: when a section is created will be assigned a default project and at least need to be 1 or more.
-
+* Manages the filter component
+* NOTE: when a section is created will be assigned a default project and at least need to be 1 or more.
+* 1 - Get the section_id of the user
+* 2 - With the user:
+* 	1 - get the user section_id
+* 	2 - withe the user section_id build the component_filter_master
+* 	3 - check the admin user with component-security-administrator (value 1)
+* 	4 - if the user is not admin, get the data of the component_filter_master and his tipo for get the label
+* 	5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
+* 	6 - Save the array of the projects for this section inside the user projects (in the user section)
 */
 class component_filter extends component_relation_common {
 
@@ -43,29 +41,12 @@ class component_filter extends component_relation_common {
 	}//end __construct
 
 
-
 	/**
-	* GET DATO
-	* @return array|null $dato
-	* 	Old Format {"7":2,"269":2,"298":2}
-	* @see component_filter_master->get_dato() for maintain unified format of projects
-	*/
-	public function get_dato() {
-
-		// Call to parent class component_relation_common
-		$dato = parent::get_dato();
-
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|null $dato
+	* SET_DATA
+	* @param array|null $data
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_data( ?array $data ) : bool {
 
 		// For safe compatibility backwards. Removed 08-02-2023 because is not needed in current version
 			// $dato = self::convert_dato_pre_490( $dato, $this->tipo );
@@ -76,7 +57,7 @@ class component_filter extends component_relation_common {
 			if ($is_global_admin===true) {
 
 				// do not modify dato
-				$final_dato = $dato;
+				$final_data = $data;
 
 			}else{
 
@@ -100,19 +81,19 @@ class component_filter extends component_relation_common {
 				}
 
 				// merge final data
-				$final_dato = empty($dato)
+				$final_data = empty($data)
 					? $non_access_locators
-					: array_merge( (array)$dato, $non_access_locators );
+					: array_merge( (array)$data, $non_access_locators );
 			}
 
 
-		return parent::set_dato( $final_dato );
-	}//end set_dato
+		return parent::set_data( $final_data );
+	}//end set_data
 
 
 
 	/**
-	* SET_DATO_DEFAULT
+	* SET_DATA_DEFAULT
 	* Overwrite component common method.
 	* Set the dato default of the user for this component.
 	* If the user has not write access to the component it will not set.
@@ -120,7 +101,7 @@ class component_filter extends component_relation_common {
 	* only the user who created the section and the global administrator can access the record
 	* @return bool true
 	*/
-	protected function set_dato_default() : bool {
+	protected function set_data_default() : bool {
 
 		// Data default only can be saved by users than have permissions to save.
 		// Read users can not change component data.
@@ -137,7 +118,7 @@ class component_filter extends component_relation_common {
 		// tm (time_machine) mode case
 			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
-					. " Warning on set_dato_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
+					. " Warning on set_data_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
 					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 					. ' tipo: ' . $this->tipo . PHP_EOL
@@ -168,7 +149,7 @@ class component_filter extends component_relation_common {
 					// set current user projects default
 					if (!empty($default_dato_for_user)) {
 
-						$this->set_dato($default_dato_for_user);
+						$this->set_data($default_dato_for_user);
 						$this->save();
 
 						debug_log(__METHOD__
@@ -185,7 +166,7 @@ class component_filter extends component_relation_common {
 
 		// data default is not set
 		return false;
-	}//end set_dato_default
+	}//end set_data_default
 
 
 

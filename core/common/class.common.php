@@ -3605,7 +3605,7 @@ abstract class common {
 						case 'edit':
 							if ($model==='section') {
 								// section
-								$table					= common::get_matrix_table_from_tipo($tipo);
+								$table = common::get_matrix_table_from_tipo($tipo);
 								$ar_model_name_required	= [
 									'component_',
 									'section_group',
@@ -3615,7 +3615,7 @@ abstract class common {
 									// 'section_group_relation',
 									// 'section_group_portal',
 								];
-								$ar_related				= section::get_ar_children_tipo_by_model_name_in_section(
+								$ar_related = section::get_ar_children_tipo_by_model_name_in_section(
 									$tipo,
 									$ar_model_name_required,
 									true, // bool from_cache

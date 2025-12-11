@@ -80,8 +80,8 @@ class lang {
 		}
 
 		// short vars
-			$table		= lang::$langs_matrix_table;
-			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
+		$table		= lang::$langs_matrix_table;
+		$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
 		$code_tipo	= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
 
 		// query: (!) This is a temporal query until the search class is refactored (24/11/2025)
@@ -95,13 +95,13 @@ class lang {
 		$sql .= PHP_EOL . 'WHERE';
 
 		// ar_lang_tld_clean. Clean tld from 'lg-' prefix
-			$ar_lang_tld_clean = array_map(function($lang_tld){
-				// lang tld formatting
-				if (strpos($lang_tld, 'lg-')===0) {
-					$lang_tld = substr($lang_tld, 3);
-				}
-				return $lang_tld;
-			}, $ar_lang_tld);
+		$ar_lang_tld_clean = array_map(function($lang_tld){
+			// lang tld formatting
+			if (strpos($lang_tld, 'lg-')===0) {
+				$lang_tld = substr($lang_tld, 3);
+			}
+			return $lang_tld;
+		}, $ar_lang_tld);
 
 		// add
 		$sql .= PHP_EOL . "string->'hierarchy41'->0->>'value' = ANY($1)"; // using ANY operator parametrized
@@ -115,32 +115,32 @@ class lang {
 				return '"' . addslashes($v) . '"'; // Quote and escape each element
 			}, $ar_lang_tld_clean)) . '}'
 		];
-
+	
 		// DB query exec
 		$result = matrix_db_manager::exec_search($sql, $params);
-			if ($result===false) {
-				debug_log(__METHOD__
+		if ($result===false) {
+			debug_log(__METHOD__
 				." Error on exec_search. strQuery: " . PHP_EOL
 				.to_string($sql)
-					, logger::ERROR
-				);
-				return null;
-			}
+				, logger::ERROR
+			);
+			return null;
+		}		
 
 		// items
-			$items = [];
-			while ($rows = pg_fetch_assoc($result)) {
+		$items = [];
+		while ($rows = pg_fetch_assoc($result)) {
 
-				$section_id	= (int)$rows['section_id'];
-				$names		= $rows['name']; // json_handler::decode($rows['names']);
-				$code		= $rows['code'];
+			$section_id	= (int)$rows['section_id'];
+			$names		= $rows['name']; // json_handler::decode($rows['names']);
+			$code		= $rows['code'];
 
-				$items[] = (object)[
-					'code'			=> $code,
-					'section_id'	=> $section_id,
-					'names'			=> [$names]
-				];
-			}
+			$items[] = (object)[
+				'code'			=> $code,
+				'section_id'	=> $section_id,
+				'names'			=> [$names]
+			];
+		}
 
 		// cache
 		$resolve_multiple_lang_cache[$cache_key] = $items;
