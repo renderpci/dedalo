@@ -2290,23 +2290,22 @@ class section extends common {
 			bool $resolve_virtual=false, // (!) keep default resolve_virtual=false
 			bool $recursive=true,
 			bool $search_exact=false,
-			array|bool $ar_tipo_exclude_elements=false,
+			array|false $ar_tipo_exclude_elements=false,
 			?array $ar_exclude_models=null
 		) : array {
 
-		# AR_MODEL_NAME_REQUIRED cast 'ar_model_name_required' to array
-		$ar_model_name_required = (array)$ar_model_name_required;
-
 		static $cache_ar_children_tipo = [];
-		$cache_uid = $section_tipo.'_'.serialize($ar_model_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
-		if ($from_cache === true) {
-			// if (isset($cache_ar_children_tipo[$cache_uid])) {
-			if (array_key_exists($cache_uid, $cache_ar_children_tipo)) {
+		$cache_uid = implode('_', [
+			$section_tipo,
+			implode('|', $ar_model_name_required),
+			(int)$resolve_virtual,
+			(int)$recursive,
+			(int)$search_exact,
+			md5(serialize($ar_tipo_exclude_elements)),
+			md5(serialize($ar_exclude_models))
+		]);
+		if ($from_cache && isset($cache_ar_children_tipo[$cache_uid])) {
 				return $cache_ar_children_tipo[$cache_uid];
-			}
-			// elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
-			// 	return $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid];
-			// }
 		}
 
 		$ar_elements_to_be_exclude = [];
@@ -2322,8 +2321,7 @@ class section extends common {
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 
 			if($section_real_tipo!==$original_tipo) {
-
-				# OVERWRITE CURRENT SECTION TIPO WITH REAL SECTION TIPO
+				// Overwrite current section tipo with real section tipo
 				$section_tipo = $section_real_tipo;
 			}//end if($section_real_tipo!=$original_tipo) {
 
@@ -2336,28 +2334,23 @@ class section extends common {
 					true // $search_exact // bool search_exact
 				);
 			}
-			if (!isset($ar_tipo_exclude_elements[0])) {
-				// debug_log(__METHOD__
-				// 	." Warning. exclude_elements of section $original_tipo not found (1) ".to_string()
-				// 	, logger::WARNING
-				// );
-			}else{
 
-				$tipo_exclude_elements		= $ar_tipo_exclude_elements[0];
+			$tipo_exclude_elements = $ar_tipo_exclude_elements[0] ?? false;
+			if ($tipo_exclude_elements) {
 				$ar_elements_to_be_exclude	= ontology_node::get_relation_nodes(
 					$tipo_exclude_elements,
 					false, // bool cache
 					true // bool simple
 				);
-
 				foreach ($ar_elements_to_be_exclude as $element_tipo) {
-
+					$additional_excludes = [];
 					$model_name = ontology_node::get_model_by_tipo($element_tipo, true);
 					if($model_name==='section_group' || $model_name === 'section_tab' || $model_name === 'tab') {
-						$ar_recursive_children		= (array)section::get_ar_recursive_children($element_tipo, $ar_exclude_models);
-						$ar_elements_to_be_exclude	= array_merge($ar_elements_to_be_exclude, $ar_recursive_children);
+						$ar_recursive_children	= section::get_ar_recursive_children($element_tipo, $ar_exclude_models);
+						$additional_excludes	= array_merge($additional_excludes, $ar_recursive_children);
 					}
-				}//end foreach ($ar_elements_to_be_exclude as $key => $element_tipo) {
+					$ar_elements_to_be_exclude = array_merge($ar_elements_to_be_exclude, $additional_excludes);
+				}//end foreach ($ar_elements_to_be_exclude as $key => $element_tipo)
 			}
 		}//end if($resolve_virtual)
 
@@ -2369,7 +2362,7 @@ class section extends common {
 		if (count($ar_model_name_required)>1) {
 
 			if (true===$recursive) { // Default is recursive
-				$ar_recursive_children = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
+				$ar_recursive_children = section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
 				$ontology_node			= ontology_node::get_instance($tipo);
 				$ar_recursive_children	= $ontology_node->get_ar_children_of_this();
@@ -2401,39 +2394,59 @@ class section extends common {
 			$ar_recursive_children = array_diff($ar_recursive_children, $ar_elements_to_be_exclude);
 		}
 
-		// Loop through the child elements of the current section in the thesaurus
-		foreach($ar_recursive_children as $current_tipo) {
-
-			$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
-			foreach((array)$ar_model_name_required as $model_name_required) {
-
-				if (strpos($model_name, $model_name_required)!==false && !in_array($current_tipo, $section_ar_children_tipo) ) {
-
-					if($search_exact===true && $model_name!==$model_name_required) {
-						// Is not accepted model
-					}else{
-						$section_ar_children_tipo[] = $current_tipo;
-					}
-				}
-
-				// component_filter : If we search for 'component_filter', we will only return the first one, since there may be nested sections
-				if($ar_model_name_required[0]==='component_filter' && count($ar_recursive_children)>1) {
-					if(SHOW_DEBUG===true) {
-						// debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_children). " " .to_string($ar_model_name_required));
-						// throw new Exception("Error Processing Request", 1);
-					}
-					continue;
-				}
-			}
-		}//end foreach($ar_recursive_children as $current_tipo)
+		// Filter children by models
+		$section_ar_children_tipo = self::filter_children_by_models(
+			$ar_recursive_children,
+			$ar_model_name_required,
+			$search_exact
+		);
 
 		// Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
-		// $_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid] = $section_ar_children_tipo;
 
 
 		return $section_ar_children_tipo;
 	}//end get_ar_children_tipo_by_model_name_in_section
+
+
+
+	/**
+	 * Filter children by models
+	 * @param array $ar_recursive_children
+	 * @param array $ar_model_name_required
+	 * @param bool $search_exact
+	 * @return array
+	 */
+	private static function filter_children_by_models(
+		array $ar_recursive_children,
+		array $ar_model_name_required,
+		bool $search_exact
+		): array {
+		$result = [];
+		$result_keys = []; // For O(1) lookups
+		
+		foreach($ar_recursive_children as $current_tipo) {
+			if (isset($result_keys[$current_tipo])) {
+				continue; // Already added
+			}
+
+			$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
+			
+			foreach($ar_model_name_required as $model_name_required) {
+				$matches = $search_exact 
+					? ($model_name === $model_name_required)
+					: str_contains($model_name, $model_name_required)!==false;
+					
+				if ($matches) {
+					$result[] = $current_tipo;
+					$result_keys[$current_tipo] = true;
+					break; // Found match, no need to check other required models
+				}
+			}
+		}
+		
+		return $result;
+	}//end filter_children_by_models
 
 
 
