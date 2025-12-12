@@ -21,13 +21,26 @@ class tool_ontology_parser extends tool_common {
 			$response->errors	= [];
 
 		// main_ontology_records
-		$ontotology_records = ontology::get_all_main_ontology_records();
+		$ontology_records = ontology::get_all_main_ontology_records(); // return a db result iterator
 
 		$ontologies = [];
-		foreach ($ontotology_records as $row) {
+		foreach ($ontology_records as $row) {
+
+			// section_record
+			$section_record = section_record::get_instance( $row->section_tipo, $row->section_id );
+			$section_record->set_data($row);			
 
 			// target_section_tipo
-				$target_section_tipo = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN}[0] ?? null;
+				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TARGET_SECTION_TIPO );
+				$target_section_tipo_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TARGET_SECTION_TIPO, // string tipo
+					$row->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$row->section_tipo // string section_tipo
+				);
+				$target_section_tipo = $target_section_tipo_component->get_value();
 				if (empty($target_section_tipo)) {
 					debug_log(__METHOD__
 						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id "
@@ -38,7 +51,16 @@ class tool_ontology_parser extends tool_common {
 				}
 
 			// tld
-				$tld = $row->datos->components->{DEDALO_HIERARCHY_TLD2_TIPO}->dato->{DEDALO_DATA_NOLAN}[0] ?? null;
+				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TLD2_TIPO );
+				$tld_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TLD2_TIPO, // string tipo
+					$row->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$row->section_tipo // string section_tipo
+				);
+				$tld = $tld_component->get_value();
 				if (empty($tld)) {
 					debug_log(__METHOD__
 						." Skipped hierarchy without tld: $row->section_tipo, $row->section_id "
@@ -49,9 +71,16 @@ class tool_ontology_parser extends tool_common {
 				}
 
 			// name
-				$full_data = $row->datos->components->{DEDALO_HIERARCHY_TERM_TIPO}->dato ?? null;
-				$name = component_common::get_value_with_fallback_from_dato_full( $full_data );
-
+				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TERM_TIPO );
+				$name_component = component_common::get_instance(
+					$model, // string model
+					DEDALO_HIERARCHY_TERM_TIPO, // string tipo
+					$row->section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_LANG, // string lang
+					$row->section_tipo // string section_tipo
+				);
+				$name = $name_component->get_component_data_fallback()[0]->value ?? null;				
 
 			// typology
 				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
@@ -65,7 +94,7 @@ class tool_ontology_parser extends tool_common {
 					$row->section_tipo // string section_tipo
 				);
 
-				$typology_data = $typology_component->get_dato()[0] ?? null;
+				$typology_data = $typology_component->get_data()[0] ?? null;
 				if (empty($typology_data)) {
 					debug_log(__METHOD__
 						." Hierarchy without typology: $row->section_tipo, $row->section_id "
@@ -89,7 +118,7 @@ class tool_ontology_parser extends tool_common {
 					$current_ontology->typology_name		= $typology_name;
 
 				$ontologies[] = $current_ontology;
-		}//end foreach ($result->ar_records as $row)
+		}//end foreach ($ontology_records as $row)
 
 		// response
 			$response->result	= $ontologies;

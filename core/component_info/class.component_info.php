@@ -23,14 +23,14 @@ class component_info extends component_common {
 	protected $supports_translation = false;
 
 	/**
-	* GET_DATO
-	* @return array|null $dato
+	* GET_DATA
+	* @return array|null $data
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+		// data_resolved. Already resolved case
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// widgets check
@@ -48,7 +48,7 @@ class component_info extends component_common {
 			}
 
 		// the component info dato will be the all widgets data
-			$dato = [];
+			$data = [];
 
 		// each widget will be created and compute its own data
 			foreach ($widgets as $widget_obj) {
@@ -67,27 +67,27 @@ class component_info extends component_common {
 					$widget = widget_common::get_instance($widget_options);
 
 				// Widget data
-					$widget_value = $widget->get_dato();
+					$widget_value = $widget->get_data();
 					if (!empty($widget_value)) {
-						$dato = array_merge($dato, $widget_value);
+						$data = array_merge($data, $widget_value);
 					}
 			}//end foreach ($widgets as $widget)
 
 		// set the component info dato with the result
-			$this->dato				= $dato;
-			$this->dato_resolved	= $dato;
+			$this->data				= $data;
+			$this->data_resolved	= $data;
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
 	/**
-	* GET_DATO_PARSED
-	* @return array|null $dato_parsed
+	* GET_DATA_PARSED
+	* @return array|null $data_parsed
 	*/
-	public function get_dato_parsed() : ?array {
+	public function get_data_parsed() : ?array {
 
 		// widgets check
 			$widgets = $this->get_widgets();
@@ -123,7 +123,7 @@ class component_info extends component_common {
 					$widget = widget_common::get_instance($widget_options);
 
 				// Widget data
-					$widget_value = $widget->get_dato_parsed();
+					$widget_value = $widget->get_data_parsed();
 					if (!empty($widget_value)) {
 						$dato_parsed = array_merge($dato_parsed, $widget_value);
 					}
@@ -131,7 +131,7 @@ class component_info extends component_common {
 
 
 		return $dato_parsed;
-	}//end get_dato_parsed
+	}//end get_data_parsed
 
 
 
@@ -564,7 +564,7 @@ class component_info extends component_common {
 	* Widget use the ipo (input, process, output) object to define how process the data
 	* grid value use the `output` definition to create columns for every value
 	* The column will named as the output id as label (TODO, add tipo for the label of the column)
-	* By default the widget will return his data, but is possible to overwrite it with get_dato_parsed() in the widget
+	* By default the widget will return his data, but is possible to overwrite it with get_data_parsed() in the widget
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
@@ -582,7 +582,7 @@ class component_info extends component_common {
 			];
 
 		// short vars
-			$data		= $this->get_dato_parsed();// use data parsed to be processed by the widget if needed. see mdcat->sum_dates
+			$data		= $this->get_data_parsed();// use data parsed to be processed by the widget if needed. see mdcat->sum_dates
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
 			$widgets 	= $this->get_widgets();

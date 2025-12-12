@@ -24,7 +24,7 @@ abstract class counter {
 			return 0;
 		}
 
-		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$matrix_table.'" WHERE tipo = $1 LIMIT 1';
+		$strQuery 	= 'SELECT value AS counter_number FROM "'.$matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($tipo));
 		if (!$result) {
 			throw new Exception("Error Processing Request. DB error on get counter value", 1);
@@ -89,7 +89,7 @@ abstract class counter {
 
 			// update already created counter case
 
-			$strQuery	= 'UPDATE "'.$matrix_table.'" SET dato = $1 WHERE tipo = $2';
+			$strQuery	= 'UPDATE "'.$matrix_table.'" SET value = $1 WHERE tipo = $2';
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($dato, $tipo));
 			if ($result===false) {
 				throw new Exception("Error Processing Request. DB error on update counter. Update '$matrix_table'", 1);
@@ -137,7 +137,7 @@ abstract class counter {
 		# TEST IF COUNTER EXISTS BEFORE SET
 		$counter_created = false;
 		// When current_value is bigger than zero, test is counter exits. If not, create calling counter with zero value
-		$strQuery 	= 'SELECT dato AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
+		$strQuery 	= 'SELECT value AS counter_number FROM "'.$counter_matrix_table.'" WHERE tipo = $1 LIMIT 1';
 		$result	  	= pg_query_params(DBi::_getConnection(), $strQuery, array($section_tipo));
 		if(!$result) throw new Exception("Error Processing Request. DB error on get counter value", 1);
 		$rows 		= pg_num_rows($result);
@@ -151,7 +151,7 @@ abstract class counter {
 		# COUNTER EXISTS. But value is different than bigger_section_id
 		if($bigger_section_id>0) {
 			# update_counter with bigger_section_id value
-			$strQuery = 'UPDATE "'.$counter_matrix_table.'" SET dato = $1 WHERE tipo = $2';
+			$strQuery = 'UPDATE "'.$counter_matrix_table.'" SET value = $1 WHERE tipo = $2';
 			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
 			if(!$result)throw new Exception("Error Processing Request. DB error on update counter value", 1);
 			if(SHOW_DEBUG===true) {

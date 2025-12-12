@@ -2305,7 +2305,7 @@ class section extends common {
 			md5(serialize($ar_exclude_models))
 		]);
 		if ($from_cache && isset($cache_ar_children_tipo[$cache_uid])) {
-				return $cache_ar_children_tipo[$cache_uid];
+			return $cache_ar_children_tipo[$cache_uid];
 		}
 
 		$ar_elements_to_be_exclude = [];
@@ -2411,7 +2411,8 @@ class section extends common {
 
 
 	/**
-	 * Filter children by models
+	 * FILTER_CHILDREN_BY_MODELS
+	 * Filter children by models in section
 	 * @param array $ar_recursive_children
 	 * @param array $ar_model_name_required
 	 * @param bool $search_exact
@@ -2422,21 +2423,22 @@ class section extends common {
 		array $ar_model_name_required,
 		bool $search_exact
 		): array {
+
 		$result = [];
 		$result_keys = []; // For O(1) lookups
-		
+
 		foreach($ar_recursive_children as $current_tipo) {
 			if (isset($result_keys[$current_tipo])) {
 				continue; // Already added
 			}
 
 			$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
-			
+
 			foreach($ar_model_name_required as $model_name_required) {
 				$matches = $search_exact 
 					? ($model_name === $model_name_required)
-					: str_contains($model_name, $model_name_required)!==false;
-					
+					: str_contains($model_name, $model_name_required);
+
 				if ($matches) {
 					$result[] = $current_tipo;
 					$result_keys[$current_tipo] = true;
@@ -2444,7 +2446,7 @@ class section extends common {
 				}
 			}
 		}
-		
+
 		return $result;
 	}//end filter_children_by_models
 

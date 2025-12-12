@@ -2,7 +2,7 @@
 /**
 * CLASS SEARCH
 * TRAIT ORDER
-*
+* Order methods
 */
 trait order {
 

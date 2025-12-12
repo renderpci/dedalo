@@ -188,7 +188,7 @@ class tm_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				. " Error Processing Request Load " . to_string($sql) . PHP_EOL
+				. " Error executing READ query on table: $table" . PHP_EOL
 				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
@@ -222,13 +222,13 @@ class tm_db_manager {
 
 		$table = self::$table;
 
-		// Check for empty update payload
-		if (empty($values)) {
+		// Check for empty update payload. Cast to array to avoid empty() false positives
+		if (empty((array)$values)) {
 			debug_log(
 				__METHOD__
-					. " Empty values array " . PHP_EOL
+					. " Ignored update with empty values" . PHP_EOL
 					. ' values: ' . json_encode($values),
-				logger::ERROR
+				logger::WARNING
 			);
 			return false;
 		}
@@ -273,11 +273,11 @@ class tm_db_manager {
 		$result = pg_query_params($conn, $sql, $params);
 
 		if (!$result) {
-			debug_log(
-				__METHOD__
-					. " Error Processing Request Load " . to_string($sql) . PHP_EOL
-					. ' error: ' . pg_last_error($conn),
-				logger::ERROR
+			debug_log(__METHOD__
+				. " Error updating record" . PHP_EOL
+				. ' sql: ' . $sql . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				,logger::ERROR
 			);
 			return false;
 		}
@@ -335,7 +335,6 @@ class tm_db_manager {
 		if (!$result) {
 			debug_log(__METHOD__
 				. ' Error executing DELETE on table: ' . $table . PHP_EOL
-				. ' sql ' . to_string($sql ?? '') . PHP_EOL
 				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);

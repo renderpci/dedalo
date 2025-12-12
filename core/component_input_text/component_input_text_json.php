@@ -86,6 +86,9 @@
 				// activity 'Where' case
 					if ($this->tipo==='dd546') {
 						$first_value = $value[0]->value ?? null;
+						if(is_array($first_value)){
+							$first_value = $first_value[0];
+						}
 						if( !empty($first_value) ){
 							$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
 							$term = strip_tags($term);

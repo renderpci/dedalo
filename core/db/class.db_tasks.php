@@ -48,10 +48,6 @@ class db_tasks {
 					continue; // Skip table
 				}
 
-				if (strpos($table_name, 'matrix_descriptors')!==false) {
-					continue; // Skip table
-				}
-
 				// Detected  sqlmap tables. 'sqlmapfile','sqlmapoutput'
 				if (strpos($table_name, 'sqlmap')!==false) {
 					throw new Exception("Error Processing Request. Security sql injection warning", 1);

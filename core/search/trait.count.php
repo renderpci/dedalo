@@ -2,7 +2,7 @@
 /**
 * CLASS SEARCH
 * TRAIT count
-*
+* Count methods
 */
 trait count {
 

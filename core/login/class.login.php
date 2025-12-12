@@ -1467,41 +1467,7 @@ class login extends common {
 	* Here we expect only one user, but could exists more than one with the the same name potentially.
 	*/
 	public static function get_users_with_name( string $username ) : array {
-
-		// old search
-			// $arguments = [];
-			// $arguments['strPrimaryKeyName']	= 'section_id';
-			// $arguments['section_tipo']		= DEDALO_SECTION_USERS_TIPO;
-			// $arguments["datos#>>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}'"] = json_encode([$username],JSON_UNESCAPED_UNICODE);
-			// // search
-			// $matrix_table			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
-			// $JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table, null, DEDALO_SECTION_USERS_TIPO);
-			// $ar_result				= (array)$JSON_RecordObj_matrix->search($arguments);
-			// $user_count				= count($ar_result);
-
-		// search direct
-			// $conn = DBi::_getConnection();
-			// $sql  = "
-			// 	SELECT section_id FROM \"matrix_users\" WHERE
-			// 	datos#>'{components,".DEDALO_USER_NAME_TIPO.",dato,lg-nolan}' @> $1
-			// ";
-			// $result = pg_query_params(
-			// 	$conn,
-			// 	$sql,
-			// 	[json_encode([$username],JSON_UNESCAPED_UNICODE)]
-			// );
-			// if (!$result) {
-			// 	debug_log(__METHOD__ . " Unable to get results from database" . PHP_EOL
-			// 		.' error: ' . pg_last_error($conn)
-			// 		, logger::ERROR
-			// 	);
-			// 	$response->msg = "Unable to get results from database. See your server log for details.";
-			// 	return $response;
-			// }
-			// // Number of rows returned
-			// $ar_result	= pg_fetch_all($result);
-			// $user_count	= count($ar_result);
-
+		
 		// SQO way
 			// $sqo = json_decode('
 			// 	{

@@ -39,12 +39,12 @@ class db_result implements IteratorAggregate
 		}
 	}
 	
-	public function fetch_all(): array
+	public function fetch_all() : array
 	{
 		return iterator_to_array($this->getIterator());
 	}
 	
-	public function fetch_one()
+	public function fetch_one() : object|array
 	{
 		if ($this->as_array) {
 			return pg_fetch_assoc($this->result);
@@ -52,7 +52,7 @@ class db_result implements IteratorAggregate
 		return pg_fetch_object($this->result);
 	}
 	
-	public function row_count(): int
+	public function row_count() : int
 	{
 		return pg_num_rows($this->result);
 	}

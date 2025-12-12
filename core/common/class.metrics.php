@@ -25,6 +25,14 @@ final class metrics {
 		static $matrix_total_time = 0;
 		static $matrix_total_calls = 0;
 
+	// exec_search matrix_db_manager
+		static $exec_search_total_time = 0;
+		static $exec_search_total_calls = 0;
+
+	// exec_search dd_ontology_db_manager
+		static $exec_dd_ontology_search_total_time = 0;
+		static $exec_dd_ontology_search_total_calls = 0;
+
 	// search_free (JSON_RecordDataBounceObject)
 		static $search_free_total_time = 0;
 		static $search_free_total_calls = 0;

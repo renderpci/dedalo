@@ -64,27 +64,27 @@ class widget_common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* @return
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
 		debug_log(__METHOD__
 			." Do not use this method, overwrite it in every widget ".get_called_class()." : ". PHP_EOL
 			, logger::WARNING
 		);
 		return null;
-	}//end get_dato
+	}//end get_data
 
 
 
 	/**
-	* GET_DATO_PARSED
-	* @return array|null $dato_parsed
+	* GET_DATA_PARSED
+	* @return array|null $data_parsed
 	*/
-	public function get_dato_parsed() : ?array {
+	public function get_data_parsed() : ?array {
 
-		return $this->get_dato();
+		return $this->get_data();
 	}
 
 
