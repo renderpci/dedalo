@@ -18,9 +18,6 @@ class component_section_id extends component_common {
 			? (int)$this->section_id
 			: null;
 
-		// Set as loaded
-			$this->is_loaded_matrix_data = true;
-
 		return [$data];
 	}//end get_data
 

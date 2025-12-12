@@ -24,16 +24,16 @@ class matrix_activity_db_manager extends matrix_db_manager {
 	* adding `section_tipo` and `section_id` only) and with query params when is not (other
 	* dynamic combinations of columns data).
 	* @param string $table
-	* The name of the table to query. The function validates this against
-	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	* 	The name of the table to query. The function validates this against
+	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
 	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
+	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param object|null $values = {} (optional)
-	* Object with {column name : value} structure.
-	* Keys are column names, values are their new values.
+	* 	Object with {column name : value} structure.
+	* 	Keys are column names, values are their new values.
 	* @return int|false $section_id
-	* Returns the new $section_id on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* 	Returns the new $section_id on success, or `false` if validation fails,
+	* 	query preparation fails, or execution fails.
 	*/
 	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
 
@@ -41,7 +41,7 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		if (!isset(self::$tables[$table])) {
 			debug_log(
 				__METHOD__
-				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
+				. " Invalid table. This table is not allowed to create records." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
 				. ' allowed_tables: ' . json_encode(self::$tables)
 				, logger::ERROR
@@ -49,6 +49,17 @@ class matrix_activity_db_manager extends matrix_db_manager {
 			return false;
 		}
 
+		// Check for empty update payload. Cast to array to avoid empty() false positives
+		// if (empty((array)$values)) {
+		// 	debug_log(
+		// 		__METHOD__
+		// 			. " Ignored create with empty values" . PHP_EOL
+		// 			. ' values: ' . json_encode($values),
+		// 		logger::ERROR
+		// 	);
+		// 	return false;
+		// }
+		
 		// Connection
 		$conn = DBi::_getConnection();
 

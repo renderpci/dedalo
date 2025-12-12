@@ -249,8 +249,6 @@ class tm_record_data {
 	}//end save_column_data
 
 
-	// static methods
-
 
 	/**
 	* READ

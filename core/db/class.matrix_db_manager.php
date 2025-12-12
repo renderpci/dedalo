@@ -11,8 +11,6 @@
 * - Updating existing records (update)
 * - Inserting new records with optional initial data (create)
 * - Deleting existing records (delete)
-*
-* Additionally, simple searches using filters are available.
 */
 class matrix_db_manager {
 
@@ -812,7 +810,6 @@ class matrix_db_manager {
 		if (!$result) {
 			debug_log(__METHOD__
 				. ' Error executing DELETE on table: ' . $table . PHP_EOL
-				. ' sql ' . to_string($sql ?? '') . PHP_EOL
 				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
@@ -1026,9 +1023,6 @@ class matrix_db_manager {
 				.' params: ' . json_encode($params) . PHP_EOL
 				, logger::ERROR
 			);
-			if(SHOW_DEBUG===true) {
-				dump(pg_last_error($conn)," error on sql_query: ".to_string( PHP_EOL.$sql_query.PHP_EOL ));
-			}
 			return false;
 		}
 
@@ -1048,13 +1042,14 @@ class matrix_db_manager {
 			metrics::$exec_search_total_time += $total_time_ms;
 			
 			// query additional info
-			if (isset(debug_backtrace()[1]['function'])) {
+			$bt = debug_backtrace();
+			if (isset($bt[1]['function'])) {
 				
 				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
 
 				foreach ([1,2,3,4,5,6,7,8] as $key) {
-					if (isset(debug_backtrace()[$key]['function'])) {
-						$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
+					if (isset($bt[$key]['function'])) {
+						$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
 					}
 				}
 				$sql_query = $sql_prepend . trim($sql_query);

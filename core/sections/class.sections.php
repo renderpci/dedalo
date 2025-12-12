@@ -129,6 +129,8 @@ class sections extends common {
 		}
 	}//end set_up
 
+
+
 	/**
 	* GET_DATA
 	* Get records from database using current sqo (search_query_object)

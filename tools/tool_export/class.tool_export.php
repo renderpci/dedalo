@@ -323,7 +323,7 @@ class tool_export extends tool_common {
 
 	 			// sections
 				$sections			= sections::get_instance(null, $sqo, $section_tipo);
-				$this->ar_records	= $sections->get_dato();
+				$this->ar_records	= $sections->get_data();
 				break;
 		}
 

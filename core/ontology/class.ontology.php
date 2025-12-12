@@ -2637,7 +2637,6 @@ class ontology {
 				$locator->set_section_tipo( $section_tipo );
 				$locator->set_section_id( $section_id );
 
-
 		// create a sqo to count all the references
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo( [$local_section_tipo] );

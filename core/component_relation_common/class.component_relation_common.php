@@ -216,34 +216,28 @@ class component_relation_common extends component_common {
 	protected function load_component_dato() : bool {
 
 		if( empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-			// return null;
 			return false;
 		}
 
-		if( $this->is_loaded_matrix_data!==true ) {
+		// dato full
+		$this->dato_full = $this->get_all_data();
 
-			// dato full
-			$this->dato_full = $this->get_all_data();
+		// dato
+		if (!empty($this->dato_full)) {
 
-			// dato
-			if (!empty($this->dato_full)) {
-
-				$this->dato = [];
-				$translatable = $this->ontology_node->get_is_translatable();
-				foreach ($this->dato_full as $locator) {
-					if ($translatable!==true) {
-						$this->dato[] = $locator;
-					}else if(isset($locator->lang) && $locator->lang===$this->lang){
-						$this->dato[] = $locator;
-					}
+			$this->dato = [];
+			$translatable = $this->ontology_node->get_is_translatable();
+			foreach ($this->dato_full as $locator) {
+				if ($translatable!==true) {
+					$this->dato[] = $locator;
+				}else if(isset($locator->lang) && $locator->lang===$this->lang){
+					$this->dato[] = $locator;
 				}
-			}else{
-				$this->dato = $this->dato_full;
 			}
-
-			# Set as loaded
-			$this->is_loaded_matrix_data = true;
+		}else{
+			$this->dato = $this->dato_full;
 		}
+
 
 		return true;
 	}//end load_component_dato
@@ -2419,7 +2413,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
-	* $comopnent_tipo set the target component to get the section_tipo, by default id the target section component, but is possible get the target model section.
+	* $component_tipo set the target component to get the section_tipo, by default id the target section component, but is possible get the target model section.
 	* @param array $hierarchy_types
 	* @param string $component_tipo, by default uses DEDALO_HIERARCHY_TARGET_SECTION_TIPO (hierarchy53)
 	* @return array $hierarchy_sections_from_types

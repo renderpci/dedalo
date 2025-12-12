@@ -2,7 +2,7 @@
 /**
 * CLASS SEARCH
 * TRAIT SELECT
-*
+* Select methods
 */
 trait select {
 

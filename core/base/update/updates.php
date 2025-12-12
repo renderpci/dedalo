@@ -88,8 +88,9 @@ $updates->$v = new stdClass();
 			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				CREATE INDEX idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
-					(string -> \'hierarchy41\' -> 0 ->> \'value\')
+					(string->\'hierarchy41\'->0->>\'value\')
 				);
+				ANALYZE matrix_langs;
 			');
 
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('

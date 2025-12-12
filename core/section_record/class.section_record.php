@@ -152,7 +152,7 @@ class section_record {
 	* @param string $tipo
 	* @param string $column
 	* @param array|null $data
-	* @return array|null $result Array of matching elements or null if none found
+	* @return bool $result Array of matching elements or null if none found
 	*/
 	public function set_component_data( string $tipo, string $column, ?array $data ) : bool {
 
@@ -658,6 +658,7 @@ class section_record {
 	}//end update_modified_section_data
 
 
+
 	/**
 	* GET_INVERSE_REFERENCES
 	* Get calculated inverse locators for all matrix tables
@@ -856,10 +857,6 @@ class section_record {
 
 		return $ar_removed;
 	}//end remove_section_media_files
-
-
-
-	// static methods
 
 
 

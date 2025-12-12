@@ -45,6 +45,7 @@ export const get_editing_preset_json_filter = async function(self) {
 		// set / overwrite some properties
 		source.tipo			= temp_presets_section_tipo
 		source.section_tipo	= temp_presets_section_tipo
+		source.model		= 'section'
 		// config. set config options like read_only to allow custom server behaviors
 		source.config = {
 			// set the read_only to true, it will used to assign permissions to at least 1 in the target section and components.
@@ -468,7 +469,7 @@ export const create_new_search_preset = function(options) {
 							const changed_data_section = [{
 								action	: 'insert',
 								key		: 0,
-								value	: self.section_tipo
+								value	: {value: self.section_tipo}
 							}]
 							await component_instance_section_tipo.save(changed_data_section)
 						})()
@@ -547,6 +548,10 @@ export const save_preset = async function(options) {
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
 
+		if (!section_tipo || !section_id) {
+			console.error('Invalid section_tipo or section_id:', section_tipo, section_id );
+			return
+		}
 	// filter value
 		const filter_obj = await self.parse_dom_to_json_filter({}).filter
 

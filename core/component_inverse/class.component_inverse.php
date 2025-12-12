@@ -32,10 +32,7 @@ class component_inverse extends component_common {
 		// fix dato
 			$this->dato				= $dato;
 			$this->dato_resolved	= $dato;
-
-		// Set as loaded
-			$this->is_loaded_matrix_data = true;
-
+			
 
 		return $dato;
 	}//end get_dato

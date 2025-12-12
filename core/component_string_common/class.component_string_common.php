@@ -270,7 +270,6 @@ class component_string_common extends component_common {
 
 
 
-
 	/**
 	* EXTRACT_COMPONENT_DATO_FALLBACK
 	* Retrieves component data for a specific language and implements

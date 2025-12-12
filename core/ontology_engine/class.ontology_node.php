@@ -736,28 +736,26 @@ class ontology_node {
 	* Get model of the given tipo (ontology node)
 	* @param string $tipo
 	* @param bool $from_cache = true
-	* @return string $modelo
+	* @return string|null $model
 	*/
-	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : string {
+	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : ?string {
 
-		static $model_by_tipo;
+		static $model_by_tipo_cache;
 
 		// cache
 		$cache_uid = $tipo;
-		if ($from_cache===true && isset($model_by_tipo[$cache_uid])) {
-			return $model_by_tipo[$cache_uid];
+		if ($from_cache===true && isset($model_by_tipo_cache[$cache_uid])) {
+			return $model_by_tipo_cache[$cache_uid];
 		}
 
 		$ontology_node	= ontology_node::get_instance($tipo);
-		$modelo	= $ontology_node->get_model();
+		$model	= $ontology_node->get_model();
 
 		// cache
-		if( !empty($modelo) ){
-			$model_by_tipo[$cache_uid] = $modelo;
-		}
+		$model_by_tipo_cache[$cache_uid] = $model;
 
 
-		return $modelo;
+		return $model;
 	}//end get_model_by_tipo
 
 

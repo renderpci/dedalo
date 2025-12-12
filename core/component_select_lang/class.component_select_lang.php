@@ -96,16 +96,21 @@ class component_select_lang extends component_relation_common {
 	*/
 	public function get_value_code() : ?string {
 
-		$dato = $this->get_dato();
+		$data = $this->get_data();
 
 		// empty case
-			if (empty($dato)) {
-				return null;
-			}
+		if (empty($data)) {
+			return null;
+		}
 
 		// lang class manage resolution
-			$locator	= reset($dato);
-			$code		= lang::get_code_from_locator($locator);
+		$locator = $data[0] ?? null;
+		if (empty($locator)) {
+			return null;
+		}
+		
+		// code resolution
+		$code = lang::get_code_from_locator($locator);
 
 
 		return $code;
@@ -267,24 +272,39 @@ class component_select_lang extends component_relation_common {
 	* @param bool $include_negative = false
 	* @return object $response
 	*/
-	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
+	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {	
 
-		// datalist
-			$ar_all_project_select_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
-			$datalist = [];
-			foreach ((array)$ar_all_project_select_langs as $item) {
+		// datalist. One by one version
+			// $ar_all_project_select_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
+			// $datalist = [];
+			// foreach ((array)$ar_all_project_select_langs as $item) {
 
-				$label		= lang::get_name_from_code($item);
-				$code		= $item;
-				$list_value	= lang::get_lang_locator_from_code($item);
+			// 	$label		= lang::get_name_from_code($item);
+			// 	$code		= $item;
+			// 	$list_value	= lang::get_lang_locator_from_code($item);
 
+			// 	$item_value = new stdClass();
+			// 		$item_value->value		= $list_value;
+			// 		$item_value->label		= $label;
+			// 		$item_value->section_id	= $code;
+
+			// 	$datalist[] = $item_value;
+			// }
+			// dump($datalist, 'datalist');
+
+		// datalist. Resolving multiple langs at once
+			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
+			$datalist = array_map(function ($item) {				
+				$locator = new locator();
+				$locator->set_section_id($item->section_id);
+				$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);	
 				$item_value = new stdClass();
-					$item_value->value		= $list_value;
-					$item_value->label		= $label;
-					$item_value->section_id	= $code;
+					$item_value->value		= $locator;
+					$item_value->label		= $item->names[0] ?? $item->code;
+					$item_value->section_id	= 'lg-'.$item->code;
 
-				$datalist[] = $item_value;
-			}
+				return $item_value;
+			}, $langs_resolved);
 
 		// sort the list for easy access
 			usort($datalist, function($a, $b) {

@@ -486,7 +486,7 @@ class indexation_grid {
 
 				// component filter by section tipo
 					$section_real_tipo		= section::get_section_real_tipo_static($section_top_tipo);
-					$component_filter_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_real_tipo, ['component_filter'])[0];
+					$component_filter_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_real_tipo, ['component_filter'])[0] ?? null;
 					if (empty($component_filter_tipo)) {
 						debug_log(__METHOD__
 							. " Error: component_filter_tipo not found" . PHP_EOL
