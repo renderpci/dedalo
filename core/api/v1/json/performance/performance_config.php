@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 
 // Enable/disable performance monitoring
-define('PERFORMANCE_MONITORING_ENABLED', true);
+define('PERFORMANCE_MONITORING_ENABLED', false);
 
 // Slow request threshold in milliseconds
 // Requests exceeding this threshold will be flagged as slow
