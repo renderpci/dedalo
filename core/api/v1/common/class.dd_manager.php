@@ -164,6 +164,10 @@ final class dd_manager {
 						'Search exec_search (matrix_db_manager)',
 						'--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms',
 						'--> exec_search_total_calls: '. metrics::$exec_search_total_calls,
+						// exec_search stats
+						'Search exec_search (dd_ontology_db_manager)',
+						'--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms',
+						'--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls,
 						// search_free stats
 						'Search free (JSON_RecordDataBounceObject)',
 						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
@@ -189,6 +193,7 @@ final class dd_manager {
 						'time: ' . (
 							metrics::$security_permissions_total_time +
 							metrics::$exec_search_total_time +
+							metrics::$exec_dd_ontology_search_total_time +
 							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
 							metrics::$matrix_total_time +
