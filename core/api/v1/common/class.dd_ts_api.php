@@ -173,8 +173,8 @@ final class dd_ts_api {
 
 					// Calculate total if not set
 					if (!isset($current_pagination->total)) {
-						$dato = $component_relation_children->get_dato();
-						$current_pagination->total = (is_countable($dato) ? count($dato) : 0);
+						$data = $component_relation_children->get_data();
+						$current_pagination->total = (is_countable($data) ? count($data) : 0);
 					}
 					// Fix pagination to the component (used when get_data_paginated is called from the class)
 					$component_relation_children->pagination = $current_pagination;
@@ -183,7 +183,7 @@ final class dd_ts_api {
 					$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
 					$children = $use_pagination
 						? $component_relation_children->get_data_paginated()
-						: $component_relation_children->get_dato();
+						: $component_relation_children->get_data();
 			}//end if (empty($children))
 
 		// parse_child_data

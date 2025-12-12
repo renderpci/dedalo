@@ -53,6 +53,7 @@
 			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
 			$terms_are_model = $this->build_options->terms_are_model ?? false;
 
+			// get hierarchy sections
 			$hierarchy_sections = $this->get_hierarchy_sections(
 				$hierarchy_types_filter, // hierarchy_types_filter
 				$hierarchy_sections_filter, // hierarchy_sections_filter
@@ -60,15 +61,18 @@
 			);
 
 		// typologies
-			$ar_tipologies_section_id = [];
 			$ar_typologies = [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
+
+				// force temporally !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+				$hierarchy_data->active_in_thesaurus = true;
 
 				// remove the typology of hierarchies that are not active to show it in thesaurus tree
 				if( isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false ){
 					continue;
 				}
 
+				// skip hierarchies without children_tipo
 				if (empty($hierarchy_data->children_tipo)) {
 					debug_log(__METHOD__
 						. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
@@ -78,22 +82,22 @@
 					continue;
 				}
 
-				if (!in_array($hierarchy_data->typology_section_id, $ar_tipologies_section_id)) {
-					$ar_tipologies_section_id[] = $hierarchy_data->typology_section_id;
+				if (!isset($ar_tipologies[$hierarchy_data->typology_section_id])) {
+					// add unique typology to the list					
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
 						$typology->type			= 'typology';
 						$typology->label		= $this->get_typology_name($hierarchy_data->typology_section_id);
 						$typology->order		= $this->get_typology_order($hierarchy_data->typology_section_id);
 
-					$ar_typologies[] = $typology;
+					$ar_typologies[$hierarchy_data->typology_section_id] = $typology;
 				}
 			}
 
 		$item = new stdClass();
 			$item->tipo			= $this->get_tipo();
 			$item->value		= $hierarchy_sections;
-			$item->typologies	= $ar_typologies;
+			$item->typologies	= array_values($ar_typologies);
 
 		// ts_search : hierarchy_terms (search)
 			$hierarchy_terms = $properties->hierarchy_terms ?? null;
