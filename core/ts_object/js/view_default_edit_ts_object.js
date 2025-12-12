@@ -390,7 +390,7 @@ const render_ts_line = function(self) {
 						// term_id . like 'dd_1'
 						return term_regex_result
 							? term_regex_result[2] + term_regex_result[3]
-							: section_tipo + section_id
+							: self.section_tipo + self.section_id
 					  })()
 					: self.section_tipo +'_'+ self.section_id
 
