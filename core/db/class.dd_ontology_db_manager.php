@@ -479,7 +479,15 @@ abstract class dd_ontology_db_manager {
 			return false;
 		}
 
-		$table = self::$ontology_table;
+		// debug
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+
+			// metrics
+			metrics::$exec_dd_ontology_search_total_calls++;
+		}
+
+		$table = self::$table;
 
 		$conn = DBi::_getConnection();
 
@@ -529,14 +537,38 @@ abstract class dd_ontology_db_manager {
 			return false;
 		}
 
-		// result
-		$rows = pg_fetch_all($result);
+		// debug
+		if(SHOW_DEBUG===true) {
+			// time
+			$total_time_ms = exec_time_unit($start_time, 'ms');			
 
-		$tipos = [];
-		foreach ($rows as $row) {
-			$tipos[] = $row['tipo'];
+			// metrics
+			metrics::$exec_dd_ontology_search_total_time += $total_time_ms;
+			
+			// query additional info
+			$bt = debug_backtrace();
+			if (isset($bt[1]['function'])) {
+				
+				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
+
+				foreach ([1,2,3,4,5,6,7,8] as $key) {
+					if (isset($bt[$key]['function'])) {
+						$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
+					}
+				}
+				$sql = $sql_prepend . trim($sql);
+			}
+
+			// debug log sql query. See PHP log file
+			$sql = '-- exec_search: ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql;
+			$sql_debug = debug_prepared_statement($sql, $params, $conn);
+			$level = $total_time_ms > 2 ? logger::ERROR : logger::DEBUG;
+			debug_log(__METHOD__
+				. ' sql_debug: ' . PHP_EOL
+				. PHP_EOL . $sql_debug . PHP_EOL
+				, $level
+			);
 		}
-
 
 
 		return $tipos;
