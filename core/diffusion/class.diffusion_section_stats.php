@@ -62,13 +62,13 @@ class diffusion_section_stats extends diffusion {
 
 		// last saved user activity stats (looks section 'dd1521' to get last record by date)
 			$sqo = json_decode('{
-			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			  "limit": 1,
-			  "offset": 0,
-			  "select": [],
-			  "filter": {
+				"section_tipo": ["'.USER_ACTIVITY_SECTION_TIPO.'"],
+				"limit": 1,
+				"offset": 0,
+				"select": [],
+				"filter": {
 				"$and": [
-				  {
+					{
 					"q": {
 						"section_tipo" : "'.DEDALO_SECTION_USERS_TIPO.'",
 						"section_id" : "'.$user_id.'",
@@ -76,53 +76,55 @@ class diffusion_section_stats extends diffusion {
 					},
 					"q_operator": null,
 					"path": [
-					  {
-					    "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-					    "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-					    "model": "'.ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
-					    "name": "User"
-					  }
+						{
+						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+						"component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
+						"model": "'.ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
+						"name": "User"
+						}
 					]
-				  }
-				]
-			  },
-			  "order": [
-				{
-				  "direction": "DESC",
-				  "path": [
-					{
-					  "name": "Date",
-					  "model": "component_date",
-					  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-					  "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-					  "column": "jsonb_path_query_first('.USER_ACTIVITY_SECTION_TIPO.'.datos, \'strict $.components.'.USER_ACTIVITY_DATE_TIPO.'.dato.\"lg-nolan\"[0].start.time\', silent => true)"
 					}
-				  ]
+				]
+				},
+				"order": [
+				{
+					"direction": "DESC",
+					"path": [
+					{
+						"name": "Date",
+						"model": "component_date",
+						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
+						"component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
+						"column": "jsonb_path_query_first('.USER_ACTIVITY_SECTION_TIPO.'.datos, \'strict $.components.'.USER_ACTIVITY_DATE_TIPO.'.dato.\"lg-nolan\"[0].start.time\', silent => true)"
+					}
+					]
 				},
 				{
-				  "direction": "DESC",
-				  "path": [
+					"direction": "DESC",
+					"path": [
 					{
-					  "component_tipo": "section_id",
-					  "model": "component_section_id",
-					  "name": "ID",
-					  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'"
+						"component_tipo": "section_id",
+						"model": "component_section_id",
+						"name": "ID",
+						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'"
 					}
-				  ]
+					]
 				}
-			  ]
+				]
 			}');
+			$search_query_object = new search_query_object($sqo);
 
 			// Search records
 			$search = search::get_instance(
-				$sqo // object sqo
+				$search_query_object // object sqo
 			);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
+			$db_result	= $search->search();
+
+			$first_record = $db_result->fetch_one();
 
 			// activity_filter_beginning. Builds a SQL sentence as 'AND date > '2025-03-07''
 			// for filter results in the next query against matrix_activity
-			$activity_filter_beginning = isset($ar_records[0])
+			$activity_filter_beginning = !empty($first_record)
 				? (function($row){
 
 					$section_id		= $row->section_id;
@@ -137,8 +139,8 @@ class diffusion_section_stats extends diffusion {
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
-					$dato			= $component->get_dato();
-					$current_date	= $dato[0] ?? null;
+					$data			= $component->get_data();
+					$current_date	= $data[0] ?? null;
 					if (empty($current_date)) {
 						debug_log(__METHOD__
 							. " Skip. Not valid date found for user"
@@ -156,7 +158,7 @@ class diffusion_section_stats extends diffusion {
 					$filter = 'AND timestamp > \''.$beginning_date.'\'';
 
 					return $filter;
-				  })($ar_records[0])
+				  })($first_record)
 				: '';
 
 		// do not include today in any case because it is not yet complete.
@@ -167,7 +169,7 @@ class diffusion_section_stats extends diffusion {
 				SELECT *
 				FROM "matrix_activity"
 				WHERE
-				datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
+				relation->\'dd543\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				'.$activity_filter_beginning.'
 				ORDER BY timestamp ASC
 				LIMIT 1
@@ -720,9 +722,9 @@ class diffusion_section_stats extends diffusion {
 			$search	= search::get_instance(
 				$sqo // object sqo
 			);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
-			if (empty($ar_records)) {
+			$db_result	= $search->search();
+			$total		= $db_result->row_count();
+			if ($total===0) {
 				return null;
 			}
 

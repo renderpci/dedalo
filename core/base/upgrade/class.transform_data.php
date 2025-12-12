@@ -1964,6 +1964,7 @@ class transform_data {
 							"section_tipo": [
 								"'.$section_tipo.'"
 							],
+							"select": [],
 							"limit": 10,
 							"offset": 0,
 							"filter": {
@@ -1991,23 +1992,20 @@ class transform_data {
 					$search = search::get_instance(
 						$sqo // object sqo
 					);
-					$check_search		= $search->search();
-					$check_ar_records	= $check_search->ar_records;
-					if(count($check_ar_records)>0) {
+					$db_result	= $search->search();
+					$row		= $db_result->fetch_one();
+					if($row){
 
-						$record = $check_ar_records[0];
-
-						$new_section_id = $record->section_id;
+						$new_section_id = $row->section_id;
 
 					}else{
 
 						// create new section to save new data
 						// new section will be the locator to add into the records
-						$new_section = section::get_instance(
-							null, // string|null section_id
+						$new_section = section::get_instance(							
 							$section_tipo // string section_tipo
 						);
-						$new_section_id = $new_section->Save();
+						$new_section_id = $new_section->create_record();
 
 						// create new component with the specification
 						$component_model		= ontology_node::get_model_by_tipo( $component_tipo );

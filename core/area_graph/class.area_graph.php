@@ -143,9 +143,10 @@ class area_graph extends area_common {
 
 	/**
 	* GET_ACTIVE_NETWORKS_SECTIONS
-	* @return array $ar_records
+	* Search for all active networks sections
+	* @return db_result $db_result
 	*/
-	public static function get_active_networks_sections() : array {
+	public static function get_active_networks_sections() : db_result {
 
 		$section_tipo	= 'nexus40'; // hierarchy1
 		$active_tipo	= 'nexus44'; // hierarchy4
@@ -185,12 +186,10 @@ class area_graph extends area_common {
 		}');
 
 		$search = search::get_instance($search_query_object);
-		$result = $search->search();
-
-		$ar_records = $result->ar_records;
+		$db_result = $search->search();
 
 
-		return $ar_records;
+		return $db_result;
 	}//end get_active_networks_sections
 
 
@@ -450,12 +449,12 @@ class area_graph extends area_common {
 
 		# Search records
 			$search			= search::get_instance($search_query_object);
-			$search_result	= $search->search();
-			$ar_records		= $search_result->ar_records;
+			$db_result		= $search->search();
+			$total_records	= $db_result->row_count();
 
 		# ar_path_mix . Calculate full path of each result
 			$ar_path_mix = array();
-			foreach ($ar_records as $row) {
+			foreach ($db_result as $row) {
 
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
@@ -478,9 +477,7 @@ class area_graph extends area_common {
 		// ar_data_combined
 			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
 
-		$result = self::walk_hierarchy_data($ar_data_combined);
-
-		$total_records = count($ar_records);
+		$result = self::walk_hierarchy_data($ar_data_combined);		
 
 		// response
 			$response->msg 	  	= "Records found: $total_records";

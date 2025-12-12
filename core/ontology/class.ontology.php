@@ -960,29 +960,30 @@ class ontology {
 				return $cache_ontology_sections;
 			}
 
-		// ar_records. Get all records from main ontology executing a search
-			$ar_records = ontology::get_all_main_ontology_records();
+		// records. Get all records from main ontology executing a search
+			$db_result = ontology::get_all_main_ontology_records();
 
 		// iterate rows
 			$ontology_sections = [];
-			foreach ($ar_records as $row) {
+			foreach ($db_result as $row) {
 
-				$target_section_tipo = $row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato->{DEDALO_DATA_NOLAN}[0] ?? null;
+				$hierarchy_target_section_data = $row->string->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO} ?? [];
+				$target_section_tipo = $hierarchy_target_section_data[0]->value ?? null;
 
 				// target section tipo check
-					if (empty($target_section_tipo)) {
-						debug_log(__METHOD__
-							." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
-							.' target_dato: '. to_string($row->datos->components->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO}->dato)
-							, logger::ERROR
-						);
-						continue;
-					}
+				if (empty($target_section_tipo)) {
+					debug_log(__METHOD__
+						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
+						.' hierarchy_target_section_data: '. to_string($hierarchy_target_section_data)
+						, logger::ERROR
+					);
+					continue;
+				}
 
 				// add section tipo
-					$ontology_sections[] = $target_section_tipo;
+				$ontology_sections[] = $target_section_tipo;
 
-			}//end foreach ($result->ar_records as $row)
+			}//end foreach ($db_result as $row)
 
 		// cache
 			if ($use_cache===true && !empty($ontology_sections)) {
@@ -999,10 +1000,10 @@ class ontology {
 	* GET_ALL_MAIN_ONTOLOGY_RECORDS
 	* Exec a search against matrix_ontology_main filtering
 	* for main_section_tipo without limit and return all resulting records
-	* @return array $ar_records
+	* @return db_result $db_result
 	* @test true
 	*/
-	public static function get_all_main_ontology_records() : array {
+	public static function get_all_main_ontology_records() : db_result {
 
 		$main_section_tipo = self::$main_section_tipo;
 
@@ -1014,11 +1015,9 @@ class ontology {
 
 		// search exec
 			$search	= search::get_instance($sqo);
-			$result	= $search->search();
+			$db_result	= $search->search();
 
-		$ar_records = $result->ar_records ?? [];
-
-		if (empty($ar_records)) {
+		if (empty($db_result)) {
 			debug_log(__METHOD__
 				. " EMPTY AR RECORDS " . PHP_EOL
 				. ' section_tipo: ' . to_string($main_section_tipo) . PHP_EOL
@@ -1028,7 +1027,7 @@ class ontology {
 		}
 
 
-		return $ar_records;
+		return $db_result;
 	}//end get_all_main_ontology_records
 
 
@@ -1084,13 +1083,13 @@ class ontology {
 		$search = search::get_instance(
 			$sqo // object sqo
 		);
-		$result = $search->search();
+		$db_result = $search->search();
 
 		// active_elements
-		$active_elements = array_map(
-			'ontology::row_to_element',
-			$result->ar_records
-		);
+		$active_elements = [];
+		foreach ($db_result as $row) {
+			$active_elements[] = ontology::row_to_element($row);
+		}
 
 		// cache
 		$active_ontology_elements_cache = $active_elements;
@@ -1960,11 +1959,11 @@ class ontology {
 		$search = search::get_instance(
 			$sqo // object sqo
 		);
-		$search_response	= $search->search();
-		$ar_records			= $search_response->ar_records;
+		$db_result	= $search->search();
+		$total		= $db_result->row_count();
 
 		// Check if we have records to process
-		if (empty($ar_records) || !is_array($ar_records)) {
+		if ($total===0) {
 			$response->result	= true;
 			$response->msg		= 'OK. No records found to process [set_records_in_dd_ontology] ' .$sqo->section_tipo;
 			$response->msg		.= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
@@ -1978,7 +1977,7 @@ class ontology {
 		}, ontology::get_active_elements());
 
 		$processed_count = 0;
-		foreach ($ar_records as $current_record) {
+		foreach ($db_result as $current_record) {
 
 			$section_tipo	= $current_record->section_tipo;
 			$section_id		= $current_record->section_id;
@@ -2045,7 +2044,7 @@ class ontology {
 			$response->result			= true;
 			$response->msg				= 'OK. Request done successfully [set_records_in_dd_ontology] ' .to_string($sqo->section_tipo);
 			$response->msg				.= ' | '. exec_time_unit($start_time,'ms').' ms';
-			$response->total			= count($ar_records);
+			$response->total			= $total;
 			$response->processed_count	= $processed_count;
 		}else{
 			// Partial success case
@@ -2101,32 +2100,34 @@ class ontology {
 			$search = search::get_instance(
 				$sqo, // object sqo
 			);
-			$search_response	= $search->search();
-			$ar_records			= $search_response->ar_records;
+			$db_result	= $search->search();
+			$total		= $db_result->row_count();
 
 		// 2 create the dd_ontology nodes of all matrix records
 			$ontology_nodes = [];
-			foreach ($ar_records as $current_record) {
+			if($total>0){
+				foreach ($db_result as $current_record) {
 
-				$current_section_tipo	= $current_record->section_tipo;
-				$current_section_id		= $current_record->section_id;
+					$current_section_tipo	= $current_record->section_tipo;
+					$current_section_id		= $current_record->section_id;
 
-				// ontology_node item
-				$ontology_node = ontology::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
+					// ontology_node item
+					$ontology_node = ontology::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
 
-				if( empty($ontology_node ) ){
-					ontology_utils::delete_bk_table();
-					$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
-					debug_log(__METHOD__
-						. " Error generating dd_ontology with section_tipo " . PHP_EOL
-						. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
-						. ' current_section_id: ' . to_string($current_section_id)
-						, logger::ERROR
-					);
-					return $response;
+					if( empty($ontology_node ) ){
+						ontology_utils::delete_bk_table();
+						$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
+						debug_log(__METHOD__
+							. " Error generating dd_ontology with section_tipo " . PHP_EOL
+							. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
+							. ' current_section_id: ' . to_string($current_section_id)
+							, logger::ERROR
+						);
+						return $response;
+					}
+
+					$ontology_nodes[] = $ontology_node;
 				}
-
-				$ontology_nodes[] = $ontology_node;
 			}
 
 		// 3 delete all tld records
@@ -2648,16 +2649,16 @@ class ontology {
 			$search = search::get_instance(
 				$sqo // object sqo
 			);
-			$rows_data	= $search->search();
-			$ar_records	= $rows_data->ar_records; // create reference
+			$db_result	= $search->search();
+			$total		= $db_result->row_count();
 
 		// If the node has not any overwrite node return null
-			if( empty($ar_records) ){
+			if( $total===0 ){
 				return null;
 			}
 
 		// set the overwrite node locator with the row
-			$overwrite_row = $ar_records[0];
+			$overwrite_row = $db_result->fetch_one();
 
 			$overwrite_locator = new locator();
 				$overwrite_locator->set_section_tipo( $overwrite_row->section_tipo );

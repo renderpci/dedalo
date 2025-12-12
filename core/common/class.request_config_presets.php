@@ -326,10 +326,12 @@ class request_config_presets {
 			];
 
 		$search		= search::get_instance($search_query_object);
-		$rows_data	= $search->search();
+		$db_result	= $search->search();
 
-		$ar_records = $rows_data->ar_records;
-		if (empty($ar_records)) {
+		// total_records count
+		$total_records = $db_result->row_count();
+
+		if ($total_records === 0) {
 
 			$result = [];
 
@@ -358,7 +360,7 @@ class request_config_presets {
 				// 		: [];
 
 			// direct from section data
-				$dato = $ar_records[0] ?? new stdClass();
+				$dato = $db_result->fetch_one ?? new stdClass();
 				if (isset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN})) {
 
 					$json_data		= reset($dato->datos->components->{$component_json_tipo}->dato->{DEDALO_DATA_NOLAN});

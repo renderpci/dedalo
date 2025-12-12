@@ -466,21 +466,19 @@ class component_relation_children extends component_relation_common {
 				}
 
 			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
+			$db_result	= $search->search();
 
-			// fix result ar_records as dato
-			$result	= $rows_data->ar_records;
-
-			$children = array_map( function($row) use($component_tipo){
-
+			$children = [];
+			foreach ($db_result as $row) {
+				
 				$locator = new locator();
 					$locator->set_section_tipo($row->section_tipo);
 					$locator->set_section_id($row->section_id);
 					$locator->set_from_component_tipo($component_tipo);
 					$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
-
-				return $locator;
-			}, $result);
+				
+				$children[] = $locator;
+			}
 
 
 		return $children;
@@ -827,12 +825,12 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_limit( 1 ); // set limit for security. Overwrite when needed.
 
 			$search		= search::get_instance($sqo);
-			$rows_data	= $search->search();
+			$db_result	= $search->search();
 
 			// check if the result is empty,
 			// if yes return false the child has any non descriptor
 			// if no return true the child has almost 1 non descriptor
-			$result	= empty($rows_data->ar_records) ? false : true ;
+			$result	= $db_result->row_count() === 0 ? false : true ;
 
 
 		return $result;

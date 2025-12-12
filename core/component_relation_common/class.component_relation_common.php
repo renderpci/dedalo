@@ -2020,8 +2020,7 @@ class component_relation_common extends component_common {
 					$sqo->set_filter_by_locators($new_relation_locators);
 
 				$search		= search::get_instance($sqo);
-				$rows_data	= $search->search();
-				$ar_records	= & $rows_data->ar_records; // create reference
+				$db_result	= $search->search();
 				if(SHOW_DEBUG===true) {
 					$total = exec_time_unit($start_time2,'ms');
 					if ($total>30) {
@@ -2032,11 +2031,11 @@ class component_relation_common extends component_common {
 			// locators. Create a custom locator for each record
 				$component_tipo = $this->get_tipo();
 				$ar_result = [];
-				foreach ($ar_records as $inverse_section) {
+				foreach ($db_result as $row) {
 
 					$current_locator = new locator();
-						$current_locator->set_section_tipo($inverse_section->section_tipo);
-						$current_locator->set_section_id($inverse_section->section_id);
+						$current_locator->set_section_tipo($row->section_tipo);
+						$current_locator->set_section_id($row->section_id);
 						// $current_locator->set_type($inverse_section->type);
 						$current_locator->set_from_component_tipo($component_tipo);
 
@@ -2282,8 +2281,8 @@ class component_relation_common extends component_common {
 			$end_path 	= end($path);
 			$end_path->selector = $selector;
 
-			$search_query_object = '{
-			  "section_tipo": "'.$section_tipo.'",
+			$search_query_object = json_decode('{
+			  "section_tipo": "['.$section_tipo.']",
 			  "allow_sub_select_by_id": false,
 			  "remove_distinct": true,
 			  "limit": 0,
@@ -2292,21 +2291,14 @@ class component_relation_common extends component_common {
 				  "path": '.json_encode($path).'
 				}
 			  ]
-			}';
-			#dump($search_query_object, ' search_query_object ** ++ '.to_string());
-			$search_query_object = json_decode($search_query_object);
-			$search 			 = search::get_instance($search_query_object);
-			$result 			 = $search->search();
-			#dump($result, ' result ** ++ '.to_string());
+			}');						
+			$search 	= search::get_instance($search_query_object);
+			$db_result 	= $search->search();
 
 		// Parse results for stats
 			$ar_clean = [];
-			// foreach ($result->ar_records as $key => $item) {
-			$ar_records_size = sizeof($result->ar_records);
-			for ($i=0; $i < $ar_records_size; $i++) {
-
-				$item = $result->ar_records[$i];
-
+			foreach ($db_result as $item) {			
+				
 				#$uid = $locator->section_tipo.'_'.$locator->section_id;
 
 				$value = end($item);
@@ -2508,36 +2500,36 @@ class component_relation_common extends component_common {
 				}
 			');
 
+		// select columns
+		// get directly the component data instead all section data to improve performance
+			$model = ontology_node::get_model_by_tipo($component_tipo, true);
+			$column = section_record_data::get_column_name($model);
+			$select = new stdClass();
+				$select->key 		= $component_tipo;
+				$select->column 	= $column;
+
+			$search_query_object->select	= [$select];
 		// search exec
-			$search	= search::get_instance($search_query_object);
-			$result	= $search->search();
+			$search		= search::get_instance($search_query_object);
+			$db_result	= $search->search();
 
 		// iterate rows
 			$hierarchy_sections_from_types = [];
-			foreach ($result->ar_records as $row) {
+			foreach ($db_result as $row) {
 
-				if (empty($row->datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN})) {
-					debug_log(__METHOD__
-						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ".to_string()
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				$target_dato			= $row->datos->components->{$component_tipo}->dato->{DEDALO_DATA_NOLAN};
-				$target_section_tipo	= $target_dato[0] ?? null;
+				$target_section_tipo = $row->{$component_tipo}[0]->value ?? null;
 
 				if (empty($target_section_tipo)) {
 					debug_log(__METHOD__
 						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
-						.' target_dato: '. to_string($target_dato)
+						.' target_dato: '. to_string($row->{$component_tipo})
 						, logger::ERROR
 					);
 					continue;
 				}
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
-			}//end foreach ($result->ar_records as $row)
+			}//end foreach ($db_result as $row)
 
 		// cache
 			if ($use_cache===true) {

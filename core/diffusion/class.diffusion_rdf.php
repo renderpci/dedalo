@@ -1037,8 +1037,8 @@ class diffusion_rdf extends diffusion {
 			$search = search::get_instance(
 				$search_query_object // object sqo
 			);
-			$result			= $search->search();
-			$dato_entity	= $result->ar_records[0] ?? null;
+			$db_result	= $search->search();
+			$dato_entity= $db_result->fetch_one() ?? null;
 
 		// base_uri
 			if (empty($dato_entity)) {
@@ -1400,18 +1400,18 @@ class diffusion_rdf extends diffusion {
 	*/
 	public static function get_to_publish_rows(string $section_tipo, array $ar_section_id) : array {
 
-		# Resolve component_publication_tipo
+		// Resolve component_publication_tipo
 		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 
-
-	       $q = implode(',', (array)$ar_section_id);
+		$q = implode(',', (array)$ar_section_id);
 
         // query
 			$query = '
 			{
 			    "id": "numisdata4_list",
-			    "section_tipo": "'.$section_tipo.'",
+				"select": [],
+			    "section_tipo": "['.$section_tipo.']",
 			    "limit": false,
 			    "filter": {
 			        "$and": [
@@ -1448,16 +1448,16 @@ class diffusion_rdf extends diffusion {
 			$search = search::get_instance(
 				$sqo // object sqo
 			);
-			$result		= $search->search();
-			$ar_records	= $result->ar_records;
+			$db_result = $search->search();
 
 		// format output as array of id's
-			$ar_section_id_clean = array_map(function($item){
-				return $item->section_id;
-			}, (array)$ar_records);
+			$ar_section_id_clean = [];
+			foreach ($db_result as $row) {
+				$ar_section_id_clean[] = $row->section_id;
+			}
 
 
-		return (array)$ar_section_id_clean;
+		return $ar_section_id_clean;
 	}//end get_to_publish_rows
 
 
@@ -1535,13 +1535,11 @@ class diffusion_rdf extends diffusion {
 			$search = search::get_instance(
 				$sqo // object sqo
 			);
-			$result		= $search->search();
-			$records	= $result->ar_records;
-
+			$db_result = $search->search();			
 
 		// result
 			$result = [];
-			foreach ($records as $record) {
+			foreach ($db_result as $record) {
 
 				$section_id		= $record->section_id;
 				$section_tipo	= $record->section_tipo;
