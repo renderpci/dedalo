@@ -2460,7 +2460,7 @@ abstract class component_common extends common {
 							// decode raw db column data to object or array format. (json)
 							$data = json_decode($data);
 						}
-						$current_label	= component_string_common::get_value_with_fallback_from_data(
+						$current_label = component_string_common::get_value_with_fallback_from_data(
 							$data,
 							true, // bool decorate_untranslated
 							DEDALO_DATA_LANG_DEFAULT,
@@ -3017,14 +3017,14 @@ abstract class component_common extends common {
 				// because the main component will save all information in the tm row.
 				// at this point the component section will not save time machine for the component.
 				$section = $dataframe_component->get_my_section();
-					$section->save_tm = false;
+				tm_record::$save_tm = false;
 
 				// remove the data from dataframe.
 				$dataframe_component->set_dato( null );
 				$dataframe_component->Save();
 
 				// back to set time machine to true for the next savings.
-				$section->save_tm = true;
+				tm_record::$save_tm = true;
 			}
 
 		return true;
@@ -4429,6 +4429,12 @@ abstract class component_common extends common {
 
 		return null;
 	}//end get_regenerate_options
+
+
+
+	public function detect_data_version(){
+		
+	}
 
 
 

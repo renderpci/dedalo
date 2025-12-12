@@ -802,6 +802,9 @@ class tool_import_dedalo_csv extends tool_common {
 		// Restore logging activity # !IMPORTANT
 			logger_backend_activity::$enable_log = true;
 
+		// back to set time machine to true for the next savings.
+			tm_record::$save_tm = true;
+
 		// response
 			if (!empty($updated_rows) || !empty($created_rows)) {
 				$response->result		= true;

@@ -351,10 +351,10 @@ class component_iri extends component_common {
 			// remove the time machine to save the dataframe
 			// the main component_iri will save the full imported data in save
 			$dataframe_section = $component_dataframe_label->get_my_section();
-			$dataframe_section->save_tm = false;
+			tm_record::$save_tm = false;
 			$component_dataframe_label->Save();
 			// re activate the time machine
-			$dataframe_section->save_tm = true;
+			tm_record::$save_tm = true;
 		}
 
 		// save the component

@@ -1278,7 +1278,7 @@ class diffusion_sql extends diffusion  {
 				if ($build_mode==='default') {
 					$section->add_diffusion_info_default($diffusion_element_tipo);
 					$section->save_modified = false;
-					$section->save_tm = false; // prevent to save time machine record
+					tm_record::$save_tm = false; // prevent to save time machine record
 					$section->Save();
 
 					debug_log(__METHOD__
