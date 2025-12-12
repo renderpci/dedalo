@@ -645,9 +645,9 @@ class area_maintenance extends area_common {
 	* 	iterations: int,
 	* 	update_rate: int
 	* }
-	* @return object|never Returns object in CLI mode, never returns in web mode (calls die())
+	* @return object Returns object in CLI mode
 	*/
-	public static function long_process_stream(object $options) : object|never {
+	public static function long_process_stream(object $options) : object {
 
 		// options
 			$iterations		= $options->iterations ?? 10;
@@ -758,7 +758,14 @@ class area_maintenance extends area_common {
 				$ms = $update_rate;
 				usleep( $ms * 1000 );
 			}
-			die();
+			
+			// This code is unreachable but required for type safety
+			// to satisfy the object return type declaration
+			$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Stream ended';
+			
+			return $response;
 		}
 	}//end long_process_stream
 
