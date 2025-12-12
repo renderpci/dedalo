@@ -12,6 +12,9 @@ abstract class DBi {
 	 * @var PgSql\Connection|null Stores the cached PgSql\Connection instance.
 	 */
 	private static ?PgSql\Connection $pg_conn_cache = null;
+	// Connection caching variables
+	private static $pg_conn_valid_until = 0;
+	private static $connection_check_interval = 30; // seconds
 
 	// array of already defined prepared statements.
 	public static array $prepared_statements = [];
@@ -41,9 +44,19 @@ abstract class DBi {
 		bool			$cache		= true
 		) : PgSql\Connection|false {
 
-		// If caching is enabled and a connection is already cached and active, return it.
-		if ($cache && self::$pg_conn_cache instanceof PgSql\Connection && pg_connection_status(self::$pg_conn_cache) === PGSQL_CONNECTION_OK) {
-			return self::$pg_conn_cache;
+		$now = time();
+	
+		// If caching is enabled and a connection is cached and recently validated
+		if ($cache && self::$pg_conn_cache instanceof PgSql\Connection) {
+			// Only check status if the cached validity has expired
+			if ($now < self::$pg_conn_valid_until || 
+				pg_connection_status(self::$pg_conn_cache) === PGSQL_CONNECTION_OK) {
+				self::$pg_conn_valid_until = $now + self::$connection_check_interval;
+				return self::$pg_conn_cache;
+			}
+			// Connection is dead, clear cache
+			self::$pg_conn_cache = null;
+			self::$pg_conn_valid_until = 0;
 		}
 
 		// Build connection string parameters
