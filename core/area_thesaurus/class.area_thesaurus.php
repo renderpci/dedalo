@@ -119,13 +119,13 @@ class area_thesaurus extends area_common {
 
 			// item
 				$item = new stdClass();
-					$item->section_id			= $element->section_id; //*
-					$item->section_tipo			= $element->section_tipo; //*
-					$item->target_section_tipo	= $element->target_section_tipo;//*
-					$item->target_section_name	= $element->name;//*
+					$item->section_id			= $element->section_id;
+					$item->section_tipo			= $element->section_tipo;
+					$item->target_section_tipo	= $element->target_section_tipo;
+					$item->target_section_name	= $element->name;
 					$item->children_tipo		= $children_tipo;
-					$item->typology_section_id	= $class_name==='ontology' ? '14' : $element->typology_id;//*
-					$item->order				= $element->order;//*
+					$item->typology_section_id	= $class_name==='ontology' ? '14' : $element->typology_id;
+					$item->order				= $element->order;
 					$item->type					= 'hierarchy';
 					$item->active_in_thesaurus	= $element->active_in_thesaurus;
 					$item->root_terms			= $root_terms;

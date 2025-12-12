@@ -516,8 +516,8 @@ class ontology {
 				$target_section_tipo
 			);
 
-			$children_component->set_dato($children_data);
-			$children_component->Save();
+			$children_component->set_data($children_data);
+			$children_component->save();
 		}
 
 
@@ -1127,7 +1127,7 @@ class ontology {
 				$section_tipo // string section_tipo
 			);
 			$name		= $component->get_value();
-			$name_data	= $component->get_dato_full();
+			$name_data	= $component->get_data();
 
 		// tld
 			$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
@@ -1179,9 +1179,9 @@ class ontology {
 				DEDALO_DATA_LANG, // string lang
 				$section_tipo // string section_tipo
 			);
-			$main_lang = $component->get_value_code();
+			$main_lang = $component->get_value_code();			
 
-		// Typology
+		// Typology (typology_id | typology_name)
 			$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 			$typology_component = component_common::get_instance(
 				$model, // string model
@@ -1191,8 +1191,7 @@ class ontology {
 				DEDALO_DATA_NOLAN, // string lang
 				$section_tipo // string section_tipo
 			);
-
-			$typology_data	= $typology_component->get_dato();
+			$typology_data	= $typology_component->get_data();
 			$typology_id	= $typology_data[0]->section_id ?? null;
 			$typology_name	= $typology_component->get_value();
 
@@ -1206,8 +1205,8 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$order_dato		= $component_order->get_dato();
-			$order_value	= $order_dato[0] ?? 0;
+			$order_data		= $component_order->get_data();			
+			$order_value	= $order_data[0]->value ?? 0;
 
 		// active_in_thesaurus get the status of the component active
 		// it will use to discard into tree view the hierarchy in client
@@ -1221,26 +1220,29 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$active_in_thesaurus_data	= $component_active_in_thesaurus->get_dato();
-			$active_in_thesaurus		= isset($active_in_thesaurus_data[0]) && (int)$active_in_thesaurus_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES
+			$active_in_thesaurus_data = $component_active_in_thesaurus->get_data();
+			$active_section_id = $active_in_thesaurus_data[0]->section_id ?? null;
+			$active_in_thesaurus = $active_section_id === NUMERICAL_MATRIX_VALUE_YES
 				? true
 				: false;
 
+		// Build element
+		$element = new stdclass();
+		$element->section_id = $section_id;
+		$element->section_tipo = $section_tipo;
+		$element->name = $name;
+		$element->name_data = $name_data;
+		$element->tld = $tld;
+		$element->target_section_tipo = $target_section_tipo;
+		$element->target_section_model_tipo = $target_section_model_tipo;
+		$element->main_lang = $main_lang;
+		$element->typology_id = $typology_id;
+		$element->typology_name = $typology_name;
+		$element->order = $order_value;
+		$element->active_in_thesaurus = $active_in_thesaurus;
 
-		return (object)[
-			'section_id'				=> $section_id,
-			'section_tipo'				=> $section_tipo,
-			'name'						=> $name,
-			'name_data'					=> $name_data,
-			'tld'						=> $tld,
-			'target_section_tipo'		=> $target_section_tipo,
-			'target_section_model_tipo'	=> $target_section_model_tipo,
-			'main_lang'					=> $main_lang,
-			'typology_id'				=> $typology_id,
-			'typology_name'				=> $typology_name,
-			'order'						=> $order_value,
-			'active_in_thesaurus'		=> $active_in_thesaurus
-		];
+
+		return $element;		
 	}//end row_to_element
 
 
@@ -2566,7 +2568,7 @@ class ontology {
 			$section_tipo // string section_tipo
 		);
 
-		$root_terms = $componnent->get_dato();
+		$root_terms = $componnent->get_data() ?? [];
 
 		return $root_terms;
 	}//end get_root_terms
@@ -2607,8 +2609,8 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$main_record->section_tipo
 			);
-			$order_data = $component->get_dato();
-			$order = $order_data[0] ??  null;
+			$order_data = $component->get_data();
+			$order = $order_data[0] ?? null;
 			if(!empty($order)){
 				$order = (int)$order;
 			}

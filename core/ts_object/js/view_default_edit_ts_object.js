@@ -1397,11 +1397,10 @@ const render_ontology_term = function(options) {
 	// parse parts
 		const regex				= /^(.*) ([a-z]{2,}) ([0-9]+)$/gm;
 		const term_regex_result	= regex.exec(item.value)
-
 		// term_text
-			const term_text = term_regex_result
-				? term_regex_result[1]
-				: ts_id
+		const term_text = term_regex_result
+			? term_regex_result[1]
+			: item.value || ts_id
 
 	// term_node
 		const term_node = ui.create_dom_element({
