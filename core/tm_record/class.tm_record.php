@@ -18,8 +18,9 @@ class tm_record {
  	public string|int $section_id;
 	// section_record_data class instance
 	protected object $data_instance;
-	// To disable time machine save, set: tm_record::$save_time_machine_version = false;
-	public static $save_time_machine_version = true;
+	// To disable time machine save GLOBAL, set: tm_record::$save_tm = false;
+	public static $save_tm = true;
+
 
 
 	/**
@@ -137,9 +138,9 @@ class tm_record {
 	*/
 	public static function create( object $values ) : tm_record|false {
 
-		// save_time_machine_version. To disable time machine save, set: tm_record::$save_time_machine_version = false;
+		// save_tm. To disable time machine save, set: tm_record::$save_tm = false;
 		// This is useful for some bulk operations like 'portalize'
-		if (tm_record::$save_time_machine_version === false) {
+		if (tm_record::$save_tm === false) {
 			return false;
 		}
 

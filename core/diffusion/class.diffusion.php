@@ -1457,7 +1457,7 @@ abstract class diffusion  {
 					// section avoid save_modified by user in diffusion
 						$section = $component->get_my_section();
 						$section->save_modified = false;
-						$section->save_tm = false; // prevent to save time machine record
+						tm_record::$save_tm = false; // prevent to save time machine record
 					$component->Save();
 					$save_first = true;
 				}
@@ -1483,7 +1483,7 @@ abstract class diffusion  {
 					// section avoid save_modified by user in diffusion
 						$section = $component->get_my_section();
 						$section->save_modified = false;
-						$section->save_tm = false; // prevent to save time machine record
+						tm_record::$save_tm = false; // prevent to save time machine record
 					$component->Save();
 				}
 
@@ -1526,7 +1526,7 @@ abstract class diffusion  {
 				// section avoid save_modified by user in diffusion
 					$section = $component->get_my_section();
 					$section->save_modified = false;
-					$section->save_tm = false; // prevent to save time machine record
+					tm_record::$save_tm = false; // prevent to save time machine record
 				$component->Save();
 
 		// debug

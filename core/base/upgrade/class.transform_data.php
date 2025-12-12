@@ -2266,7 +2266,7 @@ class transform_data {
 				// remove the old component data and
 				// change time machine data
 					// disable time machine
-					RecordObj_time_machine::$save_time_machine_version = false;
+					tm_record::$save_tm = false;
 
 					foreach ($components as $component_item) {
 
@@ -2331,7 +2331,7 @@ class transform_data {
 					}
 
 					// active time machine
-					RecordObj_time_machine::$save_time_machine_version = true;
+					tm_record::$save_tm = true;
 			}
 		}//end foreach ($ar_transform_map as $item)
 

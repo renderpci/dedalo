@@ -57,8 +57,8 @@ class section extends common {
 		// tm_context. Array
 		public $tm_context;
 
-		// time machine save control
-		public $save_tm = true;
+		// // time machine save control
+		// public $save_tm = true;
 
 		/**
 		* SECTIONS FOR DATAFRAME

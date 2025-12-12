@@ -44,7 +44,7 @@ class tool_update_cache extends tool_common {
 
 		// Disable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log				= false;
-			RecordObj_time_machine::$save_time_machine_version	= false;
+			tm_record::$save_tm	= false;
 
 		// RECORDS. Use actual list search options as base to build current search
 			$sqo_id	= section::build_sqo_id($section_tipo);
@@ -112,7 +112,7 @@ class tool_update_cache extends tool_common {
 
 		// Enable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log				= true;
-			RecordObj_time_machine::$save_time_machine_version	= true;
+			tm_record::$save_tm	= true;
 
 		$section_label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 

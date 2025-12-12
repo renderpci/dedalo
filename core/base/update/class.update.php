@@ -80,7 +80,7 @@ class update {
 
 		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)
 			logger_backend_activity::$enable_log = false;
-			#RecordObj_time_machine::$save_time_machine_version  = false;
+			#tm_record::$save_tm  = false;
 
 		// update. Select the correct update object from the file 'updates.php'
 			$update = null;
@@ -195,7 +195,7 @@ class update {
 
 		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)
 			logger_backend_activity::$enable_log = false;
-			#RecordObj_time_machine::$save_time_machine_version  = false;
+			#tm_record::$save_tm  = false;
 
 		// update. Select the correct update object from the file 'updates.php'
 			$update = null;

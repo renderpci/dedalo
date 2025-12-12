@@ -192,11 +192,11 @@ class component_dataframe extends component_portal {
 		// Remove the time machine to save the dataframe
 		// this set will be saved by main component.
 		$section = $this->get_my_section();
-		$section->save_tm = false;
+		tm_record::$save_tm = false;
 		$this->set_dato( $data );
 		$this->Save();
 		// re activate the time machine
-		$section->save_tm = true;
+		tm_record::$save_tm = true;
 
 		return true;
 	}//end set_time_machine_data
