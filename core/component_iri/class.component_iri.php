@@ -1698,9 +1698,9 @@ class component_iri extends component_common {
 		try {
 			// search the label into target section:
 			$search = search::get_instance($search_query_object);
-			$result = $search->search();
+			$db_result = $search->search();
 
-			return $result->ar_records[0] ?? null;
+			return $db_result->fetch_one() ?? null;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__

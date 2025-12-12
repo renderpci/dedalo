@@ -280,9 +280,14 @@ class component_relation_index extends component_relation_common {
 				$sqo, // object sqo
 			);
 
-			$search_response = $search_instace->search();
+			$db_result = $search_instace->search();
 			// as the SQO is limited to 1, the result will be only 1
-			$row = reset( $search_response->ar_records );
+			$row = $db_result->fetch_one();
+
+			if (empty($row)) {
+				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . $current_section_tipo);
+				continue;
+			}
 
 			// create a valid locator to build the section instance
 			// this instance can calculate his context and his sub-context

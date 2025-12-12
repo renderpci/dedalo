@@ -386,18 +386,18 @@ class component_relation_related extends component_relation_common {
 			$search_query_object->set_offset(0);
 			$search_query_object->set_full_count(false);
 
-		$search			= search::get_instance($search_query_object);
-		$records_data	= $search->search();
+		$search		= search::get_instance($search_query_object);
+		$db_result	= $search->search();
 
 		$ar_result = [];
-		foreach ($records_data->ar_records as $row) {
+		foreach ($db_result as $row) {
 
 			$element = new stdClass();
 				$element->section_tipo			= $row->section_tipo;
 				$element->section_id			= $row->section_id;
 				$element->from_component_tipo	= $this->tipo;
 
-			$ar_result[]    = $element;
+			$ar_result[] = $element;
 		}
 
 

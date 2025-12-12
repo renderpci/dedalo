@@ -140,10 +140,8 @@ class get_coins_by_period extends widget_common {
 					$ts_sqo->limit	= 0;
 
 				$ts_search = search::get_instance($ts_sqo);
-					$ts_search_result	= $ts_search->search();
-					$ts_ar_records		= $ts_search_result->ar_records;
-
-
+					$db_result = $ts_search->search();
+					$ts_ar_records = $db_result->fetch_all();
 
 				// main term of ts, search in hierarchies section to get the main terms of the thesaurus
 				// create a OR statement of sqo for each thesaurus section_tipo
@@ -166,16 +164,12 @@ class get_coins_by_period extends widget_common {
 				}');
 
 				$hierarchies_search = search::get_instance($search_query_object);
-					$hierarchies_search_result	= $hierarchies_search->search();
-					$hierarchies_records		= $hierarchies_search_result->ar_records;
+				$db_result = $hierarchies_search->search();				
 
 				$ordered_hierarchy = [];
-				foreach ($hierarchies_records as $current_hierarchy_section_data) {
+				foreach ($db_result as $row) {
 
-					$root_hierarchy_children = array_filter($current_hierarchy_section_data->datos->relations, function($el) {
-						return $el->from_component_tipo === DEDALO_HIERARCHY_CHILDREN_TIPO;
-					});
-
+					$root_hierarchy_children = $row->relation->{DEDALO_HIERARCHY_CHILDREN_TIPO} ?? [];
 					foreach ($root_hierarchy_children as $current_locator) {
 
 						$result = $this->get_hierarchy_children_recursive($ts_ar_records, $current_locator, null);
@@ -273,18 +267,15 @@ class get_coins_by_period extends widget_common {
 					$sqo->limit		= 0;
 					$sqo->set_filter( $sqo_filter );
 
-				$search			= search::get_instance($sqo);
-				$search_result	= $search->search();
-				$ar_records		= $search_result->ar_records;
+				$search		= search::get_instance($sqo);
+				$db_result	= $search->search();
 
 			// get the value of the component using portal dato
 				$empty_period_count = null;
-				foreach ($ar_records as $current_section_data) {
+				foreach ($db_result as $row) {
 
-					$relations = $current_section_data->datos->relations ?? [];
-					$duplicated_dato = array_find($relations, function($el) use($component_tipo_duplicated){
-						return $el->from_component_tipo === $component_tipo_duplicated;
-					});
+					$duplicated_value = $row->relation->$component_tipo_duplicated ?? [];
+					$duplicated_dato = $duplicated_value[0] ?? null;					
 					// sample of duplicated dato: object|null
 						// {
 						//     "type": "dd151",
@@ -296,21 +287,18 @@ class get_coins_by_period extends widget_common {
 						continue;
 					}
 
-					$period_dato = array_filter($relations, function($el) use($component_tipo_period) {
-						return $el->from_component_tipo === $component_tipo_period;
-					});
+					$period_dato = $row->relation->$component_tipo_period ?? null;
 					if(empty($period_dato)){
 						$empty_period_count++;
-					}
+					}else{
+						foreach ($period_dato as $current_period) {
 
-					foreach ($period_dato as $current_period) {
+							$ts_term = array_find($ar_hierarchies, function($el) use($current_period){
+								return $el->section_tipo === $current_period->section_tipo
+										&& $el->section_id === $current_period->section_id;
+							});
 
-						$ts_term = array_find($ar_hierarchies, function($el) use($current_period){
-							return $el->section_tipo === $current_period->section_tipo
-									&& $el->section_id === $current_period->section_id;
-						});
-
-						// check ts_term found
+							// check ts_term found
 							if (!is_object($ts_term)) {
 								debug_log(__METHOD__
 									. " Ignored not found ts_term for period. " . PHP_EOL
@@ -322,27 +310,28 @@ class get_coins_by_period extends widget_common {
 								continue;
 							}
 
-						// Check if the source specify that need any parent with specific model (as "Era" model terms)
-						if($use_parent === true){
-							// find the parent term with the target model section_id
-							$area_term = $this->get_parent_with_specific_model($ar_hierarchies, $ts_term, $target_model_section_id);
+							// Check if the source specify that need any parent with specific model (as "Era" model terms)
+							if($use_parent === true){
+								// find the parent term with the target model section_id
+								$area_term = $this->get_parent_with_specific_model($ar_hierarchies, $ts_term, $target_model_section_id);
 
-							// if the term do not has any parent with the model to find add it to the unknown term (?)
-							if(!isset($area_term)){
-								$empty_period_count++;
+								// if the term do not has any parent with the model to find add it to the unknown term (?)
+								if(!isset($area_term)){
+									$empty_period_count++;
+								}else{
+									// count the coin into the term
+									$area_term->count = $area_term->count + 1;
+								}
+
 							}else{
 								// count the coin into the term
-								$area_term->count = $area_term->count + 1;
+								if(is_object($ts_term)){
+									$ts_term->count = $ts_term->count + 1;
+								}
 							}
-
-						}else{
-							// count the coin into the term
-							if(is_object($ts_term)){
-								$ts_term->count = $ts_term->count + 1;
-							}
-						}
-					}//end foreach ($period_dato as $current_period)
-				}//end foreach ($ar_records as $current_section_data)
+						}//end foreach ($period_dato as $current_period)
+					}
+				}//end foreach ($db_result as $row)
 
 				$period = array_filter($ar_hierarchies, function($el){
 					return $el->count !== null;
