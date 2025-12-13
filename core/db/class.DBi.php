@@ -242,7 +242,7 @@ abstract class DBi {
 
 		// cache
 			static $mysqli;
-			if(isset($mysqli)) {
+			if($cache === true && isset($mysqli)) {
 				return($mysqli);
 			}
 
