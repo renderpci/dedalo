@@ -397,7 +397,7 @@ final class dd_ts_api {
 				$locator->set_from_component_tipo($component_relation_parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
 
-			$added = (bool)$component_relation_parent->add_locator_to_dato( $locator );
+			$added = (bool)$component_relation_parent->add_locator_to_data( $locator );
 			if ($added===true) {
 
 				// Save relation parent data
@@ -481,7 +481,7 @@ final class dd_ts_api {
 				$locator->set_section_id($old_parent_section_id);
 				$locator->set_from_component_tipo($parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->remove_locator_from_dato($locator);
+			$result = $component_relation_parent->remove_locator_from_data($locator);
 			if (!$result) {
 				$response->errors[] = 'remove old parent failed';
 				$response->msg .= ' Remove old parent locator failed: ' . to_string($locator);
@@ -499,7 +499,7 @@ final class dd_ts_api {
 				$locator->set_section_id($new_parent_section_id);
 				$locator->set_from_component_tipo($parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->add_locator_to_dato($locator);
+			$result = $component_relation_parent->add_locator_to_data($locator);
 			if (!$result) {
 				$response->errors[] = 'add new parent failed';
 				$response->msg .= ' Add new parent locator failed: ' . to_string($locator);
@@ -512,7 +512,7 @@ final class dd_ts_api {
 			);
 
 		// save
-			$component_relation_parent->Save();
+			$component_relation_parent->save();
 
 		// response
 			$response->result	= true;

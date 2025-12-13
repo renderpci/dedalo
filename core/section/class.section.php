@@ -3459,7 +3459,7 @@ class section extends common {
 	// 			$locator_to_remove->set_section_tipo($this->tipo);
 	// 			$locator_to_remove->set_from_component_tipo($component_tipo);
 
-	// 		if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
+	// 		if (true === $component->remove_locator_from_data( $locator_to_remove )) {
 
 	// 			// removed case
 

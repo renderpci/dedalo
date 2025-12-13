@@ -924,12 +924,12 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* ADD_LOCATOR_TO_DATO
+	* ADD_LOCATOR_TO_DATA
 	* Add one locator to current 'dato'. Verify that it exists before, to avoid duplicates.
 	* @param object $locator
 	* @return bool
 	*/
-	public function add_locator_to_dato( object $locator ) : bool {
+	public function add_locator_to_data( object $locator ) : bool {
 
 		if(empty($locator)) {
 			return false;
@@ -949,17 +949,17 @@ class component_relation_common extends component_common {
 		}
 
 		// short vars
-		$dato	= $this->get_dato();
+		$data	= $this->get_data();
 		$added	= false;
 
 		// maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, undesired object is created)
-		$dato = array_values($dato);
+		$data = array_values($data);
 
-		$object_exists = locator::in_array_locator( $locator, $dato );
+		$object_exists = locator::in_array_locator( $locator, $data );
 		if ($object_exists===false) {
 
 			// Add to dato
-			array_push($dato, $locator);
+			array_push($data, $locator);
 
 			$added = true;
 		}else{
@@ -972,12 +972,12 @@ class component_relation_common extends component_common {
 
 		// Updates current dato
 		if ($added===true) {
-			$this->set_dato( $dato );
+			$this->set_data( $data );
 		}
 
 
 		return $added;
-	}//end add_locator_to_dato
+	}//end add_locator_to_data
 
 
 
@@ -3412,9 +3412,9 @@ class component_relation_common extends component_common {
 				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 				$locator->set_from_component_tipo($this->tipo);
 
-			$added = $this->add_locator_to_dato($locator);
+			$added = $this->add_locator_to_data($locator);
 			if ($added!==true) {
-				$response->msg .= 'Error add_locator_to_dato. New locator is not added !';
+				$response->msg .= 'Error add_locator_to_data. New locator is not added !';
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
 					.' locator: ' . to_string($locator) . PHP_EOL
