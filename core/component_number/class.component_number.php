@@ -179,39 +179,39 @@ class component_number extends component_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Returns int or float number as string formatted
-	* @return string|null $valor
-	*/
-	public function get_valor($index='all') {
+	// /**
+	// * GET_VALOR
+	// * Returns int or float number as string formatted
+	// * @return string|null $valor
+	// */
+	// public function get_valor($index='all') {
 
-		$valor = '';
+	// 	$valor = '';
 
-		$dato = $this->get_dato();
+	// 	$dato = $this->get_data();
 
-		if(empty($dato)) {
-			return (string)$valor;
-		}
+	// 	if(empty($dato)) {
+	// 		return (string)$valor;
+	// 	}
 
-		if ($index==='all') {
-			$ar = array();
-			foreach ($dato as $key => $value) {
-				$value = component_number::number_to_string($value);
-				if (!empty($value)) {
-					$ar[] = $value;
-				}
-			}
-			if (count($ar)>0) {
-				$valor = implode(',',$ar);
-			}
-		}else{
-			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
-		}
+	// 	if ($index==='all') {
+	// 		$ar = array();
+	// 		foreach ($dato as $key => $value) {
+	// 			$value = component_number::number_to_string($value);
+	// 			if (!empty($value)) {
+	// 				$ar[] = $value;
+	// 			}
+	// 		}
+	// 		if (count($ar)>0) {
+	// 			$valor = implode(',',$ar);
+	// 		}
+	// 	}else{
+	// 		$index = (int)$index;
+	// 		$valor = isset($dato[$index]) ? $dato[$index] : null;
+	// 	}
 
-		return $valor;
-	}//end get_valor
+	// 	return $valor;
+	// }//end get_valor
 
 
 
