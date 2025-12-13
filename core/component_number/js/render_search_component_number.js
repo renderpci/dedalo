@@ -107,7 +107,11 @@ const get_content_data = function(self) {
 /**
 * GET_INPUT_ELEMENT
 * @param int i (array position from value)
-* @param number current_value
+* @param object current_value
+* {
+*	id : 1,
+* 	value : 73
+* }
 * @param object self (component instance)
 * @return HTMLElement content_value
 */
@@ -124,7 +128,7 @@ const get_input_element = (i, current_value, self) => {
 		element_type	: 'input',
 		type			: 'text',
 		class_name		: 'input_value',
-		value			: current_value,
+		value			: current_value?.value || '',
 		parent			: content_value
 	})
 
