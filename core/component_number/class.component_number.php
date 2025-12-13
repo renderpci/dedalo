@@ -599,7 +599,7 @@ class component_number extends component_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$dato				= parent::get_dato();
+		$dato				= parent::get_data();
 		$value				= is_array($dato) ? reset($dato) : $dato;
 		$diffusion_value	= !empty($value)
 			? (string)$value
