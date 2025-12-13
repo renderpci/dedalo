@@ -121,42 +121,61 @@ class component_number extends component_common {
 
 
 	/**
-	* SET_DATO
+	* SET_DATA
+	* Format the given data with the properties set in ontology
+	* Format could be 'int' or 'float'.
 	* @return bool
 	*/
-	public function set_dato( $dato ) : bool {
+	public function set_data( $data ) : bool {
 
-		if ($this->is_empty($dato)) {
+		// Empty data
+		if ($this->is_empty($data)) {
 
-			$safe_dato = null;
+			$safe_data = null;
 
 		}else{
 
-			$safe_dato = array();
-			foreach ((array)$dato as  $value) {
-				if (is_null($value) || $value==='') {
-					$safe_dato[] = null;
-				}elseif (is_numeric($value)) {
-					$safe_dato[] = $this->set_format_form_type($value);
-				}else{
-					// trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+			$safe_data = [];
+			foreach ( $data as $item ) {
+				// Wrong data!
+				if($item === null){
 					debug_log(__METHOD__
-						." Invalid value! [component_number.set_dato] value: "
-						.to_string($value)
+						. ' WARNING : Invalid data item! removed ' . PHP_EOL					
+						. ' data: ' . to_string($data)
+						, logger::ERROR
+					);
+					continue;
+				}
+				// Empty values
+				// save it as is.
+				if($item->value === null){
+					$safe_data[] = $item;
+					continue;
+				}
+				// values are not empty, format them.
+				if ( is_numeric($item->value) ) {
+					$new_item = clone($item);
+					$new_item->value = $this->set_format_form_type($item->value);
+					$safe_data[] = $new_item;
+				}else{
+					// trigger_error("Invalid value! [component_number.set_data] value: ".json_encode($value));
+					debug_log(__METHOD__
+						." Invalid value! [component_number.set_data] value: "
+						.to_string($item)
 						, logger::ERROR
 					);
 				}
 			}
 
-			// empty dato case
-			if ($this->is_empty($safe_dato)) {
-				$safe_dato = null;
+			// empty data case
+			if ($this->is_empty($safe_data)) {
+				$safe_data = null;
 			}
 		}
 
 
-		return parent::set_dato( $safe_dato );
-	}//end set_dato
+		return parent::set_data( $safe_data );
+	}//end set_data
 
 
 
