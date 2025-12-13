@@ -102,8 +102,9 @@ abstract class DBi {
 			return $pg_conn_real;
 		}
 
-		// Cache the successful connection
+		// cache is true case. Cache the successful connection
 		self::$pg_conn_cache = $pg_conn_real;
+		self::$pg_conn_valid_until = $now + self::$connection_check_interval;	
 
 
 		return self::$pg_conn_cache;
@@ -483,9 +484,11 @@ abstract class DBi {
 	* Get all Database indexes as:
 	* 	public	| matrix |	matrix_section_tipo_section_id
 	* 	public	| matrix |	matrix_relations_gin
-	* @return array $list
+	* @return array|false $list
 	*/
-	public static function get_indexes() : array {
+	public static function get_indexes() : array|false {
+
+		$conn = DBi::_getConnection();
 
 		$sql = "
 			SELECT
@@ -502,7 +505,16 @@ abstract class DBi {
 				tablename;
 		";
 
-		$result	= pg_query(DBi::_getConnection(), $sql);
+		$result	= pg_query($conn, $sql);
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
 
 		$list = [];
 		while($row = pg_fetch_assoc($result)) {
@@ -531,9 +543,11 @@ abstract class DBi {
 	* Get all Database user functions as:
 	* 	public	check_array_component
 	* 	public	f_unaccent
-	* @return array $list
+	* @return array|false $list
 	*/
-	public static function get_functions() : array {
+	public static function get_functions() : array|false {
+
+		$conn = DBi::_getConnection();
 
 		$sql = "
 			SELECT
@@ -552,7 +566,16 @@ abstract class DBi {
 				p.proname;
 		";
 
-		$result	= pg_query(DBi::_getConnection(), $sql);
+		$result	= pg_query($conn, $sql);
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
 
 		$list = [];
 		while($row = pg_fetch_assoc($result)) {
@@ -575,9 +598,13 @@ abstract class DBi {
 	* GET_CONSTRAINT_FROM_INDEX
 	* Get the constraint for one given index
 	* @param string $index_name
-	* @return array $constraint_name
+	* @return array|false $constraint_name
 	*/
-	public static function get_constraint_name_from_index( string $index_name ) : array {
+	public static function get_constraint_name_from_index( string $index_name ) : array|false {
+
+		$conn = DBi::_getConnection();
+
+		$safe_index_name = pg_escape_literal($conn, $index_name);
 
 		$sql = "
 			SELECT
@@ -594,12 +621,20 @@ abstract class DBi {
 					FROM
 						pg_class
 					WHERE
-						relname = '{$index_name}'
-					);
-
+						relname = {$safe_index_name}
+				);
 		";
 
-		$result	= pg_query(DBi::_getConnection(), $sql);
+		$result	= pg_query($conn, $sql);
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
 
 		$list = [];
 		while($row = pg_fetch_assoc($result)) {
