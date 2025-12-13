@@ -136,10 +136,10 @@ final class component_dataframe_test extends TestCase {
 
 
 	/**
-	* TEST_remove_locator_from_dato
+	* TEST_remove_locator_from_data
 	* @return void
 	*/
-	public function test_remove_locator_from_dato() {
+	public function test_remove_locator_from_data() {
 
 		// without caller dataframe
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
@@ -159,7 +159,7 @@ final class component_dataframe_test extends TestCase {
 
 			$ar_properties = [];
 
-			$result = $component->remove_locator_from_dato(
+			$result = $component->remove_locator_from_data(
 				$locator,
 				$ar_properties
 			);
@@ -203,7 +203,7 @@ final class component_dataframe_test extends TestCase {
 
 			$ar_properties = [];
 
-			$result = $component->remove_locator_from_dato(
+			$result = $component->remove_locator_from_data(
 				$locator,
 				$ar_properties
 			);
@@ -223,7 +223,7 @@ final class component_dataframe_test extends TestCase {
 			);
 			// expected running without errors
 			$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
-	}//end test_remove_locator_from_dato
+	}//end test_remove_locator_from_data
 
 
 

@@ -276,7 +276,7 @@ class component_relation_parent extends component_relation_common {
 			}
 
 		// Add current locator to component dato
-			if (!$this->add_locator_to_dato($locator)) {
+			if (!$this->add_locator_to_data($locator)) {
 				return false;
 			}
 
@@ -295,7 +295,7 @@ class component_relation_parent extends component_relation_common {
 	public function remove_parent( locator $locator ) : bool {
 
 		// remove current locator from component dato
-		if (!$this->remove_locator_from_dato($locator)) {
+		if (!$this->remove_locator_from_data($locator)) {
 			return false;
 		}
 
@@ -303,6 +303,7 @@ class component_relation_parent extends component_relation_common {
 	}//end remove_parent
 
 
+	
 	/**
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @param string $component_tipo

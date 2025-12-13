@@ -299,10 +299,10 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
-	* TEST_add_locator_to_dato
+	* TEST_add_locator_to_data
 	* @return void
 	*/
-	public function test_add_locator_to_dato() : void {
+	public function test_add_locator_to_data() : void {
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -320,7 +320,7 @@ final class component_relation_common_test extends TestCase {
 			$locator->set_section_id(3);
 			$locator->set_type($type);
 
-		$value = $component->add_locator_to_dato($locator);
+		$value = $component->add_locator_to_data($locator);
 
 		$this->assertTrue(
 			gettype($value)==='boolean',
@@ -331,15 +331,15 @@ final class component_relation_common_test extends TestCase {
 			$value===true,
 			'expected true : ' . PHP_EOL
 		);
-	}//end test_add_locator_to_dato
+	}//end test_add_locator_to_data
 
 
 
 	/**
-	* TEST_remove_locator_from_dato
+	* TEST_remove_locator_from_data
 	* @return void
 	*/
-	public function test_remove_locator_from_dato() : void {
+	public function test_remove_locator_from_data() : void {
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -356,7 +356,7 @@ final class component_relation_common_test extends TestCase {
 				$locator->set_section_id(3);
 				$locator->set_type($component->get_relation_type());
 
-			$value = $component->remove_locator_from_dato($locator);
+			$value = $component->remove_locator_from_data($locator);
 
 			$this->assertTrue(
 				gettype($value)==='boolean',
@@ -374,7 +374,7 @@ final class component_relation_common_test extends TestCase {
 
 				$locator = $dato[0];
 
-				$value = $component->remove_locator_from_dato($locator);
+				$value = $component->remove_locator_from_data($locator);
 
 				$this->assertTrue(
 					gettype($value)==='boolean',
@@ -386,7 +386,7 @@ final class component_relation_common_test extends TestCase {
 					'expected true : ' . PHP_EOL
 				);
 			}
-	}//end test_remove_locator_from_dato
+	}//end test_remove_locator_from_data
 
 
 

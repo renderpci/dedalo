@@ -203,7 +203,7 @@ class transform_data {
 								$new_locator->set_section_id($new_section_id);
 								$new_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
-							$original_component_portal_target->add_locator_to_dato($new_locator);
+							$original_component_portal_target->add_locator_to_data($new_locator);
 							// save component
 							$original_component_portal_target->Save();
 
@@ -222,7 +222,7 @@ class transform_data {
 								$new_locator->set_section_id($current_locator->section_id);
 								$new_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
-							$new_component_portal->add_locator_to_dato($new_locator);
+							$new_component_portal->add_locator_to_data($new_locator);
 							// save component
 							$new_component_portal->Save();
 
@@ -251,7 +251,7 @@ class transform_data {
 									$new_locator->set_section_id($ds_locator->section_id);
 									$new_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
-								$new_component_portal_ds->add_locator_to_dato($new_locator);
+								$new_component_portal_ds->add_locator_to_data($new_locator);
 								// save component
 								$new_component_portal_ds->Save();
 							}

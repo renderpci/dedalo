@@ -112,7 +112,7 @@ class component_relation_related extends component_relation_common {
 			}
 
 		// Add current locator to component dato
-			$result = $this->add_locator_to_dato($locator);
+			$result = $this->add_locator_to_data($locator);
 
 
 		return $result;
@@ -129,7 +129,7 @@ class component_relation_related extends component_relation_common {
 	public function remove_related( object $locator ) : bool {
 
 		// Add current locator to component dato
-		$result = $this->remove_locator_from_dato($locator);
+		$result = $this->remove_locator_from_data($locator);
 
 		return $result;
 	}//end remove_related

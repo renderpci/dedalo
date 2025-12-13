@@ -578,7 +578,7 @@ class component_relation_index extends component_relation_common {
 			];
 
 		// Add current locator to component dato
-			if (!$this->remove_locator_from_dato($locator, $ar_properties)) {
+			if (!$this->remove_locator_from_data($locator, $ar_properties)) {
 				return false;
 			}
 

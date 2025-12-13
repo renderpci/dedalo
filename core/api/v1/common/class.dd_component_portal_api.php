@@ -86,7 +86,7 @@ final class dd_component_portal_api {
 			}
 
 		// remove
-			$removed = $component->remove_locator_from_dato(
+			$removed = $component->remove_locator_from_data(
 				$locator, // object locator full or partial
 				$ar_properties // array properties to compare
 			);
