@@ -79,33 +79,44 @@ class component_number extends component_common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
+	* Obtain the data from DB and format as ontology defines
 	* @return array|null
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
-		$dato = parent::get_dato();
+		$data = parent::get_data();
 
-		$format_dato = [];
-		$count = is_array($dato)
-			? count($dato)
-			: 0;
+		if($data === null){
+			return null;
+		}
 
-		foreach ((array)$dato as $value) {
-			if($count === 1 && $value === null){
+		$format_data = [];
+		foreach ( $data as $item ) {
+			// Wrong data!
+			if($item === null){
+				debug_log(__METHOD__
+					. ' WARNING : Invalid data item! removed ' . PHP_EOL					
+					. ' data: ' . to_string($data)
+					, logger::ERROR
+				);
 				continue;
 			}
-			$format_dato[] = $this->set_format_form_type($value);
+			// Empty values
+			// save it as is.
+			if($item->value === null){
+				$format_data[] = $item;
+				continue;
+			}
+			// values are not empty, format them.
+			$new_item = clone($item);
+			$new_item->value = $this->set_format_form_type($item->value);
+			$format_data[] = $new_item;
 		}
 
-		// empty data case
-		if ($this->is_empty($format_dato)) {
-			$format_dato = null;
-		}
 
-
-		return $format_dato;
-	}//end get_dato
+		return $format_data;
+	}//end get_data
 
 
 
