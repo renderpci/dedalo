@@ -91,7 +91,11 @@ const get_content_data = function(self) {
 * GET_CONTENT_VALUE
 * Creates the current input text node
 * @param int i
-* @param string current_value
+* @param object current_value
+* {
+*	id : 1,
+* 	value : 73
+* }
 * @param object self
 * @return HTMLElement content_value
 */
@@ -108,7 +112,7 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: current_value?.value || '',
 			parent			: content_value
 		})
 		input.step = self.get_steps()

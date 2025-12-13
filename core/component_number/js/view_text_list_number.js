@@ -32,7 +32,7 @@ view_text_list_number.render = async function(self, options) {
 	// short vars
 		const data			= self.data || {}
 		const value_string	= (data.value)
-			? data.value.join(self.context.fields_separator)
+			? value.map(item => item.value).join(self.context.fields_separator)
 			: ''
 
 	// wrapper. Set as span

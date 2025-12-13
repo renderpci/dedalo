@@ -99,7 +99,11 @@ export const get_content_data = function(self) {
 /**
 * GET_CONTENT_VALUE
 * @param int i
-* @param int|null current_value
+* @param object current_value
+* {
+*	id : 1,
+* 	value : 73
+* }
 * @param object self
 * @return HTMLElement content_value
 */
@@ -116,7 +120,7 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: current_value?.value || '',
 			parent			: content_value
 		})
 		input.step = self.get_steps()
@@ -187,7 +191,11 @@ const get_content_value = (i, current_value, self) => {
 /**
 * GET_CONTENT_VALUE_READ
 * @param int i
-* @param int|null current_value
+* @param object current_value
+* {
+*	id : 1,
+* 	value : 73
+* }
 * @param object self
 * @return HTMLElement content_value
 */
@@ -197,7 +205,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: current_value?.value || ''
 		})
 
 
@@ -298,11 +306,19 @@ export const change_handler = function(e, key, self) {
 		? parsed_value
 		: null;
 
+	// update value item
+	const item = self.data.value[key]
+	if (!item) {
+		console.error('Failed to change value. Item not found for key', key)
+		return
+	}	
+	item.value = safe_value
+
 	// change data
 	const changed_data_item = Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: safe_value
+		value	: item
 	})
 
 	// change_value (save data)
