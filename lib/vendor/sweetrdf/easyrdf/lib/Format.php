@@ -113,6 +113,9 @@ class Format
 
         $acceptStr = '';
         foreach ($accepted_types as $type => $q) {
+            if (null === $q) {
+                continue;
+            }
             if ($acceptStr) {
                 $acceptStr .= ',';
             }
@@ -550,7 +553,8 @@ class Format
 
 /*
    Register default set of supported formats
-   NOTE: they are ordered by preference
+   NOTE: q=null is used for media types that should not be included in Accept headers
+   because they are non-standard or obscure but will still be recognised as Content-type
 */
 
 Format::register(
@@ -558,7 +562,7 @@ Format::register(
     'RDF/PHP',
     'https://www.easyrdf.org/docs/rdf-formats-php',
     [
-        'application/x-httpd-php-source' => 1.0,
+        'application/x-httpd-php-source' => null, // not registered; could be any PHP
     ],
     ['phps']
 );
@@ -568,9 +572,9 @@ Format::register(
     'RDF/JSON Resource-Centric',
     'https://www.easyrdf.org/docs/rdf-formats-json',
     [
-        'application/json' => 1.0,
-        'text/json' => 0.9,
-        'application/rdf+json' => 0.9,
+        'application/json' => null, // could be any JSON
+        'text/json' => null, // not officially registered
+        'application/rdf+json' => null, // not officially registered
     ],
     ['json']
 );
@@ -580,7 +584,7 @@ Format::register(
     'JSON-LD',
     'http://www.w3.org/TR/json-ld/',
     [
-        'application/ld+json' => 1.0,
+        'application/ld+json' => 0.7,
     ],
     ['jsonld']
 );
@@ -590,11 +594,11 @@ Format::register(
     'N-Triples',
     'http://www.w3.org/TR/n-triples/',
     [
-        'application/n-triples' => 1.0,
-        'text/plain' => 0.9,
-        'text/ntriples' => 0.9,
-        'application/ntriples' => 0.9,
-        'application/x-ntriples' => 0.9,
+        'application/n-triples' => 0.9,
+        'text/plain' => null, // could be any text
+        'text/ntriples' => null, // not officially registered
+        'application/ntriples' => null, // not officially registered
+        'application/x-ntriples' => null, // not officially registered
     ],
     ['nt']
 );
@@ -604,9 +608,9 @@ Format::register(
     'Turtle Terse RDF Triple Language',
     'https://www.w3.org/TR/turtle/',
     [
-        'text/turtle' => 0.8,
-        'application/turtle' => 0.7,
-        'application/x-turtle' => 0.7,
+        'text/turtle' => 1.0,
+        'application/turtle' => null, // not officially registered
+        'application/x-turtle' => null, // not officially registered
     ],
     ['ttl']
 );
@@ -617,8 +621,8 @@ Format::register(
     'http://www.w3.org/TR/rdf-syntax-grammar/',
     [
         'application/rdf+xml' => 0.8,
-        'text/xml' => 0.5,
-        'application/xml' => 0.5,
+        'text/xml' => null, // could be any XML
+        'application/xml' => null, // could be any XML
     ],
     ['rdf', 'xrdf']
 );
@@ -628,7 +632,7 @@ Format::register(
     'Graphviz',
     'http://www.graphviz.org/doc/info/lang.html',
     [
-        'text/vnd.graphviz' => 0.8,
+        'text/vnd.graphviz' => null,
     ],
     ['gv', 'dot']
 );
@@ -643,8 +647,8 @@ Format::register(
     'Notation3',
     'http://www.w3.org/2000/10/swap/grammar/n3#',
     [
-        'text/n3' => 0.5,
-        'text/rdf+n3' => 0.5,
+        'text/n3' => null,
+        'text/rdf+n3' => null,
     ],
     ['n3']
 );
@@ -654,8 +658,8 @@ Format::register(
     'RDFa',
     'http://www.w3.org/TR/rdfa-core/',
     [
-        'text/html' => 0.4,
-        'application/xhtml+xml' => 0.4,
+        'text/html' => null, // could be any HTML without RDFa
+        'application/xhtml+xml' => null, // could be any XHTML without RDFa
     ],
     ['html']
 );
@@ -683,7 +687,7 @@ Format::register(
     'Portable Network Graphics (PNG)',
     'http://www.w3.org/TR/PNG/',
     [
-        'image/png' => 0.3,
+        'image/png' => null,
     ],
     ['png']
 );
@@ -693,7 +697,7 @@ Format::register(
     'Graphics Interchange Format (GIF)',
     'http://www.w3.org/Graphics/GIF/spec-gif89a.txt',
     [
-        'image/gif' => 0.2,
+        'image/gif' => null,
     ],
     ['gif']
 );
@@ -703,7 +707,7 @@ Format::register(
     'Scalable Vector Graphics (SVG)',
     'http://www.w3.org/TR/SVG/',
     [
-        'image/svg+xml' => 0.3,
+        'image/svg+xml' => null,
     ],
     ['svg']
 );

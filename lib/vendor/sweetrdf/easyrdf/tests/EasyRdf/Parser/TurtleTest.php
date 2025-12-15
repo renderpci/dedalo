@@ -621,4 +621,42 @@ class TurtleTest extends TestCase
 
         $this->parseTurtle('turtle/gh58-sweetrdf-bool-parser.ttl');
     }
+
+    /**
+     * Error parsing Turtle that only contains PREFIX declarations but no triples
+     *
+     * @see https://github.com/sweetrdf/easyrdf/issues/74
+     */
+    public function testIssue74()
+    {
+        $this->expectNotToPerformAssertions();
+
+        /**
+         * Triggered:
+         *
+         *      PHP Fatal error: Uncaught EasyRdf\Parser\Exception:
+         *      Turtle Parse Error: expected an RDF value here, found '>' on line 3, column 1
+         *      in /home/xxx/proj/easyrdf-fuseki-compat/vendor/sweetrdf/easyrdf/lib/Parser/Turtle.php:544
+         */
+        $this->turtleParser->parse(
+            new Graph(),
+            "PREFIX ex: <http://example.org/>\n",
+            'turtle',
+            $this->baseUri.'issue/74'
+        );
+
+        /**
+         * Triggered:
+         *
+         *      PHP Fatal error: Uncaught EasyRdf\Parser\Exception:
+         *      Turtle Parse Error: expected ':', found '/' on line 1, column 32
+         *      in /home/xxx/proj/easyrdf-fuseki-compat/vendor/sweetrdf/easyrdf/lib/Parser/Turtle.php:1044
+         */
+        $this->turtleParser->parse(
+            new Graph(),
+            "PREFIX ex: <http://example.org/>",
+            'turtle',
+            $this->baseUri.'issue/74'
+        );
+    }
 }

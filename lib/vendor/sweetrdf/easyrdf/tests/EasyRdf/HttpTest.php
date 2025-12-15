@@ -56,7 +56,7 @@ class HttpTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            '$httpClient should be an object of class Zend\Http\Client or EasyRdf\Http\Client'
+            '$httpClient should be an object of class EasyRdf\Http\Client or Laminas\Http\Client'
         );
         Http::setDefaultHttpClient(null);
     }
@@ -65,7 +65,7 @@ class HttpTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            '$httpClient should be an object of class Zend\Http\Client or EasyRdf\Http\Client'
+            '$httpClient should be an object of class EasyRdf\Http\Client or Laminas\Http\Client'
         );
         Http::setDefaultHttpClient('foobar');
     }
