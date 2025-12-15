@@ -1854,6 +1854,9 @@ class component_text_area extends component_common {
 		// escape q string for DB
 			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
+
 		// Always set fixed values
 		$query_object->type = 'string';
 
@@ -1953,6 +1956,63 @@ class component_text_area extends component_common {
 				$query_object->operator = '!~';
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
+				break;
+			# IS EXACTLY EQUAL ==
+			case (strpos($q, '==')===0 || $q_operator==='=='):
+
+				$operator = '==';
+				$q_clean  = str_replace($operator, '', $q);
+
+				// common
+				$query_object->operator = '@>';
+				$query_object->unaccent = false;
+				$query_object->type = 'object';
+
+				// regular version
+				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+
+				// paragraph version
+				$p_query_object = clone($query_object);
+				$p_query_object->q_parsed = '\'["<p>'.$q_clean.'</p>"]\'';
+
+				if (isset($query_object->lang) && $query_object->lang==='all') {
+
+					$logical_operator = '$or';
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ((array)$ar_all_langs as $current_lang) {
+
+						// regular version
+						$clone = clone($query_object);
+							$clone->component_path[] = $current_lang;
+
+						$ar_query_object[] = $clone;
+
+						// paragraph version
+						$clone2 = clone($p_query_object);
+							$clone2->component_path[] = $current_lang;
+
+						$ar_query_object[] = $clone2;
+					}
+					$query_object = new stdClass();
+						$query_object->$logical_operator = $ar_query_object;
+				}else{
+
+					// With lang
+
+					// add component_path lang for both
+					if (isset($query_object->lang)) {
+						$query_object->component_path[] = $query_object->lang;
+						$p_query_object->component_path[] = $query_object->lang;
+					}
+
+					// final query_object with both queries: 'raspa', '<p>raspa</p>''
+					$ar_queries = [$query_object, $p_query_object];
+					$logical_operator = '$or';
+					$query_object = new stdClass();
+						$query_object->$logical_operator = $ar_queries;
+				}
 				break;
 			# IS SIMILAR
 			case (strpos($q, '=')===0):
