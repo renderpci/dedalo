@@ -12,80 +12,80 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
     );
 
     public static $prefixLengthsPsr4 = array (
-        'z' => 
+        'z' =>
         array (
             'zozlak\\' => 7,
         ),
-        'r' => 
+        'r' =>
         array (
             'rdfInterface\\' => 13,
             'rdfHelpers\\' => 11,
         ),
-        'R' => 
+        'R' =>
         array (
             'RobRichards\\XMLSecLibs\\' => 23,
         ),
-        'P' => 
+        'P' =>
         array (
             'Psr\\Http\\Message\\' => 17,
             'PhpParser\\' => 10,
         ),
-        'O' => 
+        'O' =>
         array (
             'OneLogin\\' => 9,
         ),
-        'L' => 
+        'L' =>
         array (
             'Linfo\\' => 6,
         ),
-        'E' => 
+        'E' =>
         array (
             'EasyRdf\\' => 8,
         ),
-        'D' => 
+        'D' =>
         array (
             'DeepCopy\\' => 9,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'zozlak\\' => 
+        'zozlak\\' =>
         array (
             0 => __DIR__ . '/..' . '/zozlak/rdf-constants/src/zozlak',
         ),
-        'rdfInterface\\' => 
+        'rdfInterface\\' =>
         array (
             0 => __DIR__ . '/..' . '/sweetrdf/rdf-interface/src/rdfInterface',
         ),
-        'rdfHelpers\\' => 
+        'rdfHelpers\\' =>
         array (
             0 => __DIR__ . '/..' . '/sweetrdf/rdf-helpers/src/rdfHelpers',
         ),
-        'RobRichards\\XMLSecLibs\\' => 
+        'RobRichards\\XMLSecLibs\\' =>
         array (
             0 => __DIR__ . '/..' . '/robrichards/xmlseclibs/src',
         ),
-        'Psr\\Http\\Message\\' => 
+        'Psr\\Http\\Message\\' =>
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
-        'PhpParser\\' => 
+        'PhpParser\\' =>
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
         ),
-        'OneLogin\\' => 
+        'OneLogin\\' =>
         array (
             0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
         ),
-        'Linfo\\' => 
+        'Linfo\\' =>
         array (
             0 => __DIR__ . '/..' . '/linfo/linfo/src/Linfo',
         ),
-        'EasyRdf\\' => 
+        'EasyRdf\\' =>
         array (
             0 => __DIR__ . '/..' . '/sweetrdf/easyrdf/lib',
         ),
-        'DeepCopy\\' => 
+        'DeepCopy\\' =>
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
         ),
@@ -790,12 +790,12 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         'PHPUnit\\Runner\\HookMethodCollection' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/HookMethod/HookMethodCollection.php',
         'PHPUnit\\Runner\\InvalidOrderException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Exception/InvalidOrderException.php',
         'PHPUnit\\Runner\\ParameterDoesNotExistException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Exception/ParameterDoesNotExistException.php',
-        'PHPUnit\\Runner\\Phpt\\InvalidPhptFileException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/Exception/InvalidPhptFileException.php',
-        'PHPUnit\\Runner\\Phpt\\Parser' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/Parser.php',
-        'PHPUnit\\Runner\\Phpt\\PhptExternalFileCannotBeLoadedException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/Exception/PhptExternalFileCannotBeLoadedException.php',
-        'PHPUnit\\Runner\\Phpt\\Renderer' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/Renderer.php',
-        'PHPUnit\\Runner\\Phpt\\TestCase' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/TestCase.php',
-        'PHPUnit\\Runner\\Phpt\\UnsupportedPhptSectionException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Phpt/Exception/UnsupportedPhptSectionException.php',
+        'PHPUnit\\Runner\\Phpt\\InvalidPhptFileException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/Exception/InvalidPhptFileException.php',
+        'PHPUnit\\Runner\\Phpt\\Parser' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/Parser.php',
+        'PHPUnit\\Runner\\Phpt\\PhptExternalFileCannotBeLoadedException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/Exception/PhptExternalFileCannotBeLoadedException.php',
+        'PHPUnit\\Runner\\Phpt\\Renderer' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/Renderer.php',
+        'PHPUnit\\Runner\\Phpt\\TestCase' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/TestCase.php',
+        'PHPUnit\\Runner\\Phpt\\UnsupportedPhptSectionException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/PHPT/Exception/UnsupportedPhptSectionException.php',
         'PHPUnit\\Runner\\ResultCache\\DefaultResultCache' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/ResultCache/DefaultResultCache.php',
         'PHPUnit\\Runner\\ResultCache\\NullResultCache' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/ResultCache/NullResultCache.php',
         'PHPUnit\\Runner\\ResultCache\\ResultCache' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/ResultCache/ResultCache.php',

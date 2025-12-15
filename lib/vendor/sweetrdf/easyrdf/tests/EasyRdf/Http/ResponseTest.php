@@ -119,8 +119,6 @@ class ResponseTest extends TestCase
      * Unlike stanrdard 'deflate' response, those do not contain the zlib header
      * and trailer. Unfortunately some buggy servers (read: IIS) send those and
      * we need to support them.
-     *
-     * @see http://framework.zend.com/issues/browse/ZF-6040
      */
     public function testNonStandardDeflateResponseZF6040()
     {

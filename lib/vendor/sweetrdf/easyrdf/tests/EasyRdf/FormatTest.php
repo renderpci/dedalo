@@ -106,14 +106,14 @@ class FormatTest extends TestCase
     public function testGetHttpAcceptHeader()
     {
         $accept = Format::getHttpAcceptHeader();
-        $this->assertStringContainsString('application/json', $accept);
+        $this->assertStringContainsString('text/turtle,', $accept);
         $this->assertStringContainsString('application/rdf+xml;q=0.8', $accept);
     }
 
     public function testGetHttpAcceptHeaderWithExtra()
     {
         $accept = Format::getHttpAcceptHeader(['extra/header' => 0.5]);
-        $this->assertStringContainsString('application/json', $accept);
+        $this->assertStringContainsString('text/turtle,', $accept);
         $this->assertStringContainsString('extra/header;q=0.5', $accept);
     }
 

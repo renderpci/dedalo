@@ -1866,17 +1866,17 @@
         },
         {
             "name": "sweetrdf/easyrdf",
-            "version": "1.16.1",
-            "version_normalized": "1.16.1.0",
+            "version": "1.18.2",
+            "version_normalized": "1.18.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sweetrdf/easyrdf.git",
-                "reference": "f42130dc7188f89f5fc9539e3be0dc854145dd77"
+                "reference": "e024182b3cf3840750995cd4702a3bb43a24de1b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sweetrdf/easyrdf/zipball/f42130dc7188f89f5fc9539e3be0dc854145dd77",
-                "reference": "f42130dc7188f89f5fc9539e3be0dc854145dd77",
+                "url": "https://api.github.com/repos/sweetrdf/easyrdf/zipball/e024182b3cf3840750995cd4702a3bb43a24de1b",
+                "reference": "e024182b3cf3840750995cd4702a3bb43a24de1b",
                 "shasum": ""
             },
             "require": {
@@ -1898,14 +1898,13 @@
                 "phpstan/phpstan": "^1.0",
                 "phpstan/phpstan-phpunit": "^1.0",
                 "phpunit/phpunit": "^9.5.0|^10.0.0",
-                "semsol/arc2": "^3",
-                "zendframework/zend-http": "^2"
+                "semsol/arc2": "^3"
             },
             "suggest": {
                 "ml/json-ld": "^1.0",
                 "semsol/arc2": "^3"
             },
-            "time": "2025-01-28T18:31:07+00:00",
+            "time": "2025-11-25T15:08:30+00:00",
             "type": "library",
             "installation-source": "dist",
             "autoload": {
@@ -1948,7 +1947,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sweetrdf/easyrdf/issues",
-                "source": "https://github.com/sweetrdf/easyrdf/tree/1.16.1"
+                "source": "https://github.com/sweetrdf/easyrdf/tree/1.18.2"
             },
             "install-path": "../sweetrdf/easyrdf"
         },

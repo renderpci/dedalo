@@ -140,6 +140,17 @@ class Turtle extends Ntriples
 
         if (preg_match('/^(@|prefix$|base$)/i', $directive)) {
             $this->parseDirective($directive);
+
+            /**
+             * If we have already reached the end of the data, this means that the turtle data only contains
+             * PREFIX directives and/or a base directive, nothing else.
+             *
+             * For your information: https://github.com/sweetrdf/easyrdf/issues/74
+             */
+            if (-1 === $this->peek()) {
+                return;
+            }
+
             $this->skipWSC();
             // SPARQL BASE and PREFIX lines do not end in .
             if ('@' == $directive[0]) {
@@ -154,7 +165,9 @@ class Turtle extends Ntriples
     }
 
     /**
-     * Parse a directive [3]
+     * Parse a directive such as PREFIX or BASE [3]
+     *
+     * @param string $directive
      *
      * @ignore
      */
@@ -163,6 +176,27 @@ class Turtle extends Ntriples
         $directive = strtolower($directive);
         if ('prefix' == $directive || '@prefix' == $directive) {
             $this->parsePrefixID();
+
+            /**
+             * We terminate processing when the next character is the last character and also a line break.
+             * This if clause was added to fix https://github.com/sweetrdf/easyrdf/issues/74.
+             *
+             * Note: EasyRdf runs on Linux and Windows. Since both use different line endings, the following
+             *       check has been extended with PHP_EOL, which represents the operating system's line ending.
+             */
+            if ("\n" === $this->peek() || PHP_EOL === $this->peek()) {
+                // Read the line ending and move the pointer 1 character forward.
+                $this->read();
+
+                if (-1 == $this->peek()) {
+                    /*
+                     * We have reached the end of the data. Calling read() again moves the pointer to this position
+                     * and we can stop parsing later. Otherwise, it would expect more data and cause an
+                     * error.
+                     */
+                    $this->read();
+                }
+            }
         } elseif ('base' == $directive || '@base' == $directive) {
             $this->parseBase();
         } elseif (0 == mb_strlen($directive, 'UTF-8')) {
@@ -1195,11 +1229,15 @@ class Turtle extends Ntriples
         return "\x20" == $c || "\x09" == $c || "\x0A" == $c || "\x0D" == $c;
     }
 
-    /** @ignore */
+    /**
+     * @param non-empty-string $c
+     *
+     * @ignore
+     */
     public static function isPrefixStartChar($c)
     {
         // ord - Convert the first byte of a string to a value between 0 and 255
-        $o = \ord($c);
+        $o = \ord($c[0]);
 
         return
             $o >= 0x41 && $o <= 0x5A     // A-Z
@@ -1220,11 +1258,15 @@ class Turtle extends Ntriples
             || self::isPrefixStartChar($c);
     }
 
-    /** @ignore */
+    /**
+     * @param non-empty-string $c
+     *
+     * @ignore
+     */
     public static function isNameChar($c)
     {
         // ord - Convert the first byte of a string to a value between 0 and 255
-        $o = \ord($c);
+        $o = \ord($c[0]);
 
         return
             self::isNameStartChar($c)

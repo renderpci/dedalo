@@ -4,13 +4,18 @@ on: [push, pull_request]
 
 jobs:
     linux-tests:
-        name: Linux-Tests with PHP ${{ matrix.php-versions }}
+        name: "Linux-Tests with PHP ${{ matrix.php-versions }}, experimental: ${{ matrix.experimental }}"
         runs-on: ubuntu-latest
+        continue-on-error: ${{ matrix.experimental }}
 
         strategy:
-            fail-fast: true
+            fail-fast: false
             matrix:
                 php-versions: ['8.0', '8.1', '8.2', '8.3', '8.4']
+                experimental: [false]
+                include:
+                  - php-versions: '8.5'
+                    experimental: true
 
         steps:
             -   name: Checkout
@@ -35,13 +40,18 @@ jobs:
                 run: vendor/bin/phpstan analyse
 
     windows-tests:
-        name: Windows-Tests with PHP ${{ matrix.php-versions }}
-        runs-on: windows-2019
+        name: "Windows-Tests with PHP ${{ matrix.php-versions }}, experimental: ${{ matrix.experimental }}"
+        runs-on: windows-latest
+        continue-on-error: ${{ matrix.experimental }}
 
         strategy:
-            fail-fast: true
+            fail-fast: false
             matrix:
                 php-versions: ['8.0', '8.1', '8.2', '8.3', '8.4']
+                experimental: [false]
+                include:
+                  - php-versions: '8.5'
+                    experimental: true
 
         steps:
             -   name: Checkout
