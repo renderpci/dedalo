@@ -35,6 +35,26 @@ $updates = new stdClass();
 
 
 
+$v=684; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 8;
+	$updates->$v->version_minor			= 4;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 8;
+	$updates->$v->update_from_minor		= 3;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.matrix_activity;
+		');
+
+
+
 $v=683; #####################################################################################
 $updates->$v = new stdClass();
 
