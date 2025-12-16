@@ -89,6 +89,21 @@ class locator extends stdClass {
 
 
 	/**
+	* SET_ID
+	* @param int $value
+	* @return bool
+	*/
+	public function set_id(int $value) : bool  {
+
+		$this->id = $value;
+
+		return true;
+	}//end set_id
+
+
+
+
+	/**
 	* SET_PAGINATED_KEY
 	* @param int $value
 	* @return bool
