@@ -81,6 +81,14 @@ define('DEDALO_SECTION_RESOURCES_IMAGE_TIPO',			'rsc170');
 define('DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO',			'rsc29');
 
 // ontology
+define('DEDALO_ONTOLOGY_PUBLICATION_TIPO',				'ontology3');
+define('DEDALO_ONTOLOGY_IS_DESCRIPTOR_TIPO',			'ontology4');
+define('DEDALO_ONTOLOGY_TERM_TIPO',						'ontology5');
+define('DEDALO_ONTOLOGY_MODEL_TIPO',					'ontology6');
+define('DEDALO_ONTOLOGY_TLD_TIPO',						'ontology7');
+define('DEDALO_ONTOLOGY_TRANSLATABLE_TIPO',				'ontology8');
+define('DEDALO_ONTOLOGY_PARENT_TIPO',					'ontology15');
+define('DEDALO_ONTOLOGY_IS_MODEL_TIPO',					'ontology30');
 define('DEDALO_ONTOLOGY_SECTION_TIPO',					'ontology35');
 define('DEDALO_ONTOLOGY_ORDER_TIPO',					'ontology41');
 
