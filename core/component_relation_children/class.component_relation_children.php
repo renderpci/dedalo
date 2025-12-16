@@ -21,46 +21,46 @@ class component_relation_children extends component_relation_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Get value . Default is get dato . overwrite in every different specific component
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
+	// /**
+	// * GET_VALOR
+	// * Get value . Default is get dato . overwrite in every different specific component
+	// * @param string|null $lang = DEDALO_DATA_LANG
+	// * @return string|null $valor
+	// */
+	// public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
 
-		$dato = $this->get_dato();
+	// 	$dato = $this->get_data();
 
-		// empty case
-			if (empty($dato)) {
-				return null;
-			}
+	// 	// empty case
+	// 		if (empty($dato)) {
+	// 			return null;
+	// 		}
 
-		// resolve locators
-			$ar_valor = [];
-			foreach ((array)$dato as $current_locator) {
-				$ar_valor[] = ts_object::get_term_by_locator(
-					$current_locator,
-					$lang,
-					true // bool from_cache
-				);
-			}
+	// 	// resolve locators
+	// 		$ar_valor = [];
+	// 		foreach ((array)$dato as $current_locator) {
+	// 			$ar_valor[] = ts_object::get_term_by_locator(
+	// 				$current_locator,
+	// 				$lang,
+	// 				true // bool from_cache
+	// 			);
+	// 		}
 
-		// component valor
-			$ar_valor_clean = [];
-			foreach ($ar_valor as $value) {
-				if (empty($value)) {
-					continue;
-				}
-				if(!empty(trim($value))) {
-					$ar_valor_clean[] = $value;
-				}
-			}
-			$valor = implode(', ', $ar_valor_clean);
+	// 	// component valor
+	// 		$ar_valor_clean = [];
+	// 		foreach ($ar_valor as $value) {
+	// 			if (empty($value)) {
+	// 				continue;
+	// 			}
+	// 			if(!empty(trim($value))) {
+	// 				$ar_valor_clean[] = $value;
+	// 			}
+	// 		}
+	// 		$valor = implode(', ', $ar_valor_clean);
 
 
-		return $valor;
-	}//end get_valor
+	// 	return $valor;
+	// }//end get_valor
 
 
 
@@ -76,44 +76,71 @@ class component_relation_children extends component_relation_common {
 
 
 
+	// /**
+	// * GET DATO
+	// * This component don't store data, only manages calculated data from component_relation_parent generated data
+	// * stored in section 'relations' container
+	// * @return array $dato
+	// *	$dato is always an array of locators
+	// */
+	// public function get_data() : array {
+
+	// 	// dato_resolved. Already resolved case
+	// 		if(isset($this->dato_resolved)) {
+	// 			return $this->dato_resolved;
+	// 		}
+
+	// 	// empty section_id case
+	// 		if(empty($this->section_id)){
+	// 			return [];
+	// 		}
+
+	// 	// always get dato calculated from my parents that call the current section
+	// 		$dato = component_relation_children::get_children(
+	// 			$this->section_id,
+	// 			$this->section_tipo,
+	// 			$this->tipo
+	// 		);
+
+	// 	// fix dato.
+	// 		$this->dato = $dato;
+
+	// 	// set dato_resolve and cache it
+	// 		$this->dato_resolved = $this->dato;
+
+	// 	// Set as loaded.
+	// 		// $this->bl_loaded_matrix_data = true;
+
+
+	// 	return $dato;
+	// }//end get_data
+
+
+
 	/**
-	* GET DATO
-	* This component don't store data, only manages calculated data from component_relation_parent generated data
-	* stored in section 'relations' container
-	* @return array $dato
-	*	$dato is always an array of locators
+	* LOAD_COMPONENT_DATA
+	* Get data from its related parent
+	* component children doesn't store data, it get its data resolving the parent relations
+	* @see component_relation_common->load_component_data()
+	* @return bool
 	*/
-	public function get_dato() : array {
+	protected function load_component_data() : bool {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
-			}
-
-		// empty section_id case
-			if(empty($this->section_id)){
-				return [];
+		// check vars
+			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
+				return false;
 			}
 
 		// always get dato calculated from my parents that call the current section
-			$dato = component_relation_children::get_children(
+			$this->data = component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo
 			);
 
-		// fix dato.
-			$this->dato = $dato;
 
-		// set dato_resolve and cache it
-			$this->dato_resolved = $this->dato;
-
-		// Set as loaded.
-			// $this->bl_loaded_matrix_data = true;
-
-
-		return $dato;
-	}//end get_dato
+		return true;
+	}//end load_component_data
 
 
 
@@ -148,21 +175,21 @@ class component_relation_children extends component_relation_common {
 
 
 
+	// /**
+	// * GET_DATa_FULL
+	// * @return array|null $dato
+	// */
+	// public function get_data_full() : ?array {
+
+	// 	$dato = $this->get_data();
+
+	// 	return $dato;
+	// }//end get_data_full
+
+
+
 	/**
-	* GET_DATO_FULL
-	* @return array|null $dato
-	*/
-	public function get_dato_full() : ?array {
-
-		$dato = $this->get_dato();
-
-		return $dato;
-	}//end get_dato_full
-
-
-
-	/**
-	* SET_DATO
+	* SET_DATA
 	* Note that current component DON'T STORE DATA.
 	* Instead, is inserted in the related 'component_relation_parent' the link to self
 	* Don't use this method regularly, is preferable use 'add_children' method for every new relation
@@ -170,7 +197,7 @@ class component_relation_children extends component_relation_common {
 	*	When dato is string is because is a JSON encoded dato
 	* @return bool
 	*/
-	public function set_dato( $dato ) : bool {
+	public function set_data( $dato ) : bool {
 
 		// Normalize dato to an array of locator objects
 			$normalized_dato = match (true) {
@@ -181,7 +208,7 @@ class component_relation_children extends component_relation_common {
 			};
 
 		// remove previous dato
-			$previous_dato = $this->get_dato();
+			$previous_dato = $this->get_data();
 			if (!empty($previous_dato)) {
 				foreach ($previous_dato as $locator) {
 
@@ -242,12 +269,12 @@ class component_relation_children extends component_relation_common {
 
 		// $this->update_parents($normalized_dato);
 
-		// force read the new value on get_dato (prevent cache inconsistency)
+		// force read the new value on get_data (prevent cache inconsistency)
 			unset($this->dato_resolved); //  = null;
 
 
 		return true;
-	}//end set_dato
+	}//end set_data
 
 
 
@@ -377,14 +404,14 @@ class component_relation_children extends component_relation_common {
 		// save if changed
 			if ($changed===true) {
 
-				$saved = $component_relation_parent->Save();
+				$saved = $component_relation_parent->save();
 				if ($saved && $saved>0) {
 					$result = true;
 				}
 
-				// force read the new value on get_dato (prevent cache inconsistency)
+				// force read the new value on get_data (prevent cache inconsistency)
 				$this->dato_resolved = null;
-				$this->get_dato();
+				$this->get_data();
 			}
 
 
@@ -645,9 +672,9 @@ class component_relation_children extends component_relation_common {
 			$ar_parent = [];
 			foreach ($children_locators as $current_locator) {
 
-				$child_compnent_tipo	= $current_locator->from_component_tipo;
+				$child_component_tipo	= $current_locator->from_component_tipo;
 				$ar_target_parent_tipo	= component_relation_children::get_ar_related_parent_tipo(
-					$child_compnent_tipo,
+					$child_component_tipo,
 					'hierarchy20' // ITS NOT CORRECT, but is not possible know the section_tipo here
 				);
 				if (!empty($ar_target_parent_tipo)) {
@@ -662,7 +689,7 @@ class component_relation_children extends component_relation_common {
 							DEDALO_DATA_NOLAN,
 							$current_locator->section_tipo
 						);
-						$component_parent_dato = $component->get_dato();
+						$component_parent_dato = $component->get_data();
 						foreach ($component_parent_dato as $parent_locator) {
 							$ar_parent[] = $parent_locator->section_id;
 						}
@@ -734,7 +761,8 @@ class component_relation_children extends component_relation_common {
 				$locator->section_tipo // string section_tipo
 			);
 
-			$value = $component->get_value();
+			$data = $component->get_data();
+			$value = $data[0]->value ?? 1;
 
 			// check if value changes
 			if ((int)$value===$order) {
@@ -742,9 +770,11 @@ class component_relation_children extends component_relation_common {
 				continue;
 			}
 
+			$data[0]->value = $order;
+
 			// save changed value
-			$component->set_dato([$order]);
-			$component->Save();
+			$component->set_data( $data );
+			$component->save();
 
 			$changed[] = (object)[
 				'value'		=> $order,
