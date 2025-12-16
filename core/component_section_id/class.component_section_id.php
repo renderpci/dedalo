@@ -135,7 +135,6 @@ class component_section_id extends component_common {
 				? reset($query_object->q)
 				: $query_object->q;
 
-
 		// q. if q is a locator, get the section_id as int
 			$query_object->q = is_object($query_object->q) && isset($query_object->q->section_id)
 				? $query_object->q->section_id
@@ -148,6 +147,17 @@ class component_section_id extends component_common {
 		if (isset($query_object->q_operator)) {
 			$q = $query_object->q_operator . $q;
 		}
+
+		// Validate path and calculate translatable
+		if (empty($query_object->path) || !is_array($query_object->path)) {
+			throw new Exception("Invalid component path");
+		}
+		
+		// column
+		$column = section_record_data::get_column_name( get_called_class() );
+		
+		// table_alias
+		$table_alias = $query_object->table_alias;
 
 		// Always set fixed values
 		$query_object->type = 'number';
@@ -239,10 +249,12 @@ class component_section_id extends component_common {
 				break;
 			// EQUAL DEFAULT
 			default:
-				$operator = '=';
-				$q_clean  = (int)str_replace('+', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer = _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('+', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 		}//end switch (true) {
 
