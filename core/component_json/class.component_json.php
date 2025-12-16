@@ -26,127 +26,17 @@ class component_json extends component_common {
 
 
 
-	/**
-	* GET_DATO
-	* @return array|null $dato
-	*/
-	public function get_dato() : ?array {
+	// /**
+	// * GET_VALOR
+	// * Is equal to dato in this component
+	// * @return array|null $valor
+	// */
+	// public function get_valor() {
 
-		$dato = parent::get_dato();
+	// 	$valor = $this->get_dato();
 
-		// OLD
-			// if(!empty($dato) && !is_array($dato)) {
-			// 	try {
-
-			// 		$data_string = !is_string($dato)
-			// 			? json_encode($dato)
-			// 			: $dato;
-
-			// 		$data_object = json_decode($data_string);
-			// 		$new_data = ($data_object)
-			// 			? [$data_object]
-			// 			: [];
-
-			// 	} catch (Exception $e) {
-			// 		debug_log(__METHOD__
-			// 			. " Exception on read dato. Applying default data: [] " . PHP_EOL
-			// 			. ' exception: ' . $e->getMessage()
-			// 			, logger::ERROR
-			// 		);
-			// 		$new_data = [];
-			// 	}
-
-			// 	$dato = $new_data;
-
-			// 	// update
-			// 	$this->set_dato($dato);
-			// 	$this->Save();
-			// }
-
-		if (!is_null($dato) && !is_array($dato)) {
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__
-					. ' Expected dato type array or null, but type is different. Converted to array|null and saving' . PHP_EOL
-					. ' type: ' . gettype($dato) . PHP_EOL
-					. ' tipo: ' . $this->tipo . PHP_EOL
-					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-					. ' section_id: ' . $this->section_id
-					, logger::ERROR
-				);
-				dump($dato, ' dato ++ '.to_string());
-			}
-
-			// format
-				$dato = !empty($dato)
-					? [$dato]
-					: null;
-
-			// update DDBB value
-				$this->set_dato($dato);
-				$this->Save();
-		}
-
-
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|null $dato
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		if (!empty($dato)) {
-
-			// old format v5
-				if (is_string($dato)) {
-
-					$decoded = json_decode($dato);
-					if (json_last_error() !== JSON_ERROR_NONE) {
-						debug_log(__METHOD__
-							. " Error. Only valid JSON is accepted as dato " . PHP_EOL
-							. ' dato: ' . to_string($dato) . PHP_EOL
-							.' decoded: ' . to_string($decoded)
-							, logger::ERROR
-						);
-						return false;
-					}
-				}
-
-			if(!is_object($dato) && !is_array($dato) && !is_null($dato)) {
-				debug_log(__METHOD__
-					. " Error. Stopped set_dato because is not as expected type " . PHP_EOL
-					. ' type: ' . gettype($dato) . PHP_EOL
-					. ' dato: ' . to_string($dato)
-					, logger::ERROR
-				);
-				return false;
-			}
-
-			if (!is_null($dato) && !is_array($dato)) {
-				$dato = [$dato];
-			}
-		}
-
-		return parent::set_dato( $dato );
-	}//end set_dato
-
-
-
-	/**
-	* GET_VALOR
-	* Is equal to dato in this component
-	* @return array|null $valor
-	*/
-	public function get_valor() {
-
-		$valor = $this->get_dato();
-
-		return $valor;
-	}//end get_valor
+	// 	return $valor;
+	// }//end get_valor
 
 
 
