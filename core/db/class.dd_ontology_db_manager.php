@@ -17,10 +17,10 @@ abstract class dd_ontology_db_manager {
 
 
 	// Ontology table
-	public static string $ontology_table = 'dd_ontology';
+	public static string $table = 'dd_ontology';
 
 	// columns list
-	public static array $ontology_columns = [
+	public static array $columns = [
 		'tipo'				=> true,
 		'parent'			=> true,
 		'term'				=> true,
@@ -36,19 +36,19 @@ abstract class dd_ontology_db_manager {
 	];
 
 	// JSON columns to decode
-	public static array $ontology_json_columns = [
+	public static array $json_columns = [
 		'term'				=> true,
 		'relations'			=> true,
 		'properties'		=> true
 	];
 
 	// int columns to parse
-	public static array $ontology_int_columns = [
+	public static array $int_columns = [
 		'order_number'		=> true
 	];
 
 	// bool columns to parse
-	public static array $ontology_boolean_columns = [
+	public static array $boolean_columns = [
 		'is_model'			=> true,
 		'is_translatable'	=> true
 	];
@@ -65,18 +65,18 @@ abstract class dd_ontology_db_manager {
 	* It is executed using prepared statement when the values are empty (default creation of empty record
 	* adding `tipo` only) and with query params when is not (other dynamic combinations of columns data).
 	* @param string $tipo
-	* A string identifier representing the unique type of ontology node.
-	* Used as part of the WHERE clause in the SQL query.
-	* @param array $values = [] (optional)
-	* Assoc array with [column name => value] structure.
-	* Keys are column names, values are their new values.
+	* 	A string identifier representing the unique type of ontology node.
+	* 	Used as part of the WHERE clause in the SQL query.
+	* @param object|null $values = {} (optional)
+	* 	Object with {column name : value} structure.
+	* 	Keys are column names, values are their new values.
 	* @return int|false $id
-	* Returns the new `id` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* 	Returns the new `id` on success, or `false` if validation fails,
+	*	 query preparation fails, or execution fails.
 	*/
-	public static function create( string $tipo, array $values=[] ) : int|false {
+	public static function create( string $tipo, ?object $values = null ) : int|false {
 
-		$table = self::$ontology_table;
+		$table = self::$table;
 
 		// Connection
 		$conn = DBi::_getConnection();
@@ -89,16 +89,16 @@ abstract class dd_ontology_db_manager {
 
 
 		// Add fixed columns (this allows use prepared statements)
-		foreach (self::$ontology_columns as $col => $col_value) {
+		foreach (self::$columns as $col => $col_value) {
 			// Prevent double columns. Already added by default (required).
 			if ($col==='tipo') continue;
 
 			$columns[] = pg_escape_identifier($conn, $col);
 
-			$value = $values[$col] ?? null;
+			$value = $values->$col ?? null;
 
 			// Placeholders / Values
-			 if ($value !== null && isset(self::$ontology_json_columns[$col])) {
+			 if ($value !== null && isset(self::$json_columns[$col])) {
 				// Encode PHP array/object as JSON string
 				$params[]		= json_handler::encode($value);
 				$placeholders[]	= '$' . $param_index . '::jsonb';
@@ -137,7 +137,7 @@ abstract class dd_ontology_db_manager {
 		";
 
 		// Execute query with prepared statement
-		$stmt_name = __METHOD__ . '_' . $table;
+		$stmt_name = 'dd_ontology_create_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			if (!pg_prepare(
 				$conn,
@@ -175,6 +175,11 @@ abstract class dd_ontology_db_manager {
 				, logger::ERROR
 			);
 			return false;
+		}
+
+		// Invalidate cache, before return (could be an update on conflict)
+		if (isset(self::$load_cache[$tipo])) {
+			unset(self::$load_cache[$tipo]);
 		}
 
 
@@ -216,12 +221,12 @@ abstract class dd_ontology_db_manager {
 		}
 
 		$conn = DBi::_getConnection();
-		$table = self::$ontology_table;
+		$table = self::$table;
 
 		// With prepared statement
 		$stmt_name = __METHOD__ . '_' . $table;
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$select_fields = '"' . implode('","', array_keys(self::$ontology_columns)) . '"';
+			$select_fields = '"' . implode('","', array_keys(self::$columns)) . '"';
 			// $select_fields = '*';
 			$sql = 'SELECT '.$select_fields.' FROM "'.$table.'" WHERE tipo = $1 LIMIT 1';
 			if (!pg_prepare(
@@ -243,12 +248,10 @@ abstract class dd_ontology_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				." Error executing READ" . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
-			// Cache the error
-			self::$load_cache[$tipo] = false;
 			return false;
 		}
 
@@ -269,11 +272,11 @@ abstract class dd_ontology_db_manager {
 				continue;
 			}
 			// parse values
-			if (isset(self::$ontology_json_columns[$key])) {
+			if (isset(self::$json_columns[$key])) {
 				$row[$key] = json_decode($value, false);
-			} elseif (isset(self::$ontology_int_columns[$key])) {
+			} elseif (isset(self::$int_columns[$key])) {
 				$row[$key] = (int)$value;
-			} elseif (isset(self::$ontology_boolean_columns[$key])) {
+			} elseif (isset(self::$boolean_columns[$key])) {
 				$row[$key] = ($value === 't' || $value === true || $value === '1');
 			}
 		}
@@ -307,28 +310,29 @@ abstract class dd_ontology_db_manager {
 	* Safely updates one or more columns in the "ontology" table row,
 	* identified by a `tipo`.
 	* @param string $tipo
-	* A string identifier representing the unique type of ontology node.
-	* Used as part of the WHERE clause in the SQL query.
-	* @param array $values
-	* Assoc array with [column name => value] structure
-	* Keys are column names, values are their new values.
+	* 	A string identifier representing the unique type of ontology node.
+	* 	Used as part of the WHERE clause in the SQL query.
+	* @param object $values
+	* 	Object with {column name : value} structure
+	* 	Keys are column names, values are their new values.
 	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* 	Returns `true` on success, or `false` if validation fails,
+	* 	query preparation fails, or execution fails.
 	*/
-	public static function update( string $tipo, array $values ) : bool {
+	public static function update( string $tipo, object $values ) : bool {
 
-		// check values
-		if (empty($values)) {
-			debug_log(__METHOD__
-				." Empty values array " . PHP_EOL
-				.' values: ' . json_encode($values)
-				, logger::ERROR
+		// Check for empty update payload. Cast to array to avoid empty() false positives
+		if (empty((array)$values)) {
+			debug_log(
+				__METHOD__
+					. " Ignored update with empty values " . PHP_EOL
+					. ' values: ' . json_encode($values),
+				logger::WARNING
 			);
 			return false;
 		}
 
-		$table = self::$ontology_table;
+		$table = self::$table;
 
 		// DB connection
 		$conn = DBi::_getConnection();
@@ -342,19 +346,25 @@ abstract class dd_ontology_db_manager {
 		$param_index = 2;
 
 		// Single-pass loop: Validate columns, prepare values, and build SQL parts simultaneously.
+		$columns = ['tipo'];
 		foreach ($values as $column => $value) {
 			// Validate column name (Security/Guardrail)
-			if (!isset(self::$ontology_columns[$column])) {
-				throw new Exception("Invalid column name: $column");
+			if (!isset(self::$columns[$column])) {
+				debug_log(__METHOD__
+					." Invalid column name: $column" . PHP_EOL
+					.' values: ' . json_encode($values)
+					, logger::ERROR
+				);
+				continue;
 			}
 
 			// Placeholders / Values
-			 if ($value !== null && isset(self::$ontology_json_columns[$column])) {
+			 if ($value !== null && isset(self::$json_columns[$column])) {
 				// Encode PHP array/object as JSON string
 				$params[] = json_handler::encode($value);
 				// Build the SET clause, safely quoting the column name for PostgreSQL
 				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++ . '::jsonb';
-			}else if(isset(self::$ontology_boolean_columns[$column])) {
+			}else if(isset(self::$boolean_columns[$column])) {
 				// Change to normalized string for Boolean value
 				$params[] = ($value === true) ? 't' : 'f';
 				// Build the SET clause, safely quoting the column name for PostgreSQL
@@ -364,6 +374,9 @@ abstract class dd_ontology_db_manager {
 				// Build the SET clause, safely quoting the column name for PostgreSQL
 				$set_clauses[] = pg_escape_identifier($conn, $column) . ' = $' . $param_index++;
 			}
+
+			// Column add
+			$columns[] = $column;
 		}
 
 		// SQL Execution
@@ -372,12 +385,29 @@ abstract class dd_ontology_db_manager {
 			. ' SET ' . implode(', ', $set_clauses)
 			. ' WHERE tipo = $1';
 
-
+		// Execute using pg_query_params for performance and security
 		$result = pg_query_params($conn, $sql, $params);
+
+		// No record existing case.
+		// When the record doesn't exist in DB, perform a INSERT
+		if ($result && pg_affected_rows($result) == 0) {
+			
+			$placeholders = [];
+			foreach($columns as $key => $column){
+				$placeholders[] = '$'. ($key+1);
+			}
+
+			$sql_insert = 'INSERT INTO ' . $table . ' (' 
+				. implode(', ', $columns) . ')
+				VALUES (' 
+				. implode(', ', $placeholders) . ')';
+			
+			$result = pg_query_params($conn, $sql_insert, $params);
+		}
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				." Error executing UPDATE" . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
@@ -409,7 +439,7 @@ abstract class dd_ontology_db_manager {
 
 		$conn = DBi::_getConnection();
 
-		$table = self::$ontology_table;
+		$table = self::$table;
 
 		// With prepared statement
 		$stmt_name = __METHOD__ . '_' . $table;
@@ -437,8 +467,7 @@ abstract class dd_ontology_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
-				. ' sql ' . to_string($sql ?? '') . PHP_EOL
+				." Error executing DELETE" . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
@@ -461,20 +490,24 @@ abstract class dd_ontology_db_manager {
 	* Search in one or more columns in the "ontology" table ,
 	* return an array with the found `tipos`..
 	* @param array $values
-	* Assoc array with [column name => value] structure
-	* Keys are column names, values are their new values.
+	* 	Assoc array with [column name => value] structure
+	* 	Keys are column names, values are their new values.
+	* @param bool $order = false
+	* 	If true, the results will be ordered by order_number ASC.
+	* @param int $limit = null
+	* 	Limit the number of results.
 	* @return array|false
-	* Returns and array with found tipos on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* 	Returns and array with found tipos on success, or `false` if validation fails,
+	* 	query preparation fails, or execution fails.
 	*/
 	public static function search( array $values, bool $order=false, ?int $limit=null ) : array|false {
 
 		// check values
 		if (empty($values)) {
 			debug_log(__METHOD__
-				." Empty values array " . PHP_EOL
+				." Ignored search with empty values" . PHP_EOL
 				.' values: ' . json_encode($values)
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return false;
 		}
@@ -497,16 +530,30 @@ abstract class dd_ontology_db_manager {
 		$where_clauses = [];
 
 		// Add dynamic columns
+		static $allowed_ops = ['=', '!=', '<', '>', '<=', '>=', 'LIKE', 'ILIKE', '@>'];
 		foreach ($values as $col => $value) {
 
 			// Columns. Only accepts normalized columns
-			if (!isset(self::$ontology_columns[$col])) {
-				throw new Exception("Invalid column name: $col");
+			if (!isset(self::$columns[$col])) {
+				debug_log(__METHOD__
+					." Invalid column name: $col" . PHP_EOL
+					.' values: ' . json_encode($values)
+					, logger::ERROR
+				);
+				return false;
 			}
 
 			if (is_object($value)) {
 
 				// search with operator
+				if (!in_array($value->operator, $allowed_ops)) {
+					debug_log(__METHOD__
+						." Invalid operator: " . $value->operator . PHP_EOL
+						.' values: ' . json_encode($values)
+						, logger::ERROR
+					);
+					return false;
+				}
 				$params[] = $value->value;
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
 
@@ -530,12 +577,15 @@ abstract class dd_ontology_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				." Error Processing Request Load ".to_string($sql) . PHP_EOL
+				." Error executing SEARCH" . PHP_EOL
 				.' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
 			return false;
 		}
+
+		// Build and array of tipos		
+		$tipos = pg_fetch_all_columns($result, 0);
 
 		// debug
 		if(SHOW_DEBUG===true) {
@@ -563,11 +613,11 @@ abstract class dd_ontology_db_manager {
 			$sql = '-- exec_search: ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql;
 			$sql_debug = debug_prepared_statement($sql, $params, $conn);
 			$level = $total_time_ms > 2 ? logger::ERROR : logger::DEBUG;
-			debug_log(__METHOD__
-				. ' sql_debug: ' . PHP_EOL
-				. PHP_EOL . $sql_debug . PHP_EOL
-				, $level
-			);
+			// debug_log(__METHOD__
+			// 	. ' sql_debug: ' . PHP_EOL
+			// 	. PHP_EOL . $sql_debug . PHP_EOL
+			// 	, $level
+			// );
 		}
 
 
