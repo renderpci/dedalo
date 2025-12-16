@@ -5,7 +5,8 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
+	import { add_instance } from '../../common/js/instances.js'
+import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_email} from './view_default_edit_email.js'
 	import {view_line_edit_email} from './view_line_edit_email.js'
 	import {view_mini_email} from './view_mini_email.js'
@@ -118,38 +119,41 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
-			value			: current_value,
+			value			: current_value.value,
 			parent			: content_value
 		})
-		// focus event
-			input.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self, false)
-				}
-			})
+		
+		// focus event		
+		const focus_handler = (e) => {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
+		}
+		input.addEventListener('focus', focus_handler)
+	
 		// keyup event
-			input.addEventListener('keyup', function(e){
-				keyup_handler(e, i, self)
-			})
+		const keyup_handler = (e) => {
+			keyup_handler(e, i, self)
+		}
+		input.addEventListener('keyup', keyup_handler)
+	
 		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
-				e.stopPropagation()
-			})
-		// mousedown event. Capture event propagation
-			// input.addEventListener('mousedown', (e) => {
-			// 	e.stopPropagation()
-			// })
+		const click_handler = (e) => {
+			e.stopPropagation()
+		}
+		input.addEventListener('click', click_handler)
+	
 		// change event
-			input.addEventListener('change', fn_change)
-			function fn_change(e) {
-				// validate
-				const validated = self.verify_email(input.value)
-				ui.component.error(!validated, input)
-				if (!validated) {
-					return false
-				}
-			}//end change
+		const change_handler = (e) => {
+			// validate
+			const validated = self.verify_email(input.value)
+			ui.component.error(!validated, input)
+			if (!validated) {
+				return false
+			}
+		}
+		input.addEventListener('change', change_handler)
 
 	// add buttons to the email row
 		// button_remove
@@ -159,11 +163,12 @@ const get_content_value = (i, current_value, self) => {
 					title			: get_label.delete || 'Delete',
 					class_name		: 'button remove hidden_button',
 					parent			: content_value
-				})
-				button_remove.addEventListener('mouseup', function(e) {
+				})				
+				const mouseup_handler = (e) => {
 					e.stopPropagation()
 					remove_handler(input, i, self)
-				})
+				}
+				button_remove.addEventListener('mouseup', mouseup_handler)
 			}
 
 		// button email
@@ -171,12 +176,12 @@ const get_content_value = (i, current_value, self) => {
 				element_type	: 'span',
 				class_name		: 'button email hidden_button',
 				parent			: content_value
-			})
-			button_email.addEventListener('mouseup', function(e) {
+			})			
+			const mouseup_handler = (e) => {
 				e.stopPropagation()
 				self.send_email(input.value)
-			})
-
+			}
+			button_email.addEventListener('mouseup', mouseup_handler)
 
 
 	return content_value
@@ -231,38 +236,42 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				title			: get_label.new || 'Add new input field',
 				parent			: fragment
-			})
-			add_button.addEventListener('click', function(e) {
+			})			
+			const click_handler = async (e) => {
 				e.stopPropagation()
 
 				// no value case
-					if (!self.data.value || !self.data.value.length) {
-						self.node.content_data[0].querySelector('input').focus()
-						return
-					}
+				if (!self.data.value || !self.data.value.length) {
+					self.node.content_data[0].querySelector('input').focus()
+					return
+				}
 
 				const key = self.data.value.length
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: key,
-					value	: null
+					value	: {
+						value : null,
+						lang : self.lang
+					}
 				})]
-				self.change_value({
+
+				await self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
 				})
-				.then(()=>{
-					const input_node = self.node.content_data[key]
-						? self.node.content_data[key].querySelector('input')
-						: null
-					if (input_node) {
-						input_node.focus()
-					}else{
-						console.warn('Empty input_node:', self.node.content_data, key);
-					}
-				})
-			})
+				
+				const input_node = self.node.content_data[key]
+					? self.node.content_data[key].querySelector('input')
+					: null
+				if (input_node) {
+					input_node.focus()
+				}else{
+					console.warn('Empty input_node:', self.node.content_data, key);
+				}				
+			}
+			add_button.addEventListener('click', click_handler)
 		}
 
 	// button send_multiple_email
@@ -271,8 +280,8 @@ export const get_buttons = (self) => {
 				element_type	: 'span',
 				class_name		: 'button email_multiple',
 				parent			: fragment
-			})
-			send_multiple_email.addEventListener('click', async function (e) {
+			})		
+			const click_handler = async (e) => {
 				e.stopPropagation()
 
 				const ar_emails		= await self.get_ar_emails()
@@ -328,7 +337,8 @@ export const get_buttons = (self) => {
 				}else{
 					window.location.href = mailto_prefix + ar_emails[0]
 				}
-			})
+			}
+			send_multiple_email.addEventListener('click', click_handler)
 		}
 
 	// buttons tools
@@ -359,31 +369,31 @@ export const keyup_handler = function(e, key, self) {
 	e.preventDefault()
 
 	// tab/shift case catch
-		if (e.key==='Tab' || e.key==='Shift') {
-			return
-		}
+	if (e.key==='Tab' || e.key==='Shift') {
+		return
+	}
 
 	// Enter key force to save changes
-		if (e.key==='Enter') {
+	if (e.key==='Enter') {
 
-			// force to save current input if changed
-				const changed_data = self.data.changed_data || []
-				// change_value (save data)
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		}else{
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: key,
-					value	: e.target.value || ''
-				})
+		// force to save current input if changed
+		const changed_data = self.data.changed_data || []
+		// change_value (save data)
+		self.change_value({
+			changed_data	: changed_data,
+			refresh			: false
+		})
+	}else{
+		// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: e.target.value || ''
+		})
 
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
-		}
+		// fix instance changed_data
+		self.set_changed_data(changed_data_item)
+	}
 
 
 	return true
@@ -402,29 +412,29 @@ export const keyup_handler = function(e, key, self) {
 export const remove_handler = function(input, key, self) {
 
 	// force possible input change before remove
-		document.activeElement.blur()
+	document.activeElement.blur()
 
 	// value
-		const current_value = input.value ? input.value : null
-		if (current_value) {
-			if (!confirm(get_label.sure)) {
-				return
-			}
+	const current_value = input.value ? input.value : null
+	if (current_value) {
+		if (!confirm(get_label.sure)) {
+			return
 		}
+	}
 
 	// changed_data
-		const changed_data = [Object.freeze({
-			action	: 'remove',
-			key		: key,
-			value	: null
-		})]
+	const changed_data = [Object.freeze({
+		action	: 'remove',
+		key		: key,
+		value	: null
+	})]
 
 	// change_value. Returns a promise that is resolved on api response is done
-		const response = self.change_value({
-			changed_data	: changed_data,
-			label			: current_value,
-			refresh			: true
-		})
+	const response = self.change_value({
+		changed_data	: changed_data,
+		label			: current_value,
+		refresh			: true
+	})
 
 
 	return response
