@@ -252,7 +252,7 @@ class component_string_common extends component_common {
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return array|null $dato_fb
 	*/
-	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?array {
+	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT ) : ?array {
 
 		$data = $this->get_data();
 		if (empty($data)) {
@@ -293,103 +293,80 @@ class component_string_common extends component_common {
 
 
 	/**
-	* EXTRACT_COMPONENT_DATO_FALLBACK
-	* Retrieves component data for a specific language and implements
-	* a fallback mechanism when data is missing or empty. It follows
-	* a hierarchical fallback strategy to ensure data availability across different
-	* language contexts.
-	*
-	* FALLBACK HIERARCHY:
-	* 1. Current language data (if not empty)
-	* 2. Main/default language data
-	* 3. No-language (NOLAN) data
-	* 4. All other available project languages (in sequence)
-	* 5. null (if no data found in any language)
-	*
-	* ALGORITHM FLOW:
-	* - Preserves current language state for restoration
-	* - Retrieves data for the requested language
-	* - For each empty value, iterates through fallback languages
-	* - Returns first non-empty value found or null
-	* - Restores original language state
-	* @param string $lang = DEDALO_DATA_LANG
+	* GET_VALUE_WITH_FALLBACK_FROM_DATA
+	* Receive a full dato of translatable component and try to find a no empty lang
+	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
+	* @param array|null $data
+	* @param bool $decorate_untranslated = false
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
-	* @return array $dato_fb
+	* @return string|null $value
 	*/
-	public function extract_component_dato_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
+	public static function get_value_with_fallback_from_data(
+		array|null $data,
+		bool $decorate_untranslated=false,
+		string $main_lang=DEDALO_DATA_LANG_DEFAULT,
+		string $lang=DEDALO_DATA_LANG
+		) : ?string {
 
-		// get and store initial lang to restore later
-			$initial_lang = $this->get_lang();
-
-		// Try direct dato
-			$dato = $this->get_dato();
-			if (empty($dato)) {
-				// set one null value to force iterate data
-				$dato = [null];
-			}
-
-		// fallback if empty
-		$dato_fb = [];
-		foreach ($dato as $key => $value) {
-
-			if( $this->is_empty($value)===true ) {
-
-				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-					if ($lang!==$main_lang || $this->with_lang_versions===true) {
-						// change temporally the component lang
-						$this->set_lang($main_lang);
-						$dato_lang = $this->get_dato();
-						$dato_fb[$key] = isset($dato_lang[$key])
-							? $dato_lang[$key]
-							: null;
-					}
-
-				// Try nolan
-					if (empty($dato_fb[$key])) {
-						// change temporally the component lang
-						$this->set_lang(DEDALO_DATA_NOLAN);
-						$dato_lang = $this->get_dato();
-						$dato_fb[$key] = isset($dato_lang[$key])
-							? $dato_lang[$key]
-							: null;
-					}
-
-				// Try all projects langs sequence
-					if (empty($dato_fb[$key])) {
-						$data_langs = common::get_ar_all_langs(); // Langs from config projects
-						foreach ($data_langs as $current_lang) {
-							if ($current_lang===$lang || $current_lang===$main_lang) {
-								continue; // Already checked
-							}
-							// change temporally the component lang
-							$this->set_lang($current_lang);
-							$dato_lang = $this->get_dato();
-							$dato_fb[$key] = isset($dato_lang[$key])
-								? $dato_lang[$key]
-								: null;
-
-							// useful value is found
-							if (!empty($dato_fb[$key])) {
-								break; // Stops when any data is found
-							}
-						}
-					}
-
-				// empty case
-					if (empty($dato_fb[$key])) {
-						$dato_fb[$key] = null;
-					}
-			}else{
-				$dato_fb[$key] = $value;
-			}
+		if (empty($data)) {
+			return null;
 		}
 
-		// restore initial lang
-			$this->set_lang($initial_lang);
+		# Declare as false
+		$is_fallback  = false;
 
+		// Create lookup array once
+			$lookup = [];
+			foreach ($data as $item) {
+				$lookup[$item->lang] = $item->value;
+			}
 
-		return $dato_fb;
-	}//end extract_component_dato_fallback
+		// Try direct value
+		$value = $lookup[$lang] ?? null; // Returns 'Yes' instantly
+
+		// $value = isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
+
+		if (empty($value)) {
+
+			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			if ($lang!==$main_lang) {
+				$value = $lookup[$main_lang] ?? null;
+				// $value = isset($decoded_obj->$main_lang) ? $decoded_obj->$main_lang : null;
+			}
+
+			# Try nolan
+			if (empty($value)) {
+				$nolan_lang = DEDALO_DATA_NOLAN;
+				$value = $lookup[$nolan_lang] ?? null;
+				// $value = isset($decoded_obj->$nolan_lang) ? $decoded_obj->$nolan_lang : null;
+			}
+
+			# Try all projects langs sequence
+			if (empty($value)) {
+				$data_langs = common::get_ar_all_langs(); # Langs from config projects
+				foreach ($data_langs as $current_lang) {
+					if ($current_lang===$lang || $current_lang===$main_lang) {
+						continue; // Already checked
+					}
+					// $value = isset($decoded_obj->$current_lang) ? $decoded_obj->$current_lang : null;
+					$value = $lookup[$current_lang] ?? null;
+					if (!empty($value)) break; # Stops when first data is found
+				}
+			}
+
+			# Set as fallback value
+			$is_fallback = true;
+		}
+
+		// Flat possible array values to string
+		$value = to_string($value);
+
+		if ($is_fallback===true && $decorate_untranslated===true) {
+			$value = component_common::decorate_untranslated($value);
+		}
+
+		return $value;
+	}//end get_value_with_fallback_from_data
 
 
 
