@@ -160,8 +160,8 @@ class area_thesaurus extends area_common {
 			$section_tipo
 		);
 
-		$dato		= $component->get_dato();
-		$locator	= $dato[0] ?? null;
+		$data		= $component->get_data();
+		$locator	= $data[0] ?? null;
 
 		return $locator;
 	}//end get_typology_data
@@ -245,8 +245,8 @@ class area_thesaurus extends area_common {
 			$lang,
 			$section_tipo
 		);
-		$dato			= $component->get_dato();
-		$order_value	= $dato[0] ?? 0;
+		$data			= $component->get_data();
+		$order_value	= $data[0]->value ?? 0;
 
 		// cache
 			$typology_order_values[$typology_section_id] = $order_value;
@@ -419,7 +419,7 @@ class area_thesaurus extends area_common {
 							$children_section_tipo // string section_tipo
 						);
 
-						$children_data = $component_children->get_dato();
+						$children_data = $component_children->get_data();
 
 						// built the ts_object with every child data
 						foreach ($children_data as $children_key => $child_locator) {

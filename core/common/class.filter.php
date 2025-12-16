@@ -49,7 +49,7 @@ abstract class filter {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$user_projects = $component_filter_master->get_dato();
+			$user_projects = $component_filter_master->get_data();
 
 			// children
 			foreach ($user_projects as $current_locator) {

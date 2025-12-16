@@ -104,7 +104,7 @@ class request_config_presets {
 				DEDALO_DATA_NOLAN,
 				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
 			);
-			return $component->get_dato() ?? [];
+			return $component->get_data() ?? [];
 		};
 	
 		// foreach($db_result as $row) {
@@ -353,7 +353,7 @@ class request_config_presets {
 				// 		DEDALO_DATA_NOLAN, // string lang
 				// 		$current_section_tipo // string section_tipo
 				// 	);
-				// 	$json_data = $component_json->get_dato();
+				// 	$json_data = $component_json->get_data();
 
 				// 	$result = !empty($json_data)
 				// 		? (is_array($json_data) ? reset($json_data) : [$json_data])

@@ -703,10 +703,9 @@ abstract class common {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				 $dato = $component->get_dato();
-				 if (isset($dato[0])) {
-					$lang_code = lang::get_code_from_locator($dato[0], $add_prefix=true);
-					# dump($lang_code, ' lang_code ++ '.to_string());
+				 $data = $component->get_data();
+				 if (isset($data[0])) {
+					$lang_code = lang::get_code_from_locator($data[0], true);
 					$main_lang = $lang_code;
 				 }
 			}

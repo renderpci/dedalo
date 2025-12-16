@@ -140,8 +140,8 @@ class component_av extends component_media_common implements component_media_int
 			$quality = $this->get_default_quality();
 
 		// current_url. get from dato
-			$dato = $this->get_dato();
-			if(isset($dato)){
+			$data = $this->get_data();
+			if(isset($data)){
 
 				// Caller class name, the name of who instantiate the component
 				// the URI resolution of the data depends of the caller
