@@ -1388,7 +1388,7 @@ class ontology {
 			);
 			$active_in_thesaurus_data = $component_active_in_thesaurus->get_data();
 			$active_section_id = $active_in_thesaurus_data[0]->section_id ?? null;
-			$active_in_thesaurus = $active_section_id === NUMERICAL_MATRIX_VALUE_YES
+			$active_in_thesaurus = (int)$active_section_id === NUMERICAL_MATRIX_VALUE_YES
 				? true
 				: false;
 
@@ -1464,7 +1464,7 @@ class ontology {
 				return null;
 			}
 			// create the term_id
-			$tld	= $tld_data[0];
+			$tld	= $tld_data[0]->value;
 			$tipo	= $tld . $section_id;
 
 		// tipo
@@ -1582,7 +1582,7 @@ class ontology {
 				// set the model tipo as (dd6, dd3, etd.)
 				// using the locator of the component
 				// model will be the term_id (section_tipo & section_id)
-				$model_locator = reset($model_data);
+				$model_locator = $model_data[0];
 				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
 
 				// set the model resolution (section, component_input_text, etc)
@@ -1624,7 +1624,7 @@ class ontology {
 					$section_tipo
 				);
 
-				$order_data = $order_component->get_dato();
+				$order_data = $order_component->get_data();
 
 				if(empty($order_data)){
 
@@ -1638,7 +1638,7 @@ class ontology {
 
 				}else{
 
-					$order_value = reset($order_data);
+					$order_value = $order_data[0]->value;
 					$ontology_node->set_order_number( (int)$order_value );
 				}
 			}
@@ -1684,7 +1684,7 @@ class ontology {
 			// get the v5 properties data with the main node definition.
 			$properties_v5_data = $properties_v5_data ?? self::get_node_component_data( $locator, $properties_v5_tipo );
 
-			if( !is_empty_dato( $properties_v5_data ) ){
+			if( !is_empty( $properties_v5_data ) ){
 				$properties_v5 = json_encode( $properties_v5_data[0] );
 			}else{
 				$properties_v5 = null;
@@ -1816,11 +1816,7 @@ class ontology {
 			DEDALO_DATA_NOLAN,
 			$locator->section_tipo
 		);
-		$dato = $component->get_dato();
-
-		// Unify the empty values to null (relations return a empty array when they has not data)
-		$data = empty( $dato ) ? null : $dato;
-
+		$data = $component->get_data();
 
 		return $data;
 	}//end get_node_component_data
@@ -1856,7 +1852,7 @@ class ontology {
 			);
 
 		}else{
-			$translatable_data_locator = reset($translatable_data);
+			$translatable_data_locator = $translatable_data[0];
 			$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? true : false;
 		}
 
@@ -1908,6 +1904,7 @@ class ontology {
 	* the term includes all languages translations.
 	* @param locator $locator
 	* @return object|null $term
+	* {"lg-eng": "Denmark", "lg-spa": "Dinamarca"}
 	*/
 	private static function resolve_term( locator $locator ) : ?object {
 
@@ -1922,14 +1919,13 @@ class ontology {
 			$locator->section_tipo
 		);
 
-		$term_data = $term_component->get_dato_full();
+		$term_data = $term_component->get_data();
 
-		if( !empty($term_data) && !empty(get_object_vars($term_data)) ){
+		if( !is_empty($term_data) ) {
 			$term = new stdClass();
-			foreach ($term_data as $lang => $ar_term) {
-				if( !empty($ar_term) ){
-					$term->$lang = reset($ar_term);
-				}
+			foreach ($term_data as $item){
+				$lang = $item->lang;
+				$term->$lang = $item->value;
 			}
 		}else{
 			$term = null;
@@ -1977,7 +1973,7 @@ class ontology {
 				$locator->section_tipo
 			);
 
-			$tld = $tld_component->get_dato()[0] ?? null;
+			$tld = $tld_component->get_data()[0]->value ?? null;
 
 			if( empty($tld) ){
 
@@ -2049,7 +2045,7 @@ class ontology {
 		);
 
 		// siblings will be the children component data.
-		$siblings_data = $children_component->get_dato() ?? [];
+		$siblings_data = $children_component->get_data() ?? [];
 
 
 		return $siblings_data;
@@ -2153,7 +2149,6 @@ class ontology {
 			if ($section_tipo===self::$main_section_tipo) {
 
 				// main_ontology records (ontology35)
-
 				$tld = ontology::get_main_tld($section_id, $section_tipo);
 
 				// if current ontology is not active (is not in the active tld list)
@@ -2436,16 +2431,16 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$first_dato	= $dato[0] ?? null;
+			$data		= $component->get_data();
+			$first_data	= $data[0]->value ?? null;
 
 			// empty case
-			if (empty($first_dato)) {
+			if (empty($first_data)) {
 				return null;
 			}
 
 		// always in lowercase
-			$tld = strtolower( $first_dato );
+			$tld = strtolower( $first_data );
 
 
 		return $tld;
@@ -2489,7 +2484,7 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$main_record->section_tipo
 			);
-			$typology_data = $component->get_dato();
+			$typology_data = $component->get_data();
 
 		// use section_id as typology_id if empty data use 15 as default (others)
 		$typology_id = isset($typology_data[0])
