@@ -6,7 +6,8 @@
 */
 class component_section_id extends component_common {
 
-
+	// Property to enable or disable the get and set data in different languages
+	protected $supports_translation = false;
 
 	/**
 	* GET_DATA
@@ -20,6 +21,19 @@ class component_section_id extends component_common {
 
 		return [$data];
 	}//end get_data
+
+
+	/**
+	* GET_DATA_LANG
+	* @return array|null $data
+	*/
+	public function get_data_lang( ?string $lang=null ) : ?array {
+
+		$data = $this->get_data();
+
+		return $data;
+	}//end get_data_lang
+
 
 
 
@@ -47,15 +61,15 @@ class component_section_id extends component_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Alias of get_dato
-	* @return int|null
-	*/
-	public function get_valor() {
+	// /**
+	// * GET_VALOR
+	// * Alias of get_dato
+	// * @return int|null
+	// */
+	// public function get_valor() {
 
-		return $this->get_dato();
-	}//end get_valor
+	// 	return $this->get_dato();
+	// }//end get_valor
 
 
 
