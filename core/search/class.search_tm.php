@@ -26,6 +26,20 @@ class search_tm extends search {
 	}//end build_full_count_sql_query_select
 
 
+	/**
+	* BUILD_SQL_QUERY_ORDER
+	* Creates the SQL to order based on search_query_object order property
+	* @return void
+	*/
+	public function build_sql_query_order() : void {
+
+		$string_query = 'id DESC';
+
+		$this->sql_obj->order[] = $string_query;
+		$this->sql_obj->order_default[] = $string_query;
+	}//end build_sql_query_order
+
+
 
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
