@@ -642,6 +642,19 @@ abstract class component_common extends common {
 				// current dato check
 					$data = $this->data;
 					if (empty($data)) {
+						
+						if(!is_array($data_default)) {
+							debug_log(__METHOD__
+								. " Data default is not an array. Converting to array" . PHP_EOL
+								. ' data_default: ' . json_encode($data_default) . PHP_EOL
+								. ' component: ' . get_called_class() . PHP_EOL
+								. ' tipo: ' . $this->tipo . PHP_EOL
+								. ' section_id: ' . $this->section_id . PHP_EOL
+								. ' section_tipo: ' . $this->section_tipo								
+								, logger::ERROR
+							);
+							$data_default = [$data_default];
+						}
 
 						// set dato only when own dato is empty
 							$this->set_data( $data_default );
@@ -726,6 +739,16 @@ abstract class component_common extends common {
 					// This ensures objects with an 'id' property set to null/0/empty are treated as new.
 					$has_id = ($is_object && property_exists($item, 'id') && $item->id) ? true : false;
 					if( !$has_id ){
+						if( !$is_object ) {
+							$new_item = new stdClass();
+							$new_item->value = $item;
+							// Replace item with new_item
+							$item = $new_item;
+							debug_log(__METHOD__
+								. " New item created (not object on checking counter): " . json_encode($item)
+								, logger::ERROR
+							);
+						}
 						$data_to_set[] = $this->set_data_item_counter( $item );
 					}else{
 						$data_to_set[] = $item;
@@ -1017,7 +1040,17 @@ abstract class component_common extends common {
 		$safe_lang = $lang ?? $this->get_lang();
 		$data_lang = array_values (
 			array_filter( $data, function($el) use ($safe_lang) {
-				return $el->lang === $safe_lang;
+				if(!is_object($el)) {
+					debug_log(__METHOD__
+						. ' Ignored $el is not an object: ' . json_encode($el) . PHP_EOL
+						. ' section_id: '. $this->section_id . PHP_EOL
+						. ' section_tipo: '. $this->section_tipo . PHP_EOL
+						. ' tipo: '. $this->tipo						
+						, logger::ERROR
+					);
+					return false;
+				}
+				return (isset($el->lang) && $el->lang === $safe_lang);
 			})
 		);
 
