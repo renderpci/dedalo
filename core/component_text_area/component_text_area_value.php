@@ -7,11 +7,11 @@
 	// component data
 		$full_raw_text	= $data[0] ?? '';
 		if (empty($full_raw_text)) {
-			$dato_fallback = $this->extract_component_dato_fallback(
+			$dato_fallback = $this->get_component_data_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
-			$full_raw_text	= $dato_fallback[0] ?? '';
+			$full_raw_text	= $dato_fallback[0]->value ?? '';
 		}
 
 	// short vars
