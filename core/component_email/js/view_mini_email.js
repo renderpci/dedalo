@@ -37,7 +37,7 @@ view_mini_email.render = async function(self, options) {
 		})
 
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = value.map(item => item.value).join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

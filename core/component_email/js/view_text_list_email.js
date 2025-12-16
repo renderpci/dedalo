@@ -32,7 +32,7 @@ view_text_list_email.render = async function(self, options) {
 	// short vars
 		const data			= self.data || {}
 		const value			= data.value || []
-		const value_string	= value.join(self.context.fields_separator)
+		const value_string	= value.map(item => item.value).join(self.context.fields_separator)
 
 	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({
