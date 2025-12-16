@@ -20,8 +20,8 @@ class component_filter extends component_relation_common {
 	public $run_propagate_filter = true;
 
 	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_FILTER;
-	protected $default_relation_type_rel	= null;
+	protected $default_relation_type = DEDALO_RELATION_TYPE_FILTER;
+	protected $default_relation_type_rel = null;
 
 	# test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -39,6 +39,7 @@ class component_filter extends component_relation_common {
 		// Build the component normally
 			parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
+
 
 
 	/**
@@ -139,22 +140,22 @@ class component_filter extends component_relation_common {
 				$this->section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato
 				) {
 
-				$dato = $this->get_dato();
-				if(empty($dato)) {
+				$data = $this->get_data();
+				if(empty($data)) {
 
 					// filter always save default project.
 					$user_id				= logged_user_id();
-					$default_dato_for_user	= $this->get_default_data_for_user($user_id);
+					$default_data_for_user	= $this->get_default_data_for_user($user_id);
 
 					// set current user projects default
-					if (!empty($default_dato_for_user)) {
+					if (!empty($default_data_for_user)) {
 
-						$this->set_data($default_dato_for_user);
+						$this->set_data($default_data_for_user);
 						$this->save();
 
 						debug_log(__METHOD__
 							." Saved component filter (tipo:$this->tipo, section_id:$this->section_id, section_tipo:$this->section_tipo) DEDALO_DEFAULT_PROJECT as ". PHP_EOL
-							.' default_dato_for_user: ' . json_encode($default_dato_for_user, JSON_PRETTY_PRINT)
+							.' default_data_for_user: ' . json_encode($default_data_for_user, JSON_PRETTY_PRINT)
 							, logger::DEBUG
 						);
 
@@ -626,12 +627,12 @@ class component_filter extends component_relation_common {
 	public function regenerate_component() : bool {
 
 		# Force loads dato always !IMPORTANT
-		$dato = $this->get_dato();
+		$data = $this->get_data();
 
 		$this->run_propagate_filter = false; # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
 
 		# Save component data
-		$this->Save();
+		$this->save();
 
 
 		return true;
@@ -652,15 +653,15 @@ class component_filter extends component_relation_common {
 
 		$diffusion_value = null;
 
-		// dato
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		// data
+		$data = $this->get_data();
+		if (empty($data)) {
 			return $diffusion_value;
 		}
 
 		// label
 		$ar_label = [];
-		foreach ((array)$dato as $locator) {
+		foreach ((array)$data as $locator) {
 			$label = ts_object::get_term_by_locator(
 				$locator,
 				$lang ?? DEDALO_DATA_LANG,
@@ -743,6 +744,7 @@ class component_filter extends component_relation_common {
 	}//end get_order_path
 
 
+
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
@@ -752,8 +754,8 @@ class component_filter extends component_relation_common {
 	*/
 	public function get_list_value() : ?array {
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
+		$data = $this->get_data();
+		if (empty($data)) {
 			return null;
 		}
 
@@ -766,7 +768,7 @@ class component_filter extends component_relation_common {
 		foreach ($ar_projects as $item) {
 
 			$locator = $item->locator;
-			if ( true===locator::in_array_locator($locator, $dato, ['section_id','section_tipo']) ) {
+			if ( true===locator::in_array_locator($locator, $data, ['section_id','section_tipo']) ) {
 				$list_value[] = $item->label;
 			}
 		}
