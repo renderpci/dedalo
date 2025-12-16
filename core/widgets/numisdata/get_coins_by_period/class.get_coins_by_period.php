@@ -395,7 +395,7 @@ class get_coins_by_period extends widget_common {
 
 			// filter all children of the current thesaurus section.
 			$root_hierarchy_children = array_filter($ts_term_section->datos->relations, function($el){
-				return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
+				return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_CHILDREN_TIPO;
 			});
 			// if this section has children do recursion
 			if(!empty($root_hierarchy_children)){

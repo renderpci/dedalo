@@ -615,7 +615,7 @@ class area_graph extends area_common {
 		$section_tipo 	= $ar_parts[0];
 		$section_id 	= $ar_parts[1];
 
-		$tipo 			= DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
+		$tipo 			= DEDALO_THESAURUS_RELATION_CHILDREN_TIPO;
 		$model_name 	= ontology_node::get_model_by_tipo($tipo,true); // 'component_relation_children';
 		$mode 			= 'list';
 		$component_relation_children = component_common::get_instance(
