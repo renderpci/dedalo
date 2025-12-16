@@ -98,6 +98,13 @@ class login extends common {
 			$ar_result		= $ar_section_id;
 			$user_count		= count($ar_result);
 
+			// give root user of v6
+			// Provisional!
+			if( empty($ar_result) && $username==='root' ){
+				$ar_result = login::get_v6_root_db_data();
+				$user_count		= count($ar_result);
+			}
+
 		// user found in db check
 			if( !is_array($ar_result) || empty($ar_result[0]) ) {
 
@@ -152,7 +159,7 @@ class login extends common {
 				}
 				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
-				$response->errors[] = 'More than one user withe same name already exists';
+				$response->errors[] = 'More than one user with the same name already exists';
 				// error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
@@ -182,7 +189,7 @@ class login extends common {
 			// give password of v6
 			if( empty($password_data) && $username==='root' ){
 				$password_data = $component_password->get_v6_root_password_data();
-			}
+			}		
 
 			// password length check
 				if( empty($password_data) || strlen($password_data)<8 ) {
@@ -1453,6 +1460,19 @@ class login extends common {
 
 		return $dd_object;
 	}//end get_structure_context
+
+
+	/**
+	* GET_V6_ROOT_DB_DATA
+	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
+	* REMOVE IT IN VERSIONS >V7.0.0
+	* @return array
+	*/
+	public static function get_v6_root_db_data(): array {
+		
+		return [-1];
+
+	}//end get_v6_root_db_data
 
 
 
