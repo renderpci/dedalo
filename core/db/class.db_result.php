@@ -44,7 +44,7 @@ class db_result implements IteratorAggregate
 		return iterator_to_array($this->getIterator());
 	}
 	
-	public function fetch_one() : object|array
+	public function fetch_one() : object|array|false
 	{
 		if ($this->as_array) {
 			return pg_fetch_assoc($this->result);
