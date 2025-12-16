@@ -387,28 +387,20 @@ class ontology {
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
 
 		$safe_tipo = safe_tipo( $target_section_tipo );
+		$q = '{"hierarchy53": [{"value": "'.$safe_tipo.'"}]}';
 
 		// SQL query
-			$sql  = '-- '.__METHOD__;
-			$sql .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
-			$sql .= "\n section_tipo = $1 AND";
-			$sql .= "\n (datos#>'{components,hierarchy53,dato,".DEDALO_DATA_NOLAN."}' ? $2)";
-			$sql .= "\n LIMIT 1 ;";
+			$sql = 'SELECT section_id, section_tipo ' . PHP_EOL;
+			$sql .= 'FROM '. self::$main_table . PHP_EOL;
+			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
+			$sql .= 'string @> $2' . PHP_EOL;
+			$sql .= 'LIMIT 1 ;';
 
 		// search
-			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $safe_tipo]);
-			while ($row = pg_fetch_object($result)) {
+			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $q]);
+			$row 	= pg_fetch_object($result) ?? null;
 
-				// decode JSON column 'datos'
-				if (isset($row->datos)) {
-					$row->datos = json_handler::decode($row->datos);
-				}
-
-				return $row;
-			}
-
-
-		return null;
+		return $row;
 	}//end get_ontology_main_form_target_section_tipo
 
 
