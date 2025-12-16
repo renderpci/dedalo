@@ -456,8 +456,8 @@ class ontology {
 				$related_locators[] = $related_locator;
 			}
 
-			$relations_component->set_dato( $related_locators );
-			$relations_component->Save();
+			$relations_component->set_data( $related_locators );
+			$relations_component->save();
 		}
 
 
@@ -562,50 +562,149 @@ class ontology {
 
 		// Name fallback
 			if( empty($name_data) ){
-				$name_data = (object)[
-					DEDALO_STRUCTURE_LANG => [$tld]
-				];
+				$name_data = [(object)[
+					"id"	=> 1,
+					"lang" 	=> DEDALO_STRUCTURE_LANG,
+					"value" => $tld
+				]];
 				$file_item->name_data = $name_data;
 			}
 
 		// target_section_tipo fallback
 			$file_item->target_section_tipo = $target_section_tipo;
 
-		// ontology table record template data
-			$section_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/main_section_data.json' );
-			$section_data			= json_handler::decode( $section_data_string );
+		// check if the main tld already exists
+			$row_ontology_main = self::get_ontology_main_from_tld( $tld );
 
+		// if main section exist update it, else create new one
+			$main_section_id = ( !empty($row_ontology_main) )
+				? $row_ontology_main->section_id
+				: null ;
+
+		// If the main section doesn't exists create new record using section
+			if($main_section_id===null){
+				$main_section = section::get_instance(
+					self::$main_section_tipo// string section_tipo
+				);
+				$main_section_id = $main_section->create_record();
+			}
+		// create the main section_record
+			$section_record = section_record::get_instance(self::$main_section_tipo, $main_section_id);		
+
+		// Project
+			$tipo 	= DEDALO_HIERARCHY_FILTER_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );
+			$component_data = new locator();
+				$component_data->set_id( 1 );
+				$component_data->set_type( 'dd675' );
+				$component_data->set_section_tipo( 'dd153' );
+				$component_data->set_section_id( '1' );
+				$component_data->set_from_component_tipo( $tipo );
+			
+			$section_record->set_component_data($tipo, $column, [$component_data]);
+
+		// Thesaurus active
+			$tipo 	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );
+			$ts_active_data = new locator();
+				$ts_active_data->set_id( 1 );
+				$ts_active_data->set_type( 'dd151' );
+				$ts_active_data->set_section_tipo( 'dd64' );
+				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
+				$ts_is_active = ($tld === 'dd') ? '1' : '2'; // only dd terms will be active by default, any other tld wil be no active, user can change it manually.
+				$ts_active_data->set_section_id( $ts_is_active );
+				$ts_active_data->set_from_component_tipo( $tipo );
+			
+			$section_record->set_component_data($tipo, $column, [$ts_active_data]);
+
+		// Language
+			$tipo 	= DEDALO_HIERARCHY_LANG_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );
+			$component_data = new locator();
+				$component_data->set_id( 1 );
+				$component_data->set_type( 'dd151' );
+				$component_data->set_section_tipo( 'lg1' );
+				$component_data->set_section_id( '17344' ); // lg-spa, Spanish!
+				$component_data->set_from_component_tipo( $tipo );
+			
+			$section_record->set_component_data($tipo, $column, [$component_data]);
+
+		// Active
+			$tipo 	= DEDALO_HIERARCHY_ACTIVE_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );
+			$component_data = new locator();
+				$component_data->set_id( 1 );
+				$component_data->set_type( 'dd151' );
+				$component_data->set_section_tipo( 'dd64' );
+				$component_data->set_section_id( '1' );
+				$component_data->set_from_component_tipo( $tipo );
+			
+			$section_record->set_component_data($tipo, $column, [$component_data]);
+		
 		// Name
-			$section_data->components->hierarchy5->dato = $name_data;
+			$tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );
+
+			$section_record->set_component_data($tipo, $column, $name_data);
 
 		// TLD
-			$section_data->components->hierarchy6->dato->{DEDALO_DATA_NOLAN} = [$tld];
+			$tipo 	= DEDALO_HIERARCHY_TLD2_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );		
+			$tld_data = [(object)[
+				"id"	=> 1,
+				"lang" 	=> DEDALO_DATA_NOLAN,
+				"value" => $tld
+			]];
+
+			$section_record->set_component_data($tipo, $column, $tld_data);
 
 		// Target section tipo
-			$section_data->components->hierarchy53->dato->{DEDALO_DATA_NOLAN} = [$target_section_tipo];
+			$tipo 	= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
+			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+			$column = section_record_data::get_column_name( $model );	
+
+			$target_section_tipo_data = [(object)[
+				"id"	=> 1,
+				"lang" 	=> DEDALO_DATA_NOLAN,
+				"value" => $target_section_tipo
+			]];
+			
+			$section_record->set_component_data($tipo, $column, $target_section_tipo_data);
 
 		// Typology
 			if( !empty($typology_id) ){
+				$tipo 	= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );	
+
 				$typology_data = new locator();
 					$typology_data->set_type( 'dd151' );
 					$typology_data->set_section_tipo( DEDALO_HIERARCHY_TYPES_SECTION_TIPO );
 					$typology_data->set_section_id( $typology_id );
 					$typology_data->set_from_component_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 
-				$section_data->relations[]= $typology_data;
+				$section_record->set_component_data($tipo, $column, [$typology_data]);
 			}
 
 		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
 			if($tld === 'dd'){
 
+				$tipo 	= DEDALO_HIERARCHY_CHILDREN_TIPO; // hierarchy45
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+
 				// general term
 				$general_term = new locator();
-					$general_term->set_type('dd48');
+					$general_term->set_type( 'dd48' );
 					$general_term->set_section_tipo( $target_section_tipo );
-					$general_term->set_section_id('1');
-					$general_term->set_from_component_tipo('hierarchy45');
-
-				$section_data->relations[] = $general_term;
+					$general_term->set_section_id( '1' );
+					$general_term->set_from_component_tipo( $tipo );			
 
 				// model term
 				$model_term = new locator();
@@ -614,35 +713,15 @@ class ontology {
 					$model_term->set_section_id('2');
 					$model_term->set_from_component_tipo('hierarchy45');
 
-				$section_data->relations[] = $model_term;
-
-				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
-				foreach($section_data->relations as $locator){
-					if($locator->from_component_tipo === DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO){ // 'hierarchy125'
-						$locator->section_id = '1';
-					}
-				}
+				$section_record->set_component_data($tipo, $column, [$general_term, $model_term]);
 			}
 
-		// check if the main tld already exists
-			$ontology_main = self::get_ontology_main_from_tld( $tld );
+		// Save the section record
+			$section_record->save();
 
-		// if main section exist update it, else create new one
-			$main_section_id = ( !empty($ontology_main) )
-				? $ontology_main->section_id
-				: null ;
 
 		// create dd_ontology node for section
 			ontology::create_dd_ontology_ontology_section_node( $file_item );
-
-		// matrix section
-			$main_section = section::get_instance(
-				$main_section_id, // string|null section_id
-				self::$main_section_tipo// string section_tipo
-			);
-			$main_section->set_dato( $section_data );
-			$main_section_id = $main_section->Save();
-
 
 		return $main_section_id;
 	}//end add_main_section
