@@ -219,11 +219,8 @@ class hierarchy extends ontology {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato_fallback = $component->extract_component_dato_fallback(
-				DEDALO_DATA_LANG, // lang
-				DEDALO_DATA_LANG_DEFAULT // main_lang
-			);
-			$name = $dato_fallback[0] ?? null;
+			$data_lang = $component->get_data_lang_with_fallback();
+			$name = $data_lang[0]->value ?? null;
 			if (empty($name)) {
 				$name = 'Hierarchy ' . $tld2;
 			}
