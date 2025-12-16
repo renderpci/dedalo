@@ -280,7 +280,7 @@ final class dd_core_api {
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
-					$model		= $tool_name ?? ontology_node::get_model_by_tipo($tipo, true);
+					$model		= $tool_name ?? ontology_node::get_model_by_tipo($tipo, true) ?? '';
 					$last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? '';
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
@@ -2478,7 +2478,7 @@ final class dd_core_api {
 					'value'	=> $value
 				];
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
-			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
+			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
 			$obj->dedalo_projects_default_langs		= array_map(function ($item) {
 				return [
 					'label'	=> $item->names[0] ?? $item->code,
