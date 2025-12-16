@@ -466,43 +466,42 @@ class component_string_common extends component_common {
 
 		// $q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-			$q = is_array($query_object->q)
-				? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
-				: ($query_object->q ?? '');
+		$q = is_array($query_object->q)
+			? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
+			: ($query_object->q ?? '');
 
 		// split q case
-			$q_split = $query_object->q_split ?? false;
-			if ($q_split===true && !search::is_literal($q)) {
-				$q_items = preg_split('/\s/', $q);
-				if (count($q_items)>1) {
-					return self::handle_query_splitting($query_object, $q_items, '$and');
-				}
+		$q_split = $query_object->q_split ?? false;
+		if ($q_split===true && !search::is_literal($q)) {
+			$q_items = preg_split('/\s/', $q);
+			if (count($q_items)>1) {
+				return self::handle_query_splitting($query_object, $q_items, '$and');
 			}
+		}
 
 		// Validate path and calculate translatable
-			if (empty($query_object->path) || !is_array($query_object->path)) {
-				throw new Exception("Invalid component path");
-			}
-			$path_end = end($query_object->path);
-			$component_tipo = $path_end->component_tipo;
-			$translatable = ontology_node::get_translatable($component_tipo);
-
+		if (empty($query_object->path) || !is_array($query_object->path)) {
+			throw new Exception("Invalid component path");
+		}
+		$path_end = end($query_object->path);
+		$component_tipo = $path_end->component_tipo;
+		$translatable = ontology_node::get_translatable($component_tipo);
 		
 		// column
-			$column = section_record_data::get_column_name( get_called_class() );
+		$column = section_record_data::get_column_name( get_called_class() );
 		
-		//table_alias
-			$table_alias	= $query_object->table_alias;
+		// table_alias
+		$table_alias = $query_object->table_alias;
 
 		// escape q string for DB
-			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		// q_operator. Search component do not use a 'q_operator' but for compatibility with
 		// any search call, it is added here and is accepted too.
-			$q_operator = $query_object->q_operator ?? null;
+		$q_operator = $query_object->q_operator ?? null;
 
 		// type. Always set fixed values
-			$query_object->type = 'string';
+		$query_object->type = 'string';
 
 		switch (true) {
 
@@ -629,28 +628,39 @@ class component_string_common extends component_common {
 			case (strpos($q, '==')===0 || $q_operator==='=='):
 				$operator = '==';
 				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '@>';
-				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
-				$query_object->unaccent = false;
-				$query_object->type = 'object';
-				if (isset($query_object->lang) && $query_object->lang!=='all') {
-					$query_object->component_path[] = $query_object->lang;
-				}
-				if (isset($query_object->lang) && $query_object->lang==='all') {
-					$logical_operator = '$or';
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						// Empty data is blank array []
-						$clone = clone($query_object);
-							$clone->component_path[] = $current_lang;
+				// $query_object->operator = '@>';
+				// $query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				// $query_object->unaccent = false;
+				// $query_object->type = 'object';
+				// if (isset($query_object->lang) && $query_object->lang!=='all') {
+				// 	$query_object->component_path[] = $query_object->lang;
+				// }
+				// if (isset($query_object->lang) && $query_object->lang==='all') {
+				// 	$logical_operator = '$or';
+				// 	$ar_query_object = [];
+				// 	$ar_all_langs 	 = common::get_ar_all_langs();
+				// 	$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+				// 	foreach ($ar_all_langs as $current_lang) {
+				// 		// Empty data is blank array []
+				// 		$clone = clone($query_object);
+				// 			$clone->component_path[] = $current_lang;
 
-						$ar_query_object[] = $clone;
-					}
-					$query_object = new stdClass();
-						$query_object->$logical_operator = $ar_query_object;
-				}
+				// 		$ar_query_object[] = $clone;
+				// 	}
+				// 	$query_object = new stdClass();
+				// 		$query_object->$logical_operator = $ar_query_object;
+				// }
+
+				// sample: 
+				// $table_alias.string::jsonb -> 'dd132' @> '[{"value": "pepe"}]'
+				
+				// sql using GIN index
+				$query_object->sentence = "{$table_alias}.{$column}::jsonb -> '$component_tipo' @> _Q1_";
+
+				// params
+				$query_object->params = (isset($query_object->lang) && $query_object->lang==='all')
+					? ['_Q1_' => '[{"value": "'.$q_clean.'"}]']
+					: ['_Q1_' => '[{"value":"'.$q_clean.'","lang":"'.($query_object->lang ?? DEDALO_DATA_LANG).'"}]'];
 				break;
 
 			// IS SIMILAR
@@ -720,19 +730,15 @@ class component_string_common extends component_common {
 
 			// DEFAULT CONTAINS
 			default:
-				// $operator = '~*'; // case insensitive regular expression matching
+				// sql sentence
+				$sql  = "{$table_alias}.{$column} @? (";
+				$sql .= "'$.{$component_tipo}[*].value ? (@ like_regex \"'||_Q1_||'\" flag \"i\")'";
+				$sql .= ")::jsonpath";
+				$query_object->sentence = $sql;
+
+				// params
 				$q_clean  = str_replace('+', '', $q);
-				// $query_object->operator		= $operator;
-				// $query_object->q_parsed		= '\'.*\[".*'.$q_clean.'.*\'';
-				// $query_object->unaccent		= true;
-				// $query_object->data_path	= ['value'];
-				$query_object->sentence = trim("
-					{$table_alias}.{$column} @? '$.{$component_tipo}[*].value ? (@ like_regex \"_Q1_\" flag \"i\")'
-				");
-
-				// $query_object->sentence = 'search_string LIKE f_unaccent(lower(\'%_Q1_%\'))';
 				$query_object->params = ['_Q1_' => $q_clean];
-
 				break;
 		}//end switch (true)
 
