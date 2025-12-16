@@ -3318,13 +3318,13 @@ abstract class component_common extends common {
 	public function regenerate_component() : bool {
 
 		// Force loads dato always !IMPORTANT
-		$dato = $this->get_dato();
+		$data = $this->get_data();
 
 		// force format correctly empty data like [null] -> null
-		$this->set_dato($dato);
+		$this->set_data($data);
 
 		// Save component data
-		$this->Save();
+		$this->save();
 
 
 		return true;
