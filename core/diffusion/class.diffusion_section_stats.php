@@ -522,12 +522,11 @@ class diffusion_section_stats extends diffusion {
 		// creates a new section
 			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
 			$section		= section::get_instance(
-				null,
 				$section_tipo,
 				'edit',
 				false // bool cache
 			);
-			$section_id	= $section->Save();
+			$section_id	= $section->create_record();
 			if (empty($section_id)) {
 				debug_log(__METHOD__." ERROR. UNABLE TO CREATE A NEW SECTION RECORD IN SECTION $section_tipo".to_string(), logger::ERROR);
 				return false;
@@ -551,8 +550,8 @@ class diffusion_section_stats extends diffusion {
 					$locator->set_from_component_tipo($tipo);
 
 				$data = [$locator];
-				$component->set_dato($data);
-				$component->Save();
+				$component->set_data($data);
+				$component->save();
 			})(USER_ACTIVITY_USER_TIPO, $user_id); // dd1522
 
 		// type. component_input_text. String, It can be one of these values: year, month, day
@@ -566,9 +565,9 @@ class diffusion_section_stats extends diffusion {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$data = [$value];
-				$component->set_dato($data);
-				$component->Save();
+				$data = [(object)['value' => $value, 'lang' => DEDALO_DATA_NOLAN]];
+				$component->set_data($data);
+				$component->save();
 			})(USER_ACTIVITY_TYPE_TIPO, $type); // dd1531
 
 		// date. component_date
@@ -592,8 +591,8 @@ class diffusion_section_stats extends diffusion {
 				$data = new stdClass();
 					$data->start = $dd_date;
 
-				$component->set_dato([$data]);
-				$component->Save();
+				$component->set_data([$data]);
+				$component->save();
 			})(USER_ACTIVITY_DATE_TIPO, $year, $month, $day); // dd1530
 
 		// totals. component_json. Array of objects mandatory like [{"dd696": 24, "dd693": 110}]
@@ -607,9 +606,9 @@ class diffusion_section_stats extends diffusion {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$data = [$value];
-				$component->set_dato($data);
-				$component->Save();
+				$data = [(object)['value' => $value, 'lang' => DEDALO_DATA_NOLAN]];
+				$component->set_data($data);
+				$component->save();
 			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523
 
 		// debug
