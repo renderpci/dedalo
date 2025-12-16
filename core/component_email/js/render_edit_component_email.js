@@ -119,9 +119,14 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
-			value			: current_value.value,
+			value			: current_value?.value,
 			parent			: content_value
 		})
+		// mousedown event. Capture event propagation
+		const mousedown_handler = (e) => {
+			e.stopPropagation()
+		}
+		input.addEventListener('mousedown', mousedown_handler)
 		
 		// focus event		
 		const focus_handler = (e) => {
@@ -131,18 +136,28 @@ const get_content_value = (i, current_value, self) => {
 			}
 		}
 		input.addEventListener('focus', focus_handler)
-	
-		// keyup event
-		const keyup_handler = (e) => {
-			keyup_handler(e, i, self)
+
+		// keydown event
+		const keydown_handler = (e) => {
+			e.stopPropagation()
+			if(e.key==='Tab'){
+				ui.component.deactivate(self)
+				return
+			}
 		}
-		input.addEventListener('keyup', keyup_handler)
-	
+		input.addEventListener('keydown', keydown_handler)
+
 		// click event. Capture event propagation
 		const click_handler = (e) => {
 			e.stopPropagation()
 		}
 		input.addEventListener('click', click_handler)
+	
+		// keyup event
+		// const input_keyup_handler = (e) => {
+		// 	keyup_handler(e, i, self)
+		// }
+		// input.addEventListener('keyup', input_keyup_handler)		
 	
 		// change event
 		const change_handler = (e) => {
@@ -152,6 +167,7 @@ const get_content_value = (i, current_value, self) => {
 			if (!validated) {
 				return false
 			}
+			self.change_handler(e, i, self)
 		}
 		input.addEventListener('change', change_handler)
 
@@ -353,6 +369,39 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* CHANGE_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const change_handler = function(e, key, self) {
+	e.preventDefault()
+
+	const input_value = e.target.value || ''
+
+	// change data
+	const changed_data_item = Object.freeze({
+		action	: 'update',
+		key		: key,
+		value	: {
+			value	: input_value,
+			lang	: self.lang
+		}
+	})
+
+	// fix instance changed_data
+	self.set_changed_data(changed_data_item)
+
+
+	return true
+}//end change_handler
 
 
 
