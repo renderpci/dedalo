@@ -108,6 +108,7 @@ class component_media_common extends component_common {
 		// }]
 
 
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -164,9 +165,9 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $grid_cell_object
@@ -179,9 +180,9 @@ class component_media_common extends component_common {
 				'id' => $this->section_tipo.'_'.$this->tipo
 			];
 
-		// current_url. get from dato
-			$dato = $this->get_dato();
-			if(isset($dato)){
+		// current_url. get from data
+			$data = $this->get_data();
+			if(isset($data)){
 
 				$element_quality = ($this->mode==='edit')
 					? $this->get_default_quality()
@@ -252,11 +253,11 @@ class component_media_common extends component_common {
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
 		// data
-			$dato = $this->get_dato();
-			if (empty($dato) || empty($dato[0])) {
+			$data = $this->get_data();
+			if (empty($data) || empty($data[0])) {
 				return null;
 			}
-			$files_info = $dato[0]->files_info ?? [];
+			$files_info = $data[0]->files_info ?? [];
 			$found = array_find($files_info, function($el){
 				return $el->quality === $this->get_default_quality()
 					&& $el->extension === $this->get_extension()
@@ -370,12 +371,12 @@ class component_media_common extends component_common {
 			// get data from DDBB without checking the files
 			// this check use the data of the component to check if the files exists
 			// this check is faster than check every media file.
-				$dato = $this->get_dato();
-				if (empty($dato) || empty($dato[0])) {
+				$data = $this->get_data();
+				if (empty($data) || empty($data[0])) {
 					return $diffusion_data;
 				}
 				// get the files_info, it has the file_exist parameter that determinate if file exists in the media tree
-				$files_info = $dato[0]->files_info ?? [];
+				$files_info = $data[0]->files_info ?? [];
 				$found = array_find($files_info, function($el) use ($quality, $extension){
 					return $el->quality === $quality
 						&& $el->extension === $extension
@@ -408,7 +409,6 @@ class component_media_common extends component_common {
 
 
 
-
 	/**
 	* GET_ID
 	* @return string|null $id
@@ -426,7 +426,7 @@ class component_media_common extends component_common {
 			if (!isset($section_id)) {
 				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__
-						." Component dato (section_id: $this->section_id,section_tipo: $this->section_tipo) is empty"
+						." Component data (section_id: $this->section_id,section_tipo: $this->section_tipo) is empty"
 						, logger::WARNING
 					);
 				}
@@ -972,7 +972,7 @@ class component_media_common extends component_common {
 		$extensions				= array_merge( $extensions, $alternative_extensions);
 
 		$unique_extensions		= array_unique($extensions);
-		$dato					= $this->get_dato();
+		$data					= $this->get_data();
 
 		// files check
 			$files_info = [];
@@ -1011,13 +1011,13 @@ class component_media_common extends component_common {
 			}//end foreach ($ar_quality as $quality)
 
 		// original_normalized_name add like 'rsc29_rsc170_770.tif'
-			if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
+			if (isset($data[0]) && isset($data[0]->original_normalized_name)) {
 
 				$original_quality	= $this->get_original_quality();
-				$file_extension		= get_file_extension($dato[0]->original_normalized_name);
+				$file_extension		= get_file_extension($data[0]->original_normalized_name);
 
 				// original file like 'memoria_oral_presentacion.mov'
-					$original_file_path	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
+					$original_file_path	= $this->get_media_path_dir($original_quality) .'/'. $data[0]->original_normalized_name;
 					if (file_exists($original_file_path)) {
 						// file_info
 						$quality_file_info = $this->get_quality_file_info($original_quality, $file_extension);
@@ -1029,13 +1029,13 @@ class component_media_common extends component_common {
 			}
 
 		// modified_normalized_name add like 'rsc29_rsc170_770.psd'
-			if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
+			if (isset($data[0]) && isset($data[0]->modified_normalized_name)) {
 
 				$modified_quality	= $this->get_modified_quality();
-				$file_extension		= get_file_extension($dato[0]->modified_normalized_name);
+				$file_extension		= get_file_extension($data[0]->modified_normalized_name);
 
 				// original file like 'memoria_oral_presentacion.mov'
-					$modified_file_path	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
+					$modified_file_path	= $this->get_media_path_dir($modified_quality) .'/'. $data[0]->modified_normalized_name;
 					if (file_exists($modified_file_path)) {
 						// file_info
 						$quality_file_info = $this->get_quality_file_info($modified_quality, $file_extension);
@@ -1062,7 +1062,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_DATALIST
 	* Creates a list of file info items iterating all qualities from
-	* the component dato
+	* the component data
 	* @return array $datalist
 	* @test true
 	*/
@@ -1074,9 +1074,9 @@ class component_media_common extends component_common {
 			// );
 
 		// from component DDBB data
-			$dato = $this->get_dato();
-			$files_info = isset($dato[0]) && isset($dato[0]->files_info)
-				? $dato[0]->files_info
+			$data = $this->get_data();
+			$files_info = isset($data[0]) && isset($data[0]->files_info)
+				? $data[0]->files_info
 				: [];
 
 		// get_ar_quality
@@ -1133,7 +1133,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Reduced version of get_dato to use in list mode.
+	* Reduced version of get_data to use in list mode.
 	* Unused quality and alternative extension info files will be ignored
 	* @return array|null $list_value
 	* @test true
@@ -1303,17 +1303,17 @@ class component_media_common extends component_common {
 		);
 		if ($result===true) {
 
-			// update dato on delete original
+			// update data on delete original
 				if( !isset($extension) ){
 					$original_quality	= $this->get_original_quality();
 					$modified_quality	= $this->get_modified_quality();
 					if ($quality===$original_quality || $quality===$modified_quality) {
-						$dato = $this->get_dato();
-						if (isset($dato[0]) && is_object($dato[0])) {
-							foreach ($dato[0] as $name => $current_value) {
+						$data = $this->get_data();
+						if (isset($data[0]) && is_object($data[0])) {
+							foreach ($data[0] as $name => $current_value) {
 								// delete all info about the current quality (file_name, upload_date, normalized_name, ..)
-								if (strpos($name, $quality.'_')===0 && isset($dato[0]->{$name})) {
-									unset($dato[0]->{$name});
+								if (strpos($name, $quality.'_')===0 && isset($data[0]->{$name})) {
+									unset($data[0]->{$name});
 								}
 							}
 						}
@@ -1336,8 +1336,8 @@ class component_media_common extends component_common {
 					logged_user_id() // int
 				);
 
-			// save to force update dato files_info
-				$this->Save();
+			// save to force update data files_info
+				$this->save();
 
 			$response->result	= true;
 			$response->msg		= 'File deleted successfully. ' . $quality;
@@ -1379,8 +1379,8 @@ class component_media_common extends component_common {
 				$allowed_extensions
 			);
 
-		// dato
-			$dato = $this->get_dato();
+		// data
+			$data = $this->get_data();
 
 		// valid quality list
 			$valid_ar_quality = $this->get_ar_quality();
@@ -1400,8 +1400,8 @@ class component_media_common extends component_common {
 
 				// original case. If defined 'original_normalized_name', add extension to list to delete
 					if ( $current_quality===$this->get_original_quality() ) {
-						$original_normalized_name	= isset($dato[0]) && isset($dato[0]->original_normalized_name)
-							? $dato[0]->original_normalized_name
+						$original_normalized_name	= isset($data[0]) && isset($data[0]->original_normalized_name)
+							? $data[0]->original_normalized_name
 							: null;
 						if (isset($original_normalized_name)) {
 							$original_normalized_extension = get_file_extension($original_normalized_name);
@@ -1413,8 +1413,8 @@ class component_media_common extends component_common {
 
 				// modified case. If defined 'modified_normalized_name', add extension to list to delete
 					if ( $current_quality===$this->get_modified_quality() ) {
-						$modified_normalized_name	= isset($dato[0]) && isset($dato[0]->modified_normalized_name)
-							? $dato[0]->modified_normalized_name
+						$modified_normalized_name	= isset($data[0]) && isset($data[0]->modified_normalized_name)
+							? $data[0]->modified_normalized_name
 							: null;
 						if (isset($modified_normalized_name)) {
 							$modified_normalized_extension = get_file_extension($modified_normalized_name);
@@ -1927,7 +1927,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_UPLOADED_FILE
-	* From component dato with fallback to files
+	* From component data with fallback to files
 	* @param string $quality
 	* @return string|null $original_quality
 	* @test true
@@ -1937,14 +1937,14 @@ class component_media_common extends component_common {
 		$uploaded_file = null;
 
 		// short vars
-			$dato			= $this->get_dato();
+			$data			= $this->get_data();
 			$property_name	= $quality . '_normalized_name';
 			$file_name		= null;
 
-		if (isset($dato[0]) && isset($dato[0]->{$property_name})) {
+		if (isset($data[0]) && isset($data[0]->{$property_name})) {
 
-			// already in dato case
-			$file_name = $dato[0]->{$property_name};
+			// already in data case
+			$file_name = $data[0]->{$property_name};
 
 		}else{
 
@@ -1967,7 +1967,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_QUALITY_FILE_INFO
-	* Read the given quality file data, in media common dato item format
+	* Read the given quality file data, in media common data item format
 	* Result sample:
 	* {
 	* 	"quality": "50MB",
@@ -1988,7 +1988,7 @@ class component_media_common extends component_common {
 	* }
 	* @param string $quality
 	* @param string|null $extension = null
-	* @return object $dato_item
+	* @return object $data_item
 	* @test true
 	*/
 	public function get_quality_file_info( string $quality, ?string $extension=null ) : object {
@@ -1999,7 +1999,7 @@ class component_media_common extends component_common {
 
 				$extension = pathinfo($external_source)['extension'];
 
-				$dato_item = (object)[
+				$data_item = (object)[
 					'quality'		=> $quality,
 					'file_exist'	=> true,
 					'file_name'		=> null,
@@ -2010,7 +2010,7 @@ class component_media_common extends component_common {
 					'extension'		=> $extension,
 					'external'		=> true
 				];
-				return $dato_item;
+				return $data_item;
 			}
 
 		// file path
@@ -2031,7 +2031,7 @@ class component_media_common extends component_common {
 		// no file case
 			if ($file_exist===false) {
 
-				$dato_item = (object)[
+				$data_item = (object)[
 					'quality'		=> $quality,
 					'file_exist'	=> false,
 					'file_name'		=> null,
@@ -2041,7 +2041,7 @@ class component_media_common extends component_common {
 					'file_time'		=> null,
 					'extension'		=> null
 				];
-				return $dato_item;
+				return $data_item;
 			}
 
 		// file_name
@@ -2093,7 +2093,7 @@ class component_media_common extends component_common {
 			$file_path_relative = str_replace(DEDALO_MEDIA_PATH, '', $file_path);
 
 		// add quality file info
-			$dato_item = (object)[
+			$data_item = (object)[
 				'quality'		=> $quality,
 				'file_exist'	=> $file_exist,
 				'file_name'		=> $file_name,
@@ -2105,7 +2105,7 @@ class component_media_common extends component_common {
 			];
 
 
-		return $dato_item;
+		return $data_item;
 	}//end get_quality_file_info
 
 
@@ -2445,7 +2445,6 @@ class component_media_common extends component_common {
 
 
 
-
 	/**
 	* DELETE_NORMALIZED_FILES
 	* Remove all image versions that are different of the uploaded files (normalized files), including the alternative versions
@@ -2561,25 +2560,25 @@ class component_media_common extends component_common {
 		// thumb. Re-create thumb always (from default quality file)
 			$this->create_thumb();
 
-		// files_info. Updates component dato files info values iterating available files
+		// files_info. Updates component data files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it
 		// Note that this method is called again on save, but this is intentional
-			$this->update_component_dato_files_info();
+			$this->update_component_data_files_info();
 
-		// dato. Current updated stored dato
-			$dato = $this->get_dato();
+		// data. Current updated stored data
+			$data = $this->get_data();
 
-		// empty case. Previous update_component_dato_files_info generates
-		// a new dato if files are found. Else no dato is set (null)
-			if (empty($dato)) {
+		// empty case. Previous update_component_data_files_info generates
+		// a new data if files are found. Else no data is set (null)
+			if (empty($data)) {
 				return false;
 			}
 
-		// bad dato case
-			if (isset($dato[0]) && !is_object($dato[0])) {
+		// bad data case
+			if (isset($data[0]) && !is_object($data[0])) {
 				debug_log(__METHOD__
 					. " Invalid component data. Expected object and received array " . PHP_EOL
-					. ' dato: ' . to_string($dato)
+					. ' data: ' . to_string($data)
 					, logger::ERROR
 				);
 				return false;
@@ -2588,7 +2587,7 @@ class component_media_common extends component_common {
 		// original_file_name: from target_filename (use example: component_image rsc29)
 		// When original_file_name is not defined, we look in the properties definition
 		// to get the filename in the target_filename defined (as component_input_text)
-			if (!isset($dato[0]->original_file_name)) {
+			if (!isset($data[0]->original_file_name)) {
 
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
@@ -2604,38 +2603,38 @@ class component_media_common extends component_common {
 						DEDALO_DATA_NOLAN, // string lang
 						$this->section_tipo // string section_tipo
 					);
-					$filename_dato = $component->get_dato();
+					$filename_data = $component->get_data();
 
 					// original_file_name
-					if( !empty($filename_dato[0]) ) {
+					if( !empty($filename_data[0]) ) {
 
-						$dato[0]->original_file_name = $filename_dato[0];
+						$data[0]->original_file_name = $filename_data[0];
 
 						// original_normalized_name
-						if ( !isset($dato[0]->original_normalized_name) ) {
-							$dato[0]->original_normalized_name = $this->get_id() .'.'. get_file_extension($filename_dato[0]);
+						if ( !isset($data[0]->original_normalized_name) ) {
+							$data[0]->original_normalized_name = $this->get_id() .'.'. get_file_extension($filename_data[0]);
 						}
 
 						// original_upload_date
-						if (!isset($dato[0]->original_upload_date)) {
+						if (!isset($data[0]->original_upload_date)) {
 
-							$file_path = $this->get_media_path_dir( $this->get_original_quality() ) .'/'. $dato[0]->original_normalized_name;
+							$file_path = $this->get_media_path_dir( $this->get_original_quality() ) .'/'. $data[0]->original_normalized_name;
 							if (file_exists($file_path)) {
 								$modification_time				= filectime($file_path);
-								$dato[0]->original_upload_date	= !empty($modification_time)
+								$data[0]->original_upload_date	= !empty($modification_time)
 									? dd_date::get_dd_date_from_unix_timestamp($modification_time)
 									: null;
 							}
 						}
 					}
 
-					// replace existing dato
-					$this->set_dato($dato);
+					// replace existing data
+					$this->set_data($data);
 				}
 			}
 
 		// original_normalized_name
-			if (!isset($dato[0]->original_normalized_name)) {
+			if (!isset($data[0]->original_normalized_name)) {
 
 				$original_quality = $this->get_original_quality();
 
@@ -2644,15 +2643,15 @@ class component_media_common extends component_common {
 				);
 				if (!empty($original_normalized_name)) {
 
-					$dato[0]->original_normalized_name = $original_normalized_name;
+					$data[0]->original_normalized_name = $original_normalized_name;
 
 					// original_upload_date
-					if (!isset($dato[0]->original_upload_date)) {
+					if (!isset($data[0]->original_upload_date)) {
 
 						$file_path = $this->get_media_path_dir($original_quality) .'/'. $original_normalized_name;
 						if (file_exists($file_path)) {
 							$modification_time				= filectime($file_path);
-							$dato[0]->original_upload_date	= !empty($modification_time)
+							$data[0]->original_upload_date	= !empty($modification_time)
 								? dd_date::get_dd_date_from_unix_timestamp($modification_time)
 								: null;
 						}
@@ -2661,7 +2660,7 @@ class component_media_common extends component_common {
 			}
 
 		// modified_normalized_name
-			if (!isset($dato[0]->modified_normalized_name)) {
+			if (!isset($data[0]->modified_normalized_name)) {
 
 				$modified_quality = $this->get_modified_quality();
 
@@ -2671,15 +2670,15 @@ class component_media_common extends component_common {
 						$modified_quality
 					);
 					if (!empty($modified_normalized_name)) {
-						$dato[0]->modified_normalized_name = $modified_normalized_name;
+						$data[0]->modified_normalized_name = $modified_normalized_name;
 
 						// modified_upload_date
-						if (!isset($dato[0]->modified_upload_date)) {
+						if (!isset($data[0]->modified_upload_date)) {
 
 							$file_path = $this->get_media_path_dir($modified_quality) .'/'. $modified_normalized_name;
 							if (file_exists($file_path)) {
 								$modification_time				= filectime($file_path);
-								$dato[0]->modified_upload_date	= !empty($modification_time)
+								$data[0]->modified_upload_date	= !empty($modification_time)
 									? dd_date::get_dd_date_from_unix_timestamp($modification_time)
 									: null;
 							}
@@ -3003,9 +3002,9 @@ class component_media_common extends component_common {
 				logged_user_id() // int
 			);
 
-		// update component dato files info and save
+		// update component data files info and save
 			if ($save===true) {
-				$this->Save();
+				$this->save();
 			}
 
 		// response
@@ -3019,13 +3018,13 @@ class component_media_common extends component_common {
 
 
 	/**
-	* UPDATE_COMPONENT_DATO_FILES_INFO
+	* UPDATE_COMPONENT_DATA_FILES_INFO
 	* Get component files info reading current media and
-	* updates the component dato. Does not save!
+	* updates the component data. Does not save!
 	* @return bool
 	* @test true
 	*/
-	protected function update_component_dato_files_info() : bool {
+	protected function update_component_data_files_info() : bool {
 
 		// get files info
 			// $files_info	= [];
@@ -3045,15 +3044,15 @@ class component_media_common extends component_common {
 				false // bool include_empty. Prevent to store empty quality files
 			);
 
-		// save component dato
-			$dato = $this->get_dato();
-			if (isset($dato[0])) {
-				if (!is_object($dato[0])) {
+		// save component data
+			$data = $this->get_data();
+			if (isset($data[0])) {
+				if (!is_object($data[0])) {
 
-					// bad dato case
+					// bad data case
 					debug_log(__METHOD__
-						." ERROR. BAD COMPONENT DATO " .PHP_EOL
-						.' dato:' . json_encode($dato, JSON_PRETTY_PRINT)
+						." ERROR. BAD COMPONENT DATa " .PHP_EOL
+						.' data:' . json_encode($data, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);
 					return false;
@@ -3061,46 +3060,46 @@ class component_media_common extends component_common {
 				}else{
 
 					// replace files info values
-					$dato[0]->files_info = $files_info;
+					$data[0]->files_info = $files_info;
 				}
 			}else{
 
-				if (empty($files_info) && empty($dato)) {
+				if (empty($files_info) && empty($data)) {
 
-					$dato = null;
+					$data = null;
 
 				}else{
 
-					if (empty($dato)) {
-						// create a new dato from scratch
-						$dato_item = (object)[
+					if (empty($data)) {
+						// create a new data from scratch
+						$data_item = (object)[
 							'files_info' => $files_info
 						];
-						$dato = [$dato_item];
+						$data = [$data_item];
 					}else{
-						// Leave dato as is (used in test unit)
+						// Leave data as is (used in test unit)
 					}
 				}
 			}
 
-		// updates dato
-			$this->set_dato($dato);
+		// updates data
+			$this->set_data($data);
 
 
 		return true;
-	}//end update_component_dato_files_info
+	}//end update_component_data_files_info
 
 
 
 	/**
 	* SAVE
-	* Update component dato reading media files before save
+	* Update component data reading media files before save
 	* @return bool
 	* @test true
 	*/
 	public function save() : bool {
 
-		$this->update_component_dato_files_info();
+		$this->update_component_data_files_info();
 
 		return parent::save();
 	}//end save
@@ -3203,8 +3202,8 @@ class component_media_common extends component_common {
 				return false;
 			}
 
-		// save to force update dato files_info
-			$this->Save();
+		// save to force update data files_info
+			$this->save();
 
 
 		return true;
