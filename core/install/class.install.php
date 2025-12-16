@@ -1931,40 +1931,11 @@ class install extends common {
 		// short vars
 			$config	= self::get_config();
 
-		// hierarchy search by
-			// MOVED TO CLASS HIERARCHY !
-				// $sql = '
-				// 	SELECT section_id
-				// 	FROM "matrix_hierarchy_main"
-				// 	WHERE
-				// 	f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
-				// ';
-				// debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-				// if ($exec) {
-				// 	$result = pg_query(DBi::_getConnection(), $sql);
-				// 	if ($result===false) {
-				// 		$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
-				// 		debug_log(__METHOD__.$msg, logger::ERROR);
-				// 		$response->msg = $msg;
-
-				// 		return $response; // return error here !
-				// 	}
-				// 	$rows	= (array)pg_fetch_assoc($result);
-				// 	$value	= reset($rows);
-				// 	if (empty($value)) {
-				// 		$msg = " Error on db search. Not found tld to activate: tld2: '$tld' (activate_hierarchy)";
-				// 		debug_log(__METHOD__.$msg, logger::ERROR);
-				// 		$response->msg = $msg;
-
-				// 		return $response; // return error here !
-				// 	}
-				// }
-				// $section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-				// $section_id		= $value;
-			$hierarchy_by_tld_response	= hierarchy::get_hierarchy_by_tld($tld);
-			$section_tipo				= DEDALO_HIERARCHY_SECTION_TIPO;
-			$section_id					= $hierarchy_by_tld_response->result;
-			$section_exists				= !empty($section_id);
+		// hierarchy search 	
+			$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
+			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+			$section_id		= $hierarchy_row->section_id;
+			$section_exists	= !empty($section_id);
 
 		// hierarchy not already exists case. Create a new one
 			if ($section_exists===false) {
