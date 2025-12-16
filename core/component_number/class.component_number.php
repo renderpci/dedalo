@@ -560,16 +560,18 @@ class component_number extends component_common {
 
 			// EQUAL DEFAULT
 			default:
-				$operator = '=';
-				$q_clean  = str_replace('+', '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = '@>';
-				$query_object->q_parsed	= '\''.$q_clean.'\'';
-				// $query_object->operator = '@@';
-				// $query_object->q_parsed	= '\'$[*] =='.$q_clean.'\'';
+				// sql sentence
+				$sql  = "{$table_alias}.{$column} @? (";
+				$sql .= "'$.{$component_tipo}[*].value ? (@ == \"'||_Q1_||'\")'";
+				$sql .= ")::jsonpath";
+				$query_object->sentence = $sql;
+
+				// params
+				$q_clean = str_replace(['+', ','], ['', '.'], $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 		}//end switch (true)
-
+		
 
 		return $query_object;
 	}//end resolve_query_object_sql
