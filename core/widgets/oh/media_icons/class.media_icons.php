@@ -9,16 +9,16 @@ class media_icons extends widget_common {
 
 
 	/**
-	* GET_DATO
-	* @return array $dato
+	* GET_DATA
+	* @return array|null $data
 	*/
-	public function get_dato() : array {
+	public function get_data() : ?array {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
 		$ipo			= $this->ipo;
 
-		$dato = [];
+		$data = [];
 
 		// every state has a IPO that come from structure (input, process , output).
 		foreach ($ipo as $key => $current_ipo) {
@@ -57,7 +57,7 @@ class media_icons extends widget_common {
 							DEDALO_DATA_LANG,
 							$source_section_tipo
 						);
-						$source_dato = $source_component->get_dato();
+						$source_dato = $source_component->get_data();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
 						$locator = reset($source_dato);
 
@@ -129,7 +129,7 @@ class media_icons extends widget_common {
 											DEDALO_DATA_NOLAN,
 											$locator->section_tipo
 										);
-										$duration_dato = $duration_component->get_dato();
+										$duration_dato = $duration_component->get_data();
 										if (isset($duration_dato[0])) {
 
 											// use already stored value from DDBB
@@ -213,18 +213,18 @@ class media_icons extends widget_common {
 
 							$object_value->{$current_id} = $current_data;
 							$object_value->widget = get_class($this);
-							// $dato[] = $current_data;
+							// $data[] = $current_data;
 					}//end foreach ($output as $data_map)
 
 					// set the final data to the widget
-					$dato[] = $object_value;
+					$data[] = $object_value;
 				}
 			}//end foreach ($ar_paths as $path)
 		}//foreach $ipo
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
