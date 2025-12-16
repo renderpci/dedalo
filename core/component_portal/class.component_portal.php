@@ -43,7 +43,7 @@ class component_portal extends component_relation_common {
 		}
 
 		// Force loads dato always !IMPORTANT
-		$this->get_dato();
+		$data = $this->get_data();
 
 		debug_log(__METHOD__
 			." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ". PHP_EOL
@@ -51,7 +51,7 @@ class component_portal extends component_relation_common {
 			, logger::WARNING
 		);
 
-		if(empty($dato)) {
+		if(empty($data)) {
 			return true;
 		}
 
