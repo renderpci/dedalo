@@ -1072,26 +1072,16 @@ abstract class component_common extends common {
 			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
 				return false;
 			}
-			if (empty($this->section_tipo)) {
-				debug_log(__METHOD__
-					." Error Processing Request. section tipo not found for component tipo: $this->tipo "
-					, logger::ERROR
-				);
-				return false;
-			}
 
+		// section create
+			$section_record = $this->get_my_section_record();
 
+		// component full_data
+			$this->data = $section_record->get_component_data(
+				$this->tipo,
+				$this->data_column_name
+			);
 
-			// section create
-				$section_record = $this->get_my_section_record();
-
-			// component full_data
-				$this->data = $section_record->get_component_data(
-					$this->tipo,
-					$this->data_column_name
-				);
-
-		// }
 
 		return true;
 	}//end load_component_data
