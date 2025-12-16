@@ -72,13 +72,14 @@ service_time_machine.prototype.init = async function(options) {
 	// status update
 		self.status = 'initializing'
 
-	self.model			= options.model || 'service_time_machine'
-	self.tipo			= options.section_tipo
-	self.section_tipo	= options.section_tipo
-	self.section_id		= options.section_id
-	self.mode			= 'tm' // only allowed 'tm'
-	self.view			= options.view || 'default'
-	self.lang			= options.lang
+	self.model					= options.model || 'service_time_machine'
+	self.tipo					= 'dd15'
+	self.section_tipo			= 'dd15'
+	self.section_tipo_caller 	= options.section_tipo
+	self.section_id_caller		= options.section_id
+	self.mode					= 'list' // only allowed 'tm'
+	self.view					= options.view || 'default'
+	self.lang					= options.lang
 
 	self.caller			= options.caller || null
 
@@ -163,7 +164,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// (!) IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
 				self.rqo.show.ddo_map.map(ddo => {
 					// change ddo properties to safe mode and permissions
-					ddo.mode		= 'tm'
+					ddo.mode		= 'list'
 					ddo.permissions	= 1
 
 					return ddo
@@ -285,8 +286,9 @@ service_time_machine.prototype.build_request_config = function() {
 		const config_sqo		= config.sqo || null
 
 	// general vars
-		const section_tipo	= self.section_tipo
-		const section_id	= self.section_id
+		const section_tipo			= self.section_tipo
+		const section_id_caller		= self.section_id_caller
+		const section_tipo_caller 	= self.section_tipo_caller
 
 	// sqo
 		// common base sqo
@@ -295,7 +297,7 @@ service_time_machine.prototype.build_request_config = function() {
 			: {
 				id				: 'tmp',
 				mode			: 'tm',
-				section_tipo	: [{ tipo : section_tipo }],
+				section_tipo	: [{ tipo : section_tipo_caller }],
 				limit			: self.limit,
 				offset			: 0,
 				order			: [{
@@ -337,8 +339,8 @@ service_time_machine.prototype.build_request_config = function() {
 
 					// sqo. filter_by_locators
 						sqo.filter_by_locators = [{
-							section_tipo	: section_tipo,
-							section_id		: section_id
+							section_tipo	: section_tipo_caller,
+							section_id		: section_id_caller
 							// removed because limit components by lang
 							// lang			: lang // (!) used only in time machine to filter by column lang
 						}]
@@ -348,8 +350,8 @@ service_time_machine.prototype.build_request_config = function() {
 
 					// component case. Usually from tool or inspector component history
 					const current_locator =	{
-							section_tipo	: section_tipo,
-							section_id		: section_id,
+							section_tipo	: section_tipo_caller,
+							section_id		: section_id_caller,
 							tipo			: tipo, // (!) used only in time machine to filter by column tipo
 							lang			: lang, // (!) used only in time machine to filter by column lang
 						}
@@ -376,7 +378,7 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					label			: 'Matrix id',
-					mode			: 'tm',
+					mode			: 'list',
 					view			: 'mini'
 				},
 				//  bulk_process_id . tm info -> Process
@@ -389,49 +391,49 @@ service_time_machine.prototype.build_request_config = function() {
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'Bulk process id',
-					mode			: 'tm',
+					mode			: 'list',
 					view			: 'mini'
 				},
-				// when dd547 (from activity section)
+				// when dd559 (from activity section)
 				{
 					id				: 'when',
-					tipo			: 'dd547',
+					tipo			: 'dd559',
 					type			: 'component',
 					typo			: 'ddo',
 					model			: 'component_date',
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'When',
-					mode			: 'tm',
+					mode			: 'list',
 					view			: 'mini',
 					properties		: {
 						date_mode : 'date_time'
 					}
 				},
-				// who dd543 (from activity section)
+				// who dd578 (from activity section)
 				{
 					id				: 'who',
-					tipo			: 'dd543',
+					tipo			: 'dd578',
 					type			: 'component',
 					typo			: 'ddo',
-					model			: 'component_input_text',
+					model			: 'component_autocomplete',
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'Who',
-					mode			: 'tm',
+					mode			: 'list',
 					view			: 'mini'
 				},
-				// where dd546 (from activity section)
+				// where dd577 (from activity section)
 				{
 					id				: 'where',
-					tipo			: 'dd546',
+					tipo			: 'dd577',
 					type			: 'component',
 					typo			: 'ddo',
 					model			: 'component_input_text',
 					section_tipo	: section_tipo,
 					parent			: section_tipo,
 					debug_label		: 'Where',
-					mode			: 'tm',
+					mode			: 'list',
 					view			: 'mini'
 				}
 			]
@@ -444,14 +446,14 @@ service_time_machine.prototype.build_request_config = function() {
 					// annotations rsc329 (section_tipo "rsc832")
 					{
 						id				: 'annotations',
-						tipo			: 'rsc329',
+						tipo			: 'dd732',
 						type			: 'component',
 						typo			: 'ddo',
 						model			: 'component_text_area',
-						section_tipo	: 'rsc832',
+						section_tipo	: section_tipo,
 						parent			: section_tipo,
 						debug_label		: 'annotations',
-						mode			: 'tm',
+						mode			: 'list',
 						view			: 'mini'
 					}
 				)
@@ -462,6 +464,8 @@ service_time_machine.prototype.build_request_config = function() {
 				const config_ddo_map_length = config_ddo_map.length
 				for (let i = 0; i < config_ddo_map_length; i++) {
 					const item = config_ddo_map[i]
+					item.parent 		= section_tipo
+					item.section_tipo 	= section_tipo
 					ddo_map.push(item)
 				}
 			}
