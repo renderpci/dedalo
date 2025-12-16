@@ -1175,7 +1175,7 @@ final class dd_core_api {
 						}
 
 					// force recalculate dato
-						$dato = $component->get_dato();
+						$data = $component->get_data();
 
 					// changed_data action: sort_data, add_new_element, insert, remove ..
 						$changed_data_action = isset($changed_data[0])
@@ -1194,7 +1194,7 @@ final class dd_core_api {
 							case 'insert': // from service_autocomplete choose selection
 
 								// pagination
-									$total	= empty($dato) ? 0 : count($dato);
+									$total	= empty($data) ? 0 : count($data);
 									$limit	= isset($component->pagination->limit)
 										? (int)$component->pagination->limit
 										: 10;
