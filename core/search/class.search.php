@@ -783,8 +783,7 @@ class search {
 		$this->build_main_where();
 		$this->build_sql_filter();
 		$this->build_sql_projects_filter();
-		$this->build_filter_by_user_records();
-		
+		$this->build_filter_by_user_records();		
 
 		// sql_query
 		$sql_query = '';
@@ -806,7 +805,9 @@ class search {
 			// where
 			// merge main_where and where and remove empty sentences	
 			$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
-			$query_inside .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+			if( !empty( $all_where_sentences )){
+				$query_inside .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+			}
 
 			// multi section union case
 			if (count($this->ar_section_tipo)>1) {
@@ -892,7 +893,9 @@ class search {
 		// where
 		// merge main_where and where and remove empty sentences	
 		$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
-		$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+		if( !empty( $all_where_sentences )){
+			$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
+		}
 
 		// multi-section union case
 		if (count($this->ar_section_tipo)>1) {
