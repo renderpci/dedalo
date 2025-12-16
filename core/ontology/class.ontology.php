@@ -354,30 +354,24 @@ class ontology {
 	* @test true
 	*/
 	public static function get_ontology_main_from_tld( string $tld ) : ?object {
+		
+		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)	
+		$tld 		= trim(strtolower($tld));
+		$safe_tld 	= safe_tld( $tld );
+		$q 			= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
 
-		$safe_tld = safe_tld( $tld );
-
-		// SQL query
-			$sql  = '-- '.__METHOD__;
-			$sql .= "\n SELECT * FROM " . self::$main_table . ' WHERE';
-			$sql .= "\n section_tipo = $1 AND";
-			$sql .= "\n (datos#>'{components,hierarchy6,dato,".DEDALO_DATA_NOLAN."}' ? $2)";
-			$sql .= "\n LIMIT 1 ;";
+		// SQL query			
+			$sql = 'SELECT section_id, section_tipo ' . PHP_EOL;
+			$sql .= 'FROM '. self::$main_table . PHP_EOL;
+			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;		
+			$sql .= 'string @> $2' . PHP_EOL;
+			$sql .= 'LIMIT 1 ;';
 
 		// search
-			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $safe_tld]);
-			while ($row = pg_fetch_object($result)) {
+			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $q]);
+			$row 	= pg_fetch_object($result) ?? null;
 
-				// decode JSON column 'datos'
-				if (isset($row->datos)) {
-					$row->datos = json_handler::decode($row->datos);
-				}
-
-				return $row;
-			}
-
-
-		return null;
+		return $row;
 	}//end get_ontology_main_from_tld
 
 
