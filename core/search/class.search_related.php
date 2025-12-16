@@ -79,6 +79,7 @@ class search_related extends search {
 				$query	.= ( isset($group_by) )
 					? implode(', ', $group_by).', '
 					: '';
+				
 				// add full count when is set
 				// else get the row
 				$query	.= (isset($this->sqo->full_count) && $this->sqo->full_count===true)
