@@ -205,6 +205,28 @@ class component_string_common extends component_common {
 	}//end set_dato
 
 
+	
+	/**
+	 * GET_DATA_LANG_WITH_FALLBACK
+	 * Retrieve the data lang with DEDALO_DATA_LANG (user can choose/change it in menu)
+	 * if the current DEDALO_DATA_LANG doesn't exist
+	 * try to get any other lang as fallback
+	 * @see $this->get_component_data_fallback();
+	 * if the fallback doesn't exist return null
+	 * @return array|null $data_lang
+	 */
+	public function get_data_lang_with_fallback() : ?array {
+
+		$data_lang = $this->get_data_lang();
+
+		if( empty($data_lang) ){
+			$data_lang = $this->get_component_data_fallback();
+		}
+
+		return $data_lang;
+	}// end get_data_lang_with_fallback
+
+
 
 	/**
 	* GET_COMPONENT_DATA_FALLBACK
