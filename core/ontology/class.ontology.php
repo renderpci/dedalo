@@ -119,10 +119,15 @@ class ontology {
 				DEDALO_DATA_NOLAN,
 				$target_section_tipo
 			);
-
-			$dato = empty($tld) ? null : [$tld];
-			$tld_component->set_dato( $dato );
-			$tld_component->Save();
+			// @working here !
+			$data = null;
+			if(!empty($tld)){
+				$value = new stdClass();
+				$value->value = $tld;
+				$data = [$value];
+			}
+			$tld_component->set_data( $data );
+			$tld_component->save();
 
 		// model. Get the model tld and id
 			if( !empty($model) && $model!=='null' ){
@@ -145,9 +150,9 @@ class ontology {
 					$target_section_tipo
 				);
 
-				$dato = empty($model_locator) ? null : [$model_locator];
-				$model_component->set_dato( $dato );
-				$model_component->Save();
+				$data = empty($model_locator) ? null : [$model_locator];
+				$model_component->set_data( $data );
+				$model_component->save();
 			}
 
 		// descriptor
@@ -167,9 +172,9 @@ class ontology {
 				$descriptor_locator->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
 				$descriptor_locator->set_section_id( NUMERICAL_MATRIX_VALUE_YES );
 
-			$dato = [$descriptor_locator];
-			$is_descriptor_component->set_dato( $dato );
-			$is_descriptor_component->Save();
+			$data = [$descriptor_locator];
+			$is_descriptor_component->set_data( $data );
+			$is_descriptor_component->save();
 
 		// is model
 			$is_model_tipo		= 'ontology30';
@@ -187,9 +192,9 @@ class ontology {
 				$is_model_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$is_model_locator->set_section_id($is_model ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$dato = [$is_model_locator];
-			$is_model_component->set_dato( $dato );
-			$is_model_component->Save();
+			$data = [$is_model_locator];
+			$is_model_component->set_data( $data );
+			$is_model_component->save();
 
 		// translatable
 			$translatable_tipo		= 'ontology8';
@@ -207,28 +212,35 @@ class ontology {
 				$translatable_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$translatable_locator->set_section_id($translatable ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO);
 
-			$dato = [$translatable_locator];
-			$translatable_component->set_dato( $dato );
-			$translatable_component->Save();
+			$data = [$translatable_locator];
+			$translatable_component->set_data( $data );
+			$translatable_component->save();
 
 		// term
 			$term_tipo		= 'ontology5';
 			$term_model		= ontology_node::get_model_by_tipo( $term_tipo  );
-
+			//build the term data
+			$term_data = [];
 			foreach ($term as $current_lang => $term_value) {
+				$current_term_value = new stdClass();
+					$current_term_value->lang 	= $current_lang;
+					$current_term_value->value	= $term_value;
 
-				$term_component	= component_common::get_instance(
-					$term_model,
-					$term_tipo ,
-					$section_id,
-					'list',
-					$current_lang,
-					$target_section_tipo
-				);
-
-				$term_component->set_dato( [$term_value] );
-				$term_component->Save();
+				$term_data[] = $current_term_value;
 			}
+			// create the component
+			$term_component	= component_common::get_instance(
+				$term_model,
+				$term_tipo ,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$target_section_tipo
+			);
+			// set its data and save
+			$term_component->set_data( $term_data );
+			$term_component->save();
+			
 
 		// properties V5
 			$properties_v5_tipo			= 'ontology19';
@@ -260,9 +272,9 @@ class ontology {
 
 			$properties_css = $properties->css ?? null;
 
-			$dato = [$properties_css];
-			$properties_css_component->set_dato( $dato );
-			$properties_css_component->Save();
+			$data = [$properties_css];
+			$properties_css_component->set_data( $data );
+			$properties_css_component->save();
 
 		// properties RQO
 			$properties_rqo_tipo		= 'ontology17';
@@ -278,9 +290,9 @@ class ontology {
 
 			$properties_rqo = $properties->source ?? null;
 
-			$dato = [$properties_rqo];
-			$properties_rqo_component->set_dato( $dato );
-			$properties_rqo_component->Save();
+			$data = [$properties_rqo];
+			$properties_rqo_component->set_data( $data );
+			$properties_rqo_component->save();
 
 		// properties
 			$properties_tipo		= 'ontology18';
@@ -324,8 +336,8 @@ class ontology {
 				$properties_general_value = [$properties_general];
 			}
 
-			$properties_component->set_dato( $properties_general_value ?? null );
-			$properties_component->Save();
+			$properties_component->set_data( $properties_general_value ?? null );
+			$properties_component->save();
 
 
 		return true;
