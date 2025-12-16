@@ -209,7 +209,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: current_value?.value || ''
 		})
 
 
@@ -379,8 +379,9 @@ export const change_handler = function(e, key, self) {
 
 	// validate
 	const validated = self.verify_email(input_value)
+	// set errors class
+	ui.component.error(!validated, e.target)
 	if (!validated) {
-		ui.component.error(!validated, e.target)
 		return false
 	}
 
