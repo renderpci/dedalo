@@ -3006,6 +3006,9 @@ abstract class component_common extends common {
 
 		// get the component dataframe
 		$dataframe_ddo = $this->get_dataframe_ddo();
+		if( empty($dataframe_ddo) ){
+			return true;
+		}
 
 		$caller_dataframe = new stdClass();
 			$caller_dataframe->section_tipo			= $this->section_tipo;
