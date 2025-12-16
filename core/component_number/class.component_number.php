@@ -376,6 +376,13 @@ class component_number extends component_common {
 			$q = to_string($q);
 		}
 
+		// Validate path and calculate translatable
+		if (empty($query_object->path) || !is_array($query_object->path)) {
+			throw new Exception("Invalid component path");
+		}
+		$path_end = end($query_object->path);
+		$component_tipo = $path_end->component_tipo;
+
 		// q_operator
 		$q_operator = $query_object->q_operator ?? null;
 
@@ -394,7 +401,11 @@ class component_number extends component_common {
 		$between_separator  = '...';
 		//$sequence_separator = ',';
 
-		#$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
+		// column
+		$column = section_record_data::get_column_name( get_called_class() );
+		
+		// table_alias
+		$table_alias = $query_object->table_alias;
 
 		switch (true) {
 
