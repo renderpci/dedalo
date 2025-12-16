@@ -95,7 +95,7 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_FOLDER
-	* 	Get element directory from config
+	* Gets element directory from config
 	* @return string
 	*/
 	public function get_folder() : string {
@@ -139,8 +139,8 @@ class component_3d extends component_media_common implements component_media_int
 			$quality = $this->get_default_quality();
 
 		// dato. get from dato
-			$dato = $this->get_dato();
-			if(isset($dato)){
+			$data = $this->get_data();
+			if(isset($data)){
 
 				// Caller class name, the name of who instantiate the component
 				// the URI resolution of the data depends of the caller
@@ -198,30 +198,30 @@ class component_3d extends component_media_common implements component_media_int
 
 
 
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string|null $valor_export
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
+	// /**
+	// * GET_VALOR_EXPORT
+	// * Return component value sent to export data
+	// * @return string|null $valor_export
+	// */
+	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
-		}
+	// 	if (empty($valor)) {
+	// 		$dato = $this->get_dato();				// Get dato from DB
+	// 	}else{
+	// 		$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
+	// 	}
 
-		$av_file_path			= $this->get_valor();
-		$posterframe_file_path	= $this->get_posterframe_url(
-			true, // bool test_file dedalo image placeholder when not file exists
-			true // bool absolute ike 'http://myhost/mypath/myimage.jpg'
-		);
+	// 	$av_file_path			= $this->get_valor();
+	// 	$posterframe_file_path	= $this->get_posterframe_url(
+	// 		true, // bool test_file dedalo image placeholder when not file exists
+	// 		true // bool absolute ike 'http://myhost/mypath/myimage.jpg'
+	// 	);
 
-		$valor_export = $av_file_path .','. ($posterframe_file_path ?? '');
+	// 	$valor_export = $av_file_path .','. ($posterframe_file_path ?? '');
 
 
-		return $valor_export;
-	}//end get_valor_export
+	// 	return $valor_export;
+	// }//end get_valor_export
 
 
 
@@ -296,6 +296,7 @@ class component_3d extends component_media_common implements component_media_int
 	}//end get_posterframe_url
 
 
+
 	/**
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file
@@ -323,7 +324,7 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_POSTERFRAME
-	* 	Remove the file 'posterframe' from the disk
+	* Removes the file 'posterframe' from the disk
 	* @return bool
 	*/
 	public function delete_posterframe() : bool {
@@ -583,16 +584,16 @@ class component_3d extends component_media_common implements component_media_int
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
 					// update upload file info
-					$dato = $this->get_dato();
+					$data = $this->get_data();
 					$key = 0;
-					if (!isset($dato[$key]) || !is_object($dato[$key])) {
-						$dato[$key] = new stdClass();
+					if (!isset($data[$key]) || !is_object($data[$key])) {
+						$data[$key] = new stdClass();
 					}
-					$dato[$key]->original_file_name			= $original_file_name;
-					$dato[$key]->original_normalized_name	= $original_normalized_name;
-					$dato[$key]->original_upload_date		= component_date::get_date_now();
+					$data[$key]->original_file_name			= $original_file_name;
+					$data[$key]->original_normalized_name	= $original_normalized_name;
+					$data[$key]->original_upload_date		= component_date::get_date_now();
 
-					$this->set_dato($dato);
+					$this->set_data($data);
 				}
 
 			// Generate default_3d_format : If uploaded file is not in Dedalo standard format (glb), is saved and not processed.
