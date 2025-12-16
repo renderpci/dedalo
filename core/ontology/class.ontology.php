@@ -2511,10 +2511,10 @@ class ontology {
 	* @param string $tld
 	* @return object|null $name_data
 	* sample:
-	* {
-	* 	"lg-spa": ["Test | test"],
-	* 	"lg-eng": ["Test | test"]
-	* }
+	* [
+	* 	{"lang": "lg-spa", "value": "Prueba"},
+	* 	{"lang": "lg-eng", "value": "Test"}
+	* ]
 	* @test true
 	*/
 	public static function get_main_name_data( string $tld ) : ?object {
@@ -2541,7 +2541,7 @@ class ontology {
 				DEDALO_DATA_LANG,
 				$main_record->section_tipo
 			);
-			$name_data = $component->get_dato_full();
+			$name_data = $component->get_data();
 
 
 		return $name_data;
