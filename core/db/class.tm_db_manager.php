@@ -248,7 +248,13 @@ class tm_db_manager {
 		foreach ($values as $column => $value) {
 			// Validate column name (Security/Guardrail)
 			if (!isset(self::$columns[$column])) {
-				throw new Exception("Invalid column name: $column");
+				debug_log(
+					__METHOD__
+						. " Ignored update with invalid column name: $column" . PHP_EOL
+						. ' values: ' . json_encode($values),
+					logger::WARNING
+				);
+				return false;
 			}
 
 			// Prepare value: JSON encode if it's a designated JSON column and not null

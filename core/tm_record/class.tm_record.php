@@ -301,4 +301,192 @@ class tm_record {
 
 
 
-}//end section_record
+	/**
+	 * SET_SECTION_RECORD_FACTORY
+	 * Set every component data of the Time machine into the section_record instance
+	 * @param string $tipo - The type of component to set in time-machine
+	 * @param array|null $data - The component's data
+	 * @param section_record $section_record - The instance of Section Record
+	 * @return bool - If operation was successful or not, true if success and false otherwise
+	 */
+	private function set_section_record_factory( string $tipo, ?array $data, section_record $section_record ) : bool {
+
+		$model 	= ontology_node::get_model_by_tipo( $tipo, true );
+		$column = section_record_data::get_column_name( $model );
+		$result = $section_record->set_component_data( $tipo, $column, $data );
+
+		return $result;
+	}//end set_section_record_factory
+
+
+
+	/**
+	 * GET_SECTION_RECORD
+	 * Get a section record from tm_record.
+	 * transform the Time machine data into a section record object.
+	 * Create the data for the Time machine components.
+	 * Build the section_record with this data.
+	 * @return section_record $section_record
+	 */
+	public function get_section_record() : section_record {
+
+		$tm_data = $this->get_data();
+
+		$id					= $tm_data->id;
+		$section_id 		= $tm_data->section_id;
+		$section_tipo 		= $tm_data->section_tipo;
+		$tipo				= $tm_data->tipo;
+		$lang				= $tm_data->lang;	
+		$timestamp			= $tm_data->timestamp;
+		$user_id			= $tm_data->user_id;
+		$bulk_process_id	= $tm_data->bulk_process_id;
+		$data				= $tm_data->data;
+
+		$section_record = section_record::get_instance( 'dd15', $id);
+
+		// section_id 
+			// the section_id that store the time machine data
+			// dd1212 - component_number
+			$id_data = new stdClass();
+				$id_data->id 	= 1;
+				$id_data->value = (int)$section_id;
+
+			$this->set_section_record_factory(
+				'dd1212',
+				[$id_data], 
+				$section_record 
+			);		
+
+		// When.
+			// The time of the record was created in Time Machine. 
+			// dd559 - component_date
+			$date = dd_date::get_dd_date_from_timestamp( $timestamp );
+			$date_value = new stdClass();
+				$date_value->id 	= 1;
+				$date_value->start 	= $date;
+
+			$this->set_section_record_factory(
+				'dd559',
+				[$date_value], 
+				$section_record 
+			);
+
+		// Where
+			// The tipo of the component/section where the change was done.
+			// Resolve the term of the tipo and use it as data of the component
+			// dd577 - component_input_text
+			$component_value = ontology_node::get_term_by_tipo(
+				$tipo, // string tipo
+				DEDALO_DATA_LANG, // string lang
+				true, // bool from_cache
+				true // bool fallback
+			);
+
+			$where_value = new stdClass();
+				$where_value->id = 1;
+				$where_value->lang = DEDALO_DATA_NOLAN;
+				$where_value->value = $component_value;
+
+			$this->set_section_record_factory(
+				'dd577',
+				[$where_value], 
+				$section_record 
+			);
+
+
+		// Who
+			// User. The user who made the change.
+			// dd578 - component_autocomplete
+			$user_locator = new locator();
+				$user_locator->set_id(1);
+				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+				$user_locator->set_section_id($user_id);
+				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$user_locator->set_from_component_tipo('dd578');
+
+			$this->set_section_record_factory(
+				'dd578',
+				[$user_locator], 
+				$section_record 
+			);
+
+		// Annotation
+			// Remark about the change made. This is used to provide context for the change and can be useful in auditing purposes. It's not mandatory.
+			// Resolve the the annotation as string and inject into the component.
+			// dd732 -  component_text_area
+			
+			// 1. search notes with current matrix_id
+				$sqo = new search_query_object();
+					$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
+					$sqo->filter		= json_decode('{
+						"$and": [
+							{
+								"q": "'.$id.'",
+								"q_operator": null,
+								"path": [
+									{
+										"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
+										"component_tipo": "rsc835",
+										"model": "component_number",
+										"name": "Code"
+									}
+								]
+							}
+						]
+					}');
+				$search = search::get_instance($sqo);
+				$db_result = $search->search();
+
+				$note_section_id = $db_result->fetch_one()->section_id ?? null;
+			// 2. Create the component and get its data
+			// the data will used as (injected into) the component data of the time_machine annotation component.
+				$note_model			= ontology_node::get_model_by_tipo( 'rsc329', true );
+				$current_component	= component_common::get_instance(
+					$note_model,
+					'rsc329',
+					$note_section_id,
+					'tm', // use tm mode to preserve service_time_machine coherence
+					$ddo->lang ?? DEDALO_DATA_LANG,
+					$sqo->section_tipo
+				);
+
+				$note_value = $current_component->get_data();				
+
+				$this->set_section_record_factory(
+					'dd732',
+					$note_value, 
+					$section_record 
+				);
+
+		// Bulk process id
+			// Process id for the bulk process. This is used to track and manage multiple changes together. It is used to identify the changes in a bulk operation.
+			// dd1371 - component_number
+			$bulk_process_id_value = new stdClass();
+				$bulk_process_id_value->id = 1;
+				$bulk_process_id_value->value = $bulk_process_id;
+
+			$this->set_section_record_factory(
+				'dd1371',
+				[$bulk_process_id_value], 
+				$section_record 
+			);
+
+		
+		// Data
+			$source_model = ontology_node::get_model_by_tipo($tipo,true);
+			if($source_model==='section'){				
+				
+			}else{
+				
+				$this->set_section_record_factory(
+					$tipo,
+					$data, 
+					$section_record 
+				);
+
+			}
+
+		return $section_record;
+	}//end get_section_record
+
+}//end tm_record

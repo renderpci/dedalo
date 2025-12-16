@@ -155,18 +155,18 @@ const rebuild_columns_map = async function(self) {
 			? self.config.ignore_columns
 			: [
 				'dd1573', // matrix_id
-				'dd547', // when
-				'dd543', // who
-				'dd546' // where
+				'dd559', // when
+				'dd578', // who
+				'dd577' // where
 			  ])
 			// map names to tipo (columns already parse id for another uses)
 			.map(el => {
 				switch (el) {
 					case 'matrix_id'		: return 'dd1573';
 					case 'bulk_process_id'	: return 'dd1371';
-					case 'when'				: return 'dd547';
-					case 'who'				: return 'dd543';
-					case 'where'			: return 'dd546';
+					case 'when'				: return 'dd559';
+					case 'who'				: return 'dd578';
+					case 'where'			: return 'dd577';
 					default					: return el;
 				}
 			})

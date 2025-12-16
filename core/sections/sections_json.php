@@ -17,7 +17,7 @@
 	// dato is the full result of a search using the search_query_object
 	$sections_data = $this->get_data();
 
-	if (empty($sections_data)) {
+	if ( $sections_data->row_count()===0 ) {
 
 		$ar_section_tipo = $this->get_ar_section_tipo();
 
@@ -75,6 +75,13 @@
 			$rejected_sections = [];
 
 			foreach ($sections_data as $current_record) {
+				// when the caller is a Time Machine section 
+				// $current_record is a Time Machine Record then we need to convert it into a Section Record
+				if( $mode ==='tm' || $this->caller_tipo ==='dd15' ){
+					$tm_record = tm_record::get_instance( $current_record->id );
+					$tm_record->set_data( $current_record );
+					$current_record = $tm_record->get_section_record();
+				}
 
 				$section_tipo	= $current_record->section_tipo;
 				$section_id		= $current_record->section_id;
