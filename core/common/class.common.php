@@ -1351,97 +1351,69 @@ abstract class common {
 
 	/**
 	* GET_JSON
-	* @param object|null $options
+	* Loads the JSON controller file and returns the normalized API response JSON object
+	* @param object|null $request_options
 	* @return object $json
 	*	Object with data and context (configurable) like:
-	* {
-	* 	context : [...],
-	* 	data : [...]
-	* }
+	*	{
+	*		context : [...],
+	*		data : [...]
+	*	}
 	*/
-	public function get_json( ?object $options=null ) : object {
-
-		$json_cache = false; // experimental. Set false in production (!)
+	public function get_json( ?object $request_options=null ) : object {
 
 		// Debug
-			if(SHOW_DEBUG===true) {
-				$get_json_start_time = start_time();
-			}
+		if(SHOW_DEBUG===true) {
+			$get_json_start_time = start_time();
+		}		
 
-		// options
-			$get_context		= $options->get_context ?? true;
-			$context_type		= $options->context_type ?? 'default';
-			$get_data			= $options->get_data ?? true;
-			$get_request_config	= $options->get_request_config ?? false;
+		// Create options object to easy select from JSON controller
+		$options = new stdClass();
+			$options->get_context		= $request_options->get_context ?? true;
+			$options->context_type		= $request_options->context_type ?? 'default';
+			$options->get_data			= $request_options->get_data ?? true;
+			$options->get_request_config= $request_options->get_request_config ?? false;
 
-		// short vars
-			$called_model	= get_class($this);
-			$called_tipo	= $this->get_tipo();
+		// path. Use called class (ex. component_input_text) to build 'component_input_text_json.php'
+		$called_model = get_class($this);
+		$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
 
-		// cache context
-			static $resolved_get_json = [];
-			if ($json_cache===true) {
-				$key_beats = [
-					$called_model,
-					$called_tipo,
-					$this->get_section_id() ?? '',
-					($this->get_section_tipo() ?? ''),
-					$this->mode,
-					$context_type,
-					(int)$get_request_config,
-					(int)$get_context,
-					(int)$get_data
-				];
-				$cache_key = implode('_', $key_beats);
-				if (isset($resolved_get_json[$cache_key])) {
-					debug_log(__METHOD__." ////////////////////////////////////// Returned resolved JSON with key: ".to_string($cache_key), logger::DEBUG);
-					return $resolved_get_json[$cache_key];
-				}
-			}
-
-		// old way
-			// re-create options object to easy select from JSON controller
-				$options = (object)[
-					'get_context'			=> $get_context,
-					'context_type'			=> $context_type,
-					'get_data'				=> $get_data,
-					'get_request_config'	=> $get_request_config
-				];
-
-			// path. Class name is called class (ex. component_input_text), not this class (common)
-				$path = DEDALO_CORE_PATH .'/'. $called_model .'/'. $called_model .'_json.php';
-
-			// controller include
-				$json = include( $path );
+		// controller include
+		try {
+			$json = include( $path );
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. " Error loading json class file " . PHP_EOL
+				. ' Caught exception: ' . $e->getMessage()
+				. ' path: ' . $path						
+				, logger::ERROR
+			);
+		}
 
 		// Debug
-			if(SHOW_DEBUG===true) {
+		if(SHOW_DEBUG===true) {
 
-				$exec_time = exec_time_unit($get_json_start_time);
+			$exec_time = exec_time_unit($get_json_start_time);
 
-				$json->debug = new stdClass();
-					$json->debug->exec_time = $exec_time;
+			$json->debug = new stdClass();
+			$json->debug->exec_time = $exec_time;
 
-				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
-				$current_section_id		= $this->get_section_id() ?? '';
+			$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
+			$current_section_id		= $this->get_section_id() ?? '';
 
-				$len = !empty($called_tipo)
-					? strlen($called_tipo)
-					: 0;
-				$repeat = ($len < 21)
-					? (21 - $len)
-					: 0;
-				$tipo_line = $called_tipo .' '. str_repeat('-', $repeat);
-				debug_log(
-					'--- get_json --------------------- '. $tipo_line .' '. number_format($exec_time,3) .' ms - '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
-					logger::DEBUG
-				);
-			}
-
-		// cache
-			if ($json_cache===true) {
-				$resolved_get_json[$cache_key] = $json;
-			}
+			$called_tipo = $this->get_tipo();
+			$len = !empty($called_tipo)
+				? strlen($called_tipo)
+				: 0;
+			$repeat = ($len < 21)
+				? (21 - $len)
+				: 0;
+			$tipo_line = $called_tipo .' '. str_repeat('-', $repeat);
+			debug_log(
+				'--- get_json --------------------- '. $tipo_line .' '. number_format($exec_time,3) .' ms - '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
+				logger::DEBUG
+			);
+		}
 
 
 		return $json;
