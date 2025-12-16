@@ -2495,8 +2495,7 @@ class component_relation_common extends component_common {
 			$select = new stdClass();
 				$select->key 		= $component_tipo;
 				$select->column 	= $column;
-
-			$search_query_object->select	= [$select];
+			$search_query_object->select = [$select];
 		// search exec
 			$search		= search::get_instance($search_query_object);
 			$db_result	= $search->search();
@@ -2505,12 +2504,22 @@ class component_relation_common extends component_common {
 			$hierarchy_sections_from_types = [];
 			foreach ($db_result as $row) {
 
-				$target_section_tipo = $row->{$component_tipo}[0]->value ?? null;
+				$result_column = $row->{$component_tipo} === null
+					? null
+					: json_decode($row->{$component_tipo});
+
+				if(empty($result_column)) {
+					continue;
+				}
+
+				$target_section_tipo = $result_column[0]->value ?? null;
 
 				if (empty($target_section_tipo)) {
 					debug_log(__METHOD__
-						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
-						.' target_dato: '. to_string($row->{$component_tipo})
+						." Skipped hierarchy without target section tipo.". PHP_EOL
+						.' component_tipo: '.$component_tipo . PHP_EOL
+						.' row: '. to_string($row) . PHP_EOL
+						.' component data: '. to_string($row->{$component_tipo})
 						, logger::ERROR
 					);
 					continue;
@@ -2623,67 +2632,68 @@ class component_relation_common extends component_common {
 					break;
 
 				case 'field_value':
-					// this case is used in component_relation_children in the hierarchy section
-					// in these case the array of sections will get from the value of specific field
-					$target_values = $source_item->value; // target thesaurus like ['hierarchy53']
+					// This case is used in component_relation_children in the hierarchy section.
+					// In these case the array of sections will get from the value of specific field
+					$target_values = $source_item->value ?? []; // target thesaurus like ['hierarchy53']
 
 					// sections (all hierarchy sections -hierarchy1- normally)
 					// Use here a custom SQO search to prevent projects filter
-						$sqo = new stdClass();
-							$sqo->section_tipo			= $caller_section_tipo;
-							$sqo->limit					= 0;
-							$sqo->offset				= 0;
-							$sqo->order					= false;
-							$sqo->skip_projects_filter	= true;
-							// filter active only to reduce the amount of sections where to search
-							// improving speed and ignoring not used (inactive) sections
-							$sqo->filter				= json_decode('
+					$sqo = new search_query_object();
+					$sqo->set_select([]);
+					$sqo->set_section_tipo([$caller_section_tipo]);
+					$sqo->set_limit(0);
+					$sqo->set_offset(0);
+					$sqo->set_order([]);
+					$sqo->set_skip_projects_filter(true);
+					// filter active only to reduce the amount of sections where to search
+					// improving speed and ignoring not used (inactive) sections
+					$filter = json_decode('{
+						"$and": [
 							{
-								"$and": [
+								"q": {
+									"section_tipo": "dd64",
+									"section_id": "1",
+									"from_component_tipo": "hierarchy4"
+								},
+								"q_operator": null,
+								"path": [
 									{
-										"q": {
-											"section_tipo": "dd64",
-											"section_id": "1",
-											"from_component_tipo": "hierarchy4"
-										},
-										"q_operator": null,
-										"path": [
-											{
-												"section_tipo": "hierarchy1",
-												"component_tipo": "hierarchy4",
-												"model": "component_radio_button",
-												"name": "Active"
-											}
-										],
-										"q_split": false,
-										"type": "jsonb",
-										"component_path": [
-											"relations"
-										],
-										"operator": "@>",
-										"q_parsed": "\'[{\"section_tipo\":\"dd64\",\"section_id\":\"1\",\"from_component_tipo\":\"hierarchy4\"}]\'"
+										"section_tipo": "hierarchy1",
+										"component_tipo": "hierarchy4",
+										"model": "component_radio_button",
+										"name": "Active"
 									}
-								]
+								],
+								"q_split": false,
+								"type": "jsonb",
+								"component_path": [
+									"relation"
+								],
+								"operator": "@>",
+								"q_parsed": "\'{\"hierarchy4\":[{\"section_tipo\":\"dd64\",\"section_id\":\"1\",\"from_component_tipo\":\"hierarchy4\"}]}\'"
 							}
-							');
+						]
+					}');
+					$sqo->set_filter($filter);
+					$sections = sections::get_instance(
+						null,
+						$sqo,
+						$caller_section_tipo, // caller tipo
+						'list',
+						DEDALO_DATA_NOLAN
+					);
+					$db_result = $sections->get_data();
+					
+					$total = $db_result->row_count();
+					if($total > 0){
+						foreach ($target_values as $current_component_tipo) {
 
-						$sections = sections::get_instance(
-							null,
-							$sqo,
-							$caller_section_tipo, // caller tipo
-							'list',
-							DEDALO_DATA_NOLAN
-						);
-						$records = $sections->get_dato();
-
-					foreach ((array)$target_values as $current_component_tipo) {
-
-						// short vars
-							$model_name		= ontology_node::get_model_by_tipo($current_component_tipo,true);
+							// short vars
+							$model_name		= ontology_node::get_model_by_tipo($current_component_tipo, true);
 							$current_lang	= common::get_element_lang($current_component_tipo, DEDALO_DATA_LANG);
 
-						// data
-							foreach ($records as $current_record) {
+							// data
+							foreach ($db_result as $current_record) {
 
 								// (!) do not inject section data here anytime
 								// because interferes with component_relation_cildren saving
@@ -2698,31 +2708,33 @@ class component_relation_common extends component_common {
 									$current_record->section_tipo
 								);
 
-								$component_dato = $component->get_dato();
-								if ( empty($component_dato) ) {
+								$component_data = $component->get_data();
+								if ( empty($component_data) ) {
 									continue;
 								}
 
-								foreach ($component_dato as $current_section_tipo) {
+								foreach ($component_data as $current_data_item) {
+									$current_section_tipo = $current_data_item->value ?? null;
 									if ( empty($current_section_tipo) ) {
 										continue;
 									}
-									$section_model_name = ontology_node::get_model_by_tipo($current_section_tipo,true);
+									$section_model_name = ontology_node::get_model_by_tipo($current_section_tipo, true);
 									if ( $section_model_name==='section' ) {
 										$ar_section_tipo[] = $current_section_tipo;
 									}else{
 										debug_log(__METHOD__
-											. " target section tipo definition is ignored because is not a section " . PHP_EOL
-											. ' section_tipo ignored: '. to_string($current_section_tipo) . PHP_EOL
-											. ' model: ' . to_string($section_model_name). PHP_EOL
-											. ' section: ' . to_string($current_record->section_tipo). PHP_EOL
-											. ' section_id: ' . to_string($current_record->section_id). PHP_EOL
-											, logger::ERROR
+											. " Target section tipo definition is ignored because is not a section or the model is undefined " . PHP_EOL
+											. ' section_tipo: '. to_string($current_section_tipo) . PHP_EOL
+											. ' model: ' . json_encode($section_model_name). PHP_EOL
+											. ' record section_tipo: ' . to_string($current_record->section_tipo). PHP_EOL
+											. ' record section_id: ' . to_string($current_record->section_id)
+											, logger::WARNING
 										);
 									}
 								}
-							}//end foreach ($dato as $current_record)
-					}//end foreach ((array)$target_values as $current_component_tipo)
+							}//end foreach ($db_result as $current_record)
+						}//end foreach ($target_values as $current_component_tipo)
+					}
 					break;
 
 				case 'hierarchy_terms':
