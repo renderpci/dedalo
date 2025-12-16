@@ -42,8 +42,10 @@
 
 				case 'edit':
 				default:
-					$value				= $this->get_data_lang();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$value = $this->get_data_lang();
+					// $ar_list_of_values = $this->get_ar_list_of_values();
+					// unified to prevent double calls from radio_button as 'get_ar_list_of_values' and 'get_list_of_values'
+					$ar_list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG);
 					break;
 			}
 
