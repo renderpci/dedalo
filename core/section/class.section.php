@@ -4127,691 +4127,691 @@ class section extends common {
 
 
 
-	/**
-	* GET_TM_SUBDATUM
-	* Used by time machine to get the components and section sub context and subdata.
-	* subdatum: is the context and data of every section or component that the caller (this time machine) need to show, search or select
-	* ex: if the time machine of the component is a portal that call to toponymy tm it will need the context and data of the pointer section and the components that will be showed or searched.
-	* This method use the data of the caller (ar_db_record) to get only the data to be used, ex: only the records of the component in time machine to show.
-	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
-	* @param string|null $from_parent = null
-	* @param array $ar_db_record = []
-	* 	Array of natrix_time_machine table found records
-	* @return object $subdatum
-	* 	Object with two properties: array context, array data
-	*	{
-	*		context	: [],
-	* 		data	: []
-	* 	}
-	*/
-	public function get_tm_subdatum( ?string $from_parent=null, array $ar_db_record=[] ) : object {
-
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	$start_time = start_time();
-			// 	$len = !empty($this->tipo)
-			// 		? strlen($this->tipo)
-			// 		: 0;
-			// 	$repeat = ($len < 14)
-			// 		? (14 - $len)
-			// 		: 0;
-			// 	$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-			// 	$log = "------------------- get_tm_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_db_record, JSON_PRETTY_PRINT)
-			// 	error_log($log);
-			// }
-
-		$ar_subcontext	= [];
-		$ar_subdata		= [];
-
-		// request_config. On empty return empty context and data object
-			$request_config = $this->context->request_config ?? null;
-			if(empty($request_config)) {
-				// no request config case. Return empty here
-				return (object)[
-					'context'	=> [],
-					'data'		=> []
-				];
-			}
-
-		// ddo_map. Get the full ddo in every request_config
-			$full_ddo_map = [];
-			foreach ($request_config as $request_config_item) {
-
-				// skip empty ddo_map
-				if(empty($request_config_item->show->ddo_map)) {
-					debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
-					continue;
-				}
-				// merge all ddos of all request_config
-				$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
-			}//end foreach ($request_config_dedalo as $request_config_item)
-			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
-			$ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
-
-		// get the context and data for every locator
-			foreach($ar_db_record as $db_record) {
-
-				// check record format
-					if (!is_object($db_record)) {
-						if(SHOW_DEBUG===true) {
-							debug_log(
-								__METHOD__." Error Processing Request. db_record is NOT an expected object. Ignored record ! ".to_string($db_record),
-								logger::ERROR
-							);
-						}
-						continue;
-					}
-
-				// sub-data time machine from record columns
-					$section_id			= $db_record->section_id;
-					$section_tipo		= $db_record->section_tipo;
-					$lang				= $db_record->lang;
-					$id					= $db_record->id;
-					$timestamp			= $db_record->timestamp;
-					$bulk_process_id	= $db_record->bulk_process_id;
-					$user_id			= $db_record->userID;
-					$tipo				= $db_record->tipo;
-					$dato				= $db_record->dato;
-
-				// empty tipo case catch
-					if (empty($tipo)) {
-						debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::WARNING);
-						continue;
-					}
-
-				// short vars
-					$source_model				= ontology_node::get_model_by_tipo($tipo,true);
-					$components_with_relations	= component_relation_common::get_components_with_relations();
-					$mode						= 'tm';
-
-				// if time machine is recovering sections, creates the section and inject his time machine dato to be used as normal section loaded from matrix
-				// all data and sub-data will get from this.
-				if($source_model==='section'){
-					$section = section::get_instance(
-						$section_id,
-						$section_tipo
-					);
-					$section->set_dato($dato);
-				}
-
-				// ar_ddo iterate
-						// build data from elements
-				foreach ($ddo_map as $ddo) {
-
-					// ddo tipo
-						$current_ddo_tipo = $ddo->tipo;
-
-					// ddo item model
-						$ddo->model = $ddo->model ?? ontology_node::get_model_by_tipo($ddo->tipo, true);
-
-					// permissions
-						$ddo->permissions = 1;
-
-					// model of dato tipo
-						$model = ontology_node::get_model_by_tipo($tipo, true); // model of dato tipo
-
-					// switch cases
-						switch (true) {
-
-							case ($current_ddo_tipo==='dd1573'): // id (model: component_section_id)
-								$data_item = (object)[
-									'id'					=> 'matrix_id',
-									'section_id'			=> $section_id,
-									'section_tipo'			=> $section_tipo,
-									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'lang'					=> DEDALO_DATA_NOLAN,
-									'mode'					=> $mode, // expected 'tm'
-									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'value'					=> $id,
-									'debug_model'			=> 'component_section_id',
-									'debug_label'			=> 'matrix ID',
-									'matrix_id'				=> $id,
-									'user_id'				=> $user_id
-								];
-								$ar_subdata[]		= $data_item;
-								$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($current_ddo_tipo==='dd1371'): // process id (model: component_section_id)
-								$data_item = (object)[
-									'id'					=> 'bulk_process_id',
-									'section_id'			=> $section_id,
-									'section_tipo'			=> $section_tipo,
-									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'lang'					=> DEDALO_DATA_NOLAN,
-									'mode'					=> $mode, // expected 'tm'
-									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'value'					=> [$bulk_process_id], // always need to be array
-									'debug_model'			=> 'component_number',
-									'debug_label'			=> 'Process id',
-									'matrix_id'				=> $id
-								];
-								$ar_subdata[]		= $data_item;
-								$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($current_ddo_tipo==='rsc329'): // user notes
-								// search notes with current matrix_id
-									$sqo = new search_query_object();
-										$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
-										$sqo->filter		= json_decode('{
-											"$and": [
-												{
-													"q": "'.$id.'",
-													"q_operator": null,
-													"path": [
-														{
-															"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
-															"component_tipo": "rsc835",
-															"model": "component_number",
-															"name": "Code"
-														}
-													]
-												}
-											]
-										}');
-									$search = search::get_instance($sqo);
-									$db_result = $search->search();
-
-									$note_section_id = $db_result->fetch_one()->section_id ?? null;
-
-								// component
-									$note_model			= ontology_node::get_model_by_tipo($current_ddo_tipo,true);
-									$current_component	= component_common::get_instance(
-										$note_model,
-										$current_ddo_tipo,
-										$note_section_id,
-										$mode, // use tm mode to preserve service_time_machine coherence
-										$ddo->lang ?? DEDALO_DATA_LANG,
-										$sqo->section_tipo
-									);
-
-									// inject this tipo as related component from_component_tipo
-										$current_component->from_component_tipo	= $current_ddo_tipo;
-										$current_component->from_section_tipo	= $section_tipo;
-
-									// permissions. Set to allow all users read
-										$current_component->set_permissions(1);
-
-									// get component JSON
-										$get_json_options = new stdClass();
-											$get_json_options->get_context	= false;
-											$get_json_options->get_data		= true;
-										$element_json = $current_component->get_json($get_json_options);
-
-									// edit section_id to match section locator data item
-										$data_item = !empty($element_json->data) && !empty($element_json->data[0])
-											? $element_json->data[0]
-											: $current_component->get_data_item(null);
-										// set matrix_id
-										$data_item->matrix_id = $id;
-
-									// attach to current ddo
-										$data_item->from_component_tipo	= $current_ddo_tipo;
-										$data_item->section_id			= $section_id;
-										$data_item->section_tipo		= $section_tipo;
-										// parent properties
-										$data_item->parent_section_tipo	= $sqo->section_tipo;
-										$data_item->parent_section_id	= $note_section_id;
-
-									// tm_user_id. Add time machine info
-										$data_item->tm_user_id = $user_id;
-
-									$ar_subdata[]		= $data_item;
-									$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
-
-								$timestamp_tipo	= $current_ddo_tipo;
-								$model_name		= ontology_node::get_model_by_tipo($timestamp_tipo,true);
-								$component		= component_common::get_instance(
-									$model_name,
-									$timestamp_tipo,
-									$section_id,
-									$mode,
-									DEDALO_DATA_NOLAN,
-									$section_tipo
-								);
-
-								// dato
-									$date = dd_date::get_dd_date_from_timestamp( $timestamp );
-									$date_value = new stdClass();
-										$date_value->start = $date;
-									$component_dato = [$date_value];
-									$component->set_dato($component_dato);
-									$component->set_permissions(1);
-
-								// get component JSON
-									$get_json_options = new stdClass();
-										$get_json_options->get_context	= false;
-										$get_json_options->get_data		= true;
-									$element_json = $component->get_json($get_json_options);
-
-								// edit section_id to match section locator data item
-									$data_item = reset($element_json->data);
-										$data_item->matrix_id = $id;
-
-								$ar_subdata[]		= $data_item;
-								$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($current_ddo_tipo==='dd543'): // Who (model: component_autocomplete) from activity section
-
-								$locator = new locator();
-									$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
-									$locator->set_section_id($user_id);
-									$locator->set_type(DEDALO_RELATION_TYPE_LINK);
-								$ar_values = component_relation_common::get_locator_value(
-									$locator,
-									DEDALO_DATA_LANG, // lang
-									false, // show_parents
-									['dd132'], // array|bool ar_components_related
-									true // bool include_self
-								);
-								$data_item = (object)[
-									'id'					=> 'who',
-									'section_id'			=> $section_id,
-									'section_tipo'			=> $section_tipo,
-									'tipo'					=> $current_ddo_tipo,
-									'lang'					=> DEDALO_DATA_NOLAN,
-									'mode'					=> $mode,
-									'from_component_tipo'	=> $current_ddo_tipo,
-									'value'					=> $ar_values,
-									'debug_label'			=> 'modified by user',
-									'matrix_id'				=> $id
-								];
-
-								$ar_subdata[]		= $data_item;
-								$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
-								// component_label
-									$component_label = ontology_node::get_term_by_tipo(
-										$tipo, // string tipo
-										DEDALO_APPLICATION_LANG, // string lang
-										true, // bool from_cache
-										true // bool fallback
-									);
-									// on tool_time_machine prepend section label
-									$rqo = dd_core_api::$rqo ?? null;
-									if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
-										// section_label
-											$section_label = ontology_node::get_term_by_tipo(
-												$section_tipo, // string tipo
-												DEDALO_APPLICATION_LANG, // string lang
-												true, // bool from_cache
-												true // bool fallback
-											);
-											$component_label = $section_label.': '.$component_label;
-									}
-								$current_value	= [$component_label];
-								$data_item		= (object)[
-									'id'					=> 'where',
-									'section_id'			=> $section_id,
-									'section_tipo'			=> $section_tipo,
-									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'lang'					=> DEDALO_DATA_LANG,
-									'mode'					=> $mode,
-									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'value'					=> $current_value, // .' ['.$section_tipo.']'
-									'debug_model'			=> 'component_input_text',
-									'debug_label'			=> 'Where',
-									'matrix_id'				=> $id
-								];
-								$ar_subdata[]		= $data_item;
-								$ar_subcontext[]	= $ddo;
-								break;
-
-							case ($ddo->model==='dd_grid' && $model==='section'): // Value : section first tm creation record case
-								// model section case. If row dato model is section, create a pseudo dd_grid data
-								// simulate grid value
-								$dd_grid_value = (object)[
-									'type'		=> 'column',
-									'label'		=> 'section',
-									'cell_type'	=> 'text',
-									'value'		=> [
-										'Created: '.$db_record->dato->created_date,
-										'By user: '.$db_record->dato->created_by_userID
-									]
-								];
-								$data_item = (object)[
-									'id'					=> 'dd_grid',
-									'section_id'			=> $section_id,
-									'section_tipo'			=> $section_tipo,
-									'tipo'					=> $current_ddo_tipo,
-									'lang'					=> DEDALO_DATA_NOLAN,
-									'mode'					=> $mode,
-									'from_component_tipo'	=> $current_ddo_tipo,
-									'from_section_tipo'		=> $section_tipo,
-									'value'					=> $dd_grid_value,
-									'debug_model'			=> $ddo->model,
-									'debug_label'			=> 'section',
-									'matrix_id'				=> $id
-								];
-								$ar_subdata[] = $data_item;
-								break;
-
-							default:
-
-								// component
-									$component_tipo	= ($source_model==='section')
-										? $ddo->tipo // get from ddo
-										: $tipo;	 // get from db record dato ($db_record->tipo)
-									$component_model	= ontology_node::get_model_by_tipo($component_tipo, true); // $ddo->model;
-									$is_relation		= in_array($component_model, $components_with_relations);
-									$lang				= $is_relation===true
-										? DEDALO_DATA_NOLAN
-										: ((bool)ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
-
-									$caller_dataframe = $ddo->caller_dataframe ?? null;
-
-									$current_component = component_common::get_instance(
-										$component_model,
-										$component_tipo,
-										$section_id,
-										$mode, // the component always in tm because the edit could fire a save with the dato_default
-										$lang,
-										$section_tipo,
-										true,
-										$caller_dataframe
-									);
-
-									// missing component case. When the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
-										if($current_component===null) {
-
-											debug_log(__METHOD__." Temporal data_item build for missing component: $model - $component_tipo", logger::WARNING);
-
-											$data_item = $this->get_data_item(null);
-												$data_item->parent_tipo			= $section_tipo;
-												$data_item->parent_section_id	= $section_id;
-												$data_item->from_component_tipo	= $current_ddo_tipo;
-												$data_item->from_section_tipo	= $section_tipo;
-
-											$ar_subdata[]		= $data_item;
-											$ar_subcontext[]	= $ddo;
-											continue 2;
-										}//end if($current_component===null)
-
-								// inject this tipo as related component from_component_tipo
-									$current_component->from_component_tipo	= $current_ddo_tipo;
-									$current_component->from_section_tipo	= $section_tipo;
-
-								// view
-									$current_view = $ddo->view ?? 'text';
-									$current_component->set_view($current_view);
-
-								// dato. inject dato from time machine record
-									if ($source_model==='section') {
-
-										$dato = isset($dato)
-											? $dato
-											: new stdClass();
-
-										// dato safe format
-										if (!isset($dato->relations)) {
-											$dato->relations = [];
-										}
-										if (!isset($dato->components)) {
-											$dato->components = new stdClass();
-										}
-									}
-									$current_dato = ($source_model!=='section')
-										? $dato // from deleted component dato case
-										: (($is_relation===false) // from deleted section case
-											? $dato->components->{$current_ddo_tipo}->dato->{$lang} ?? null
-											: array_values(array_filter($dato->relations, function($el) use($current_ddo_tipo) {
-												return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
-											  })));
-
-									// has dataframe
-									// if the component has a dataframe
-									// the time machine data will has both data, the main data from the main component
-									// and the dataframe data.
-									// To inject the correct main data is necessary filter it with the from_component_tipo
-										if ( strpos($source_model, 'component_')!==false && !empty($dato) ) {
-
-											$dataframe_ddo = $current_component->get_dataframe_ddo();
-											if( !empty($dataframe_ddo) ) {
-												if (!is_array($dato)) {
-
-													debug_log(__METHOD__
-														. " [has dataframe] dato expected type is array " . PHP_EOL
-														. ' dato type: ' . gettype($dato) . PHP_EOL
-														. ' dato: ' . to_string($dato) . PHP_EOL
-														. ' section_tipo: ' . to_string($this->tipo) . PHP_EOL
-														. ' section_id: ' . to_string($this->section_id) . PHP_EOL
-														. ' dataframe_ddo: ' . to_string($dataframe_ddo) . PHP_EOL
-														, logger::ERROR
-													);
-
-												}else{
-
-													// Remove dataframe values (locators)
-													$components_with_relations = component_relation_common::get_components_with_relations();
-													if (in_array($component_model, $components_with_relations) ) {
-														// Relation.
-														$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
-															return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
-														}));
-
-													}else{
-														// literal.
-														$current_dato = array_values( array_filter( $dato, function($el) {
-															return !isset($el->from_component_tipo);
-														}));
-													}
-												}
-											}
-										}
-
-									// inject current_dato
-										$current_component->set_dato($current_dato);
-
-									// permissions. Set to allow all users read
-										$current_component->set_permissions(1);
-
-								if ($ddo->model==='dd_grid') {
-
-									// component value
-										$value = $current_component->get_grid_value();
-									// data item
-										$data_item = $current_component->get_data_item($value);
-										// add matrix_id always
-										$data_item->matrix_id = $id;
-										// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
-										$data_item->tipo = $current_ddo_tipo;
-									// data add
-										$ar_subdata[]		= $data_item;
-										$ar_subcontext[]	= $ddo;
-								}else{
-
-									// normal case
-
-									// get component JSON data
-										$element_json = $current_component->get_json((object)[
-											'get_context'	=> true,
-											'get_data'		=> true
-										]);
-
-									// Check if the element JSON has his own request_config to change it as list
-									// when the component has his own definition in ontology, it can had a components in edit mode
-									// all this components need to be set to mode = list
-									// this change is important to maintain the data as is in time machine
-									// and prevent to save default data from components in edit mode inside the tool tm.
-										foreach ($element_json->context as $value) {
-											if(isset($value->request_config) && is_array($value->request_config)){
-												// select the request config of dedalo api_engine
-												$new_request_config_object = array_find($value->request_config, function($el) {
-													return $el->api_engine==='dedalo';
-												});
-												// if the component has his own show and ddo_map, change it to mode = list
-												if(is_object($new_request_config_object) && isset($new_request_config_object->show) && isset($new_request_config_object->show->ddo_map)){
-													foreach ($new_request_config_object->show->ddo_map as $new_ddo) {
-														$new_ddo->mode = 'tm';
-													}
-												}
-											}
-										}
-
-									// mix ar_subcontext
-										$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
-
-									// empty data case. Generate and add a empty value item
-										if (empty($element_json->data) && $model!=='component_section_id') {
-											$data_item = $current_component->get_data_item(null);
-												$data_item->parent_tipo		= $section_tipo;
-												$data_item->row_section_id	= $section_id;
-											$element_json->data = [$data_item];
-										}
-									// has_dataframe
-										// if the component has a dataframe create new component and inject his own data
-										// dataframe data is saved by the main dataframe and is part of the row data
-										if (strpos($source_model, 'component_')!==false && !empty($dataframe_ddo)) {
-											foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
-
-												$dataframe_tipo = $current_dataframe_ddo->tipo;
-
-												// 1 remove dataframe data created by the main component in his subdatum process
-												// when the main component create his own subdatum it can get incorrect dataframe data
-												// because the main component use the time machine data but not the dataframe data by itself.
-												// and it can meet his data with the current dataframe data.
-												// to avoid it, remove the dataframe data from the main component.
-												foreach ($element_json->data as $key => $current_source_data) {
-													if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
-														unset($element_json->data[$key]);
-													}
-												}
-
-												// 2 get the dataframe data from dato, filtering by dataframe_tipo
-												if( !empty($dato) ){
-													$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
-														return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
-													}));
-												}
-
-												// 3 get the component dataframe data with time machine data
-												if (!empty($dataframe_data)) {
-
-													$dataframe_model = ontology_node::get_model_by_tipo($dataframe_tipo);
-
-													foreach ($dataframe_data as $key => $current_dataframe_data) {
-														// create the caller_dataframe with the current data information
-														$new_caller_dataframe = new stdClass();
-															$new_caller_dataframe->section_id_key		= $current_dataframe_data->section_id_key;
-															$new_caller_dataframe->section_tipo_key		= $current_dataframe_data->section_tipo_key;
-															$new_caller_dataframe->section_tipo			= $section_tipo;
-															$new_caller_dataframe->main_component_tipo	= $tipo;
-
-														// create the dataframe component
-														$dataframe_component = component_common::get_instance(
-															$dataframe_model,
-															$dataframe_tipo,
-															$section_id,
-															$mode, // the component always in tm because the edit could fire a save with the dato_default
-															$lang,
-															$section_tipo,
-															true,
-															$new_caller_dataframe
-														);
-														// inject the current data
-														$dataframe_component->set_dato( [$current_dataframe_data] );
-														// permissions. Set to allow all users read
-														$dataframe_component->set_permissions(1);
-														// get component JSON data
-														$dataframe_json = $dataframe_component->get_json((object)[
-															'get_context'	=> true,
-															'get_data'		=> true
-														]);
-
-														// parse component_data. Add matrix_id and unify output value
-														$dataframe_data	= array_map(function($data_item) use($id) {
-															$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
-															return $data_item;
-														}, $dataframe_json->data);
-														// mix dataframe data with the current main data
-														$ar_subdata = array_merge($ar_subdata, $dataframe_data);
-													}
-												}
-											}
-										}
-									// parse component_data. Add matrix_id and unify output value
-										$component_data	= array_map(function($data_item) use($id) {
-											$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
-											return $data_item;
-										}, $element_json->data);
-
-									// data add
-										$ar_subdata = array_merge($ar_subdata, $component_data);
-
-								}//end if ($is_dd_grid_column===true)
-								break;
-						}//end switch(true)
-				}//end foreach ($ddo_map as $ddo)
-
-			}//end foreach($ar_locators as $current_locator)
-
-
-		// subdatum
-			$subdatum = new stdClass();
-				$subdatum->context	= $ar_subcontext;
-				$subdatum->data		= $ar_subdata;
-
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	$time = exec_time_unit($start_time,'ms');
-			// 	$time_string = $time>100
-			// 		? sprintf("\033[31m%s\033[0m", $time)
-			// 		: $time;
-			// 	$len = !empty($this->tipo)
-			// 		? strlen($this->tipo)
-			// 		: 0;
-			// 	$repeat = ($len < 14)
-			// 		? (14 - $len)
-			// 		: 0;
-			// 	$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-			// 	$log = "------------------- get_tm_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
-			// 	error_log($log);
-			// }
-
-
-		return $subdatum;
-	}//end get_tm_subdatum
-
-
-
-	/**
-	* GET_TIME_MACHINE_LIST_TIPO
-	* Get the time machine list tipo for the section
-	* @return string|null $time_machine_list_tipo
-	*/
-	public function get_time_machine_list_tipo() : ?string {
-
-		$section_tipo = $this->tipo;
-
-		// $time_machine_list_tipo	= section::get_ar_children_by_model($section_tipo, ['time_machine_list']) ?? null;
-
-		$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-			$section_tipo,
-			['time_machine_list'], // ar_model_name_required
-			true, // from cache
-			true, // resolve virtual
-			false, // bool recursive
-			true // bool search_exact
-		);
-		$time_machine_list_tipo	= $ar_children_tipo[0] ?? null;
-
-		$permissions = isset($time_machine_list_tipo)
-			? common::get_permissions($section_tipo, $time_machine_list_tipo)
-			: 0;
-
-		if( isset($permissions) && $permissions>0 ) {
-			return $time_machine_list_tipo;
-		}
-
-		return null;
-	}//end get_time_machine_list_tipo
+	// /**
+	// * GET_TM_SUBDATUM
+	// * Used by time machine to get the components and section sub context and subdata.
+	// * subdatum: is the context and data of every section or component that the caller (this time machine) need to show, search or select
+	// * ex: if the time machine of the component is a portal that call to toponymy tm it will need the context and data of the pointer section and the components that will be showed or searched.
+	// * This method use the data of the caller (ar_db_record) to get only the data to be used, ex: only the records of the component in time machine to show.
+	// * For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
+	// * @param string|null $from_parent = null
+	// * @param array $ar_db_record = []
+	// * 	Array of natrix_time_machine table found records
+	// * @return object $subdatum
+	// * 	Object with two properties: array context, array data
+	// *	{
+	// *		context	: [],
+	// * 		data	: []
+	// * 	}
+	// */
+	// public function get_tm_subdatum( ?string $from_parent=null, array $ar_db_record=[] ) : object {
+
+	// 	// debug
+	// 		// if(SHOW_DEBUG===true) {
+	// 		// 	$start_time = start_time();
+	// 		// 	$len = !empty($this->tipo)
+	// 		// 		? strlen($this->tipo)
+	// 		// 		: 0;
+	// 		// 	$repeat = ($len < 14)
+	// 		// 		? (14 - $len)
+	// 		// 		: 0;
+	// 		// 	$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+	// 		// 	$log = "------------------- get_tm_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_db_record, JSON_PRETTY_PRINT)
+	// 		// 	error_log($log);
+	// 		// }
+
+	// 	$ar_subcontext	= [];
+	// 	$ar_subdata		= [];
+
+	// 	// request_config. On empty return empty context and data object
+	// 		$request_config = $this->context->request_config ?? null;
+	// 		if(empty($request_config)) {
+	// 			// no request config case. Return empty here
+	// 			return (object)[
+	// 				'context'	=> [],
+	// 				'data'		=> []
+	// 			];
+	// 		}
+
+	// 	// ddo_map. Get the full ddo in every request_config
+	// 		$full_ddo_map = [];
+	// 		foreach ($request_config as $request_config_item) {
+
+	// 			// skip empty ddo_map
+	// 			if(empty($request_config_item->show->ddo_map)) {
+	// 				debug_log(__METHOD__." Ignored empty show ddo_map in request_config_item:".to_string($request_config_item), logger::ERROR);
+	// 				continue;
+	// 			}
+	// 			// merge all ddos of all request_config
+	// 			$full_ddo_map = array_merge($full_ddo_map, $request_config_item->show->ddo_map);
+	// 		}//end foreach ($request_config_dedalo as $request_config_item)
+	// 		// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
+	// 		$ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
+
+	// 	// get the context and data for every locator
+	// 		foreach($ar_db_record as $db_record) {
+
+	// 			// check record format
+	// 				if (!is_object($db_record)) {
+	// 					if(SHOW_DEBUG===true) {
+	// 						debug_log(
+	// 							__METHOD__." Error Processing Request. db_record is NOT an expected object. Ignored record ! ".to_string($db_record),
+	// 							logger::ERROR
+	// 						);
+	// 					}
+	// 					continue;
+	// 				}
+
+	// 			// sub-data time machine from record columns
+	// 				$section_id			= $db_record->section_id;
+	// 				$section_tipo		= $db_record->section_tipo;
+	// 				$lang				= $db_record->lang;
+	// 				$id					= $db_record->id;
+	// 				$timestamp			= $db_record->timestamp;
+	// 				$bulk_process_id	= $db_record->bulk_process_id;
+	// 				$user_id			= $db_record->userID;
+	// 				$tipo				= $db_record->tipo;
+	// 				$dato				= $db_record->dato;
+
+	// 			// empty tipo case catch
+	// 				if (empty($tipo)) {
+	// 					debug_log(__METHOD__." Empty tipo was received ! . db_record: ".PHP_EOL.to_string($db_record), logger::WARNING);
+	// 					continue;
+	// 				}
+
+	// 			// short vars
+	// 				$source_model				= ontology_node::get_model_by_tipo($tipo,true);
+	// 				$components_with_relations	= component_relation_common::get_components_with_relations();
+	// 				$mode						= 'tm';
+
+	// 			// if time machine is recovering sections, creates the section and inject his time machine dato to be used as normal section loaded from matrix
+	// 			// all data and sub-data will get from this.
+	// 			if($source_model==='section'){
+	// 				$section = section::get_instance(
+	// 					$section_id,
+	// 					$section_tipo
+	// 				);
+	// 				$section->set_dato($dato);
+	// 			}
+
+	// 			// ar_ddo iterate
+	// 					// build data from elements
+	// 			foreach ($ddo_map as $ddo) {
+
+	// 				// ddo tipo
+	// 					$current_ddo_tipo = $ddo->tipo;
+
+	// 				// ddo item model
+	// 					$ddo->model = $ddo->model ?? ontology_node::get_model_by_tipo($ddo->tipo, true);
+
+	// 				// permissions
+	// 					$ddo->permissions = 1;
+
+	// 				// model of dato tipo
+	// 					$model = ontology_node::get_model_by_tipo($tipo, true); // model of dato tipo
+
+	// 				// switch cases
+	// 					switch (true) {
+
+	// 						case ($current_ddo_tipo==='dd1573'): // id (model: component_section_id)
+	// 							$data_item = (object)[
+	// 								'id'					=> 'matrix_id',
+	// 								'section_id'			=> $section_id,
+	// 								'section_tipo'			=> $section_tipo,
+	// 								'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'lang'					=> DEDALO_DATA_NOLAN,
+	// 								'mode'					=> $mode, // expected 'tm'
+	// 								'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'value'					=> $id,
+	// 								'debug_model'			=> 'component_section_id',
+	// 								'debug_label'			=> 'matrix ID',
+	// 								'matrix_id'				=> $id,
+	// 								'user_id'				=> $user_id
+	// 							];
+	// 							$ar_subdata[]		= $data_item;
+	// 							$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($current_ddo_tipo==='dd1371'): // process id (model: component_section_id)
+	// 							$data_item = (object)[
+	// 								'id'					=> 'bulk_process_id',
+	// 								'section_id'			=> $section_id,
+	// 								'section_tipo'			=> $section_tipo,
+	// 								'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'lang'					=> DEDALO_DATA_NOLAN,
+	// 								'mode'					=> $mode, // expected 'tm'
+	// 								'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'value'					=> [$bulk_process_id], // always need to be array
+	// 								'debug_model'			=> 'component_number',
+	// 								'debug_label'			=> 'Process id',
+	// 								'matrix_id'				=> $id
+	// 							];
+	// 							$ar_subdata[]		= $data_item;
+	// 							$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($current_ddo_tipo==='rsc329'): // user notes
+	// 							// search notes with current matrix_id
+	// 								$sqo = new search_query_object();
+	// 									$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
+	// 									$sqo->filter		= json_decode('{
+	// 										"$and": [
+	// 											{
+	// 												"q": "'.$id.'",
+	// 												"q_operator": null,
+	// 												"path": [
+	// 													{
+	// 														"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
+	// 														"component_tipo": "rsc835",
+	// 														"model": "component_number",
+	// 														"name": "Code"
+	// 													}
+	// 												]
+	// 											}
+	// 										]
+	// 									}');
+	// 								$search = search::get_instance($sqo);
+	// 								$db_result = $search->search();
+
+	// 								$note_section_id = $db_result->fetch_one()->section_id ?? null;
+
+	// 							// component
+	// 								$note_model			= ontology_node::get_model_by_tipo($current_ddo_tipo,true);
+	// 								$current_component	= component_common::get_instance(
+	// 									$note_model,
+	// 									$current_ddo_tipo,
+	// 									$note_section_id,
+	// 									$mode, // use tm mode to preserve service_time_machine coherence
+	// 									$ddo->lang ?? DEDALO_DATA_LANG,
+	// 									$sqo->section_tipo
+	// 								);
+
+	// 								// inject this tipo as related component from_component_tipo
+	// 									$current_component->from_component_tipo	= $current_ddo_tipo;
+	// 									$current_component->from_section_tipo	= $section_tipo;
+
+	// 								// permissions. Set to allow all users read
+	// 									$current_component->set_permissions(1);
+
+	// 								// get component JSON
+	// 									$get_json_options = new stdClass();
+	// 										$get_json_options->get_context	= false;
+	// 										$get_json_options->get_data		= true;
+	// 									$element_json = $current_component->get_json($get_json_options);
+
+	// 								// edit section_id to match section locator data item
+	// 									$data_item = !empty($element_json->data) && !empty($element_json->data[0])
+	// 										? $element_json->data[0]
+	// 										: $current_component->get_data_item(null);
+	// 									// set matrix_id
+	// 									$data_item->matrix_id = $id;
+
+	// 								// attach to current ddo
+	// 									$data_item->from_component_tipo	= $current_ddo_tipo;
+	// 									$data_item->section_id			= $section_id;
+	// 									$data_item->section_tipo		= $section_tipo;
+	// 									// parent properties
+	// 									$data_item->parent_section_tipo	= $sqo->section_tipo;
+	// 									$data_item->parent_section_id	= $note_section_id;
+
+	// 								// tm_user_id. Add time machine info
+	// 									$data_item->tm_user_id = $user_id;
+
+	// 								$ar_subdata[]		= $data_item;
+	// 								$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($current_ddo_tipo==='dd547'): // When (model: component_date) from activity section
+
+	// 							$timestamp_tipo	= $current_ddo_tipo;
+	// 							$model_name		= ontology_node::get_model_by_tipo($timestamp_tipo,true);
+	// 							$component		= component_common::get_instance(
+	// 								$model_name,
+	// 								$timestamp_tipo,
+	// 								$section_id,
+	// 								$mode,
+	// 								DEDALO_DATA_NOLAN,
+	// 								$section_tipo
+	// 							);
+
+	// 							// dato
+	// 								$date = dd_date::get_dd_date_from_timestamp( $timestamp );
+	// 								$date_value = new stdClass();
+	// 									$date_value->start = $date;
+	// 								$component_dato = [$date_value];
+	// 								$component->set_dato($component_dato);
+	// 								$component->set_permissions(1);
+
+	// 							// get component JSON
+	// 								$get_json_options = new stdClass();
+	// 									$get_json_options->get_context	= false;
+	// 									$get_json_options->get_data		= true;
+	// 								$element_json = $component->get_json($get_json_options);
+
+	// 							// edit section_id to match section locator data item
+	// 								$data_item = reset($element_json->data);
+	// 									$data_item->matrix_id = $id;
+
+	// 							$ar_subdata[]		= $data_item;
+	// 							$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($current_ddo_tipo==='dd543'): // Who (model: component_autocomplete) from activity section
+
+	// 							$locator = new locator();
+	// 								$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+	// 								$locator->set_section_id($user_id);
+	// 								$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+	// 							$ar_values = component_relation_common::get_locator_value(
+	// 								$locator,
+	// 								DEDALO_DATA_LANG, // lang
+	// 								false, // show_parents
+	// 								['dd132'], // array|bool ar_components_related
+	// 								true // bool include_self
+	// 							);
+	// 							$data_item = (object)[
+	// 								'id'					=> 'who',
+	// 								'section_id'			=> $section_id,
+	// 								'section_tipo'			=> $section_tipo,
+	// 								'tipo'					=> $current_ddo_tipo,
+	// 								'lang'					=> DEDALO_DATA_NOLAN,
+	// 								'mode'					=> $mode,
+	// 								'from_component_tipo'	=> $current_ddo_tipo,
+	// 								'value'					=> $ar_values,
+	// 								'debug_label'			=> 'modified by user',
+	// 								'matrix_id'				=> $id
+	// 							];
+
+	// 							$ar_subdata[]		= $data_item;
+	// 							$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($current_ddo_tipo==='dd546'): // Where (model: component_input_text)
+	// 							// component_label
+	// 								$component_label = ontology_node::get_term_by_tipo(
+	// 									$tipo, // string tipo
+	// 									DEDALO_APPLICATION_LANG, // string lang
+	// 									true, // bool from_cache
+	// 									true // bool fallback
+	// 								);
+	// 								// on tool_time_machine prepend section label
+	// 								$rqo = dd_core_api::$rqo ?? null;
+	// 								if ( $rqo && $rqo->source->tipo!==$rqo->source->section_tipo ) {
+	// 									// section_label
+	// 										$section_label = ontology_node::get_term_by_tipo(
+	// 											$section_tipo, // string tipo
+	// 											DEDALO_APPLICATION_LANG, // string lang
+	// 											true, // bool from_cache
+	// 											true // bool fallback
+	// 										);
+	// 										$component_label = $section_label.': '.$component_label;
+	// 								}
+	// 							$current_value	= [$component_label];
+	// 							$data_item		= (object)[
+	// 								'id'					=> 'where',
+	// 								'section_id'			=> $section_id,
+	// 								'section_tipo'			=> $section_tipo,
+	// 								'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'lang'					=> DEDALO_DATA_LANG,
+	// 								'mode'					=> $mode,
+	// 								'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+	// 								'value'					=> $current_value, // .' ['.$section_tipo.']'
+	// 								'debug_model'			=> 'component_input_text',
+	// 								'debug_label'			=> 'Where',
+	// 								'matrix_id'				=> $id
+	// 							];
+	// 							$ar_subdata[]		= $data_item;
+	// 							$ar_subcontext[]	= $ddo;
+	// 							break;
+
+	// 						case ($ddo->model==='dd_grid' && $model==='section'): // Value : section first tm creation record case
+	// 							// model section case. If row dato model is section, create a pseudo dd_grid data
+	// 							// simulate grid value
+	// 							$dd_grid_value = (object)[
+	// 								'type'		=> 'column',
+	// 								'label'		=> 'section',
+	// 								'cell_type'	=> 'text',
+	// 								'value'		=> [
+	// 									'Created: '.$db_record->dato->created_date,
+	// 									'By user: '.$db_record->dato->created_by_userID
+	// 								]
+	// 							];
+	// 							$data_item = (object)[
+	// 								'id'					=> 'dd_grid',
+	// 								'section_id'			=> $section_id,
+	// 								'section_tipo'			=> $section_tipo,
+	// 								'tipo'					=> $current_ddo_tipo,
+	// 								'lang'					=> DEDALO_DATA_NOLAN,
+	// 								'mode'					=> $mode,
+	// 								'from_component_tipo'	=> $current_ddo_tipo,
+	// 								'from_section_tipo'		=> $section_tipo,
+	// 								'value'					=> $dd_grid_value,
+	// 								'debug_model'			=> $ddo->model,
+	// 								'debug_label'			=> 'section',
+	// 								'matrix_id'				=> $id
+	// 							];
+	// 							$ar_subdata[] = $data_item;
+	// 							break;
+
+	// 						default:
+
+	// 							// component
+	// 								$component_tipo	= ($source_model==='section')
+	// 									? $ddo->tipo // get from ddo
+	// 									: $tipo;	 // get from db record dato ($db_record->tipo)
+	// 								$component_model	= ontology_node::get_model_by_tipo($component_tipo, true); // $ddo->model;
+	// 								$is_relation		= in_array($component_model, $components_with_relations);
+	// 								$lang				= $is_relation===true
+	// 									? DEDALO_DATA_NOLAN
+	// 									: ((bool)ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN);
+
+	// 								$caller_dataframe = $ddo->caller_dataframe ?? null;
+
+	// 								$current_component = component_common::get_instance(
+	// 									$component_model,
+	// 									$component_tipo,
+	// 									$section_id,
+	// 									$mode, // the component always in tm because the edit could fire a save with the dato_default
+	// 									$lang,
+	// 									$section_tipo,
+	// 									true,
+	// 									$caller_dataframe
+	// 								);
+
+	// 								// missing component case. When the data is not correct or the tipo don't mach with the ontology (ex:time machine data of old components)
+	// 									if($current_component===null) {
+
+	// 										debug_log(__METHOD__." Temporal data_item build for missing component: $model - $component_tipo", logger::WARNING);
+
+	// 										$data_item = $this->get_data_item(null);
+	// 											$data_item->parent_tipo			= $section_tipo;
+	// 											$data_item->parent_section_id	= $section_id;
+	// 											$data_item->from_component_tipo	= $current_ddo_tipo;
+	// 											$data_item->from_section_tipo	= $section_tipo;
+
+	// 										$ar_subdata[]		= $data_item;
+	// 										$ar_subcontext[]	= $ddo;
+	// 										continue 2;
+	// 									}//end if($current_component===null)
+
+	// 							// inject this tipo as related component from_component_tipo
+	// 								$current_component->from_component_tipo	= $current_ddo_tipo;
+	// 								$current_component->from_section_tipo	= $section_tipo;
+
+	// 							// view
+	// 								$current_view = $ddo->view ?? 'text';
+	// 								$current_component->set_view($current_view);
+
+	// 							// dato. inject dato from time machine record
+	// 								if ($source_model==='section') {
+
+	// 									$dato = isset($dato)
+	// 										? $dato
+	// 										: new stdClass();
+
+	// 									// dato safe format
+	// 									if (!isset($dato->relations)) {
+	// 										$dato->relations = [];
+	// 									}
+	// 									if (!isset($dato->components)) {
+	// 										$dato->components = new stdClass();
+	// 									}
+	// 								}
+	// 								$current_dato = ($source_model!=='section')
+	// 									? $dato // from deleted component dato case
+	// 									: (($is_relation===false) // from deleted section case
+	// 										? $dato->components->{$current_ddo_tipo}->dato->{$lang} ?? null
+	// 										: array_values(array_filter($dato->relations, function($el) use($current_ddo_tipo) {
+	// 											return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+	// 										  })));
+
+	// 								// has dataframe
+	// 								// if the component has a dataframe
+	// 								// the time machine data will has both data, the main data from the main component
+	// 								// and the dataframe data.
+	// 								// To inject the correct main data is necessary filter it with the from_component_tipo
+	// 									if ( strpos($source_model, 'component_')!==false && !empty($dato) ) {
+
+	// 										$dataframe_ddo = $current_component->get_dataframe_ddo();
+	// 										if( !empty($dataframe_ddo) ) {
+	// 											if (!is_array($dato)) {
+
+	// 												debug_log(__METHOD__
+	// 													. " [has dataframe] dato expected type is array " . PHP_EOL
+	// 													. ' dato type: ' . gettype($dato) . PHP_EOL
+	// 													. ' dato: ' . to_string($dato) . PHP_EOL
+	// 													. ' section_tipo: ' . to_string($this->tipo) . PHP_EOL
+	// 													. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+	// 													. ' dataframe_ddo: ' . to_string($dataframe_ddo) . PHP_EOL
+	// 													, logger::ERROR
+	// 												);
+
+	// 											}else{
+
+	// 												// Remove dataframe values (locators)
+	// 												$components_with_relations = component_relation_common::get_components_with_relations();
+	// 												if (in_array($component_model, $components_with_relations) ) {
+	// 													// Relation.
+	// 													$current_dato = array_values( array_filter( $dato, function($el) use($current_ddo_tipo) {
+	// 														return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
+	// 													}));
+
+	// 												}else{
+	// 													// literal.
+	// 													$current_dato = array_values( array_filter( $dato, function($el) {
+	// 														return !isset($el->from_component_tipo);
+	// 													}));
+	// 												}
+	// 											}
+	// 										}
+	// 									}
+
+	// 								// inject current_dato
+	// 									$current_component->set_dato($current_dato);
+
+	// 								// permissions. Set to allow all users read
+	// 									$current_component->set_permissions(1);
+
+	// 							if ($ddo->model==='dd_grid') {
+
+	// 								// component value
+	// 									$value = $current_component->get_grid_value();
+	// 								// data item
+	// 									$data_item = $current_component->get_data_item($value);
+	// 									// add matrix_id always
+	// 									$data_item->matrix_id = $id;
+	// 									// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
+	// 									$data_item->tipo = $current_ddo_tipo;
+	// 								// data add
+	// 									$ar_subdata[]		= $data_item;
+	// 									$ar_subcontext[]	= $ddo;
+	// 							}else{
+
+	// 								// normal case
+
+	// 								// get component JSON data
+	// 									$element_json = $current_component->get_json((object)[
+	// 										'get_context'	=> true,
+	// 										'get_data'		=> true
+	// 									]);
+
+	// 								// Check if the element JSON has his own request_config to change it as list
+	// 								// when the component has his own definition in ontology, it can had a components in edit mode
+	// 								// all this components need to be set to mode = list
+	// 								// this change is important to maintain the data as is in time machine
+	// 								// and prevent to save default data from components in edit mode inside the tool tm.
+	// 									foreach ($element_json->context as $value) {
+	// 										if(isset($value->request_config) && is_array($value->request_config)){
+	// 											// select the request config of dedalo api_engine
+	// 											$new_request_config_object = array_find($value->request_config, function($el) {
+	// 												return $el->api_engine==='dedalo';
+	// 											});
+	// 											// if the component has his own show and ddo_map, change it to mode = list
+	// 											if(is_object($new_request_config_object) && isset($new_request_config_object->show) && isset($new_request_config_object->show->ddo_map)){
+	// 												foreach ($new_request_config_object->show->ddo_map as $new_ddo) {
+	// 													$new_ddo->mode = 'tm';
+	// 												}
+	// 											}
+	// 										}
+	// 									}
+
+	// 								// mix ar_subcontext
+	// 									$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+
+	// 								// empty data case. Generate and add a empty value item
+	// 									if (empty($element_json->data) && $model!=='component_section_id') {
+	// 										$data_item = $current_component->get_data_item(null);
+	// 											$data_item->parent_tipo		= $section_tipo;
+	// 											$data_item->row_section_id	= $section_id;
+	// 										$element_json->data = [$data_item];
+	// 									}
+	// 								// has_dataframe
+	// 									// if the component has a dataframe create new component and inject his own data
+	// 									// dataframe data is saved by the main dataframe and is part of the row data
+	// 									if (strpos($source_model, 'component_')!==false && !empty($dataframe_ddo)) {
+	// 										foreach ( $dataframe_ddo as $current_dataframe_ddo ) {
+
+	// 											$dataframe_tipo = $current_dataframe_ddo->tipo;
+
+	// 											// 1 remove dataframe data created by the main component in his subdatum process
+	// 											// when the main component create his own subdatum it can get incorrect dataframe data
+	// 											// because the main component use the time machine data but not the dataframe data by itself.
+	// 											// and it can meet his data with the current dataframe data.
+	// 											// to avoid it, remove the dataframe data from the main component.
+	// 											foreach ($element_json->data as $key => $current_source_data) {
+	// 												if($current_source_data->tipo === $dataframe_tipo || $current_source_data->from_component_tipo === $dataframe_tipo){
+	// 													unset($element_json->data[$key]);
+	// 												}
+	// 											}
+
+	// 											// 2 get the dataframe data from dato, filtering by dataframe_tipo
+	// 											if( !empty($dato) ){
+	// 												$dataframe_data = array_values( array_filter( $dato, function($el) use($dataframe_tipo) {
+	// 													return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+	// 												}));
+	// 											}
+
+	// 											// 3 get the component dataframe data with time machine data
+	// 											if (!empty($dataframe_data)) {
+
+	// 												$dataframe_model = ontology_node::get_model_by_tipo($dataframe_tipo);
+
+	// 												foreach ($dataframe_data as $key => $current_dataframe_data) {
+	// 													// create the caller_dataframe with the current data information
+	// 													$new_caller_dataframe = new stdClass();
+	// 														$new_caller_dataframe->section_id_key		= $current_dataframe_data->section_id_key;
+	// 														$new_caller_dataframe->section_tipo_key		= $current_dataframe_data->section_tipo_key;
+	// 														$new_caller_dataframe->section_tipo			= $section_tipo;
+	// 														$new_caller_dataframe->main_component_tipo	= $tipo;
+
+	// 													// create the dataframe component
+	// 													$dataframe_component = component_common::get_instance(
+	// 														$dataframe_model,
+	// 														$dataframe_tipo,
+	// 														$section_id,
+	// 														$mode, // the component always in tm because the edit could fire a save with the dato_default
+	// 														$lang,
+	// 														$section_tipo,
+	// 														true,
+	// 														$new_caller_dataframe
+	// 													);
+	// 													// inject the current data
+	// 													$dataframe_component->set_dato( [$current_dataframe_data] );
+	// 													// permissions. Set to allow all users read
+	// 													$dataframe_component->set_permissions(1);
+	// 													// get component JSON data
+	// 													$dataframe_json = $dataframe_component->get_json((object)[
+	// 														'get_context'	=> true,
+	// 														'get_data'		=> true
+	// 													]);
+
+	// 													// parse component_data. Add matrix_id and unify output value
+	// 													$dataframe_data	= array_map(function($data_item) use($id) {
+	// 														$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
+	// 														return $data_item;
+	// 													}, $dataframe_json->data);
+	// 													// mix dataframe data with the current main data
+	// 													$ar_subdata = array_merge($ar_subdata, $dataframe_data);
+	// 												}
+	// 											}
+	// 										}
+	// 									}
+	// 								// parse component_data. Add matrix_id and unify output value
+	// 									$component_data	= array_map(function($data_item) use($id) {
+	// 										$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
+	// 										return $data_item;
+	// 									}, $element_json->data);
+
+	// 								// data add
+	// 									$ar_subdata = array_merge($ar_subdata, $component_data);
+
+	// 							}//end if ($is_dd_grid_column===true)
+	// 							break;
+	// 					}//end switch(true)
+	// 			}//end foreach ($ddo_map as $ddo)
+
+	// 		}//end foreach($ar_locators as $current_locator)
+
+
+	// 	// subdatum
+	// 		$subdatum = new stdClass();
+	// 			$subdatum->context	= $ar_subcontext;
+	// 			$subdatum->data		= $ar_subdata;
+
+	// 	// debug
+	// 		// if(SHOW_DEBUG===true) {
+	// 		// 	$time = exec_time_unit($start_time,'ms');
+	// 		// 	$time_string = $time>100
+	// 		// 		? sprintf("\033[31m%s\033[0m", $time)
+	// 		// 		: $time;
+	// 		// 	$len = !empty($this->tipo)
+	// 		// 		? strlen($this->tipo)
+	// 		// 		: 0;
+	// 		// 	$repeat = ($len < 14)
+	// 		// 		? (14 - $len)
+	// 		// 		: 0;
+	// 		// 	$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+	// 		// 	$log = "------------------- get_tm_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->section_tipo ?? $this->tipo).'-'.$this->section_id ; //  .' '.json_encode($ar_locators, JSON_PRETTY_PRINT)
+	// 		// 	error_log($log);
+	// 		// }
+
+
+	// 	return $subdatum;
+	// }//end get_tm_subdatum
+
+
+
+	// /**
+	// * GET_TIME_MACHINE_LIST_TIPO
+	// * Get the time machine list tipo for the section
+	// * @return string|null $time_machine_list_tipo
+	// */
+	// public function get_time_machine_list_tipo() : ?string {
+
+	// 	$section_tipo = $this->tipo;
+
+	// 	// $time_machine_list_tipo	= section::get_ar_children_by_model($section_tipo, ['time_machine_list']) ?? null;
+
+	// 	$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+	// 		$section_tipo,
+	// 		['time_machine_list'], // ar_model_name_required
+	// 		true, // from cache
+	// 		true, // resolve virtual
+	// 		false, // bool recursive
+	// 		true // bool search_exact
+	// 	);
+	// 	$time_machine_list_tipo	= $ar_children_tipo[0] ?? null;
+
+	// 	$permissions = isset($time_machine_list_tipo)
+	// 		? common::get_permissions($section_tipo, $time_machine_list_tipo)
+	// 		: 0;
+
+	// 	if( isset($permissions) && $permissions>0 ) {
+	// 		return $time_machine_list_tipo;
+	// 	}
+
+	// 	return null;
+	// }//end get_time_machine_list_tipo
 
 
 
