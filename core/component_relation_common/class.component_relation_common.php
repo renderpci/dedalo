@@ -1411,13 +1411,7 @@ class component_relation_common extends component_common {
 		$query_object->component_path = ['relations'];
 
 		// format. Used for example to to set 'function' (see numisdata161 sqo->filter_by_list)
-		$format = $query_object->format ?? null;
-
-		// column
-			$column = section_record_data::get_column_name( get_called_class() );
-		
-		//table_alias
-			$table_alias	= $query_object->table_alias;
+		$format = $query_object->format ?? null;		
 
 		// q . Expected:
 		// - Object locator as {"section_id":"4","section_tipo":"hierarchy13","type":"dd151","from_component_tipo":"hierarchy9"}
@@ -1488,6 +1482,12 @@ class component_relation_common extends component_common {
 			);
 		}
 
+		// column
+		$column = section_record_data::get_column_name( get_called_class() );
+		
+		// table_alias
+		$table_alias = $query_object->table_alias;
+
 		switch (true) {
 			// IS DIFFERENT
 			case ($q_operator==='!=' && !empty($q)):
@@ -1522,19 +1522,13 @@ class component_relation_common extends component_common {
 				break;
 			// CONTAIN
 			default:
-				// $operator = '@>';
-				$q_clean = '['.$q.']';
-				// $query_object->operator = $operator;
-				// $query_object->q_parsed	= $q_clean;
+				// sql sentence
+				$sql = "{$table_alias}.{$column} @> _Q1_::jsonb";
+				$query_object->sentence = $sql;
 
-				$query_object->sentence = trim("
-					{$table_alias}.{$column}->'{$component_tipo}' @> _Q1_::jsonb
-				");
-
-				// $query_object->sentence = 'search_string LIKE f_unaccent(lower(\'%_Q1_%\'))';
+				// params
+				$q_clean = '{"'.$component_tipo.'":['.$q.']}';
 				$query_object->params = ['_Q1_' => $q_clean];
-
-
 				break;
 		}//end switch (true)
 
