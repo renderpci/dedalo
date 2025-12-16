@@ -45,18 +45,18 @@ class component_image extends component_media_common implements component_media_
 	*/
 	public function save() : bool {
 
-		$dato = $this->get_dato();
+		$data = $this->get_data();
 
-		// create_svg_file from dato item temporal container
-		if (!empty($dato)) {
-			foreach ($dato as $dato_item) {
-				if(isset($dato_item->svg_file_data)) {
-					$this->create_svg_file($dato_item->svg_file_data);
+		// create_svg_file from data item temporal container
+		if (!empty($data)) {
+			foreach ($data as $data_item) {
+				if(isset($data_item->svg_file_data)) {
+					$this->create_svg_file($data_item->svg_file_data);
 				}
 			}
 		}
 
-		$this->dato = $dato;
+		$this->data = $data;
 
 		$result = parent::save();
 
@@ -298,9 +298,9 @@ class component_image extends component_media_common implements component_media_
 				$this->section_tipo
 			);
 
-			$dato			= $component->get_dato();
-			$first_value	= !empty($dato) && is_array($dato)
-				? $dato[0]
+			$data			= $component->get_data();
+			$first_value	= !empty($data) && is_array($data)
+				? $data[0]
 				: null;
 
 			// used to change the IRI of the image, don't use it as dataframe section
@@ -345,13 +345,13 @@ class component_image extends component_media_common implements component_media_
 
 		$modified_uploaded_file = null;
 
-		$dato = $this->get_dato();
-		if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
+		$data = $this->get_data();
+		if (isset($data[0]) && isset($data[0]->modified_normalized_name)) {
 
 			$modified_quality	= $this->get_modified_quality();
 
 			// original file like 'memoria_oral_presentacion.mov'
-			$modified_uploaded_file	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
+			$modified_uploaded_file	= $this->get_media_path_dir($modified_quality) .'/'. $data[0]->modified_normalized_name;
 		}
 
 		return $modified_uploaded_file;
@@ -620,24 +620,24 @@ class component_image extends component_media_common implements component_media_
 				$key = 0;
 
 			// update upload file info
-				$dato = $this->get_dato();
-				if (!isset($dato[$key]) || !is_object($dato[$key])) {
-					$dato[$key] = new stdClass();
+				$data = $this->get_data();
+				if (!isset($data[$key]) || !is_object($data[$key])) {
+					$data[$key] = new stdClass();
 				}
 
 			if ($this->quality===$this->get_original_quality()) {
-				$dato[$key]->original_file_name			= $original_file_name;
-				$dato[$key]->original_normalized_name	= $original_normalized_name;
-				$dato[$key]->original_upload_date		= component_date::get_date_now();
+				$data[$key]->original_file_name			= $original_file_name;
+				$data[$key]->original_normalized_name	= $original_normalized_name;
+				$data[$key]->original_upload_date		= component_date::get_date_now();
 
-				$this->set_dato($dato);
+				$this->set_data($data);
 
 			}else if ($this->quality===$this->get_modified_quality()) {
-				$dato[$key]->modified_file_name			= $original_file_name;
-				$dato[$key]->modified_normalized_name	= $original_normalized_name;
-				$dato[$key]->modified_upload_date		= component_date::get_date_now();
+				$data[$key]->modified_file_name			= $original_file_name;
+				$data[$key]->modified_normalized_name	= $original_normalized_name;
+				$data[$key]->modified_upload_date		= component_date::get_date_now();
 
-				$this->set_dato($dato);
+				$this->set_data($data);
 			}
 
 		// debug
