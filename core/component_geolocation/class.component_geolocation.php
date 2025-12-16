@@ -285,13 +285,13 @@ class component_geolocation extends component_common {
 	public function regenerate_component() : bool {
 
 		// Force loads dato always !IMPORTANT
-		$dato = $this->get_dato();
+		$data = $this->get_data();
 
-		if (!is_null($dato) && !is_array($dato)) {
-			$this->set_dato([$dato]);
+		if (!is_null($data) && !is_array($data)) {
+			$this->set_data([$data]);
 			debug_log(__METHOD__
-				. " Changed dato format " . PHP_EOL
-				. to_string($dato)
+				. " Changed data format " . PHP_EOL
+				. to_string($data)
 				, logger::ERROR
 			);
 		}
@@ -312,12 +312,12 @@ class component_geolocation extends component_common {
 	*/
 	public function get_latitude() : ?float {
 
-		$dato = $this->get_dato();
-		if (empty($dato) || empty($dato[0]) ) {
+		$data = $this->get_data();
+		if (empty($data) || empty($data[0]) ) {
 			return null;
 		}
 
-		$dato			= $dato[0];
+		$data			= $data[0];
 		$data_latitude	= $dato->lat ?? null;
 
 		if(empty($data_latitude)){
@@ -339,12 +339,12 @@ class component_geolocation extends component_common {
 	*/
 	public function get_longitude() : ?float {
 
-		$dato = $this->get_dato();
-		if (empty($dato) || empty($dato[0]) ) {
+		$data = $this->get_data();
+		if (empty($data) || empty($data[0]) ) {
 			return null;
 		}
 
-		$dato			= $dato[0];
+		$data			= $data[0];
 		$data_longitude	= $dato->lon ?? null;
 
 		if(empty($data_longitude)){
@@ -369,13 +369,13 @@ class component_geolocation extends component_common {
 	*/
 	public function get_diffusion_value_socrata() : ?object {
 
-		$dato = $this->get_dato();
-		if (empty($dato) || empty($dato[0]) ) {
+		$data = $this->get_data();
+		if (empty($data) || empty($data[0]) ) {
 			return null;
 		}
 
-		$dato			= $dato[0];
-		$socrata_data	= 'POINT ('.$dato->lat.', '.$dato->lon.')';
+		$data			= $data[0];
+		$socrata_data	= 'POINT ('.$data->lat.', '.$data->lon.')';
 
 		# {
 		#   "type": "Point",
@@ -388,8 +388,8 @@ class component_geolocation extends component_common {
 		$geo_json_point = new stdClass();
 			$geo_json_point->type 		 = 'Point';
 			$geo_json_point->coordinates = [
-				floatval($dato->lon),
-				floatval($dato->lat)
+				floatval($data->lon),
+				floatval($data->lat)
 			];
 
 		#$point = new stdClass();
@@ -436,7 +436,7 @@ class component_geolocation extends component_common {
 	*/
 	public function get_diffusion_value_as_geojson() : ?string {
 
-		$dato = $this->get_dato(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
+		$dato = $this->get_dat(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
 
 		// select first
 		$value = $dato[0] ?? null;
