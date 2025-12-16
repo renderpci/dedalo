@@ -112,7 +112,7 @@ final class dd_component_text_area_api {
 			// 	$pseudo_locator->type	= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
 
 			// $ar_properties	= ['tag_id','type']; // properties to compare
-			// $removed		= $indexing_component->remove_locator_from_dato($pseudo_locator, $ar_properties);
+			// $removed		= $indexing_component->remove_locator_from_data($pseudo_locator, $ar_properties);
 			// if ($removed===true) {
 			// 	$indexing_component_current_dato = $indexing_component->get_dato();
 			// 	$total = count($indexing_component_original_dato) - count($indexing_component_current_dato);
