@@ -238,41 +238,41 @@ class ontology_node {
 	* Therefore, models are unique name that point to specific code scripts in Dédalo.
 	* section 			---> class.section.php / section.js / section.css
 	* component_portal 	---> class.componnet_portal.php / componnet_portal.js / componnet_portal.css
-	* @return string
+	* @return string|null $model
 	*/
-	public function get_model() : string {
+	public function get_model() : ?string {
 
 		$this->load_data();
 
 		if (empty($this->tipo)) {
-			return '';
+			return null;
 		}
 
 		// forced models in v6 (while we are using structure v5)
-			switch ($this->tipo) {
-				case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
-					return 'component_radio_button';
-				case DEDALO_USER_PROFILE_TIPO:
-					return 'component_select';
-				case 'dd546': // activity where
-					return 'component_input_text';
-				case 'dd545': // activity what
-					return 'component_select';
-				case 'dd544': // activity ip
-					return 'component_input_text';
-				case 'dd551': // activity 'dato'
-					return 'component_json';
-				case 'hierarchy48': // hierarchy 'order'
-					return 'component_number';
-				case 'dd1067': // tools component_security_tools
-					return 'component_check_box';
-				// temporal 6.4.5
-					case 'hierarchy45': // hierarchy main: General term
-					case 'hierarchy59': // hierarchy main: General term model
-					// case 'hierarchy49':
-					// case 'ontology14';
-						return 'component_portal';
-			}
+		switch ($this->tipo) {
+			case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
+				return 'component_radio_button';
+			case DEDALO_USER_PROFILE_TIPO:
+				return 'component_select';
+			case 'dd546': // activity where
+				return 'component_input_text';
+			case 'dd545': // activity what
+				return 'component_select';
+			case 'dd544': // activity ip
+				return 'component_input_text';
+			case 'dd551': // activity 'data'
+				return 'component_json';
+			case 'hierarchy48': // hierarchy 'order'
+				return 'component_number';
+			case 'dd1067': // tools component_security_tools
+				return 'component_check_box';
+			// temporal 6.4.5
+				case 'hierarchy45': // hierarchy main: General term
+				case 'hierarchy59': // hierarchy main: General term model
+				// case 'hierarchy49':
+				// case 'ontology14';
+					return 'component_portal';
+		}
 
 		// new model resolution with fallback
 		$model = $this->data->model ?? null;
@@ -297,7 +297,7 @@ class ontology_node {
 					return 'area_maintenance'; // temporal !
 				}
 
-				return '';
+				return null;
 			}
 
 			$model = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -318,7 +318,7 @@ class ontology_node {
 					. ' tipo: ' . to_string($this->tipo)
 					, logger::ERROR
 				);
-				return '';
+				return null;
 			}
 		}//end if (empty($model))
 
@@ -643,11 +643,11 @@ class ontology_node {
 			return false;
 		}
 
-		$values = (array)$this->get_data() ?? [];
+		$values = $this->data;
 
 		// Safe add TLD
-		$values['tld'] = get_tld_from_tipo($tipo);
-		if (empty($values['tld'])) {
+		$values->tld = get_tld_from_tipo($tipo);
+		if (empty($values->tld)) {
 			return false;
 		}
 
