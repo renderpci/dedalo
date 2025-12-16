@@ -593,74 +593,75 @@ class component_date extends component_common {
 	public static function resolve_query_object_sql(object $query_object) : object {
 
 		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-			$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-			if (empty($query_object->q) && empty($query_object->q_operator)) {
-				return $query_object;
-			}
+		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		if (empty($query_object->q) && empty($query_object->q_operator)) {
+			return $query_object;
+		}
 		
 		// column
-			$column = section_record_data::get_column_name( get_called_class() );
+		$column = section_record_data::get_column_name( get_called_class() );
 		
-		//table_alias
-			$table_alias	= $query_object->table_alias;
+		// table_alias
+		$table_alias = $query_object->table_alias;
 
 		// q_object
-			$q_object = $query_object->q ?? null;
+		$q_object = $query_object->q ?? null;
 
 		// q plain text case
-			if (!is_object($q_object)) {
-				// Check for operators and date elements
+		if (!is_object($q_object)) {
+			// Check for operators and date elements
 
-				// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
-				#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
-				preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", trim($query_object->q), $matches);
-				if (isset($matches[0])) {
+			// Note that here the order is inverse: YY-MM-DD (in component is DD-MM-YY)
+			#preg_match("/^(>=|<=|>|<)?([0-9]{1,10})(-(1[0-2]|[1-9]))?(-(3[01]|[12][0-9]|[1-9]))?$/", $query_object->q, $matches);
+			preg_match("/^(\W{1,2})?([0-9]{1,10})-?([0-9]{1,2})?-?([0-9]{1,2})?$/", trim($query_object->q), $matches);
+			if (isset($matches[0])) {
 
-					$key_op		= 1;
-					$key_year	= 2;
-					$key_month	= 3;
-					$key_day	= 4;
+				$key_op		= 1;
+				$key_year	= 2;
+				$key_month	= 3;
+				$key_day	= 4;
 
-					$op = $matches[$key_op];
+				$op = $matches[$key_op];
 
-					$base_date = new stdClass();
-						$base_date->year = $matches[$key_year];
-						if(!empty($matches[$key_month]) && $matches[$key_month]<=12){
-							$base_date->month = $matches[$key_month];
-							if (!empty($matches[$key_day]) && $matches[$key_day]<=31) {
-								$base_date->day = $matches[$key_day];
-							}
+				$base_date = new stdClass();
+					$base_date->year = $matches[$key_year];
+					if(!empty($matches[$key_month]) && $matches[$key_month]<=12){
+						$base_date->month = $matches[$key_month];
+						if (!empty($matches[$key_day]) && $matches[$key_day]<=31) {
+							$base_date->day = $matches[$key_day];
 						}
+					}
 
-					$dd_date	= new dd_date($base_date);
-					$time		= dd_date::convert_date_to_seconds($dd_date);
-					$dd_date->set_time($time);
-					$dd_date->set_op($op);
+				$dd_date	= new dd_date($base_date);
+				$time		= dd_date::convert_date_to_seconds($dd_date);
+				$dd_date->set_time($time);
+				$dd_date->set_op($op);
 
-					// Encapsulate object in start property to follow new date format (2018-09-19)
-					$date_default_obj = new stdClass();
-						$date_default_obj->start = $dd_date;
+				// Encapsulate object in start property to follow new date format (2018-09-19)
+				$date_default_obj = new stdClass();
+					$date_default_obj->start = $dd_date;
 
-					// Replace q_object
-					$q_object = $date_default_obj;
+				// Replace q_object
+				$q_object = $date_default_obj;
 
-				}else if (empty($query_object->q_operator)) {
+			}else if (empty($query_object->q_operator)) {
 
-					$query_object->operator = '=';
-					$query_object->q_parsed	= "'INVALID VALUE!'";
+				$query_object->operator = '=';
+				$query_object->q_parsed	= "'INVALID VALUE!'";
 
-					return $query_object;
-				}
+				return $query_object;
 			}
+		}
+
 		// short vars
-			$q_operator						= isset($query_object->q_operator) ? $query_object->q_operator : null;
-			$operator						= !empty($q_operator) ? trim($q_operator) : '=';
-			$component_tipo					= end($query_object->path)->component_tipo;
-			$ontology_node					= ontology_node::get_instance($component_tipo);
-			$properties						= $ontology_node->get_properties();
-			$date_mode						= isset($properties->date_mode) ? $properties->date_mode : 'date';
-			$query_object->data_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
-			$query_object->type				= 'jsonb';
+		$q_operator					= isset($query_object->q_operator) ? $query_object->q_operator : null;
+		$operator					= !empty($q_operator) ? trim($q_operator) : '=';
+		$component_tipo				= end($query_object->path)->component_tipo;
+		$ontology_node				= ontology_node::get_instance($component_tipo);
+		$properties					= $ontology_node->get_properties();
+		$date_mode					= isset($properties->date_mode) ? $properties->date_mode : 'date';
+		$query_object->data_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
+		$query_object->type			= 'jsonb';
 
 		// shared resolution functions
 			$is_empty = function(object $query_object) : object {
@@ -1051,18 +1052,17 @@ class component_date extends component_common {
 				break;
 		}//end switch ($date_mode)
 
-
 		// catch non defined $final_query_object cases
-			if (!isset($final_query_object)) {
-				$final_query_object = $query_object;
-				debug_log(__METHOD__
-					. " Unable to resolve current query_object. Using original query_object to continue " . PHP_EOL
-					.' date_mode: ' . $date_mode . PHP_EOL
-					.' operator: '  . $operator . PHP_EOL
-					.' query_object: ' . to_string($query_object)
-					, logger::ERROR
-				);
-			}
+		if (!isset($final_query_object)) {
+			$final_query_object = $query_object;
+			debug_log(__METHOD__
+				. " Unable to resolve current query_object. Using original query_object to continue " . PHP_EOL
+				.' date_mode: ' . $date_mode . PHP_EOL
+				.' operator: '  . $operator . PHP_EOL
+				.' query_object: ' . to_string($query_object)
+				, logger::ERROR
+			);
+		}
 
 
 		return $final_query_object;

@@ -36,6 +36,7 @@ view_mini_portal.render = async function(self) {
 			caller	: self,
 			view	: children_view
 		})
+	
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 

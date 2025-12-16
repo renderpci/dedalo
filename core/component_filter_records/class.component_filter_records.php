@@ -10,6 +10,8 @@ class component_filter_records extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
 
+
+
 	/**
 	* GET DATO
 	* @return array|null $dato
