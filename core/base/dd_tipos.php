@@ -4,7 +4,6 @@
 // root tipo
 define('DEDALO_ROOT_TIPO',								'dd1');
 define('DEDALO_THESAURUS_TIPO',							'dd100');
-define('DEDALO_TESAURO_TIPO',							DEDALO_THESAURUS_TIPO); // legacy Ontology dd_edit
 define('DEDALO_MEDIA_AREA_TIPO',						'rsc1');
 define('DEDALO_AREA_ROOT_TIPO',							'dd242');
 define('DEDALO_AREA_MAINTENANCE_TIPO',					'dd88');
