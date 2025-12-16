@@ -151,25 +151,13 @@ const get_content_value = (i, current_value, self) => {
 		const click_handler = (e) => {
 			e.stopPropagation()
 		}
-		input.addEventListener('click', click_handler)
-	
-		// keyup event
-		// const input_keyup_handler = (e) => {
-		// 	keyup_handler(e, i, self)
-		// }
-		// input.addEventListener('keyup', input_keyup_handler)		
+		input.addEventListener('click', click_handler)	
 	
 		// change event
-		const change_handler = (e) => {
-			// validate
-			const validated = self.verify_email(input.value)
-			ui.component.error(!validated, input)
-			if (!validated) {
-				return false
-			}
-			self.change_handler(e, i, self)
+		const input_change_handler = (e) => {
+			change_handler(e, i, self)
 		}
-		input.addEventListener('change', change_handler)
+		input.addEventListener('change', input_change_handler)
 
 	// add buttons to the email row
 		// button_remove
@@ -382,22 +370,34 @@ export const get_buttons = (self) => {
 * @return bool
 */
 export const change_handler = function(e, key, self) {
-	e.preventDefault()
 
 	const input_value = e.target.value || ''
 
-	// change data
-	const changed_data_item = Object.freeze({
-		action	: 'update',
-		key		: key,
-		value	: {
-			value	: input_value,
-			lang	: self.lang
-		}
-	})
+	const data			= self.data || {}
+	const value			= data.value || []
+	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
 
-	// fix instance changed_data
-	self.set_changed_data(changed_data_item)
+	// validate
+	const validated = self.verify_email(input_value)
+	if (!validated) {
+		ui.component.error(!validated, e.target)
+		return false
+	}
+
+	item_value.value = input_value
+
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: item_value
+		})
+
+	// change_value (save data)
+		self.change_value({
+			changed_data	: [changed_data_item],
+			refresh			: false
+		})
 
 
 	return true
