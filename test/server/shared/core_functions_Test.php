@@ -1901,13 +1901,13 @@ final class core_functions_test extends TestCase {
 
 
 	/**
-	* TEST_is_empty_dato
+	* TEST_is_empty
 	* @return void
 	*/
-	public function test_is_empty_dato() {
+	public function test_is_empty() {
 
 		// 1 true
-		$result = is_empty_dato(
+		$result = is_empty(
 			''
 		);
 
@@ -1926,7 +1926,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// 2 true
-		$result = is_empty_dato(
+		$result = is_empty(
 			[]
 		);
 		$eq = $result===true;
@@ -1937,7 +1937,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// 3 true
-		$result = is_empty_dato(
+		$result = is_empty(
 			[null]
 		);
 		$eq = $result===true;
@@ -1948,7 +1948,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// 4 true
-		$result = is_empty_dato(
+		$result = is_empty(
 			['']
 		);
 		$eq = $result===true;
@@ -1959,7 +1959,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// 5 false
-		$result = is_empty_dato(
+		$result = is_empty(
 			[null,'a']
 		);
 		$eq = $result===false;
@@ -1970,7 +1970,7 @@ final class core_functions_test extends TestCase {
 		);
 
 		// 6 false
-		$result = is_empty_dato(
+		$result = is_empty(
 			0.07
 		);
 		$eq = $result===false;
@@ -1979,7 +1979,7 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
-	}//end test_is_empty_dato
+	}//end test_is_empty
 
 
 
