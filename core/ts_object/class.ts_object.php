@@ -152,28 +152,94 @@ class ts_object {
 	* Iterates locators extracting the child data of each one
 	* @see get_data
 	* @param array $locators
-	* @param string $area_model='area_thesaurus'
+	* @param string $area_model
+	*   Default 'area_thesaurus' (currently unused, reserved for future functionality)
+	* @param object|null $ts_object_options
+	*   Optional ts_object options (will be cloned to avoid mutation)
 	* @return array $child_data
 	*/
 	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
 
 		$children_data = [];
 
-		foreach ($locators as $locator) {
+		$first_locator = $locators[0] ?? null;
+		if (empty($first_locator)) {
+			return $children_data;
+		}
 
-			$section_id		= $locator->section_id;
-			$section_tipo	= $locator->section_tipo;
+		// Validate first locator has required properties
+		if (!isset($first_locator->section_tipo)) {
+			debug_log(__METHOD__
+				. " Invalid first locator: missing section_tipo property" . PHP_EOL
+				. ' locator: ' . to_string($first_locator)
+				, logger::ERROR
+			);
+			return $children_data;
+		}
 
+		// Get component order.
+		// To prevent calculate the component order for each locator,
+		// we assume that all locators are from the same section or compatible sections
+		$component_order_tipo = ts_object::get_component_order_tipo($first_locator->section_tipo);
+		
+		// Validate component_order_tipo before using it
+		if (empty($component_order_tipo)) {
+			debug_log(__METHOD__
+				. " Unable to get component_order_tipo for section: {$first_locator->section_tipo}" . PHP_EOL
+				. ' Skipping order assignment for all locators'
+				, logger::WARNING
+			);
+			// Continue without order - set to null for all items
+			$component_order_model = null;
+		} else {
+			$component_order_model = ontology_node::get_model_by_tipo($component_order_tipo);
+		}
+
+		foreach ($locators as $key => $locator) {
+
+			// Validate locator has required properties
+			if (!isset($locator->section_id) || !isset($locator->section_tipo)) {
+				debug_log(__METHOD__
+					. " Invalid locator at index $key: missing required properties" . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$section_id   = $locator->section_id;
+			$section_tipo = $locator->section_tipo;
+
+			// Clone ts_object_options to avoid mutating the original object
 			$ts_options = empty($ts_object_options)
 				? new stdClass()
-				: $ts_object_options;
+				: clone $ts_object_options;
 
 			// Do not set order here because could overwrite the custom order !
 			// set order of locator in the ts_options
 			// $ts_options->order = $key+1;
 
-			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_options );
-			$child_object	= $ts_object->get_data();
+			// Set order from component number value
+			if (!empty($component_order_model) && !empty($component_order_tipo)) {
+				$component = component_common::get_instance(
+					$component_order_model,
+					$component_order_tipo,
+					$locator->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$locator->section_tipo
+				);
+				$data = $component->get_data();
+				$order = $data[0]->value ?? null;
+				$ts_options->order = $order;
+			} else {
+				// No order component available
+				$ts_options->order = null;
+			}
+
+			// Create ts_object
+			$ts_object    = new ts_object( $section_id, $section_tipo, $ts_options );
+			$child_object = $ts_object->get_data();
 
 			if (empty($child_object->ar_elements)) {
 				$tld = get_tld_from_tipo($locator->section_tipo);
