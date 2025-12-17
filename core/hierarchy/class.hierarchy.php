@@ -716,51 +716,32 @@ class hierarchy extends ontology {
 	* get result section_id
 	* @param $tld
 	*	tld like 'es'
-	* @return object $response
+	* @return object|null $row
 	*/
-	public static function get_hierarchy_by_tld( string $tld ) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-			$response->errors	= [];
+	public static function get_hierarchy_by_tld( string $tld ) : ?object {
 
 		// short vars
 			$table			= self::$main_table; // expected 'matrix_hierarchy_main'
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+		
+			// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)	
+			$tld 			= trim(strtolower($tld));
+			$safe_tld 		= safe_tld( $tld );
+			$q				= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
 
-		$sql = '
-			SELECT section_id
-			FROM "'.$table.'"
-			WHERE
-			section_tipo = \''.$section_tipo.'\' AND
-			f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
-		';
-		// debug info
-		debug_log(__METHOD__
-			." Executing DB query ".to_string($sql)
-			, logger::WARNING
-		);
+		// SQL query	
+			$sql = 'SELECT section_id, section_tipo' . PHP_EOL;
+			$sql .= 'FROM '.$table . PHP_EOL;
+			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
+			$sql .= 'string @> $2';
+			$sql .= 'LIMIT 1 ;';
 
-		$result = pg_query(DBi::_getConnection(), $sql);
-		if ($result===false) {
-			$msg = " Error on db execution (get_hierarchy_by_tld): ".pg_last_error(DBi::_getConnection());
-			debug_log(__METHOD__
-				. $msg
-				, logger::ERROR
-			);
-			$response->errors[] = $msg;
+		// search
+			$result = matrix_db_manager::exec_search($sql, [$section_tipo, $q]);
+			$row 	= pg_fetch_object($result) ?? null;
+	
 
-			return $response; // return error here !
-		}
-		$rows	= pg_fetch_assoc($result);
-		$value	= !empty($rows) ? reset($rows) : null;
-
-		$response->result	= $value ?? null;
-		$response->msg		= 'OK. Request done';
-
-
-		return $response;
+		return $row;
 	}//end get_hierarchy_by_tld
 
 
