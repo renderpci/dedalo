@@ -663,7 +663,7 @@ class tool_import_dedalo_csv extends tool_common {
 								}
 
 							// component save
-								$component->set_dato($conformed_value);
+								$component->set_data($conformed_value);
 								$component->import_save();
 							break;
 
@@ -692,7 +692,7 @@ class tool_import_dedalo_csv extends tool_common {
 								}
 
 							// component save
-								$component->set_dato($conformed_value);
+								$component->set_data($conformed_value);
 								$component->import_save();
 							break;
 
@@ -710,7 +710,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 									if (strpos($v_key, 'lg-')===0) {
 										$component->set_lang( $v_key );
-										$component->set_dato( $v_value );
+										$component->set_data( $v_value );
 										$component->import_save();
 									}else{
 										debug_log(__METHOD__
@@ -757,7 +757,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 										// Removed direct call
 										// unified with API calls with changed_data_item object
-											// $component->set_dato( $conformed_value );
+											// $component->set_data( $conformed_value );
 											// $component->observable_dato = ($component->model === 'component_relation_related')
 											// 	? $component->get_dato_with_references()
 											// 	: $conformed_value;
