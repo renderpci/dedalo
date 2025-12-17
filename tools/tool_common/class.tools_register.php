@@ -983,15 +983,17 @@ class tools_register {
 		// search
 			$config_search	= search::get_instance( $sqo_config_tool_active );
 			$db_result		= $config_search->search();
+			$row_count 		= $db_result->row_count();	
 
 		// map result as ar_config
 			$ar_config = [];
-			foreach( $db_result as $record ) {
+			if($row_count > 0) {
+				foreach( $db_result as $record ) {
 
-				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
-				$section_record->set_data( $record );
+					$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+					$section_record->set_data( $record );
 
-				// name
+					// name
 					$model		= ontology_node::get_model_by_tipo($name_tipo,true);
 					$component	= component_common::get_instance(
 						$model,
@@ -1004,7 +1006,7 @@ class tools_register {
 					$data	= $component->get_data_lang();
 					$name	= $data[0]->value ?? null;
 
-				// config
+					// config
 					$model		= ontology_node::get_model_by_tipo($config_tipo,true);
 					$component	= component_common::get_instance(
 						$model,
@@ -1017,12 +1019,13 @@ class tools_register {
 					$data	= $component->get_data_lang();
 					$config	= $data[0]->value ?? null;
 
-				$value = (object)[
-					'name'		=> $name,
-					'config'	=> $config
-				];
+					$value = (object)[
+						'name'		=> $name,
+						'config'	=> $config
+					];
 
-				$ar_config[] = $value;
+					$ar_config[] = $value;
+				}
 			}
 
 		// cache. save the result into the cache
@@ -1060,11 +1063,10 @@ class tools_register {
 			}');
 
 		// search
-			$config_search	= search::get_instance($sqo_config_tool_active);
-			$db_result	= $config_search->search();
+			$config_search = search::get_instance($sqo_config_tool_active);
+			$db_result = $config_search->search();
 		
-		// map result as ar_config
-			
+		// map result as ar_config			
 			foreach ($db_result as $record) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
@@ -1080,7 +1082,7 @@ class tools_register {
 						, logger::ERROR
 					);
 				}else{
-					$component	= component_common::get_instance(
+					$component = component_common::get_instance(
 						$model,
 						$name_tipo,
 						$record->section_id,
@@ -1102,7 +1104,7 @@ class tools_register {
 						, logger::ERROR
 					);
 				}else{
-					$component	= component_common::get_instance(
+					$component = component_common::get_instance(
 						$model,
 						$config_tipo,
 						$record->section_id,
