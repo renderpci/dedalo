@@ -163,26 +163,78 @@ class matrix_db_manager {
 
 		// Optimized single-query approach with advisory lock
 		// The lock is automatically released when the transaction ends (COMMIT or ROLLBACK)
+		
+		// $sql = "
+		// 	WITH locked AS (
+		// 		SELECT pg_advisory_xact_lock(hashtext($1))
+		// 	),
+		// 	updated_counter AS (
+		// 		INSERT INTO $counter_table (tipo, value)
+		// 		VALUES ($1, 1)
+		// 		ON CONFLICT (tipo) DO UPDATE
+		// 		SET value = $counter_table.value + 1
+		// 		RETURNING value
+		// 	)
+		// 	INSERT INTO $table (" . implode(', ', $columns) . ")
+		// 	SELECT " . implode(', ', $placeholders) . " FROM updated_counter
+		// 	RETURNING section_id;
+		// ";
+
+		// $result = pg_query_params($conn, $sql, $params);
+
+		// If the counter record is missing, it will initialize using the next available section_id
+		// from the section tipo.
+		// If the counter record exists, it will increment the existing value
 		$sql = "
 			WITH locked AS (
-				SELECT pg_advisory_xact_lock(hashtext($1))
+			 -- Keep the lock to prevent race conditions
+			 SELECT pg_advisory_xact_lock(hashtext($1))
+			),
+			-- Step 1: Calculate where the counter SHOULD start based on existing data
+			calc_start AS (
+			 SELECT COALESCE(MAX(section_id), 0) + 1 as next_start
+			 FROM $table
+			 WHERE section_tipo = $1
 			),
 			updated_counter AS (
-				INSERT INTO $counter_table (tipo, value)
-				VALUES ($1, 1)
-				ON CONFLICT (tipo) DO UPDATE
-				SET value = $counter_table.value + 1
-				RETURNING value
+			 INSERT INTO $counter_table (tipo, value)
+			 -- Step 2: Initialize with the calculated max value (safe fallback)
+			 SELECT $1, next_start FROM calc_start
+			 ON CONFLICT (tipo) 
+			 DO UPDATE
+			  -- Step 3: If the counter exists, ignore the calculation and just increment
+			  SET value = matrix_counter.value + 1
+			  RETURNING value
 			)
 			INSERT INTO $table (" . implode(', ', $columns) . ")
 			SELECT " . implode(', ', $placeholders) . " FROM updated_counter
 			RETURNING section_id;
-		";
+		";		
 
-		$result = pg_query_params($conn, $sql, $params);
+		// With prepared statement
+		$stmt_name = 'create_' . $table . '_' . md5(implode('_', $columns));
+		if (!isset(DBi::$prepared_statements[$stmt_name])) {
+			if (!pg_prepare(
+				$conn,
+				$stmt_name,
+				$sql
+			)) {
+				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+				return false;
+			}
+			// Set the statement as existing.
+			DBi::$prepared_statements[$stmt_name] = true;
+		}
+		$result = pg_execute($conn, $stmt_name, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__ . " Query failed: " . pg_last_error($conn), logger::ERROR);
+			debug_log(__METHOD__ 
+				. " Query failed: " . pg_last_error($conn) . PHP_EOL
+				. " sql: " . to_string($sql) . PHP_EOL
+				. " params: " . json_encode($params, JSON_PRETTY_PRINT) . PHP_EOL
+				. " sql_debug: " . debug_prepared_statement($sql, $params, $conn)
+				, logger::ERROR
+			);
 			return false;
 		}
 
