@@ -231,14 +231,14 @@ class security {
 			$user_id = logged_user_id(); // from session
 			$component_security_access = security::get_user_security_access($user_id);
 
-		// data_access. is the first value of the result array if not empty
-			$data = !empty($component_security_access)
-				? ($component_security_access->get_data() ?? [])
+		// dato_access. is the first value of the result array if not empty
+			$dato = !empty($component_security_access)
+				? ($component_security_access->get_dato() ?? [])
 				: [];
 
 		// transforms to assoc array (fast for check if item exists)
 			$permissions_table = [];
-			foreach ($data as $item) {
+			foreach ($dato as $item) {
 				$permissions_key = $item->section_tipo.'_'.$item->tipo;
 				$permissions_table[$permissions_key] = $item->value;
 			}
@@ -346,13 +346,13 @@ class security {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$profile_data = $component_profile->get_data();
-			if (empty($profile_data)) {
+			$profile_dato = $component_profile->get_data();
+			if (empty($profile_dato)) {
 				return null;
 			}
 
 			// locator
-			$locator = $profile_data[0] ?? null;
+			$locator = $profile_dato[0] ?? null;
 
 			// Verify it's actually an object (locator)
 			if (!is_object($locator)) {
@@ -481,18 +481,18 @@ class security {
 					DEDALO_SECTION_USERS_TIPO
 				);
 
-				$security_administrator_data = $component_security_administrator->get_data();
+				$security_administrator_dato = $component_security_administrator->get_dato();
 
 				// empty user data case
-					if (empty($security_administrator_data)) {
+					if (empty($security_administrator_dato)) {
 						return false;
 					}
 
 				// locator data
-					$data = (int)$security_administrator_data[0]->section_id;
+					$dato = (int)$security_administrator_dato[0]->section_id;
 
 				// is_global_admin
-					$is_global_admin = ($data===1);
+					$is_global_admin = ($dato===1);
 			}
 
 
@@ -536,18 +536,18 @@ class security {
 					DEDALO_DATA_NOLAN,
 					DEDALO_SECTION_USERS_TIPO
 				);
-				$data = $component->get_data();
+				$dato = $component->get_dato();
 
 				// empty user data case
-					if (empty($data)) {
+					if (empty($dato)) {
 						return false;
 					}
 
 				// locator data
-					$data = (int)$data[0]->section_id;
+					$dato = (int)$dato[0]->section_id;
 
 				// is_developer
-					$is_developer = ($data===1);
+					$is_developer = ($dato===1);
 			}
 
 

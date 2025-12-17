@@ -32,17 +32,13 @@ view_default_list_number.render = async function(self, options) {
 	// short vars
 		const data			= self.data || {}
 		const value			= data.value || []
-
-	// Value as string
-		const value_string	= (value.length>0)
-			? value.map(item => item.value).join(self.context.fields_separator)
-			: ''
+		const value_string	= value.map(item => item.value).join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
-		})		
-		const click_handler = (e) => {
+		})
+		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
 
 			const wrapper_width	= wrapper.getBoundingClientRect().width
@@ -63,8 +59,7 @@ view_default_list_number.render = async function(self, options) {
 					}
 				})
 			}
-		}
-		wrapper.addEventListener('click', click_handler)
+		})
 
 
 	return wrapper

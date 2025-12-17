@@ -453,7 +453,67 @@ final class component_input_text_test extends TestCase {
 	}//end test_set_permissions
 
 
-	
+
+	/**
+	* TEST_SET_IS_LOADED_MATRIX_DATA
+	* @return void
+	*/
+	public function test_set_is_loaded_matrix_data() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->set_is_loaded_matrix_data(
+			true
+		);
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			$component->is_loaded_matrix_data===true,
+				'expected is_loaded_matrix_data do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' is_loaded_matrix_data: '.to_string($component->is_loaded_matrix_data)
+		);
+
+		$value = $component->set_is_loaded_matrix_data(
+			false
+		);
+
+		$this->assertTrue(
+			$component->is_loaded_matrix_data===false,
+				'expected is_loaded_matrix_data do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' is_loaded_matrix_data: '.to_string($component->is_loaded_matrix_data)
+		);
+	}//end test_set_is_loaded_matrix_data
+
+
+
+	/**
+	* TEST_get_is_loaded_matrix_data
+	* @return void
+	*/
+	public function test_get_is_loaded_matrix_data() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->get_is_loaded_matrix_data();
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+	}//end test_get_is_loaded_matrix_data
+
+
+
 	/**
 	* TEST_LOAD_STRUCTURE_DATA
 	* @return void

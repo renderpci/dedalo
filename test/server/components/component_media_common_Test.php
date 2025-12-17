@@ -2171,10 +2171,10 @@ final class component_media_common_test extends TestCase {
 
 
 	/**
-	* TEST_update_component_data_files_info
+	* TEST_update_component_dato_files_info
 	* @return void
 	*/
-	public function test_update_component_data_files_info() {
+	public function test_update_component_dato_files_info() {
 
 		// default dato
 		foreach (get_elements() as $element) {
@@ -2195,7 +2195,7 @@ final class component_media_common_test extends TestCase {
 				false
 			);
 
-			$result = $component->update_component_data_files_info();
+			$result = $component->update_component_dato_files_info();
 
 			$this->assertTrue(
 				gettype($result)==='boolean',
@@ -2203,7 +2203,7 @@ final class component_media_common_test extends TestCase {
 					. gettype($result)
 			);
 		}//end foreach (get_elements() as $element)
-	}//end test_update_component_data_files_info
+	}//end test_update_component_dato_files_info
 
 
 

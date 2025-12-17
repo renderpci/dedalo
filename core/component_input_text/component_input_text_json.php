@@ -63,8 +63,8 @@
 			case 'tm':
 				$value			= $this->get_list_value();
 				$fallback_value	= $this->is_empty_data( $value )
-					? $this->get_component_data_fallback()
-					: null;
+					? null
+					: $this->get_component_data_fallback();
 				break;
 
 			case 'search':
@@ -74,10 +74,10 @@
 
 			case 'edit':
 			default:
-				$value			= $this->get_data_lang();				
+				$value			= $this->get_data_lang();
 				$fallback_value	= $this->is_empty_data( $value )
-					? $this->get_component_data_fallback()
-					: null;
+					? null
+					: $this->get_component_data_fallback();
 				break;
 		}
 

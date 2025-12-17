@@ -31,10 +31,7 @@ view_text_list_number.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-
-	// Value as string
-		const value_string	= (value.length>0)
+		const value_string	= (data.value)
 			? value.map(item => item.value).join(self.context.fields_separator)
 			: ''
 

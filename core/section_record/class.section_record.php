@@ -16,8 +16,6 @@ class section_record {
  	public string|int $section_id;
 	// section_record_data class instance
 	protected object $data_instance;
-	// Exist this record in the database?
-	public bool $record_in_the_database;
 
 
 
@@ -48,6 +46,7 @@ class section_record {
 			$this->section_tipo	= $section_tipo;
 			$this->section_id	= $section_id;
 
+
 		// Initiate section_record_data instance.
 			// It's instanced once and handles all the section data database tasks.
 			$this->data_instance = section_record_data::get_instance(
@@ -55,6 +54,16 @@ class section_record {
 				$section_id
 			);
 	}//end get_instance
+
+
+
+	/**
+	* __DESTRUCT
+	* @return
+	*/
+	public function __destruct() {
+
+	}//end __destruct
 
 
 
@@ -73,30 +82,10 @@ class section_record {
 		// it returns the cached data without reconnecting to the database.
 		// All section instances with the same section_tipo and section_id values
 		// share the same cached instance of 'section_record_data', independent of the mode.
-		$result = $this->data_instance->read();
+		$this->data_instance->read();
 
-		// when load data and the record doesn't exists set the property 'exists' in the instance' to false
-		// if the record exists into the database set it as true.
-		$this->record_in_the_database = ( $result===null )
-			? false
-			: true;
-		
 		return true;
 	}//end load_data
-
-
-
-	public function exists_in_the_database() : bool {
-
-		if( isset($this->record_in_the_database) ){
-			return $this->record_in_the_database;
-		}
-
-		// force to load all data from database
-		$this->load_data();
-
-		return $this->record_in_the_database;
-	}
 
 
 
@@ -171,23 +160,6 @@ class section_record {
 
 		return $result;
 	}//end set_component_data
-
-
-	/**
-	 * SAVE
-	 * Update all section_record data into DB
-	 * Will save every column with current data
-	 * The save data will update the row as section record is.
-	 * - If the column is set as null the DB will delete it.
-	 * - If the column has change or delete any component, the update will set the column as is.
-	 * @return bool $result Boolean indicating whether the operation was successful
-	 */
-	public function save() : bool {
-
-		$result = $this->data_instance->save_data();
-
-		return $result;
-	}// end save
 
 
 
@@ -347,8 +319,6 @@ class section_record {
 			}
 			// Remove the instance and delete it from cache.
 			$this->data_instance->__destruct();
-			// change the status of the record, now doesn't exist into DB.
-			$this->record_in_the_database = false;
 
 		// 3. Remove this section record in linked sections and its own media
 			// inverse references. Remove all inverse references to this section
@@ -921,7 +891,7 @@ class section_record {
 		}
 
 		$section_record = section_record::get_instance( $section_tipo, $section_id );
-		$section_record->record_in_the_database = true;
+
 
 		return $section_record;
 	}//end create

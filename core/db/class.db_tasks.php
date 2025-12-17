@@ -33,9 +33,7 @@ class db_tasks {
 
 			// skip tables
 			$ar_skip_tables = [
-				'session_data',
-				'matrix_counter',
-				'matrix_counter_dd',
+				'session_data'
 			];
 
 			// Find and iterate all db tables

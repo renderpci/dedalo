@@ -92,7 +92,7 @@ const get_content_data = async function(self) {
 		}
 
 		// tld from hierarchy6 - component_input_text - TLD
-		const tld			= hierarchy_data.value[0].value;
+		const tld			= hierarchy_data.value[0];
 		const section_id	= self.caller.data?.value?.[0]?.section_id;
 
 		// Calculate info based on mode

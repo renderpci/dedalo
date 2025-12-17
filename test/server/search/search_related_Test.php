@@ -35,10 +35,10 @@ final class search_related_test extends TestCase {
 
 
 	/**
-	* TEST_parse_sql_query
+	* TEST_parse_search_query_object
 	* @return void
 	*/
-	public function test_parse_sql_query() {
+	public function test_parse_search_query_object() {
 
 		$sqo = json_decode('
 			{
@@ -52,6 +52,7 @@ final class search_related_test extends TestCase {
 			    "offset": false,
 			    "full_count": false,
 			    "order": null,
+			    "order_custom": null,
 			    "filter_by_locators": [
 			        {
 			            "section_tipo": "dd922",
@@ -71,7 +72,7 @@ final class search_related_test extends TestCase {
 		$search = search::get_instance(
 			$sqo // object sqo
 		);
-		$result = $search->parse_sql_query(
+		$result = $search->parse_search_query_object(
 			false
 		);
 
@@ -89,7 +90,7 @@ final class search_related_test extends TestCase {
 				. 'result: ' . to_string($result) . PHP_EOL
 				. 'sqo: ' . to_string($sqo)
 		);
-	}//end test_parse_sql_query
+	}//end test_parse_search_query_object
 
 
 

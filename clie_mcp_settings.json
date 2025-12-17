@@ -1,7 +1,0 @@
-{
-  "servers": {
-    "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
-      "directory": "/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/mcp-fileserver"
-    }
-  }
-}

@@ -156,12 +156,12 @@ class tool_common {
 			if (empty($tool_object)) {
 				debug_log(__METHOD__
 					. " Error. Invalid tool_object. Unable to continue !  " . PHP_EOL
-					. ' name: '.to_string($name) .PHP_EOL
-					// . ' component_tipo: '.to_string($component_tipo) .PHP_EOL
+					. ' model: '.to_string($model) .PHP_EOL
+					. ' component_tipo: '.to_string($component_tipo) .PHP_EOL
 					. ' section_tipo: '.to_string($this->section_tipo) .PHP_EOL
 					. ' section_id: '.to_string($this->section_id) .PHP_EOL
 					. ' tool name: '.to_string($name) .PHP_EOL
-					. ' tool_object: ' .json_encode($tool_object)
+					. ' dato: ' .json_encode($simple_tool_obj_data)
 					, logger::ERROR
 				);
 			}
@@ -195,9 +195,9 @@ class tool_common {
 				return $el->lang===DEDALO_APPLICATION_LANG;
 			});
 			$description = is_object($tool_description_object) && !empty($tool_description_object->value)
-				? $tool_description_object->value
+				? $tool_description_object->value[0]
 				: (is_object($ar_description[0]->value)
-					? ($ar_description->value ?? null)
+					? ($ar_description[0]->value ?? null)
 					: null);
 
 		// labels. take care of empty objects like '{}'
@@ -487,66 +487,63 @@ class tool_common {
 			if(!isset($all_registered_tools_records)) {
 				$all_registered_tools_records = tool_common::get_active_tools();
 			}
-		
-			// get all tools config sections
+		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
 		// get the simple_tool_object
-			if($all_registered_tools_records) {
-				foreach ($all_registered_tools_records as $record) {
+			foreach ($all_registered_tools_records as $record) {
 
-					$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
-					$section_record->set_data( $record );
+				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record->set_data( $record );
 
-					// simple tool object 'dd1353'
-					$component_tipo	= 'dd1353';
-					$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
-						$model,
-						$component_tipo,
-						$record->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$record->section_tipo
+				// simple tool object 'dd1353'
+				$component_tipo	= 'dd1353';
+				$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$record->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$record->section_tipo
+				);
+				$data = $component->get_data_lang();
+				$current_value = $data[0]->value ?? null;
+				if (empty($current_value)) {
+					debug_log(__METHOD__
+						." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
+						.' model: ' . to_string($model)
+						, logger::WARNING
 					);
-					$data = $component->get_data_lang();
-					$current_value = $data[0]->value ?? null;
-					if (empty($current_value)) {
+					continue;
+				}
+				// append config
+					$current_config	= array_find($ar_config, function($el) use($current_value) {
+						return $el->name===$current_value->name;
+					});
+
+					if(!is_object($current_config)){
+						$ar_config		= tools_register::get_all_default_config_tool_client();
+						$current_config	= array_find($ar_config, function($el) use($current_value) {
+							return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
+						});
+					}
+
+					if(!is_object($current_config)){
 						debug_log(__METHOD__
-							." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
-							.' model: ' . to_string($model)
-							, logger::WARNING
+							. " Ignored bad config " . PHP_EOL
+							. to_string($current_config)
+							, logger::ERROR
 						);
 						continue;
 					}
-					// append config
-						$current_config	= array_find($ar_config, function($el) use($current_value) {
-							return $el->name===$current_value->name;
-						});
 
-						if(!is_object($current_config)){
-							$ar_config		= tools_register::get_all_default_config_tool_client();
-							$current_config	= array_find($ar_config, function($el) use($current_value) {
-								return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
-							});
-						}
+					$current_value->config = is_object($current_config)
+						? $current_config->config
+						: null;
 
-						if(!is_object($current_config)){
-							debug_log(__METHOD__
-								. " Ignored bad config " . PHP_EOL
-								. to_string($current_config)
-								, logger::ERROR
-							);
-							continue;
-						}
-
-						$current_value->config = is_object($current_config)
-							? $current_config->config
-							: null;
-
-					$registered_tools[] = $current_value;
-				}//end foreach ($all_registered_tools_records as $record)
-			}
+				$registered_tools[] = $current_value;
+			}//end foreach ($all_registered_tools_records as $record)
 
 		// cache
 			if ($use_cache===true) {
