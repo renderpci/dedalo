@@ -261,7 +261,7 @@ class ts_object {
 
 	/**
 	* GET_DATA
-	* @return object $child_data
+ 	* @return object $child_data
 	*/
 	public function get_data() : object {
 		// $start_time=start_time();
@@ -397,8 +397,8 @@ class ts_object {
 						// get the data when the component is not a relation_index
 						// relation index get full data when get_dato() is called
 						// but this component needs a pagination data
-						$dato = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
-							? $component->get_dato()
+						$component_data = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
+							? ($component->get_data_lang() ?? [])
 							: [];
 
 					// re-format dato in some cases:
@@ -409,16 +409,16 @@ class ts_object {
 								break;
 
 							case ($model_name==='component_autocomplete_hi' || $model_name==='component_portal'):
-								if (!empty($dato)) {
+								if (!empty($component_data)) {
 									$values = [];
-									foreach ($dato as $current_locator) {
+									foreach ($component_data as $current_locator) {
 										$values[] = ts_object::get_term_by_locator(
 											$current_locator,
 											DEDALO_DATA_LANG,
 											true
 										);
 									}
-									$dato = $values;
+									$component_data = $values;
 								}
 								break;
 
@@ -428,7 +428,7 @@ class ts_object {
 								if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
 									$component_rel = $component->get_references(); //$component->relation_type_rel
 									#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
-									$dato = array_merge($dato, $component_rel);
+									$component_data = array_merge($component_data, $component_rel);
 								}
 								break;
 
@@ -439,7 +439,7 @@ class ts_object {
 									? $component->get_url() . '?' . start_time()
 									: '';
 
-								$dato = $file_url;
+								$component_data = $file_url;
 								break;
 
 							default:
@@ -450,12 +450,15 @@ class ts_object {
 					// value
 						switch (true) {
 
-							case ($element_obj->type==='term'):
-								// term Is translatable and uses lang fallback here
-								$element_value = empty($dato)
-									? $component->extract_component_value_fallback()
-									: $dato;
+							case ($element_obj->type==='term'):								
 
+								// term Is translatable and uses lang fallback here								
+								$element_value = empty($component_data)
+									? $component->extract_component_value_fallback() // ! unverified
+									: ($component_data[0]->value ?? $component_data[0] ?? '');									
+
+								// (!) Note that this element (term) could be multiple (various items) and
+								// the value is cumulative added in $element_obj->value on each iteration
 								$element_obj->value = isset($element_obj->value)
 									? to_string($element_obj->value) . $separator . to_string($element_value)
 									: to_string($element_value);
@@ -469,9 +472,9 @@ class ts_object {
 
 								// ND element can change term value when 'descriptor' value is 'no' (locator of 'no')
 									if($current_object->icon==='ND') {
-										if (isset($dato[0])
-											&& isset($dato[0]->section_id)
-											&& (int)$dato[0]->section_id===2) {
+										if (isset($component_data[0])
+											&& isset($component_data[0]->section_id)
+											&& (int)$component_data[0]->section_id===2) {
 											ts_object::set_term_as_nd($data->ar_elements);
 											$data->is_descriptor = false;
 										}
@@ -507,8 +510,8 @@ class ts_object {
 								}else{
 
 									// dato check
-									$considered_empty_dato = (bool)is_empty_dato($dato);
-									if($considered_empty_dato===true) {
+									$considered_empty_data = (bool)is_empty($component_data);
+									if($considered_empty_data===true) {
 										continue 3; // Skip empty icon value links
 									}
 								}
@@ -520,10 +523,12 @@ class ts_object {
 								$data->children_tipo = $element_tipo;
 
 								// fix children dato
-								// $data->children = $dato;
+								// $data->children = $component_data;
 
 								// set has_descriptor_children value
-								$data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
+								$data->has_descriptor_children = empty($component_data)
+									? false
+									: $this->has_children_of_type($component_data, 'descriptor');
 								// $data->has_descriptor_children = component_relation_children::has_children_of_type(
 								// 	$this->section_id,
 								// 	$this->section_tipo,
@@ -537,7 +542,9 @@ class ts_object {
 									: 'button show children unactive';
 
 								// ND : No descriptors case
-								$has_children_of_type_result = $this->has_children_of_type($dato, 'nd');
+								$has_children_of_type_result = empty($component_data)
+									? false
+									: $this->has_children_of_type($component_data, 'nd');
 								// $has_children_of_type_result = component_relation_children::has_children_of_type(
 								// 	$this->section_id,
 								// 	$this->section_tipo,
@@ -557,7 +564,7 @@ class ts_object {
 								break;
 
 							default:
-								$element_obj->value = $dato;
+								$element_obj->value = $component_data;
 								break;
 						}//end switch (true) value
 
