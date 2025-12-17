@@ -387,6 +387,7 @@ class matrix_db_manager {
 		$param_index = 3;
 
 		// Single-pass loop: Validate columns, prepare values, and build SQL parts simultaneously.
+		$columns = ['section_id', 'section_tipo'];
 		foreach ($values as $column => $value) {
 			// Validate column name (Security/Guardrail)
 			if (!isset(self::$columns[$column])) {
@@ -409,7 +410,10 @@ class matrix_db_manager {
 
 			// Add the prepared value directly to the parameter array
 			$params[] = $safe_value;
-		}
+
+			// Column add
+			$columns[] = $column;
+		}		
 
 		// SQL Execution
 		// Construct the final query string
@@ -417,8 +421,25 @@ class matrix_db_manager {
 			. ' SET ' . implode(', ', $set_clauses)
 			. ' WHERE section_id = $1 AND section_tipo = $2';
 
-		// Execute using pg_query_params for performance and security (using the binary protocol)
+		// Execute using pg_query_params for performance and security
 		$result = pg_query_params($conn, $sql, $params);
+
+		// No record existing case.
+		// When the record doesn't exist in DB, perform a INSERT
+		if ($result && pg_affected_rows($result) == 0) {
+			
+			$placeholders = [];
+			foreach($columns as $key => $column){
+				$placeholders[] = '$'. ($key+1);
+			}
+
+			$sql_insert = 'INSERT INTO ' . $table . ' (' 
+				. implode(', ', $columns) . ')
+				VALUES (' 
+				. implode(', ', $placeholders) . ')';
+			
+			$result = pg_query_params($conn, $sql_insert, $params);
+		}
 
 		if (!$result) {
 			debug_log(
