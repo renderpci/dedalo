@@ -289,16 +289,16 @@ class component_pdf extends component_media_common implements component_media_in
 			$original_quality = $this->get_original_quality();
 			if ($this->quality===$original_quality) {
 				// update upload file info
-				$dato = $this->get_dato();
+				$data = $this->get_data();
 				$key = 0;
-				if (!isset($dato[$key]) || !is_object($dato[$key])) {
-					$dato[$key] = new stdClass();
+				if (!isset($data[$key]) || !is_object($data[$key])) {
+					$data[$key] = new stdClass();
 				}
-				$dato[$key]->original_file_name			= $original_file_name;
-				$dato[$key]->original_normalized_name	= $original_normalized_name;
-				$dato[$key]->original_upload_date		= component_date::get_date_now();
+				$data[$key]->original_file_name			= $original_file_name;
+				$data[$key]->original_normalized_name	= $original_normalized_name;
+				$data[$key]->original_upload_date		= component_date::get_date_now();
 
-				$this->set_dato($dato);
+				$this->set_data($data);
 			}
 
 		// debug
@@ -327,7 +327,7 @@ class component_pdf extends component_media_common implements component_media_in
 						$target_section_tipo,
 						false
 					);
-					$component_target_filename->set_dato( $original_file_name );
+					$component_target_filename->set_data( $original_file_name );
 					$component_target_filename->Save();
 				}
 
@@ -1245,9 +1245,14 @@ class component_pdf extends component_media_common implements component_media_in
 								strlen($text_from_pdf_response->original)>2
 								) {
 
+								// to_save_data_item
+								$to_save_data_item = new stdClass();
+								$to_save_data_item->value = $text_from_pdf_response->result;
+								$to_save_data_item->lang = DEDALO_DATA_LANG;
+
 								// set and save extracted text
-								$component_text_area->set_dato($text_from_pdf_response->result);
-								$component_text_area->Save();
+								$component_text_area->set_data([$to_save_data_item]);
+								$component_text_area->save();
 							}
 						}//end if (file_exists($target_pdf_path))
 					// }//end if (empty($component_text_area_value))
