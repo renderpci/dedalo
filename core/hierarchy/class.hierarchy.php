@@ -88,8 +88,8 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$locator	= $dato[0] ?? null;
+			$data		= $component->get_data();
+			$locator	= $data[0] ?? null;
 			if( empty($locator) ||
 				!isset($locator->section_tipo) || $locator->section_tipo!==DEDALO_SECTION_SI_NO_TIPO ||
 				!isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
@@ -117,11 +117,11 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato		= $component->get_dato();
-			$first_dato	= $dato[0] ?? null;
-			$tld2		= !empty($first_dato)
-				? strtolower( $first_dato )
-				: $first_dato;
+			$data		= $component->get_data();
+			$first_data	= $dato[0]->value ?? null;
+			$tld2		= !empty($first_data)
+				? strtolower( $first_data )
+				: $first_data;
 			if (empty($tld2)) {
 
 				// Error: TLD2 is mandatory
@@ -146,8 +146,8 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$dato				= $component->get_dato();
-			$real_section_tipo	= $dato[0] ?? false;
+			$data				= $component->get_data();
+			$real_section_tipo	= $data[0]->value ?? false;
 			if (empty($real_section_tipo)) {
 
 				// Error: source_real_section_tipo is mandatory
@@ -187,12 +187,12 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$hierarchy_type_dato = $component->get_dato();
-			$is_toponymy = (isset($hierarchy_type_dato[0]) && isset($hierarchy_type_dato[0]->section_id) && $hierarchy_type_dato[0]->section_id=='2')
+			$hierarchy_type_data = $component->get_data();
+			$is_toponymy = (isset($hierarchy_type_data[0]) && isset($hierarchy_type_data[0]->section_id) && $hierarchy_type_data[0]->section_id=='2')
 				? true
 				: false;
-			$typology_id = isset($hierarchy_type_dato[0])
-				? (int)$hierarchy_type_dato[0]->section_id
+			$typology_id = isset($hierarchy_type_data[0])
+				? (int)$hierarchy_type_data[0]->section_id
 				: 0;
 			if ($typology_id<1) {
 
@@ -224,7 +224,7 @@ class hierarchy extends ontology {
 			if (empty($name)) {
 				$name = 'Hierarchy ' . $tld2;
 			}
-			$name_data = $component->get_dato_full();
+			$name_data = $component->get_data();
 
 		// -------- VIRTUAL SECTION --------
 
