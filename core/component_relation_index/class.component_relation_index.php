@@ -198,13 +198,14 @@ class component_relation_index extends component_relation_common {
 		// target section
 			$target_section	= $this->get_target_section();
 
-
 		// create a sqo to count all the references
 			$sqo_count = new search_query_object();
+				// $sqo_count->set_select([]);
 				$sqo_count->set_section_tipo($target_section);
 				$sqo_count->set_mode('related');
 				$sqo_count->set_filter_by_locators($filter_by_locators);
 				$sqo_count->set_group_by($group_by);
+				$sqo_count->set_full_count(true);
 
 		// search to get
 			$search					= search::get_instance($sqo_count);
