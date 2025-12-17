@@ -394,32 +394,6 @@ final class section_test extends TestCase {
 
 
 	/**
-	* TEST_SET_IS_LOADED_MATRIX_DATA
-	* @return void
-	*/
-	public function test_set_is_loaded_matrix_data() : void {
-
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
-
-		$section = section::get_instance(
-			$section_id, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode
-		);
-
-		$result = $section->set_is_loaded_matrix_data(false);
-
-		$this->assertTrue(
-			gettype($result)==='boolean' ,
-			'expected type boolean. Current type: ' .gettype($result)
-		);
-	}//end test_set_is_loaded_matrix_data
-
-
-
-	/**
 	* TEST_GET_DATO
 	* @return void
 	*/
