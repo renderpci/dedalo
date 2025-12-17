@@ -176,6 +176,23 @@ class section_record {
 	}//end set_component_data
 
 
+	/**
+	 * SAVE
+	 * Update all section_record data into DB
+	 * Will save every column with current data
+	 * The save data will update the row as section record is.
+	 * - If the column is set as null the DB will delete it.
+	 * - If the column has change or delete any component, the update will set the column as is.
+	 * @return bool $result Boolean indicating whether the operation was successful
+	 */
+	public function save() : bool {
+
+		$result = $this->data_instance->save_data();
+
+		return $result;
+	}// end save
+
+
 
 	/**
 	* SAVE_COLUMN
