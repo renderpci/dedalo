@@ -801,12 +801,12 @@ class ts_object {
 			DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data();
 
 		$indexable_value = 1; // Yes
 
 		// When first element is found, return true
-		if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$indexable_value) {
+		if (isset($data[0]) && isset($data[0]->section_id) && (int)$data[0]->section_id===$indexable_value) {
 			return true;
 		}
 
@@ -923,10 +923,10 @@ class ts_object {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$dato = (array)$component->get_dato();
+			$data = $component->get_data();
 
-			if (!empty($dato)) {
-				$ar_value = array_merge($ar_value, $dato);
+			if (!empty($data)) {
+				$ar_value = array_merge($ar_value, $data);
 			}
 		}//end foreach ($ar_tipo as $tipo) {
 
@@ -1010,10 +1010,10 @@ class ts_object {
 
 					if (empty($current_value)) {
 						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-						$dato_full = $component->get_dato_full();
+						$data = $component->get_data();
 						// get_value_with_fallback_from_dato_full( $dato_full_json, $decorate_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$current_value = component_common::get_value_with_fallback_from_dato_full(
-							$dato_full,
+						$current_value = component_string_common::get_value_with_fallback_from_data(
+							$data,
 							true,
 							$main_lang,
 							$lang
@@ -1192,9 +1192,8 @@ class ts_object {
 						$search = search::get_instance(
 							$sqo // object sqo
 						);
-						$response	= $search->search();
-						$ar_records	= $response->ar_records;
-
+						$db_result	= $search->search();
+						$ar_records	= $db_result->fetch_all();
 						// cache
 						$resolved_child[$hash] = $ar_records;
 					}
