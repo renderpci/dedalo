@@ -22,7 +22,7 @@ OS:
 Hardware:
 
 - Processor: 8 processors with 3+GHZ
-- RAM: minimal 16GB / recommended: 32 GB
+- RAM: minimal 16GB / recommended: 64 GB
 - HD for OS: 100GB+ for the system in RAID 10 (SSD)
 - HD for data: 1TB+ for the data in RAD 10 (if is possible SSD)
 
