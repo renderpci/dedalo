@@ -16,6 +16,8 @@ class section_record {
  	public string|int $section_id;
 	// section_record_data class instance
 	protected object $data_instance;
+	// Exist this record in the database?
+	public bool $record_in_the_database;
 
 
 
@@ -82,8 +84,14 @@ class section_record {
 		// it returns the cached data without reconnecting to the database.
 		// All section instances with the same section_tipo and section_id values
 		// share the same cached instance of 'section_record_data', independent of the mode.
-		$this->data_instance->read();
+		$result = $this->data_instance->read();
 
+		// when load data and the record doesn't exists set the property 'exists' in the instance' to false
+		// if the record exists into the database set it as true.
+		$this->record_in_the_database = ( $result===null )
+			? false
+			: true;
+		
 		return true;
 	}//end load_data
 
@@ -350,6 +358,8 @@ class section_record {
 			}
 			// Remove the instance and delete it from cache.
 			$this->data_instance->__destruct();
+			// change the status of the record, now doesn't exist into DB.
+			$this->record_in_the_database = false;
 
 		// 3. Remove this section record in linked sections and its own media
 			// inverse references. Remove all inverse references to this section
@@ -922,7 +932,7 @@ class section_record {
 		}
 
 		$section_record = section_record::get_instance( $section_tipo, $section_id );
-
+		$section_record->record_in_the_database = true;
 
 		return $section_record;
 	}//end create
