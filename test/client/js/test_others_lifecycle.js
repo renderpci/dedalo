@@ -110,7 +110,6 @@ import {get_instance, get_all_instances} from '../../../core/common/js/instances
 			'php_info',
 			'php_user',
 			'publication_api',
-			'regenerate_relations',
 			'register_tools',
 			'sequences_status',
 			'sqo_test_environment',
