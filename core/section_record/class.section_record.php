@@ -89,6 +89,20 @@ class section_record {
 
 
 
+	public function exists_in_the_database() : bool {
+
+		if( isset($this->record_in_the_database) ){
+			return $this->record_in_the_database;
+		}
+
+		// force to load all data from database
+		$this->load_data();
+
+		return $this->record_in_the_database;
+	}
+
+
+
 	/**
 	* GET_DATA
 	* Retrieves all columns data of the record
