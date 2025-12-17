@@ -72,7 +72,7 @@ const get_content_data_edit = function(self) {
 		content_data.appendChild(button_exit_edit)
 
 	// values (inputs)
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const inputs_value	= (value.length<1) ? [{value:null}] : value // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_content_value(i, inputs_value[i], self)
@@ -110,13 +110,14 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input field
-		const fallback_value = self.data.fallback_value?.[i] || ''
+		const input_value = current_value.value || null
+		const fallback_value = self.data.fallback_value?.[i].value || ''
 		const input = ui.create_dom_element({
 			element_type	: element_type,
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
-			placeholder		: (current_value ? '' : fallback_value),
+			value			: input_value,
+			placeholder		: (input_value ? '' : fallback_value),
 			parent			: content_value
 		})
 		// focus event
