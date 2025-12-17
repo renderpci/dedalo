@@ -13,7 +13,7 @@ class ts_object {
 	// string (mandatory)
 	public $section_tipo;
 	// object
-	protected $section;
+	// protected $section;
 	// mixed object|null (default null)
 	protected $options;
 	// string (default 'edit')
@@ -50,7 +50,7 @@ class ts_object {
 		$this->ts_parent = $ts_parent;
 
 		# Build and set current section obj
-		$this->section = section::get_instance( $section_id, $section_tipo );
+		// $this->section = section::get_instance( $section_id, $section_tipo );
 
 		# Fix options
 		$this->options = $options;
