@@ -67,22 +67,22 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		$columns		= ['"section_tipo"']; // required columns
 		$placeholders	= ['$1']; // placeholders for them
 		$params			= [$section_tipo]; // param values (first one for tipo)
-		$param_index	= 2; // next param index ($2, $3, ...)
+		$param_index	= 2; // next param index ($2, $3, ...)	
+		
+		// Add fixed columns (this allows use prepared statements)
+		foreach (self::$columns as $col => $col_value) {
+			// Prevent double columns (section_tipo and section_id are added by default)
+			if ($col==='section_tipo' || $col==='section_id') continue;
 
-		// Add dynamic columns
-		foreach ($values as $col => $value) {
-
-			// Columns. Only accepts normalized columns
-			if (!isset(self::$columns[$col])) {
-				throw new Exception("Invalid column name: $col");
-			}
 			$columns[] = pg_escape_identifier($conn, $col);
 
+			$value = $values->$col ?? null;
+
 			// Placeholders / Values
-			 if ($value !== null && isset(self::$json_columns[$col])) {
+			if ($value !== null && isset(self::$json_columns[$col])) {
 				// Encode PHP array/object as JSON string
 				$params[]		= json_handler::encode($value);
-				$placeholders[]	= '$' . $param_index . '::jsonb';
+				$placeholders[]	= '$' . $param_index . '::jsonb';	
 			}else{
 				$params[]		= $value;
 				$placeholders[]	= '$' . $param_index;
@@ -92,30 +92,15 @@ class matrix_activity_db_manager extends matrix_db_manager {
 			$param_index++;
 		}
 
-		// (!) Note that value returned by Save action, in case of activity, is the section_id
-		// auto created by table sequence 'matrix_activity_section_id_seq', not by counter
-
-		// Execute the main atomic SQL block with parameters
-			// $sql = "
-			// 	INSERT INTO $table (" . implode(', ', $columns) . ")
-			// 	VALUES (" . implode(', ', $placeholders) . ")
-			// 	RETURNING section_id;
-			// ";
-
-			// // Execute query with params
-			// $result = pg_query_params(
-			// 	$conn,
-			// 	$sql,
-			// 	$params
-			// );
+		// (!) Note that value returned by save action, in case of activity, is the section_id
+		// auto created by table sequence 'matrix_activity_section_id_seq', not by the counter.	
 
 		// Execute with prepared statements
-			$stmt_name = __METHOD__ . '_' . $table;
+			$stmt_name = 'create_' . $table;
 			if (!isset(DBi::$prepared_statements[$stmt_name])) {
 				$sql = "
 					INSERT INTO $table (" . implode(', ', $columns) . ")
-					VALUES (" . implode(', ', $placeholders) . ")
-					RETURNING section_id;
+					VALUES (" . implode(', ', $placeholders) . ")					
 				";
 				if (!pg_prepare(
 					$conn,
@@ -140,8 +125,8 @@ class matrix_activity_db_manager extends matrix_db_manager {
 			return false;
 		}
 
-
-		// Only for compatibility returns 1
+		// Removed real return section_id for performance reasons (its not used)
+		// Return 1 to be compatible with previous behavior
 		return 1;
 	}//end create
 
