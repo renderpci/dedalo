@@ -7,11 +7,13 @@
 class component_password extends component_common {
 
 
-
+	// string . Fake value to show in grid
 	public $fake_value = '****************';
 
-	// Property to enable or disable the get and set data in different languages
+	// bool . Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
+
+
 
 	/**
 	* __CONSTRUCT
@@ -201,13 +203,14 @@ class component_password extends component_common {
 	}//end update_dato_version
 
 
+
 	/**
 	* GET_V6_ROOT_PASSWORD_DATA
 	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
 	* REMOVE IT IN VERSIONS >V7.0.0
-	* @return
+	* @return string|false|null $data
 	*/
-	public function get_v6_root_password_data() {
+	public function get_v6_root_password_data() : string|false|null {
 
 		$sql_query = "
 			SELECT datos->'components'->'dd133'->'dato'->'lg-nolan'->>0

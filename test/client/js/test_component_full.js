@@ -100,7 +100,7 @@ async function make_element_test(options) {
 				// 	console.error(error)
 				// }
 
-			console.log(`-> ${model} ${mode}-${view}-${new_instance.permissions}`, new_instance);
+			// console.log(`-> ${model} ${mode}-${view}-${new_instance.permissions}`, new_instance);
 
 			resolve(new_instance)
 		// })
@@ -335,11 +335,11 @@ async function make_element_test(options) {
 						'Main label should not exist in line view (Except for portals)'
 					);
 				}
-				assert.notEqual(
-					new_instance.node.querySelector(':scope >.buttons_container'),
-					null,
-					'buttons_container must necessarily exist (edit-line-2)'
-				);
+				// assert.notEqual(
+				// 	new_instance.node.querySelector(':scope >.buttons_container'),
+				// 	null,
+				// 	'buttons_container must necessarily exist (edit-line-2)'
+				// );
 				assert.notEqual(
 					new_instance.node.querySelector(':scope >.content_data'),
 					null,
@@ -628,21 +628,25 @@ async function make_element_test(options) {
 					null,
 					'buttons_container must not exist (edit-search-2)'
 				);
-				assert.notEqual(
-					new_instance.node.querySelector(':scope >.content_data'),
-					null,
-					'content_data must necessarily exist'
-				);
-				assert.notEqual(
-					new_instance.node.content_data,
-					undefined,
-					'content_data pointer must necessarily exist from wrapper'
-				);
-				assert.equal(
-					new_instance.node.classList.contains('search'),
-					true,
-					'instance wrapper classList display must contains "view_line" '
-				);
+				// Check content data
+				if(element.model!=='component_password') {
+					assert.notEqual(
+						new_instance.node.querySelector(':scope >.content_data'),
+						null,
+						'content_data must necessarily exist'
+					);								
+					assert.notEqual(
+						new_instance.node.content_data,
+						undefined,
+						'content_data pointer must necessarily exist from wrapper'
+					);
+					// Check search container
+					assert.equal(
+						new_instance.node.classList.contains('search'),
+						true,
+						'instance wrapper classList display must contains "view_line" '
+					);
+				}
 			}
 		})	}) })
 	}

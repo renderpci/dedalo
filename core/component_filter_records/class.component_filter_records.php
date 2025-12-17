@@ -12,66 +12,66 @@ class component_filter_records extends component_common {
 
 
 
-	/**
-	* GET DATO
-	* @return array|null $dato
-	* Sample data:
-	* [
-	*	 {
-	*	  "tipo": "oh1",
-	*	  "value": null
-	*	 },
-	*	 {
-	*	  "tipo": "rsc167",
-	*	  "value": [1,3,6]
-	*	 }
-	* ]
-	*/
-	public function get_dato() {
+	// /**
+	// * GET DATO
+	// * @return array|null $dato
+	// * Sample data:
+	// * [
+	// *	 {
+	// *	  "tipo": "oh1",
+	// *	  "value": null
+	// *	 },
+	// *	 {
+	// *	  "tipo": "rsc167",
+	// *	  "value": [1,3,6]
+	// *	 }
+	// * ]
+	// */
+	// public function get_dato() {
 
-		$dato = parent::get_dato();
+	// 	$dato = parent::get_dato();
 
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* dato is object (from JSON data) and set as array
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		// string case. Tool Time machine case, dato is string
-			if (is_string($dato)) {
-				$dato = json_handler::decode($dato);
-			}
-
-		// non array case, force to array if not null
-			if (!is_null($dato) && !is_array($dato)) {
-				$dato = [$dato];
-			}
-
-		return parent::set_dato( $dato );
-	}//end set_dato
+	// 	return $dato;
+	// }//end get_dato
 
 
 
-	/**
-	* GET_VALOR
-	* @return string|null $valor
-	*/
-	public function get_valor() {
+	// /**
+	// * SET_DATO
+	// * dato is object (from JSON data) and set as array
+	// * @return bool
+	// */
+	// public function set_dato($dato) : bool {
 
-		$dato = $this->get_dato();
+	// 	// string case. Tool Time machine case, dato is string
+	// 		if (is_string($dato)) {
+	// 			$dato = json_handler::decode($dato);
+	// 		}
 
-		$valor = empty($dato)
-			? null
-			: json_encode($dato);
+	// 	// non array case, force to array if not null
+	// 		if (!is_null($dato) && !is_array($dato)) {
+	// 			$dato = [$dato];
+	// 		}
 
-		return $valor;
-	}//end get_valor
+	// 	return parent::set_dato( $dato );
+	// }//end set_dato
+
+
+
+	// /**
+	// * GET_VALOR
+	// * @return string|null $valor
+	// */
+	// public function get_valor() {
+
+	// 	$dato = $this->get_dato();
+
+	// 	$valor = empty($dato)
+	// 		? null
+	// 		: json_encode($dato);
+
+	// 	return $valor;
+	// }//end get_valor
 
 
 

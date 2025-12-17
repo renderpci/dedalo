@@ -134,24 +134,24 @@ class sections extends common {
 	/**
 	* GET_DATA
 	* Get records from database using current sqo (search_query_object)
-	* @return array $this->data ($ar_records from search)
+	* @return db_result $db_result
 	*/
-	public function get_data() {
+	public function get_data() : db_result {
 
 		// already calculated case
-			if (isset($this->data)) {
-				return $this->data;
-			}		
+		if (isset($this->data)) {
+			return $this->data;
+		}		
 
 		// search
-			$search		= search::get_instance($this->search_query_object);
-			$db_result	= $search->search();
+		$search		= search::get_instance($this->search_query_object);
+		$db_result	= $search->search();
 
 		// fix db_result ar_records as data
-			$this->data = $db_result;
+		$this->data = $db_result;
 
 
-		return $this->data;
+		return $db_result;
 	}//end get_data
 
 
