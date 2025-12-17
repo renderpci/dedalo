@@ -1174,7 +1174,9 @@ final class ontology_test extends TestCase {
 				'tld'			=> 'tldtest',
 				'section_tipo'	=> $section_tipo,
 				'typology_id'	=> 15,
-				'name_data'		=> (object)['lg-spa' => ['TLD TEST']]
+				'name_data'		=> [
+					(object)['lang' => 'lg-spa', 'value' => 'TLD TEST']
+				]
 			];
 			$section_id = ontology::add_main_section($file_item);
 
@@ -1288,7 +1290,9 @@ final class ontology_test extends TestCase {
 				'tld'			=> 'tldtest',
 				'section_tipo'	=> $section_tipo,
 				'typology_id'	=> 15,
-				'name_data'		=> (object)['lg-spa' => ['TLD TEST']]
+				'name_data'		=> [
+					(object)['lang' => 'lg-spa', 'value' => 'TLD TEST']
+				]
 			];
 			$section_id = ontology::add_main_section($file_item);
 	}//end test_delete_ontology
