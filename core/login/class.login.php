@@ -1527,16 +1527,15 @@ class login extends common {
 			// }
 
 		// direct way. Note that this search do not has the restrictions of the SQO way (section_id > 0)		
-			$sql = "
-				SELECT section_id
-				FROM matrix_users
-				WHERE section_tipo = '".DEDALO_SECTION_USERS_TIPO."'
-				AND matrix_users.string::jsonb -> '".DEDALO_USER_NAME_TIPO."' @> $1
-				ORDER BY section_id ASC
-			";
+			$sql  = 'SELECT section_id' . PHP_EOL;
+			$sql .= 'FROM matrix_users' . PHP_EOL;
+			$sql .= 'WHERE section_tipo = \'' . DEDALO_SECTION_USERS_TIPO .'\'' . PHP_EOL;
+			$sql .= 'AND matrix_users.string::jsonb @> $1' . PHP_EOL;
+			$sql .= 'ORDER BY section_id ASC'  . PHP_EOL;
+			$sql .= 'LIMIT 1';
 		
 			$result = matrix_db_manager::exec_search($sql, [
-				'[{"value": "'.$username.'"}]'
+				'{"'.DEDALO_USER_NAME_TIPO.'":[{"value": "'.$username.'"}]}'
 			]);
 
 			if (!$result) {				
@@ -1570,15 +1569,15 @@ class login extends common {
 		$code_component_tipo = 'dd1053';
 
 		// direct data way
-			$sql = "
-				SELECT section_id
-				FROM matrix_users
-				WHERE section_tipo = '".DEDALO_SECTION_USERS_TIPO."'
-				AND matrix_users.string::jsonb -> '".$code_component_tipo."' @> $1
-				ORDER BY section_id ASC
-			";
+			$sql  = 'SELECT section_id' . PHP_EOL;
+			$sql .= 'FROM matrix_users' . PHP_EOL;
+			$sql .= 'WHERE section_tipo = \'' . DEDALO_SECTION_USERS_TIPO .'\'' . PHP_EOL;
+			$sql .= 'AND matrix_users.string::jsonb @> $1' . PHP_EOL;
+			$sql .= 'ORDER BY section_id ASC' . PHP_EOL;
+			$sql .= 'LIMIT 1';
+		
 			$result = matrix_db_manager::exec_search($sql, [
-				'[{"lang": "lg-nolan", "value": "'.$code.'"}]'
+				'{"'.$code_component_tipo.'":[{"lang": "lg-nolan", "value": "'.$code.'"}]}'
 			]);
 			
 			if (!$result) {
