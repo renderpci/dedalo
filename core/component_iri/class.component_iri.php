@@ -26,17 +26,17 @@ class component_iri extends component_common {
 	// with_lang_versions. Set in properties for true like component_input_text
 	public $with_lang_versions = true;
 
-		// Property to enable or disable the get and set data in different languages
+	// bool . Property to enable or disable the get and set data in different languages
 	protected $supports_translation = true;
 
-	//
+	// bool . included_dataframe_properties
 	private $included_dataframe_properties = false;
 
-	// Label dataframe target section tipo
-	private static $label_target_section_tipo	= 'dd1706';
+	// string . Label dataframe target section tipo
+	private static $label_target_section_tipo = 'dd1706';
 
-	// Label dataframe target component tipo
-	private	static $label_target_component_tipo	= 'dd1715';
+	// string . Label dataframe target component tipo
+	private static $label_target_component_tipo = 'dd1715';
 
 
 
@@ -460,7 +460,7 @@ class component_iri extends component_common {
 
 		// ar_values
 			$ar_values	= [];
-			$data		= $this->get_dato();
+			$data		= $this->get_data_lang();
 			if (!empty($data)) {
 				foreach ($data as $current_value) {
 
@@ -519,12 +519,11 @@ class component_iri extends component_common {
 	public function resolve_title( object $value ) : ?string {
 
 		// component dataframe of the component_iri
-		$caller_dataframe = (object)[
-			'section_tipo'			=> $this->section_tipo,
-			'section_id_key'		=> $value->id,
-			'section_tipo_key'		=> $this->section_tipo,
-			'main_component_tipo'	=> $this->tipo
-		];
+		$caller_dataframe = new stdClass();
+		$caller_dataframe->section_tipo = $this->section_tipo;
+		$caller_dataframe->section_id_key = $value->id;
+		$caller_dataframe->section_tipo_key = $this->section_tipo;
+		$caller_dataframe->main_component_tipo = $this->tipo;
 
 		// Build the component
 		$component_dataframe_label = component_common::get_instance(
@@ -573,75 +572,75 @@ class component_iri extends component_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
+	// /**
+	// * GET_VALOR
+	// * Return array dato as comma separated elements string by default
+	// * If index var is received, return dato element corresponding to this index if exists
+	// * @return string|null $valor
+	// */
+	// public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
-		$dato = $this->get_dato();
+	// 	$dato = $this->get_dato();
 
-		if ($index==='all') {
+	// 	if ($index==='all') {
 
-			$ar_val = [];
-			if (is_array($dato)) {
-				foreach ($dato as $value) {
+	// 		$ar_val = [];
+	// 		if (is_array($dato)) {
+	// 			foreach ($dato as $value) {
 
-					$ar_line = [];
+	// 				$ar_line = [];
 
-					if (!empty($value->title)) {
-						$ar_line[] = $value->title;
-					}
-					if (!empty($value->iri)) {
-						$ar_line[] = $value->iri;
-					}
+	// 				if (!empty($value->title)) {
+	// 					$ar_line[] = $value->title;
+	// 				}
+	// 				if (!empty($value->iri)) {
+	// 					$ar_line[] = $value->iri;
+	// 				}
 
-					if (!empty($ar_line)) {
+	// 				if (!empty($ar_line)) {
 
-						$ar_val[] = implode(' | ', $ar_line);
-					}
-				}
-			}
+	// 					$ar_val[] = implode(' | ', $ar_line);
+	// 				}
+	// 			}
+	// 		}
 
-			$valor = !empty($ar_val)
-				? implode(', ', $ar_val)
-				: null;
+	// 		$valor = !empty($ar_val)
+	// 			? implode(', ', $ar_val)
+	// 			: null;
 
-		}else{
+	// 	}else{
 
-			$index = (int)$index;
-			$valor = isset($dato[$index])
-				? $dato[$index]
-				: null;
-		}
-
-
-		return $valor;
-	}//end get_valor
+	// 		$index = (int)$index;
+	// 		$valor = isset($dato[$index])
+	// 			? $dato[$index]
+	// 			: null;
+	// 	}
 
 
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		if (empty($valor)) {
-			$this->get_dato(); // Get dato from DB
-		}
-
-		$valor = $this->get_valor($lang);
-		$valor = !empty($valor)
-			? strip_tags($valor) // Removes the span tag used in list mode
-			: $valor;
+	// 	return $valor;
+	// }//end get_valor
 
 
-		return (string)$valor;
-	}//end get_valor_export
+
+	// /**
+	// * GET_VALOR_EXPORT
+	// * Return component value sent to export data
+	// * @return string $valor
+	// */
+	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+
+	// 	if (empty($valor)) {
+	// 		$this->get_dato(); // Get dato from DB
+	// 	}
+
+	// 	$valor = $this->get_valor($lang);
+	// 	$valor = !empty($valor)
+	// 		? strip_tags($valor) // Removes the span tag used in list mode
+	// 		: $valor;
+
+
+	// 	return (string)$valor;
+	// }//end get_valor_export
 
 
 
@@ -1579,7 +1578,9 @@ class component_iri extends component_common {
 
 	/**
 	* CONFORM_STRING_IMPORT_DATA
-	* @return
+	* Conform the string import data to an IRI object
+	* @param string $value
+	* @return object $iri_object
 	*/
 	private function conform_string_import_data( string $value) : object {
 
@@ -1590,7 +1591,6 @@ class component_iri extends component_common {
 		$fields_separator = isset($properties->fields_separator)
 			? $properties->fields_separator
 			: ', ';
-
 
 		$iri_object = new stdClass();
 
@@ -1681,6 +1681,7 @@ class component_iri extends component_common {
 
 		// Build the query as a PHP object.
 		$search_query_object = (object)[
+			'select' => [],
 			'section_tipo' => ['dd1706'],
 			'limit' => 1,
 			'filter' => (object)[
@@ -1733,31 +1734,35 @@ class component_iri extends component_common {
 		}
 
 		// check if the label exist in the value list of the dataframe
+		// label record is a minimal row with section_id and section_tipo
 		$label_record = component_iri::get_label_record( $new_label );
 
 		if( empty($label_record) ){
 
 			// create new section for label record
-				$section_to_save = section::get_instance(
-					null, // string|null section_id
-					component_iri::$label_target_section_tipo, // string section_tipo
-					'list', // string mode
-					false // bool bool
-				);
-				$target_section_id = $section_to_save->Save();
+				$section_to_save = section::get_instance(				
+					component_iri::$label_target_section_tipo // string section_tipo
+				);				
+				$target_section_id = $section_to_save->create_record();
 
 			// component to set the new label value
+				$tipo = component_iri::$label_target_component_tipo;
+				$model = ontology_node::get_model_by_tipo($tipo, true);
 				$component_label = component_common::get_instance(
-					'component_input_text', // string model
-					component_iri::$label_target_component_tipo, // string tipo
+					$model, // string model 'component_input_text'
+					$tipo, // string tipo
 					$target_section_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_NOLAN, // string lang
 					component_iri::$label_target_section_tipo // string section_tipo
 				);
 
-				$component_label->set_dato( $new_label );
-				$component_label->Save();
+				$label_data_item = new stdClass(); 
+					$label_data_item->value = $new_label;
+					$label_data_item->lang = DEDALO_DATA_NOLAN;
+
+				$component_label->set_data( [$label_data_item] );
+				$component_label->save();
 
 				debug_log(__METHOD__
 					. " Created new label dataframe" . PHP_EOL
@@ -1778,6 +1783,7 @@ class component_iri extends component_common {
 
 	/**
 	* SAVE_LABEL_DATAFRAME
+	* Save the label into the component_dataframe
 	* @param object $options
 	* {
 	* 	section_tipo	: "rsc205",
@@ -1786,11 +1792,12 @@ class component_iri extends component_common {
 	*	section_id_key	: 1,
 	* 	target_section_id : "3"
 	* }
-	* @return
+	* @return bool
+	*  	Returns the component save result
 	*/
-	public static function save_label_dataframe( object $options ) {
+	public static function save_label_dataframe( object $options ) : bool {
 
-		// set options
+		// options
 		$section_tipo			= $options->section_tipo;
 		$section_id				= $options->section_id;
 		$component_tipo			= $options->component_tipo;
@@ -1804,8 +1811,9 @@ class component_iri extends component_common {
 			$caller_dataframe->main_component_tipo	= $component_tipo;
 
 		// Build the component
+		$model = ontology_node::get_model_by_tipo(DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, true);
 		$component_dataframe_label = component_common::get_instance(
-			'component_dataframe', // string model
+			$model, // string model 'component_dataframe'
 			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
 			$section_id, // string section_id
 			'list', // string mode
@@ -1823,12 +1831,11 @@ class component_iri extends component_common {
 			$new_locator->set_section_tipo_key( $section_tipo );
 			$new_locator->set_main_component_tipo( $component_tipo );
 
-		$component_dataframe_label->set_dato( $new_locator );
+		$component_dataframe_label->set_data( [$new_locator] );
 
 		// Save
-		$component_dataframe_label->Save();
+		return $component_dataframe_label->save();
 	}//end save_label_dataframe
-
 
 
 

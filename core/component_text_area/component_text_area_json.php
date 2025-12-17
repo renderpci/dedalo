@@ -120,7 +120,7 @@
 				case 'list':
 				case 'tm':
 					$value			= $this->get_list_value();
-					$fallback_value	= (empty($value[0]) || $this->is_empty($value[0]))
+					$fallback_value	= $this->is_empty_data( $value )
 						? $this->get_fallback_list_value((object)['max_chars'=>200])
 						: null;
 					break;
@@ -164,7 +164,7 @@
 						}
 
 					// fallback_value. Is used to create a placeholder to display a reference data to the user
-						$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+						$fallback_value	= $this->is_empty_data( $value )
 							? $this->get_fallback_edit_value((object)['max_chars'=>700])
 							: null;
 					break;

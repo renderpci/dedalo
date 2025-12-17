@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "github.com/modelcontextprotocol/servers/tree/main/src/filesystem": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount", "type=bind,src=/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo,dst=/projects/master_dedalo,readonly",
+        "mcp/filesystem",
+        "/projects/master_dedalo"
+      ]
+    }
+  }
+}

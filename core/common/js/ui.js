@@ -1317,7 +1317,7 @@ export const ui = {
 							})
 							component_label.prepend(icon)
 						}
-					}
+					}					
 
 					// description
 					if (description!==null) {
@@ -2201,7 +2201,10 @@ export const ui = {
 					// show hidden elements again on close
 						const modal_close_handler = () => {
 
-							content_data_page.classList.remove('hide')
+							if(content_data_page) {
+								content_data_page.classList.remove('hide')
+							}
+
 							if(debug_div) {
 								debug_div.classList.remove('hide')
 							}
