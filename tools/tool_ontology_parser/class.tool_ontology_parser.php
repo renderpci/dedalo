@@ -80,7 +80,7 @@ class tool_ontology_parser extends tool_common {
 					DEDALO_DATA_LANG, // string lang
 					$row->section_tipo // string section_tipo
 				);
-				$name = $name_component->get_component_data_fallback()[0]->value ?? null;				
+				$name = $name_component->get_value();				
 
 			// typology
 				$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
