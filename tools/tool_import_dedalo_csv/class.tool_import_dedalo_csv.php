@@ -503,6 +503,13 @@ class tool_import_dedalo_csv extends tool_common {
 				$bulk_process_label_component->set_data([$bulk_process_label_data]);
 				$bulk_process_label_component->save();
 
+			// SAVE_TIME_MACHINE
+				// Set section to save data for time machine
+				// No component time machine data will be saved when section saves later
+				// (based on checkbox value 'Save time machine history on import')
+				tm_record::$save_tm = ($time_machine_save===true)
+					? true
+					: false;
 
 		foreach ($ar_csv_data as $rkey => $columns) {
 
