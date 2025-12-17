@@ -530,27 +530,22 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// section. Always force create/re-use section
-				$section = section::get_instance(
-					$section_id,
-					$section_tipo,
-					'list',
-					true // set cache always to true important (!)
-				);
-				$create_record = $section->forced_create_record();
+				// $section = section::get_instance(
+				// 	$section_id,
+				// 	$section_tipo,
+				// 	'list',
+				// 	true // set cache always to true important (!)
+				// );
+				// $create_record = $section->forced_create_record();
 
+				$section_record = section_record::get_instance( $section_tipo, $section_id );
+				$exists = $section_record->exists_in_the_database();
+				
 			// set the information about the process
 				$process_info->section_id = $section_id;
-				$process_info->msg = ($create_record===true)
+				$process_info->msg = ($exists===true)
 					? label::get_label('creating') ?? 'Creating'
 					: label::get_label('updating') ?? 'Updating';
-
-			// SAVE_TIME_MACHINE
-				// Set section to save data for time machine
-				// No component time machine data will be saved when section saves later
-				// (based on checkbox value 'Save time machine history on import')
-				$section->save_tm = ($time_machine_save===true)
-					? true
-					: false;
 
 
 			// Iterate fields/columns
