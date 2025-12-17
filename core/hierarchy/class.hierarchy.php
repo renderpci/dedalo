@@ -1123,8 +1123,8 @@ class hierarchy extends ontology {
 	*/
 	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
-		$hierarchy_response	= hierarchy::get_hierarchy_by_tld( $tld );
-		$section_id			= $hierarchy_response->result;
+		$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
+		$section_id		= $hierarchy_row->section_id;
 		if( empty($section_id) ){
 			return null;
 		}
@@ -1139,7 +1139,7 @@ class hierarchy extends ontology {
 			DEDALO_HIERARCHY_SECTION_TIPO // string section_tipo
 		);
 
-		$typology_data = $typology_component->get_dato();
+		$typology_data = $typology_component->get_data();
 
 		$typology_locator = $typology_data[0] ?? null;
 
