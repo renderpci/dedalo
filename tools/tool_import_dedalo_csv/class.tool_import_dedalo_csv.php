@@ -99,7 +99,7 @@ class tool_import_dedalo_csv extends tool_common {
 							}
 							return (object)[
 								'tipo'	=> $el,
-								'label'	=> ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true),
+								'label'	=> $label,
 								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_by_tipo($el, true) : $el
 							];
 						}, $file_info);
