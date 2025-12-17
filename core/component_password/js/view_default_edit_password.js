@@ -110,43 +110,49 @@ const get_content_value = function(i, self) {
 			parent			: content_value
 		})
 		input.autocomplete = 'new-password'
-		// change event
-			input.addEventListener('change', fn_change)
-			function fn_change(e) {
-				e.preventDefault()
+		
+		// change event		
+		const change_handler = (e) => {
+			e.preventDefault()
 
-				// user confirm. Prevents Safari auto-fill save
-					// if (!confirm(get_label.sure + " [edit password]")) {
-					// 	return false
-					// }
+			// user confirm. Prevents Safari auto-fill save
+				// if (!confirm(get_label.sure + " [edit password]")) {
+				// 	return false
+				// }
 
-				// validated. Test password is acceptable string
-					const validation_obj	= self.validate_password_format(input.value)
-					const validated			= validation_obj.result
-					ui.component.error(!validated, input)
-					if (!validated) {
-						return false
-					}
+			// validated. Test password is acceptable string
+				const validation_obj	= self.validate_password_format(input.value)
+				const validated			= validation_obj.result
+				ui.component.error(!validated, input)
+				if (!validated) {
+					return false
+				}
 
-				// save value
-					const changed_data = [Object.freeze({
-						action	: 'update',
-						key		: 0,
-						value	: (input.value.length>0) ? input.value : null
-					})]
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-			}//end fn_change
+			// save value
+				const to_save_value = (input.value.length>0) 
+					? {value : input.value}
+					: null
+				const changed_data = [Object.freeze({
+					action	: 'update',
+					key		: 0,
+					value	: to_save_value
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		}
+		input.addEventListener('change', change_handler)
+		
 		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
-				e.stopPropagation()
-			})
+		input.addEventListener('click', (e) => {
+			e.stopPropagation()
+		})
+	
 		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
+		input.addEventListener('mousedown', (e) => {
+			e.stopPropagation()
+		})
 
 
 	return content_value
