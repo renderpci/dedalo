@@ -603,7 +603,7 @@ class ts_object {
 
 	/**
 	* GET_CHILDREN_DATA
-	*
+	* 
 	* @param object $options
 	* @return object $response
 	*/
@@ -649,8 +649,8 @@ class ts_object {
 
 			// Calculate total if not set
 			if (!isset($current_pagination->total)) {
-				$dato = $component_relation_children->get_dato();
-				$current_pagination->total = (is_countable($dato) ? count($dato) : 0);
+				$data = $component_relation_children->get_data();
+				$current_pagination->total = (is_countable($data) ? count($data) : 0);
 			}
 			// Fix pagination to the component (used when get_data_paginated is called from the class)
 			$component_relation_children->pagination = $current_pagination;
@@ -659,7 +659,7 @@ class ts_object {
 			$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
 			$children = $use_pagination
 				? $component_relation_children->get_data_paginated()
-				: $component_relation_children->get_dato();
+				: $component_relation_children->get_data();
 
 		// parse_child_data
 			$ar_children_data = ts_object::parse_child_data(
@@ -741,12 +741,12 @@ class ts_object {
 				DEDALO_DATA_NOLAN,
 				$current_locator->section_tipo
 			);
-			$dato = $component->get_dato();
+			$data = $component->get_data();
 
 			// When first element is found, return true
-			if (isset($dato[0])
-				&& isset($dato[0]->section_id)
-				&& (int)$dato[0]->section_id==$descriptor_value) {
+			if (isset($data[0])
+				&& isset($data[0]->section_id)
+				&& (int)$data[0]->section_id==$descriptor_value) {
 				return true;
 			}
 		}
