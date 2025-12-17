@@ -18,6 +18,9 @@ class tm_record_data {
 
 	// array columns_name
 	private array $columns_name = [
+		// int id. Matrix id value from DB column 'id'
+		// Stores the time machine id
+		'id',
 		// int section_id. Section id value from DB column 'section_id'
 		// Stores the caller section_id
 		'section_id',
@@ -167,7 +170,7 @@ class tm_record_data {
 	* @param object|null $data
 	* @return bool
 	*/
-	public function set_column_data( string $column, ?object $value ) : bool {
+	public function set_column_data( string $column, array|int|string|null $value ) : bool {
 
 		if ( !property_exists($this->data, $column) ) {
 			debug_log(__METHOD__
