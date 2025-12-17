@@ -598,6 +598,13 @@
 		border: none !important;
 		opacity: 1;
 
+		// position: relative;
+		// opacity: 1;
+		// height: 1.2rem;
+		// width: 1.2rem;
+		// padding: 2px;
+		// background
+
 		>span {
 			opacity: 0 !important;
 		}
@@ -619,6 +626,15 @@
 			// 	top: 0.10rem;
 			// 	left: 0.17rem;
 			// }
+		}
+
+		@keyframes run_spinner {
+			from {
+				transform: rotate(0deg);
+			}
+			to {
+				transform: rotate(360deg);
+			}
 		}
 
 		.area_ontology & {
