@@ -468,13 +468,12 @@ class tool_import_dedalo_csv extends tool_common {
 		// PROCESS
 			// create new process section
 				$bulk_process_section = section::get_instance(
-					null, // string|null section_id
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_process_section->Save();
+				$bulk_process_id = $bulk_process_section->create_record();
 
 			// get the bulk_process_id as the section_id of the section process
-				$bulk_process_id = $bulk_process_section->get_section_id();
+				// $bulk_process_id = $bulk_process_section->get_section_id();
 
 			// Save the file name into the process section
 				$bulk_file_component = component_common::get_instance(
@@ -485,8 +484,10 @@ class tool_import_dedalo_csv extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_file_component->set_dato($current_file);
-				$bulk_file_component->Save();
+				$bulk_file_component_data = new stdClass();
+					$bulk_file_component_data->value = $current_file;
+				$bulk_file_component->set_data([$bulk_file_component_data]);
+				$bulk_file_component->save();
 
 			// Save the process name into the process section
 				$bulk_process_label_component = component_common::get_instance(
@@ -497,8 +498,10 @@ class tool_import_dedalo_csv extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_process_label_component->set_dato($bulk_process_label);
-				$bulk_process_label_component->Save();
+				$bulk_process_label_data = new stdClass();
+					$bulk_process_label_data->value = $bulk_process_label;
+				$bulk_process_label_component->set_data([$bulk_process_label_data]);
+				$bulk_process_label_component->save();
 
 
 		foreach ($ar_csv_data as $rkey => $columns) {
