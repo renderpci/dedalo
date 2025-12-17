@@ -200,7 +200,9 @@ class section_record_data {
 						. "error: " . json_last_error_msg()
 						, logger::ERROR
 					);
-					throwException(new Exception("JSON decode error for column " . $column . ": " . json_last_error_msg()));
+					throw new Exception(
+						"JSON decode error for column " . $column . ": " . json_last_error_msg()
+					);			
 				}
 			}
 
