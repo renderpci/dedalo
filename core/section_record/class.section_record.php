@@ -48,7 +48,6 @@ class section_record {
 			$this->section_tipo	= $section_tipo;
 			$this->section_id	= $section_id;
 
-
 		// Initiate section_record_data instance.
 			// It's instanced once and handles all the section data database tasks.
 			$this->data_instance = section_record_data::get_instance(
@@ -56,16 +55,6 @@ class section_record {
 				$section_id
 			);
 	}//end get_instance
-
-
-
-	/**
-	* __DESTRUCT
-	* @return
-	*/
-	public function __destruct() {
-
-	}//end __destruct
 
 
 
