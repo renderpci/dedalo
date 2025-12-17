@@ -165,16 +165,17 @@ class diffusion_section_stats extends diffusion {
 			$activity_filter_beginning .= ' AND timestamp < \''.$today->format("Y-m-d").'\'';
 
 		// search last activity record of current user
-			$strQuery = '
-				SELECT *
-				FROM "matrix_activity"
-				WHERE
-				relation @> \'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]}\'
-				'.$activity_filter_beginning.'
-				ORDER BY timestamp ASC
-				LIMIT 1
-			';
-			$result = matrix_db_manager::exec_search($strQuery);
+			$sql_query  = 'SELECT *' . PHP_EOL;
+			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
+			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
+			$sql_query .= $activity_filter_beginning . PHP_EOL;
+			$sql_query .= 'ORDER BY id ASC' . PHP_EOL;
+			$sql_query .= 'LIMIT 1';
+
+			$result = matrix_db_manager::exec_search($sql_query,[
+				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
+			]);
+
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				$response->errors[] = 'failed database execution';
@@ -291,15 +292,18 @@ class diffusion_section_stats extends diffusion {
 			$publish_obj	= new stdClass();
 
 		// matrix_activity. Get data from current user in range
-			$strQuery = '
-				SELECT *
-				FROM "matrix_activity"
-				WHERE
-				"timestamp" between \''.$date_in.'\' and \''.$date_out.'\'
-				AND datos#>\'{relations}\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
-				ORDER BY id ASC
-			';
-			$result = matrix_db_manager::exec_search($strQuery);
+			$sql_query  = 'SELECT *' . PHP_EOL;
+			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
+			$sql_query .= 'WHERE "timestamp" between $1 and $2' . PHP_EOL;
+			$sql_query .= 'AND relation @> $3' . PHP_EOL;
+			$sql_query .= 'ORDER BY id ASC';
+			
+			$result = matrix_db_manager::exec_search($sql_query, [
+				$date_in,
+				$date_out,
+				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
+			]);
+
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				return null;
@@ -307,6 +311,9 @@ class diffusion_section_stats extends diffusion {
 
 		// iterate found records
 		while ($row = pg_fetch_object($result)) {
+
+			debug_log(__METHOD__.' Working here... Ignored action get_interval_raw_activity_data temporally.', logger::WARNING);
+			continue;
 
 			$datos = json_decode($row->datos);
 
@@ -1099,14 +1106,16 @@ class diffusion_section_stats extends diffusion {
 	*/
 	public static function delete_user_activity_stats( int $user_id ) : bool {
 
-		$strQuery	= '
-			DELETE
-			FROM "matrix_stats"
-			WHERE
-			section_tipo = \'dd1521\'
-			AND CAST("datos" AS text) LIKE \'%"section_id": "'.$user_id.'", "section_tipo": "dd128", "from_component_tipo": "dd1522"%\';
-		';
-		$result	= matrix_db_manager::exec_search($strQuery);
+		$sql_query  = 'DELETE' . PHP_EOL;
+		$sql_query .= 'FROM "matrix_stats"' . PHP_EOL;
+		$sql_query .= 'WHERE section_tipo = $1' . PHP_EOL;
+		$sql_query .= 'AND relation @> $2';
+
+		$result	= matrix_db_manager::exec_search($sql_query, [
+			'dd1521', // User activity section
+			'{"dd1522":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
+		]);
+
 		if($result===false) {
 			$msg = "Failed Delete user stats user_id ($user_id) from matrix_stats";
 			debug_log(__METHOD__
