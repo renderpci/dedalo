@@ -133,18 +133,23 @@ class tm_record_data {
 				continue;
 			}
 
-			if ( $column === 'data' && is_string($value) ) {
-				$value = json_decode( $value );
-				if (json_last_error() !== JSON_ERROR_NONE) {
-					debug_log(__METHOD__
-						. " Abort. JSON decode error for column " . PHP_EOL
-						. "column: " . $column . PHP_EOL
-						. "value: " . $value . PHP_EOL
-						. "error: " . json_last_error_msg()
-						, logger::ERROR
-					);
-					throwException(new Exception("JSON decode error for column " . $column . ": " . json_last_error_msg()));
+			if ( isset( tm_db_manager::$json_columns[$column] )) {
+				if( is_string($value) ){
+					$value = json_decode( $value );
+					if (json_last_error() !== JSON_ERROR_NONE) {
+						debug_log(__METHOD__
+							. " Abort. JSON decode error for column " . PHP_EOL
+							. "column: " . $column . PHP_EOL
+							. "value: " . $value . PHP_EOL
+							. "error: " . json_last_error_msg()
+							, logger::ERROR
+						);
+						throwException(new Exception("JSON decode error for column " . $column . ": " . json_last_error_msg()));
+					}
 				}
+			}
+			else if (isset( tm_db_manager::$int_columns[$column] )) {
+				$value = (int)$value;
 			}
 
 			$this->set_column_data( $column, $value );
