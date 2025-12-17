@@ -136,8 +136,13 @@ class matrix_db_manager {
 			foreach ($values as $col => $value) {
 
 				// Columns. Only accepts normalized columns
-				if (!isset(self::$columns[$col])) {
-					throw new Exception("Invalid column name: $col");
+				if (!isset(self::$columns[$col])) {					
+					debug_log(
+						__METHOD__ . " Ignored invalid column name: $col" . PHP_EOL
+						. ' allowed_columns: ' . json_encode(self::$columns)
+						, logger::ERROR
+					);
+					continue;
 				}
 				$columns[] = pg_escape_identifier($conn, $col);
 
@@ -333,7 +338,13 @@ class matrix_db_manager {
 		foreach ($values as $column => $value) {
 			// Validate column name (Security/Guardrail)
 			if (!isset(self::$columns[$column])) {
-				throw new Exception("Invalid column name: $column");
+				debug_log(
+					__METHOD__
+						. " Ignored invalid column name: $column" . PHP_EOL
+						. ' allowed_columns: ' . json_encode(self::$columns),
+					logger::ERROR
+				);
+				continue;
 			}
 
 			// Prepare value: JSON encode if it's a designated JSON column and not null
