@@ -10,13 +10,13 @@ class descriptors extends widget_common {
 
 
 	/**
-	* GET_DATO
-	* @return array $dato
+	* GET_DATA
+	* @return array|null $data
 	*/
-	public function get_dato() : array {
+	public function get_data() : ?array {
 		$start_time=start_time();
 
-		$dato = [];
+		$data = [];
 
 		// short vars
 			$section_tipo	= $this->section_tipo;
@@ -26,7 +26,7 @@ class descriptors extends widget_common {
 
 		// list mode does not compute result for speed
 			if($mode==='list') {
-				return $dato;
+				return $data;
 			}
 
 		// every state has a ipo that come from structure (input, process , output).
@@ -66,7 +66,7 @@ class descriptors extends widget_common {
 								DEDALO_DATA_LANG,
 								$source_section_tipo
 							);
-							$source_dato = $source_component->get_dato();
+							$source_dato = $source_component->get_data();
 
 							// locator will use to get the label of the components that has the information, only 1 locator is necessary
 							// $locator = reset($source_dato);
@@ -105,7 +105,7 @@ class descriptors extends widget_common {
 							DEDALO_DATA_NOLAN,
 							$locator->section_tipo
 						);
-						$component_dato			= $component->get_dato();
+						$component_dato			= $component->get_data();
 						$component_grid_value	= $component->get_grid_value();
 
 						$ar_component_dato			= array_merge($ar_component_dato, $component_dato);
@@ -145,7 +145,7 @@ class descriptors extends widget_common {
 							$current_data->locator	= $locator;
 
 						// set the final data to the widget
-						$dato[] = $current_data;
+						$data[] = $current_data;
 					}//end foreach ($output as $data_map)
 				}//end foreach ($ar_paths as $path)
 		}//foreach $ipo
@@ -153,14 +153,14 @@ class descriptors extends widget_common {
 		// debug
 			if(SHOW_DEVELOPER===true) {
 				debug_log(__METHOD__
-					." Total time get_dato widget descriptors: ".exec_time_unit($start_time,'ms').' ms'
+					." Total time get_data widget descriptors: ".exec_time_unit($start_time,'ms').' ms'
 					, logger::DEBUG
 				);
 			}
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
