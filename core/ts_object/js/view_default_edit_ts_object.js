@@ -221,6 +221,7 @@ export const render_children = async function(options) {
 	for (let i = 0; i < ar_children_data_len; i++) {
 
 		const child_data = children_data.ar_children_data[i]
+		console.log('child_data:', child_data);
 
 		// Ignore recursions. A child with the same properties of the parent can destroy the parent instance.
 		if (child_data.section_tipo===self.section_tipo && parseInt(child_data.section_id)===parseInt(self.section_id)) {
@@ -818,8 +819,7 @@ const render_id_column = function(self) {
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const is_descriptor		= self.is_descriptor
-		const is_indexable		= self.is_indexable
-		const children_data		= self.children_data
+		const is_indexable		= self.is_indexable		
 		const mode				= self.mode
 		const virtual_order		= self.virtual_order
 		const is_root_node		= self.is_root_node
@@ -830,7 +830,6 @@ const render_id_column = function(self) {
 			element_type	: 'div',
 			class_name		: 'id_column_content'
 		})
-
 	switch(thesaurus_mode) {
 
 		case 'relation': {
@@ -844,10 +843,10 @@ const render_id_column = function(self) {
 					title_label		: 'add',
 					parent			: id_column_content
 				})
-				const current_label_term = children_data.ar_elements.find(el => el.type==='term')
+				const current_label_term = self.data.ar_elements.find(el => el.type==='term')
 				link_related.data = {
-					section_tipo	: children_data.section_tipo,
-					section_id		: children_data.section_id,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
 					label			: current_label_term ? current_label_term.value : ''
 				}
 				// click event
@@ -874,8 +873,8 @@ const render_id_column = function(self) {
 							? window.opener // case DS opening new window
 							: window // default case (indexation)
 						window_base.event_manager.publish('link_term_' + linker_id, {
-							section_tipo	: children_data.section_tipo,
-							section_id		: children_data.section_id,
+							section_tipo	: self.section_tipo,
+							section_id		: self.section_id,
 							label			: current_label_term ? current_label_term.value : ''
 						})
 				}
@@ -1637,7 +1636,7 @@ const render_link_children = function (self) {
 			e.stopPropagation()
 
 			// if (self.ts_id==='tldtest1_2') {
-				console.warn('))))) Triggered mousedown handler:', self);
+				// console.warn('))))) Triggered mousedown handler:', self);
 				// console.warn('))))) Triggered mousedown handler e:', e);
 			// }
 
@@ -1664,10 +1663,17 @@ const render_link_children = function (self) {
 
 					// Already loaded. Only display it.
 
+					if(e.altKey) {
+						// Clean children data for force reload
+						self.children_data = null
+						// Load children data again
+						await open_children()
+					}
+
 					// show children container
 					self.children_container.classList.remove('hide')
 					// set arrow down
-					link_children_element.classList.add('open')
+					link_children_element.classList.add('open')					
 
 				}else{
 
