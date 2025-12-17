@@ -265,15 +265,15 @@ class matrix_db_manager {
 	* It's designed to provide a unified way of accessing data from
 	* various "matrix" tables within the Dédalo application.
 	* @param string $table
-	* The name of the table to query. The function validates this against
-	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	* 	The name of the table to query. The function validates this against
+	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
 	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
+	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param int $section_id
-	* A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
+	* 	A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
 	* @return object|false $row
-	* Returns the processed data as an object with parsed JSON values.
-	* If no row is found, or if a critical error occurs, it returns false.
+	* 	Returns the processed data as an object with parsed JSON values.
+	* 	If no row is found, or if a critical error occurs, it returns false.
 	*/
 	public static function read(string $table, string $section_tipo, int $section_id): object|false	{
 
@@ -314,14 +314,14 @@ class matrix_db_manager {
 
 		if (!$result) {
 			debug_log(__METHOD__
-				. " Error Processing Request Load " . to_string($sql) . PHP_EOL
+				. " Error execution READ on table: $table " . PHP_EOL
 				. ' error: ' . pg_last_error($conn)
 				, logger::ERROR
 			);
 			return false;
 		}
 
-		// Fetch all row into a single associative array
+		// Fetch result into a object row
 		$row = pg_fetch_object($result);
 		pg_free_result($result);
 
@@ -337,17 +337,17 @@ class matrix_db_manager {
 	* Safely updates one or more columns in a "matrix" table row,
 	* identified by a composite key of `section_id` and `section_tipo`.
 	* @param string $table
-	* The name of the table to query. The function validates this against
-	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	* 	The name of the table to query. The function validates this against
+	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
 	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
+	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	* @param int $section_id
-	* A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
+	* 	A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
 	* @param object $values
-	* Object with {column name : value} structure
-	* Keys are column names, values are their new values.
+	* 	Object with {column name : value} structure
+	* 	Keys are column names, values are their new values.
 	* @return bool
-	* Returns `true` on success, or `false` on failure.
+	* 	Returns `true` on success, or `false` on failure.
 	*/
 	public static function update(string $table, string $section_tipo, int $section_id, object $values): bool {
 
@@ -363,13 +363,13 @@ class matrix_db_manager {
 			return false;
 		}
 
-		// Check for empty update payload
-		if (empty($values)) {
+		// Check for empty update payload. Cast to array to avoid empty() false positives
+		if (empty((array)$values)) {
 			debug_log(
 				__METHOD__
-					. " Empty values array " . PHP_EOL
+					. " Ignored update with empty values " . PHP_EOL
 					. ' values: ' . json_encode($values),
-				logger::ERROR
+				logger::WARNING
 			);
 			return false;
 		}
@@ -442,11 +442,10 @@ class matrix_db_manager {
 		}
 
 		if (!$result) {
-			debug_log(
-				__METHOD__
-					. " Error Processing Request Load " . to_string($sql) . PHP_EOL
-					. ' error: ' . pg_last_error($conn),
-				logger::ERROR
+			debug_log(__METHOD__
+				. " Error execution UPDATE/INSERT on table: $table " . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
 			);
 			return false;
 		}
@@ -691,7 +690,7 @@ class matrix_db_manager {
 		$stmt_name_parts = ['update_by_key', $table];
 
 		// Parameters: $1=section_tipo, $2=section_id, $3=path, $4=value, $5=path2, $6=value2, etc.
-		$params = [$section_tipo, $section_id];
+		$params = [$section_id, $section_tipo];
 
 		// Group data by column to handle multiple updates to the same column
 		$columns_data = [];
@@ -788,7 +787,7 @@ class matrix_db_manager {
 			$sql = '
 				UPDATE ' . $table . '
 				SET ' . implode(', ' . PHP_EOL, $sentences) . '
-				WHERE section_tipo = $1  AND section_id = $2
+				WHERE section_id = $1 AND section_tipo = $2
 				RETURNING id
 			';
 
@@ -1092,7 +1091,10 @@ class matrix_db_manager {
 				return false;
 			}
 			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
+			DBi::$prepared_statements[$stmt_name] = true;			
+		}else{
+			// debug
+			$prepend_sql = '-- RECYCLING PREPARED statement: ' . $stmt_name . '  - ' . count(DBi::$prepared_statements) . PHP_EOL;
 		}
 
 		// default sync case
@@ -1139,13 +1141,17 @@ class matrix_db_manager {
 				$sql_query = $sql_prepend . trim($sql_query);
 			}
 
-			// debug log sql query. See PHP log file
-			$sql_query = '-- exec_search: ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
+			// debug log sql query. See PHP log file			
+			$sql_query = '-- exec_search ' . count($params) . ' params [' .$stmt_name. '] : ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;			
 			$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
-			$level = $total_time_ms > 20 ? logger::ERROR : logger::DEBUG;
+			if(isset($prepend_sql)) {
+				$sql_query_debug = $prepend_sql . $sql_query_debug;
+			}
+			$level = $total_time_ms > 20 ? logger::WARNING : logger::DEBUG;
 			debug_log(__METHOD__
 				. ' sql_query_debug: ' . PHP_EOL
 				. PHP_EOL . $sql_query_debug . PHP_EOL
+				// . PHP_EOL . $sql_query . PHP_EOL
 				, $level
 			);
 		}
