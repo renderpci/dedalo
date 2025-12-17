@@ -447,21 +447,21 @@ final class hierarchy_test extends TestCase {
 	*/
 	public function test_get_hierarchy_by_tld() {
 
-		$response = hierarchy::get_hierarchy_by_tld(
+		$hierarchy_row = hierarchy::get_hierarchy_by_tld(
 			'ts'
 		);
 
 		$this->assertTrue(
-			gettype($response)==='object',
+			gettype($hierarchy_row)==='object',
 			'expected object ' . PHP_EOL
-				. gettype($response)
+				. gettype($hierarchy_row)
 		);
 
 		$this->assertTrue(
-			$response->result==1,
+			$hierarchy_row->section_id==1,
 			'expected equal 1 ' . PHP_EOL
-				.' gettype: ' . gettype($response->result) . PHP_EOL
-				.' response: ' . to_string($response) . PHP_EOL
+				.' gettype: ' . gettype($hierarchy_row->section_id) . PHP_EOL
+				.' hierarchy_row: ' . to_string($hierarchy_row) . PHP_EOL
 				.' tld: ts'
 		);
 	}//end test_get_hierarchy_by_tld
