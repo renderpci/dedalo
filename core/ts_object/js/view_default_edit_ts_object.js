@@ -221,7 +221,6 @@ export const render_children = async function(options) {
 	for (let i = 0; i < ar_children_data_len; i++) {
 
 		const child_data = children_data.ar_children_data[i]
-		console.log('child_data:', child_data);
 
 		// Ignore recursions. A child with the same properties of the parent can destroy the parent instance.
 		if (child_data.section_tipo===self.section_tipo && parseInt(child_data.section_id)===parseInt(self.section_id)) {
