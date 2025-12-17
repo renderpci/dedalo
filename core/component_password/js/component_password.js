@@ -61,6 +61,7 @@ export const component_password = function(){
 	component_password.prototype.list				= render_list_component_password.prototype.list
 	component_password.prototype.tm					= render_list_component_password.prototype.list
 	component_password.prototype.edit				= render_edit_component_password.prototype.edit
+	component_password.prototype.search				= render_list_component_password.prototype.list
 
 
 
