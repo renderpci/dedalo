@@ -2531,42 +2531,42 @@ function build_link(string $name, array $arguments) : string {
 
 
 /**
-* IS_EMPTY_DATO
+* IS_EMPTY
 * Check if data given is considered empty
 * This prevents pseudo-empty values like '<p></p>' or similar
 * from being considered non-empty.
-* @param mixed $dato
+* @param mixed $data
 * @return bool
 */
-function is_empty_dato(mixed $dato) : bool {
+function is_empty(mixed $data) : bool {
 
 	// note that zero value (0) is considered as empty too
-	if (empty($dato)) {
+	if (empty($data)) {
 		return true;
 	}
 
 	switch (true) {
 
-		case is_object($dato):
+		case is_object($data):
 
-			foreach ($dato as $property) {
+			foreach ($data as $property) {
 				return false;
 			}
 			return true;
 
-		case is_array($dato):
+		case is_array($data):
 
-			foreach ($dato as $value) {
-				if (!is_empty_dato($value)) {
+			foreach ($data as $value) {
+				if (!is_empty($value)) {
 					return false;
 				}
 			}
 			return true;
 
-		case is_string($dato):
+		case is_string($data):
 
-			$dato_trimmed = trim($dato);
-			if (empty($dato_trimmed) || trim(strip_tags($dato_trimmed))==='') {
+			$data_trimmed = trim($data);
+			if (empty($data_trimmed) || trim(strip_tags($data_trimmed))==='') {
 				return true;
 			}
 			return false;
@@ -2575,7 +2575,7 @@ function is_empty_dato(mixed $dato) : bool {
 
 			return false;
 	}
-}//end is_empty_dato
+}//end is_empty
 
 
 
