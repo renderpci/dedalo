@@ -3390,18 +3390,15 @@ class component_relation_common extends component_common {
 
 		// 2 SECTION
 			// Section record . create new empty section in target section tipo
-			// $section_new = section::get_instance(null, $target_section_tipo);
-			// $save_options = new stdClass();
-			// 	$save_options->caller_dato				= $this->get_dato();
-			// 	$save_options->component_filter_data	= $component_filter_data;
-			// $new_section_id = $section_new->Save( $save_options );
+			$section_new = section::get_instance(null, $target_section_tipo);
 
-			$section_new = section::get_instance($target_section_tipo);
 			$save_options = new stdClass();
-				$save_options->component_filter_data = $component_filter_data;
-			$new_section_id = $section_new->create_record($save_options);
+				$save_options->caller_dato				= $this->get_dato();
+				$save_options->component_filter_data	= $component_filter_data;
 
-			if(!$new_section_id || $new_section_id<1) {
+			$new_section_id = $section_new->Save( $save_options );
+
+			if($new_section_id<1) {
 				$msg = "Error on create new section: new section_id is not valid ! ";
 				$response->msg .= $msg;
 				debug_log(__METHOD__
@@ -3460,7 +3457,7 @@ class component_relation_common extends component_common {
 
 		$term_id = null;
 
-		$data = $this->get_data();
+		$dato = $this->get_dato();
 
 		if (!empty($dato)) {
 
@@ -3475,21 +3472,21 @@ class component_relation_common extends component_common {
 					}
 				}
 
-			// add parents option				
+			// add parents option
+				$new_dato = [];
 				if (isset($options->add_parents) && $options->add_parents===true) {
-					$new_data = [];
-					# calculate parents and add to data
-					foreach ((array)$data as $current_locator) {
+					# calculate parents and add to dato
+					foreach ((array)$dato as $current_locator) {
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
 						$ar_parents = component_relation_parent::get_parents_recursive(
 							$current_locator->section_id,
 							$current_locator->section_tipo
 						);
 						foreach ($ar_parents as $parent_locator) {
-							$new_data[] = $parent_locator;
+							$new_dato[] = $parent_locator;
 						}
 					}
-					$data = array_merge($data, $new_data);
+					$dato = array_merge($dato, $new_dato);
 				}
 
 			// send to diffusion for normalize formats
@@ -3507,7 +3504,7 @@ class component_relation_common extends component_common {
 						];
 				}
 			// send to diffusion for normalize formats
-				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $data);
+				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $dato);
 		}
 
 		return $term_id;
@@ -3525,10 +3522,10 @@ class component_relation_common extends component_common {
 
 		$ar_data		= [];
 		$ddo_map		= $options->ddo_map ?? [];
-		$data			= $this->get_data();
+		$dato			= $this->get_dato();
 		$section_tipo	= $this->section_tipo;
 
-		if(empty($data)){
+		if(empty($dato)){
 			return false;
 		}
 
@@ -3548,19 +3545,15 @@ class component_relation_common extends component_common {
 			$resolve_ddo->last = true;
 		}
 
-		foreach ($data as $data_item) {
+		foreach ($dato as $current_dato) {
 
 			// create the current_data with the section of the component that call.
 			// it will use to resolve the ddo_chain
-				$current_locator = new stdClass();
-					$current_locator->section_tipo	= $data_item->section_tipo;
-					$current_locator->section_id	= $data_item->section_id;
+				$current_data = new stdClass();
+					$current_data->section_tipo	= $current_dato->section_tipo;
+					$current_data->section_id	= $current_dato->section_id;
 
-			$result_compnent_data = component_relation_common::resolve_component_data_recursively(
-				$ddo_map,
-				$init_ddo,
-				$current_locator
-			);
+			$result_compnent_data = component_relation_common::resolve_component_data_recursively($ddo_map, $init_ddo, $current_data);
 
 			$ar_data = array_merge($ar_data, $result_compnent_data);
 		}

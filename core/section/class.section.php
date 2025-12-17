@@ -1476,10 +1476,6 @@ class section extends common {
 	* CREATE_RECORD
 	* Create new record a section record in matrix
 	* @param object|null $options = null
-	* {
-	*   component_filter_data : array|null
-	*   values : object|null
-	* }
 	* @return int|null $section_id
 	*/
 	public function create_record( ?object $options=null ) : int|false {
@@ -1524,16 +1520,7 @@ class section extends common {
 			// Section record
 			// To create the new record in the DDBB
 			$section_record	= section_record::create( $tipo, $values );
-			if(!$section_record) {
-				debug_log(__METHOD__
-					. " Error to create a new section record " . PHP_EOL
-					. " section_tipo: " .$tipo . PHP_EOL
-					. " values: " .json_encode($values)
-					, logger::ERROR
-				);
-				return false;
-			}
-			$section_id	= $section_record->section_id;
+			$section_id		= $section_record->section_id;
 
 			// Check error when new record was created
 			if( $section_id===false ){

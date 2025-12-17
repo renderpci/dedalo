@@ -137,7 +137,7 @@ class DDModal extends HTMLElement {
 				.modal-header {
 					position: sticky;
 					top: 0;
-					z-index: 4;
+					z-index: 2;
 				}
 
 			/* modal body */

@@ -274,16 +274,14 @@ class component_string_common extends component_common {
 		}
 
 		// Try any other
-		$data_langs = common::get_ar_all_langs(); // Array of langs from config projects
-		// Add nolan for transliterables
-		$data_langs[] = DEDALO_DATA_NOLAN;
+		$data_langs = common::get_ar_all_langs(); // Langs from config projects
 		foreach ($data_langs as $current_lang) {
 			if ($current_lang===$lang || $current_lang===$main_lang) {
 				continue; // Already checked
 			}
 			// Get current lang group of items from data
 			$current_lang_data = $this->get_data_lang($current_lang);
-			if (!$this->is_empty_data($current_lang_data)) {
+			if (!$this->is_empty_data($data_nolan)) {
 				return $current_lang_data ;
 			}
 		}

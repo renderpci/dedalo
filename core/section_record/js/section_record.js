@@ -382,8 +382,8 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 					if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
 						// check if the column of the component is already loaded, if exists, don't load it.
-							const found = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)							
-							if(found) {
+							const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
+							if(exists) {
 								continue
 							}
 
@@ -572,20 +572,20 @@ section_record.prototype.get_component_data = function(options) {
 				){
 
 				// time machine case
-				// if (el.matrix_id && matrix_id) {
+				if (el.matrix_id && matrix_id) {
 
-				// 	if (ddo.model==='component_dataframe') {
+					if (ddo.model==='component_dataframe') {
 
-				// 		return (
-				// 			parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
-				// 			el.section_tipo_key			=== section_tipo_key &&
-				// 			parseInt(el.section_id_key)	=== parseInt(section_id_key) &&
-				// 			el.main_component_tipo		=== main_component_tipo
-				// 		)
-				// 	}
+						return (
+							parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
+							el.section_tipo_key			=== section_tipo_key &&
+							parseInt(el.section_id_key)	=== parseInt(section_id_key) &&
+							el.main_component_tipo		=== main_component_tipo
+						)
+					}
 
-				// 	return parseInt(el.matrix_id)===parseInt(matrix_id)
-				// }
+					return parseInt(el.matrix_id)===parseInt(matrix_id)
+				}
 
 				// dataframe case
 				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id

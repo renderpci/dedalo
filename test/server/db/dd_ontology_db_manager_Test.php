@@ -188,7 +188,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 	public function test_create(): void {
 
 		$tipo = 'test13';
-		$values = null; // default values is an empty array
+		$values = []; // default values is an empty array
 
 		$start_time=start_time();
 		$result = dd_ontology_db_manager::create(
@@ -217,7 +217,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Using values
 		$start_time=start_time();
-		$values = (object)[
+		$values = [
 			'order_number' => 99,
 			'properties' => (object)['test'=>true]
 
@@ -259,7 +259,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test create with boolean values
 		$tipo_bool = 'test_bool_14';
-		$values_bool = (object)[
+		$values_bool = [
 			'is_model' => true,
 			'is_translatable' => false
 		];
@@ -276,7 +276,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test create with null values
 		$tipo_null = 'test_null_15';
-		$values_null = (object)[
+		$values_null = [
 			'parent' => null,
 			'properties' => null
 		];
@@ -392,7 +392,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test reading record with JSON columns
 		$tipo_json = 'test_json_66';
-		$json_values = (object)[
+		$json_values = [
 			'term' => (object)['lg-eng' => 'Test Term', 'lg-spa' => 'Término de Prueba'],
 			'properties' => (object)['prop1' => 'value1', 'prop2' => 123]
 		];
@@ -405,7 +405,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test reading record with integer columns
 		$tipo_int = 'test_int_67';
-		dd_ontology_db_manager::create($tipo_int, (object)['order_number' => 42]);
+		dd_ontology_db_manager::create($tipo_int, ['order_number' => 42]);
 		$result_int = dd_ontology_db_manager::read($tipo_int);
 		
 		$this->assertIsInt($result_int['order_number'], 'Expected order_number to be integer');
@@ -441,7 +441,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		);
 
 
-		$values = (object)[
+		$values = [
 			'order_number' => 99,
 			'properties' => (object)['test'=>true]
 		];
@@ -481,7 +481,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$result = false;
 		try {
 			// Bad column case
-			$values2 = (object)[
+			$values2 = [
 				'data' => [
 					'test_property' => true
 				]
@@ -502,7 +502,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		}
 
 		// do it again
-		$values3 = (object)[
+		$values3 = [
 			'parent' => 'dd1',
 			'term' => json_decode('{"lg-ara":"العمليات","lg-cat":"Processos","lg-deu":"Prozesse","lg-ell":"Διεργασίες","lg-eng":"Processes","lg-eus":"Prozesuak","lg-fra":"Procédures","lg-ita":"Processi","lg-nep":"प्रक्रियाहरू","lg-por":"Processos","lg-spa":"Procesos"}'),
 			'model' => 'area_tool',
@@ -538,21 +538,21 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		);
 		// result_properties
 		$result_properties = $result['properties'];
-		$eq = json_encode($result_properties) === json_encode($values3->properties);
+		$eq = json_encode($result_properties) === json_encode($values3['properties']);
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
 				.'result properties : ' . json_encode($result_properties) . PHP_EOL
-				.'values properties : ' . json_encode($values3->properties)
+				.'values properties : ' . json_encode($values3['properties'])
 		);
 		// result_is_translatable
 		$result_is_translatable = $result['is_translatable'];
-		$eq = $result_is_translatable == $values3->is_translatable;
+		$eq = $result_is_translatable == $values3['is_translatable'];
 		$this->assertTrue(
 			$eq,
 			'expected true equal' . PHP_EOL
 				.'result is_translatable : ' . json_encode($result_is_translatable) . PHP_EOL
-				.'values is_translatable : ' . json_encode($values3->is_translatable)
+				.'values is_translatable : ' . json_encode($values3['is_translatable'])
 		);
 
 		// Updating non existing record
@@ -569,12 +569,12 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		);
 
 		// Test update with empty values (should fail)
-		$result_empty = dd_ontology_db_manager::update($tipo, new stdClass());
+		$result_empty = dd_ontology_db_manager::update($tipo, []);
 		$this->assertFalse($result_empty, 'Expected false when updating with empty values');
 
 		// Test cache invalidation after update
 		dd_ontology_db_manager::read($tipo); // Cache the record
-		dd_ontology_db_manager::update($tipo, (object)['parent' => 'dd999']);
+		dd_ontology_db_manager::update($tipo, ['parent' => 'dd999']);
 		$result_after_update = dd_ontology_db_manager::read($tipo);
 		$this->assertEquals('dd999', $result_after_update['parent'], 'Expected cache to be invalidated after update');
 
@@ -701,21 +701,21 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo2 = 'test_search_2';
 		$tipo3 = 'test_search_3';
 
-		dd_ontology_db_manager::create($tipo1, (object)[
+		dd_ontology_db_manager::create($tipo1, [
 			'parent' => 'dd1',
 			'model' => 'component_input_text',
 			'order_number' => 1,
 			'tld' => 'dd'
 		]);
 
-		dd_ontology_db_manager::create($tipo2, (object)[
+		dd_ontology_db_manager::create($tipo2, [
 			'parent' => 'dd1',
 			'model' => 'component_select',
 			'order_number' => 2,
 			'tld' => 'dd'
 		]);
 
-		dd_ontology_db_manager::create($tipo3, (object)[
+		dd_ontology_db_manager::create($tipo3, [
 			'parent' => 'dd2',
 			'model' => 'component_input_text',
 			'order_number' => 3,
@@ -820,7 +820,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 					true
 				);
 			},
-			500, // estimated time ms
+			35, // estimated time ms
 			1, // from sid
 			10000 // n records
 		);
@@ -842,8 +842,8 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 	{
 		// Test 1: Upsert behavior (create same tipo twice)
 		$tipo_upsert = 'test_upsert_99';
-		$id1 = dd_ontology_db_manager::create($tipo_upsert, (object)['parent' => 'dd1']);
-		$id2 = dd_ontology_db_manager::create($tipo_upsert, (object)['parent' => 'dd2']);
+		$id1 = dd_ontology_db_manager::create($tipo_upsert, ['parent' => 'dd1']);
+		$id2 = dd_ontology_db_manager::create($tipo_upsert, ['parent' => 'dd2']);
 		
 		// Should return same ID (upsert)
 		$this->assertEquals($id1, $id2, 'Expected same ID for upsert');
@@ -854,7 +854,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test 2: Create with all NULL values
 		$tipo_nulls = 'test_nulls_100';
-		$id_nulls = dd_ontology_db_manager::create($tipo_nulls, (object)[
+		$id_nulls = dd_ontology_db_manager::create($tipo_nulls, [
 			'parent' => null,
 			'term' => null,
 			'properties' => null
@@ -876,7 +876,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Test 2: Cache behavior - verify cache is used
 		$tipo_cache = 'test_cache_101';
-		dd_ontology_db_manager::create($tipo_cache, (object)['parent' => 'dd1']);
+		dd_ontology_db_manager::create($tipo_cache, ['parent' => 'dd1']);
 		
 		// First read (not cached)
 		$result1 = dd_ontology_db_manager::read($tipo_cache);
@@ -896,7 +896,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 			'lg-spa' => 'Término Español',
 			'lg-fra' => 'Terme Français'
 		];
-		dd_ontology_db_manager::create($tipo_json, (object)['term' => $complex_term]);
+		dd_ontology_db_manager::create($tipo_json, ['term' => $complex_term]);
 		
 		$result_json = dd_ontology_db_manager::read($tipo_json);
 		$this->assertIsObject($result_json['term'], 'Expected term to be object');
@@ -912,20 +912,20 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 	public function test_update_edge_cases(): void
 	{
 		$tipo = 'test_update_edge_103';
-		dd_ontology_db_manager::create($tipo, (object)['parent' => 'dd1']);
+		dd_ontology_db_manager::create($tipo, ['parent' => 'dd1']);
 
 		// Test 1: Update with empty values (should fail)
-		$result_empty = dd_ontology_db_manager::update($tipo, (object)[]);
+		$result_empty = dd_ontology_db_manager::update($tipo, []);
 		$this->assertFalse($result_empty, 'Expected false for empty values');
 
 		// Test 2: Update with invalid column (should fail)		
-		$result = dd_ontology_db_manager::update($tipo, (object)[
+		$result = dd_ontology_db_manager::update($tipo, [
 			'invalid_column' => 'value'
 		]);
 		$this->assertFalse($result, 'Expected false for invalid column');
 
 		// Test 3: Update with NULL to clear values
-		dd_ontology_db_manager::update($tipo, (object)[
+		dd_ontology_db_manager::update($tipo, [
 			'parent' => null,
 			'properties' => null
 		]);
@@ -935,7 +935,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$this->assertNull($result['properties'], 'Expected properties to be NULL');
 
 		// Test 4: Update boolean values
-		dd_ontology_db_manager::update($tipo, (object)[
+		dd_ontology_db_manager::update($tipo, [
 			'is_model' => true,
 			'is_translatable' => false
 		]);
@@ -1008,9 +1008,9 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo2 = 'test_search_edge_107';
 		$tipo3 = 'test_search_edge_108';
 		
-		dd_ontology_db_manager::create($tipo1, (object)['order_number' => 10]);
-		dd_ontology_db_manager::create($tipo2, (object)['order_number' => 20]);
-		dd_ontology_db_manager::create($tipo3, (object)['order_number' => 30]);
+		dd_ontology_db_manager::create($tipo1, ['order_number' => 10]);
+		dd_ontology_db_manager::create($tipo2, ['order_number' => 20]);
+		dd_ontology_db_manager::create($tipo3, ['order_number' => 30]);
 		
 		$result_operator = dd_ontology_db_manager::search([
 			'order_number' => (object)['operator' => '>', 'value' => 15]

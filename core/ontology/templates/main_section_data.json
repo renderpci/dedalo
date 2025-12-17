@@ -1,58 +1,56 @@
 {
-	"relation": {
-		"hierarchy54":[{
-			"id":1,
+	"relations": [
+		{
 			"type": "dd675",
 			"section_id": "1",
 			"section_tipo": "dd153",
 			"from_component_tipo": "hierarchy54"
-		}],
-		"hierarchy125":[{
-			"id":1,
+		},
+		{
 			"type": "dd151",
 			"section_id": "2",
 			"section_tipo": "dd64",
 			"from_component_tipo": "hierarchy125"
-		}],
-		"hierarchy8":[{
-			"id":1,
+		},
+		{
 			"type": "dd151",
 			"section_id": "17344",
 			"section_tipo": "lg1",
 			"from_component_tipo": "hierarchy8"
-		}],
-		"hierarchy4":[{
-			"id":1,
+		},
+		{
 			"type": "dd151",
 			"section_id": "1",
 			"section_tipo": "dd64",
 			"from_component_tipo": "hierarchy4"
-		}]
-	},
-	"string": {
-		"hierarchy5": [{
+		}
+	],
+	"components": {
+		"hierarchy5": {
 			"inf": "Name [component_input_text]",
-			"id":1,
-			"lang":"lg-spa",
-			"value": null			
-		}],
-		"hierarchy6": [{
+			"dato": {
+				"lg-spa": []
+			}
+		},
+		"hierarchy6": {
 			"inf": "TLD [component_input_text]",
-			"id":1,
-			"lang":"lg-nolan",
-			"value": null			
-		}],
-		"hierarchy53": [{
+			"dato": {
+				"lg-nolan": []
+			}
+		},
+		"hierarchy53": {
 			"inf": "Target section tipo [component_input_text]",
-			"id":1,
-			"lang":"lg-nolan",
-			"value": null	
-		}],
-		"hierarchy109": [{
+			"dato": {
+				"lg-nolan": []
+			}
+		},
+		"hierarchy109": {
 			"inf": "Real section tipo [component_input_text]",
-			"id":1,
-			"lang":"lg-nolan",
-			"value": "ontology1"			
-		}]
+			"dato": {
+				"lg-nolan": [
+					"ontology1"
+				]
+			}
+		}
 	}
 }

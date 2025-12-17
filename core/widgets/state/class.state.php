@@ -9,16 +9,16 @@ class state extends widget_common {
 
 
 	/**
-	* GET_DATA
-	* @return array|null $data
+	* GET_DATO
+	* @return array $dato
 	*/
-	public function get_data() : ?array {
+	public function get_dato() : array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
 		$ipo 			= $this->ipo;
 
-		$data = [];
+		$dato = [];
 
 		$project_langs = common::get_ar_all_langs();
 
@@ -68,7 +68,7 @@ class state extends widget_common {
 							DEDALO_DATA_LANG,
 							$source_section_tipo
 						);
-						$source_dato = $source_component->get_data();
+						$source_dato = $source_component->get_dato();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
 						$locator = reset($source_dato);
 
@@ -198,7 +198,7 @@ class state extends widget_common {
 								'id'	=> $item->id
 							];
 						// set the final data to the widget
-						$data[] = $current_data;
+						$dato[] = $current_data;
 					}
 
 					// get the total nodes for every column and row with the total % of the process
@@ -216,14 +216,14 @@ class state extends widget_common {
 							$total_result->value	= $total;
 							$total_result->column	= $column;
 							$total_result->type		= 'total';
-						$data[] = $total_result;
+						$dato[] = $total_result;
 					}
 				}
 			}//end if (!empty($locator))
 		}//foreach $ipo
 
-		return $data;
-	}//end get_data
+		return $dato;
+	}//end get_dato
 
 
 
@@ -272,9 +272,9 @@ class state extends widget_common {
 			$locator->section_tipo
 		);
 
-		$data	= $component_portal->get_data();
-		$value	= !empty($data)
-			? reset($data)
+		$dato	= $component_portal->get_dato();
+		$value	= !empty($dato)
+			? reset($dato)
 			: 0;
 
 

@@ -481,11 +481,6 @@ ts_object.prototype.get_children_data = async function(options) {
 
 			// success case
 
-			console.log('get_children_data api_response.result:', api_response.result);
-
-			// Sort by order (ascending)
-			api_response.result.ar_children_data.sort((a, b) => a.order - b.order);
-
 			return api_response.result
 
 		}else{

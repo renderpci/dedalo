@@ -297,7 +297,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 
 		# TIME MACHINE COPY SAVE (Return assigned id on save)
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
-		# if(tm_record::$save_tm===true && $this->matrix_table!=='matrix_activity') { DEDALO_ACTIVITY_SECTION_TIPO
+		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') { DEDALO_ACTIVITY_SECTION_TIPO
 		if($this->matrix_table!=='matrix_activity') {
 
 			$save_tm = isset($save_options->save_tm)
@@ -385,9 +385,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$time_machine_date			= $save_options->time_machine_date ?? dd_date::get_timestamp_now_for_db();
 			$bulk_process_id			= $save_options->time_machine_bulk_process_id ?? null;
 
-		// save_time_machine_version. To disable time machine save, set: tm_record::$save_tm = false;
+		// save_time_machine_version. To disable time machine save, set: RecordObj_time_machine::$save_time_machine_version = false;
 		// This is useful for some bulk operations like 'portalize'
-			if (tm_record::$save_tm===false) {
+			if (RecordObj_time_machine::$save_time_machine_version===false) {
 				return null;
 			}
 

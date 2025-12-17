@@ -169,7 +169,7 @@ class diffusion_section_stats extends diffusion {
 				SELECT *
 				FROM "matrix_activity"
 				WHERE
-				relation @> \'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]}\'
+				relation->\'dd543\' @> \'[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"dd543"}]\'
 				'.$activity_filter_beginning.'
 				ORDER BY timestamp ASC
 				LIMIT 1
@@ -522,7 +522,9 @@ class diffusion_section_stats extends diffusion {
 		// creates a new section
 			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
 			$section		= section::get_instance(
-				$section_tipo
+				$section_tipo,
+				'edit',
+				false // bool cache
 			);
 			$section_id	= $section->create_record();
 			if (empty($section_id)) {
@@ -547,7 +549,8 @@ class diffusion_section_stats extends diffusion {
 					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator->set_from_component_tipo($tipo);
 
-				$component->set_data([$locator]);
+				$data = [$locator];
+				$component->set_data($data);
 				$component->save();
 			})(USER_ACTIVITY_USER_TIPO, $user_id); // dd1522
 
@@ -562,11 +565,8 @@ class diffusion_section_stats extends diffusion {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$data_item = new stdClass();
-					$data_item->value = $value;
-					$data_item->lang = DEDALO_DATA_NOLAN;
-				
-				$component->set_data([$data_item]);
+				$data = [(object)['value' => $value, 'lang' => DEDALO_DATA_NOLAN]];
+				$component->set_data($data);
 				$component->save();
 			})(USER_ACTIVITY_TYPE_TIPO, $type); // dd1531
 
@@ -588,10 +588,10 @@ class diffusion_section_stats extends diffusion {
 
 				$dd_date = new dd_date($date);
 
-				$data_item = new stdClass();
-					$data_item->start = $dd_date;
+				$data = new stdClass();
+					$data->start = $dd_date;
 
-				$component->set_data([$data_item]);
+				$component->set_data([$data]);
 				$component->save();
 			})(USER_ACTIVITY_DATE_TIPO, $year, $month, $day); // dd1530
 
@@ -606,11 +606,8 @@ class diffusion_section_stats extends diffusion {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$data_item = new stdClass();
-					$data_item->value = $value;
-					$data_item->lang = DEDALO_DATA_NOLAN;
-				
-				$component->set_data([$data_item]);
+				$data = [(object)['value' => $value, 'lang' => DEDALO_DATA_NOLAN]];
+				$component->set_data($data);
 				$component->save();
 			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523
 

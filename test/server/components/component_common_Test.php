@@ -386,8 +386,20 @@ final class component_common_test extends TestCase {
 				false
 			);
 
+			$this->assertTrue(
+				$component->get_is_loaded_matrix_data()===false,
+				'expected false for is_loaded_matrix_data'
+			);
+
 			// dato
-			$dato = $component->get_dato();			
+			$dato = $component->get_dato();
+
+			if (!empty($dato)) {
+				$this->assertTrue(
+					$component->get_is_loaded_matrix_data()===true,
+					'expected true for is_loaded_matrix_data '.$element->model
+				);
+			}
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
@@ -429,9 +441,21 @@ final class component_common_test extends TestCase {
 			$component->set_data_source('tm');
 			$component->set_matrix_id('1');
 
+			$this->assertTrue(
+				$component->get_is_loaded_matrix_data()===false,
+				'expected false for is_loaded_matrix_data'
+			);
+
 			// dato
 			$dato = $component->get_dato();
-			
+
+			if (!empty($dato)) {
+				$this->assertTrue(
+					$component->get_is_loaded_matrix_data()===true,
+					'expected true for is_loaded_matrix_data '.$element->model
+				);
+			}
+
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
@@ -585,6 +609,14 @@ final class component_common_test extends TestCase {
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
+			);
+
+			$loaded_matrix_data = $component->get_is_loaded_matrix_data();
+
+			$this->assertTrue(
+				$loaded_matrix_data===true,
+				'expected true from is_loaded_matrix_data '.$element->model .PHP_EOL
+				. json_encode($loaded_matrix_data)
 			);
 
 			if (!in_array($element->model, [
@@ -1678,7 +1710,7 @@ final class component_common_test extends TestCase {
 	* Only for component_string_common extends
 	* @return void
 	*/
-	public function test_get_component_data_fallback() {
+	public function test_extract_component_dato_fallback() {
 
 		// default dato
 		foreach (get_elements() as $element) {
@@ -1699,7 +1731,7 @@ final class component_common_test extends TestCase {
 				continue;
 			}
 
-			$result = $component->get_component_data_fallback(
+			$result = $component->extract_component_dato_fallback(
 				DEDALO_DATA_LANG,
 				DEDALO_DATA_LANG_DEFAULT
 			);
@@ -1715,7 +1747,7 @@ final class component_common_test extends TestCase {
 				'result type expected array. current type: ' .gettype($result) .' - '.$element->model
 			);
 		}
-	}//end test_get_component_data_fallback
+	}//end test_extract_component_dato_fallback
 
 
 

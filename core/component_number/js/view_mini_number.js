@@ -32,9 +32,7 @@ view_mini_number.render = async function(self, options) {
 		const value = data.value || []
 
 	// Value as string
-		const value_string	= (value.length>0)
-			? value.map(item => item.value).join(self.context.fields_separator)
-			: ''
+		const value_string = value.map(item => item.value).join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

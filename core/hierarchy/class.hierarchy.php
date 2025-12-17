@@ -88,8 +88,8 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data		= $component->get_data();
-			$locator	= $data[0] ?? null;
+			$dato		= $component->get_dato();
+			$locator	= $dato[0] ?? null;
 			if( empty($locator) ||
 				!isset($locator->section_tipo) || $locator->section_tipo!==DEDALO_SECTION_SI_NO_TIPO ||
 				!isset($locator->section_id) || $locator->section_id!=NUMERICAL_MATRIX_VALUE_YES) {
@@ -117,11 +117,11 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data		= $component->get_data();
-			$first_data	= $dato[0]->value ?? null;
-			$tld2		= !empty($first_data)
-				? strtolower( $first_data )
-				: $first_data;
+			$dato		= $component->get_dato();
+			$first_dato	= $dato[0] ?? null;
+			$tld2		= !empty($first_dato)
+				? strtolower( $first_dato )
+				: $first_dato;
 			if (empty($tld2)) {
 
 				// Error: TLD2 is mandatory
@@ -146,8 +146,8 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data				= $component->get_data();
-			$real_section_tipo	= $data[0]->value ?? false;
+			$dato				= $component->get_dato();
+			$real_section_tipo	= $dato[0] ?? false;
 			if (empty($real_section_tipo)) {
 
 				// Error: source_real_section_tipo is mandatory
@@ -187,12 +187,12 @@ class hierarchy extends ontology {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$hierarchy_type_data = $component->get_data();
-			$is_toponymy = (isset($hierarchy_type_data[0]) && isset($hierarchy_type_data[0]->section_id) && $hierarchy_type_data[0]->section_id=='2')
+			$hierarchy_type_dato = $component->get_dato();
+			$is_toponymy = (isset($hierarchy_type_dato[0]) && isset($hierarchy_type_dato[0]->section_id) && $hierarchy_type_dato[0]->section_id=='2')
 				? true
 				: false;
-			$typology_id = isset($hierarchy_type_data[0])
-				? (int)$hierarchy_type_data[0]->section_id
+			$typology_id = isset($hierarchy_type_dato[0])
+				? (int)$hierarchy_type_dato[0]->section_id
 				: 0;
 			if ($typology_id<1) {
 
@@ -224,7 +224,7 @@ class hierarchy extends ontology {
 			if (empty($name)) {
 				$name = 'Hierarchy ' . $tld2;
 			}
-			$name_data = $component->get_data();
+			$name_data = $component->get_dato_full();
 
 		// -------- VIRTUAL SECTION --------
 
@@ -716,32 +716,51 @@ class hierarchy extends ontology {
 	* get result section_id
 	* @param $tld
 	*	tld like 'es'
-	* @return object|null $row
+	* @return object $response
 	*/
-	public static function get_hierarchy_by_tld( string $tld ) : ?object {
+	public static function get_hierarchy_by_tld( string $tld ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$table			= self::$main_table; // expected 'matrix_hierarchy_main'
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-		
-			// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)	
-			$tld 			= trim(strtolower($tld));
-			$safe_tld 		= safe_tld( $tld );
-			$q				= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
 
-		// SQL query	
-			$sql = 'SELECT section_id, section_tipo' . PHP_EOL;
-			$sql .= 'FROM '.$table . PHP_EOL;
-			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
-			$sql .= 'string @> $2';
-			$sql .= 'LIMIT 1 ;';
+		$sql = '
+			SELECT section_id
+			FROM "'.$table.'"
+			WHERE
+			section_tipo = \''.$section_tipo.'\' AND
+			f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
+		';
+		// debug info
+		debug_log(__METHOD__
+			." Executing DB query ".to_string($sql)
+			, logger::WARNING
+		);
 
-		// search
-			$result = matrix_db_manager::exec_search($sql, [$section_tipo, $q]);
-			$row 	= pg_fetch_object($result) ?? null;
-	
+		$result = pg_query(DBi::_getConnection(), $sql);
+		if ($result===false) {
+			$msg = " Error on db execution (get_hierarchy_by_tld): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__
+				. $msg
+				, logger::ERROR
+			);
+			$response->errors[] = $msg;
 
-		return $row;
+			return $response; // return error here !
+		}
+		$rows	= pg_fetch_assoc($result);
+		$value	= !empty($rows) ? reset($rows) : null;
+
+		$response->result	= $value ?? null;
+		$response->msg		= 'OK. Request done';
+
+
+		return $response;
 	}//end get_hierarchy_by_tld
 
 
@@ -1123,8 +1142,8 @@ class hierarchy extends ontology {
 	*/
 	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
-		$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
-		$section_id		= $hierarchy_row->section_id;
+		$hierarchy_response	= hierarchy::get_hierarchy_by_tld( $tld );
+		$section_id			= $hierarchy_response->result;
 		if( empty($section_id) ){
 			return null;
 		}
@@ -1139,7 +1158,7 @@ class hierarchy extends ontology {
 			DEDALO_HIERARCHY_SECTION_TIPO // string section_tipo
 		);
 
-		$typology_data = $typology_component->get_data();
+		$typology_data = $typology_component->get_dato();
 
 		$typology_locator = $typology_data[0] ?? null;
 

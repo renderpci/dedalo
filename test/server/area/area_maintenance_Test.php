@@ -189,6 +189,7 @@ final class area_maintenance_test extends TestCase {
 			'php_info',
 			'php_user',
 			'publication_api',
+			'regenerate_relations',
 			'register_tools',
 			'sequences_status',
 			'sqo_test_environment',

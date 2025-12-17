@@ -13,7 +13,7 @@ class ts_object {
 	// string (mandatory)
 	public $section_tipo;
 	// object
-	// protected $section;
+	protected $section;
 	// mixed object|null (default null)
 	protected $options;
 	// string (default 'edit')
@@ -50,7 +50,7 @@ class ts_object {
 		$this->ts_parent = $ts_parent;
 
 		# Build and set current section obj
-		// $this->section = section::get_instance( $section_id, $section_tipo );
+		$this->section = section::get_instance( $section_id, $section_tipo );
 
 		# Fix options
 		$this->options = $options;
@@ -152,94 +152,28 @@ class ts_object {
 	* Iterates locators extracting the child data of each one
 	* @see get_data
 	* @param array $locators
-	* @param string $area_model
-	*   Default 'area_thesaurus' (currently unused, reserved for future functionality)
-	* @param object|null $ts_object_options
-	*   Optional ts_object options (will be cloned to avoid mutation)
+	* @param string $area_model='area_thesaurus'
 	* @return array $child_data
 	*/
 	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
 
 		$children_data = [];
 
-		$first_locator = $locators[0] ?? null;
-		if (empty($first_locator)) {
-			return $children_data;
-		}
+		foreach ($locators as $locator) {
 
-		// Validate first locator has required properties
-		if (!isset($first_locator->section_tipo)) {
-			debug_log(__METHOD__
-				. " Invalid first locator: missing section_tipo property" . PHP_EOL
-				. ' locator: ' . to_string($first_locator)
-				, logger::ERROR
-			);
-			return $children_data;
-		}
+			$section_id		= $locator->section_id;
+			$section_tipo	= $locator->section_tipo;
 
-		// Get component order.
-		// To prevent calculate the component order for each locator,
-		// we assume that all locators are from the same section or compatible sections
-		$component_order_tipo = ts_object::get_component_order_tipo($first_locator->section_tipo);
-		
-		// Validate component_order_tipo before using it
-		if (empty($component_order_tipo)) {
-			debug_log(__METHOD__
-				. " Unable to get component_order_tipo for section: {$first_locator->section_tipo}" . PHP_EOL
-				. ' Skipping order assignment for all locators'
-				, logger::WARNING
-			);
-			// Continue without order - set to null for all items
-			$component_order_model = null;
-		} else {
-			$component_order_model = ontology_node::get_model_by_tipo($component_order_tipo);
-		}
-
-		foreach ($locators as $key => $locator) {
-
-			// Validate locator has required properties
-			if (!isset($locator->section_id) || !isset($locator->section_tipo)) {
-				debug_log(__METHOD__
-					. " Invalid locator at index $key: missing required properties" . PHP_EOL
-					. ' locator: ' . to_string($locator)
-					, logger::ERROR
-				);
-				continue;
-			}
-
-			$section_id   = $locator->section_id;
-			$section_tipo = $locator->section_tipo;
-
-			// Clone ts_object_options to avoid mutating the original object
 			$ts_options = empty($ts_object_options)
 				? new stdClass()
-				: clone $ts_object_options;
+				: $ts_object_options;
 
 			// Do not set order here because could overwrite the custom order !
 			// set order of locator in the ts_options
 			// $ts_options->order = $key+1;
 
-			// Set order from component number value
-			if (!empty($component_order_model) && !empty($component_order_tipo)) {
-				$component = component_common::get_instance(
-					$component_order_model,
-					$component_order_tipo,
-					$locator->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$locator->section_tipo
-				);
-				$data = $component->get_data();
-				$order = $data[0]->value ?? null;
-				$ts_options->order = $order;
-			} else {
-				// No order component available
-				$ts_options->order = null;
-			}
-
-			// Create ts_object
-			$ts_object    = new ts_object( $section_id, $section_tipo, $ts_options );
-			$child_object = $ts_object->get_data();
+			$ts_object		= new ts_object( $section_id, $section_tipo, $ts_options );
+			$child_object	= $ts_object->get_data();
 
 			if (empty($child_object->ar_elements)) {
 				$tld = get_tld_from_tipo($locator->section_tipo);
@@ -261,7 +195,7 @@ class ts_object {
 
 	/**
 	* GET_DATA
- 	* @return object $child_data
+	* @return object $child_data
 	*/
 	public function get_data() : object {
 		// $start_time=start_time();
@@ -397,8 +331,8 @@ class ts_object {
 						// get the data when the component is not a relation_index
 						// relation index get full data when get_dato() is called
 						// but this component needs a pagination data
-						$component_data = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
-							? ($component->get_data_lang() ?? [])
+						$dato = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
+							? $component->get_dato()
 							: [];
 
 					// re-format dato in some cases:
@@ -409,16 +343,16 @@ class ts_object {
 								break;
 
 							case ($model_name==='component_autocomplete_hi' || $model_name==='component_portal'):
-								if (!empty($component_data)) {
+								if (!empty($dato)) {
 									$values = [];
-									foreach ($component_data as $current_locator) {
+									foreach ($dato as $current_locator) {
 										$values[] = ts_object::get_term_by_locator(
 											$current_locator,
 											DEDALO_DATA_LANG,
 											true
 										);
 									}
-									$component_data = $values;
+									$dato = $values;
 								}
 								break;
 
@@ -428,7 +362,7 @@ class ts_object {
 								if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
 									$component_rel = $component->get_references(); //$component->relation_type_rel
 									#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
-									$component_data = array_merge($component_data, $component_rel);
+									$dato = array_merge($dato, $component_rel);
 								}
 								break;
 
@@ -439,7 +373,7 @@ class ts_object {
 									? $component->get_url() . '?' . start_time()
 									: '';
 
-								$component_data = $file_url;
+								$dato = $file_url;
 								break;
 
 							default:
@@ -450,15 +384,12 @@ class ts_object {
 					// value
 						switch (true) {
 
-							case ($element_obj->type==='term'):								
+							case ($element_obj->type==='term'):
+								// term Is translatable and uses lang fallback here
+								$element_value = empty($dato)
+									? $component->extract_component_value_fallback()
+									: $dato;
 
-								// term Is translatable and uses lang fallback here								
-								$element_value = empty($component_data)
-									? $component->extract_component_value_fallback() // ! unverified
-									: ($component_data[0]->value ?? $component_data[0] ?? '');									
-
-								// (!) Note that this element (term) could be multiple (various items) and
-								// the value is cumulative added in $element_obj->value on each iteration
 								$element_obj->value = isset($element_obj->value)
 									? to_string($element_obj->value) . $separator . to_string($element_value)
 									: to_string($element_value);
@@ -472,9 +403,9 @@ class ts_object {
 
 								// ND element can change term value when 'descriptor' value is 'no' (locator of 'no')
 									if($current_object->icon==='ND') {
-										if (isset($component_data[0])
-											&& isset($component_data[0]->section_id)
-											&& (int)$component_data[0]->section_id===2) {
+										if (isset($dato[0])
+											&& isset($dato[0]->section_id)
+											&& (int)$dato[0]->section_id===2) {
 											ts_object::set_term_as_nd($data->ar_elements);
 											$data->is_descriptor = false;
 										}
@@ -510,8 +441,8 @@ class ts_object {
 								}else{
 
 									// dato check
-									$considered_empty_data = (bool)is_empty($component_data);
-									if($considered_empty_data===true) {
+									$considered_empty_dato = (bool)is_empty_dato($dato);
+									if($considered_empty_dato===true) {
 										continue 3; // Skip empty icon value links
 									}
 								}
@@ -523,12 +454,10 @@ class ts_object {
 								$data->children_tipo = $element_tipo;
 
 								// fix children dato
-								// $data->children = $component_data;
+								// $data->children = $dato;
 
 								// set has_descriptor_children value
-								$data->has_descriptor_children = empty($component_data)
-									? false
-									: $this->has_children_of_type($component_data, 'descriptor');
+								$data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
 								// $data->has_descriptor_children = component_relation_children::has_children_of_type(
 								// 	$this->section_id,
 								// 	$this->section_tipo,
@@ -542,9 +471,7 @@ class ts_object {
 									: 'button show children unactive';
 
 								// ND : No descriptors case
-								$has_children_of_type_result = empty($component_data)
-									? false
-									: $this->has_children_of_type($component_data, 'nd');
+								$has_children_of_type_result = $this->has_children_of_type($dato, 'nd');
 								// $has_children_of_type_result = component_relation_children::has_children_of_type(
 								// 	$this->section_id,
 								// 	$this->section_tipo,
@@ -564,7 +491,7 @@ class ts_object {
 								break;
 
 							default:
-								$element_obj->value = $component_data;
+								$element_obj->value = $dato;
 								break;
 						}//end switch (true) value
 
@@ -603,7 +530,7 @@ class ts_object {
 
 	/**
 	* GET_CHILDREN_DATA
-	* 
+	*
 	* @param object $options
 	* @return object $response
 	*/
@@ -649,8 +576,8 @@ class ts_object {
 
 			// Calculate total if not set
 			if (!isset($current_pagination->total)) {
-				$data = $component_relation_children->get_data();
-				$current_pagination->total = (is_countable($data) ? count($data) : 0);
+				$dato = $component_relation_children->get_dato();
+				$current_pagination->total = (is_countable($dato) ? count($dato) : 0);
 			}
 			// Fix pagination to the component (used when get_data_paginated is called from the class)
 			$component_relation_children->pagination = $current_pagination;
@@ -659,7 +586,7 @@ class ts_object {
 			$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
 			$children = $use_pagination
 				? $component_relation_children->get_data_paginated()
-				: $component_relation_children->get_data();
+				: $component_relation_children->get_dato();
 
 		// parse_child_data
 			$ar_children_data = ts_object::parse_child_data(
@@ -741,12 +668,12 @@ class ts_object {
 				DEDALO_DATA_NOLAN,
 				$current_locator->section_tipo
 			);
-			$data = $component->get_data();
+			$dato = $component->get_dato();
 
 			// When first element is found, return true
-			if (isset($data[0])
-				&& isset($data[0]->section_id)
-				&& (int)$data[0]->section_id==$descriptor_value) {
+			if (isset($dato[0])
+				&& isset($dato[0]->section_id)
+				&& (int)$dato[0]->section_id==$descriptor_value) {
 				return true;
 			}
 		}
@@ -801,12 +728,12 @@ class ts_object {
 			DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$data = $component->get_data();
+		$dato = $component->get_dato();
 
 		$indexable_value = 1; // Yes
 
 		// When first element is found, return true
-		if (isset($data[0]) && isset($data[0]->section_id) && (int)$data[0]->section_id===$indexable_value) {
+		if (isset($dato[0]) && isset($dato[0]->section_id) && (int)$dato[0]->section_id===$indexable_value) {
 			return true;
 		}
 
@@ -923,10 +850,10 @@ class ts_object {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$data = $component->get_data();
+			$dato = (array)$component->get_dato();
 
-			if (!empty($data)) {
-				$ar_value = array_merge($ar_value, $data);
+			if (!empty($dato)) {
+				$ar_value = array_merge($ar_value, $dato);
 			}
 		}//end foreach ($ar_tipo as $tipo) {
 
@@ -1010,10 +937,10 @@ class ts_object {
 
 					if (empty($current_value)) {
 						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-						$data = $component->get_data();
+						$dato_full = $component->get_dato_full();
 						// get_value_with_fallback_from_dato_full( $dato_full_json, $decorate_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$current_value = component_string_common::get_value_with_fallback_from_data(
-							$data,
+						$current_value = component_common::get_value_with_fallback_from_dato_full(
+							$dato_full,
 							true,
 							$main_lang,
 							$lang
@@ -1192,8 +1119,9 @@ class ts_object {
 						$search = search::get_instance(
 							$sqo // object sqo
 						);
-						$db_result	= $search->search();
-						$ar_records	= $db_result->fetch_all();
+						$response	= $search->search();
+						$ar_records	= $response->ar_records;
+
 						// cache
 						$resolved_child[$hash] = $ar_records;
 					}

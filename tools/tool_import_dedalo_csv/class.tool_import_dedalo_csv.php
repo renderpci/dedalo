@@ -84,10 +84,6 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// ar_columns_map
 						$ar_columns_map = array_map(function($el) use($file_info){
-							$label = safe_tipo($el)
-								? ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true)
-								: $el;
-
 							if (empty($el)) {
 								debug_log(__METHOD__
 									. " Invalid tipo found in file_info " . PHP_EOL
@@ -99,7 +95,7 @@ class tool_import_dedalo_csv extends tool_common {
 							}
 							return (object)[
 								'tipo'	=> $el,
-								'label'	=> $label,
+								'label'	=> ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true),
 								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_by_tipo($el, true) : $el
 							];
 						}, $file_info);
@@ -468,12 +464,13 @@ class tool_import_dedalo_csv extends tool_common {
 		// PROCESS
 			// create new process section
 				$bulk_process_section = section::get_instance(
+					null, // string|null section_id
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_process_id = $bulk_process_section->create_record();
+				$bulk_process_section->Save();
 
 			// get the bulk_process_id as the section_id of the section process
-				// $bulk_process_id = $bulk_process_section->get_section_id();
+				$bulk_process_id = $bulk_process_section->get_section_id();
 
 			// Save the file name into the process section
 				$bulk_file_component = component_common::get_instance(
@@ -484,10 +481,8 @@ class tool_import_dedalo_csv extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_file_component_data = new stdClass();
-					$bulk_file_component_data->value = $current_file;
-				$bulk_file_component->set_data([$bulk_file_component_data]);
-				$bulk_file_component->save();
+				$bulk_file_component->set_dato($current_file);
+				$bulk_file_component->Save();
 
 			// Save the process name into the process section
 				$bulk_process_label_component = component_common::get_instance(
@@ -498,18 +493,9 @@ class tool_import_dedalo_csv extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_process_label_data = new stdClass();
-					$bulk_process_label_data->value = $bulk_process_label;
-				$bulk_process_label_component->set_data([$bulk_process_label_data]);
-				$bulk_process_label_component->save();
+				$bulk_process_label_component->set_dato($bulk_process_label);
+				$bulk_process_label_component->Save();
 
-			// SAVE_TIME_MACHINE
-				// Set section to save data for time machine
-				// No component time machine data will be saved when section saves later
-				// (based on checkbox value 'Save time machine history on import')
-				tm_record::$save_tm = ($time_machine_save===true)
-					? true
-					: false;
 
 		foreach ($ar_csv_data as $rkey => $columns) {
 
@@ -530,22 +516,27 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// section. Always force create/re-use section
-				// $section = section::get_instance(
-				// 	$section_id,
-				// 	$section_tipo,
-				// 	'list',
-				// 	true // set cache always to true important (!)
-				// );
-				// $create_record = $section->forced_create_record();
+				$section = section::get_instance(
+					$section_id,
+					$section_tipo,
+					'list',
+					true // set cache always to true important (!)
+				);
+				$create_record = $section->forced_create_record();
 
-				$section_record = section_record::get_instance( $section_tipo, $section_id );
-				$exists = $section_record->exists_in_the_database();
-				
 			// set the information about the process
 				$process_info->section_id = $section_id;
-				$process_info->msg = ($exists===true)
+				$process_info->msg = ($create_record===true)
 					? label::get_label('creating') ?? 'Creating'
 					: label::get_label('updating') ?? 'Updating';
+
+			// SAVE_TIME_MACHINE
+				// Set section to save data for time machine
+				// No component time machine data will be saved when section saves later
+				// (based on checkbox value 'Save time machine history on import')
+				$section->save_tm = ($time_machine_save===true)
+					? true
+					: false;
 
 
 			// Iterate fields/columns
@@ -668,7 +659,7 @@ class tool_import_dedalo_csv extends tool_common {
 								}
 
 							// component save
-								$component->set_data($conformed_value);
+								$component->set_dato($conformed_value);
 								$component->import_save();
 							break;
 
@@ -697,7 +688,7 @@ class tool_import_dedalo_csv extends tool_common {
 								}
 
 							// component save
-								$component->set_data($conformed_value);
+								$component->set_dato($conformed_value);
 								$component->import_save();
 							break;
 
@@ -715,7 +706,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 									if (strpos($v_key, 'lg-')===0) {
 										$component->set_lang( $v_key );
-										$component->set_data( $v_value );
+										$component->set_dato( $v_value );
 										$component->import_save();
 									}else{
 										debug_log(__METHOD__
@@ -762,7 +753,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 										// Removed direct call
 										// unified with API calls with changed_data_item object
-											// $component->set_data( $conformed_value );
+											// $component->set_dato( $conformed_value );
 											// $component->observable_dato = ($component->model === 'component_relation_related')
 											// 	? $component->get_dato_with_references()
 											// 	: $conformed_value;
