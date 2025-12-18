@@ -118,70 +118,81 @@ class diffusion_section_stats extends diffusion {
 			$search = search::get_instance(
 				$search_query_object // object sqo
 			);
-			$db_result	= $search->search();
+			$db_result = $search->search();
 
-			$first_record = $db_result->fetch_one();
+			$row = $db_result->fetch_one();
+
+			// query params
+			$params = [
+				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
+			];
+
+			// placehoders
+			$placeholders = 2; // Start with 2 because the first placeholder is the relation
 
 			// activity_filter_beginning. Builds a SQL sentence as 'AND date > '2025-03-07''
 			// for filter results in the next query against matrix_activity
-			$activity_filter_beginning = !empty($first_record)
-				? (function($row){
+			$filter_sentences = [];
+			if( !empty($row) ) {
+				$section_id		= $row->section_id;
+				$section_tipo	= $row->section_tipo;
 
-					$section_id		= $row->section_id;
-					$section_tipo	= $row->section_tipo;
-
-					$model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
-					$component	= component_common::get_instance(
-						$model,
-						USER_ACTIVITY_DATE_TIPO,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
+				$model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
+				$component	= component_common::get_instance(
+					$model,
+					USER_ACTIVITY_DATE_TIPO,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+				$data = $component->get_data();
+				$current_date = $data[0] ?? null;
+				if (empty($current_date)) {
+					debug_log(__METHOD__
+						. " Skip. Not valid date found for user" . PHP_EOL
+						. 'current_date: '.to_string($current_date)
+						, logger::ERROR
 					);
-					$data			= $component->get_data();
-					$current_date	= $data[0] ?? null;
-					if (empty($current_date)) {
-						debug_log(__METHOD__
-							. " Skip. Not valid date found for user"
-							, logger::ERROR
-						);
-						return '';
-					}
-					$dd_date		= new dd_date($current_date->start);
-					$timestamp		= $dd_date->get_dd_timestamp("Y-m-d");
+				}else{
+					$dd_date	= new dd_date($current_date->start);
+					$timestamp	= $dd_date->get_dd_timestamp("Y-m-d");
 
 					// all records after last saved + 1 day
 					$begin			= new DateTime($timestamp);
 					$beginning_date	= $begin->modify('+1 day')->format("Y-m-d");
 
-					$filter = 'AND timestamp > \''.$beginning_date.'\'';
+					$filter = '"timestamp" > $' . $placeholders;
+					$placeholders++;
 
-					return $filter;
-				  })($first_record)
-				: '';
+					$filter_sentences[] = $filter;
+					$params[] = $beginning_date;
+				}
+			}
 
-		// do not include today in any case because it is not yet complete.
-			$activity_filter_beginning .= ' AND timestamp < \''.$today->format("Y-m-d").'\'';
+			// do not include today in any case because it is not yet complete.
+			$end_date = $today->format("Y-m-d");
+			$filter_sentences[] = '"timestamp" < $'.$placeholders;
+			$params[] = $end_date;
+			$placeholders++;
 
 		// search last activity record of current user
 			$sql_query  = 'SELECT *' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
 			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
-			$sql_query .= $activity_filter_beginning . PHP_EOL;
+			$sql_query .= 'AND '.implode(' AND ', $filter_sentences) . PHP_EOL;
 			$sql_query .= 'ORDER BY id ASC' . PHP_EOL;
 			$sql_query .= 'LIMIT 1';
 
-			$result = matrix_db_manager::exec_search($sql_query,[
-				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
-			]);
+			$result = matrix_db_manager::exec_search($sql_query, $params);
 
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				$response->errors[] = 'failed database execution';
 				return $response;
 			}
-			$activity_row = pg_fetch_object($result);
+			// get last activity record in raw db format (not processed)
+			$activity_row = pg_fetch_object($result);			
 			if (!$activity_row || empty($activity_row->timestamp)) {
 				debug_log(__METHOD__." Skip. Not calculable result found for user $user_id ".to_string(), logger::WARNING);
 				$response->msg .= 'Skip. Not calculable result found for user '.$user_id;
@@ -190,7 +201,7 @@ class diffusion_section_stats extends diffusion {
 				return $response;
 			}
 
-			// dd date object
+			// dd date object from column 'timestamp' (example: '2024-12-05 09:07:33.248847')
 				$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->timestamp );
 				if (empty($date_value->year)) {
 					debug_log(__METHOD__
@@ -204,47 +215,48 @@ class diffusion_section_stats extends diffusion {
 
 		// iterate from the beginning, in steps of a day
 			$begin	= new DateTime($activity_row->timestamp);
-			$end	= $today; // $yesterday; // remember not to include today because it is not finished yet
+			$end	= $today; // remember do not include today because it is not finished yet
 
 			// by day
-				$updated_days = [];
-				for($i = $begin; $i <= $end; $i->modify('+1 day')){
+			$updated_days = [];
+			for($i = $begin; $i <= $end; $i->modify('+1 day')){
 
-					// date_in
-						$current_date	= $i->format("Y-m-d");
-						$date_in		= $current_date;
+				// date_in
+					$current_date	= $i->format("Y-m-d");
+					$date_in		= $current_date;
 
-					// date_out
-						$i_clon		= clone $i;
-						$i_clon->modify('+1 day');
-						$date_out	= $i_clon->format("Y-m-d");
+				// date_out
+					$i_clon		= clone $i;
+					$i_clon->modify('+1 day');
+					$date_out	= $i_clon->format("Y-m-d");
 
-					$totals_data = diffusion_section_stats::get_interval_raw_activity_data(
-						$user_id,
-						$date_in,
-						$date_out
+				// interval_raw_activity_data
+				$totals_data = diffusion_section_stats::get_interval_raw_activity_data(
+					$user_id,
+					$date_in,
+					$date_out
+				);
+			
+				// if not empty totals_data, add
+				if ($totals_data && count($totals_data)>0) {
+
+					// save_user_activity
+					$result = diffusion_section_stats::save_user_activity(
+						$totals_data, // array totals_data
+						$user_id, // int user_id
+						'day', // string type
+						(int)$i->format("Y"), // int year
+						(int)$i->format("m"), // int month
+						(int)$i->format("d") // int day
 					);
 
-					// if not empty totals_data, add
-					if ($totals_data && count($totals_data)>0) {
-
-						// save_user_activity
-						$result = diffusion_section_stats::save_user_activity(
-							$totals_data, // array totals_data
-							$user_id, // int user_id
-							'day', // string type
-							(int)$i->format("Y"), // int year
-							(int)$i->format("m"), // int month
-							(int)$i->format("d") // int day
-						);
-
-						// updated_days add
-						$updated_days[] = (object)[
-							'user'	=> $user_id,
-							'date'	=> $i->format("Y-m-d")
-						];
-					}
-				}//end for($i = $begin; $i <= $end; $i->modify('+1 day'))
+					// updated_days add
+					$updated_days[] = (object)[
+						'user'	=> $user_id,
+						'date'	=> $i->format("Y-m-d")
+					];
+				}
+			}//end for($i = $begin; $i <= $end; $i->modify('+1 day'))
 
 		// debug info
 			$memory		= dd_memory_usage();
@@ -495,11 +507,11 @@ class diffusion_section_stats extends diffusion {
 	*   "section_tipo": "dd42",
 	*   "from_component_tipo": "dd545"
 	* }
-	* @param object $datos
+	* @param array $data
 	* @param object &$what_obj
 	* @return object $what_obj
 	*/
-	public static function build_what( object $datos, object &$what_obj ) : object {
+	public static function build_what( array $data, object &$what_obj ) : object {
 
 		$what_tipo = logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
 
@@ -525,23 +537,15 @@ class diffusion_section_stats extends diffusion {
 			];
 
 		// what_value
-			$what_value = array_find($datos->relations ?? [], function($el) use($what_tipo){
-				return isset($el->from_component_tipo) && $el->from_component_tipo===$what_tipo;
-			});
-			// Returns an object (or null) like:
-			// {
-			// 	"tipo": "dd545",
-			// 	"type": "what",
-			// 	"value": 1
-			// }
+			$what_value = $data[0] ?? null;
+			// Returns an locator object (or null) like:
+			// {"id":1,"type":"dd151","section_id":"5","section_tipo":"dd42","from_component_tipo":"dd545"}
 			if ( !is_object($what_value) ) {
 				// no what action was found
 				debug_log(__METHOD__
 					. " Error. Ignored activity record without what definition! " . PHP_EOL
 					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
-					. ' relations: ' . to_string($datos->relations) . PHP_EOL
-					. ' section_tipo: ' . to_string($datos->section_tipo) . PHP_EOL
-					. ' section_id: ' . to_string($datos->section_id)
+					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)					
 					, logger::ERROR
 				);
 				return $what_obj;
@@ -554,9 +558,7 @@ class diffusion_section_stats extends diffusion {
 				debug_log(__METHOD__
 					. " Error. Ignored activity record without what correspondence! " . PHP_EOL
 					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
-					. ' relations: ' . to_string($datos->relations) . PHP_EOL
-					. ' section_tipo: ' . to_string($datos->section_tipo) . PHP_EOL
-					. ' section_id: ' . to_string($datos->section_id)
+					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)					
 					, logger::ERROR
 				);
 				return $what_obj;
@@ -603,7 +605,10 @@ class diffusion_section_stats extends diffusion {
 			);
 			$section_id	= $section->create_record();
 			if (empty($section_id)) {
-				debug_log(__METHOD__." ERROR. UNABLE TO CREATE A NEW SECTION RECORD IN SECTION $section_tipo".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." ERROR. Unable to create a new section record in section '$section_tipo'"
+					, logger::ERROR
+				);
 				return false;
 			}
 
