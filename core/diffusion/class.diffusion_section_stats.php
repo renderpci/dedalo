@@ -281,18 +281,25 @@ class diffusion_section_stats extends diffusion {
 	public static function get_interval_raw_activity_data(int $user_id, string $date_in, string $date_out) : ?array {
 
 		// tipos
-			// $what_tipo	= logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
+			$what_tipo	= logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
 			$where_tipo	= logger_backend_activity::$_COMPONENT_WHERE['tipo'];	// expected dd546
 			$when_tipo	= logger_backend_activity::$_COMPONENT_WHEN['tipo'];	// expected dd547
+			$data_tipo	= logger_backend_activity::$_COMPONENT_DATA['tipo'];	// expected dd551
+
+		// models
+			$what_model	= ontology_node::get_model_by_tipo($what_tipo, true);
+			$where_model = ontology_node::get_model_by_tipo($where_tipo, true);
+			$when_model	= ontology_node::get_model_by_tipo($when_tipo, true);
+			$data_model	= ontology_node::get_model_by_tipo($data_tipo, true);
 
 		// base objects
-			$what_obj		= new stdClass();
-			$where_obj		= new stdClass();
-			$when_obj		= new stdClass();
-			$publish_obj	= new stdClass();
+			$what_obj	= new stdClass();
+			$where_obj	= new stdClass();
+			$when_obj	= new stdClass();
+			$publish_obj= new stdClass();
 
 		// matrix_activity. Get data from current user in range
-			$sql_query  = 'SELECT *' . PHP_EOL;
+			$sql_query  = 'SELECT section_tipo, section_id' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
 			$sql_query .= 'WHERE "timestamp" between $1 and $2' . PHP_EOL;
 			$sql_query .= 'AND relation @> $3' . PHP_EOL;
@@ -312,36 +319,73 @@ class diffusion_section_stats extends diffusion {
 		// iterate found records
 		while ($row = pg_fetch_object($result)) {
 
-			debug_log(__METHOD__.' Working here... Ignored action get_interval_raw_activity_data temporally.', logger::WARNING);
-			continue;
+			$current_section_id	= $row->section_id;
+			$current_section_tipo = $row->section_tipo;
 
-			$datos = json_decode($row->datos);
+			// what (dd545) component_autocomplete
+				$component = component_common::get_instance(
+					$what_model,
+					$what_tipo,
+					$current_section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$current_section_tipo
+				);
+				$what_data = $component->get_data();
+				// update $what_obj adding counters to the object (passed what_obj by reference)
+				self::build_what( $what_data, $what_obj );
 
-			$where_key	= $datos->components->{$where_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
-			$when_key	= $datos->components->{$when_tipo}->dato->{DEDALO_DATA_NOLAN} ?? false;
+			// where (dd546) component_input_text
+				$component = component_common::get_instance(
+					$where_model,
+					$where_tipo,
+					$current_section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$current_section_tipo
+				);
+				$where_data = $component->get_data(); // Like: [{"id":1,"lang":"lg-nolan","value":"dd1223"}]
+				if (!empty($where_data)) {
 
-			// what
-				// update $what_obj adding counters to the object (passed by reference)
-				self::build_what( $datos, $what_obj );
-
-			// where
-				$key = $where_key;
-				if (!empty($key)) {
-
-					$key = $where_key[0];
-
-					// take care to manage publish cases in different way
+					$key = $where_data[0]->value; // Like: dd1223
+					if(is_array($key)) {
+						$key = $key[0];
+						debug_log(__METHOD__
+							." Old data format found. Casting from array to string" . PHP_EOL
+							." key: " . json_encode($key) . PHP_EOL
+							.' section_tipo: ' . $current_section_tipo . PHP_EOL
+							.' section_id: ' . $current_section_id . PHP_EOL
+							." where_data: " . json_encode($where_data, JSON_PRETTY_PRINT)
+							, logger::WARNING
+						);
+					}
+					if(empty($key) || !is_string($key)) {
+						debug_log(__METHOD__
+							." Error: invalid key. Ignored data" . PHP_EOL
+							." key: " . json_encode($key) . PHP_EOL
+							." where_data: " . json_encode($where_data, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+					}else{
+						// take care to manage publish cases in different way
 						switch (true) {
 							case ($key==='dd1223'): // last publish
-								// get record msg (dd551) info to calculate published section tipo
-								$msg = $datos->components->dd551->dato->{DEDALO_DATA_NOLAN} ?? false;
+								// get record msg (dd551) info to calculate published section tipo								
+								$component = component_common::get_instance(
+									$data_model,
+									$data_tipo,
+									$current_section_id,
+									'list',
+									DEDALO_DATA_NOLAN,
+									$current_section_tipo
+								);
+								$data_data = $component->get_data();
+								$msg = $data_data[0]->value ?? false;
 								if ($msg!==false) {
 									$_section_tipo = $msg->top_tipo ?? $msg->section_tipo ?? false;
 									if ($_section_tipo!==false) {
-
-										$publish_obj->{$_section_tipo} = isset($publish_obj->{$_section_tipo})
-											? $publish_obj->{$_section_tipo} + 1
-											: 1;
+										// Optimized: use null coalescing operator
+										$publish_obj->{$_section_tipo} = ($publish_obj->{$_section_tipo} ?? 0) + 1;
 									}
 								}
 								break;
@@ -349,63 +393,89 @@ class diffusion_section_stats extends diffusion {
 								// ignore it ..
 								break;
 							default:
-								$where_obj->{$key} = isset($where_obj->{$key})
-									? $where_obj->{$key} + 1
-									: 1;
+								// Optimized: use null coalescing operator
+								$where_obj->{$key} = ($where_obj->{$key} ?? 0) + 1;
 								break;
 						}
+					}
 				}//end where
 
-			// when
-				$key = $when_key;
-				if (!empty($key)) {
+			// when (dd547) component_date
+				$component = component_common::get_instance(
+					$when_model,
+					$when_tipo,
+					$current_section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$current_section_tipo
+				);
+				$when_data = $component->get_data(); // Like: [{"id":1,"start":{"day":26,"hour":12,"time":65098039018,"year":2025,"month":5,"minute":36,"second":58}}]	
+				if (!empty($when_data)) {
 
-					if (isset($when_key[0]->start) && isset($when_key[0]->start->hour)) {
-						$hour = $when_key[0]->start->hour;
-
-						$when_obj->{$hour} = isset($when_obj->{$hour})
-							? $when_obj->{$hour} + 1
-							: 1;
+					if (isset($when_data[0]->start) && isset($when_data[0]->start->hour)) {
+						$hour = $when_data[0]->start->hour;
+						// Optimized: use null coalescing operator
+						$when_obj->{$hour} = ($when_obj->{$hour} ?? 0) + 1;
 					}
 				}//end when
 
 		}//end while ($rows = pg_fetch_assoc($result))
 
+		// free result
+		pg_free_result($result);
 
 		// merge and verticalize data to store it
+		// Optimization: batch-fetch labels for 'what' items to avoid N+1 query pattern
+			$what_labels = [];
+			if (!empty((array)$what_obj)) {
+				$what_tipos = array_keys((array)$what_obj);
+				foreach ($what_tipos as $tipo) {
+					$what_labels[$tipo] = ontology_node::get_term_by_tipo($tipo);
+				}
+			}
+
+		// Optimization: pre-allocate array for better memory efficiency
+			$total_size = count((array)$what_obj) + count((array)$where_obj) + 
+			              count((array)$when_obj) + count((array)$publish_obj);
 			$totals_data = [];
-			// what
-			foreach ($what_obj as $key => $value) {
-				$item = new stdClass();
-					$item->type		= 'what';
-					$item->tipo		= $key;
-					$item->value	= $value;
-					$item->label	= ontology_node::get_term_by_tipo($key); // add label for easy human read
-				$totals_data[] = $item;
-			}
-			// where
-			foreach ($where_obj as $key => $value) {
-				$item = new stdClass();
-					$item->type		= 'where';
-					$item->tipo		= $key;
-					$item->value	= $value;
-				$totals_data[] = $item;
-			}
-			// when
-			foreach ($when_obj as $key => $value) {
-				$item = new stdClass();
-					$item->type		= 'when';
-					$item->hour		= $key;
-					$item->value	= $value;
-				$totals_data[] = $item;
-			}
-			// publish
-			foreach ($publish_obj as $key => $value) {
-				$item = new stdClass();
-					$item->type		= 'publish';
-					$item->tipo		= $key;
-					$item->value	= $value;
-				$totals_data[] = $item;
+			
+			if ($total_size > 0) {
+				$totals_data = array_fill(0, $total_size, null);
+				$index = 0;
+
+				// what
+				foreach ($what_obj as $key => $value) {
+					$item = new stdClass();
+						$item->type		= 'what';
+						$item->tipo		= $key;
+						$item->value	= $value;
+						$item->label	= $what_labels[$key] ?? null; // use pre-fetched label
+					$totals_data[$index++] = $item;
+				}
+				// where
+				foreach ($where_obj as $key => $value) {
+					$item = new stdClass();
+						$item->type		= 'where';
+						$item->tipo		= $key;
+						$item->value	= $value;
+					$totals_data[$index++] = $item;
+				}
+				// when
+				foreach ($when_obj as $key => $value) {
+					$item = new stdClass();
+						$item->type		= 'when';
+						$item->hour		= $key;
+						$item->value	= $value;
+					$totals_data[$index++] = $item;
+				}
+				// publish
+				foreach ($publish_obj as $key => $value) {
+					$item = new stdClass();
+						$item->type		= 'publish';
+						$item->tipo		= $key;
+						$item->value	= $value;
+					$totals_data[$index++] = $item;
+				}
 			}
 
 
