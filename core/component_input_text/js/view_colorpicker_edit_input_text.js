@@ -158,8 +158,8 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value || default_color,
-			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
+			value			: current_value?.value || default_color,
+			placeholder		: (current_value?.value) ? '' : '#f78a1c',
 			parent			: content_value
 		})
 		// focus event

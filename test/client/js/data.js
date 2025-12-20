@@ -50,7 +50,8 @@
 			type				: "dd151",
 			section_id			: section_id,
 			section_tipo		: section_tipo,
-			from_component_tipo	: from_component_tipo
+			from_component_tipo	: from_component_tipo,
+			id 					: 1
 		}
 		// if (paginated_key!==false) {
 			// value.paginated_key 	= paginated_key

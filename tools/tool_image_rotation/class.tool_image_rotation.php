@@ -43,8 +43,8 @@ class tool_image_rotation extends tool_common {
 				$section_tipo
 			);
 
-		$dato		= $component->get_dato()[0];
-		$files_info	= $dato->files_info ?? [];
+		$data		= $component->get_data()[0] ?? null;
+		$files_info	= $data->files_info ?? [];
 		// $value
 
 		$result = true;

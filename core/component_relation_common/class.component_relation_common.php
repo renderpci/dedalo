@@ -949,7 +949,7 @@ class component_relation_common extends component_common {
 		}
 
 		// short vars
-		$data	= $this->get_data();
+		$data	= $this->get_data() ?? [];
 		$added	= false;
 
 		// maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, undesired object is created)
