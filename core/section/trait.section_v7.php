@@ -53,44 +53,44 @@ trait section_v7 {
 
 
 
-    /**
-	* LOAD_SECTION_DATA @v7
-	* Loads the section DB record once.
-	* The data fill the '$this->data_columns' values
-	* with parsed integer and JSON values.
-	* To force to reload the data form DB, set the property
-	* 'this->is_loaded_data_columns' to false.
-	* @return bool
-	*/
-	private function load_section_data() : bool {
+    // /**
+	// * LOAD_SECTION_DATA @v7
+	// * Loads the section DB record once.
+	// * The data fill the '$this->data_columns' values
+	// * with parsed integer and JSON values.
+	// * To force to reload the data form DB, set the property
+	// * 'this->is_loaded_data_columns' to false.
+	// * @return bool
+	// */
+	// private function load_section_data() : bool {
 
-		// init section_record_data instance.
-		// It's instanced once and handles all the section data database tasks.
-		if (!isset($this->section_record_data)) {
-			$section_id = $this->section_id ? (int)$this->section_id : null;
-			$this->section_record_data = section_record_data::get_instance(
-				$this->tipo,
-				$section_id
-			);
-		}
+	// 	// init section_record_data instance.
+	// 	// It's instanced once and handles all the section data database tasks.
+	// 	if (!isset($this->section_record_data)) {
+	// 		$section_id = $this->section_id ? (int)$this->section_id : null;
+	// 		$this->section_record_data = section_record_data::get_instance(
+	// 			$this->tipo,
+	// 			$section_id
+	// 		);
+	// 	}
 
-		// If the section_record_data instance has already been loaded,
-		// it returns the cached data without reconnecting to the database.
-		// All section instances with the same section_tipo and section_id values
-		// share the same cached instance of 'section_record_data', independent of the mode.
-		$this->section_record_data->read();
+	// 	// If the section_record_data instance has already been loaded,
+	// 	// it returns the cached data without reconnecting to the database.
+	// 	// All section instances with the same section_tipo and section_id values
+	// 	// share the same cached instance of 'section_record_data', independent of the mode.
+	// 	$this->section_record_data->read();
 
-		/* TEST
-		$data_column_name = 'string';
-		$tipo = 'rsc21';
-		// $rsc21_data = $this->section_record_data->get_data_columns()['string']->{$tipo} ?? null;
-		// $rsc21_data = $this->get_column('string')->{$tipo} ?? null;
-		$rsc21_data = $this->data_columns[$data_column_name]->{$tipo} ?? null;
-			dump($rsc21_data, ' rsc21_data ++ '.to_string());
-			*/
+	// 	/* TEST
+	// 	$data_column_name = 'string';
+	// 	$tipo = 'rsc21';
+	// 	// $rsc21_data = $this->section_record_data->get_data_columns()['string']->{$tipo} ?? null;
+	// 	// $rsc21_data = $this->get_column('string')->{$tipo} ?? null;
+	// 	$rsc21_data = $this->data_columns[$data_column_name]->{$tipo} ?? null;
+	// 		dump($rsc21_data, ' rsc21_data ++ '.to_string());
+	// 		*/
 
-		return true;
-	}//end load_section_data
+	// 	return true;
+	// }//end load_section_data
 
 
 

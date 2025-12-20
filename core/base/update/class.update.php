@@ -1192,8 +1192,10 @@ class update {
 			$i_ref = 0; $start_time = start_time();
 			for ($i=$min; $i<=$max; $i++) {
 
-				$strQuery	= "SELECT * FROM $table WHERE id = $i ORDER BY id ASC";
-				$result		= matrix_db_manager::exec_search($strQuery, []);
+				$strQuery = "SELECT * FROM $table WHERE id = $1 ORDER BY id ASC";
+				$result	  = matrix_db_manager::exec_search($strQuery, [
+					$i
+				]);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
 					debug_log(__METHOD__

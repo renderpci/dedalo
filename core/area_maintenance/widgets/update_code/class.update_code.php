@@ -27,6 +27,7 @@ class update_code {
 				$rqo->action	= 'get_server_ready_status';
 				$rqo->options	= new stdClass();
 					$rqo->options->check = 'code_server';
+					$rqo->options->url = $server->url;
 
 			$rqo_string = 'rqo=' . json_encode($rqo);
 

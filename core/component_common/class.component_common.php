@@ -1,16 +1,10 @@
 <?php declare(strict_types=1);
-// require_once 'trait.component_common_v7.php';
 /**
 * COMPONENT_COMMON
 * Common methods of all components
 *
 */
 abstract class component_common extends common {
-
-
-
-	// traits. Files added to current class file to split the large code.
-	// use component_common_v7;
 
 
 
@@ -161,8 +155,8 @@ abstract class component_common extends common {
 	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null ) : ?object {
 
 		// tipo check. Is mandatory
-			if (empty($tipo)) {
-				$msg = "Error: on construct component (1): tipo is mandatory. component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'";
+			if (empty($tipo) || safe_tipo($tipo)===false) {
+				$msg = "Error: on construct component (1): valid tipo is mandatory. component_name:'$component_name', tipo:'$tipo', section_id:'$section_id', mode:'$mode', lang:'$lang'";
 				debug_log(__METHOD__
 					. $msg
 					, logger::ERROR
@@ -171,28 +165,27 @@ abstract class component_common extends common {
 			}
 
 		// model check. Verify 'component_name' and 'tipo' are correct
-			$model_name = ontology_node::get_model_by_tipo($tipo,true);
+			$model_name = ontology_node::get_model_by_tipo($tipo, true);
 			if (empty($component_name)) {
 
 				// calculate component name (is ontology element model)
 					$component_name = $model_name;
 
-			}else if (!empty($component_name) && $model_name!==$component_name) {
+			}else if ($model_name!==$component_name) {
 
 				// warn to admin
 					debug_log(__METHOD__.' '
-						. "Warning. Fixed inconsistency in component get_instance tipo:'$tipo'. Expected model is '$model_name' and received model is '$component_name'"
+						. "Warning. Fixing inconsistency in component get_instance model. Expected model is '$model_name' and received model is '$component_name'" . PHP_EOL
+						. ' tipo: ' . to_string($tipo) .PHP_EOL
+						. ' section_tipo: ' . to_string($section_tipo) .PHP_EOL
+						. ' section_id: ' . to_string($section_id) .PHP_EOL
 						, logger::ERROR
 					);
-					if(SHOW_DEBUG===true) {
-						$bt = debug_backtrace();
-						dump($bt, ' bt ++ '.to_string());
-					}
 
 				// fix bad model
 					$component_name = $model_name;
 			}
-			if (strpos($component_name, 'component_')!==0) {
+			if (!str_starts_with($component_name, 'component_')) {
 
 				debug_log(__METHOD__
 					. ' Error Processing Request. Illegal component: ' .PHP_EOL
@@ -202,11 +195,6 @@ abstract class component_common extends common {
 					. ' section_id: ' . to_string($section_id) .PHP_EOL
 					, logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string($tipo));
-					// throw new Exception("Error Processing Request. Illegal component: '$component_name' on ".__METHOD__, 1);
-				}
 
 				return null;
 			}
@@ -214,36 +202,16 @@ abstract class component_common extends common {
 		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 			if (empty($section_tipo)) {
 				debug_log(__METHOD__
-					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASAP '
+					. ' Error. resolve_section_tipo is not supported anymore. Please fix this call ASAP '
 					. ' section_tipo: ' . to_string($section_tipo)
 					, logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					debug_log(__METHOD__
-						. " DEBUG WARNING: TRIGGERED resolve_section_tipo". PHP_EOL
-						. ' tipo: ' .$tipo . PHP_EOL
-						. ' section_tipo: ' .$section_tipo . PHP_EOL
-						. ' backtrace: ' . to_string($bt)
-						, logger::ERROR
-					);
-				}
 				return null;
 			}
 
 		// debug verification
 			$check_instance_params = false;
 			if(SHOW_DEBUG===true && $check_instance_params===true) {
-				// model received check
-					if ( !empty($component_name) && strpos($component_name, 'component_')===false ) {
-						dump($tipo," tipo");
-						throw new Exception("Error Processing Request. section or ($component_name) intended to load as component", 1);
-					}
-				// tipo format check
-					if ( is_numeric($tipo) || !is_string($tipo) || !get_tld_from_tipo($tipo) ) {
-						dump($tipo," tipo");
-						throw new Exception("Error Processing Request. trying to use wrong var: '$tipo' as tipo to load as component", 1);
-					}
 				// section_id format check
 					if ( !empty($section_id) ) {
 						if (is_array($section_id)) {
@@ -371,8 +339,8 @@ abstract class component_common extends common {
 			if(isset($caller_dataframe)) {
 				// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
 				$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->main_component_tipo;
-			}		
-		
+			}
+
 		$instance = component_instances_cache::get($cache_key);
 		if ($instance === null) {
 			// Cache miss - Create a new instance
@@ -617,7 +585,7 @@ abstract class component_common extends common {
 				// current dato check
 					$data = $this->data;
 					if (empty($data)) {
-						
+
 						if(!is_array($data_default)) {
 							debug_log(__METHOD__
 								. " Data default is not an array. Converting to array" . PHP_EOL
@@ -625,7 +593,7 @@ abstract class component_common extends common {
 								. ' component: ' . get_called_class() . PHP_EOL
 								. ' tipo: ' . $this->tipo . PHP_EOL
 								. ' section_id: ' . $this->section_id . PHP_EOL
-								. ' section_tipo: ' . $this->section_tipo								
+								. ' section_tipo: ' . $this->section_tipo
 								, logger::ERROR
 							);
 							$data_default = [$data_default];
@@ -692,7 +660,7 @@ abstract class component_common extends common {
 
 		// resolved set
 			// $this->dato_resolved = $data;
-		
+
 		// db_data
 		// Store data before change it with new one.
 		if(!isset($this->db_data)) {
@@ -720,7 +688,7 @@ abstract class component_common extends common {
 							// Replace item with new_item
 							$item = $new_item;
 							debug_log(__METHOD__
-								. " New item created (not object on checking counter): " . json_encode($item)
+								. " New item created (is not object and not has id): " . json_encode($item)
 								, logger::ERROR
 							);
 						}
@@ -1020,7 +988,7 @@ abstract class component_common extends common {
 						. ' Ignored $el is not an object: ' . json_encode($el) . PHP_EOL
 						. ' section_id: '. $this->section_id . PHP_EOL
 						. ' section_tipo: '. $this->section_tipo . PHP_EOL
-						. ' tipo: '. $this->tipo						
+						. ' tipo: '. $this->tipo
 						, logger::ERROR
 					);
 					return false;
@@ -1581,20 +1549,20 @@ abstract class component_common extends common {
 
 			// Save main data
 			$main_data = new stdClass();
-				$main_data->key		= $tipo;
 				$main_data->column	= $data_column_name;
+				$main_data->key		= $tipo;
 
 			$data_to_save[] = $main_data;
 
 			// Save counter
 			$counter = new stdClass();
-				$counter->key		= $tipo;
 				$counter->column	= 'meta';
+				$counter->key		= $tipo;
 
 			$data_to_save[] = $counter;
 
-			// Save Relation search
-			// Only for component_autocomplete_hi
+		// Save Relation search
+		// Only for component_autocomplete_hi
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 			if ($legacy_model==='component_autocomplete_hi') {
 
@@ -1642,7 +1610,6 @@ abstract class component_common extends common {
 				return false;
 			}
 
-
 		// section save.
 			// The section will be the responsible to save the component data
 			// optional stop the save process to delay DDBB access
@@ -1681,14 +1648,14 @@ abstract class component_common extends common {
 				if( isset($this->bulk_process_id) ){
 					$tm_value->bulk_process_id = $this->bulk_process_id;
 				}
-			//Save the time machine record
+			// Save the time machine record
 				$tm_result = tm_record::create( $tm_value );
 				if ($tm_result === false) {
 					debug_log(__METHOD__
 					   .' Error saving Time Machine data for'
 					   .' tm_value: ' . to_string($tm_value)
 					   , logger::ERROR
-					);					
+					);
 				}
 
 		// activity
@@ -2391,7 +2358,7 @@ abstract class component_common extends common {
 					// add selector lag 'all' to last element of path
 					$end_path = end($path);
 					// $end_path->lang = 'all';
-			
+
 				// selected item
 					$column = section_record_data::get_column_name($end_path->model);
 					$item = new stdClass();
@@ -2411,7 +2378,7 @@ abstract class component_common extends common {
 			}
 			$db_result = $search->search();
 
-		$result = [];		
+		$result = [];
 		foreach ($db_result as $current_row) {
 
 			# value. is a basic locator section_id, section_tipo
@@ -4434,7 +4401,7 @@ abstract class component_common extends common {
 
 
 	public function detect_data_version(){
-		
+
 	}
 
 

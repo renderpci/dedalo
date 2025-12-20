@@ -71,12 +71,13 @@ class request_config_presets {
 			$sql = '';
 			$sql .= PHP_EOL . 'SELECT section_id';
 			$sql .= PHP_EOL . 'FROM matrix_list';
-			$sql .= PHP_EOL . "WHERE section_tipo = '".DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO."'";
-			$sql .= PHP_EOL . "AND matrix_list.string::jsonb -> 'dd1566' @> $1";
+			$sql .= PHP_EOL . "WHERE section_tipo = $1";
+			$sql .= PHP_EOL . "AND matrix_list.string::jsonb @> $2";
 			$sql .= PHP_EOL . "ORDER BY section_id ASC";
 			
 			$result = matrix_db_manager::exec_search($sql, [
-				'[{"section_tipo": "dd64", "section_id": "1"}]'
+				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO,
+				'{"dd1566":[{"section_tipo": "dd64", "section_id": "1"}]}'
 			]);
 
 		// Helper function to extract a component value

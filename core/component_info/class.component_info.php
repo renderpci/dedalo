@@ -22,6 +22,8 @@ class component_info extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
 
+
+
 	/**
 	* GET_DATA
 	* @return array|null $data
