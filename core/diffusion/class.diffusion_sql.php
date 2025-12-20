@@ -4049,6 +4049,148 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
+	* MAP_MEDIA
+	* Transform media URL like pdf or image to different qualities or
+	* special paths.
+	* @param object $options in this format:
+	* ..
+	* ,{
+	* 	properties : {
+	* 		options : { quality : original, extension : jpg },
+	* 		process_dato : diffusion_sql::map_media
+	* 	}
+	* }, ..
+	* @param array $dato in this format:
+	* [
+	* 	files_info : [{
+	* 		quality : original,
+	* 		file_path : /pdf/original/0/rsc37_rsc176_1.pdf,
+	* 		..
+	* 	}],
+	* 	..
+	* ]
+	* @return string|null $file_path
+	*/
+	public static function map_media(object $options, $dato) : ?string {
+
+		if (empty($dato)) {
+			return null;
+		}
+
+		// files info
+		$files_info = $dato[0]->files_info ?? null;
+		// No data available to transform
+		if (empty($files_info)) {
+			return null;
+		}
+
+		// process options. Expected an object as {"quality": "original"}
+		$process_options = $options->properties->options ?? null;
+		// Empty options. Stop processing
+		if (empty($process_options)) {
+			return null;
+		}
+
+		// transformations
+		$file_path = null;
+
+		// component. Create a component to get the correct defaults
+		try {
+
+			$tipo = $options->component->tipo;
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component = component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$options->component->section_id ?? null, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$options->component->section_tipo // string section_tipo
+			);
+
+			$default_quality = $component->get_default_quality();
+			$default_extension = $component->get_extension();
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__
+				. " Error on resolve custom path " . PHP_EOL
+				. ' exception: ' . $e->getMessage() . PHP_EOL
+				. ' options : ' . json_encode($options, JSON_PRETTY_PRINT)
+				, logger::DEBUG
+			);
+			return null;
+		}
+
+		// 1 - Quality/extension. Filters available files by quality and extension
+		// Sample to get '/image/original/0/rsc37_rsc176_1.jpg' from '/image/1.5MB/0/rsc37_rsc176_1.jpg'
+		// {
+		//   "process_dato": "diffusion_sql::map_media",
+		//   "options": {
+		//     "quality": "original",
+		//     "extension": "jpg"
+		//     }
+		//   }
+		// }
+		// select desired quality for the list if available
+		$found = array_find((array)$files_info, function($el) use ($process_options, $default_quality, $default_extension){
+
+			return $el->quality === ($process_options->quality ?? $default_quality) &&
+				   strtolower($el->extension) === strtolower($process_options->extension ?? $default_extension);
+		});
+		if (empty($found) || empty($found->file_path)) {
+			// quality do not exists
+			return null;
+		}
+		$file_path = $found->file_path;
+
+		// 2 - Replace. Replaces file path string using PHP regex replacements.
+		// Sample to get 'rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc176_1.jpg'
+		// {
+		//   "process_dato": "diffusion_sql::map_media",
+		//   "options": {
+		//     "replace": {
+		//         "regex": "~.*/~",
+		//         "substitution": ""
+		//     }
+		//   }
+		// }
+		// replace (regex). Use delimiters '~' as ~.*/~
+		if (isset($process_options->replace)) {
+			try {
+				$file_path = preg_replace(
+					''. $process_options->replace->regex .'',
+					 $process_options->replace->substitution,
+					 $file_path
+				);
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Error on replace custom path (regex) " . PHP_EOL
+					. ' exception: ' . $e->getMessage() . PHP_EOL
+					. ' process_options->replace : ' . json_encode($process_options->replace, JSON_PRETTY_PRINT)
+					, logger::DEBUG
+				);
+			}
+		}
+
+		// 3 - prefix. Prepends a string to the file path
+		// Sample to get 'http://dedalo.dev/media/rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc176_1.jpg'
+		// {
+		//   "process_dato": "diffusion_sql::map_media",
+		//   "options": {
+		//     "prefix": "http://dedalo.dev/media/"
+		//   }
+		// }
+		if (isset($process_options->prefix) && $file_path) {
+			$file_path = trim($process_options->prefix, '/') . '/' . trim($file_path, '/');
+		}
+
+
+		return $file_path;
+	}//end map_media
+
+
+
+	/**
 	* CALCULATE_DURATION
 	* properties generic postprocess data
 	* Calculate the duration of all videos in current interview from portal and returns the total duration
