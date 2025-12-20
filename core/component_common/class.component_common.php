@@ -684,7 +684,10 @@ abstract class component_common extends common {
 					if( !$has_id ){
 						if( !$is_object ) {
 							$new_item = new stdClass();
-							$new_item->value = $item;
+								$new_item->value = $item;
+								if($this->translatable) {
+									$new_item->lang = $this->lang;
+								}
 							// Replace item with new_item
 							$item = $new_item;
 							debug_log(__METHOD__
