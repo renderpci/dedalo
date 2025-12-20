@@ -221,7 +221,84 @@ trait utils {
 		// Check if the string starts and ends with a single quote
     	return strlen($q) > 1 && $q[0] === "'" && $q[-1] === "'";
 	}//end is_literal
-	
+
+
+
+	/**
+	* GET_DATA_WITH_PATH
+	* It is used by class state (component_info widget) to resolve path
+	* @param array $path in this format:
+	*	"path": [
+	*	  {
+	*		  "section_tipo": "oh1",
+	*		  "component_tipo": "oh25",
+	*		  "model": "component_portal",
+	*		  "name": "Audiovisual"
+	*	  },
+	*	  {
+	*		  "section_tipo": "rsc167",
+	*		  "component_tipo": "rsc25",
+	*		  "model": "component_select",
+	*		  "name": "Collection \/ archive"
+	*	  }
+	*  ],
+	* @param array $ar_locator
+	* @return array $data
+	*/
+	public static function get_data_with_path(array $path, array $ar_locator) : array {
+
+		$data = [];
+		foreach ($path as $path_item) {
+
+			// level data resolve
+			$path_level_locators = search::resolve_path_level($path_item, $ar_locator);
+
+			// object to store in this path level
+			$data_item = new stdClass();
+				$data_item->path	= $path_item;
+				$data_item->value	= $path_level_locators;
+
+			$data[] = $data_item;
+
+			// overwrite var $ar_locator for the next iteration
+			$ar_locator = $path_level_locators;
+		}
+
+		return $data;
+	}//end get_data_with_path
+
+
+
+	/**
+	* RESOLVE_PATH_LEVEL
+	* It is used by class state (component_info widget) to resolve path from search::get_data_with_path
+	* @param object $path_item
+	* @param array $ar_locator
+	* @return array $result
+	*/
+	public static function resolve_path_level(object $path_item, array $ar_locator) : array {
+
+		$result = [];
+		foreach ($ar_locator as $locator) {
+
+			$model_name	= ontology_node::get_model_by_tipo($path_item->component_tipo, true);
+			$component	= component_common::get_instance(
+				$model_name,
+				$path_item->component_tipo,
+				$locator->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$locator->section_tipo
+			);
+			$component_dato = $component->get_dato_full();
+
+			if (!empty($component_dato)) {
+				$result = array_merge($result, $component_dato);
+			}
+		}
+
+		return $result;
+	}//end resolve_path_level
 
 
 
