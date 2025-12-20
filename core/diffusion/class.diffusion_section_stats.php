@@ -842,7 +842,15 @@ class diffusion_section_stats extends diffusion {
 				// 	'dd1225' //  Last publication user
 				// ];
 
-			foreach ($ar_records as $row) {
+			foreach ($db_result as $row) {
+
+				// Unfinished method. Working here (!)
+				debug_log(__METHOD__
+				   ." Unfinished method. Working here v7"
+				   ." row: " . to_string($row)
+				   , logger::ERROR
+				);
+				return null;
 
 				$datos	= $row->datos;
 				$totals	= $datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN};
