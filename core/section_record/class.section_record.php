@@ -19,28 +19,49 @@ class section_record {
 	// Exist this record in the database?
 	public bool $record_in_the_database;
 
+	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
+	protected bool $is_loaded_data = false;
+
+	// metrics
+	public static int $section_record_total = 0;
+	public static int $section_record_total_calls = 0;
+
 
 
 	/**
 	* GET_INSTANCE
 	* Get an instance of a section_record object.
-	* Not cached at now because the real shared data is from section_record_data.
+	* It returns a cached instance if it exists.
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return section_record $section_record
 	*/
 	public static function get_instance( string $section_tipo, string|int $section_id ) : section_record {
 
-		return new section_record($section_tipo, (int)$section_id);
+		// metrics
+		self::$section_record_total_calls++;
+
+		$cache_key = $section_tipo .'_' .$section_id;
+
+		$instance = section_record_instances_cache::get($cache_key);
+		if ($instance === null) {
+			// Cache miss - Create a new instance and load from database
+			$instance = new section_record($section_tipo, (int)$section_id);
+			section_record_instances_cache::set($cache_key, $instance);
+		}
+
+		return $instance;
 	}//end get_instance
 
 
 
 	/**
-	* GET_INSTANCE
+	* __CONSTRUCT
 	* Cache section instances (singleton pattern)
+	* On construction, it loads the section_record_data instance.
 	* @param string $section_tipo
 	* @param int $section_id
+	* @return void
 	*/
 	private function __construct( string $section_tipo, int $section_id ) {
 
@@ -54,7 +75,27 @@ class section_record {
 				$this->section_tipo,
 				$section_id
 			);
-	}//end get_instance
+
+		// metrics
+		self::$section_record_total++;
+	}//end __construct
+
+
+
+	/**
+	* __DESTRUCT
+	* Destruct this instance and clear the instance from the cache
+	* @return void
+	*/
+	public function __destruct() {
+
+		// Clear the instance from the cache
+		$cache_key = $this->section_tipo .'_' .$this->section_id;
+		section_record_instances_cache::delete($cache_key);
+
+		// Clear the instance data
+		unset($this->data_instance);
+	}//end __destruct
 
 
 
@@ -73,7 +114,7 @@ class section_record {
 		// it returns the cached data without reconnecting to the database.
 		// All section instances with the same section_tipo and section_id values
 		// share the same cached instance of 'section_record_data', independent of the mode.
-		$result = $this->data_instance->read();
+		$result = $this->read();
 
 		// when load data and the record doesn't exists set the property 'exists' in the instance' to false
 		// if the record exists into the database set it as true.
@@ -86,6 +127,11 @@ class section_record {
 
 
 
+	/**
+	* EXISTS_IN_THE_DATABASE
+	* Returns true if the section record already exists in the database.
+	* @return bool
+	*/
 	public function exists_in_the_database() : bool {
 
 		if( isset($this->record_in_the_database) ){
@@ -96,7 +142,7 @@ class section_record {
 		$this->load_data();
 
 		return $this->record_in_the_database;
-	}
+	}//end exists_in_the_database
 
 
 
@@ -173,6 +219,7 @@ class section_record {
 	}//end set_component_data
 
 
+
 	/**
 	 * SAVE
 	 * Update all section_record data into DB
@@ -184,10 +231,24 @@ class section_record {
 	 */
 	public function save() : bool {
 
-		$result = $this->data_instance->save_data();
+		// $result = $this->data_instance->save_data();
+
+		$section_tipo = $this->section_tipo;
+		$section_id = $this->section_id;
+
+		// data_instance
+		$table = $this->data_instance->get_table();		
+		$data = $this->data_instance->get_data();
+
+		$result = matrix_db_manager::update(
+			$table,
+			$section_tipo,
+			$section_id,
+			$data
+		);
 
 		return $result;
-	}// end save
+	}//end save
 
 
 
@@ -210,7 +271,22 @@ class section_record {
 		$this->data_instance->set_column_data( $column, $value );
 
 		// 2 - save to database the column
-		$result = $this->data_instance->save_column_data( [$column] );
+		// $result = $this->data_instance->save_column_data( [$column] );
+
+		$section_tipo = $this->section_tipo;
+		$section_id	 = $this->section_id;
+
+		// data_instance
+		$table = $this->data_instance->get_table();		
+		$values = new stdClass();
+			$values->$column = $this->data_instance->$column ?? null;		
+
+		$result = matrix_db_manager::update(
+			$table,
+			$section_tipo,
+			$section_id,
+			$values
+		);
 
 
 		return $result;
@@ -219,21 +295,145 @@ class section_record {
 
 
 	/**
+	* SAVE_KEY_DATA
+	* Safely saves one key data of one column in a "matrix" table row,
+	* identified by a composite key of `section_id` and `section_tipo`.
+	* @param array $data_to_save
+	* Array of objects with the following structure:
+	* [
+	*  (object)[
+	*   'column' => 'relation',
+	*   'key' => 'test80',
+	*   'value' => (object)[
+	*     'section_tipo' => 'test65',
+	*     'section_id' => 1,
+	*     'type' => 'dd151',
+	*     'id' => 1
+	*   ]
+	* ]
+	* ]
+	* @return bool
+	* Returns `true` on success, or `false` if validation fails,
+	* query preparation fails, or execution fails.
+	*/
+	public function save_key_data( array $data_to_save ) : bool {
+
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+
+		// data_instance
+		$table = $this->data_instance->get_table();
+
+		// data to save e.g. format:
+		// [{
+		// 	"column" 	: "relation",
+		// 	"key"		: "oh25",
+		// 	"value"		: [{"section_id":3,"section_tipo":"oh1"}]
+		// }]
+
+		// check for empty columns. If any column is empty, 
+		// remove it from the database for maintaining clean DB data
+		$columns_to_delete = [];
+		foreach ($data_to_save as $data) {
+
+			$column	= $data->column;
+			$key	= $data->key;
+			// assign the value for this column and key (as data for one component in different columns)
+			$data->value = $this->data_instance->get_key_data($column, $key);
+
+			// check null values
+			if( $data->value===null ){
+				// check if the column is null
+				$table_data_is_null = $this->data_instance->$column ?? null;
+				// if the column is null, remove all
+				if( $table_data_is_null===null ){
+					$columns_to_delete[] = $column;
+				}
+			}
+		}
+		// Remove the empty columns, remove all column data
+		if( !empty($columns_to_delete) ){
+			
+			// $this->save_column_data( $columns_to_delete );
+			$values = new stdClass();
+			foreach ($columns_to_delete as $current_column) {
+				$values->$current_column = null;
+			}
+			$save_result = matrix_db_manager::update(
+				$table,
+				$section_tipo,
+				$section_id,
+				$values
+			);
+			if( $save_result === false ){
+				debug_log(__METHOD__
+				   . ' Failed to save empty columns' . PHP_EOL	
+				   . ' columns_to_delete: ' . json_encode($columns_to_delete, JSON_PRETTY_PRINT)
+				   , logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__
+				   . ' Saved empty columns' . PHP_EOL	
+				   . ' columns_to_delete: ' . json_encode($columns_to_delete, JSON_PRETTY_PRINT) . PHP_EOL
+				   . ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT)
+				   , logger::WARNING
+				);
+				// Remove columns that will be deleted and don't need to be update
+				foreach ($data_to_save as $key => $data) {
+					if( in_array($data->column, $columns_to_delete) ){
+						unset($data_to_save[$key]);
+					}
+				}
+			}
+		}
+
+		// if no data to save, return true
+		// this can happen if all columns are null
+		if( empty($data_to_save) ){
+			return true;
+		}
+
+		// debug
+		if(SHOW_DEBUG) {
+			debug_log(__METHOD__
+				. ' Saving component data' . PHP_EOL
+				. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT)
+				, logger::WARNING
+			);
+		}
+
+		return matrix_db_manager::update_by_key(
+			$table,
+			$section_tipo,
+			$section_id,
+			$data_to_save
+		);
+	}//end save_key_data
+
+
+
+	/**
 	* SAVE_COMPONENT_DATA
-	* Saves given value into the component container.
-	* @param string $column
-	* 	DB column
-	* @param string $tipo
-	* 	Component tipo
-	* @param ?array $value
-	* 	Component data value
+	* Saves given data into the component container.
+	* @param array $data_to_save
+	* 	Array of objects with the following structure:
+	*   [
+	* 	 {
+	* 		"key": "test52",
+	* 		"column": "string"
+	* 	 },
+	* 	 {
+	* 		"key": "test52",
+	* 		"column": "meta"
+	* 	 }
+	* 	]
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
 	public function save_component_data( array $data_to_save ) : bool {
 
 		// Save into DB
-		$result = $this->data_instance->save_key_data(
+		$result = $this->save_key_data(
 			$data_to_save
 		);
 
@@ -256,13 +456,13 @@ class section_record {
 
 
 	/**
-	* DELETE_RECORD
+	* DELETE
 	* Remove the record from DB
 	* Save all section record data deleted into Time machine
 	* @param bool $delete_diffusion_records=true
 	* @return bool
 	*/
-	public function delete_record( bool $delete_diffusion_records=true ) : bool {
+	public function delete( bool $delete_diffusion_records=true ) : bool {
 
 		// section_tipo
 			$section_tipo = $this->section_tipo;
@@ -295,7 +495,7 @@ class section_record {
 					$tm_value->section_tipo		= $section_tipo;
 					$tm_value->section_id		= $section_id;	
 
-				//Save the time machine record
+				// Save the time machine record
 				$tm_record = tm_record::create( $tm_value );
 				if ($tm_record === false) {
 					debug_log(__METHOD__
@@ -305,27 +505,28 @@ class section_record {
 					);
 					throw new Exception("Error Processing Request. id_time_machine is empty", 1);
 				}
+				$id = $tm_record->id ?? null;
 
-				$id = $tm_record->id;
 				// destruct
 				// Unload the tm record and tm record data.  		    					   	   	 	     	    
 				// It force to load the record saved previously from DB.
-				$tm_record->__destruct();
+				unset($tm_record);
 
 				// get the saved tm data and compare it with the new data. If they are equal, then save them to time machine else throw an error message;  		    
 				$test_tm_record = tm_record::get_instance($id);
 				$saved_tm_data = $test_tm_record->get_data();
 
-				// cast to array and order the keys in alphabetical order for comparison purposes,
-				$a = (array)$saved_tm_data->data;
-				$b = (array)$data;
-				ksort($a);
-				ksort($b);
+				// JSON encode and decode to compare objects
+				$a = $saved_tm_data->data;
+				$b = $data;
+
+				$a = json_decode(json_encode($a));
+				$b = json_decode(json_encode($b));
 
 				$is_equal = ($a == $b);
 				if ($is_equal===false) {
 					debug_log(__METHOD__
-						. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id_time_machine [Section:Delete]." .PHP_EOL
+						. " ERROR: The data_time_machine and data_section were expected to be identical. (time machine record: $id [Section:Delete]." .PHP_EOL
 						. ' Record is NOT deleted ! (3) ' . PHP_EOL
 						. ' section_tipo: ' . $section_tipo . PHP_EOL
 						. ' section_id: ' . $section_id . PHP_EOL
@@ -336,26 +537,26 @@ class section_record {
 				}
 
 		// 2. Delete the record in DB
-			$delete_result = $this->data_instance->delete();
-
+			$table = $this->data_instance->get_table();
+			$delete_result = matrix_db_manager::delete(
+				$table,
+				$section_tipo,
+				$section_id
+			);			
 			if( $delete_result===false ){
 				debug_log(__METHOD__
 					." Stopping to deleted section '$section_tipo'_'$section_id', error removing data from DDBB"
 					, logger::ERROR
 				);
 				return false;
-			}
-			// Remove the instance and delete it from cache.
-			$this->data_instance->__destruct();
-			// change the status of the record, now doesn't exist into DB.
-			$this->record_in_the_database = false;
+			}			
 
 		// 3. Remove this section record in linked sections and its own media
 			// inverse references. Remove all inverse references to this section
-				$this->remove_all_inverse_references();
+			$this->remove_all_inverse_references();
 
 			// media. Remove media files associated to this section
-				$this->remove_section_media_files();
+			$this->remove_section_media_files();
 
 		// 4. Publication
 			// Remove published records in MYSQL, etc.
@@ -370,6 +571,16 @@ class section_record {
 					);
 				}
 			}
+
+		// 5. Remove the instance data and delete it from cache.
+			unset($this->data_instance);
+			// set as unloaded
+			$this->is_loaded_data = false;
+			// change the status of the record, now doesn't exist into DB.
+			$this->record_in_the_database = false; 
+			// remove from cache
+			$cache_key = $section_tipo .'_' .$section_id;
+			section_record_instances_cache::delete($cache_key);			
 
 		// Log
 			debug_log(__METHOD__
@@ -398,14 +609,14 @@ class section_record {
 
 		// Returns the delete result.
 		return true;
-	}//end delete_record
+	}//end delete
 
 
 
 	/**
 	* DELETE_DATA
-	* Empty all components data
-	* The empty will be save into DB and Time machine
+	* Empty all columns components data
+	* The empty will be saved into DB and Time machine
 	* @return bool
 	*/
 	public function delete_data() : bool {
@@ -426,7 +637,7 @@ class section_record {
 			);
 
 			// don't empty some components
-			$ar_components_model_no_delete_dato = [
+			$excluded_model_to_empty = [
 				'component_section_id',
 				'component_external',
 				'component_inverse'
@@ -441,13 +652,14 @@ class section_record {
 
 				$current_model_name = ontology_node::get_model_by_tipo($current_component_tipo, true);
 
-				// don't empty some components check
-					if (in_array($current_model_name, $ar_components_model_no_delete_dato)){
-						continue;
-					}
+				// don't empty some components data
+				if (in_array($current_model_name, $excluded_model_to_empty)){
+					continue;
+				}
+
 				// Built every component and empty its data
-				$translatable	= ontology_node::get_translatable($current_component_tipo);
-				$lang		= ($translatable === false)
+				$translatable = ontology_node::get_translatable($current_component_tipo);
+				$lang = ($translatable === false)
 					? DEDALO_DATA_NOLAN
 					: DEDALO_DATA_LANG;
 
@@ -459,20 +671,23 @@ class section_record {
 					$lang,
 					$section_tipo,
 					false
-				);
-				// check if the component has data
-				// if the components has not data continue to next one
+				);				
+		
+				// If the component has no data, move on to the next one.
 				$current_component_data = $current_component->get_data();
 				if(empty($current_component_data)){
 					continue;
 				}
-				// Set the component data to null to empty
-				// if the component is a component_filter set the main user project
-				$empty_data = ($current_model_name==='component_filter')
-					? $current_component->get_default_data_for_user( $user_id )
-					: null;
 
-				$current_component->set_data($empty_data);
+				// Empty the component data by setting it to null.
+				// If the component is a component_filter, set the main user project.
+				if($current_model_name==='component_filter'){
+					$new_data = $current_component->get_default_data_for_user( $user_id );
+				} else {
+					$new_data = null;
+				}
+
+				$current_component->set_data($new_data);
 
 				// save the component and set new Time Machine entry
 				$current_component->save();
@@ -482,21 +697,22 @@ class section_record {
 					$current_component->remove_component_media_files();
 				}
 
+				// Add the deleted component tipo to the array.
 				$ar_deleted_tipos[] = $current_component_tipo;
 			}
 
-		// remove component inside section data in DDBB
+		// Update the modified section data.
 			$this->update_modified_section_data((object)[
 				'mode' => 'update_data'
 			]);
 
-		// Log
+		// debug
 			debug_log(__METHOD__
 				." Empty section record data '$section_tipo'_'$section_id' and its children"
 				, logger::DEBUG
 			);
 
-			// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			$logger_msg = "Empty section record and children data";
 			logger::$obj['activity']->log_message(
 				'DELETE',
@@ -637,7 +853,7 @@ class section_record {
 					);
 
 				// Save
-					$this->data_instance->save_key_data(
+					$this->save_key_data(
 						[(object)[
 							'column' =>'relation',
 							'key' => $created_by_user->tipo
@@ -669,7 +885,7 @@ class section_record {
 					);
 
 				// Save
-					$this->data_instance->save_key_data(
+					$this->save_key_data(
 						[(object)[
 							'column' =>'relation',
 							'key' => $modified_by_user->tipo
@@ -818,7 +1034,7 @@ class section_record {
 	/**
 	* REMOVE_SECTION_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file linked to current section (all quality versions)
-	* @see section record->delete_record()
+	* @see section_record->delete()
 	* @return array|null
 	* 	Array of objects (removed components info)
 	*/
@@ -908,6 +1124,20 @@ class section_record {
 	*/
 	public static function create( string $section_tipo, ?object $values=null ) : section_record|false {
 
+		// debug temporal to check caller class
+		if(SHOW_DEBUG===true) {
+			$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+			$callerClass = $trace[1]['class'] ?? 'Global';
+			if($callerClass !== 'section'){
+				debug_log(__METHOD__
+					." ONLY CALLS FROM SECTION ARE ALLOWED ". PHP_EOL
+					. ' callerClass: ' . $callerClass 					
+					, logger::ERROR
+				);
+				throw new Exception(" ONLY CALLS FROM SECTION ARE ALLOWED ");
+			}
+		}
+
 		$table = common::get_matrix_table_from_tipo($section_tipo);
 
 		$section_id = matrix_db_manager::create(
@@ -922,6 +1152,11 @@ class section_record {
 
 		$section_record = section_record::get_instance( $section_tipo, $section_id );
 		$section_record->record_in_the_database = true;
+
+		// update values
+		// $section_record->set_data($values);
+		$section_record->get_data(); // force to update values
+
 
 		return $section_record;
 	}//end create
@@ -1053,6 +1288,92 @@ class section_record {
 
 		return $new_section_id;
 	}//end duplicate
+
+
+
+	/**
+	* READ
+	* Retrieves a single row of data from a specified PostgreSQL table
+	* based on section_id and section_tipo.
+	* It's designed to provide a unified way of accessing data from
+	* various "matrix" tables within the Dédalo application.
+	* The function validates the table against a predefined list of allowed tables
+	* to prevent SQL injection vulnerabilities.
+	* @param bool $cache = true
+	* On true (default), if isset $this->data, no new database call is made.
+	* On false, a new database query is always forced.
+	* @return object|null $this->data
+	* Returns the processed data as an object with parsed JSON values.
+	* If no row is found, it returns null.
+	*/
+	public function read( bool $cache=true ) : ?object {
+
+		if ($cache && $this->is_loaded_data) {
+			return $this->data_instance->get_data();
+		}
+
+		$table = $this->data_instance->get_table();
+
+		$section_tipo = $this->section_tipo;
+		$section_id	= $this->section_id;
+
+		$row = matrix_db_manager::read(
+			$table,
+			$section_tipo,
+			$section_id
+		);
+
+		// No results found
+		if (!$row) {
+			return null;
+		}
+
+		// assign data_columns from database results
+		$columns_name = $this->data_instance->get_columns_name();
+		foreach ($columns_name as $column) {
+
+			if ( !isset($row->$column) ) {
+				// Ignore non existing data_columns key
+				continue;
+			}
+
+			if ( $row->$column!==null ) {
+				// JSON case
+				$column_decoded = json_decode($row->$column);
+				$this->data_instance->set_column_data($column, $column_decoded);
+			}
+		}
+
+		// Updates is_loaded_data
+		$this->is_loaded_data = true;
+
+
+		return $this->data_instance->get_data();
+	}//end read
+
+
+
+	// /**
+	// * DELETE
+	// * Safely deletes one record in a "matrix" table,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function delete() : bool {
+
+	// 	$table = $this->data_instance->get_table();
+
+	// 	$section_tipo = $this->section_tipo;
+	// 	$section_id	= $this->section_id;
+
+	// 	return matrix_db_manager::delete(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id
+	// 	);
+	// }//end delete
 
 
 
