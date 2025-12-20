@@ -1,14 +1,8 @@
 <?php declare(strict_types=1);
 /**
 * Class SECTION_RECORD_DATA
-*
 * It is a normalized matrix data container to get centralized access
-* to matrix records as CRUD.
-*
-* Supported actions include:
-* - Loading record data
-* - Updating existing records
-* - Inserting new records with optional initial data
+
 */
 class section_record_data {
 
@@ -97,7 +91,7 @@ class section_record_data {
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
 	protected bool $is_loaded_data = false;
 
-	// array instances
+	// array instances. @var array<string, \WeakReference<self>>
 	// Cache instances list added by the 'get_instance' calls based on section_tipo and $section_id key
 	private static array $instances = [];
 
@@ -113,13 +107,16 @@ class section_record_data {
 	// The name of the table to query.
 	protected readonly string $table;
 
+	// metrics
+	public static int $section_record_data_total_calls = 0;
+
 
 
 	/**
 	* GET_INSTANCE
 	* Singleton instance constructor for the class section_record_data
 	* Stores cache instances based on the contraction of section_tipo and $section_id
-	* as 'oh1_1'. If the section id is null, no cache is used.
+	* as 'oh1_1'.
 	* @param string $section_tipo
 	* 	Ontology identifier of the section. E.g. 'oh1'
 	* @param int $section_id
@@ -128,14 +125,12 @@ class section_record_data {
 	*/
 	public static function get_instance( string $section_tipo, int $section_id ) : self {
 
-		// cache
-		$cache_key = $section_tipo .'_' .$section_id;
-		if (isset(self::$instances[$cache_key])) {
-			return self::$instances[$cache_key];
-		}
+		// metrics
+		self::$section_record_data_total_calls++;
 
-		return self::$instances[$cache_key] = new self($section_tipo, $section_id);
-	}//end get_section_record_data_instance
+
+		return new self($section_tipo, $section_id);
+	}//end get_instance
 
 
 
@@ -173,6 +168,31 @@ class section_record_data {
 			unset( self::$instances[$cache_key] );
 		}
 	}//end __destruct
+
+
+
+	/**
+	* GET_COLUMNS_NAME
+	* Returns the columns definitions of the section_record
+	* @return array
+	*/
+	public function get_columns_name() : array {
+		
+		return $this->columns_name;
+	}//end get_columns_name
+
+
+
+	/**
+	* GET_COLUMN_NAME
+	* Resolve the column name for the given model
+	* @param string $model as 'component_input_text'
+	* @return string|null
+	*/
+	public static function get_column_name( string $model ) : ?string {
+
+		return section_record_data::$column_map[$model] ?? null;
+	}//end get_column_name
 
 
 
@@ -272,6 +292,7 @@ class section_record_data {
 
 		// Set or change the data of the given key
 		$this->data->$column->$key = $data;
+		
 
 		return true;
 	}//end set_key_data
@@ -279,9 +300,21 @@ class section_record_data {
 
 
 	/**
+	* GET_TABLE
+	* Returns the full table object
+	* @return string $this->table
+	*/
+	public function get_table() : string {
+
+		return $this->table;
+	}//end get_table
+
+
+
+	/**
 	* GET_DATA
-	* Returns the full data array
-	* @return array $this->data
+	* Returns the full data object
+	* @return object $this->data
 	*/
 	public function get_data() : object {
 
@@ -317,57 +350,57 @@ class section_record_data {
 
 
 
-	/**
-	* SAVE_DATA
-	* Safely saves whole data one or more columns in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public function save_data() : bool {
+	// /** -- MOVED TO RECTION_RECORD --
+	// * SAVE_DATA
+	// * Safely saves whole data one or more columns in a "matrix" table row,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function save_data() : bool {
 
-		$table			= $this->table;
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
-		$data			= $this->data;
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
+	// 	$data			= $this->data;
 
-		return matrix_db_manager::update(
-			$table,
-			$section_tipo,
-			$section_id,
-			$data
-		);
-	}//end save_data
+	// 	return matrix_db_manager::update(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id,
+	// 		$data
+	// 	);
+	// }//end save_data
 
 
+	
+	// /** -- MOVED TO RECTION_RECORD --
+	// * SAVE_COLUMN_DATA
+	// * Safely saves specific data of a given columns in a "matrix" table row,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @param array $columns
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function save_column_data( array $columns ) : bool {
 
-	/**
-	* SAVE_COLUMN_DATA
-	* Safely saves specific data of a given columns in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param array $columns
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public function save_column_data( array $columns ) : bool {
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
+	// 	$values			= new stdClass();
+	// 	foreach ($columns as $current_column) {
+	// 		$values->$current_column = $this->data->$current_column ?? null;
+	// 	}
 
-		$table			= $this->table;
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
-		$values			= new stdClass();
-		foreach ($columns as $current_column) {
-			$values->$current_column = $this->data->$current_column ?? null;
-		}
-
-		return matrix_db_manager::update(
-			$table,
-			$section_tipo,
-			$section_id,
-			$values
-		);
-	}//end save_column_data
+	// 	return matrix_db_manager::update(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id,
+	// 		$values
+	// 	);
+	// }//end save_column_data
 
 
 
@@ -410,58 +443,58 @@ class section_record_data {
 
 
 
-	/**
-	* SAVE_KEY_DATA
-	* Safely saves one key data of one column in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param array $data_to_save
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public function save_key_data( array $data_to_save ) : bool {
+	// /** -- MOVED TO RECTION_RECORD --
+	// * SAVE_KEY_DATA
+	// * Safely saves one key data of one column in a "matrix" table row,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @param array $data_to_save
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function save_key_data( array $data_to_save ) : bool {
 
-		$table			= $this->table;
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
 
-		$columns_to_delete = [];
-		foreach ($data_to_save as $data) {
+	// 	$columns_to_delete = [];
+	// 	foreach ($data_to_save as $data) {
 
-			$column	= $data->column;
-			$key	= $data->key;
-			// assign the value for this column and key (as data for one component in different columns)
-			$data->value = $this->data->$column->$key ?? null;
+	// 		$column	= $data->column;
+	// 		$key	= $data->key;
+	// 		// assign the value for this column and key (as data for one component in different columns)
+	// 		$data->value = $this->data->$column->$key ?? null;
 
-			// check null values
-			if( $data->value===null ){
-				// check if the column is null
-				$table_data_is_null = $this->data->$column ?? null;
-				// if the column is null, remove all
-				if( $table_data_is_null===null ){
-					$columns_to_delete[] = $column;
-				}
-			}
-		}
-		// Remove the empty columns, remove all column data
-		if( !empty($columns_to_delete) ){
-			$this->save_column_data( $columns_to_delete );
+	// 		// check null values
+	// 		if( $data->value===null ){
+	// 			// check if the column is null
+	// 			$table_data_is_null = $this->data->$column ?? null;
+	// 			// if the column is null, remove all
+	// 			if( $table_data_is_null===null ){
+	// 				$columns_to_delete[] = $column;
+	// 			}
+	// 		}
+	// 	}
+	// 	// Remove the empty columns, remove all column data
+	// 	if( !empty($columns_to_delete) ){
+	// 		$this->save_column_data( $columns_to_delete );
 
-			// Remove columns that will be deleted and don't need to be update
-			foreach ($data_to_save as $key => $data) {
-				if( in_array($data->column, $columns_to_delete) ){
-					unset($data_to_save[$key]);
-				}
-			}
-		}
+	// 		// Remove columns that will be deleted and don't need to be update
+	// 		foreach ($data_to_save as $key => $data) {
+	// 			if( in_array($data->column, $columns_to_delete) ){
+	// 				unset($data_to_save[$key]);
+	// 			}
+	// 		}
+	// 	}
 
-		return matrix_db_manager::update_by_key(
-			$table,
-			$section_tipo,
-			$section_id,
-			$data_to_save
-		);
-	}//end save_key_data
+	// 	return matrix_db_manager::update_by_key(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id,
+	// 		$data_to_save
+	// 	);
+	// }//end save_key_data
 
 
 
@@ -469,98 +502,85 @@ class section_record_data {
 
 
 
-	/**
-	* READ
-	* Retrieves a single row of data from a specified PostgreSQL table
-	* based on section_id and section_tipo.
-	* It's designed to provide a unified way of accessing data from
-	* various "matrix" tables within the Dédalo application.
-	* The function validates the table against a predefined list of allowed tables
-	* to prevent SQL injection vulnerabilities.
-	* @param bool $cache = true
-	* On true (default), if isset $this->data, no new database call is made.
-	* On false, a new database query is always forced.
-	* @return object|null $this->data
-	* Returns the processed data as an associative array with parsed JSON values.
-	* If no row is found, it returns an empty array [].
-	*/
-	public function read( bool $cache=true ) : ?object {
+	// /** -- MOVED TO RECTION_RECORD --
+	// * READ
+	// * Retrieves a single row of data from a specified PostgreSQL table
+	// * based on section_id and section_tipo.
+	// * It's designed to provide a unified way of accessing data from
+	// * various "matrix" tables within the Dédalo application.
+	// * The function validates the table against a predefined list of allowed tables
+	// * to prevent SQL injection vulnerabilities.
+	// * @param bool $cache = true
+	// * On true (default), if isset $this->data, no new database call is made.
+	// * On false, a new database query is always forced.
+	// * @return object|null $this->data
+	// * Returns the processed data as an object with parsed JSON values.
+	// * If no row is found, it returns null.
+	// */
+	// public function read( bool $cache=true ) : ?object {
 
-		if ($cache && $this->is_loaded_data) {
-			return $this->data;
-		}
+	// 	if ($cache && $this->is_loaded_data) {
+	// 		return $this->data;
+	// 	}
 
-		$table			= $this->table;
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
 
-		$row = matrix_db_manager::read(
-			$table,
-			$section_tipo,
-			$section_id
-		);
+	// 	$row = matrix_db_manager::read(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id
+	// 	);
 
-		// No results found
-		if (!$row) {
-			return null;
-		}
+	// 	// No results found
+	// 	if (!$row) {
+	// 		return null;
+	// 	}
 
-		// assign data_columns from database results
-		foreach ($this->columns_name as $column) {
+	// 	// assign data_columns from database results
+	// 	foreach ($this->columns_name as $column) {
 
-			if ( !isset($row->$column) ) {
-				// Ignore non existing data_columns key
-				continue;
-			}
+	// 		if ( !isset($row->$column) ) {
+	// 			// Ignore non existing data_columns key
+	// 			continue;
+	// 		}
 
-			if ( $row->$column!==null ) {
-				// JSON case
-				$this->data->$column = json_decode($row->$column);
-			}
-		}
+	// 		if ( $row->$column!==null ) {
+	// 			// JSON case
+	// 			$this->data->$column = json_decode($row->$column);
+	// 		}
+	// 	}
 
-		// Updates is_loaded_data
-		$this->is_loaded_data = true;
-
-
-		return $this->data;
-	}//end read
+	// 	// Updates is_loaded_data
+	// 	$this->is_loaded_data = true;
 
 
-
-	/**
-	* DELETE
-	* Safely deletes one record in a "matrix" table,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public function delete() : bool {
-
-		$table			= $this->table;
-		$section_tipo	= $this->section_tipo;
-		$section_id		= $this->section_id;
-
-		return matrix_db_manager::delete(
-			$table,
-			$section_tipo,
-			$section_id
-		);
-	}//end delete
+	// 	return $this->data;
+	// }//end read
 
 
 
-	/**
-	* GET_COLUMN_NAME
-	* Resolve the column name for the given model
-	* @param string $model as 'component_input_text'
-	* @return string|null
-	*/
-	public static function get_column_name( string $model ) : ?string {
+	// /** -- MOVED TO RECTION_RECORD --
+	// * DELETE
+	// * Safely deletes one record in a "matrix" table,
+	// * identified by a composite key of `section_id` and `section_tipo`.
+	// * @return bool
+	// * Returns `true` on success, or `false` if validation fails,
+	// * query preparation fails, or execution fails.
+	// */
+	// public function delete() : bool {
 
-		return section_record_data::$column_map[$model] ?? null;
-	}//end get_column_name
+	// 	$table			= $this->table;
+	// 	$section_tipo	= $this->section_tipo;
+	// 	$section_id		= $this->section_id;
+
+	// 	return matrix_db_manager::delete(
+	// 		$table,
+	// 		$section_tipo,
+	// 		$section_id
+	// 	);
+	// }//end delete
 
 
 

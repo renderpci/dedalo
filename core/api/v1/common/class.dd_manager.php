@@ -36,6 +36,9 @@ final class dd_manager {
 				$nchars			= 200;
 				$line			= $text .' '. str_repeat(">", $nchars - $text_length).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
+				
+				// enable cache analytics
+				section_record_instances_cache::setAnalytics(true);
 			}
 
 		// logged check
@@ -184,6 +187,13 @@ final class dd_manager {
 						'Data (components)',
 						'--> data_total_time: '  . metrics::$data_total_time.' ms',
 						'--> data_total_calls: ' . metrics::$data_total_calls,
+						// cache
+						'Cache',
+						'--> section_record_total: ' . section_record::$section_record_total,
+						'--> section_record_total_calls: ' . section_record::$section_record_total_calls,
+						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,												
+						'--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
+						'--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
 						// Subdatum
 						// 'Subdatum',
 						// '--> subdatum_total_time: ' . metrics::$subdatum_total_time.' ms',
@@ -205,6 +215,11 @@ final class dd_manager {
 						. implode(PHP_EOL, $metrics)
 						, logger::WARNING
 					);
+					$enable_cache_analytics = true;
+					if($enable_cache_analytics) {					
+						error_log(section_record_instances_cache::exportAnalytics('json'));
+					}
+					
 
 
 				// end line info
