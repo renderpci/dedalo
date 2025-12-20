@@ -79,12 +79,14 @@ class json_handler {
 
 		// check errors
 			if (json_last_error()!==JSON_ERROR_NONE) {
+				$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
 				debug_log(__METHOD__
 					. " Error on decode JSON value: " .PHP_EOL
 					. 'json_last_error: '.json_last_error() .PHP_EOL
 					. 'json_last_error_msg: '.json_last_error_msg() .PHP_EOL
 					. 'string $json: '. $json .PHP_EOL
-					. 'assoc: '. to_string($assoc)
+					. 'assoc: '. to_string($assoc) .PHP_EOL
+					. 'trace: '. print_r($trace, true)
 					, logger::ERROR
 				);
 			}

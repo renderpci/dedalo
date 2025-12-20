@@ -87,7 +87,8 @@ $updates->$v = new stdClass();
 		// @TODO : ADD TO DB_PG_DEFINTIONS !
 			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				CREATE INDEX idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
+				DROP INDEX IF EXISTS "idx_matrix_langs_hierarchy41_value";
+				CREATE INDEX IF NOT EXISTS idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
 					(string->\'hierarchy41\'->0->>\'value\')
 				);
 				ANALYZE matrix_langs;
@@ -281,7 +282,7 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data. 
+		// Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data',
 				'script_class'	=> 'v6_to_v7',
@@ -291,7 +292,7 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Recreate the tm table in PostgreSQL. 
+		// Recreate the tm table in PostgreSQL.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Recreate the tm table in PostgreSQL. ',
 				'script_class'	=> 'v6_to_v7',
@@ -301,7 +302,7 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Fill the new  columns `user_id`, `bulk_process` and `data` with its previous column data. 
+		// Fill the new  columns `user_id`, `bulk_process` and `data` with its previous column data.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Fill the new  columns "user_id", "bulk_process" and "data" with its previous column data. ',
 				'script_class'	=> 'v6_to_v7',

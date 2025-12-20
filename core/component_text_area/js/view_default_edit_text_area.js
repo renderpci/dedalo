@@ -353,7 +353,7 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value.value)
+		const value = self.tags_to_html(current_value?.value)
 
 	// content_value
 		const content_value = ui.create_dom_element({

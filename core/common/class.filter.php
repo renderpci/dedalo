@@ -278,9 +278,7 @@ abstract class filter {
 					$current_locator->section_tipo // string section_tipo
 				);
 				$order_data		= $order_component->get_data();
-				$order_value	= isset($order_data[0])
-					? (int)$order_data[0]
-					: 0;
+				$order_value	= (int)($order_data[0]->value ?? 0);			
 
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,

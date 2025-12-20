@@ -192,7 +192,7 @@ class diffusion_section_stats extends diffusion {
 				return $response;
 			}
 			// get last activity record in raw db format (not processed)
-			$activity_row = pg_fetch_object($result);			
+			$activity_row = pg_fetch_object($result);
 			if (!$activity_row || empty($activity_row->timestamp)) {
 				debug_log(__METHOD__." Skip. Not calculable result found for user $user_id ".to_string(), logger::WARNING);
 				$response->msg .= 'Skip. Not calculable result found for user '.$user_id;
@@ -236,7 +236,7 @@ class diffusion_section_stats extends diffusion {
 					$date_in,
 					$date_out
 				);
-			
+
 				// if not empty totals_data, add
 				if ($totals_data && count($totals_data)>0) {
 
@@ -316,7 +316,7 @@ class diffusion_section_stats extends diffusion {
 			$sql_query .= 'WHERE "timestamp" between $1 and $2' . PHP_EOL;
 			$sql_query .= 'AND relation @> $3' . PHP_EOL;
 			$sql_query .= 'ORDER BY id ASC';
-			
+
 			$result = matrix_db_manager::exec_search($sql_query, [
 				$date_in,
 				$date_out,
@@ -327,6 +327,8 @@ class diffusion_section_stats extends diffusion {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
 				return null;
 			}
+
+		$cache_component = false;
 
 		// iterate found records
 		while ($row = pg_fetch_object($result)) {
@@ -341,7 +343,8 @@ class diffusion_section_stats extends diffusion {
 					$current_section_id,
 					'list',
 					DEDALO_DATA_NOLAN,
-					$current_section_tipo
+					$current_section_tipo,
+					$cache_component
 				);
 				$what_data = $component->get_data();
 				// update $what_obj adding counters to the object (passed what_obj by reference)
@@ -354,7 +357,8 @@ class diffusion_section_stats extends diffusion {
 					$current_section_id,
 					'list',
 					DEDALO_DATA_NOLAN,
-					$current_section_tipo
+					$current_section_tipo,
+					$cache_component
 				);
 				$where_data = $component->get_data(); // Like: [{"id":1,"lang":"lg-nolan","value":"dd1223"}]
 				if (!empty($where_data)) {
@@ -382,14 +386,15 @@ class diffusion_section_stats extends diffusion {
 						// take care to manage publish cases in different way
 						switch (true) {
 							case ($key==='dd1223'): // last publish
-								// get record msg (dd551) info to calculate published section tipo								
+								// get record msg (dd551) info to calculate published section tipo
 								$component = component_common::get_instance(
 									$data_model,
 									$data_tipo,
 									$current_section_id,
 									'list',
 									DEDALO_DATA_NOLAN,
-									$current_section_tipo
+									$current_section_tipo,
+									$cache_component
 								);
 								$data_data = $component->get_data();
 								$msg = $data_data[0]->value ?? false;
@@ -419,9 +424,10 @@ class diffusion_section_stats extends diffusion {
 					$current_section_id,
 					'list',
 					DEDALO_DATA_NOLAN,
-					$current_section_tipo
+					$current_section_tipo,
+					$cache_component
 				);
-				$when_data = $component->get_data(); // Like: [{"id":1,"start":{"day":26,"hour":12,"time":65098039018,"year":2025,"month":5,"minute":36,"second":58}}]	
+				$when_data = $component->get_data(); // Like: [{"id":1,"start":{"day":26,"hour":12,"time":65098039018,"year":2025,"month":5,"minute":36,"second":58}}]
 				if (!empty($when_data)) {
 
 					if (isset($when_data[0]->start) && isset($when_data[0]->start->hour)) {
@@ -437,57 +443,39 @@ class diffusion_section_stats extends diffusion {
 		pg_free_result($result);
 
 		// merge and verticalize data to store it
-		// Optimization: batch-fetch labels for 'what' items to avoid N+1 query pattern
-			$what_labels = [];
-			if (!empty((array)$what_obj)) {
-				$what_tipos = array_keys((array)$what_obj);
-				foreach ($what_tipos as $tipo) {
-					$what_labels[$tipo] = ontology_node::get_term_by_tipo($tipo);
-				}
-			}
-
-		// Optimization: pre-allocate array for better memory efficiency
-			$total_size = count((array)$what_obj) + count((array)$where_obj) + 
-			              count((array)$when_obj) + count((array)$publish_obj);
 			$totals_data = [];
-			
-			if ($total_size > 0) {
-				$totals_data = array_fill(0, $total_size, null);
-				$index = 0;
-
-				// what
-				foreach ($what_obj as $key => $value) {
-					$item = new stdClass();
-						$item->type		= 'what';
-						$item->tipo		= $key;
-						$item->value	= $value;
-						$item->label	= $what_labels[$key] ?? null; // use pre-fetched label
-					$totals_data[$index++] = $item;
-				}
-				// where
-				foreach ($where_obj as $key => $value) {
-					$item = new stdClass();
-						$item->type		= 'where';
-						$item->tipo		= $key;
-						$item->value	= $value;
-					$totals_data[$index++] = $item;
-				}
-				// when
-				foreach ($when_obj as $key => $value) {
-					$item = new stdClass();
-						$item->type		= 'when';
-						$item->hour		= $key;
-						$item->value	= $value;
-					$totals_data[$index++] = $item;
-				}
-				// publish
-				foreach ($publish_obj as $key => $value) {
-					$item = new stdClass();
-						$item->type		= 'publish';
-						$item->tipo		= $key;
-						$item->value	= $value;
-					$totals_data[$index++] = $item;
-				}
+			// what
+			foreach ($what_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'what';
+					$item->tipo		= $key;
+					$item->value	= $value;
+					$item->label	= ontology_node::get_term_by_tipo($key); // add label for easy human read
+				$totals_data[] = $item;
+			}
+			// where
+			foreach ($where_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'where';
+					$item->tipo		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+			// when
+			foreach ($when_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'when';
+					$item->hour		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
+			}
+			// publish
+			foreach ($publish_obj as $key => $value) {
+				$item = new stdClass();
+					$item->type		= 'publish';
+					$item->tipo		= $key;
+					$item->value	= $value;
+				$totals_data[] = $item;
 			}
 
 
@@ -545,7 +533,7 @@ class diffusion_section_stats extends diffusion {
 				debug_log(__METHOD__
 					. " Error. Ignored activity record without what definition! " . PHP_EOL
 					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
-					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)					
+					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 				return $what_obj;
@@ -558,7 +546,7 @@ class diffusion_section_stats extends diffusion {
 				debug_log(__METHOD__
 					. " Error. Ignored activity record without what correspondence! " . PHP_EOL
 					. ' what_tipo: ' . to_string($what_tipo) . PHP_EOL
-					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)					
+					. ' data: ' . json_encode($data, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 				return $what_obj;
@@ -647,7 +635,7 @@ class diffusion_section_stats extends diffusion {
 				$data_item = new stdClass();
 					$data_item->value = $value;
 					$data_item->lang = DEDALO_DATA_NOLAN;
-				
+
 				$component->set_data([$data_item]);
 				$component->save();
 			})(USER_ACTIVITY_TYPE_TIPO, $type); // dd1531
@@ -691,7 +679,7 @@ class diffusion_section_stats extends diffusion {
 				$data_item = new stdClass();
 					$data_item->value = $value;
 					$data_item->lang = DEDALO_DATA_NOLAN;
-				
+
 				$component->set_data([$data_item]);
 				$component->save();
 			})(USER_ACTIVITY_TOTALS_TIPO, $totals_data); // dd1523
