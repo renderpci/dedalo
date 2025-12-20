@@ -77,7 +77,7 @@ if (!include APP_ROOT . '/config/config.php') {
 // php://input get post vars. file_get_contents returns a JSON encoded string
 $str_json = file_get_contents('php://input');
 if (!empty($str_json)) {
-	$rqo = json_handler::decode($str_json);
+	$rqo = json_decode($str_json);
 	// Error handling
 	if ($rqo === null && json_last_error() !== JSON_ERROR_NONE) {
 		$response = new stdClass();
