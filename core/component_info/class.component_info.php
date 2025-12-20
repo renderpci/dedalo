@@ -158,10 +158,10 @@ class component_info extends component_common {
 	*/
 	public function get_db_data() {
 
-		$data = parent::get_dato();
+		$data = parent::get_data();
 
 		if(empty($data)){
-			$data = $this->get_dato();
+			$data = $this->get_data();
 		}
 
 

@@ -244,7 +244,7 @@ export const get_buttons = (self) => {
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: key,
-					value	: null
+					value	: {value: null}
 				})]
 				self.change_value({
 					changed_data	: changed_data,

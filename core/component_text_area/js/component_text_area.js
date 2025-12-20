@@ -495,7 +495,7 @@ component_text_area.prototype.save_value = async function(key, value) {
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: (new_data.length>0) ? new_data : null
+		value	: (new_data.length>0) ? {value: new_data, lang: self.lang} : null
 	})]
 	const js_promise = self.change_value({
 		changed_data	: changed_data,

@@ -68,11 +68,12 @@ class state extends widget_common {
 							DEDALO_DATA_LANG,
 							$source_section_tipo
 						);
-						$source_dato = $source_component->get_data();
+						$source_data = $source_component->get_data();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
-						$locator = reset($source_dato);
-
-						$ar_locator = array_merge($ar_locator, $source_dato);
+						$locator = $source_data[0] ?? null;
+						if($locator){
+							$ar_locator[] = $locator;
+						}
 					}
 					break;
 

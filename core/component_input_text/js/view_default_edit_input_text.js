@@ -129,7 +129,7 @@ const get_content_value = (i, current_value, self) => {
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
 			value			: current_value.value || '' ,
-			placeholder		: (current_value.value) ? '' : self.data.fallback_value?.[i],
+			placeholder		: (current_value.value) ? '' : self.data.fallback_value?.[i].value,
 			parent			: content_value
 		})
 		// mousedown event. Capture event propagation
@@ -316,7 +316,10 @@ const get_buttons = (self) => {
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					key		: key,
-					value	: null
+					value	: {
+						value: null,
+						lang: self.lang
+					}
 				})]
 				self.change_value({
 					changed_data	: changed_data,

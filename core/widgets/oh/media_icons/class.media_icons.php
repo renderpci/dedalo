@@ -59,9 +59,10 @@ class media_icons extends widget_common {
 						);
 						$source_dato = $source_component->get_data();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
-						$locator = reset($source_dato);
-
-						$ar_locator = array_merge($ar_locator, $source_dato);
+						$locator = $source_dato[0] ?? null;
+						if($locator){
+							$ar_locator[] = $locator;
+						}
 					}
 					break;
 

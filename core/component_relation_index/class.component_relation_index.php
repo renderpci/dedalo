@@ -73,8 +73,8 @@ class component_relation_index extends component_relation_common {
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
 		// pagination
-			$limit			= $custom_limit ?? $this->pagination->limit;
-			$offset			= $this->pagination->offset;
+			$limit			= $custom_limit ?? $this->pagination->limit ?? null;
+			$offset			= $this->pagination->offset ?? null;
 
 			$target_section	= $this->get_target_section();
 
