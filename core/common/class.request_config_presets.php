@@ -67,12 +67,12 @@ class request_config_presets {
 			// $search		= search::get_instance($search_query_object);
 			// $db_result	= $search->search();
 
-		// direct way		
+		// direct way
 			$sql = '';
 			$sql .= PHP_EOL . 'SELECT section_id';
 			$sql .= PHP_EOL . 'FROM matrix_list';
 			$sql .= PHP_EOL . "WHERE section_tipo = $1";
-			$sql .= PHP_EOL . "AND matrix_list.string::jsonb @> $2";
+			$sql .= PHP_EOL . "AND matrix_list.relation::jsonb @> $2";
 			$sql .= PHP_EOL . "ORDER BY section_id ASC";
 			
 			$result = matrix_db_manager::exec_search($sql, [
@@ -128,7 +128,7 @@ class request_config_presets {
 
 			// Get JSON config (dd625)
 				$json_data		= $get_component_data('dd625', $section_id);
-				$request_config	= $json_data[0] ?? [];
+				$request_config	= $json_data[0]->value ?? [];
 
 				// Normalize input
 				$request_items = is_array($request_config) ? $request_config : [$request_config];
@@ -157,18 +157,20 @@ class request_config_presets {
 
 			// Only store if we have valid configs
 			if (!empty($safe_request_config)) {
-				$active_request_config[] = (object)[
-					'tipo'			=> $tipo,
-					'section_tipo'	=> $section_tipo,
-					'mode'			=> $mode,
-					'user_id'		=> $user_id,
-					'public'		=> $public,
-					'data'			=> $safe_request_config
-				];
+
+				$item = new stdClass();
+					$item->tipo           = $tipo;
+					$item->section_tipo   = $section_tipo;
+					$item->mode           = $mode;
+					$item->user_id        = $user_id;
+					$item->public         = $public;
+					$item->data           = $safe_request_config;
+
+				$active_request_config[] = $item;
 			}
 		}
 
-		// $active_request_config_cache
+		// active_request_config_cache
 		$active_request_config_cache = $active_request_config;
 
 

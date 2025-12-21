@@ -452,10 +452,14 @@ class ts_object {
 
 							case ($element_obj->type==='term'):								
 
-								// term Is translatable and uses lang fallback here								
-								$element_value = empty($component_data)
-									? $component->extract_component_value_fallback() // ! unverified
-									: ($component_data[0]->value ?? $component_data[0] ?? '');									
+								// term Is translatable and uses lang fallback here
+								if(empty($component_data)) {	
+									$data_item_fallback = $component->get_component_data_fallback();
+									$element_value = $data_item_fallback[0]->value ?? $data_item_fallback[0] ?? '';
+									$element_value = component_common::decorate_untranslated($element_value);
+								}else{
+									$element_value = $component_data[0]->value ?? $component_data[0] ?? '';
+								}
 
 								// (!) Note that this element (term) could be multiple (various items) and
 								// the value is cumulative added in $element_obj->value on each iteration

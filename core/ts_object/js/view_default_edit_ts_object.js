@@ -433,9 +433,9 @@ const render_ts_line = function(self) {
 				// button_duplicate
 				if (area_ontology_caller) {
 					const button_duplicate = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button_duplicate',
-						inner_html		: '<span>+</span>',
+						element_type	: 'button',
+						class_name		: 'duplicate',
+						title			: 'Duplicate',
 						parent			: fragment
 					})
 					// click event
@@ -1440,6 +1440,8 @@ const render_ontology_term = function(options) {
 			})
 		}
 		term_text_node.addEventListener('click', click_handler)
+		// fix term pointer
+		self.term_text = term_text_node
 
 	// element_to_hilite
 		if (self.element_to_hilite) {

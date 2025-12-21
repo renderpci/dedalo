@@ -1265,7 +1265,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 					// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
 					const save_handler = function() {
-
+						
 						const caller = current_component
 
 						const ar_values = []
@@ -1284,9 +1284,9 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 							}
 						}
 
-						const value = ar_values.join(' ')
+						const value = ar_values.map(el => el.value).join(' ')						
 						// change the value of the current DOM element
-						self.term_text.innerHTML = value
+						self.term_text.textContent = value
 
 						dd_request_idle_callback(
 							() => {

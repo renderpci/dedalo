@@ -174,7 +174,6 @@ class section_record {
 
 		$result = $this->data_instance->set_data( $data );
 
-
 		return $result;
 	}//end set_data
 
@@ -279,7 +278,7 @@ class section_record {
 		// data_instance
 		$table = $this->data_instance->get_table();		
 		$values = new stdClass();
-			$values->$column = $this->data_instance->$column ?? null;		
+			$values->$column = $this->data_instance->get_column_data($column) ?? null;
 
 		$result = matrix_db_manager::update(
 			$table,
@@ -344,7 +343,7 @@ class section_record {
 			// check null values
 			if( $data->value===null ){
 				// check if the column is null
-				$table_data_is_null = $this->data_instance->$column ?? null;
+				$table_data_is_null = $this->data_instance->get_column_data($column);
 				// if the column is null, remove all
 				if( $table_data_is_null===null ){
 					$columns_to_delete[] = $column;
