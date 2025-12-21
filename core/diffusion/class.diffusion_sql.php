@@ -4084,19 +4084,7 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 
-		// process options. Expected an object as {"quality": "original"}
-		$process_options = $options->properties->options ?? null;
-		// Empty options. Stop processing
-		if (empty($process_options)) {
-			return null;
-		}
-
-		// transformations
-		$file_path = null;
-
-		// component. Create a component to get the correct defaults
 		try {
-
 			$tipo = $options->component->tipo;
 			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component = component_common::get_instance(
@@ -4107,13 +4095,9 @@ class diffusion_sql extends diffusion  {
 				DEDALO_DATA_NOLAN, // string lang
 				$options->component->section_tipo // string section_tipo
 			);
-
-			$default_quality = $component->get_default_quality();
-			$default_extension = $component->get_extension();
-
 		} catch (Exception $e) {
 			debug_log(__METHOD__
-				. " Error on resolve custom path " . PHP_EOL
+				. " Error on load component " . PHP_EOL
 				. ' exception: ' . $e->getMessage() . PHP_EOL
 				. ' options : ' . json_encode($options, JSON_PRETTY_PRINT)
 				, logger::DEBUG
@@ -4121,40 +4105,25 @@ class diffusion_sql extends diffusion  {
 			return null;
 		}
 
-		// 1 - Quality/extension. Filters available files by quality and extension
-		// Sample to get '/image/original/0/rsc37_rsc176_1.jpg' from '/image/1.5MB/0/rsc37_rsc176_1.jpg'
-		// {
-		//   "process_dato": "diffusion_sql::map_media",
-		//   "options": {
-		//     "quality": "original",
-		//     "extension": "jpg"
-		//     }
-		//   }
-		// }
-		// select desired quality for the list if available
-		$found = array_find((array)$files_info, function($el) use ($process_options, $default_quality, $default_extension){
-
-			return $el->quality === ($process_options->quality ?? $default_quality) &&
-				   strtolower($el->extension) === strtolower($process_options->extension ?? $default_extension);
-		});
-		if (empty($found) || empty($found->file_path)) {
-			// quality do not exists
-			return null;
+		// process options. Expected an object as {"quality": "original"}
+		$process_options = $options->properties->options ?? null;
+		// Empty options. Stop processing
+		if (empty($process_options)) {
+			return $component->get_diffusion_value();
 		}
-		$file_path = $found->file_path;
 
-		// 2 - Replace. Replaces file path string using PHP regex replacements.
-		// Sample to get 'rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc176_1.jpg'
-		// {
-		//   "process_dato": "diffusion_sql::map_media",
-		//   "options": {
-		//     "replace": {
-		//         "regex": "~.*/~",
-		//         "substitution": ""
-		//     }
-		//   }
-		// }
-		// replace (regex). Use delimiters '~' as ~.*/~
+		// transformations
+		$file_path = null;
+
+		// component. Create a component to get the correct defaults
+		$quality = $process_options->quality ?? $component->get_default_quality();
+		$extension = $process_options->extension ?? $component->get_extension();
+
+		// 1 - Quality/Extension. Builds the URL based on given quality and extension when provided.
+		$component->set_extension($extension);
+		$file_path = $component->get_url($quality);
+
+		// 2 - Replace (regex). Use delimiters '~' as ~.*/~
 		if (isset($process_options->replace)) {
 			try {
 				$file_path = preg_replace(
@@ -4172,7 +4141,7 @@ class diffusion_sql extends diffusion  {
 			}
 		}
 
-		// 3 - prefix. Prepends a string to the file path
+		// 3 - Prefix. Prepends a string to the file path
 		// Sample to get 'http://dedalo.dev/media/rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc176_1.jpg'
 		// {
 		//   "process_dato": "diffusion_sql::map_media",
