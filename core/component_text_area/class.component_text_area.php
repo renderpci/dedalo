@@ -2228,24 +2228,24 @@ class component_text_area extends component_string_common {
 			$max_chars = $options->max_chars ?? 700;
 
 		// dato_fallback. array of each dato array element using fallback
-			$dato_fallback = $this->get_component_data_fallback(
+			$data_fallback = $this->get_component_data_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
 
-			if (empty($dato_fallback)) {
+			if (empty($data_fallback)) {
 				return null;
 			}
 
-		// list_value. Iterate dato_fallback and truncate long text
+		// list_value. Iterate data_fallback and truncate long text
 			$list_value = [];
-			foreach ($dato_fallback as $current_value) {
+			foreach ($data_fallback as $data_item) {
 
 				$value = null;
 
-				if(!empty($current_value)) {
+				if(!empty($data_item->value)) {
 					// replace Dédalo tags by html image tags
-						$html_value	= TR::add_tag_img_on_the_fly($current_value);
+						$html_value	= TR::add_tag_img_on_the_fly($data_item->value);
 
 					// truncate long text to use in list mode
 						$value		= common::truncate_html(
@@ -2257,10 +2257,12 @@ class component_text_area extends component_string_common {
 					// add final ... when is truncated
 						if (!empty($value) && strlen($value)<strlen($html_value)) {
 							$value .= ' ...';
-						}
+						}									
 				}
 
-				$list_value[] = $value;
+				$data_item->value = $value;
+
+				$list_value[] = $data_item;
 			}
 
 		return $list_value;
