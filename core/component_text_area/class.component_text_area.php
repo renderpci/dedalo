@@ -1028,8 +1028,9 @@ class component_text_area extends component_string_common {
 	/**
 	* GET_ANNOTATIONS
 	* Used for diffusion global search annotations
+	* Locate the note tags in the component text data and return them as an array
 	* @see diffusion global search needs
-	* @return array|null $ar_terms
+	* @return array|null $ar_annotations
 	*/
 	public function get_annotations() : ?array {
 
@@ -1148,7 +1149,7 @@ class component_text_area extends component_string_common {
 		// clean HTML
 			// remove empty paragraphs
 				if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
-					$diffusion_value = '';
+					$diffusion_value = '';º
 				}
 
 			// change p by br to preserve v5 compatibility (ck/tiny)
