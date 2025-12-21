@@ -284,7 +284,7 @@ class component_string_common extends component_common {
 			// Get current lang group of items from data
 			$current_lang_data = $this->get_data_lang($current_lang);
 			if (!$this->is_empty_data($current_lang_data)) {
-				return $current_lang_data ;
+				return $current_lang_data;
 			}
 		}
 

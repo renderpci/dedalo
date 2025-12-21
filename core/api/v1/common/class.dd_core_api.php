@@ -627,6 +627,8 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
+		// $conn = DBi::_getConnection();
+
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 
