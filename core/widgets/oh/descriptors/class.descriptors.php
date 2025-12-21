@@ -92,7 +92,7 @@ class descriptors extends widget_common {
 					$component_tipo = $last_path->component_tipo;
 
 					// create items with the every locator
-					$ar_component_dato			= [];
+					$ar_component_data			= [];
 					$ar_component_grid_value	= [];
 					foreach ($ar_locator as $locator) {
 
@@ -105,10 +105,10 @@ class descriptors extends widget_common {
 							DEDALO_DATA_NOLAN,
 							$locator->section_tipo
 						);
-						$component_dato			= $component->get_data();
+						$component_data			= $component->get_data() ?? [];
 						$component_grid_value	= $component->get_grid_value();
 
-						$ar_component_dato			= array_merge($ar_component_dato, $component_dato);
+						$ar_component_data			= array_merge($ar_component_data, $component_data);
 						$ar_component_grid_value	= array_merge($ar_component_grid_value, $component_grid_value->value);
 					}
 
@@ -120,13 +120,13 @@ class descriptors extends widget_common {
 					// set value. Using last created component
 						$component_grid_value->value = $ar_component_grid_value;
 
-					// output, use the IPO output for create the items to send to compoment_info and client side
+					// output, use the IPO output for create the items to send to component_info and client side
 					foreach ($output as $data_map) {
 
 						switch ($data_map->id) {
 
 							case 'indexation':
-								$value = sizeof($ar_component_dato);
+								$value = sizeof($ar_component_data);
 								break;
 
 							case 'terms':
