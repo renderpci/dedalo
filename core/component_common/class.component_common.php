@@ -1390,19 +1390,19 @@ abstract class component_common extends common {
 			];
 
 		// short vars
-			$dato		= $this->get_dato();
+			$data		= $this->get_data();
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
 
 		// data
-			$data = empty($dato)
+			$data = empty($data)
 				? null
 				: array_map(function($el){
 					if (is_array($el) || is_object($el)) {
 						return json_encode($el);
 					}
 					return $el;
-				}, $dato);
+				}, $data);
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
