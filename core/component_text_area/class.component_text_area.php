@@ -153,42 +153,42 @@ class component_text_area extends component_string_common {
 
 
 
-	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
+	// /**
+	// * GET_VALOR
+	// * Return array dato as comma separated elements string by default
+	// * If index var is received, return dato element corresponding to this index if exists
+	// * @return string|null $valor
+	// */
+	// public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
-		$valor = '';
+	// 	$valor = '';
 
-		$dato = $this->get_dato();
-		if(empty($dato)) {
-			return $valor;
-		}
+	// 	$dato = $this->get_dato();
+	// 	if(empty($dato)) {
+	// 		return $valor;
+	// 	}
 
-		if ($index==='all') {
-			$ar = array();
-			foreach ((array)$dato as $value) {
-				$value = is_string($value)
-					? trim($value)
-					: null;
-				if (!empty($value)) {
-					$ar[] = TR::add_tag_img_on_the_fly($value);
-				}
-			}
-			if (count($ar)>0) {
-				$valor = implode(',', $ar);
-			}
-		}else{
-			$index = (int)$index;
-			$valor = isset($dato[$index]) ? TR::add_tag_img_on_the_fly($dato[$index]) : null;
-		}
+	// 	if ($index==='all') {
+	// 		$ar = array();
+	// 		foreach ((array)$dato as $value) {
+	// 			$value = is_string($value)
+	// 				? trim($value)
+	// 				: null;
+	// 			if (!empty($value)) {
+	// 				$ar[] = TR::add_tag_img_on_the_fly($value);
+	// 			}
+	// 		}
+	// 		if (count($ar)>0) {
+	// 			$valor = implode(',', $ar);
+	// 		}
+	// 	}else{
+	// 		$index = (int)$index;
+	// 		$valor = isset($dato[$index]) ? TR::add_tag_img_on_the_fly($dato[$index]) : null;
+	// 	}
 
 
-		return $valor;
-	}//end get_valor
+	// 	return $valor;
+	// }//end get_valor
 
 
 
@@ -1149,7 +1149,7 @@ class component_text_area extends component_string_common {
 		// clean HTML
 			// remove empty paragraphs
 				if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
-					$diffusion_value = '';º
+					$diffusion_value = '';
 				}
 
 			// change p by br to preserve v5 compatibility (ck/tiny)
