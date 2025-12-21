@@ -38,7 +38,7 @@ final class dd_manager {
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 				
 				// enable cache analytics
-				section_record_instances_cache::setAnalytics(true);
+				section_record_instances_cache::setAnalytics(false);
 			}
 
 		// logged check
@@ -215,12 +215,9 @@ final class dd_manager {
 						. implode(PHP_EOL, $metrics)
 						, logger::WARNING
 					);
-					$enable_cache_analytics = true;
-					if($enable_cache_analytics) {					
+					if(section_record_instances_cache::getAnalyticsStatus()===true) {					
 						error_log(section_record_instances_cache::exportAnalytics('json'));
 					}
-					
-
 
 				// end line info
 					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
