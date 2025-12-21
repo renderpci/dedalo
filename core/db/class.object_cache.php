@@ -447,10 +447,10 @@ class component_instances_cache {
      * @param string|int $key Unique identifier (section_id, tipo, etc.)
      * @return section_record|null
      */
-    public static function get($key): ?object {
+    public static function get($key) : ?object {
         $cacheKey = self::normalizeKey($key);
         
-        if (!isset(self::$instances[$cacheKey])) {
+        if ( !isset(self::$instances[$cacheKey]) ) {
             self::$misses++;
             return null;
         }
@@ -461,8 +461,7 @@ class component_instances_cache {
         $instance = self::$instances[$cacheKey];
         unset(self::$instances[$cacheKey]);
         self::$instances[$cacheKey] = $instance;
-
-        
+                
         
         return $instance;
     }
