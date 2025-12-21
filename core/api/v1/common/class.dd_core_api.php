@@ -627,6 +627,8 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
+		// $conn = DBi::_getConnection();
+
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 
@@ -2447,6 +2449,17 @@ final class dd_core_api {
 	*/
 	public static function get_page_globals() : object {
 
+		// cache
+		$cache_file_name = 'cache_page_globals.json';
+		$cache_data_string	= dd_cache::cache_from_file((object)[
+			'file_name' => $cache_file_name
+		]);
+		$cache_data = new stdClass();
+		if (!empty($cache_data_string)) {
+			$cache_data = json_decode($cache_data_string);
+		}
+		$cache_modified = false;
+
 		$obj = new stdClass();
 			$obj->dedalo_last_error					= $_ENV['DEDALO_LAST_ERROR'] ?? null;
 			// logged informative only
@@ -2478,14 +2491,24 @@ final class dd_core_api {
 					'value'	=> $value
 				];
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
-			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
-			$obj->dedalo_projects_default_langs		= array_map(function ($item) {
-				return [
-					'label'	=> $item->names[0] ?? $item->code,
-					'value'	=> 'lg-'.$item->code,
-					'tld2'	=> lang::get_alpha2_from_code('lg-'.$item->code)
-				];
-			}, $langs_resolved);			
+			
+			// projects default langs
+			if(isset($cache_data->dedalo_projects_default_langs)) {
+				$obj->dedalo_projects_default_langs = $cache_data->dedalo_projects_default_langs;
+			}else{
+				$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
+				$obj->dedalo_projects_default_langs = array_map(function ($item) {
+					return [
+						'label' => $item->names[0] ?? $item->code,
+						'value' => 'lg-'.$item->code,
+						'tld2' => lang::get_alpha2_from_code('lg-'.$item->code)
+					];
+				}, $langs_resolved);
+				// Set cache
+				$cache_data->dedalo_projects_default_langs = $obj->dedalo_projects_default_langs;
+				$cache_modified = true;
+			}			
+
 			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
@@ -2512,8 +2535,14 @@ final class dd_core_api {
 				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
 			// recovery mode
 			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
-			//
-			$obj->data_version					= get_current_data_version();
+			// data_version
+			if(isset($cache_data->data_version)) {
+				$obj->data_version					= $cache_data->data_version;
+			}else{
+				$obj->data_version					= get_current_data_version();
+				$cache_data->data_version			= $obj->data_version;
+				$cache_modified = true;
+			}
 
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
@@ -2538,6 +2567,14 @@ final class dd_core_api {
 					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
 				}
 			}
+
+		// cache
+		if ($cache_modified===true && login::is_logged()) {
+			dd_cache::cache_to_file((object)[
+				'file_name' => $cache_file_name,
+				'data' => $cache_data
+			]);
+		}
 
 
 		return $obj;

@@ -197,7 +197,8 @@ class request_config_object extends stdClass {
 				if (!method_exists($this, $method)) {
 					debug_log(__METHOD__
 						. " Ignored non existing method " . PHP_EOL
-						. ' method: ' . to_string($method)
+						. ' method: ' . to_string($method) . PHP_EOL
+						. ' data: ' . to_string($data)
 						, logger::ERROR
 					);
 					continue;

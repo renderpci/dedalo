@@ -310,6 +310,13 @@ class section_record_instances_cache {
     public static function setAnalytics(bool $enabled): void {
         self::$analyticsEnabled = $enabled;
     }
+
+    /**
+     * Get analytics status
+     */
+    public static function getAnalyticsStatus(): bool {
+        return self::$analyticsEnabled;
+    }
     
     /**
      * Export analytics for external analysis
