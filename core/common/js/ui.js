@@ -2985,7 +2985,9 @@ export const ui = {
 			e.stopPropagation()
 
 			node.classList.remove('fullscreen')
-			menu_wrapper.classList.remove('hide')
+			if (menu_wrapper) {
+				menu_wrapper.classList.remove('hide')
+			}
 			exit_button.remove()
 			if(exit_callback){
 				exit_callback()
