@@ -23,6 +23,16 @@ class request_config_presets {
 			return $active_request_config_cache;
 		}
 
+		// cache
+		$cache_file_name = 'cache_active_request_config.json';
+		$cache_data_string	= dd_cache::cache_from_file((object)[
+			'file_name' => $cache_file_name
+		]);
+		if (!empty($cache_data_string)) {
+			$result = json_decode($cache_data_string);
+			return $result;
+		}
+
 		$active_request_config = [];
 
 		// Search active request config records from database (matrix_list)
@@ -142,6 +152,12 @@ class request_config_presets {
 		// active_request_config_cache
 		$active_request_config_cache = $active_request_config;
 
+		// cache
+		dd_cache::cache_to_file((object)[
+			'file_name' => $cache_file_name,
+			'data' => $active_request_config
+		]);
+
 
 		return $active_request_config;
 	}//end get_active_request_config
@@ -163,7 +179,7 @@ class request_config_presets {
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 			metrics::add_metric('presets_total_calls');
-		}
+		}		
 
 		// Get cached list of active_request_config
 		$active_request_config = self::get_active_request_config();
@@ -196,7 +212,7 @@ class request_config_presets {
 		}
 
 		// data (request config array)
-		$data = $found->data ?? [];
+		$data = $found->data ?? [];		
 
 
 		return $data;

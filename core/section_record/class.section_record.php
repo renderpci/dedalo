@@ -22,6 +22,9 @@ class section_record {
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
 	protected bool $is_loaded_data = false;
 
+	// array of events subscriptions
+	protected array $events_subscriptions = [];
+
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -76,6 +79,24 @@ class section_record {
 				$section_id
 			);
 
+		// Events subscription
+		$manager = event_manager_class::get_instance();
+		
+		// Subscribe to section_record_save event
+		$token = $manager->subscribe('section_record_save', function($instance) {	
+			// Invalidate request config cache file.
+			// This is used to invalidate the request config cache file
+			// when the section_record_save event is triggered.
+			// This only affects current user cache.
+			if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
+				$cache_file_name = 'cache_active_request_config.json';
+				dd_cache::delete_cache_files([
+					$cache_file_name
+				]);
+			}
+		});
+		$this->events_subscriptions[] = $token;
+
 		// metrics
 		self::$section_record_total++;
 	}//end __construct
@@ -95,7 +116,31 @@ class section_record {
 
 		// Clear the instance data
 		unset($this->data_instance);
+
+		// Unsubscribe events
+		$manager = event_manager_class::get_instance();
+		foreach ($this->events_subscriptions as $token) {
+			$manager->unsubscribe('section_record_save', $token);
+		}
 	}//end __destruct
+
+
+
+	/**
+	* SAVE_EVENT
+	* Dispatches a save event for this section record
+	* @return void
+	*/
+	private function save_event() : void {
+
+		// Publish event. Note that this event is used
+		// to invalidate the request config cache file (see __construct)
+		event_manager_class::get_instance()->publish(
+			'section_record_save',
+			$this
+		);
+
+	}//end save_event	
 
 
 
@@ -246,6 +291,9 @@ class section_record {
 			$data
 		);
 
+		// save event
+		$this->save_event();
+
 		return $result;
 	}//end save
 
@@ -287,6 +335,8 @@ class section_record {
 			$values
 		);
 
+		// save event
+		$this->save_event();
 
 		return $result;
 	}//end save_column
@@ -401,12 +451,17 @@ class section_record {
 			);
 		}
 
-		return matrix_db_manager::update_by_key(
+		$result = matrix_db_manager::update_by_key(
 			$table,
 			$section_tipo,
 			$section_id,
 			$data_to_save
 		);
+
+		// save event
+		$this->save_event();
+	
+		return $result;
 	}//end save_key_data
 
 
@@ -447,6 +502,9 @@ class section_record {
 			$this->update_modified_section_data((object)[
 				'mode' => 'update_record'
 			]);
+
+		// save event
+		$this->save_event();
 
 
 		return true;
@@ -605,6 +663,8 @@ class section_record {
 				logged_user_id() // int
 			);
 
+		// save event
+		$this->save_event();
 
 		// Returns the delete result.
 		return true;
@@ -729,6 +789,8 @@ class section_record {
 				$user_id // int
 			);
 
+		// save event
+		$this->save_event();
 
 		// Returns the delete result.
 		return true;
@@ -1156,6 +1218,8 @@ class section_record {
 		// $section_record->set_data($values);
 		$section_record->get_data(); // force to update values
 
+		// save event
+		$section_record->save_event();
 
 		return $section_record;
 	}//end create
@@ -1349,30 +1413,6 @@ class section_record {
 
 		return $this->data_instance->get_data();
 	}//end read
-
-
-
-	// /**
-	// * DELETE
-	// * Safely deletes one record in a "matrix" table,
-	// * identified by a composite key of `section_id` and `section_tipo`.
-	// * @return bool
-	// * Returns `true` on success, or `false` if validation fails,
-	// * query preparation fails, or execution fails.
-	// */
-	// public function delete() : bool {
-
-	// 	$table = $this->data_instance->get_table();
-
-	// 	$section_tipo = $this->section_tipo;
-	// 	$section_id	= $this->section_id;
-
-	// 	return matrix_db_manager::delete(
-	// 		$table,
-	// 		$section_tipo,
-	// 		$section_id
-	// 	);
-	// }//end delete
 
 
 
