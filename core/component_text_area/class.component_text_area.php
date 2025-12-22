@@ -47,10 +47,23 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components.
-	* If the mode is "indexation_list", create the fragments of the indexation
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $value
+	* Get the grid value of the text area component for use in dd_grid rendering.
+	* Processes data differently based on component mode (indexation_list vs default).
+	* In indexation_list mode, creates fragments for indexation.
+	* In default mode, processes data to build display values with HTML tags.
+	*
+	* @param object|null $ddo Optional dd_grid configuration object containing:
+	*   - records_separator: Custom separator for records (default ' | ')
+	*   - class_list: CSS classes to apply to the cell
+	* @return dd_grid_cell_object The grid cell object containing:
+	*   - type: 'column'
+	*   - label: Component label
+	*   - cell_type: 'text' (default)
+	*   - ar_columns_obj: Array of column objects
+	*   - records_separator: Separator for records
+	*   - value: Processed data values (HTML formatted)
+	*   - fallback_value: Fallback values for other languages
+	*   - model: Component class name
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
@@ -334,17 +347,17 @@ class component_text_area extends component_string_common {
 
 
 
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string|null $valor_export
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
+	// /**
+	// * GET_VALOR_EXPORT
+	// * Return component value sent to export data
+	// * @return string|null $valor_export
+	// */
+	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		$valor_export = $this->get_valor($lang);
+	// 	$valor_export = $this->get_valor($lang);
 
-		return $valor_export;
-	}//end get_valor_export
+	// 	return $valor_export;
+	// }//end get_valor_export
 
 
 
