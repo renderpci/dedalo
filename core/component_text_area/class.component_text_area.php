@@ -175,7 +175,7 @@ class component_text_area extends component_string_common {
 	*
 	* @return bool $result
 	*/
-	public function save(bool $update_all_langs_tags_state=false, bool $clean_text=true) : bool {
+	public function save( bool $clean_text=true) : bool {
 
 		// Store current data for processing
 			$current_data = $this->data;
@@ -1353,42 +1353,45 @@ class component_text_area extends component_string_common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
 
-		// Force loads dato always !IMPORTANT
-		$dato = $this->get_dato();
+		// Force loads data always !IMPORTANT
+		$data = $this->get_data();
 
-		if (!empty($dato) && isset($dato[0])) {
+		if ( !empty($data) ) {
 
 			$old_tc_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
 
-			$new_dato = [];
-			foreach ($dato as $value) {
+			$new_data = [];
+			foreach ($data as $item) {
+				$value = $item->value ?? null;
 
-				if (is_null($value)) {
+				// avoid empty values
+				if ($value===null) {
 					continue;
 				}
 
+				$new_item = clone( $item );
+
 				// Converts old timecodes
-				$new_value = preg_replace($old_tc_pattern, "[TC_$2.000_TC]", (string)$value);
+				$new_item->value = preg_replace($old_tc_pattern, "[TC_$2.000_TC]", (string)$value);
 
 				// convert tag paths from ../../../inc/btn.php/[geo-n-1-] to ../component_text_area/tag/?id=[geo-n-1-]
 				// <img id="[geo-n-1-]" src="../../../inc/btn.php/[geo-n-1-]" class="geo" data-type="geo" data-tag_id="1" data-state="n" data-label="" data-data="{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[-2.01936392737486,42.645594932190519]}}]}" />
 				// @todo
 
-				$new_dato[] = $new_value;
+				$new_data[] = $new_item;
 			}
 
-			$this->set_dato($new_dato);
+			$this->set_dato($new_data);
 		}
 
-		// Save component data. Defaults arguments: $update_all_langs_tags_state=false, $clean_text=true
-		$this->Save(
-			false, // bool update_all_langs_tags_state
+		// Save component data. Defaults arguments: $clean_text=true
+		$this->save(
 			true // bool clean_text
 		);
 
