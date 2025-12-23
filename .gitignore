@@ -183,3 +183,8 @@ phpunit-results.*
 
 #local files and configurations
 /local
+.markdownlint.json
+cline_mcp_settings.json
+.continue/agents/new-config.yaml
+.continue/rules/new-rule-1.md
+.continue/rules/new-rule.md
