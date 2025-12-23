@@ -3782,11 +3782,8 @@ abstract class component_common extends common {
 				break;
 
 			case 'update':
-				// safe format
-				if (!is_array($data)) {
-					$data = [$data];
-				}
-				// check if the key exist in the $data if the key exist change it directly, else create all positions with null value for coherence
+
+				// check if the key exist in the $data. if the key exist, change it directly, else create all positions with null value for coherence
 				if( isset($data[$changed_data->key]) || array_key_exists($changed_data->key, $data) ) {
 					$data[$changed_data->key] = $changed_data->value;
 				}else{
@@ -3852,32 +3849,14 @@ abstract class component_common extends common {
 						break;
 
 					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
-						// propagate deletion to other data langs
-						$section = $this->get_my_section();
 
-						// deactivate save option
-						$this->save_to_database = false;
-						$save_to_database = $this->save_to_database; // default is true
+						$data = $this->get_data();
+						// remove null key and set dato updated
+						array_splice($data, $changed_data->key, 1);
+						$this->set_data($data);
+						//save
+						$this->save();
 
-						$ar_langs = $this->get_component_ar_langs();
-						foreach ($ar_langs as $current_lang) {
-
-							$this->dato_resolved = null;
-
-							// change lang and get dato
-							$this->set_lang($current_lang);
-							$dato = $this->get_dato() ?? [];
-
-							// remove null key and set dato updated
-							array_splice($data, $changed_data->key, 1);
-							$this->set_data($data);
-
-							// send to section for fix data (avoid save each lang)
-							$section->save_component_dato($this, 'direct', $save_to_database);
-						}
-
-						// reactivate save option
-						$this->save_to_database = true;
 						break;
 
 					default:
