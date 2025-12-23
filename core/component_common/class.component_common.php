@@ -1254,10 +1254,10 @@ abstract class component_common extends common {
 	# GET_DATO_UNCHANGED
 	# Recover component var 'dato' without change type or other custom component changes
 	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato)
-	public function get_dato_unchanged() {
+	public function get_data_unchanged() {
 
 		return $this->dato;
-	}//end get_dato_unchanged
+	}//end get_data_unchanged
 
 
 
@@ -3170,15 +3170,15 @@ abstract class component_common extends common {
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version	= null;
-			$options->dato_unchanged	= null;
+			$options->data_unchanged	= null;
 			$options->reference_id		= null;
 			$options->tipo				= null;
 			$options->section_id		= null;
@@ -3187,17 +3187,17 @@ abstract class component_common extends common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
+			$data_unchanged = $options->data_unchanged;
 			$reference_id 	= $options->reference_id;
 
 
 		$response = new stdClass();
 			$response->result	= 0;
-			$response->msg		= "This component ".get_called_class()." don't have update_dato_version, please check the class of the component <br />";
+			$response->msg		= "This component ".get_called_class()." don't have update_data_version, please check the class of the component <br />";
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

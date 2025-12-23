@@ -1256,15 +1256,15 @@ class component_date extends component_common {
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
+			$options->data_unchanged 	= null;
 			$options->reference_id 		= null;
 			$options->tipo 				= null;
 			$options->section_id 		= null;
@@ -1273,7 +1273,7 @@ class component_date extends component_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version = $options->update_version;
-			$dato_unchanged = $options->dato_unchanged;
+			$data_unchanged = $options->data_unchanged;
 			$reference_id 	= $options->reference_id;
 			$section_tipo 	= $options->section_tipo ?? '';
 
@@ -1296,12 +1296,12 @@ class component_date extends component_common {
 						$response->result	= 0;
 						$response->msg		= "Ignored data, empty data";
 
-				if(empty($dato_unchanged)){
+				if(empty($data_unchanged)){
 
 					return $response;
 				}
 				// set a clone of the original data unchanged
-				$clone_data_unchange = json_decode(json_encode( $dato_unchanged ));
+				$clone_data_unchange = json_decode(json_encode( $data_unchanged ));
 
 				// set the time into the new_data
 				$new_data = array_map(function($item) {
@@ -1312,11 +1312,11 @@ class component_date extends component_common {
 
 				// if the new_data is not the same that $dato_unchange save it.
 				// time will be added into the new_data
-				if($new_data != $dato_unchanged){
+				if($new_data != $data_unchanged){
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_data;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_data).".<br />";
 				}
 
 				return $response;
@@ -1333,7 +1333,7 @@ class component_date extends component_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

@@ -714,15 +714,15 @@ class component_3d extends component_media_common implements component_media_int
 	* UPDATE_DATO_VERSION
 	* @param object $options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $options) : object {
+	public static function update_data_version(object $options) : object {
 
 		// options
 			$update_version	= $options->update_version ?? '';
-			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$data_unchanged	= $options->data_unchanged ?? null;
 			$reference_id	= $options->reference_id ?? null;
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
@@ -754,7 +754,7 @@ class component_3d extends component_media_common implements component_media_int
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 				break;
 
 			default:
@@ -766,7 +766,7 @@ class component_3d extends component_media_common implements component_media_int
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

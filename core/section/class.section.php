@@ -645,7 +645,7 @@ class section extends common {
 
 	// 			// get the time_machine data from component
 	// 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
-	// 			$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_dato_unchanged();
+	// 			$save_options->time_machine_data	= $component_obj->get_time_machine_data_to_save();//$component_obj->get_data_unchanged();
 	// 			$save_options->time_machine_lang	= $component_lang;
 	// 			$save_options->time_machine_tipo	= $component_tipo;
 	// 			// previous_component_dato
@@ -767,8 +767,8 @@ class section extends common {
 	// 			$component_global_dato->dato->{$component_lang} = new stdClass();
 	// 		}
 
-	// 	// dato_unchanged : We update the data in the current language
-	// 		$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+	// 	// data_unchanged : We update the data in the current language
+	// 		$component_dato = $component_obj->get_data_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
 	// 	// unset when data null
 	// 		if($component_dato===null || empty($component_dato)){
@@ -4059,7 +4059,7 @@ class section extends common {
 	// 				);
 	// 				$component->set_dato( $date_now );
 	// 				// $this->set_component_direct_dato( $component ); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
-	// 				$component_dato = $component->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+	// 				$component_dato = $component->get_data_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
 	// 			// set value with safe path
 	// 				if (!isset($this->dato->components)) {
@@ -4104,7 +4104,7 @@ class section extends common {
 	// 				);
 	// 				$component->set_dato($date_now);
 	// 				// $this->set_component_direct_dato($component); // (!) removed 11-02-2023 : interact with section save flow (tool register case)
-	// 				$component_dato = $component->get_dato_unchanged(); // (!) IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+	// 				$component_dato = $component->get_data_unchanged(); // (!) IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
 
 	// 			// set value with safe path
 	// 				if (!isset($this->dato->components)) {

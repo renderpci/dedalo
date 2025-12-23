@@ -113,15 +113,15 @@ class component_json extends component_common {
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
+			$options->data_unchanged 	= null;
 			$options->reference_id 		= null;
 			$options->tipo 				= null;
 			$options->section_id 		= null;
@@ -130,7 +130,7 @@ class component_json extends component_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
+			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id;
 
 
@@ -138,11 +138,11 @@ class component_json extends component_common {
 		switch ($update_version) {
 
 			case '6.0.0':
-				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_string($data_unchanged)) {
 					// update search presets of component_json (temp and user presets has the same component_tipo)
 					if($options->tipo==='dd625'){
 						// replace the sqo of search to new component models for v6
-						$dato_unchanged = str_replace(
+						$data_unchanged = str_replace(
 							[
 								'"modelo"',
 								'"component_autocomplete"',
@@ -157,23 +157,23 @@ class component_json extends component_common {
 								'"component_text_area"',
 								'"component_text_area"'
 							],
-							$dato_unchanged);
+							$data_unchanged);
 					}
 
 					// decode old string data to json
-					$new_dato = json_decode($dato_unchanged);
+					$new_dato = json_decode($data_unchanged);
 					$new_dato = [$new_dato];
 
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 
 
 				}else{
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 				}
 				break;
 
@@ -186,7 +186,7 @@ class component_json extends component_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 
