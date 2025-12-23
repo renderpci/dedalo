@@ -1070,19 +1070,20 @@ class component_text_area extends component_string_common {
 				return null;
 			}
 
-		// dato
-			$dato = $this->get_dato();
-			if(empty($dato)){
+		// data
+			$data = $this->get_data();
+			if(empty($data)){
 				return null;
 			}
 
 		$ar_annotations = [];
-		foreach ($dato as $key => $current_dato) {
-			if(empty($current_dato)){
+		foreach ($data as $item) {
+			$value = $item->value ?? '';
+			if( empty($value) ){
 				continue;
 			}
 			$pattern = TR::get_mark_pattern('note', $standalone=true);
-			preg_match_all($pattern,  $current_dato,  $matches, PREG_PATTERN_ORDER);
+			preg_match_all($pattern,  $value,  $matches, PREG_PATTERN_ORDER);
 			if (empty($matches[0])) {
 				$ar_annotations[] = null;
 				continue;
@@ -1108,16 +1109,17 @@ class component_text_area extends component_string_common {
 				$section_tipo				= $locator->section_tipo;
 				$ar_notes_section_ddo_map	= $tags_notes->$section_tipo;
 
+				// create a new note object to be filled with the information
 				$note_obj = new stdClass();
 					$note_obj->data	= $locator;
 				foreach ($ar_notes_section_ddo_map as $current_ddo) {
-
+					// get the note component
 					$note_component_tipo	= $current_ddo->component_tipo;
 					$note_component_model	= ontology_node::get_model_by_tipo($note_component_tipo,true);
-
+					// set the note section record
 					$note_section_tipo		= $locator->section_tipo;
 					$note_section_id		= $locator->section_id;
-
+					// create the component
 					$translatable			= ontology_node::get_translatable($note_component_tipo);
 					$current_component		= component_common::get_instance(
 						$note_component_model,
@@ -1127,21 +1129,24 @@ class component_text_area extends component_string_common {
 						($translatable) ? $lang : DEDALO_DATA_NOLAN,
 						$note_section_tipo
 					);
-					$dato		= $current_component->get_dato();
+					// get the note data
+					$note_data	= $current_component->get_data();
 					$note_type	= $current_ddo->id;
 
+					// set the type of the note data
+					// for bool types set it as 1 = true/ 2 = false equivalent
 					if ($current_ddo->type === 'bool') {
-						$dato = !empty($dato) && ($dato[0]->section_id === '1')
+						$note_data = !empty($note_data) && ($note_data[0]->section_id === '1')
 							? true
 							: false;
 					}
-
-					$note_obj->$note_type = $dato;
+					
+					$note_obj->$note_type = $note_data;
 				}
 
 				$ar_annotations[] = $note_obj;
 			}//end foreach ($matches[7] as $current_note)
-		}//end foreach ($dato as $key => $current_dato)
+		}//end foreach ($data as $key => $current_data)
 
 
 		return $ar_annotations;
