@@ -43,7 +43,6 @@ include DEDALO_CORE_PATH . '/common/class.request_query_object.php'; // new 16-0
 include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021
 include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
-include DEDALO_CORE_PATH . '/common/class.event_manager.php'; // new 22-12-2025
 // Section
 include DEDALO_CORE_PATH . '/section/class.section.php';
 include DEDALO_CORE_PATH . '/section_record/class.section_record_data.php';
