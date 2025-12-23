@@ -566,9 +566,8 @@ class component_text_area extends component_string_common {
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
 		$model_name			= get_class($this);
-		$component_ar_langs	= (array)$this->get_component_ar_langs();
-
-
+		// create the component and get its data
+		// (!) This method Save
 		$component_text_area = component_common::get_instance(
 				$model_name, // component_text_area
 				$this->tipo,
@@ -580,50 +579,55 @@ class component_text_area extends component_string_common {
 			);
 		$data = $component_text_area->get_data();
 
-		$ar_langs_changed = array();
-		foreach ($component_ar_langs as $current_lang) {
-
-			if (empty($data)) {
-				continue;
-			}
-
-			$to_save	= false;
-			$new_data	= [];
-			foreach ($data as $key => $text_raw) {
-
-				$delete_tag_from_text = (object)self::delete_tag_from_text(
-					$tag_id, // string tag_id like '1'
-					$tag_type, // string tag_type like 'index'
-					$text_raw
-				);
-				$remove_count = (int)$delete_tag_from_text->remove_count;
-				if ($remove_count>0) {
-					$to_save = true;
-				}
-				$text_raw_updated = $delete_tag_from_text->result;
-				// add
-				$new_data[] = $text_raw_updated;
-			}//end foreach ($dato as $key => $current_text_raw)
-
-			if ($to_save===true) {
-
-				$component_text_area->set_dato($new_data);
-				// save
-				$component_text_area->Save();
+		if ( empty($data) ) {
+			return [];
+		}
+		// storage variables
+		$new_data			= [];	
+		$to_save			= false;
+		$ar_langs_changed 	= [];
+		// loop through the data and delete the tag
+		foreach ($data as $item) {
+			$current_lang = $item->lang;
+			$text_raw = $item->value;
+			$new_item = clone($item);
+			// delete the tag from text
+			$delete_tag_from_text = self::delete_tag_from_text(
+				$tag_id, // string tag_id like '1'
+				$tag_type, // string tag_type like 'index'
+				$text_raw
+			);
+			// count the number of tags removed from text
+			$remove_count = (int)$delete_tag_from_text->remove_count;
+			if ($remove_count>0) {
+				$to_save = true;
 				$ar_langs_changed[] = $current_lang;
+				// inform that the data item will be deleted from data
 				debug_log(__METHOD__
-					." Deleted tag ($tag_id, $tag_type, $key) in lang ".to_string($current_lang)
-					, logger::WARNING
-				);
-			}else{
-				debug_log(__METHOD__
-					. " Ignored (not matches found) deleted tag ($tag_id, $tag_type, $key) in lang: " . PHP_EOL
-					. 'current_lang: '.to_string($current_lang)
+					." Deleted tag ($tag_id, $tag_type) in lang ".to_string($current_lang)
 					, logger::WARNING
 				);
 			}
-		}//end foreach ($component_ar_langs as $current_lang)
+			// set the new value to data item
+			$new_item->value = $delete_tag_from_text->result;
+			// add the new item to the data array
+			$new_data[] = $new_item;	
+		}// end foreach $data as $item
 
+		// save the data if there are tags removed from text
+		if ($to_save===true) {
+			// set the new data to component text area
+			$component_text_area->set_data($new_data);
+			// save
+			$component_text_area->save();
+			
+		}else{
+			// inform that the data item will be not deleted from data
+			debug_log(__METHOD__
+				. " Ignored (not matches found) deleted tag ($tag_id, $tag_type) in lang: "
+				, logger::WARNING
+			);
+		}// end if ($to_save===true)
 
 		return $ar_langs_changed;
 	}//end delete_tag_from_all_langs
