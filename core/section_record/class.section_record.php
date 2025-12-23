@@ -22,9 +22,6 @@ class section_record {
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
 	protected bool $is_loaded_data = false;
 
-	// array of events subscriptions
-	protected array $events_subscriptions = [];
-
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -79,24 +76,6 @@ class section_record {
 				$section_id
 			);
 
-		// Events subscription
-		$manager = event_manager_class::get_instance();
-		
-		// Subscribe to section_record_save event
-		$token = $manager->subscribe('section_record_save', function($instance) {	
-			// Invalidate request config cache file.
-			// This is used to invalidate the request config cache file
-			// when the section_record_save event is triggered.
-			// This only affects current user cache.
-			if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
-				$cache_file_name = 'cache_active_request_config.json';
-				dd_cache::delete_cache_files([
-					$cache_file_name
-				]);
-			}
-		});
-		$this->events_subscriptions[] = $token;
-
 		// metrics
 		self::$section_record_total++;
 	}//end __construct
@@ -116,12 +95,6 @@ class section_record {
 
 		// Clear the instance data
 		unset($this->data_instance);
-
-		// Unsubscribe events
-		$manager = event_manager_class::get_instance();
-		foreach ($this->events_subscriptions as $token) {
-			$manager->unsubscribe('section_record_save', $token);
-		}
 	}//end __destruct
 
 
@@ -133,13 +106,16 @@ class section_record {
 	*/
 	private function save_event() : void {
 
-		// Publish event. Note that this event is used
-		// to invalidate the request config cache file (see __construct)
-		event_manager_class::get_instance()->publish(
-			'section_record_save',
-			$this
-		);
-
+		// Invalidate request config cache file.
+		// This is used to invalidate the request config cache file
+		// when the section_record_save event is triggered.
+		// This only affects current user cache.
+		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
+			$cache_file_name = 'cache_active_request_config.json';
+			dd_cache::delete_cache_files([
+				$cache_file_name
+			]);
+		}
 	}//end save_event	
 
 
