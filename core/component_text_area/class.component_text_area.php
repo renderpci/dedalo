@@ -1697,25 +1697,25 @@ class component_text_area extends component_string_common {
 		// options
 			$max_chars = $options->max_chars ?? 700;
 
-		// dato_fallback. array of each dato array element using fallback
-			$dato_fallback = $this->get_component_data_fallback(
+		// data_fallback. array of each data array element using fallback
+			$data_fallback = $this->get_component_data_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
 
-			if (empty($dato_fallback)) {
+			if (empty($data_fallback)) {
 				return null;
 			}
 
-		// list_value. Iterate dato_fallback and truncate long text
+		// list_value. Iterate data_fallback and truncate long text
 			$edit_value = [];
-			foreach ($dato_fallback as $current_value) {
+			foreach ($data_fallback as $data_item) {
 
 				$value = null;
 
-				if(is_string($current_value)) {
+				if(!empty($data_item->value)) {
 					// delete all Dédalo tags
-						$string_value = TR::deleteMarks($current_value);
+						$string_value = TR::deleteMarks($data_item->value);
 
 					// delete every tag as paragraph tags
 						$string_value = strip_tags($string_value);
@@ -1726,7 +1726,9 @@ class component_text_area extends component_string_common {
 							(int)$max_chars // int maxLength
 						);
 				}
-				$edit_value[] = $value;
+				$data_item->value = $value;
+
+				$list_value[] = $data_item;
 			}
 
 		return $edit_value;
