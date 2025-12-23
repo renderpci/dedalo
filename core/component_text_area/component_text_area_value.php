@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
 
 // Process different values of the component_text_area
-// split the dato into columns, it depends of the format_column.
+// split the data into columns, it depends of the format_column.
 // format_columns allowed: av, pdf, svg, geo, text
 
 	// component data
-		$full_raw_text	= $data[0] ?? '';
-		if (empty($full_raw_text)) {
-			$dato_fallback = $this->get_component_data_fallback(
+		$full_raw_text	= $data[0]->value ?? '';
+		if ( empty($full_raw_text) ) {
+			$data_fallback = $this->get_component_data_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
-			$full_raw_text	= $dato_fallback[0]->value ?? '';
+			$full_raw_text	= $data_fallback[0]->value ?? '';
 		}
 
 	// short vars
