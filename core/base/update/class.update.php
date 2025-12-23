@@ -798,7 +798,7 @@ class update {
 								$update_options->tipo			= $current_component_tipo;
 								$update_options->section_id		= $section_id;
 								$update_options->section_tipo	= $current_section_tipo;
-								$update_options->context		= 'update_component_dato';
+								$update_options->context		= 'update_component_data';
 
 							$response = $model_name::update_data_version($update_options);
 							switch ((int)$response->result) {
@@ -849,7 +849,7 @@ class update {
 								$update_options->context 		= 'update_time_machine_dato';
 
 								$response 		= $model_name::update_data_version($update_options);
-								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
+								#debug_log(__METHOD__." UPDATE_DATA_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result === 1){
 									$current_time_machine_obj->set_dato($response->new_dato);
 									$current_time_machine_obj->Save();

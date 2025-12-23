@@ -963,7 +963,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
@@ -979,7 +979,7 @@ class component_pdf extends component_media_common implements component_media_in
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$section_tipo	= $options->section_tipo ?? null;
-			$context		= $options->context ?? 'update_component_dato';
+			$context		= $options->context ?? 'update_component_data';
 
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {

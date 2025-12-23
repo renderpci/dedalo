@@ -146,7 +146,7 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
@@ -162,7 +162,7 @@ class component_select_lang extends component_relation_common {
 			$options->tipo 				= null;
 			$options->section_id 		= null;
 			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->context 			= 'update_component_data';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
