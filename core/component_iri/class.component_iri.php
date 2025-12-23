@@ -701,7 +701,7 @@ class component_iri extends component_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
@@ -724,7 +724,7 @@ class component_iri extends component_common {
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$section_tipo	= $options->section_tipo ?? null;
-			$context		= $options->context ?? 'update_component_dato';
+			$context		= $options->context ?? 'update_component_data';
 
 		// model. Expected 'component_iri'
 		$model = ontology_node::get_model_by_tipo( $tipo );

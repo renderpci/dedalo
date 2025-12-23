@@ -324,7 +324,7 @@ class component_dataframe extends component_portal {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* Is fired by area_maintenance update_data to transform
 	* component data between different versions or upgrades
 	* @see update::components_update
@@ -336,7 +336,7 @@ class component_dataframe extends component_portal {
 	* 	tipo: string
 	* 	section_id: string|int
 	* 	section_tipo: string
-	* 	context: string (default: 'update_component_dato')
+	* 	context: string (default: 'update_component_data')
 	* }
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
@@ -352,7 +352,7 @@ class component_dataframe extends component_portal {
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$section_tipo	= $options->section_tipo ?? null;
-			$context		= $options->context ?? 'update_component_dato';
+			$context		= $options->context ?? 'update_component_data';
 
 
 
