@@ -1156,24 +1156,9 @@ class tool_import_files extends tool_common {
 								$ddo->section_tipo
 							);
 
-							$ar_langs		= $temp_component->get_component_ar_langs();
-							$original_lang	= $current_lang;
-							foreach ($ar_langs as $current_lang) {
-
-								$temp_component->set_lang($current_lang);
-								$temp_dato = $temp_component->get_dato();
-
-								if (empty($temp_dato)) {
-									continue;
-								}
-
-								// apply value
-								$component->set_lang($current_lang);
-								$component->set_dato($temp_dato);
-								$component->Save();
-							}
-							// restore lang
-							$component->set_lang($original_lang);
+							$temp_data = $temp_component->get_data();
+							$component->set_data($temp_data);
+							$component->save();
 						}
 
 					// component_filter. Propagate the project to the media section, that will be the target_section_tipo
