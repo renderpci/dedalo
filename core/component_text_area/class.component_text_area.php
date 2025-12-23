@@ -589,18 +589,20 @@ class component_text_area extends component_string_common {
 		$new_data			= [];	
 		$to_save			= false;
 		$ar_langs_changed 	= [];
-		
+
 		// loop through the data and delete the tag
 		foreach ($data as $item) {
 			$current_lang = $item->lang;
 			$text_raw = $item->value;
 			$new_item = clone($item);
+
 			// delete the tag from text
 			$delete_tag_from_text = self::delete_tag_from_text(
 				$tag_id, // string tag_id like '1'
 				$tag_type, // string tag_type like 'index'
 				$text_raw
 			);
+
 			// count the number of tags removed from text
 			$remove_count = (int)$delete_tag_from_text->remove_count;
 			if ($remove_count>0) {
@@ -612,6 +614,7 @@ class component_text_area extends component_string_common {
 					, logger::WARNING
 				);
 			}
+
 			// set the new value to data item
 			$new_item->value = $delete_tag_from_text->result;
 			// add the new item to the data array
@@ -867,7 +870,8 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* GET_RELATED_COMPONENT_select_lang
+	* GET_RELATED_COMPONENT_SELECT_LANG
+	* Search in ontology for related component_select_lang
 	* @return string|null $tipo
 	*/
 	public function get_related_component_select_lang() : ?string {
