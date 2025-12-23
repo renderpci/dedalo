@@ -240,6 +240,8 @@ Split date range
 
 # media map
 
+!!! Info Version >= 6.8.5
+
 Map media files path
 >Process the media file path of the component to perform regex, select custom quality, prepend a domain, etc.  
 >Please note that the processing is cumulative and the order is as follows: quality/extension, replace, prefix.
