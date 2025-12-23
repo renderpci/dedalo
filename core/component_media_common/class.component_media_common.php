@@ -45,7 +45,7 @@ interface component_media_interface {
 	public function build_version(string $quality, bool $async=true, bool $save=true);
 	public function create_thumb();
 	public function process_uploaded_file(object $file_data, object $process_options);
-	public static function update_dato_version(object $options);
+	public static function update_data_version(object $options);
 	public function remove_component_media_files(array $ar_quality=[]);
 	public function regenerate_component();
 	public function create_alternative_version(string $quality, string $extension, ?object $options=null);

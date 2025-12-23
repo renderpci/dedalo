@@ -331,7 +331,7 @@ class component_dataframe extends component_portal {
 	* @param object $options
 	* {
 	* 	update_version: array
-	* 	dato_unchanged: mixed
+	* 	data_unchanged: mixed
 	* 	reference_id: string|int
 	* 	tipo: string
 	* 	section_id: string|int
@@ -339,15 +339,15 @@ class component_dataframe extends component_portal {
 	* 	context: string (default: 'update_component_dato')
 	* }
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version( object $options ) : object {
+	public static function update_data_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? null;
-			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$data_unchanged	= $options->data_unchanged ?? null;
 			$reference_id	= $options->reference_id ?? null;
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
@@ -366,7 +366,7 @@ class component_dataframe extends component_portal {
 				// in 6.4.3 the dataframe is updated to link with section_id_key and section_tipo_key
 				// it able to create components dataframe for components with multiple target section_tipo
 				// this update get the target_section of the main component to assign it to the dataframe data.
-				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_array($data_unchanged)) {
 					$ontology_node			= ontology_node::get_instance($tipo);
 					$main_component_tipo	= $ontology_node->get_parent();
 
@@ -401,7 +401,7 @@ class component_dataframe extends component_portal {
 
 					$new_dato		= [];
 					$need_to_be_updated	= false;
-					foreach ((array)$dato_unchanged as $current_locator) {
+					foreach ((array)$data_unchanged as $current_locator) {
 						// id the data has section_tipo_key do not change
 						if(isset($current_locator->section_tipo_key)){
 							continue;
@@ -414,7 +414,7 @@ class component_dataframe extends component_portal {
 						$need_to_be_updated = true;
 
 						$new_dato[] = $current_locator;
-					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+					}//end foreach ((array)$data_unchanged as $key => $current_locator)
 
 
 					if ($need_to_be_updated === true) {
@@ -440,20 +440,20 @@ class component_dataframe extends component_portal {
 						$response = new stdClass();
 							$response->result	= 3;
 							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 					}else{
 
 						$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 
 					}// end if($need_to_be_updated === true)
 				}else{
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
+				}//end (!empty($data_unchanged) && is_array($data_unchanged))
 				break;
 
 			case '6.8.0':
@@ -518,11 +518,11 @@ class component_dataframe extends component_portal {
 				}
 
 				// change the data
-				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_array($data_unchanged)) {
 
 					$new_dato		= [];
 					$need_to_be_updated	= false;
-					foreach ((array)$dato_unchanged as $current_locator) {
+					foreach ((array)$data_unchanged as $current_locator) {
 						// id the data has section_tipo_key do not change
 						if( isset($current_locator->main_component_tipo) ){
 							continue;
@@ -532,7 +532,7 @@ class component_dataframe extends component_portal {
 						$need_to_be_updated = true;
 
 						$new_dato[] = $current_locator;
-					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+					}//end foreach ((array)$data_unchanged as $key => $current_locator)
 
 					if ($need_to_be_updated === true) {
 
@@ -557,20 +557,20 @@ class component_dataframe extends component_portal {
 						$response = new stdClass();
 							$response->result	= 3;
 							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 					}else{
 
 						$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 
 					}// end if($need_to_be_updated === true)
 				}else{
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
+				}//end (!empty($data_unchanged) && is_array($data_unchanged))
 
 				break;
 			default:
@@ -582,7 +582,7 @@ class component_dataframe extends component_portal {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

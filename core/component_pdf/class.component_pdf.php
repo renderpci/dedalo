@@ -966,15 +966,15 @@ class component_pdf extends component_media_common implements component_media_in
 	* UPDATE_DATO_VERSION
 	* @param object $options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version( object $options ) : object {
+	public static function update_data_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? '';
-			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$data_unchanged	= $options->data_unchanged ?? null;
 			$reference_id	= $options->reference_id ?? null;
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
@@ -1006,15 +1006,15 @@ class component_pdf extends component_media_common implements component_media_in
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 				break;
 
 			case '6.0.0':
 				$is_old_dato = (
-					empty($dato_unchanged) || // v5 early case
-					(is_object($dato_unchanged) && property_exists($dato_unchanged, 'scalar')) || // mdcat old data cases
-					isset($dato_unchanged->section_id) || // v5 modern case
-					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
+					empty($data_unchanged) || // v5 early case
+					(is_object($data_unchanged) && property_exists($data_unchanged, 'scalar')) || // mdcat old data cases
+					isset($data_unchanged->section_id) || // v5 modern case
+					(isset($data_unchanged[0]) && isset($data_unchanged[0]->original_file_name)) // v6 alpha case
 				);
 				// $is_old_dato = true; // force here
 				if ($is_old_dato===true) {
@@ -1057,10 +1057,10 @@ class component_pdf extends component_media_common implements component_media_in
 								$response = new stdClass();
 									$response->result	= 1;
 									$response->new_dato	= null;
-									$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string(null).".<br />";
+									$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string(null).".<br />";
 								// $response = new stdClass();
 								// 	$response->result	= 2;
-								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($dato_unchanged)."
+								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($data_unchanged)."
 								return $response;
 							}
 
@@ -1074,10 +1074,10 @@ class component_pdf extends component_media_common implements component_media_in
 						$source_file_name = pathinfo($file)['basename'];
 
 					// offset
-						$offset = !empty($dato_unchanged) &&
-							(is_object($dato_unchanged) && isset($dato_unchanged->offset) ||  // object case
-							is_array($dato_unchanged) && isset($dato_unchanged[0]->offset)) // array case
-								? $dato_unchanged[0]->offset
+						$offset = !empty($data_unchanged) &&
+							(is_object($data_unchanged) && isset($data_unchanged->offset) ||  // object case
+							is_array($data_unchanged) && isset($data_unchanged[0]->offset)) // array case
+								? $data_unchanged[0]->offset
 								: null;
 
 					// lib_data
@@ -1122,7 +1122,7 @@ class component_pdf extends component_media_common implements component_media_in
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 
 					// clean vars
 						unset($source_file_upload_date);
@@ -1132,7 +1132,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 				}
 				break;
 
@@ -1145,7 +1145,7 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

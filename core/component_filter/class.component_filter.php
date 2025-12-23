@@ -491,15 +491,15 @@ class component_filter extends component_relation_common {
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
+			$options->data_unchanged 	= null;
 			$options->reference_id 		= null;
 			$options->tipo 				= null;
 			$options->section_id 		= null;
@@ -508,7 +508,7 @@ class component_filter extends component_relation_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
+			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id;
 
 		$update_version = implode(".", $update_version);
@@ -519,11 +519,11 @@ class component_filter extends component_relation_common {
 				# Compatibility old dedalo instalations
 				# Old dato is and object (associative array for php)
 				// Like {"1": 2}
-				if (!empty($dato_unchanged)) {
+				if (!empty($data_unchanged)) {
 					// Old format is received case
 					/*
 					$ar_locators = [];
-					foreach ($dato_unchanged as $key => $value) {
+					foreach ($data_unchanged as $key => $value) {
 
 						if (isset($value->section_id) && isset($value->section_tipo)) {
 							# Updated dato (is locator)
@@ -541,19 +541,19 @@ class component_filter extends component_relation_common {
 						$ar_locators[] = $filter_locator;
 					}
 					*/
-					$ar_locators = self::convert_dato_pre_490( $dato_unchanged, $options->tipo );
+					$ar_locators = self::convert_dato_pre_490( $data_unchanged, $options->tipo );
 					# Replace old formatted value with new formatted array of locators
 					$new_dato = $ar_locators;
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 				}
 				break;
 
@@ -566,7 +566,7 @@ class component_filter extends component_relation_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

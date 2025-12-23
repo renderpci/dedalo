@@ -210,15 +210,15 @@ class component_input_text extends component_string_common {
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version	= null;
-			$options->dato_unchanged	= null;
+			$options->data_unchanged	= null;
 			$options->reference_id		= null;
 			$options->tipo				= null;
 			$options->section_id		= null;
@@ -227,37 +227,37 @@ class component_input_text extends component_string_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
+			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id;
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
 			case '4.0.21':
-				#$dato = $this->get_dato_unchanged();
+				#$dato = $this->get_data_unchanged();
 
 				# Compatibility old dedalo installations
-				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_string($data_unchanged)) {
 
-					$new_dato = (array)$dato_unchanged;
+					$new_dato = (array)$data_unchanged;
 
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 
-				}else if(is_array($dato_unchanged)){
+				}else if(is_array($data_unchanged)){
 
 					$response = new stdClass();
 						$response->result	= 1;
-						$response->new_dato	= $dato_unchanged;
-						$response->msg		= "[$reference_id] Dato is array ".to_string($dato_unchanged)." only save .<br />";
+						$response->new_dato	= $data_unchanged;
+						$response->msg		= "[$reference_id] Dato is array ".to_string($data_unchanged)." only save .<br />";
 
 				}else{
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 				}
 				break;
 
@@ -270,7 +270,7 @@ class component_input_text extends component_string_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

@@ -704,13 +704,13 @@ class component_iri extends component_common {
 	* UPDATE_DATO_VERSION
 	* @param object $options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	* 	$response->new_dato = mixed; // new dato when result is 1
 	* 	$response->msg = string; // status message
 	*/
-	public static function update_dato_version(object $options) : object {
+	public static function update_data_version(object $options) : object {
 
 		// Validate options structure
 		if (!isset($options->update_version)) {
@@ -719,7 +719,7 @@ class component_iri extends component_common {
 
 		// options
 			$update_version	= $options->update_version ?? null;
-			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$data_unchanged	= $options->data_unchanged ?? null;
 			$reference_id	= $options->reference_id ?? '';
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
@@ -801,7 +801,7 @@ class component_iri extends component_common {
 				}
 
 				// Update the component data
-				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_array($data_unchanged)) {
 
 					// Update the locator to move old ds and dataframe to v6 dataframe model.
 					$component = component_common::get_instance(
@@ -815,7 +815,7 @@ class component_iri extends component_common {
 
 					$new_data = [];
 					$counter = 0;
-					foreach ($dato_unchanged as $current_data) {
+					foreach ($data_unchanged as $current_data) {
 
 						// Clone the current data so as not to touch the originals.
 						$iri_data = json_decode(json_encode( $current_data ));
@@ -870,14 +870,14 @@ class component_iri extends component_common {
 
 					$response->result	= 1;
 					$response->new_dato	= $new_data;
-					$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
+					$response->msg		= "[$reference_id] Data were changed from ".to_string($data_unchanged)." to ".to_string($new_data).".<br />";
 				}else{
 
 					// empty data case
 
 					$response->result	= 2;
-					$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+					$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
+				}//end (!empty($data_unchanged) && is_array($data_unchanged))
 				break;
 
 			default:
@@ -889,7 +889,7 @@ class component_iri extends component_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 
