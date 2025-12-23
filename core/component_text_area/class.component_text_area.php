@@ -455,7 +455,7 @@ class component_text_area extends component_string_common {
 
 	/**
 	* DELETE_TAG_FROM_ALL_LANGS
-	* Search all component data langs and delete tag an update (save) dato on every lang
+	* Search all component data langs and delete tag an update (save) data on every lang
 	* (!) This method will save the result if data changes on each language
 	* @see tool_indexation 'delete_tag'
 	*
@@ -1387,7 +1387,7 @@ class component_text_area extends component_string_common {
 				$new_data[] = $new_item;
 			}
 
-			$this->set_dato($new_data);
+			$this->set_data($new_data);
 		}
 
 		// Save component data. Defaults arguments: $clean_text=true
@@ -1445,7 +1445,7 @@ class component_text_area extends component_string_common {
 
 		// component_geolocation data
 			$component_geolocation_data = $component_geolocation->get_data();
-			// empty dato case
+			// empty data case
 			if (empty($component_geolocation_data)) {
 				return [];
 			}
@@ -1788,22 +1788,22 @@ class component_text_area extends component_string_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
-				if(is_array($dato_from_json)){
-					$value = $normalize_value($dato_from_json);
-				}else if (is_object($dato_from_json)) {
-					foreach ($dato_from_json as $key => $current_values) {
+				if(is_array($data_from_json)){
+					$value = $normalize_value($data_from_json);
+				}else if (is_object($data_from_json)) {
+					foreach ($data_from_json as $key => $current_values) {
 						$ar_values = is_array($current_values)
 							? $current_values
 							: [$current_values];
 
 						$value = $normalize_value($ar_values);
-						$dato_from_json->$key = $value ;
+						$data_from_json->$key = $value ;
 					}
 				}
 
-				$response->result	= $dato_from_json;
+				$response->result	= $data_from_json;
 				$response->msg		= 'OK';
 
 				return $response;
@@ -1822,7 +1822,7 @@ class component_text_area extends component_string_common {
 				($begins_one !== '[' && $ends_two !== '"]')
 				){
 
-				// inport_value is a string
+				// import_value is a string
 				$value = !empty($import_value) || $import_value==='0'
 				? $normalize_value([$import_value])
 				: null;
@@ -1883,10 +1883,10 @@ class component_text_area extends component_string_common {
 				DEDALO_DATA_NOLAN, // string lang
 				$this->section_tipo // string section_tipo
 			);
-			$related_component_dato = $related_component->get_dato();
-			if (!empty($related_component_dato[0])) {
+			$related_component_data = $related_component->get_data();
+			if (!empty($related_component_data[0])) {
 
-				$original_lang = lang::get_code_from_locator($related_component_dato[0]);
+				$original_lang = lang::get_code_from_locator($related_component_data[0]);
 
 				// set original lang
 				return $original_lang;
