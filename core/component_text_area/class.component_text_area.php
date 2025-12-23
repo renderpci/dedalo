@@ -554,7 +554,7 @@ class component_text_area extends component_string_common {
 	/**
 	* DELETE_TAG_FROM_ALL_LANGS
 	* Search all component data langs and delete tag an update (save) dato on every lang
-	* (!) This method Save the result if data changes on each lang
+	* (!) This method will save the result if data changes on each language
 	* @see tool_indexation 'delete_tag'
 	*
 	* @param string $tag_id
@@ -565,9 +565,10 @@ class component_text_area extends component_string_common {
 	*/
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
+		// model of the component text area
 		$model_name			= get_class($this);
+
 		// create the component and get its data
-		// (!) This method Save
 		$component_text_area = component_common::get_instance(
 				$model_name, // component_text_area
 				$this->tipo,
@@ -579,13 +580,16 @@ class component_text_area extends component_string_common {
 			);
 		$data = $component_text_area->get_data();
 
+		// return if data doesn't exists
 		if ( empty($data) ) {
 			return [];
 		}
+
 		// storage variables
 		$new_data			= [];	
 		$to_save			= false;
 		$ar_langs_changed 	= [];
+		
 		// loop through the data and delete the tag
 		foreach ($data as $item) {
 			$current_lang = $item->lang;
