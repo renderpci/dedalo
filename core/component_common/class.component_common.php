@@ -2791,51 +2791,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_COMPONENT_AR_LANGS
-	* Returns an array with all the languages used by this component from the data of the section that hosts it
-	* @return array $component_ar_langs
-	*/
-	public function get_component_ar_langs() : array {
-
-		$component_ar_langs = [];
-
-		$tipo		= $this->tipo;
-		$section_id	= $this->section_id;
-		if (empty($section_id)) {
-			debug_log(__METHOD__
-				. " Error: section_id is mandatory !" .PHP_EOL
-				. ' tipo: ' . $tipo . PHP_EOL
-				. ' section_id: '. $section_id
-				, logger::ERROR
-			);
-
-			return $component_ar_langs;
-		}
-
-		$section		= $this->get_my_section();
-		$section_dato	= $section->get_dato();
-
-		$component_dato_full = $section_dato->components->$tipo->dato ?? null;
-		if ($component_dato_full!==null) {
-			foreach ($component_dato_full as $key => $value) {
-
-				$component_ar_langs[] = $key; // Old way
-				/*
-				$locator = new locator();
-					$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
-					$locator->set_section_id(lang::get_section_id_from_code($key));
-
-				$component_ar_langs[] = $locator;
-				*/
-			}
-		}
-
-		return $component_ar_langs;
-	}//end get_component_ar_langs
-
-
-
-	/**
 	* GET_AR_TARGET_SECTION_DDO
 	* target section/s from which the portal/autocomplete feeds with records.
 	* Not to be confused with the section in which the portal is
