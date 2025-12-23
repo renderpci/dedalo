@@ -240,10 +240,10 @@ Split date range
 
 # media map
 
-!!! Info Version >= 6.8.5
+!!! info "Version >= 6.8.5"
 
 Map media files path
->Process the media file path of the component to perform regex, select custom quality, prepend a domain, etc.  
+>Process the media file path of the component to perform regex, select custom quality, prepend a domain, etc.
 >Please note that the processing is cumulative and the order is as follows: quality/extension, replace, prefix.
 >
 ##### direct
@@ -251,13 +251,13 @@ Map media files path
 ```json
 {
   "process_dato": "diffusion_sql::map_media",
-  "options": {    
+  "options": {
     "quality": "original",
     "extension": "jpg",
     "replace": {
       "regex": "~.*/~",
       "substitution": ""
-    },    
+    },
     "prefix": "http://dedalo.dev/media/",
   },
 }
@@ -273,7 +273,7 @@ Map media files path
 
 #### replace
 >
->Perform a regular expression replacement on the file path. Use '~' as delimiters as '\~.*/\~'.  
+>Perform a regular expression replacement on the file path. Use '~' as delimiters as '\~.*/\~'.
 Sample: (replacement to get 'rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc176_1.jpg')
 
 ```json
@@ -282,7 +282,7 @@ Sample: (replacement to get 'rsc37_rsc176_1.jpg' from '/pdf/original/0/rsc37_rsc
     "regex": "~.*/~",
     "substitution": ""
   }
-}  
+}
 ```
 
 #### prefix
