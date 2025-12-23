@@ -903,7 +903,7 @@ class component_text_area extends component_string_common {
 	* }
 	* @param string $tag_type, used to get the configuration in properties
 	* @return array $ar_tags_data
-	* 	Array of component_portal dato locators
+	* 	Array of component_portal data locators
 	*/
 	public function get_component_tags_data( string $tag_type='index' ) : array {
 
@@ -932,7 +932,7 @@ class component_text_area extends component_string_common {
 				$section_tipo
 			);
 
-		$ar_tags_data = $component_index->get_dato() ?? [];
+		$ar_tags_data = $component_index->get_data() ?? [];
 
 
 		return $ar_tags_data;
