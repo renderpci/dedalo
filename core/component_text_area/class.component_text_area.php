@@ -1419,7 +1419,8 @@ class component_text_area extends component_string_common {
 				$this->tipo,
 				true
 			);
-
+		// inform when no related component_geolocation is found
+		// and return empty array to avoid any further operations
 			if (empty($ar_related_by_model[0])) {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
@@ -1430,6 +1431,7 @@ class component_text_area extends component_string_common {
 				);
 				return [];
 			}
+		// create the component geolocation
 			$component_geolocation_tipo	= $ar_related_by_model[0];
 			$component_geolocation		= component_common::get_instance(
 				$component_geolocation_model, // string model
@@ -1442,12 +1444,12 @@ class component_text_area extends component_string_common {
 			);
 
 		// component_geolocation data
-			$component_geolocation_dato = $component_geolocation->get_dato();
+			$component_geolocation_data = $component_geolocation->get_data();
 			// empty dato case
-			if (empty($component_geolocation_dato)) {
+			if (empty($component_geolocation_data)) {
 				return [];
 			}
-			$lib_data = $component_geolocation_dato[0]->lib_data ?? null;
+			$lib_data = $component_geolocation_data[0]->lib_data ?? null;
 			if (empty($lib_data)) {
 				return [];
 			}
@@ -1480,7 +1482,7 @@ class component_text_area extends component_string_common {
 						}
 					}
 				}
-
+				// create a new value for the layer
 				$current_value = (object)[
 					'layer_id'		=> $layer->layer_id,
 					'text'			=> '', // only to maintain v5 diffusion format
@@ -1492,11 +1494,12 @@ class component_text_area extends component_string_common {
 			}
 
 		// compare result
-			$dato		= $this->get_dato();
-			$raw_text	= $dato[0] ?? '';
+			$data		= $this->get_data();
+			$raw_text	= $data[0]->value ?? '';
 			// split by pattern
 			$pattern_geo_full	= TR::get_mark_pattern('geo_full', true);
 			$ar_geo_tag			= preg_split($pattern_geo_full, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+		// get geo tags from array
 			$geo_tags			= [];
 			if ($ar_geo_tag) {
 				$geo_tags = array_filter($ar_geo_tag, function($el){
