@@ -100,6 +100,27 @@ class section_record {
 
 
 	/**
+	* SAVE_EVENT
+	* Dispatches a save event for this section record
+	* @return void
+	*/
+	private function save_event() : void {
+
+		// Invalidate request config cache file.
+		// This is used to invalidate the request config cache file
+		// when the section_record_save event is triggered.
+		// This only affects current user cache.
+		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
+			$cache_file_name = 'cache_active_request_config.json';
+			dd_cache::delete_cache_files([
+				$cache_file_name
+			]);
+		}
+	}//end save_event	
+
+
+
+	/**
 	* LOAD_DATA
 	* Loads the section DB record once.
 	* The data fill the '$this->data_columns' values
@@ -246,6 +267,9 @@ class section_record {
 			$data
 		);
 
+		// save event
+		$this->save_event();
+
 		return $result;
 	}//end save
 
@@ -287,6 +311,8 @@ class section_record {
 			$values
 		);
 
+		// save event
+		$this->save_event();
 
 		return $result;
 	}//end save_column
@@ -401,12 +427,17 @@ class section_record {
 			);
 		}
 
-		return matrix_db_manager::update_by_key(
+		$result = matrix_db_manager::update_by_key(
 			$table,
 			$section_tipo,
 			$section_id,
 			$data_to_save
 		);
+
+		// save event
+		$this->save_event();
+	
+		return $result;
 	}//end save_key_data
 
 
@@ -447,6 +478,9 @@ class section_record {
 			$this->update_modified_section_data((object)[
 				'mode' => 'update_record'
 			]);
+
+		// save event
+		$this->save_event();
 
 
 		return true;
@@ -605,6 +639,8 @@ class section_record {
 				logged_user_id() // int
 			);
 
+		// save event
+		$this->save_event();
 
 		// Returns the delete result.
 		return true;
@@ -729,6 +765,8 @@ class section_record {
 				$user_id // int
 			);
 
+		// save event
+		$this->save_event();
 
 		// Returns the delete result.
 		return true;
@@ -1156,6 +1194,8 @@ class section_record {
 		// $section_record->set_data($values);
 		$section_record->get_data(); // force to update values
 
+		// save event
+		$section_record->save_event();
 
 		return $section_record;
 	}//end create
@@ -1349,30 +1389,6 @@ class section_record {
 
 		return $this->data_instance->get_data();
 	}//end read
-
-
-
-	// /**
-	// * DELETE
-	// * Safely deletes one record in a "matrix" table,
-	// * identified by a composite key of `section_id` and `section_tipo`.
-	// * @return bool
-	// * Returns `true` on success, or `false` if validation fails,
-	// * query preparation fails, or execution fails.
-	// */
-	// public function delete() : bool {
-
-	// 	$table = $this->data_instance->get_table();
-
-	// 	$section_tipo = $this->section_tipo;
-	// 	$section_id	= $this->section_id;
-
-	// 	return matrix_db_manager::delete(
-	// 		$table,
-	// 		$section_tipo,
-	// 		$section_id
-	// 	);
-	// }//end delete
 
 
 

@@ -10,157 +10,136 @@ class request_config_presets {
 	/**
 	* GET_ACTIVE_REQUEST_CONFIG
 	* Search all active request config records from database (matrix_list)
-	* and save/get the result to a static cache '$active_request_config_cache'
+	* and save/get the result to a static cache '$active_request_config_cache'.
+	* We don't use components here to avoid calculating permissions, etc.
 	* @return array
 	* 	Assoc array of request_config_object objects
 	*/
 	public static function get_active_request_config() : array {
 
 		// cache
-		static $active_request_config_cache;
+		static $active_request_config_cache;		
 		if(isset($active_request_config_cache)) {
 			return $active_request_config_cache;
 		}
 
+		// cache
+		$cache_file_name = 'cache_active_request_config.json';
+		$cache_data_string	= dd_cache::cache_from_file((object)[
+			'file_name' => $cache_file_name
+		]);
+		if (!empty($cache_data_string)) {
+			$result = json_decode($cache_data_string);
+			return $result;
+		}
+
 		$active_request_config = [];
 
-		// search way
-			// // filter for active only
-			// $filter = json_decode('
-			// 	{
-			// 		"$and": [
-			// 			{
-			// 				"q": {
-			// 					"section_tipo": "dd64",
-			// 					"section_id": "1",
-			// 					"from_component_tipo": "dd1566"
-			// 				}
-			// 				,
-			// 				"q_operator": null,
-			// 				"path": [
-			// 					{
-			// 						"section_tipo": "dd1244",
-			// 						"component_tipo": "dd1566",
-			// 						"model": "component_radio_button",
-			// 						"name": "Active"
-			// 					}
-			// 				],
-			// 				"q_split": false,
-			// 				"type": "jsonb"
-			// 			}
-			// 		]
-			// 	}
-			// ');
+		// Search active request config records from database (matrix_list)
+		$sql = '';
+		$sql .= PHP_EOL . 'SELECT *';
+		$sql .= PHP_EOL . 'FROM matrix_list';
+		$sql .= PHP_EOL . "WHERE section_tipo = $1";
+		$sql .= PHP_EOL . "AND matrix_list.relation::jsonb @> $2";
+		$sql .= PHP_EOL . "ORDER BY section_id ASC";
+		
+		$result = matrix_db_manager::exec_search($sql, [
+			DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO,
+			'{"dd1566":[{"section_tipo": "dd64", "section_id": "1"}]}'
+		]);
 
-			// // Search all records of request config section dd1244			
-			// $search_query_object = new search_query_object();
-			// 	$search_query_object->set_id('search_active_request_config');
-			// 	$search_query_object->set_mode('list');
-			// 	$search_query_object->set_section_tipo([DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO]);
-			// 	$search_query_object->set_filter($filter);
-			// 	$search_query_object->set_limit(0);
-			// 	$search_query_object->set_full_count(false);
-			// 	$search_query_object->set_select([
-			// 		(object)['column' => 'section_id']
-			// 	]);
+		// Prepare component info for fast access
+		$ar_components_info = [
+			'tipo'           => ['tipo' => 'dd1242', 'model' => null, 'column' => null],
+			'section_tipo'   => ['tipo' => 'dd642',  'model' => null, 'column' => null],
+			'mode'           => ['tipo' => 'dd1246', 'model' => null, 'column' => null],
+			'user_id'        => ['tipo' => 'dd654',  'model' => null, 'column' => null],
+			'public'         => ['tipo' => 'dd640',  'model' => null, 'column' => null],
+			'request_config' => ['tipo' => 'dd625',  'model' => null, 'column' => null],
+		];
 
-			// $search		= search::get_instance($search_query_object);
-			// $db_result	= $search->search();
+		// Pre-calculate models and columns
+		foreach ($ar_components_info as $key => &$info) {
+			$info['model']  = ontology_node::get_model_by_tipo($info['tipo'], true);
+			$info['column'] = section_record_data::get_column_name($info['model']);
+		}
+		unset($info); // break reference
 
-		// direct way
-			$sql = '';
-			$sql .= PHP_EOL . 'SELECT section_id';
-			$sql .= PHP_EOL . 'FROM matrix_list';
-			$sql .= PHP_EOL . "WHERE section_tipo = $1";
-			$sql .= PHP_EOL . "AND matrix_list.relation::jsonb @> $2";
-			$sql .= PHP_EOL . "ORDER BY section_id ASC";
-			
-			$result = matrix_db_manager::exec_search($sql, [
-				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO,
-				'{"dd1566":[{"section_tipo": "dd64", "section_id": "1"}]}'
-			]);
-
-		// Helper function to extract a component value
-		$get_component_value = function($tipo, $section_id) {
-			$model = ontology_node::get_model_by_tipo($tipo, true);
-			$component = component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
-			);
-			return $component->get_value() ?? '';
-		};
-
-		// Helper function to extract a component data
-		$get_component_data = function($tipo, $section_id) {
-			$model = ontology_node::get_model_by_tipo($tipo, true);
-			$component = component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
-			);
-			return $component->get_data() ?? [];
-		};
-	
-		// foreach($db_result as $row) {
 		while ($row = pg_fetch_object($result)) {
 			
-			$section_id = $row->section_id;
+			$section_tipo = $row->section_tipo;
+			$section_id   = $row->section_id;
 
-			// Generate values
-				$tipo			= $get_component_value('dd1242', $section_id); // tipo
-				$section_tipo	= $get_component_value('dd642', $section_id);  // section_tipo
-				$mode			= $get_component_value('dd1246', $section_id);  // mode
+			// Get cached section record (hydrated with parsed row data)
+			$section_record = section_record::get_instance($section_tipo, $section_id);
+			$section_record->set_data($row);
 
-			// Get user_id (dd654)
-				$user_id_data	= $get_component_data('dd654', $section_id);
-				$user_id		= $user_id_data[0]->section_id ?? null;
+			// Extract raw data directly
+			$get_raw_value = function($key) use ($section_record, $ar_components_info) {
+				$info = $ar_components_info[$key];
+				$data = $section_record->get_component_data($info['tipo'], ($info['column'] ?? ''));
+				return $data[0] ?? null;
+			};
 
-			// Get public value (dd640)
-				$public_data	= $get_component_data('dd640', $section_id);
-				$public			= isset($public_data[0]->section_id) && $public_data[0]->section_id=='1';
+			// 1. Simple values (string components)
+			$tipo_obj         = $get_raw_value('tipo');
+			$tipo             = $tipo_obj->value ?? '';
+			
+			$section_tipo_obj = $get_raw_value('section_tipo');
+			$current_section_tipo = $section_tipo_obj->value ?? ''; // Renamed to avoid collision
 
-			// Get JSON config (dd625)
-				$json_data		= $get_component_data('dd625', $section_id);
-				$request_config	= $json_data[0]->value ?? [];
+			$mode_obj         = $get_raw_value('mode');
+			$mode             = $mode_obj->value ?? '';
 
-				// Normalize input
-				$request_items = is_array($request_config) ? $request_config : [$request_config];
+			// 2. Relations (user_id, public)
+			$user_id_obj      = $get_raw_value('user_id');
+			$user_id          = $user_id_obj->section_id ?? null;
 
-				// Normalize each request_config_object
-				$safe_request_config = [];
-				foreach ($request_items as $current_item) {
-					try {
-						if (!is_object($current_item)) {
-							throw new Exception("Invalid non object request_config_object item", 1);
-						}
-						$request_config_object = new request_config_object($current_item);
-						if (!empty($request_config_object)) {
-							$safe_request_config[] = $request_config_object;
-						}
-					} catch (Exception $e) {
-						debug_log(__METHOD__
-							. " Ignored invalid request_config_object item " . PHP_EOL
-							. ' current_item: ' . to_string($current_item) . PHP_EOL
-							. ' section_tipo: ' . $section_tipo  . PHP_EOL
-							. ' section_id: ' . $section_id
-							, logger::ERROR
-						);
+			$public_obj       = $get_raw_value('public');
+			$public           = isset($public_obj->section_id) && $public_obj->section_id == '1';
+
+			// 3. JSON content
+			$config_obj       = $get_raw_value('request_config');
+			$request_config   = $config_obj->value ?? [];
+
+			// Validate essential data
+			if (empty($tipo) || empty($current_section_tipo)) {
+				continue;
+			}
+
+			// Normalize input
+			$request_items = is_array($request_config) ? $request_config : [$request_config];
+
+			// Normalize each request_config_object
+			$safe_request_config = [];
+			foreach ($request_items as $current_item) {
+				try {
+					if (!is_object($current_item)) {
+						// Skip empty/invalid items silently or throw if strict
+						if(empty($current_item)) continue;
+						throw new Exception("Invalid non object request_config_object item", 1);
 					}
+					$request_config_object = new request_config_object($current_item);
+					if (!empty($request_config_object)) {
+						$safe_request_config[] = $request_config_object;
+					}
+				} catch (Exception $e) {
+					debug_log(__METHOD__
+						. " Ignored invalid request_config_object item " . PHP_EOL
+						. ' current_item: ' . to_string($current_item) . PHP_EOL
+						. ' section_tipo: ' . $section_tipo  . PHP_EOL
+						. ' section_id: ' . $section_id
+						, logger::ERROR
+					);
 				}
+			}
 
 			// Only store if we have valid configs
 			if (!empty($safe_request_config)) {
 
 				$item = new stdClass();
 					$item->tipo           = $tipo;
-					$item->section_tipo   = $section_tipo;
+					$item->section_tipo   = $current_section_tipo;
 					$item->mode           = $mode;
 					$item->user_id        = $user_id;
 					$item->public         = $public;
@@ -172,6 +151,12 @@ class request_config_presets {
 
 		// active_request_config_cache
 		$active_request_config_cache = $active_request_config;
+
+		// cache
+		dd_cache::cache_to_file((object)[
+			'file_name' => $cache_file_name,
+			'data' => $active_request_config
+		]);
 
 
 		return $active_request_config;
@@ -194,7 +179,7 @@ class request_config_presets {
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 			metrics::add_metric('presets_total_calls');
-		}
+		}		
 
 		// Get cached list of active_request_config
 		$active_request_config = self::get_active_request_config();
@@ -205,7 +190,8 @@ class request_config_presets {
 					$el->section_tipo === $section_tipo &&
 					$el->mode === $mode &&
 					$el->user_id == logged_user_id()); // filter by owner user
-		});
+		});		
+
 		// fallback to public presets
 		if (empty($found)) {
 			$found = array_find($active_request_config, function($el) use($tipo, $section_tipo, $mode) {
@@ -226,7 +212,7 @@ class request_config_presets {
 		}
 
 		// data (request config array)
-		$data = $found->data ?? [];
+		$data = $found->data ?? [];		
 
 
 		return $data;
