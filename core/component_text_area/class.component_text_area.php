@@ -1376,26 +1376,31 @@ class component_text_area extends component_string_common {
 	* Build tag label to show in transcriptions tag image of persons
 	* @param object locator
 	* @return object $label
+	* {
+	* 	"initials"	: "ricsa",
+	* 	"full_name"	: "Ricardo Sánchez",
+	* 	"role"		: "Interviewer"
+	* }
 	*/
 	public static function get_tag_person_label(object $locator) : object {
 
-		# Fixes tipos
+		// Fixes tipos
 		$ar_tipos = [
-			'name'		=> 'rsc85',
-			'surname'	=> 'rsc86'
+			'name'		=> 'rsc85', // name
+			'surname'	=> 'rsc86' // surname
 		];
-
+		// create the label object
 		$label = new stdClass();
 			$label->initials	= '';
 			$label->full_name	= '';
 			$label->role		= '';
 
 		if (isset($locator->component_tipo)) {
-			$label->role = ontology_node::get_term_by_tipo($locator->component_tipo,DEDALO_APPLICATION_LANG,true);
+			$label->role = ontology_node::get_term_by_tipo($locator->component_tipo, DEDALO_APPLICATION_LANG, true);
 		}
 
 		foreach ($ar_tipos as $key => $tipo) {
-
+			// get the model of the component, expected component_input_text for the name and surname
 			$model_name	= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
 				$model_name,
@@ -1405,35 +1410,40 @@ class component_text_area extends component_string_common {
 				DEDALO_DATA_NOLAN,
 				$locator->section_tipo
 			);
-			$dato = $component->get_valor();
-
+			// get its data and extract the first value to add it to the label
+			$data 	= $component->get_data();
+			$value 	= $data[0]->value ?? '';
+			// Reduce the name of the person into the tag label
+			// and use the full name into the tooltip
 			switch ($key) {
 
 				case 'name':
-					$label->initials	.= mb_substr($dato,0,3);
-					$label->full_name	.= $dato;
+					// Get only the 3 first letters of the name 
+					$label->initials	.= mb_substr($value,0,3);
+					$label->full_name	.= $value;
 					break;
 
 				case 'surname':
-					if (!empty($dato)) {
-						$ar_parts = explode(' ', $dato);
+					// get only the 2 first letters of the surname 
+					if (!empty($value)) {
+						$ar_parts = explode(' ', $value);
 						if (isset($ar_parts[0])) {
 							$label->initials .= mb_substr($ar_parts[0],0,2);
 						}
 						if (isset($ar_parts[1])) {
 							$label->initials .= mb_substr($ar_parts[1],0,2);
 						}
-						$label->full_name .= ' '.$dato;
+						$label->full_name .= ' '.$value;
 					}
 					break;
 
 				default:
 					break;
 			}
-		}
+		}// end foreach($ar_tipos as $key => $tipo)
 
 
-		return (object)$label;
+		return $label;
 	}//end get_tag_person_label
 
 
