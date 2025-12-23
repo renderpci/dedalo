@@ -1286,16 +1286,13 @@ class component_text_area extends component_string_common {
 				$current_section_tipo
 			);
 			// TAG
-			$dato = $component->get_dato();
-			foreach ($dato as $current_locator) {
+			$data = $component->get_data();
+			foreach ($data as $current_locator) {
 
 				$lkey = $current_locator->section_tipo .'_' .$current_locator->section_id;
 				if (in_array($lkey, $resolved)) {
 					continue;
 				}
-
-				# Add current component tipo to locator stored in tag
-				#$current_locator->component_tipo = $current_component_tipo;
 
 				$data_locator = new locator();
 					$data_locator->set_section_tipo($current_locator->section_tipo);
@@ -1329,7 +1326,7 @@ class component_text_area extends component_string_common {
 				$tags_persons[] = $element;
 
 				$resolved[] = $lkey;
-			}
+			}// end foreach($data as $current_locator)
 		}
 
 
