@@ -168,35 +168,30 @@ class component_text_area extends component_string_common {
 
 	/**
 	* SAVE
+	* Save component data with text sanitization
 	* Overwrite component_common method
-	* @param bool $update_all_langs_tags_state
-	* @param bool $clean_text
+	* @param bool $update_all_langs_tags_state	Whether to update language tags across all languages
+	* @param bool $clean_text					Whether to clean/sanitize text content
 	*
 	* @return bool $result
 	*/
 	public function save(bool $update_all_langs_tags_state=false, bool $clean_text=true) : bool {
 
-		// update_all_langs_tags_state
-		// we review the labels to update their status in the other languages
-		// to avoid an infinite loop, in the 'Save' order of the updates, we will pass '$update_all_langs_tags_state=false'
-			// if ($update_all_langs_tags_state===true) {
-			// 	$this->update_all_langs_tags_state();
-			// }
-
-		// Dato current assigned
-			$dato_current = $this->data;
+		// Store current data for processing
+			$current_data = $this->data;
 
 		// clean data
-			if ($clean_text && !empty($data_current)) {
-				foreach ($data_current as $key => $current_value) {
+			if ($clean_text && !empty($current_data)) {
+				foreach ( $current_data as $key => $item ) {
+					$current_value = $item->value ?? '';
 					if (!empty($current_value)) {
-						$data_current[$key] = TR::conform_tr_data($current_value);
+						 $current_data[$key]->value = TR::conform_tr_data($current_value);
 					}
 				}
 			}
 
 		// Set data again (cleaned)
-			$this->data = $dato_current;
+			$this->data = $current_data;
 
 		// From here, we save in the standard way. Expected int $section_id
 			$result = parent::save();
