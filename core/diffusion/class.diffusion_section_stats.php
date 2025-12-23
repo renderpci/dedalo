@@ -57,74 +57,27 @@ class diffusion_section_stats extends diffusion {
 			$response->errors	= [];
 
 		// time vars
-			$today		= new DateTime();
-			$yesterday	= new DateTime(); $yesterday->modify('-1 day'); // or $yesterday->sub(new DateInterval('P1D'));
+			$today = new DateTime();
 
-		// last saved user activity stats (looks section 'dd1521' to get last record by date)
-			$sqo = json_decode('{
-				"section_tipo": ["'.USER_ACTIVITY_SECTION_TIPO.'"],
-				"limit": 1,
-				"offset": 0,
-				"select": [],
-				"filter": {
-				"$and": [
-					{
-					"q": {
-						"section_tipo" : "'.DEDALO_SECTION_USERS_TIPO.'",
-						"section_id" : "'.$user_id.'",
-						"from_component_tipo" : "'.USER_ACTIVITY_USER_TIPO.'"
-					},
-					"q_operator": null,
-					"path": [
-						{
-						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-						"component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-						"model": "'.ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true).'",
-						"name": "User"
-						}
-					]
-					}
-				]
-				},
-				"order": [
-				{
-					"direction": "DESC",
-					"path": [
-					{
-						"name": "Date",
-						"model": "component_date",
-						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-						"component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-						"column": "jsonb_path_query_first('.USER_ACTIVITY_SECTION_TIPO.'.datos, \'strict $.components.'.USER_ACTIVITY_DATE_TIPO.'.dato.\"lg-nolan\"[0].start.time\', silent => true)"
-					}
-					]
-				},
-				{
-					"direction": "DESC",
-					"path": [
-					{
-						"component_tipo": "section_id",
-						"model": "component_section_id",
-						"name": "ID",
-						"section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'"
-					}
-					]
-				}
-				]
-			}');
-			$search_query_object = new search_query_object($sqo);
+		// 1 - last saved user activity stats (looks section 'dd1521' in matrix_stats to get the last record)
+		// We look for the last record of the user activity stats to know where to start the process
+			$sql_query  = 'SELECT section_tipo, section_id' . PHP_EOL;
+			$sql_query .= 'FROM "matrix_stats"' . PHP_EOL;
+			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
+			$sql_query .= 'ORDER BY id DESC' . PHP_EOL;
+			$sql_query .= 'LIMIT 1';
 
-			// Search records
-			$search = search::get_instance(
-				$search_query_object // object sqo
+			$matrix_stats_result = matrix_db_manager::exec_search(
+				$sql_query,
+				['{"'.USER_ACTIVITY_USER_TIPO.'":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}']
 			);
-			$db_result = $search->search();
+			$row = pg_fetch_object($matrix_stats_result);
 
-			$row = $db_result->fetch_one();
-
+		// 2 - last activity record of current user
+		// We search activity records of current user from the date of the last saved user activity stats
 			// query params
 			$params = [
-				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}'
+				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}' // dd543 is the who component
 			];
 
 			// placehoders
@@ -137,7 +90,7 @@ class diffusion_section_stats extends diffusion {
 				$section_id		= $row->section_id;
 				$section_tipo	= $row->section_tipo;
 
-				$model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO,true);
+				$model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO, true);
 				$component	= component_common::get_instance(
 					$model,
 					USER_ACTIVITY_DATE_TIPO,
@@ -147,12 +100,13 @@ class diffusion_section_stats extends diffusion {
 					$section_tipo
 				);
 				$data = $component->get_data();
-				$current_date = $data[0] ?? null;
+				$current_date = $data[0] ?? null;				
+
 				if (empty($current_date)) {
 					debug_log(__METHOD__
-						. " Skip. Not valid date found for user" . PHP_EOL
+						. " Not valid start date found for user '$user_id'. We will look in all user history." . PHP_EOL
 						. 'current_date: '.to_string($current_date)
-						, logger::ERROR
+						, logger::WARNING
 					);
 				}else{
 					$dd_date	= new dd_date($current_date->start);
@@ -176,7 +130,7 @@ class diffusion_section_stats extends diffusion {
 			$params[] = $end_date;
 			$placeholders++;
 
-		// search last activity record of current user
+			// search last activity record of current user
 			$sql_query  = 'SELECT *' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
 			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
@@ -184,7 +138,7 @@ class diffusion_section_stats extends diffusion {
 			$sql_query .= 'ORDER BY id ASC' . PHP_EOL;
 			$sql_query .= 'LIMIT 1';
 
-			$result = matrix_db_manager::exec_search($sql_query, $params);
+			$result = matrix_db_manager::exec_search($sql_query, $params);			
 
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
@@ -201,17 +155,18 @@ class diffusion_section_stats extends diffusion {
 				return $response;
 			}
 
-			// dd date object from column 'timestamp' (example: '2024-12-05 09:07:33.248847')
-				$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->timestamp );
-				if (empty($date_value->year)) {
-					debug_log(__METHOD__
-						." Skip. Not valid date found for user $user_id "
-						, logger::ERROR
-					);
-					$response->msg .= 'Not valid date found for user '.$user_id;
-					$response->errors[] = 'invalid date from activity row: ' .$activity_row->section_id;
-					return $response;
-				}
+			// Check dd date object from column 'timestamp' (example: '2024-12-05 09:07:33.248847')
+			// This is a check to validate the timestamp value. If not valid (year is not available), skip the process.
+			$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->timestamp );
+			if (empty($date_value->year)) {
+				debug_log(__METHOD__
+					." Skip. Not valid date found for user $user_id "
+					, logger::ERROR
+				);
+				$response->msg .= 'Not valid date found for user '.$user_id;
+				$response->errors[] = 'invalid date from activity row: ' .$activity_row->section_id;
+				return $response;
+			}
 
 		// iterate from the beginning, in steps of a day
 			$begin	= new DateTime($activity_row->timestamp);
@@ -219,7 +174,7 @@ class diffusion_section_stats extends diffusion {
 
 			// by day
 			$updated_days = [];
-			for($i = $begin; $i <= $end; $i->modify('+1 day')){
+			for($i = $begin; $i < $end; $i->modify('+1 day')){
 
 				// date_in
 					$current_date	= $i->format("Y-m-d");
@@ -250,13 +205,24 @@ class diffusion_section_stats extends diffusion {
 						(int)$i->format("d") // int day
 					);
 
+					if($result===false) {
+						debug_log(__METHOD__
+							." Save user activity failed for user $user_id ". PHP_EOL
+							.' date_in: '.to_string($date_in).PHP_EOL
+							.' date_out: '.to_string($date_out).PHP_EOL
+							.' totals_data: '.to_string($totals_data)
+							, logger::ERROR
+						);
+						continue;
+					}
+
 					// updated_days add
 					$updated_days[] = (object)[
 						'user'	=> $user_id,
 						'date'	=> $i->format("Y-m-d")
 					];
 				}
-			}//end for($i = $begin; $i <= $end; $i->modify('+1 day'))
+			}//end for($i = $begin; $i < $end; $i->modify('+1 day'))
 
 		// debug info
 			$memory		= dd_memory_usage();
@@ -570,6 +536,7 @@ class diffusion_section_stats extends diffusion {
 	* SAVE_USER_ACTIVITY
 	* Creates a new record on user activity section and
 	* store all data (user, type, date, totals)
+	* in table 'matrix_stats'
 	* @param array $totals_data
 	*	Verticalized array of objects
 	* @param int $user_id
@@ -587,7 +554,7 @@ class diffusion_section_stats extends diffusion {
 	public static function save_user_activity(array $totals_data, int $user_id, string $type, int $year, ?int $month=null, ?int $day=null) : int|false {
 
 		// creates a new section
-			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521';
+			$section_tipo	= USER_ACTIVITY_SECTION_TIPO; // 'dd1521' matrix_stats table;
 			$section		= section::get_instance(
 				$section_tipo
 			);
