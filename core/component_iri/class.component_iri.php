@@ -40,8 +40,8 @@ class component_iri extends component_common {
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
-		// lang. Force always DEDALO_DATA_NOLAN
-			$lang = DEDALO_DATA_NOLAN;
+		// (!) lang. Uses default lang DEDALO_DATA_NOLAN because is not translatable,
+		// BUT, allow another languages for transliteration (with_lang_versions = true)
 
 		// Fix with_lang_versions for clarity
 			$this->with_lang_versions = true;
