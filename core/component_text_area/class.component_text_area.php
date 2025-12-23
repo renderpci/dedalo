@@ -1642,7 +1642,7 @@ class component_text_area extends component_string_common {
 		// options
 			$max_chars = $options->max_chars ?? 700;
 
-		// dato_fallback. array of each dato array element using fallback
+		// data_fallback. array of each data array element using fallback
 			$data_fallback = $this->get_component_data_fallback(
 				DEDALO_DATA_LANG, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
@@ -1686,7 +1686,7 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* GET_FALLBACK_edit_VALUE
+	* GET_FALLBACK_EDIT_VALUE
 	* Used by component_text_area and component_html_text to
 	* generate fallback versions of current empty values
 	* @param object|null $options = null
