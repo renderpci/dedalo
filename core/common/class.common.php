@@ -2864,6 +2864,16 @@ abstract class common {
 		// check section tipo model (allow areas)
 			if ($section_tipo!=='self') {
 				$section_model = ontology_node::get_model_by_tipo($section_tipo,true);
+				if(empty($section_model)) {
+					debug_log(__METHOD__
+						. " Error. Empty section/area model " . PHP_EOL
+						. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
+						. ' section_model: ' . to_string($section_model) . PHP_EOL
+						. ' current tipo: '  . to_string($tipo)						
+						, logger::ERROR
+					);
+					return [];
+				}
 				if ($section_model!=='section' && strpos($section_model, 'area')!==0) {
 					debug_log(__METHOD__
 						. " Error. Invalid section/area tipo " . PHP_EOL
@@ -2873,6 +2883,7 @@ abstract class common {
 						. ' dbt: ' . to_string( debug_backtrace()[1] )
 						, logger::ERROR
 					);
+					return [];
 				}
 			}
 
@@ -4497,7 +4508,7 @@ abstract class common {
 				return $tools;
 			}
 
-		// user_tools (cached on file cache_user_tools.json)
+		// user_tools (cached on file cache_user_tools.php)
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars

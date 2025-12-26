@@ -627,8 +627,6 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
-		// $conn = DBi::_getConnection();
-
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 
@@ -643,6 +641,9 @@ final class dd_core_api {
 
 				return $response;
 			}
+
+		// Init the DB connection (consumes 4 - 6 ms)
+			$conn = DBi::_getConnection();
 
 		// redirect to the method
 			switch ($rqo->source->action) {
@@ -2450,13 +2451,12 @@ final class dd_core_api {
 	public static function get_page_globals() : object {
 
 		// cache
-		$cache_file_name = 'cache_page_globals.json';
-		$cache_data_string	= dd_cache::cache_from_file((object)[
+		$cache_file_name = 'cache_page_globals.php';
+		$cache_data	= dd_cache::cache_from_file((object)[
 			'file_name' => $cache_file_name
-		]);
-		$cache_data = new stdClass();
-		if (!empty($cache_data_string)) {
-			$cache_data = json_decode($cache_data_string);
+		]);		
+		if (empty($cache_data)) {
+			$cache_data = [];
 		}
 		$cache_modified = false;
 
@@ -2493,8 +2493,8 @@ final class dd_core_api {
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
 			
 			// projects default langs
-			if(isset($cache_data->dedalo_projects_default_langs)) {
-				$obj->dedalo_projects_default_langs = $cache_data->dedalo_projects_default_langs;
+			if(isset($cache_data['dedalo_projects_default_langs'])) {
+				$obj->dedalo_projects_default_langs = $cache_data['dedalo_projects_default_langs'];
 			}else{
 				$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
 				$obj->dedalo_projects_default_langs = array_map(function ($item) {
@@ -2505,7 +2505,7 @@ final class dd_core_api {
 					];
 				}, $langs_resolved);
 				// Set cache
-				$cache_data->dedalo_projects_default_langs = $obj->dedalo_projects_default_langs;
+				$cache_data['dedalo_projects_default_langs'] = $obj->dedalo_projects_default_langs;
 				$cache_modified = true;
 			}			
 
@@ -2536,11 +2536,11 @@ final class dd_core_api {
 			// recovery mode
 			$obj->recovery_mode					= $_ENV['DEDALO_RECOVERY_MODE'] ?? false;
 			// data_version
-			if(isset($cache_data->data_version)) {
-				$obj->data_version					= $cache_data->data_version;
+			if(isset($cache_data['data_version'])) {
+				$obj->data_version					= $cache_data['data_version'];
 			}else{
 				$obj->data_version					= get_current_data_version();
-				$cache_data->data_version			= $obj->data_version;
+				$cache_data['data_version']			= $obj->data_version;
 				$cache_modified = true;
 			}
 

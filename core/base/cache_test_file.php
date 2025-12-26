@@ -25,4 +25,4 @@
 	// error_log('test_data:' . json_encode($test_data));
 
 // write result to file as text
-	echo json_encode($test_data);
+	echo '<?php return ' . var_export($test_data, true) . ';';

@@ -171,7 +171,7 @@ final class component_security_access_test extends TestCase {
 				. gettype($result)
 		);
 
-		$expected = 'cache_tree_'.$lang.'.json';
+		$expected = 'cache_tree_'.$lang.'.php';
 		$this->assertTrue(
 			$result===$expected,
 			'expected type string : ' . PHP_EOL

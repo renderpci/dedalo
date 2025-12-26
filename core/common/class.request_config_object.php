@@ -203,9 +203,28 @@ class request_config_object extends stdClass {
 					);
 					continue;
 				}
+				if($value === null && $key!=='api_config') {
+					continue;
+				}
 				$this->{$method}($value);
 			}
 	}//end __construct
+
+
+
+	/**
+	* __SET_STATE
+	* Magic method to create a new object from an array.
+	* It is used to regenerate the object from a serialized string
+	* like from var_export action in cache.
+	*/
+	public static function __set_state($an_array) : object {
+        $obj = new request_config_object(
+			(object)$an_array
+		);
+
+        return $obj;
+    }//end __set_state
 
 
 

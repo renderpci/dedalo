@@ -9,6 +9,19 @@ class dd_cache {
 
 
 	/**
+	* GET_CACHE_FILE_PREFIX
+	* Normalized cache file name prefix
+	* using entity id and logged user id
+	* Like 'monedaiberica_1-' for use as 'monedaiberica_1-cache_permissions_table'
+	* @return string
+	*/
+	public static function get_cache_file_prefix() : string {
+		return DEDALO_ENTITY .'_'. logged_user_id() . '_';
+	}//end get_cache_file_prefix
+
+
+
+	/**
 	* PROCESS_AND_CACHE_TO_FILE
 	* Write result of process to cache to manage large calculations like
 	* component_security_access datalist
@@ -24,7 +37,7 @@ class dd_cache {
 			$process_file	= $options->process_file;
 			// object data
 			$data			= $options->data;
-			// string file_name. Sample: 1.cache_tree.json
+			// string file_name. Sample: 1.cache_tree.php
 			$file_name		= $options->file_name;
 			// wait until process ends
 			$wait			= $options->wait ?? false;
@@ -92,18 +105,17 @@ class dd_cache {
 	* Write result of process to cache to manage large calculations like
 	* component_security_access datalist
 	* @param object $options
-	* @return string|bool $status
-	* 	Returns last line on success or false on failure.
+	* @return bool $result
 	*/
-	public static function cache_to_file(object $options) : string|bool {
+	public static function cache_to_file(object $options) : bool {
 
 		// options
-			// object data
-			$data		= $options->data;
-			// string file_name. Sample	: 1.cache_tree.json
-			$file_name	= $options->file_name;
+			// data
+			$data = $options->data;
+			// file_name. E.g. '1.cache_tree.php'
+			$file_name = $options->file_name;
 			// prefix
-			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
+			$prefix = $options->prefix ?? dd_cache::get_cache_file_prefix();
 
 		// base_path. Used to save the files. Usually '/tmp'
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -116,18 +128,18 @@ class dd_cache {
 			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// file_path
-			$file_path	= $base_path . '/' . $prefix . $file_name;
+			$file_path = $base_path . '/' . $prefix . $file_name;
 
-		// string data
-			$string_data = json_encode($data, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-
-		// save data to file
-			$result = file_put_contents($file_path, $string_data, LOCK_EX);
-			if ($result===false) {
+		// Write data to file. Using var_export enables the Opcode cache for this file.
+			try {
+				$write_result = file_put_contents($file_path, '<?php return ' . var_export($data, true) . ';');
+				$result = $write_result !== false;
+			} catch (Exception $e) {
 				debug_log(__METHOD__
 					." Error on write file. file_path:  " . $file_path
 					, logger::ERROR
 				);
+				$result = false;
 			}
 
 		// debug
@@ -145,35 +157,19 @@ class dd_cache {
 
 
 	/**
-	* GET_CACHE_FILE_PREFIX
-	* Normalized cache file name prefix
-	* using entity id and logged user id
-	* Like 'monedaiberica_1-' for use as 'monedaiberica_1-cache_permissions_table'
-	* @return string
-	*/
-	public static function get_cache_file_prefix() : string {
-		return DEDALO_ENTITY .'_'. logged_user_id() . '_';
-		// return session_id() . '_';
-	}//end get_cache_file_prefix
-
-
-
-	/**
 	* CACHE_FROM_FILE
 	* Reads cache file contents
 	* @param object $options
-	* @return string|bool $contents
-	* 	Returns string content of the file or false on failure.
+	* @return mixed $contents
+	* 	Returns mixed content of the file or false on failure.
 	*/
-	public static function cache_from_file(object $options) : string|bool {
+	public static function cache_from_file(object $options) : mixed {
 
 		// options
-			// string file_name. Sample: 1.cache_tree.json
-			$file_name	= $options->file_name;
+			// string file_name. Sample: 1.cache_tree.php
+			$file_name = $options->file_name;
 			// prefix. (!) If you set custom prefix, the file created will not be deleted automatically on logout/quit
-			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
-			// use_cache
-			$use_cache	= $options->use_cache ?? true;
+			$prefix = $options->prefix ?? dd_cache::get_cache_file_prefix();
 
 		// base_path. Used to save the files. Usually '/tmp'
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -187,36 +183,16 @@ class dd_cache {
 
 		// file_path
 			$file_path = $base_path . '/' . $prefix . $file_name;
-
-		// cache
-			static $cache_from_file_cache = [];
-			if ($use_cache===true) {
-				// if (isset($cache_from_file_cache[$file_path])) {
-				if (array_key_exists($file_path, $cache_from_file_cache)) {
-					return $cache_from_file_cache[$file_path];
-				}
-			}
-
-		// check file exists
 			if (!file_exists($file_path)) {
 				return false;
 			}
 
-		// contents
-			$contents = file_get_contents($file_path);
-			if ($contents===false) {
-				// error reading the file
-				debug_log(__METHOD__
-					. ' Warning: cache file not found ! . This could be an error or a test for file' . PHP_EOL
-					. ' file_path: '.to_string($file_path)
-					, logger::WARNING
-				);
-			}
-			// debug_log(__METHOD__." Returning file cache contents successfully:  ".to_string($file_path), logger::ERROR);
 
-		// cache
-			if ($use_cache===true) {
-				$cache_from_file_cache[$file_path] = $contents; // string JSON encoded data
+		// Include file. Note that PHP Opcode caches the file.
+			try {
+				$contents = include $file_path;
+			} catch (Exception $e) {
+				$contents = false;
 			}
 
 
@@ -234,7 +210,7 @@ class dd_cache {
 	public static function cache_file_exists(object $options) : bool {
 
 		// options
-			// string file_name. Sample: 1.cache_tree.json
+			// string file_name. Sample: 1.cache_tree.php
 			$file_name	= $options->file_name;
 			// prefix. (!) If you set custom prefix, the file created will not be deleted automatically on logout/quit
 			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();

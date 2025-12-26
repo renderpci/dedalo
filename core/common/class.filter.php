@@ -66,7 +66,7 @@ abstract class filter {
 					if(!isset($user_projects_keys[$key])) {
 						$user_projects[] = $child_locator;
 						$user_projects_keys[$key] = true;
-					}						
+					}
 				}
 			}
 
@@ -96,6 +96,16 @@ abstract class filter {
 
 
 	/**
+	 * GET_PROJECTS_CACHE_NAME
+	 * @return string
+	 */
+	public static function get_projects_cache_name() : string {
+		return 'cache_ar_projects.php';
+	}//end get_projects_cache_name
+
+
+
+	/**
 	* CLEAN_CACHE
 	* @param int $user_id
 	* @param string $component_tipo
@@ -119,7 +129,7 @@ abstract class filter {
 			// 	unset($_SESSION['dedalo']['config'][$cache_key]);
 			// }
 		// file cache
-			$file_name = 'cache_ar_projects.json';
+			$file_name = filter::get_projects_cache_name();
 			dd_cache::delete_cache_files(
 				[$file_name]
 			);
@@ -158,20 +168,14 @@ abstract class filter {
 					if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
 						return filter::$user_authorized_projects_cache[$cache_key];
 					}
-				// session cache
-					// if (isset($_SESSION['dedalo']['config'][$cache_key])) {
-					// 	// set value
-					// 	filter::$user_authorized_projects_cache[$cache_key] = $_SESSION['dedalo']['config'][$cache_key];
-					// 	return $_SESSION['dedalo']['config'][$cache_key];
-					// }
 				// file cache
-					$file_cache = dd_cache::cache_from_file((object)[
-						'file_name'	=> 'cache_ar_projects.json'
+					$ar_projects = dd_cache::cache_from_file((object)[
+						'file_name'	=> filter::get_projects_cache_name()
 					]);
-					if (!empty($file_cache)) {
-						$ar_projects = json_handler::decode($file_cache);
-						// set value
+					if (!empty($ar_projects)) {
+						// set static cache
 						filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+
 						return $ar_projects;
 					}
 			}
@@ -259,8 +263,8 @@ abstract class filter {
 					'list', // string mode
 					DEDALO_DATA_LANG, // string lang
 					$current_locator->section_tipo // string section_tipo
-				);				
-				$term_data = $component_term->get_data();			
+				);
+				$term_data = $component_term->get_data();
 				$label = component_string_common::get_value_with_fallback_from_data(
 					$term_data,
 					false,
@@ -278,7 +282,7 @@ abstract class filter {
 					$current_locator->section_tipo // string section_tipo
 				);
 				$order_data		= $order_component->get_data();
-				$order_value	= (int)($order_data[0]->value ?? 0);			
+				$order_value	= (int)($order_data[0]->value ?? 0);
 
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
@@ -314,12 +318,10 @@ abstract class filter {
 			if ($use_cache===true) {
 				// static cache
 					filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
-				// session cache
-					// $_SESSION['dedalo']['config'][$cache_key] = $ar_projects;
-				// file cache
+				// file cache write
 					dd_cache::cache_to_file((object)[
 						'data'		=> $ar_projects,
-						'file_name'	=> 'cache_ar_projects.json'
+						'file_name'	=> filter::get_projects_cache_name()
 					]);
 			}
 

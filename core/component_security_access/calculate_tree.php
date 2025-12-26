@@ -73,4 +73,4 @@
 	}
 
 // write result to file as text
-	echo json_encode($datalist);
+	echo '<?php return ' . var_export($datalist, true) . ';';

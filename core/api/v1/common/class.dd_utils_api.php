@@ -324,7 +324,7 @@ final class dd_utils_api {
 			// precalculate profiles datalist security access in background
 			// This file is generated on every user login, launching the process in background
 			// or, when current lang is not cached yet (on user change data lang in menu)
-			// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
+			// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.php'
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']) && login::is_logged()===true) {
 				$cache_file_name = component_security_access::get_cache_tree_file_name(
 					$dedalo_application_lang ?? DEDALO_APPLICATION_LANG

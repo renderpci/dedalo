@@ -99,9 +99,9 @@ class section_record_data {
 	// A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	protected readonly string $section_tipo;
 
-	// int|null section_id
+	// int section_id
 	// A numerical identifier for the section. Used as the primary lookup key in the WHERE clauses.
-	protected readonly ?int $section_id;
+	protected readonly int $section_id;
 
 	// string table.
 	// The name of the table to query.
@@ -144,7 +144,7 @@ class section_record_data {
 
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
-		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo);
+		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
 
 		// Data columns
 		$this->data = new stdClass();
@@ -177,7 +177,7 @@ class section_record_data {
 	* @return array
 	*/
 	public function get_columns_name() : array {
-		
+
 		return $this->columns_name;
 	}//end get_columns_name
 
@@ -222,7 +222,7 @@ class section_record_data {
 					);
 					throw new Exception(
 						"JSON decode error for column " . $column . ": " . json_last_error_msg()
-					);			
+					);
 				}
 			}
 
@@ -292,7 +292,7 @@ class section_record_data {
 
 		// Set or change the data of the given key
 		$this->data->$column->$key = $data;
-		
+
 
 		return true;
 	}//end set_key_data
@@ -347,7 +347,7 @@ class section_record_data {
 
 		return $this->data->$column->$key ?? null;
 	}//end get_key_data
-	
+
 
 
 }//end class section_record_data
