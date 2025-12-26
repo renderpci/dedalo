@@ -189,7 +189,7 @@ class login extends common {
 			// give password of v6
 			if( empty($password_data) && $username==='root' ){
 				$password_data = $component_password->get_v6_root_password_data();
-			}		
+			}
 
 			// password length check
 				if( empty($password_data) || strlen($password_data)<8 ) {
@@ -842,24 +842,28 @@ class login extends common {
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
 
-				// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
-				dd_cache::delete_cache_files();
+				try {
+					// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
+					dd_cache::delete_cache_files();
 
-				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
-				debug_log(__METHOD__
-					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
-					, logger::DEBUG
-				);
-				dd_cache::process_and_cache_to_file((object)[
-					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
-					'data'			=> (object)[
-						'session_id'	=> session_id(),
-						'user_id'		=> $user_id,
-						'lang'			=> DEDALO_APPLICATION_LANG
-					],
-					'file_name'		=> $cache_file_name,
-					'wait'			=> false
-				]);
+					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
+					debug_log(__METHOD__
+						." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
+						, logger::DEBUG
+					);
+					dd_cache::process_and_cache_to_file((object)[
+						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+						'data'			=> (object)[
+							'session_id'	=> session_id(),
+							'user_id'		=> $user_id,
+							'lang'			=> DEDALO_APPLICATION_LANG
+						],
+						'file_name'		=> $cache_file_name,
+						'wait'			=> false
+					]);
+				} catch (Exception $e) {
+					debug_log(__METHOD__." $e ", logger::CRITICAL);
+				}
 			}
 
 		// user image
@@ -1469,7 +1473,7 @@ class login extends common {
 	* @return array
 	*/
 	public static function get_v6_root_db_data(): array {
-		
+
 		return [-1];
 
 	}//end get_v6_root_db_data
@@ -1487,11 +1491,11 @@ class login extends common {
 	* Here we expect only one user, but could exists more than one with the the same name potentially.
 	*/
 	public static function get_users_with_name( string $username ) : array {
-		
+
 		// SQO way
 			// $sqo = json_decode('
 			// 	{
-			// 	  "select": [{"column": "section_id"}],	
+			// 	  "select": [{"column": "section_id"}],
 			// 	  "section_tipo": [
 			// 	    "'.DEDALO_SECTION_USERS_TIPO.'"
 			// 	  ],
@@ -1526,22 +1530,22 @@ class login extends common {
 			// 	$ar_section_id[] = (int)$row->section_id;
 			// }
 
-		// direct way. Note that this search do not has the restrictions of the SQO way (section_id > 0)		
+		// direct way. Note that this search do not has the restrictions of the SQO way (section_id > 0)
 			$sql  = 'SELECT section_id' . PHP_EOL;
 			$sql .= 'FROM matrix_users' . PHP_EOL;
 			$sql .= 'WHERE section_tipo = \'' . DEDALO_SECTION_USERS_TIPO .'\'' . PHP_EOL;
 			$sql .= 'AND matrix_users.string::jsonb @> $1' . PHP_EOL;
 			$sql .= 'ORDER BY section_id ASC'  . PHP_EOL;
 			$sql .= 'LIMIT 1';
-		
+
 			$result = matrix_db_manager::exec_search($sql, [
 				'{"'.DEDALO_USER_NAME_TIPO.'":[{"value": "'.$username.'"}]}'
 			]);
 
-			if (!$result) {				
+			if (!$result) {
 				return [];
 			}
-			
+
 			// Fetch all results
 			$ar_section_id = [];
 			while ($row = pg_fetch_assoc($result)) {
@@ -1575,11 +1579,11 @@ class login extends common {
 			$sql .= 'AND matrix_users.string::jsonb @> $1' . PHP_EOL;
 			$sql .= 'ORDER BY section_id ASC' . PHP_EOL;
 			$sql .= 'LIMIT 1';
-		
+
 			$result = matrix_db_manager::exec_search($sql, [
 				'{"'.$code_component_tipo.'":[{"lang": "lg-nolan", "value": "'.$code.'"}]}'
 			]);
-			
+
 			if (!$result) {
 				return [];
 			}
