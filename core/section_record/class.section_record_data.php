@@ -99,9 +99,9 @@ class section_record_data {
 	// A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	protected readonly string $section_tipo;
 
-	// int|null section_id
+	// int section_id
 	// A numerical identifier for the section. Used as the primary lookup key in the WHERE clauses.
-	protected readonly ?int $section_id;
+	protected readonly int $section_id;
 
 	// string table.
 	// The name of the table to query.
