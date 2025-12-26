@@ -30,6 +30,8 @@ class component_string_common extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = true;
 
+	// default records separator
+	protected string $default_records_separator = ' | ';
 
 	/**
 	* GET_STRING_COMPONENTS
