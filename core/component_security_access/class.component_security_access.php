@@ -259,11 +259,12 @@ class component_security_access extends component_common {
 				// v6 children
 				$v6_children = [];
 				foreach ($section_properties->source->request_config as $item_request_config) {
-					$ddo_map = $item_request_config->show->ddo_map;
-					if(isset($ddo_map)){
-						$v6_children = array_filter($ddo_map, function($el) use ($section_tipo){
+					if(isset($item_request_config->show->ddo_map)){
+						$ddo_map = $item_request_config->show->ddo_map;
+						$filtered = array_filter($ddo_map, function($el) use ($section_tipo){
 							return ($el->parent === 'self' || $el->parent === $section_tipo);
 						});
+						$v6_children = array_merge($v6_children, $filtered);
 					}
 				}
 
