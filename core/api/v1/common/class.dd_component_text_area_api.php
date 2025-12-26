@@ -75,54 +75,6 @@ final class dd_component_text_area_api {
 
 			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);
 
-
-		// (!) Moved to self component portal API method 'remove_locator'
-		// tags_index. indexing_component. Remove locators with the tag_id given
-			// $properties					= $component_text_area->get_properties();
-			// $tags_index					= $properties->tags_index;
-			// $indexing_component_tipo		= $tags_index->tipo;
-			// $indexing_section_tipo		= $tags_index->section_tipo==='self' ? $section_tipo : $tags_index->section_tipo;
-			// $indexing_section_id			= $tags_index->section_id==='self' ? $section_id : $tags_index->section_id;
-			// $indexing_model_name			= ontology_node::get_model_by_tipo($indexing_component_tipo,true);
-			// $indexing_lang				= common::get_element_lang($indexing_component_tipo, DEDALO_DATA_LANG);
-			// $indexing_component			= component_common::get_instance(
-			// 	$indexing_model_name,
-			// 	$indexing_component_tipo,
-			// 	$indexing_section_id,
-			// 	'list',
-			// 	$indexing_lang,
-			// 	$indexing_section_tipo
-			// );
-			// // stored locator sample
-			// 	// {
-			// 	// 	"type": "dd96",
-			// 	// 	"tag_id": "19",
-			// 	// 	"section_id": "2",
-			// 	// 	"section_tipo": "dc1",
-			// 	// 	"section_top_id": "2",
-			// 	// 	"section_top_tipo": "ich100",
-			// 	// 	"tag_component_tipo": "rsc36",
-			// 	// 	"from_component_tipo": "rsc860"
-			// 	// }
-
-			// $indexing_component_original_dato = $indexing_component->get_dato();
-
-			// $pseudo_locator = new stdClass();
-			// 	$pseudo_locator->tag_id	= $tag_id;
-			// 	$pseudo_locator->type	= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
-
-			// $ar_properties	= ['tag_id','type']; // properties to compare
-			// $removed		= $indexing_component->remove_locator_from_data($pseudo_locator, $ar_properties);
-			// if ($removed===true) {
-			// 	$indexing_component_current_dato = $indexing_component->get_dato();
-			// 	$total = count($indexing_component_original_dato) - count($indexing_component_current_dato);
-			// 	$indexing_component->Save();
-			// 	$response->msg[] = 'Deleted '.$total.' locators with tag_id '.$tag_id ." ($indexing_model_name - $indexing_component_tipo)";
-			// }else{
-			// 	$response->msg[] = 'No locators are removed with tag_id '.$tag_id ." ($indexing_model_name - $indexing_component_tipo)";
-			// }
-
-
 		// response result
 			$response->result = ($n_deleted > 0);
 
