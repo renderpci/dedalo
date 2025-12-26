@@ -518,10 +518,10 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* test_get_dato_unchanged
+	* test_get_data_unchanged
 	* @return void
 	*/
-	public function test_get_dato_unchanged() {
+	public function test_get_data_unchanged() {
 
 		// default dato
 		foreach (get_elements() as $element) {
@@ -538,7 +538,7 @@ final class component_common_test extends TestCase {
 			);
 
 			$dato			= $component->get_dato();
-			$dato_unchanged	= $component->get_dato_unchanged();
+			$data_unchanged	= $component->get_data_unchanged();
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
@@ -549,13 +549,13 @@ final class component_common_test extends TestCase {
 			// note that component_number change dato type like integer for float
 			// note
 			// $this->assertTrue(
-			// 	$dato===$dato_unchanged,
-			// 	'dato_unchanged expected is equal as dato '. $element->model .PHP_EOL
+			// 	$dato===$data_unchanged,
+			// 	'data_unchanged expected is equal as dato '. $element->model .PHP_EOL
 			// 	. 'dato          : ' . json_encode($dato[0]) . ' type: '.gettype($dato[0]) .PHP_EOL
-			// 	. 'dato_unchanged: ' . json_encode($dato_unchanged[0]) . ' type: '.gettype($dato_unchanged[0])
+			// 	. 'data_unchanged: ' . json_encode($data_unchanged[0]) . ' type: '.gettype($data_unchanged[0])
 			// );
 		}
-	}//end test_get_dato_unchanged
+	}//end test_get_data_unchanged
 
 
 
@@ -1579,10 +1579,10 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_update_dato_version
+	* TEST_update_data_version
 	* @return void
 	*/
-	public function test_update_dato_version() {
+	public function test_update_data_version() {
 
 		// default dato
 		foreach (get_elements() as $element) {
@@ -1598,7 +1598,7 @@ final class component_common_test extends TestCase {
 				false
 			);
 
-			$response = $component::update_dato_version((object)[
+			$response = $component::update_data_version((object)[
 				'update_version'	=> [6,0,0],
 				'tipo'				=> $element->tipo,
 				'section_tipo'		=> $element->section_tipo,
@@ -1626,7 +1626,7 @@ final class component_common_test extends TestCase {
 				'response->msg type expected integer. current type: ' .gettype($response) .' - '.$element->model
 			);
 		}
-	}//end test_update_dato_version
+	}//end test_update_data_version
 
 
 

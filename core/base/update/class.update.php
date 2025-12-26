@@ -788,19 +788,19 @@ class update {
 								false // bool cache (!) Set false always for update to prevent memory issues (is sync with section cache)
 							);
 							$component->get_dato();
-							$dato_unchanged	= $component->get_dato_unchanged();
+							$data_unchanged	= $component->get_data_unchanged();
 							$reference_id	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
 							$update_options = new stdClass();
 								$update_options->update_version	= $update_version;
-								$update_options->dato_unchanged	= $dato_unchanged;
+								$update_options->data_unchanged	= $data_unchanged;
 								$update_options->reference_id	= $reference_id;
 								$update_options->tipo			= $current_component_tipo;
 								$update_options->section_id		= $section_id;
 								$update_options->section_tipo	= $current_section_tipo;
-								$update_options->context		= 'update_component_dato';
+								$update_options->context		= 'update_component_data';
 
-							$response = $model_name::update_dato_version($update_options);
+							$response = $model_name::update_data_version($update_options);
 							switch ((int)$response->result) {
 								case 0:
 									// skip all updates of current component because don't have update to this version
@@ -842,14 +842,14 @@ class update {
 							/*
 							$ar_time_machine_obj = tool_time_machine::get_ar_component_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo, 0, 0);
 							foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
-								$dato_unchanged = $current_time_machine_obj->get_dato();
+								$data_unchanged = $current_time_machine_obj->get_dato();
 
 								# Different options override
-								$update_options->dato_unchanged = $dato_unchanged;
+								$update_options->data_unchanged = $data_unchanged;
 								$update_options->context 		= 'update_time_machine_dato';
 
-								$response 		= $model_name::update_dato_version($update_options);
-								#debug_log(__METHOD__." UPDATE_DATO_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
+								$response 		= $model_name::update_data_version($update_options);
+								#debug_log(__METHOD__." UPDATE_DATA_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result === 1){
 									$current_time_machine_obj->set_dato($response->new_dato);
 									$current_time_machine_obj->Save();

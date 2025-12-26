@@ -164,27 +164,27 @@ class component_password extends component_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
+			$options->data_unchanged 	= null;
 			$options->reference_id 		= null;
 			$options->tipo 				= null;
 			$options->section_id 		= null;
 			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->context 			= 'update_component_data';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
+			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id ?? '';
 
 
@@ -200,7 +200,7 @@ class component_password extends component_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 
