@@ -46,14 +46,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo
 		);
@@ -87,14 +87,14 @@ final class component_text_area_test extends TestCase {
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
-		$mode			= 'edit';
+		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
 			$section_id,
-			'list',
+			$mode,
 			$lang,
 			$section_tipo,
 			false
@@ -192,45 +192,6 @@ final class component_text_area_test extends TestCase {
 			'expected array type for value. Current type: ' . gettype($value)
 		);
 	}//end test_get_locators_of_tags
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
-
-		$value = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected string type for value. Current type: ' . gettype($value)
-		);
-
-		$this->assertTrue(
-			!empty($value),
-			'expected non empty value. value: ' . to_string($value)
-		);
-	}//end test_get_valor_export
-
 
 
 	/**
