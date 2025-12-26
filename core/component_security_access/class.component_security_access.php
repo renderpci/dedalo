@@ -112,12 +112,12 @@ class component_security_access extends component_common {
 				// filtered by user data case
 
 				$user_component_security_access	= security::get_user_security_access($user_id);
-				$user_dato						= $user_component_security_access->get_dato() ?? [];
+				$user_data						= $user_component_security_access->get_data() ?? [];
 
 				$ar_auth_areas = [];
 				foreach ($ar_areas as $current_area) {
 
-					$found = array_find($user_dato, function($el) use($current_area){
+					$found = array_find($user_data, function($el) use($current_area){
 						return $el->tipo===$current_area->tipo;
 					});
 					if ($found!==null) {
@@ -654,8 +654,8 @@ class component_security_access extends component_common {
 				);
 				return false;
 			}
-			// current DDBB dato
-			$component_security_access_dato	= $component_security_access->get_dato() ?? [];
+			// current DDBB data
+			$component_security_access_data	= $component_security_access->get_data() ?? [];
 
 		// Iterate sections (normally like ts1,ts2) Generator version
 			$values_list_generator = function() use($ar_section_tipo, $permissions) {
@@ -708,7 +708,7 @@ class component_security_access extends component_common {
 			$unique_values = [];
 			foreach ($values_list_generator() as $value) {
 				// check if already exists
-				$found = array_find($component_security_access_dato, function($el) use($value) {
+				$found = array_find($component_security_access_data, function($el) use($value) {
 					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
 				});
 				if (is_object($found)) {
@@ -718,15 +718,15 @@ class component_security_access extends component_common {
 					$unique_values[] = $value;
 				}
 			}
-			$new_dato = array_merge($component_security_access_dato, $unique_values);
+			$new_data = array_merge($component_security_access_data, $unique_values);
 
 		// Save calculated data
-			$component_security_access->set_dato($new_dato);
+			$component_security_access->set_data($new_data);
 			$component_security_access->Save();
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$added = array_filter($new_dato, function($el) use($ar_section_tipo) {
+				$added = array_filter($new_data, function($el) use($ar_section_tipo) {
 					return in_array($el->section_tipo, $ar_section_tipo);
 				});
 				dump($added, ' added ++ '.to_string($ar_section_tipo));
