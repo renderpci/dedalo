@@ -23,7 +23,6 @@ interface component_string_interface {
 class component_string_common extends component_common {
 
 
-
 	/**
 	* CLASS VARS
 	*/
@@ -109,6 +108,7 @@ class component_string_common extends component_common {
 
 
 
+	/**
 	 * SANITIZE_TEXT
 	 * Sanitize text to be used as html content.
 	 * Remove posible malicious <script> or <noscript> tags
@@ -554,10 +554,10 @@ class component_string_common extends component_common {
 		$path_end = end($query_object->path);
 		$component_tipo = $path_end->component_tipo;
 		$translatable = ontology_node::get_translatable($component_tipo);
-		
+
 		// column
 		$column = section_record_data::get_column_name( get_called_class() );
-		
+
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
@@ -719,9 +719,9 @@ class component_string_common extends component_common {
 				// 		$query_object->$logical_operator = $ar_query_object;
 				// }
 
-				// sample: 
+				// sample:
 				// $table_alias.string::jsonb -> 'dd132' @> '[{"value": "pepe"}]'
-				
+
 				// sql using GIN index
 				$query_object->sentence = "{$table_alias}.{$column}::jsonb -> '$component_tipo' @> _Q1_";
 
