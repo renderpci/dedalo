@@ -523,7 +523,7 @@ class component_text_area extends component_string_common {
 			$component_text_area->set_data($new_data);
 			// save
 			$component_text_area->save();
-			
+
 		}else{
 			// inform that the data item will be not deleted from data
 			debug_log(__METHOD__
@@ -1059,7 +1059,7 @@ class component_text_area extends component_string_common {
 							? true
 							: false;
 					}
-					
+
 					$note_obj->$note_type = $note_data;
 				}
 
@@ -1070,7 +1070,7 @@ class component_text_area extends component_string_common {
 
 		return $ar_annotations;
 	}//end get_component_indexations_terms
-	
+
 
 
 	/**
