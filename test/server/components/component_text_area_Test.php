@@ -1407,4 +1407,100 @@ final class component_text_area_test extends TestCase {
 
 
 
+	/**
+	* TEST_get_plain_text
+	* @return void
+	*/
+	public function test_get_plain_text() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		// clean text
+		$plain_text = '
+			Some HTML content with links.
+			Text after TC
+			Text between index
+			Lang text
+			Text after svg
+			Text after geo
+			Text after page
+			Text after person
+			Text after note
+			Text between reference
+			Text after all tags
+		';
+		$value = '
+			<p>Some <strong>HTML</strong> content with <a href="#">links</a>.</p>
+			<p>[TC_00:01:25.627_TC]Text after TC</p>
+			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
+			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
+			<p>[geo-n-10-10-data::data]Text after geo</p>
+			<p>[page-n-3]Text after page</p>
+			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Text after person</p>
+			<p>[note-a-1-1-data:{\'section_tipo\':\'rsc326\',\'section_id\':1}:data]Text after note</p>
+			<p>[reference-n-1-reference 1-data::data]Text between reference[/reference-n-1-reference 1-data::data]</p>
+			<p>Text after all tags</p>
+		';
+
+		// Test with HTML content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = $value;
+			$item_value->lang = $lang;
+
+		$component->set_data([$item_value]);
+		$value = $component->get_plain_text();
+
+		// 1 text is the result is string
+		$this->assertTrue(
+			gettype($value)==='string',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+		// 2 text is the result is not empty
+		$this->assertTrue(
+			!empty($value),
+				'expected value do not match:' . PHP_EOL
+				.' expected: !empty()' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+
+		// 3 Veryfy if result value is correct
+		$this->assertTrue(
+			($value === $plain_text),
+				'expected value do not match:' . PHP_EOL
+				.' expected: '. json_encode($plain_text) . PHP_EOL
+				.' value: '.json_encode($value)
+		);
+
+		// Test with empty content
+		$component->set_data(null);
+		$value = $component->get_plain_text();
+		
+		$this->assertTrue(
+			$value==='',
+				'expected empty string for empty content, got: '.to_string($value)
+		);
+	}//end test_get_plain_text
+
+
+
+
 }//end class
