@@ -542,11 +542,34 @@ class component_text_area extends component_string_common {
 	* Removes the tag in the given text returning the modified text
 	* @param string $tag_id
 	* @param string $tag_type
-	* @param string $text_raw
+	* @param string $raw_text
 	*
-	* @return object $response
+	* @return object|null $response
 	*/
-	public static function delete_tag_from_text(string $tag_id, string $tag_type, string $text_raw) : object {
+	public static function delete_tag_from_text(string $tag_id, string $tag_type, string $raw_text) : ?object {
+
+		// check tag_id, tag_type are valid
+			if(empty($tag_id) || empty($tag_type)) {
+				debug_log(__METHOD__
+					. " Error: tag_id is invalid. " . PHP_EOL
+					.' tag_id: '   . $tag_id . PHP_EOL
+					.' tag_type: ' . $tag_type . PHP_EOL
+					.' raw_text: ' . $raw_text
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// empty $raw_text case
+			if (empty($raw_text)) {
+				return null;
+			}
+
+		// invalid tag type
+		$valid = in_array( $tag_type, TR::$tag_types);
+		if($valid === false){
+			return null;
+		}
 
 		// Pattern for in and out tags
 			$pattern = TR::get_mark_pattern(
@@ -558,11 +581,11 @@ class component_text_area extends component_string_common {
 
 		// Will replace matched tags with a empty string
 			$replacement		= '';
-			$text_raw_updated	= preg_replace($pattern, $replacement, $text_raw, -1, $remove_count);
+			$raw_text_updated	= preg_replace($pattern, $replacement, $raw_text, -1, $remove_count);
 
 		// response
 			$response = new stdClass();
-				$response->result		= $text_raw_updated;
+				$response->result		= $raw_text_updated;
 				$response->remove_count	= $remove_count;
 				$response->msg			= 'OK. Request done';
 
