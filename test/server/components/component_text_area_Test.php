@@ -1726,5 +1726,84 @@ final class component_text_area_test extends TestCase {
 
 
 
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		// Test string input
+		$value = $component->conform_import_data('Test string', 'column_name');
+		
+		// 1 Test the $value type
+		$this->assertTrue(
+			gettype($value)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+		// 2 Test the $value->result type
+		$this->assertTrue(
+			gettype($value->result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($value->result)
+		);
+		// 3 Test the $value->result data
+		$this->assertTrue(
+			$value->result[0]==='<p>Test string</p>',
+				'expected value do not match:' . PHP_EOL
+				.' expected: Test string' . PHP_EOL
+				.' value: '.$value->result[0]
+		);
+
+
+		// Test with JSON input
+		$json_data = '["<p>Test content in <strong>JSON</strong></p>"]';
+		$value = $component->conform_import_data($json_data, 'column_name');
+
+		// 4 Test the $value type
+		$this->assertTrue(
+			gettype($value)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+		// 5 Test the $value->result type
+		$this->assertTrue(
+			gettype($value->result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($value->result)
+		);
+		// 6 Test the $value->result data
+		$this->assertTrue(
+			$value->result[0]==='<p>Test content in <strong>JSON</strong></p>',
+				'expected value do not match:' . PHP_EOL
+				.' expected: <p>Test content in <strong>JSON</strong></p>' . PHP_EOL
+				.' value: '.$value->result[0]
+		);
+	}//end test_conform_import_data
+
+
+
+
 
 }//end class
