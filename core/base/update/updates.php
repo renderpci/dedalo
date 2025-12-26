@@ -94,6 +94,14 @@ $updates->$v = new stdClass();
 				ANALYZE matrix_langs;
 			');
 
+			// create index for matrix_time_machine. The default search is performed using the following: section_id, section_tipo, tipo, lang, timestamp DESC.
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "idx_matrix_time_machine_search_default";
+				CREATE INDEX IF NOT EXISTS idx_matrix_time_machine_search_default ON "matrix_time_machine" (
+					section_id, section_tipo, tipo, lang, timestamp DESC
+				);
+				ANALYZE matrix_time_machine;
+			');
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
 
