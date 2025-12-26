@@ -144,7 +144,7 @@ class section_record_data {
 
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
-		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo);
+		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
 
 		// Data columns
 		$this->data = new stdClass();
