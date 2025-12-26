@@ -248,22 +248,6 @@ class component_text_area extends component_string_common {
 
 
 
-
-	// /**
-	// * GET_VALOR_EXPORT
-	// * Return component value sent to export data
-	// * @return string|null $valor_export
-	// */
-	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-	// 	$valor_export = $this->get_valor($lang);
-
-	// 	return $valor_export;
-	// }//end get_valor_export
-
-
-
-
 	/**
 	* CHANGE TAG STATE
 	* Changes the tag state from given tag inside the text
