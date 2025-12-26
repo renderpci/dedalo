@@ -206,10 +206,10 @@ class section extends common {
 					. ' model: ' . to_string($model)
 					, logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
-					$bt = debug_backtrace();
-					dump($bt, ' bt ++ '.to_string());
-				}
+				// if(SHOW_DEBUG===true) {
+				// 	$bt = debug_backtrace();
+				// 	dump($bt, ' bt ++ '.to_string());
+				// }
 			}
 
 		// cache

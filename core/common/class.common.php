@@ -1104,7 +1104,7 @@ abstract class common {
 		// Debug
 		if(SHOW_DEBUG===true) {
 			$get_json_start_time = start_time();
-		}		
+		}
 
 		// Create options object to easy select from JSON controller
 		$options = new stdClass();
@@ -1124,7 +1124,7 @@ abstract class common {
 			debug_log(__METHOD__
 				. " Error loading json class file " . PHP_EOL
 				. ' Caught exception: ' . $e->getMessage()
-				. ' path: ' . $path						
+				. ' path: ' . $path
 				, logger::ERROR
 			);
 		}
@@ -2609,7 +2609,7 @@ abstract class common {
 						. " Error. Empty section/area model " . PHP_EOL
 						. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
 						. ' section_model: ' . to_string($section_model) . PHP_EOL
-						. ' current tipo: '  . to_string($tipo)						
+						. ' current tipo: '  . to_string($tipo)
 						, logger::ERROR
 					);
 					return [];
