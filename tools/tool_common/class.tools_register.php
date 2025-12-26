@@ -1285,12 +1285,12 @@ class tools_register {
 	* GET_CACHE_USER_TOOLS_FILE_NAME
 	* Normalized cache tool name
 	* Note that on save by dd_cache, file will be customized as
-	* 	'development_1_' + 'cache_user_tools.json'
+	* 	'development_1_' + 'cache_user_tools.php'
 	* @return string
 	*/
 	public static function get_cache_user_tools_file_name() : string {
 
-		return 'cache_user_tools.json';
+		return 'cache_user_tools.php';
 	}//end get_cache_user_tools_file_name
 
 

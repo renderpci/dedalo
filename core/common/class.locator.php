@@ -89,6 +89,22 @@ class locator extends stdClass {
 
 
 	/**
+	* __SET_STATE
+	* Magic method to create a new object from an array.
+	* It is used to regenerate the object from a serialized string (var_export)
+	* like from var_export action in cache.
+	*/
+	public static function __set_state($an_array) : object {
+        $obj = new locator(
+			(object)$an_array
+		);
+
+        return $obj;
+    }//end __set_state
+
+
+
+	/**
 	* SET_ID
 	* @param int $value
 	* @return bool

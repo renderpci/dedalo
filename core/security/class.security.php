@@ -191,16 +191,11 @@ class security {
 	private static function get_permissions_table() : array {
 		$start_time=start_time();
 
-		// static cache. Cached once by script run
-			if (isset(security::$permissions_table_cache)) {
-				return security::$permissions_table_cache;
-			}
-
 		// cache file
 			$use_cache = true;
 			if ($use_cache===true) {
 
-				$cache_file_name = 'cache_permissions_table.json';
+				$cache_file_name = 'cache_permissions_table.php';
 
 				// cache file check
 				$cache_data	= dd_cache::cache_from_file((object)[
@@ -208,20 +203,20 @@ class security {
 				]);
 
 				// existing value case returns from cache file
-				if (!empty($cache_data)) {
-
-					$permissions_table = json_decode(
-						$cache_data,
-						true // cast to associative array (JSON encoded as object)
-					);
-
-					// set static cache
-					security::$permissions_table_cache = $permissions_table;
+				if (!empty($cache_data) && is_array($cache_data)) {
 
 					debug_log(__METHOD__
-						." Returning permissions_table from cache file: $cache_file_name. Time: " . exec_time_unit($start_time, 'ms') . ' ms'
+						." Returning permissions_table from cache file: $cache_file_name : " . exec_time_unit($start_time, 'ms') . ' ms'
 						, logger::DEBUG
 					);
+
+					$permissions_table = $cache_data;
+
+					// debug
+					if(SHOW_DEBUG===true) {
+						// metrics
+						metrics::$security_permissions_table_time = exec_time_unit($start_time);
+					}
 
 					return $permissions_table;
 				}
@@ -243,10 +238,7 @@ class security {
 				$permissions_table[$permissions_key] = $item->value;
 			}
 
-		// set static cache
-			security::$permissions_table_cache = $permissions_table;
-
-		// cache file
+		// cache file write
 			if ($use_cache===true) {
 				// write cache data to file
 				dd_cache::cache_to_file((object)[
@@ -299,6 +291,7 @@ class security {
 	* and return the component instance
 	* @param int $user_id
 	* @return object|null $component_security_access
+	* Returns null if user profile is not found.
 	*/
 	public static function get_user_security_access(int $user_id) : ?object {
 

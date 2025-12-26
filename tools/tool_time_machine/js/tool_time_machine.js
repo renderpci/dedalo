@@ -220,7 +220,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				const template_columns = self.main_element.model==='section'
 					? null
 					: [
-						'5rem', // id
+						'8rem', // id
 						'8rem', // tm matrix_id
 						'8rem', // tm bulk_process_id
 						'11.2rem', // date (when)

@@ -94,6 +94,22 @@ $updates->$v = new stdClass();
 				ANALYZE matrix_langs;
 			');
 
+			// create index for matrix_time_machine. The default search is performed using the following: section_id, section_tipo, tipo, lang, timestamp DESC.
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "idx_matrix_time_machine_search_default";
+				CREATE INDEX IF NOT EXISTS idx_matrix_time_machine_search_default ON "matrix_time_machine" (
+					section_id, section_tipo, tipo, lang, timestamp DESC
+				);
+				ANALYZE matrix_time_machine;
+			');
+
+			// create index for matrix_activity. The diffusion_section_stats:update_user_activity_stats uses this index (ORDER BY id ASC).
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_activity_id_asc_idx";
+				CREATE INDEX IF NOT EXISTS matrix_activity_id_asc_idx ON "matrix_activity" USING btree (id ASC);
+				ANALYZE matrix_activity;
+			');
+
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
 
