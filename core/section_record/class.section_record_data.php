@@ -177,7 +177,7 @@ class section_record_data {
 	* @return array
 	*/
 	public function get_columns_name() : array {
-		
+
 		return $this->columns_name;
 	}//end get_columns_name
 
@@ -222,7 +222,7 @@ class section_record_data {
 					);
 					throw new Exception(
 						"JSON decode error for column " . $column . ": " . json_last_error_msg()
-					);			
+					);
 				}
 			}
 
@@ -292,7 +292,7 @@ class section_record_data {
 
 		// Set or change the data of the given key
 		$this->data->$column->$key = $data;
-		
+
 
 		return true;
 	}//end set_key_data
@@ -347,7 +347,7 @@ class section_record_data {
 
 		return $this->data->$column->$key ?? null;
 	}//end get_key_data
-	
+
 
 
 }//end class section_record_data
