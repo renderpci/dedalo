@@ -26,7 +26,7 @@ class component_security_access extends component_common {
 	*/
 	public static function get_cache_tree_file_name(string $lang) : string {
 
-		return 'cache_tree_'.$lang.'.json';
+		return 'cache_tree_'.$lang.'.php';
 	}//end get_cache_tree_file_name
 
 
@@ -77,34 +77,22 @@ class component_security_access extends component_common {
 			$use_cache = defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']);
 			if ($use_cache===true) {
 
-				// cache_file_name. Like 'cache_tree_'.DEDALO_APPLICATION_LANG.'.json'
-					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
+				// cache_file_name. Like 'cache_tree_'.DEDALO_APPLICATION_LANG.'.php'
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 
-				// cache from file. (!) This file is generated in background on every user login as 'entity_userID_cache_tree_lg-eng.json'
-					$contents = dd_cache::cache_from_file((object)[
-						'file_name' => $cache_file_name
-					]);
-					$datalist = (!empty($contents))
-						? json_decode($contents)
-						: null;
-					if (!empty($datalist)) {
-						$this->datalist = $datalist;
+			// cache from file. (!) This file is generated in background on every user login as 'entity_userID_cache_tree_lg-eng.php'
+				$datalist = dd_cache::cache_from_file((object)[
+					'file_name' => $cache_file_name
+				]);
+				if (!empty($datalist) && is_array($datalist)) {
+					$this->datalist = $datalist;
 						debug_log(__METHOD__
 							. ' Return already calculated and cached in file datalist. Time: ' . exec_time_unit($start_time,'ms').' ms' .PHP_EOL
 							. ' datalist total items: ' . (!empty($datalist) ? count($datalist) : 0) . PHP_EOL
-							. ' contents strlen: ' . strlen($contents)
+							// . ' contents strlen: ' . strlen($contents)
 							, logger::DEBUG
 						);
-						return $datalist;
-					}else{
-						if (!empty($contents)) {
-							debug_log(__METHOD__
-								. " Error decoding file contents from cache file" . PHP_EOL
-								. ' cache_file_name: ' . to_string($cache_file_name) . PHP_EOL
-								. ' contents: ' . $contents
-								, logger::ERROR
-							);
-						}
+						return $this->datalist;
 					}
 			}
 
@@ -179,7 +167,7 @@ class component_security_access extends component_common {
 				}
 
 				// area could be area, area_thesaurus, section, ...
-				$datalist_item = (object)[
+				$datalist_item = [
 					'tipo'			=> $current_area->tipo,
 					'section_tipo'	=> $section_tipo,
 					'model'			=> $current_area->model,
@@ -196,10 +184,11 @@ class component_security_access extends component_common {
 					// recursive calculated children area added too
 					$children = self::get_element_datalist($current_area->tipo);
 					// add already calculated section parents to the chain
-					foreach ($children as $child) {
-						$section_parents = array_merge( $ar_parent, $child->ar_parent);
-						$child->ar_parent = $section_parents;
+					foreach ($children as &$child) {
+						$section_parents = array_merge( $ar_parent, $child['ar_parent']);
+						$child['ar_parent'] = $section_parents;
 					}
+					unset($child); // break reference
 
 					$datalist = array_merge(
 						$datalist,
@@ -211,10 +200,11 @@ class component_security_access extends component_common {
 		// fix value
 			$this->datalist = $datalist;
 
-		// cache session. Store in session for speed
+		// cache file write
 			if ($use_cache===true) {
 				// cache to file.
 				// (!) This file is already generated on user login, launching the process in background
+				// Do no write here again.
 			}
 
 		// debug
@@ -282,7 +272,7 @@ class component_security_access extends component_common {
 
 				// create the children list of the v6 components
 				foreach ($v6_children as $ddo) {
-					$item = (object)[
+					$item = [
 						'tipo'			=> $ddo->tipo,
 						'section_tipo'	=> $section_tipo,
 						'model'			=> ontology_node::get_model_by_tipo($ddo->tipo, true),
@@ -294,7 +284,7 @@ class component_security_access extends component_common {
 
 				// add 'default' calculated items excluding components and section_groups
 				foreach ($children_recursive as $current_item) {
-					if (strpos($current_item->model, 'component_')===0 || $current_item->model==='section_group'){
+					if (strpos($current_item['model'], 'component_')===0 || $current_item['model']==='section_group'){
 						continue;
 					}
 					$children_list[] = $current_item;
@@ -311,7 +301,7 @@ class component_security_access extends component_common {
 
 		foreach ($children_list as $current_child) {
 
-			$parent_key = $current_child->parent;
+			$parent_key = $current_child['parent'];
 			$position = array_search($parent_key, $ar_parent);
 			if( $position===false ){
 				$ar_parent[] = $parent_key;
@@ -320,12 +310,12 @@ class component_security_access extends component_common {
 			}
 
 			// add
-			$item = (object)[
-				'tipo'			=> $current_child->tipo,
+			$item = [
+				'tipo'			=> $current_child['tipo'],
 				'section_tipo'	=> $section_tipo, // force current section_tipo
-				'model'			=> $current_child->model,
-				'label'			=> $current_child->label,
-				'parent'		=> $current_child->parent,
+				'model'			=> $current_child['model'],
+				'label'			=> $current_child['label'],
+				'parent'		=> $current_child['parent'],
 				'ar_parent'		=> $ar_parent
 			];
 			$datalist[] = $item;
@@ -431,7 +421,7 @@ class component_security_access extends component_common {
 				}
 
 			// get the ontology JSON format
-				$item = (object)[
+				$item = [
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
 					'model'			=> ontology_node::get_model_by_tipo($element_tipo, true),

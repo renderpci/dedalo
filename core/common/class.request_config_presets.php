@@ -17,20 +17,13 @@ class request_config_presets {
 	*/
 	public static function get_active_request_config() : array {
 
-		// cache
-		static $active_request_config_cache;		
-		if(isset($active_request_config_cache)) {
-			return $active_request_config_cache;
-		}
-
-		// cache
-		$cache_file_name = 'cache_active_request_config.json';
-		$cache_data_string	= dd_cache::cache_from_file((object)[
+		// cache file read
+		$cache_file_name = 'cache_active_request_config.php';
+		$cache_data	= dd_cache::cache_from_file((object)[
 			'file_name' => $cache_file_name
 		]);
-		if (!empty($cache_data_string)) {
-			$result = json_decode($cache_data_string);
-			return $result;
+		if (!empty($cache_data)) {
+			return $cache_data;
 		}
 
 		$active_request_config = [];
@@ -42,7 +35,7 @@ class request_config_presets {
 		$sql .= PHP_EOL . "WHERE section_tipo = $1";
 		$sql .= PHP_EOL . "AND matrix_list.relation::jsonb @> $2";
 		$sql .= PHP_EOL . "ORDER BY section_id ASC";
-		
+
 		$result = matrix_db_manager::exec_search($sql, [
 			DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO,
 			'{"dd1566":[{"section_tipo": "dd64", "section_id": "1"}]}'
@@ -66,7 +59,7 @@ class request_config_presets {
 		unset($info); // break reference
 
 		while ($row = pg_fetch_object($result)) {
-			
+
 			$section_tipo = $row->section_tipo;
 			$section_id   = $row->section_id;
 
@@ -84,7 +77,7 @@ class request_config_presets {
 			// 1. Simple values (string components)
 			$tipo_obj         = $get_raw_value('tipo');
 			$tipo             = $tipo_obj->value ?? '';
-			
+
 			$section_tipo_obj = $get_raw_value('section_tipo');
 			$current_section_tipo = $section_tipo_obj->value ?? ''; // Renamed to avoid collision
 
@@ -149,10 +142,7 @@ class request_config_presets {
 			}
 		}
 
-		// active_request_config_cache
-		$active_request_config_cache = $active_request_config;
-
-		// cache
+		// cache file write
 		dd_cache::cache_to_file((object)[
 			'file_name' => $cache_file_name,
 			'data' => $active_request_config
@@ -179,7 +169,7 @@ class request_config_presets {
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 			metrics::add_metric('presets_total_calls');
-		}		
+		}
 
 		// Get cached list of active_request_config
 		$active_request_config = self::get_active_request_config();
@@ -190,7 +180,7 @@ class request_config_presets {
 					$el->section_tipo === $section_tipo &&
 					$el->mode === $mode &&
 					$el->user_id == logged_user_id()); // filter by owner user
-		});		
+		});
 
 		// fallback to public presets
 		if (empty($found)) {
@@ -212,7 +202,7 @@ class request_config_presets {
 		}
 
 		// data (request config array)
-		$data = $found->data ?? [];		
+		$data = $found->data ?? [];
 
 
 		return $data;

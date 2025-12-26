@@ -4497,7 +4497,7 @@ abstract class common {
 				return $tools;
 			}
 
-		// user_tools (cached on file cache_user_tools.json)
+		// user_tools (cached on file cache_user_tools.php)
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars

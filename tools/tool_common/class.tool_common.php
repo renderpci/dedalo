@@ -943,23 +943,14 @@ class tool_common {
 			$use_cache = true;
 			if ($use_cache===true) {
 
-				// static
-					static $user_tools_cache;
-					if (isset($user_tools_cache[$user_id])) {
-						return $user_tools_cache[$user_id];
-					}
-
 				// cache file
-					$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.json'
+					$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.php'
 					$file_cache = dd_cache::cache_from_file((object)[
 						'file_name'	=> $cache_file_name
 					]);
 					if (!empty($file_cache)) {
 						// read from file encoded JSON
-						$user_tools = json_handler::decode($file_cache);
-
-						// static save value
-						$user_tools_cache[$user_id] = $user_tools;
+						$user_tools = $file_cache;
 
 						return $user_tools;
 					}
@@ -1022,15 +1013,12 @@ class tool_common {
 
 		// cache
 			if ($use_cache===true) {
-				// static
-					$user_tools_cache[$user_id] = $user_tools;
 
-				// cache file
-					// cache file
-					dd_cache::cache_to_file((object)[
-						'data'		=> $user_tools,
-						'file_name'	=> $cache_file_name
-					]);
+				// cache file write
+				dd_cache::cache_to_file((object)[
+					'data'		=> $user_tools,
+					'file_name'	=> $cache_file_name
+				]);
 			}
 
 
