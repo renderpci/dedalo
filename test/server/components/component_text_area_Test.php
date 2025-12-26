@@ -1641,5 +1641,90 @@ final class component_text_area_test extends TestCase {
 
 
 
+	/**
+	* TEST_ERROR_HANDLING_SCENARIOS
+	* @return void
+	*/
+	public function test_error_handling_scenarios() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		// 1 Test with invalid tag type in get_fragment_text_from_tag
+		$value = component_text_area::get_fragment_text_from_tag(
+			'1', // string tag
+			'invalid_type', // string $tag_type - this should return null
+			'My text raw [index-n-1] with index'
+		);
+		
+		$this->assertTrue(
+			$value===null,
+				'expected null for invalid tag type, got: '.to_string($value)
+		);
+
+		// 2 Test with empty tag_id in get_fragment_text_from_tag
+		$value = component_text_area::get_fragment_text_from_tag(
+			'', // empty tag_id
+			'index', // string $tag_type
+			'My text raw [index-n-1] with index'
+		);		
+		
+		$this->assertTrue(
+			$value===null,
+				'expected null for empty tag_id, got: '.to_string($value)
+		);
+
+		// 3 Test with valid tag and type in get_fragment_text_from_tag
+		$value = component_text_area::get_fragment_text_from_tag(
+			'1', // string tag
+			'index', // string $tag_type - this should return null
+			'My text raw [index-n-1] with index [/index-n-1]'
+		);
+
+		$this->assertTrue(
+			$value->text===' with index ',
+				'expected " with index " for empty tag_id, got: '.to_string($value)
+		);
+
+		// 4 Test delete_tag_from_text with invalid tag type
+		$response = component_text_area::delete_tag_from_text(
+			'1', // tag_id
+			'invalid_type', // tag_type - should not match any tags
+			'My text raw [index-n-1] with index to delete'
+		);
+
+		$this->assertTrue(
+			$response===null,
+				'expected null for invalid tag type, got: '.to_string($response)
+		);
+
+		// 5 Test delete_tag_from_text
+		$response = component_text_area::delete_tag_from_text(
+			'1', // tag_id
+			'index', // tag_type - should not match any tags
+			'My text raw [index-n-1]with index to delete [/index-n-1]'
+		);
+		$this->assertTrue(
+			$response->result==='My text raw with index to delete ',
+				'expected result "My text raw with index to delete", got: '.to_string($response->result)
+		);
+	}//end test_error_handling_scenarios
+
+
+
 
 }//end class
