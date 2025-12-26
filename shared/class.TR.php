@@ -17,7 +17,19 @@ abstract class TR {
 	// html_tags_allowed (note that now is not used to save data)
 	static $html_tags_allowed = '<strong><em><p><img><p>'; // <strong><em><br><img><p><h5><h6><ul><ol><li>
 
-
+	// Acepted tag types
+	static $tag_types = [
+		'tc',
+		'index',
+		'reference',
+		'svg',
+		'draw',
+		'geo',
+		'page',
+		'person',
+		'note',
+		'lang'
+	];
 
 	/**
 	* GET_MARK_PATTERN
