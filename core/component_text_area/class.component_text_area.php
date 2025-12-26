@@ -327,9 +327,6 @@ class component_text_area extends component_string_common {
 					.' raw_text: ' . $raw_text
 					, logger::ERROR
 				);
-				if(SHOW_DEBUG) {
-					error_log( 'get_fragment_text_from_tag : '.print_r(debug_backtrace(),true) );
-				}
 				return null;
 			}
 
@@ -1337,13 +1334,13 @@ class component_text_area extends component_string_common {
 			switch ($key) {
 
 				case 'name':
-					// Get only the 3 first letters of the name 
+					// Get only the 3 first letters of the name
 					$label->initials	.= mb_substr($value,0,3);
 					$label->full_name	.= $value;
 					break;
 
 				case 'surname':
-					// get only the 2 first letters of the surname 
+					// get only the 2 first letters of the surname
 					if (!empty($value)) {
 						$ar_parts = explode(' ', $value);
 						if (isset($ar_parts[0])) {
