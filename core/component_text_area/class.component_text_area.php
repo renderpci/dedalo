@@ -92,7 +92,7 @@ class component_text_area extends component_string_common {
 					if (!empty($data)) {
 						foreach ($data as $item) {
 							// $item = trim($item);
-							if (!$this->is_empty($item->value)) {
+							if (!$this->is_empty($item)) {
 								$processed_data[] = TR::add_tag_img_on_the_fly($item->value);
 							}
 						}
