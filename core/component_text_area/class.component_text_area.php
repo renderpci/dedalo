@@ -421,7 +421,17 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_plain_text() : string {
 
-		$raw_data = $this->get_value();
+		$data = $this->get_data();
+
+		$ar_values = [];
+		foreach($data as $data_item){
+			if(empty($data_item->value)){
+				continue;
+			}
+			$ar_values[] = $data_item->value;
+		}
+
+		$raw_data = implode($this->default_records_separator, $ar_values);
 
 		// empty text
 		$text = '';
