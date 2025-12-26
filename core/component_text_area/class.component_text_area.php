@@ -1627,7 +1627,7 @@ class component_text_area extends component_string_common {
 
 				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
 					$truncate_value = !empty($html_value)
-						? common::truncate_html(
+						? component_string_common::truncate_html(
 							$max_chars,
 							$html_value,
 							true // isUtf8
@@ -1738,7 +1738,7 @@ class component_text_area extends component_string_common {
 						$string_value = strip_tags($string_value);
 
 					// truncate long text to be used
-						$value = common::truncate_text(
+						$value = component_string_common::truncate_text(
 							$string_value, // string html
 							(int)$max_chars // int maxLength
 						);
