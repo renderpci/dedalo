@@ -60,7 +60,7 @@
 				);
 				// $value_fragment	= $this->get_value_fragment(220);
 				// $value_fragment	= $this->get_list_value((object)['max_chars'=>220]);
-				$value_fragment	= common::truncate_html(
+				$value_fragment	= component_string_common::truncate_html(
 					220,
 					$full_raw_text,
 					true // isUtf8
@@ -80,7 +80,7 @@
 			$tag_id = '';
 			// $value_fragment	= $this->get_value_fragment(220);
 			// $value_fragment	= $this->get_list_value((object)['max_chars'=>220]);
-			$value_fragment	= common::truncate_html(
+			$value_fragment	= component_string_common::truncate_html(
 				220,
 				$full_raw_text,
 				true // isUtf8
