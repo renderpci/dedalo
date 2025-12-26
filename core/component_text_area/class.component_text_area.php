@@ -482,7 +482,7 @@ class component_text_area extends component_string_common {
 		}
 
 		// storage variables
-		$new_data			= [];	
+		$new_data			= [];
 		$to_save			= false;
 		$ar_langs_changed 	= [];
 
@@ -514,7 +514,7 @@ class component_text_area extends component_string_common {
 			// set the new value to data item
 			$new_item->value = $delete_tag_from_text->result;
 			// add the new item to the data array
-			$new_data[] = $new_item;	
+			$new_data[] = $new_item;
 		}// end foreach $data as $item
 
 		// save the data if there are tags removed from text
