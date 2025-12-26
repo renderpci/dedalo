@@ -263,7 +263,7 @@ class component_text_area extends component_string_common {
 		// Default unchanged text
 		$text_raw_updated = $text_raw;
 
-		$id = TR::tag2value($tag);
+		$id = TR::get_tag_id($tag);
 
 		// match. Pattern allow both tags, in and out
 		$pattern = TR::get_mark_pattern(
