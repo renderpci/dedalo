@@ -109,100 +109,26 @@ class component_string_common extends component_common {
 
 
 
+	 * SANITIZE_TEXT
+	 * Sanitize text to be used as html content.
+	 * Remove posible malicious <script> or <noscript> tags
+	 * @param string $value
+	 * @return string $value
+	 */
+	public static function sanitize_text(string $value) : string {
 
-	/**
-	* GET_DATO
-	* @return array|null $dato
-	*/
-	public function get_dato() : ?array {
+		# strip slashes (need for text received from editor)
+		$value = trim(stripslashes($value));
 
-		$dato = parent::get_dato();
+		// Remove script tags
+		$value = preg_replace('/<script\b[^<]*>.*?<\/script>/is', '', $value);
 
-		if (!is_null($dato) && !is_array($dato)) {
-			$type = gettype($dato);
-			debug_log(__METHOD__
-				. " Expected dato type array or null, but type is: $type. Converted to array of strings and saving " . PHP_EOL
-				. ' tipo: ' . $this->tipo . PHP_EOL
-				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-				. ' section_id: ' . $this->section_id
-				, logger::ERROR
-			);
-			dump($dato, ' dato ++ ');
-
-			$dato = !empty($dato)
-				? [to_string($dato)]
-				: null;
-
-			// update
-			$this->set_dato($dato);
-			$this->Save();
-		}
+		// Also remove noscript tags which might contain scripts
+    	$value = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $value);
 
 
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|null $dato
-	* 	Dato now is multiple. Because this, expected type is array
-	*	but in some cases can be an array JSON encoded or some rare times a plain string
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		// remove data when data is null
-			if(is_null($dato)){
-				return parent::set_dato(null);
-			}
-
-		// string case. (Tool Time machine case, dato is string)
-			if (is_string($dato)) {
-
-				// check the dato for determinate the original format and if the $dato is correct.
-				$dato_trim				= trim($dato);
-				$dato_first_character	= substr($dato_trim, 0, 1);
-				$dato_last_character	= substr($dato_trim, -1);
-
-				if ($dato_first_character==='[' && $dato_last_character===']') {
-					# dato is JSON encoded
-					$dato = json_handler::decode($dato_trim);
-				}else{
-					# dato is string plain value
-					$dato = array($dato);
-					#debug_log(__METHOD__." Warning. [$this->tipo,$this->parent] Dato received is a plain string. Support for this type is deprecated. Use always an array to set dato. ".to_string($dato), logger::DEBUG);
-				}
-			}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				if (!is_array($dato)) {
-					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array"
-						, logger::DEBUG
-					);
-				}
-				#debug_log(__METHOD__." dato [$this->tipo,$this->parent] Type is ".gettype($dato)." -> ".to_string($dato), logger::ERROR);
-			}
-
-		// safe dato
-			$count = is_array($dato) ? count($dato) : 0;
-			if ($count === 1 && $this->is_empty((array)$dato[0])) {
-				$safe_dato = null;
-			} else {
-				foreach ((array)$dato as $value) {
-					$safe_dato[] = (!is_string($value))
-						? to_string($value)
-						: $value;
-				}
-			}
-			$dato = $safe_dato;
-
-
-		return parent::set_dato( $dato );
-	}//end set_dato
+		return $value;
+	}//end sanitize_text
 
 
 	
