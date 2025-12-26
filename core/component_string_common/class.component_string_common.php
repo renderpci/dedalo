@@ -131,7 +131,7 @@ class component_string_common extends component_common {
 	}//end sanitize_text
 
 
-	
+
 	/**
 	 * GET_DATA_LANG_WITH_FALLBACK
 	 * Retrieve the data lang with DEDALO_DATA_LANG (user can choose/change it in menu)
@@ -298,66 +298,37 @@ class component_string_common extends component_common {
 
 
 
-	// /**
-	// * EXTRACT_COMPONENT_VALUE_FALLBACK
-	// * @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
-	// * reviewing all references
-	// * @param string $lang = DEDALO_DATA_LANG
-	// * @param bool $mark = true
-	// * @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
-	// * @return string $value
-	// */
-	// public function extract_component_value_fallback(string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+	/**
+	* TRUNCATE_TEXT
+	* Multi-byte truncate or trim text
+	* @return string $final_string
+	*/
+	public static function truncate_text(string $string, int $limit, string $break=" ", string $pad='...') : string {
 
-	// 	// get and store initial lang to restore later
-	// 	$initial_lang = $this->get_lang();
+		// returns with no change if string is shorter than $limit
+			$str_len = mb_strlen($string, '8bit');
+			if($str_len <= $limit) {
+				return $string;
+			}
+		// substring multibyte
+			$string_fragment = mb_substr($string, 0, $limit);
 
-	// 	// Try direct value
-	// 	$value = $this->get_valor($lang);
+		// cut fragment by break char (if is possible)
+			if(false !== ($breakpoint = mb_strrpos($string_fragment, $break))) {
+				$final_string = mb_substr($string_fragment, 0, $breakpoint);
+			}else{
+				$final_string = $string_fragment;
+			}
 
-	// 	if (empty($value)) {
+		// add final "..."" when is truncated
+			if (!empty($final_string) && strlen($final_string)<strlen($string)) {
+				$final_string = $final_string . $pad;
+			}
 
-	// 		// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-	// 		if ($lang!==$main_lang) {
-	// 			$this->set_lang($main_lang);
-	// 			$value = $this->get_valor($main_lang);
-	// 		}
-
-	// 		// Try nolan
-	// 		if (empty($value)) {
-	// 			$this->set_lang(DEDALO_DATA_NOLAN);
-	// 			$value = $this->get_valor(DEDALO_DATA_NOLAN);
-	// 		}
-
-	// 		// Try all projects langs sequence
-	// 		if (empty($value)) {
-	// 			$data_langs = common::get_ar_all_langs(); // Langs from config projects
-	// 			foreach ($data_langs as $current_lang) {
-	// 				if ($current_lang===$lang || $current_lang===$main_lang) {
-	// 					continue; // Already checked
-	// 				}
-	// 				$this->set_lang($current_lang);
-	// 				$value = $this->get_valor($current_lang);
-	// 				if (!empty($value)) break; // Stops when first data is found
-	// 			}
-	// 		}
-
-	// 		// Set value as untranslated
-	// 		if ($mark===true) {
-	// 			$value = '<mark>'.$value.'</mark>';
-	// 		}
-	// 	}
-
-	// 	if (!is_string($value)) {
-	// 		$value = to_string($value);
-	// 	}
-
-	// 	// restore initial lang
-	// 	$this->set_lang($initial_lang);
+		return $final_string;
+	}//end truncate_text
 
 
-	// 	return $value;
-	// }//end extract_component_value_fallback
 
 
 
