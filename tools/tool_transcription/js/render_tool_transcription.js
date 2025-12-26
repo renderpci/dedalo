@@ -853,10 +853,10 @@ const render_automatic_transcription = function (options) {
 						status_container.innerHTML = `<span class="success_text">${msg}</span>`;
 
 						// set value and implicit save action in component_text_area
-						self.transcription_component.set_value({
-							key		: 0,
-							value	: response
-						})
+						self.transcription_component.set_value(
+							key		= 0,
+							value	= response
+						)
 					})
 					break;
 			}

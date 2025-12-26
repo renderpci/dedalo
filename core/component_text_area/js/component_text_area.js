@@ -453,21 +453,25 @@ component_text_area.prototype.tags_to_html = function(value) {
 /**
 * SET_VALUE
 * Set individual value based on element key
-* @param object value
-* {
-*  	key 	// int  : defined in container dataset key
-*	value 	// object : value from active text editor
-* }
+* @param inte key 				// int  : defined in value
+* @param string string_value 	// string : value from active text editor
 * @return promise
 */
-component_text_area.prototype.set_value = function(value) {
+component_text_area.prototype.set_value = function(key, string_value) {
 
 	const self = this
+	// get the unchange value object from component
+	const data			= self.data || {}
+	const value			= data.value || []
+	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	
+	// set the new value changing the item.value
+	item_value.value = string_value
 
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: value.key,
-		value	: value.value
+		value	: item_value 
 	})]
 	return self.change_value({
 		changed_data	: changed_data,
@@ -738,7 +742,7 @@ component_text_area.prototype.update_changed_data = function (options) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: parsed_value || ''
+			value	: (parsed_value.length>0) ? {value: parsed_value, lang: self.lang} : null
 		})
 
 		// fix instance changed_data
