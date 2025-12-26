@@ -624,34 +624,34 @@ class component_number extends component_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_data_version(object $request_options) : object {
 
 		$options = new stdClass();
 			$options->update_version	= null;
-			$options->dato_unchanged	= null;
+			$options->data_unchanged	= null;
 			$options->reference_id		= null;
 			$options->tipo				= null;
 			$options->section_id		= null;
 			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
+			$options->context			= 'update_component_data';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
+			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id;
 
 		$update_version_string = implode('.', $update_version);
 		switch ($update_version_string) {
 
 			case '6.0.0':
-				if ( (!empty($dato_unchanged) || $dato_unchanged==='') && !is_array($dato_unchanged) ) {
+				if ( (!empty($data_unchanged) || $data_unchanged==='') && !is_array($data_unchanged) ) {
 
 					//  Change the dato from int|float to array
 					// 	From:
@@ -660,7 +660,7 @@ class component_number extends component_common {
 					// 		[487]
 
 					// new dato
-						$dato = $dato_unchanged;
+						$dato = $data_unchanged;
 
 					// fix final dato with new format as array
 						$new_dato = [$dato];
@@ -668,12 +668,12 @@ class component_number extends component_common {
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 				}
 				break;
 
@@ -686,7 +686,7 @@ class component_number extends component_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

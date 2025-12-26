@@ -74,11 +74,17 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         sudo apt update
         ```
 
-        Install PHP 8.4
+        Install PHP 8.5
 
         ```shell
-        sudo apt install php8.4 php8.4-cli php8.4-common php8.4-mysql php8.4-pgsql php8.4-gd php8.4-mbstring php8.4-xml php8.4-pspell php8.4-tidy php8.4-bcmath php8.4-imap php8.4-soap php8.4-opcache php8.4-fpm php8.4-zip php8.4-curl
+        sudo apt install php8.5 php8.5-cli php8.5-common php8.5-mysql php8.5-pgsql php8.5-gd php8.5-mbstring php8.5-xml php8.5-pspell php8.5-tidy php8.5-bcmath php8.5-imap php8.5-soap php8.5-opcache php8.5-fpm php8.5-zip php8.5-curl
         ```
+
+        ??? tip "PHP 8.4"
+
+            ```shell
+            sudo apt install php8.4 php8.4-cli php8.4-common php8.4-mysql php8.4-pgsql php8.4-gd php8.4-mbstring php8.4-xml php8.4-pspell php8.4-tidy php8.4-bcmath php8.4-imap php8.4-soap php8.4-opcache php8.4-fpm php8.4-zip php8.4-curl
+            ```
 
         ??? tip "PHP 8.3"
 
@@ -252,7 +258,11 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         chmod 0600 ~/.pgpass
         ```
 
-5. Configuration.
+5.  Apache, PHP configuration
+
+    You can configure Apache and PHP as you wish following your needs. If you need help you can follow [this guide](apache_configuration.md) as reference.
+
+6.  Dédalo Configuration.
     Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
     1. Rename `sample.config.php` to `config.php`.

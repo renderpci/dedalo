@@ -199,42 +199,42 @@ class component_portal extends component_relation_common {
 
 
 	/**
-	* UPDATE_DATO_VERSION
+	* UPDATE_DATA_VERSION
 	* Is fired by area_maintenance update_data to transform
 	* component data between different versions or upgrades
 	* @see update::components_update
 	* @param object $options
 	* {
 	* 	update_version: array
-	* 	dato_unchanged: mixed
+	* 	data_unchanged: mixed
 	* 	reference_id: string|int
 	* 	tipo: string
 	* 	section_id: string|int
 	* 	section_tipo: string
-	* 	context: string (default: 'update_component_dato')
+	* 	context: string (default: 'update_component_data')
 	* }
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_dato_version"
+	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version( object $options ) : object {
+	public static function update_data_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? null;
-			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$data_unchanged	= $options->data_unchanged ?? null;
 			$reference_id	= $options->reference_id ?? null;
 			$tipo			= $options->tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$section_tipo	= $options->section_tipo ?? null;
-			$context		= $options->context ?? 'update_component_dato';
+			$context		= $options->context ?? 'update_component_data';
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
 			case '6.0.0':
 				// Update the locator to move old ds and dataframe to v6 dataframe model.
-				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
+				if (!empty($data_unchanged) && is_array($data_unchanged)) {
 					$ontology_node			= ontology_node::get_instance($tipo);
 					$properties				= $ontology_node->get_properties();
 					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
@@ -242,7 +242,7 @@ class component_portal extends component_relation_common {
 					$clean_locators		= [];
 					$new_dataframe		= [];
 					$need_to_be_updated	= false;
-					foreach ((array)$dato_unchanged as $key => $current_locator) {
+					foreach ((array)$data_unchanged as $key => $current_locator) {
 
 						if(isset($current_locator->ds) || isset($current_locator->dataframe)){
 							$need_to_be_updated = true;
@@ -312,7 +312,7 @@ class component_portal extends component_relation_common {
 						}
 
 						$clean_locators[] = $current_locator;
-					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
+					}//end foreach ((array)$data_unchanged as $key => $current_locator)
 
 					if ($need_to_be_updated === true) {
 
@@ -340,7 +340,7 @@ class component_portal extends component_relation_common {
 						$response = new stdClass();
 							$response->result	= 3;
 							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
 					}else{
 
 						$legacy_model_name = ontology_node::get_legacy_model_by_tipo($tipo);
@@ -348,22 +348,22 @@ class component_portal extends component_relation_common {
 							// force save to regenerate search relations
 							$response = new stdClass();
 								$response->result	= 3;
-								$response->new_dato	= $dato_unchanged;
-								$response->msg		= "[$reference_id] Dato is forced to save to regenerate search relations from ".to_string($dato_unchanged).".<br />";
+								$response->new_dato	= $data_unchanged;
+								$response->msg		= "[$reference_id] Dato is forced to save to regenerate search relations from ".to_string($data_unchanged).".<br />";
 
 						}else{
 
 							$response = new stdClass();
 							$response->result	= 2;
-							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
 						}
 					}// end if($need_to_be_updated === true)
 				}else{
 
 					$response = new stdClass();
 						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
+				}//end (!empty($data_unchanged) && is_array($data_unchanged))
 				break;
 
 			default:
@@ -375,7 +375,7 @@ class component_portal extends component_relation_common {
 
 
 		return $response;
-	}//end update_dato_version
+	}//end update_data_version
 
 
 

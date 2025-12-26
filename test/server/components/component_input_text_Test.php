@@ -248,16 +248,16 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
-	* TEST_update_dato_version
+	* TEST_update_data_version
 	* @return void
 	*/
-	public function test_update_dato_version() {
+	public function test_update_data_version() {
 
 		$options = new stdClass();
 			$options->update_version = [6,0,0];
-			$options->dato_unchanged = null;
+			$options->data_unchanged = null;
 
-		$value = component_input_text::update_dato_version($options);
+		$value = component_input_text::update_data_version($options);
 
 		// expected sample
 			//  {
@@ -277,7 +277,7 @@ final class component_input_text_test extends TestCase {
 				.' expected: 0' . PHP_EOL
 				.' value: '.to_string($value->result)
 		);
-	}//end test_update_dato_version
+	}//end test_update_data_version
 
 
 

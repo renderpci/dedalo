@@ -639,12 +639,12 @@ final class component_pdf_test extends TestCase {
 
 
 	/**
-	* TEST_update_dato_version
+	* TEST_update_data_version
 	* @return void
 	*/
-	public function test_update_dato_version() {
+	public function test_update_data_version() {
 
-		$response = component_pdf::update_dato_version((object)[
+		$response = component_pdf::update_data_version((object)[
 			'update_version' => [99,99,99]
 		]);
 
@@ -667,7 +667,7 @@ final class component_pdf_test extends TestCase {
 			'expected 0 : ' . PHP_EOL
 				. to_string($result)
 		);
-	}//end test_update_dato_version
+	}//end test_update_data_version
 
 
 
