@@ -490,16 +490,25 @@ component_text_area.prototype.set_value = function(key, string_value) {
 *	value from active text editor
 * @return promise
 */
-component_text_area.prototype.save_value = async function(key, value) {
+component_text_area.prototype.save_value = async function(key, string_value) {
 
 	const self = this
 
-	const new_data = await self.preprocess_text_to_save(value)
+	// get the unchange value object from component
+	const data			= self.data || {}
+	const value			= data.value || []
+	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+
+	// set the value to be saved in component
+	const new_data = await self.preprocess_text_to_save(string_value)
+
+	// set the new value changing the item.value
+	item_value.value = (new_data) ? new_data : null
 
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: (new_data.length>0) ? {value: new_data, lang: self.lang} : null
+		value	: item_value
 	})]
 	const js_promise = self.change_value({
 		changed_data	: changed_data,
@@ -734,15 +743,23 @@ component_text_area.prototype.update_changed_data = function (options) {
 	const text_editor	= options.text_editor
 	const key			= options.key
 
-	const value = text_editor.editor.getData();
+	// get the unchange value object from component
+	const data			= self.data || {}
+	const value			= data.value || []
+	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	// get the text editor value
+	const string_value = text_editor.editor.getData();	
 
-	self.preprocess_text_to_save(value)
+	// change the HTML string value to text value used as Dédalo data
+	self.preprocess_text_to_save(string_value)
 	.then(function(parsed_value) {
+		// create a new item in data object to be sent as Dédalo API request body
+		item_value.value = (parsed_value.length>0) ? parsed_value : null;
 
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: (parsed_value.length>0) ? {value: parsed_value, lang: self.lang} : null
+			value	: item_value
 		})
 
 		// fix instance changed_data
