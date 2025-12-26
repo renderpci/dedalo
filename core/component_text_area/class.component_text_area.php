@@ -191,7 +191,7 @@ class component_text_area extends component_string_common {
 			}
 
 		// Set data again (cleaned)
-			$this->data = $current_data;
+			$this->set_data( $current_data );
 
 		// From here, we save in the standard way. Expected int $section_id
 			$result = parent::save();
