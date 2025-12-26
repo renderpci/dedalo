@@ -627,8 +627,6 @@ final class dd_core_api {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
-		// $conn = DBi::_getConnection();
-
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
 
@@ -643,6 +641,9 @@ final class dd_core_api {
 
 				return $response;
 			}
+
+		// Init the DB connection (consumes 4 - 6 ms)
+			$conn = DBi::_getConnection();
 
 		// redirect to the method
 			switch ($rqo->source->action) {
