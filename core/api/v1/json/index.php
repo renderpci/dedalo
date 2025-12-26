@@ -53,7 +53,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 
 
 // php version check
-$minimum_version = '8.3.0';
+$minimum_version = '8.5.0';
 if (version_compare(phpversion(), $minimum_version, '<')) { // Check for PHP 8.3.0 or higher
 	$response = new stdClass();
 	$response->result	= false;
