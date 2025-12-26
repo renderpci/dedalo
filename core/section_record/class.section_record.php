@@ -111,7 +111,7 @@ class section_record {
 		// when the section_record_save event is triggered.
 		// This only affects current user cache.
 		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
-			$cache_file_name = 'cache_active_request_config.json';
+			$cache_file_name = 'cache_active_request_config.php';
 			dd_cache::delete_cache_files([
 				$cache_file_name
 			]);

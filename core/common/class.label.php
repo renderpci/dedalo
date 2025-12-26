@@ -28,23 +28,12 @@ abstract class label {
 		// get the lang to be used to get the labels
 			$lang = lang::get_label_lang( $lang );
 
-		// static cache case
-			if(isset(label::$ar_label[$lang])) {
-				return label::$ar_label[$lang];
-			}
-
-		// cache file
+		// cache file read
 			if ($use_file_cache===true) {
-				$file_cache = dd_cache::cache_from_file((object)[
+				$ar_label = dd_cache::cache_from_file((object)[
 					'file_name'	=> label::build_cache_file_name($lang)
 				]);
-				if (!empty($file_cache)) {
-
-					// read from file encoded JSON
-						$ar_label = json_handler::decode($file_cache, true);
-
-					// cache static
-						label::$ar_label[$lang] = $ar_label;
+				if (!empty($ar_label)) {
 
 					return $ar_label;
 				}
@@ -53,10 +42,7 @@ abstract class label {
 		// Calculate label for current lang and store
 			$ar_label = self::set_static_label_vars( $lang );
 
-		// cache static
-			label::$ar_label[$lang] = $ar_label;
-
-		// cache file
+		// cache file write
 			if ($use_file_cache===true) {
 				dd_cache::cache_to_file((object)[
 					'data'		=> $ar_label,
@@ -243,7 +229,7 @@ abstract class label {
 	*/
 	public static function build_cache_file_name( string $lang ) : string {
 
-		return 'cache_labels_' . $lang . '.json';
+		return 'cache_labels_' . $lang . '.php';
 	}//end build_cache_file_name
 
 
