@@ -291,6 +291,7 @@ class security {
 	* and return the component instance
 	* @param int $user_id
 	* @return object|null $component_security_access
+	* Returns null if user profile is not found.
 	*/
 	public static function get_user_security_access(int $user_id) : ?object {
 

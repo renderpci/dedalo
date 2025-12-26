@@ -487,7 +487,7 @@ class tool_common {
 			if(!isset($all_registered_tools_records)) {
 				$all_registered_tools_records = tool_common::get_active_tools();
 			}
-		
+
 			// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
