@@ -2,10 +2,10 @@
 // declare(strict_types=1);
 /**
 * TR
-* Da servicio a las transcripciones (component_text_area) pero también a las partes públicas.
-* Esta clase es genérica y debe servir también para las partes públicas.
-* Cuando se use fuera de Dédalo, copiar este fichero.
-* Para poder aprovechar las mejoras y corrección de errores del desarrollo de Dédalo, llevar control de versión de esta clase
+* Provides service to transcriptions (component_text_area) but also to public parts.
+* This class is generic and should also serve public parts.
+* When used outside of Dédalo, copy this file.
+* To be able to take advantage of the improvements and error corrections from Dédalo's development, keep version control of this class
 */
 abstract class TR {
 
@@ -45,22 +45,22 @@ abstract class TR {
 
 		switch($mark) {
 
-			# TC . Select timecode from tag like '00:01:25.627'
+			// TC . Select timecode from tag like '00:01:25.627'
 			case 'tc' :
 				$string = "(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\])";
 				break;
 
-			# TC_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
+			// TC_FULL . Select complete tag like '[TC_00:01:25.627_TC]'
 			case 'tc_full' :
 				$string = "(\[TC_[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}\.[0-9]{1,3}_TC\])";
 				break;
 
-			# TC_VALUE . Select elements from value tc like '00:01:25.627'. Used by OptimizeTC
+			// TC_VALUE . Select elements from value tc like '00:01:25.627'. Used by OptimizeTC
 			case 'tc_value' :
 				$string = "([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2})(\.([0-9]{1,3}))?";
 				break;
 
-			# INDEX
+			// INDEX
 			case 'index' :
 				if ($id!==false) {
 					$string = "\[\/{0,1}index-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
@@ -91,7 +91,7 @@ abstract class TR {
 				}
 				break;
 
-			# REFERENCE
+			// REFERENCE
 			case 'reference' :
 				if ($id) {
 					$string = "\[\/{0,1}reference-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
@@ -116,7 +116,7 @@ abstract class TR {
 				}
 				break;
 
-			# SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
+			// SVG (From now 18-05-2018 v4.9.0, will be used to manage tags from the component component_svg)
 			case 'svg' :
 				if ($id) {
 					$string = "(\[svg-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -128,7 +128,7 @@ abstract class TR {
 				$string = "\[svg-[a-z]-[0-9]{1,6}-[^-]{0,22}?-data:.*?:data\]";
 				break;
 
-			# DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
+			// DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
 			case 'draw' :
 				if ($id) {
 					$string = "(\[draw-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -137,7 +137,7 @@ abstract class TR {
 				}
 				break;
 
-			# GEO
+			// GEO
 			case 'geo' :
 				if ($id) {
 					$string = "(\[geo-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -145,12 +145,12 @@ abstract class TR {
 					$string = "(\[(geo)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])";
 				}
 				break;
-			# GEO_FULL . Select complete tag
+			// GEO_FULL . Select complete tag
 			case 'geo_full' :
 				$string = "(\[geo-[a-z]-[0-9]{1,6}(-[^-]{0,22})?-data:(.*?):data\])";
 				break;
 
-			# PAGE (pdf) [page-n-3]
+			// PAGE (pdf) [page-n-3]
 			case 'page' :
 				if ($id) {
 					$string = "\[page-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\]";
@@ -159,7 +159,7 @@ abstract class TR {
 				}
 				break;
 
-			# PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			// PERSON (transcription spoken person) like [person-a-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'person' :
 				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
 					$string = "(\[person-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -168,7 +168,7 @@ abstract class TR {
 				}
 				break;
 
-			# NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
+			// NOTE (transcription annotations) like [note-n-number-data:{"section_tipo":"dd15","section_id":"5"}:data]
 			case 'note' :
 				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
 					$string = "(\[note-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -179,7 +179,7 @@ abstract class TR {
 					}
 				break;
 
-			# LANG (transcription annotations) like [lang-n-number-data:"lg-spa":data]
+			// LANG (transcription annotations) like [lang-n-number-data:"lg-spa":data]
 			case 'lang' :
 				if ($id) { // id is pseudo locator as dd35_oh1_52 (section_tipo section_id)
 					$string = "(\[lang-[a-z]-{$id}(-[^-]{0,22}-data:.*?:data)?\])";
@@ -190,7 +190,7 @@ abstract class TR {
 					}
 				break;
 
-			# OTHERS
+			// OTHERS
 			case 'br' :
 					$string = '\<br>';
 					break;
@@ -218,7 +218,7 @@ abstract class TR {
 				throw new Exception("Error Processing Request. Error: mark: '$mark' is not valid !", 1);
 		}
 
-		# default mark have in and out slash (pattern standalone)
+		// default mark have in and out slash (pattern standalone)
 		if($standalone) $string = '/'.$string.'/';
 
 
@@ -272,26 +272,24 @@ abstract class TR {
 				? TR_TAGS_CDN . '/?id='
 				: $options->tag_url . '/?id='; //'?'
 
-		# INDEX IN
+		// INDEX IN
 		$pattern 	= TR::get_mark_pattern('indexIn'); // id,state,label,data
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
-		# INDEX OUT
+		// INDEX OUT
 		$pattern 	= TR::get_mark_pattern('indexOut');
 		$text		= preg_replace($pattern, "<img id=\"[/\$2-$3-$4-$6]\" src=\"{$tag_url}[/\$2-$3-$4-$6]\" class=\"index\" data-type=\"indexOut\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"index\" data-type=\"indexIn\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
-		# REFERENCE IN
+		// REFERENCE IN
 		$pattern 	= TR::get_mark_pattern('referenceIn');
 		// <reference class="reference" id="reference_2" data-state="n" data-label="" data-data="{'section_tipo':'rsc370','section_id':'3'}">
 		$text		= preg_replace($pattern, "<reference id=\"reference_$4\" class=\"reference\" data-type=\"reference\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">" , $text);
 
-		# REFERENCE OUT
+		// REFERENCE OUT
 		$pattern 	= TR::get_mark_pattern('referenceOut');
 		$text		= preg_replace($pattern, "</reference>", $text);
 
-		# TC
+		// TC
 		$pattern 	= TR::get_mark_pattern('tc'); //[TC_00:00:25.091_TC]
 		$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}$1\" class=\"tc\" data-type=\"tc\" data-tag_id=\"$1\" data-state=\"n\" data-label=\"$2\" data-data=\"$2\">", $text);
 		/*$text		= preg_replace_callback(
@@ -306,7 +304,7 @@ abstract class TR {
 			},
 			$text);*/
 
-		# SVG
+		// SVG
 		$pattern 	= TR::get_mark_pattern('svg');
 		preg_match($pattern, $text, $matches);
 		if (!empty($matches)) {
@@ -325,14 +323,14 @@ abstract class TR {
 					$_6 = $matches[6];
 					$_7 = $matches[7];
 
-					# data is a locator encoded as text
-					# Restore double quotes from saved safe locator string
+					// data is a locator encoded as text
+					// Restore double quotes from saved safe locator string
 					$locator_text = str_replace('\'','"',$_7);
 					if($locator = json_decode($locator_text) ) {
 
 						$url  = component_svg::get_url_from_locator($locator);
 
-						# Replace double quotes for safe management in text editor
+						// Replace double quotes for safe management in text editor
 						$data = str_replace('"','\'',$_7);
 
 						$new_text = '<img id="['.$_2.'-'.$_3.'-'.$_4.'-'.$_6.']" src="'.$url.'" class="svg" data-type="svg" data-tag_id="'.$_4.'" data-state="'.$_3.'" data-label="'.$_6.'" data-data="'.$data.'">';
@@ -344,31 +342,27 @@ abstract class TR {
 			);
 		}
 
-		# DRAW
+		// DRAW
 		$pattern	= TR::get_mark_pattern('draw');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"svg\" />$codeHiliteOut", $text);
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"draw\" data-type=\"draw\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
-		# GEO
+		// GEO
 		$pattern	= TR::get_mark_pattern('geo');
-		#$text		= preg_replace($pattern, "<img id=\"$1\" src=\"{$tag_url}/$1\" class=\"geo\" />$codeHiliteOut", $text);
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"geo\" data-type=\"geo\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
-		# PAGE
+		// PAGE
 		$pattern	= TR::get_mark_pattern('page');
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"page\" data-type=\"page\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
-		# PERSON
+		// PERSON
 		$pattern	= TR::get_mark_pattern('person'); // $string = "(\[person-([a-z])-(.+)-data:.*?:data\])";
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$5]\" src=\"{$tag_url}/[$2-$3-$4-$5]\" class=\"person\" data-type=\"person\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$5\" data-data=\"$6\">", $text);
 
-		# NOTE
+		// NOTE
 		$pattern	= TR::get_mark_pattern('note'); // $string = "(\[note-([a-z])-(.+)-data:.*?:data\])";
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
-		#$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"\" class=\"note\" data-type=\"note\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
-		# lang
+		// lang
 		$pattern	= TR::get_mark_pattern('lang'); // $string = "(\[lang-([a-z])-(.+)-data:.*?:data\])";
 		$text		= preg_replace($pattern, "<img id=\"[$2-$3-$4-$6]\" src=\"{$tag_url}[$2-$3-$4-$6]\" class=\"lang\" data-type=\"lang\" data-tag_id=\"$4\" data-state=\"$3\" data-label=\"$6\" data-data=\"$7\">", $text);
 
@@ -744,37 +738,37 @@ abstract class TR {
 
 	/**
 	* GET_CHARS_INFO
+	* Obtain the total number of charaters and words of a text string (raw or processed)
+	* @param string $raw_text
 	* @return object $chars_info
 	*/
 	public static function get_chars_info(string $raw_text) : object {
 
 		$chars_info = new stdClass();
 
-		#
-		# CLEAN TEXT
+		// CLEAN TEXT
 		$text_clean = $raw_text;
-		# clean text
-		$text_clean = trim($text_clean);
-		#$text_clean = htmlspecialchars_decode($text_clean);
-		# Remove Dédalo marks
-		$text_clean = TR::deleteMarks($text_clean);
-		# Remove html tags like strong, br, etc.
-		$text_clean = strip_tags($text_clean);
-		# Decode special html chars
-		#$text_clean = html_entity_decode($text_clean);
-		$text_clean = htmlspecialchars_decode($text_clean);
 
+		// clean text
+		$text_clean = trim($text_clean);
+
+		// Remove Dédalo marks
+		$text_clean = TR::deleteMarks($text_clean);
+
+		// Remove html tags like strong, br, etc.
+		$text_clean = strip_tags($text_clean);
+
+		// Decode special html chars
+		$text_clean = htmlspecialchars_decode($text_clean);
 		$text_clean = str_replace(array("&nbsp;")," ",$text_clean);
 
+		// Count total characters
+		$chars_info->total_chars = mb_strlen($text_clean,'UTF-8');
 
-		# COUNT TOTAL_CHARS
-		$chars_info->total_chars = mb_strlen($text_clean,'UTF-8'); 	#dump($total_chars, ' $total_chars ++ '.to_string());
-
-		# Remove spaces and breaks
+		// Remove spaces and breaks
 		$text_clean = str_replace(array("&nbsp;"," ","\n"),"",$text_clean);
-		#$text_clean = preg_replace("/\s/", "", $text_clean);#  &nbsp;
 
-		# COUNT total_chars_no_spaces
+		// count total of characters with no spaces
 		$chars_info->total_chars_no_spaces = mb_strlen($text_clean,'UTF-8'); #dump($total_chars_no_spaces, ' $total_chars_no_spaces ++ '.to_string());
 
 
