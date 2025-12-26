@@ -1502,5 +1502,144 @@ final class component_text_area_test extends TestCase {
 
 
 
+	/**
+	* TEST_LANGUAGE_FALLBACK_SCENARIOS
+	* @return void
+	*/
+	public function test_language_fallback_scenarios() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+		// !! the end of the output can be without \n or \t, therefore don't add a return at the end
+		$output_text = '
+			<p>Some <strong>HTML</strong> content with <a href="#">links</a>.</p>
+			<p><img id="[TC_00:01:25.627_TC]" src="../component_text_area/tag/?id=[TC_00:01:25.627_TC]" class="tc" data-type="tc" data-tag_id="[TC_00:01:25.627_TC]" data-state="n" data-label="00:01:25.627" data-data="00:01:25.627">Text after TC</p>
+			<p><img id="[index-n-1-my tag label]" src="../component_text_area/tag/?id=[index-n-1-my tag label]" class="index" data-type="indexIn" data-tag_id="1" data-state="n" data-label="my tag label" data-data="">Text between index<img id="[/index-n-1-my tag label]" src="../component_text_area/tag/?id=[/index-n-1-my tag label]" class="index" data-type="indexOut" data-tag_id="1" data-state="n" data-label="my tag label" data-data=""></p>
+			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
+			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_sccmk1_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Text after svg</p>
+			<p><img id="[geo-n-10-10]" src="../component_text_area/tag/?id=[geo-n-10-10]" class="geo" data-type="geo" data-tag_id="10" data-state="n" data-label="10" data-data="">Text after...</p>';
+		
+		$value = '
+			<p>Some <strong>HTML</strong> content with <a href="#">links</a>.</p>
+			<p>[TC_00:01:25.627_TC]Text after TC</p>
+			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
+			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
+			<p>[geo-n-10-10-data::data]Text after geo</p>
+			<p>[page-n-3]Text after page</p>
+			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Text after person</p>
+			<p>[note-a-1-1-data:{\'section_tipo\':\'rsc326\',\'section_id\':1}:data]Text after note</p>
+			<p>[reference-n-1-reference 1-data::data]Text between reference[/reference-n-1-reference 1-data::data]</p>
+			<p>Text after all tags</p>
+		';
+
+		// Test with HTML content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = $value;
+			$item_value->lang = $lang;
+
+		$component->set_data([$item_value]);
+
+		// Test list value with fallback
+		$options = new stdClass();
+			$options->max_chars = 130;
+
+		// 1 Test if the result is an array
+		$value = $component->get_list_value($options);
+	
+		$this->assertTrue(
+			gettype($value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($value)
+		);
+		// 2 Veryfy if result value is correct
+		$this->assertTrue(
+			($value[0]->value === $output_text),
+				'expected value do not match:' . PHP_EOL
+				.' expected: '. json_encode($output_text) . PHP_EOL
+				.' value: '.json_encode($value[0]->value)
+		);
+
+		// !! the end of the output can be without \n or \t, therefore don't add a return at the end
+		$spa_output_text = '
+			p>ES Algún contenido en <strong>HTML</strong> con <a href="#">links</a>.</p>
+			<p><img id="[TC_00:01:25.627_TC]" src="../component_text_area/tag/?id=[TC_00:01:25.627_TC]" class="tc" data-type="tc" data-tag_id="[TC_00:01:25.627_TC]" data-state="n" data-label="00:01:25.627" data-data="00:01:25.627">Texto después de TC</p>
+			<p><img id="[index-n-1-my tag label]" src="../component_text_area/tag/?id=[index-n-1-my tag label]" class="index" data-type="indexIn" data-tag_id="1" data-state="n" data-label="my tag label" data-data="">Text between index<img id="[/index-n-1-my tag label]" src="../component_text_area/tag/?id=[/index-n-1-my tag label]" class="index" data-type="indexOut" data-tag_id="1" data-state="n" data-label="my tag label" data-data=""></p>
+			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
+			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_sccmk1_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Texto después de...</p>';
+		
+		$spa_value = '
+			<p>ES Algún contenido en <strong>HTML</strong> con <a href="#">links</a>.</p>
+			<p>[TC_00:01:25.627_TC]Texto después de TC</p>
+			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
+			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Texto después de svg</p>
+			<p>[geo-n-10-10-data::data]Texto después de geo</p>
+			<p>[page-n-3]Texto después de page</p>
+			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Texto después de person</p>
+			<p>[note-a-1-1-data:{\'section_tipo\':\'rsc326\',\'section_id\':1}:data]Texto después de note</p>
+			<p>[reference-n-1-reference 1-data::data]Texto entre references[/reference-n-1-reference 1-data::data]</p>
+			<p>Texto después de todas las etiquetas</p>
+		';
+
+		// Test with HTML content
+		$spa_item_value = new stdClass();
+			$spa_item_value->id = 1;
+			$spa_item_value->value = $spa_value;
+			$spa_item_value->lang = DEDALO_DATA_LANG === 'lg-spa' ? 'lg-eng': 'lg-spa';
+
+		$component->set_data([$item_value, $spa_item_value]);
+
+		// Test fallback list value
+		$fallback_value = $component->get_fallback_list_value($options);
+
+		// 3 Veryfy if result is an array
+		$this->assertTrue(
+			gettype($fallback_value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($fallback_value)
+		);
+
+		// 4 Veryfy if result value is correct
+		$this->assertTrue(
+			($value[0]->value === $output_text),
+				'expected value do not match:' . PHP_EOL
+				.' expected: '. json_encode($output_text) . PHP_EOL
+				.' value: '.json_encode($value[0]->value)
+		);
+
+		// Test fallback edit value
+		$edit_options = new stdClass();
+			$edit_options->max_chars = 600;
+			
+		$fallback_edit_value = $component->get_fallback_edit_value($edit_options);
+		
+		$this->assertTrue(
+			gettype($fallback_edit_value)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected: array' . PHP_EOL
+				.' value: '.gettype($fallback_edit_value)
+		);
+	}//end test_language_fallback_scenarios
+
+
+
 
 }//end class
