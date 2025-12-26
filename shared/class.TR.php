@@ -558,162 +558,22 @@ abstract class TR {
 
 
 
-	# TAG2TYPE
-	public static function tag2type(string $tag) : ?string {
-
-		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$type 			= $match_pattern[1][0] ?? null;
-
-		return $type;
-	}
-	# TAG2STATE
-	public static function tag2state(string $tag) : ?string {
-
-		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$state 			= $match_pattern[2][0] ?? null;
-
-		return $state;
-	}
-	# TAG2VALUE. Convert tag to value
-	public static function tag2value(string $tag) : ?int {
+	/**
+	* GET_TAG_ID
+	* Extract the id from the tag
+	* @param string $tag [index-n-1]
+	* @return int|null $value
+	*/
+	public static function get_tag_id(string $tag) : ?int {
 
 		$match_pattern	= TR::match_pattern_index_from_tag($tag);
-		$value			= isset($match_pattern[3][0])
+		$id = isset($match_pattern[3][0])
 			? (int)$match_pattern[3][0]
 			: null;
 
-		return $value;
-	}
-	# CONVERT tag to label
-	public static function tag2label(string $tag) : ?string {
 
-		$match_pattern 	= TR::match_pattern_index_from_tag($tag);
-		$value 			= $match_pattern[5][0] ?? null;
-
-		return (string)$value;
-	}//end tag2label
-	/**
-	* TAG2DATA
-	* Convert tag to data
-	* @param string $tag
-	*	Complete tag string like [index-n-7-Label-data:{'key':'value'}:data]
-	* @return object | null
-	*	Try to parse json data as object. If not is possible parse, return null
-	*/
-	public static function tag2data(string $tag, string $type='index') : ?object {
-
-		$match_pattern	= TR::match_pattern_index_from_tag($tag, $type);
-		$string			= $match_pattern[6][0] ?? null;
-		if (!is_null($string)) {
-			#$value_string	= preg_replace("'", '"', $string);
-			$value_string	= str_replace("'", '"', $string);
-			$value			= json_decode($value_string);
-		}else{
-			$value = null;
-		}
-
-		return $value;
-	}//end tag2data
-
-
-
-	# Limpieza del POST del formulario de TR transcripción
-	# Temporalmente habilitamos la función de formateo de TC's para Gerard
-	#
-	public static function conform_tr_data(string $value) : string {
-
-		// convert br to <p>
-		# $value	= preg_replace('/(<\/? ?br>)/i', '</p><p>', $value);
-
-		# strip slashes (need for text received from editor)
-		$value = trim(stripslashes($value));
-
-		return $value;
-	}//end conform_tr_data
-
-
-
-	#Change the format for TC to TC with ms
-	public static function formatTC_to_TCms(string $string) : string {
-		# Specific code for old transcriptions TC convert like [TC_01:25:11_TC] to [TC_01:25:11.332_TC]
-		#
-		$pattern	= '/([0-9][0-9]):([0-9][0-9]):([0-9][0-9])/' ;
-		$string		= addslashes( preg_replace($pattern, '$1:$2:$3.000', stripslashes($string) ) );
-		$string		= stripslashes($string) ;
-
-		$result = $string ;
-
-		return $result ;
-	}//end formatTC_to_TCms
-
-
-
-	# multipleSpaces2One
-	public static function multipleSpaces2One(string $string) : string {
-
-		# utf-8 spaces
-		#$ar = array('&#x20;','&#xA0;' ,'&#X202F;','&#x2003;','&#x2000;','&#x2007;','&#x2001;','&#x2002;','&#x2003;','&#x2004;','&#x2005;','&#x2006;','&#x2007;','&#x2008;','&#x2009;','&#x200A;', '&#x200B;','&#xFEFF;');	#%2C%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0%C2%A0+
-		$string = urlencode($string);
-		# urlencode spaces
-		$ar = array('&nbsp;','%C2%A0');
-		$string = str_replace($ar, ' ', $string );
-		$string = preg_replace("/\ +/", ' ', $string);	# eliminate doubles spaces over urlencode string
-		$string = urldecode($string);
-
-		# eliminate invisible chars
-		#$string = preg_replace("/\s+/", ' ', $string);
-		#$string = preg_replace("/\s/", ' ', $string);
-		$string = preg_replace("/\ +/", ' ', $string);
-
-		return $string ;
-	}//end multipleSpaces2One
-
-
-
-	/**
-	* trInfo
-	* Info de los TC e Indexaciones de un texto (transcripción)
-	*/
-	public static function trInfo(string $texto) : ?string {
-
-		$fragmentoFull	= $texto ;
-		$html			= null;
-
-		// TC
-		$pattern = TR::get_mark_pattern('tc');
-		preg_match_all($pattern, $fragmentoFull, $matches);
-		$nTCs = count($matches[0]);
-
-		// INDEX
-		$pattern = TR::get_mark_pattern('indexIn');
-		preg_match_all($pattern, $fragmentoFull, $matches);
-		$nIndex = count($matches[0]);
-
-		if($nIndex >0) 	$html .= "<div class='h5div'> Index: $nIndex </div>";
-		if($nTCs >0)	$html .= "<div class='h6div'> TC's: $nTCs  </div> ";
-
-		return $html;
-	}//end trInfo
-
-
-
-	# clean text for list
-	# prepara el texto para mostrar un extracto en los listados (sin tags ni tc's)
-	public static function limpiezaFragmentoEnListados(string &$string, int $limit=160) : string {
-		#dump( debug_backtrace() );
-		# dump($string, ' string ++ '.to_string());
-		$string = str_replace('<br />',' ', $string);
-
-		// Clean ALL html tags
-		$string = strip_tags($string);
-
-		# eliminamos las marcas de tc e indexación
-		$string	= TR::deleteMarks($string);
-
-		# cortamos elegantemente el fragmento
-		return self::truncate_text($string, $limit, $break=" ", $pad="...");
-	}//end limpiezaFragmentoEnListados
-
+		return $id;
+	}//end get_tag_id
 
 
 	/**
