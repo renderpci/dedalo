@@ -258,7 +258,11 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         chmod 0600 ~/.pgpass
         ```
 
-5. Configuration.
+5.  Apache, PHP configuration
+
+    You can configure Apache and PHP as you wish following your needs. If you need help you can follow [this guide](apache_configuration.md) as reference.
+
+6.  Dédalo Configuration.
     Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
     1. Rename `sample.config.php` to `config.php`.
