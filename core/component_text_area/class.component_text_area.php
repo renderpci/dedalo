@@ -1680,16 +1680,16 @@ class component_text_area extends component_string_common {
 						$html_value	= TR::add_tag_img_on_the_fly($data_item->value);
 
 					// truncate long text to use in list mode
-						$value		= common::truncate_html(
+						$value		= component_string_common::truncate_html(
 							(int)$max_chars, // int maxLength
 							$html_value, // string html
 							true // bool isUtf8
 						);
 
 					// add final ... when is truncated
-						if (!empty($value) && strlen($value)<strlen($html_value)) {
-							$value .= ' ...';
-						}									
+						// if (!empty($value) && strlen($value)<strlen($html_value)) {
+						// 	$value .= ' ...';
+						// }
 				}
 
 				$data_item->value = $value;
