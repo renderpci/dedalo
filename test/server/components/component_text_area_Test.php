@@ -1804,6 +1804,46 @@ final class component_text_area_test extends TestCase {
 
 
 
+	/**
+	* TEST_save_with_sanitization
+	* @return void
+	*/
+	public function test_save_with_sanitization() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = '<p>Test content with <script>alert("xss")</script></p>';
+			$item_value->lang = $lang;
+		
+		// Test data sanitization in save method
+		$component->set_data([$item_value]);
+		
+		// Save should not fail and should sanitize content
+		$result = $component->save();
+		
+		$this->assertTrue(
+			$result===true,
+				'expected save to return true, got: '.to_string($result)
+		);
+	}//end test_save_with_sanitization
+
 
 
 }//end class
