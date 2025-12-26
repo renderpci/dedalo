@@ -185,7 +185,7 @@ class component_text_area extends component_string_common {
 				foreach ( $current_data as $key => $item ) {
 					$current_value = $item->value ?? '';
 					if (!empty($current_value)) {
-						 $current_data[$key]->value = TR::conform_tr_data($current_value);
+						 $current_data[$key]->value = $this->sanitize_text($current_value);
 					}
 				}
 			}
