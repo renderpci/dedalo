@@ -123,19 +123,35 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
-		$is_empty = $component->is_empty('This is a string');
+		// Test with string content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'This is a string';
+			$item_value->lang = $lang;
+
+		// 1 non empty string
+		$is_empty = $component->is_empty($item_value);
 		$this->assertTrue(
 			$is_empty===false,
 			'expected false, but received is: ' . to_string($is_empty)
 		);
-
-		$is_empty = $component->is_empty('<p></p>');
+		// 2 non empty HTML but considering it as empty
+		$item_value->value = '<p></p>';
+		$is_empty = $component->is_empty($item_value);
 		$this->assertTrue(
 			$is_empty===true,
 			'expected true, but received is: ' . to_string($is_empty)
 		);
-
-		$is_empty = $component->is_empty(' ');
+		// 3 non empty HTML but considering it as empty
+		$item_value->value = '<p> </p>';
+		$is_empty = $component->is_empty($item_value);
+		$this->assertTrue(
+			$is_empty===true,
+			'expected true, but received is: ' . to_string($is_empty)
+		);
+		// 4 non empty string but consiering it as empty
+		$item_value->value = ' ';
+		$is_empty = $component->is_empty($item_value);
 		$this->assertTrue(
 			$is_empty===true,
 			'expected true, but received is: ' . to_string($is_empty)
