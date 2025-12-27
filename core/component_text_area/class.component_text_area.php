@@ -795,9 +795,9 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_COMPONENT_TAGS_DATA
-	* Indexations, references, draw tags in v6 are direct data from portal configured in
-	* component_text_area properties 'tags_index', 'tags_references'
-	* Defined in Ontology as (sample from rsc36):
+	* Indexations, references or draw tags in v6 are direct data from portal configured in
+	* component_text_area properties 'tags_index', 'tags_references' or 'tags_draw'
+	* Defined in Ontology properties node as (sample from rsc36):
 	* {
 	*	"tags_index": {
 	*		"tipo": "rsc860",		// target component_portal tipo
