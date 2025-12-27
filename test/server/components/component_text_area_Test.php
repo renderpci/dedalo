@@ -1229,23 +1229,6 @@ final class component_text_area_test extends TestCase {
 	*/
 	public function test_update_data_version() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
-
-		// $component = component_common::get_instance(
-		// 	$model, // string model
-		// 	$tipo, // string tipo
-		// 	$section_id,
-		// 	$mode,
-		// 	$lang,
-		// 	$section_tipo,
-		// 	false
-		// );
-
 		$options = new stdClass();
 			$options->update_version = [6,0,0];
 			$options->data_unchanged = null;
