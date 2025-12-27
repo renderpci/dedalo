@@ -455,12 +455,12 @@ class component_filter extends component_relation_common {
 
 				$project = new stdClass();
 					$project->type			= 'project';
-					$project->label			= $project_item->label;
-					$project->section_tipo	= $project_item->locator->section_tipo;
-					$project->section_id	= $project_item->locator->section_id;
-					$project->value			= $project_item->locator;
-					$project->parent		= $project_item->parent;
-					$project->order			= $project_item->order;
+					$project->label			= $project_item['label'];
+					$project->section_tipo	= $project_item['locator']->section_tipo;
+					$project->section_id	= $project_item['locator']->section_id;
+					$project->value			= $project_item['locator'];
+					$project->parent		= $project_item['parent'];
+					$project->order			= $project_item['order'];
 
 				$datalist[] = $project;
 			}//end foreach ($ar_projects as $project_item)
@@ -767,9 +767,9 @@ class component_filter extends component_relation_common {
 		$list_value = [];
 		foreach ($ar_projects as $item) {
 
-			$locator = $item->locator;
+			$locator = $item['locator'];
 			if ( true===locator::in_array_locator($locator, $data, ['section_id','section_tipo']) ) {
-				$list_value[] = $item->label;
+				$list_value[] = $item['label'];
 			}
 		}
 

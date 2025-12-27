@@ -132,8 +132,7 @@ class dd_cache {
 
 		// Write data to file. Using var_export enables the Opcode cache for this file.
 			try {
-				$write_result = file_put_contents($file_path, '<?php return ' . var_export($data, true) . ';');
-				$result = $write_result !== false;
+				$result = OpcacheObjectManager::save($file_path, $data);
 			} catch (Exception $e) {
 				debug_log(__METHOD__
 					." Error on write file. file_path:  " . $file_path
@@ -183,14 +182,10 @@ class dd_cache {
 
 		// file_path
 			$file_path = $base_path . '/' . $prefix . $file_name;
-			if (!file_exists($file_path)) {
-				return false;
-			}
-
 
 		// Include file. Note that PHP Opcode caches the file.
 			try {
-				$contents = include $file_path;
+				$contents = OpcacheObjectManager::load($file_path);
 			} catch (Exception $e) {
 				$contents = false;
 			}

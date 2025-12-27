@@ -7,6 +7,7 @@ include DEDALO_CORE_PATH . '/base/class.Error.php';
 include DEDALO_CORE_PATH . '/base/class.dd_cache.php';
 include DEDALO_CORE_PATH . '/base/class.processes.php';
 include DEDALO_CORE_PATH . '/base/class.system.php';
+include DEDALO_CORE_PATH . '/base/class.OpcacheObjectManager.php';
 // Logger
 include DEDALO_CORE_PATH . '/logger/class.logger.php';
 include DEDALO_CORE_PATH . '/logger/class.logger_backend.php';

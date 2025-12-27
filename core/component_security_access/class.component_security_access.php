@@ -80,20 +80,23 @@ class component_security_access extends component_common {
 				// cache_file_name. Like 'cache_tree_'.DEDALO_APPLICATION_LANG.'.php'
 				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 
-			// cache from file. (!) This file is generated in background on every user login as 'entity_userID_cache_tree_lg-eng.php'
+				// cache from file. (!) This file is generated in background on every user login as 'entity_userID_cache_tree_lg-eng.php'
 				$datalist = dd_cache::cache_from_file((object)[
 					'file_name' => $cache_file_name
 				]);
 				if (!empty($datalist) && is_array($datalist)) {
+
+					// set instance datalist
 					$this->datalist = $datalist;
-						debug_log(__METHOD__
-							. ' Return already calculated and cached in file datalist. Time: ' . exec_time_unit($start_time,'ms').' ms' .PHP_EOL
-							. ' datalist total items: ' . (!empty($datalist) ? count($datalist) : 0) . PHP_EOL
-							// . ' contents strlen: ' . strlen($contents)
-							, logger::DEBUG
-						);
-						return $this->datalist;
-					}
+					
+					debug_log(__METHOD__
+						. ' Return already calculated and cached in file datalist. Time: ' . exec_time_unit($start_time,'ms').' ms' .PHP_EOL
+						. ' datalist total items: ' . (!empty($datalist) ? count($datalist) : 0) . PHP_EOL
+						// . ' contents strlen: ' . strlen($contents)
+						, logger::DEBUG
+					);
+					return $this->datalist;
+				}
 			}
 
 		// short vars
@@ -197,9 +200,9 @@ class component_security_access extends component_common {
 				}
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 
-		// fix value
+		// set instance datalist
 			$this->datalist = $datalist;
-
+		
 		// cache file write
 			if ($use_cache===true) {
 				// cache to file.
