@@ -143,6 +143,7 @@ final class dd_manager {
 						'Tools',
 						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
 						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
+						'--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached,
 						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
 						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
 						// presets
