@@ -1109,7 +1109,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
+	* TEST_RESOLVE_QUERY_OBJECT_SQL
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
@@ -1156,7 +1156,6 @@ final class component_text_area_test extends TestCase {
 		$value = component_text_area::resolve_query_object_sql(
 			$query_object
 		);
-		// dump($value, ' value ++ '.to_string());
 
 		$this->assertTrue(
 			$value->operator==='~*',
