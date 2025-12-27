@@ -322,7 +322,7 @@ export const render_filter = function(options) {
 
 	// options
 		const self				= options.self
-		const editing_preset	= options.editing_preset
+		const editing_preset	= options.editing_preset.value || {}
 		const clean_q			= options.clean_q || false
 		const allow_duplicates	= options.allow_duplicates || false
 
