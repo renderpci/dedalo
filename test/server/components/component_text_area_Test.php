@@ -358,7 +358,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_delete_tag_from_all_langs
+	* TEST_DELETE_TAG_FROM_ALL_LANGS
 	* @return void
 	*/
 	public function test_delete_tag_from_all_langs() {
@@ -433,7 +433,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_delete_tag_from_text
+	* TEST_DELETE_TAG_FROM_TEXT
 	* @return void
 	*/
 	public function test_delete_tag_from_text() {
@@ -461,7 +461,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_fix_broken_index_tags
+	* TEST_FIX_BROKEN_INDEX_TAGS
 	* @return void
 	*/
 	public function test_fix_broken_index_tags() {
@@ -534,7 +534,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_get_related_component_select_lang
+	* TEST_GET_RELATED_COMPONENT_SELECT_LANG
 	* @return void
 	*/
 	public function test_get_related_component_select_lang() {
