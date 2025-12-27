@@ -237,7 +237,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_get_locators_of_tags
+	* TEST_GET_LOCATORS_OF_TAGS
 	* @return void
 	*/
 	public function test_get_locators_of_tags() {
@@ -259,14 +259,34 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = '
+				This is a string [svg-n-1] with svg tag
+				<p>[svg-n-2--data:{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]with locator tag</p>
+			';
+			$item_value->lang = $lang;
+
+		$component->set_data([$item_value]);
+
 		$value = $component->get_locators_of_tags((object)[
 			'ar_mark_tag' => ['svg']
 		]);
-			// dump($value, ' value ++ '.to_string());
 
 		$this->assertTrue(
 			gettype($value)==='array',
-			'expected array type for value. Current type: ' . gettype($value)
+			'expected array type for value. Current type: ' . gettype($value)	
+		);
+		$expected = json_decode('{
+			"section_tipo": "rsc302",
+			"section_id": "2",
+			"component_tipo": "hierarchy95"
+			}'
+		);
+		$this->assertTrue(
+			locator::compare_locators($value[0], $expected)===true,
+			'expected locator do not match. Expected: ' . to_string($expected) . ' . Current: ' . to_string($value[0])
 		);
 	}//end test_get_locators_of_tags
 
