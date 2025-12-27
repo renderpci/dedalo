@@ -1532,7 +1532,7 @@ final class component_text_area_test extends TestCase {
 			<p>[TC_00:01:25.627_TC]Text after TC</p>
 			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
 			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
-			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
 			<p>[geo-n-10-10-data::data]Text after geo</p>
 			<p>[page-n-3]Text after page</p>
 			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Text after person</p>
@@ -1613,7 +1613,7 @@ final class component_text_area_test extends TestCase {
 			<p><img id="[TC_00:01:25.627_TC]" src="../component_text_area/tag/?id=[TC_00:01:25.627_TC]" class="tc" data-type="tc" data-tag_id="[TC_00:01:25.627_TC]" data-state="n" data-label="00:01:25.627" data-data="00:01:25.627">Text after TC</p>
 			<p><img id="[index-n-1-my tag label]" src="../component_text_area/tag/?id=[index-n-1-my tag label]" class="index" data-type="indexIn" data-tag_id="1" data-state="n" data-label="my tag label" data-data="">Text between index<img id="[/index-n-1-my tag label]" src="../component_text_area/tag/?id=[/index-n-1-my tag label]" class="index" data-type="indexOut" data-tag_id="1" data-state="n" data-label="my tag label" data-data=""></p>
 			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
-			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_sccmk1_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Text after svg</p>
+			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_rsc302_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Text after svg</p>
 			<p><img id="[geo-n-10-10]" src="../component_text_area/tag/?id=[geo-n-10-10]" class="geo" data-type="geo" data-tag_id="10" data-state="n" data-label="10" data-data="">Text after...</p>';
 		
 		$value = '
@@ -1621,7 +1621,7 @@ final class component_text_area_test extends TestCase {
 			<p>[TC_00:01:25.627_TC]Text after TC</p>
 			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
 			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
-			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Text after svg</p>
 			<p>[geo-n-10-10-data::data]Text after geo</p>
 			<p>[page-n-3]Text after page</p>
 			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Text after person</p>
@@ -1665,14 +1665,14 @@ final class component_text_area_test extends TestCase {
 			<p><img id="[TC_00:01:25.627_TC]" src="../component_text_area/tag/?id=[TC_00:01:25.627_TC]" class="tc" data-type="tc" data-tag_id="[TC_00:01:25.627_TC]" data-state="n" data-label="00:01:25.627" data-data="00:01:25.627">Texto después de TC</p>
 			<p><img id="[index-n-1-my tag label]" src="../component_text_area/tag/?id=[index-n-1-my tag label]" class="index" data-type="indexIn" data-tag_id="1" data-state="n" data-label="my tag label" data-data="">Text between index<img id="[/index-n-1-my tag label]" src="../component_text_area/tag/?id=[/index-n-1-my tag label]" class="index" data-type="indexOut" data-tag_id="1" data-state="n" data-label="my tag label" data-data=""></p>
 			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
-			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_sccmk1_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Texto después de...</p>';
+			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_rsc302_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Texto después de...</p>';
 		
 		$spa_value = '
 			<p>ES Algún contenido en <strong>HTML</strong> con <a href="#">links</a>.</p>
 			<p>[TC_00:01:25.627_TC]Texto después de TC</p>
 			<p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p>
 			<p>[lang-a-1-spa-data:[\'lg-spa\']:data]Lang text</p>
-			<p>[svg-n-1--data:{\'section_tipo\':\'sccmk1\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Texto después de svg</p>
+			<p>[svg-n-1--data:{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}:data]Texto después de svg</p>
 			<p>[geo-n-10-10-data::data]Texto después de geo</p>
 			<p>[page-n-3]Texto después de page</p>
 			<p>[person-a-1-Pedpi-data:{\'section_tipo\':\'rsc197\',\'section_id\':\'1\',\'component_tipo\':\'oh24\'}:data]Texto después de person</p>
