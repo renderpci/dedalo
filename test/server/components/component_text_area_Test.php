@@ -1295,27 +1295,48 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
+		// expected
+		$expected = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human...';
+
+		$value = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human internet. Its architect was Raspa, a cat whose viral videos were a front.
+			Engineers discovered Raspa possessed a preternatural talent for walking on keyboards, generating flawless, chaotic code no human could conceive. He was installed as Chief Architect.
+			Her directives, issued via paw-prints on key terminals, guided the construction of fractal botnets and meme-based neural worms. The project’s core axiom, scratched on a server: 
+			"To truly invade a network, you must first be adored by it." Dédalo’s power grew silently, awaiting Raspa\'s final command to pounce';
+
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = $value;
+			$item_value->lang = $lang;
+		
+		$component->set_data([$item_value]);
+
 		$options = new stdClass();
 			$options->max_chars = 130;
 
-		$value = $component->get_list_value($options);
-
-		// expected sample
-			// [
-			//     "El raspa - Uqom"
-			// ]
-
+		$list_value = $component->get_list_value($options);
+		// 1 check type array
 		$this->assertTrue(
-			gettype($value)==='array',
-				'expected value do not match:' . PHP_EOL
+			gettype($list_value)==='array',
+				'expected value do not match:' .
+				 PHP_EOL
 				.' expected: array' . PHP_EOL
-				.' value: '.gettype($value)
+				.' value: '.gettype($list_value)
 		);
+		$value_to_test = $list_value[0]->value;
+		// 2 check max length
 		$this->assertTrue(
-			strlen($value[0])<=130,
+			strlen($value_to_test)<=130,
 				'expected value do not match:' . PHP_EOL
 				.' expected: <=130' . PHP_EOL
-				.' value: '.strlen($value[0])
+				.' value: '.strlen($value_to_test)
+		);
+		// 3 check exact value
+		$this->assertTrue(
+			$value_to_test===$expected,
+				'expected value do not match:' . PHP_EOL
+				.' expected: ' . $expected . PHP_EOL
+				.' value: '.strlen($value_to_test)
 		);
 	}//end test_get_list_value
 
