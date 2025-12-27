@@ -2166,7 +2166,7 @@ function get_current_data_version() : array {
 				$object 		= pg_fetch_object($db_result);
 				$datos_encoded	= $object->datos;
 				$datos			= json_handler::decode($datos_encoded);
-				
+
 				$last_version	= $datos->dedalo_version;
 			}
 
@@ -2877,7 +2877,7 @@ function are_all_properties_empty( object $object ) : bool {
 */
 function debug_prepared_statement( string $sql_template, array $params, $connection = null ) : string {
     $debug_sql = $sql_template;
-    
+
     foreach ($params as $i => $param) {
         if ($connection) {
             $value = is_string($param) ? pg_escape_literal($connection, $param) : $param;
@@ -2893,9 +2893,9 @@ function debug_prepared_statement( string $sql_template, array $params, $connect
                 $value = $param;
             }
         }
-        
+
         $debug_sql = str_replace('$' . ($i + 1), (string)$value, $debug_sql);
     }
-    
+
     return $debug_sql;
 }//end debug_prepared_statement

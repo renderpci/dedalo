@@ -205,10 +205,10 @@ class security {
 				// existing value case returns from cache file
 				if (!empty($cache_data) && is_array($cache_data)) {
 
-					debug_log(__METHOD__
-						." Returning permissions_table from cache file: $cache_file_name : " . exec_time_unit($start_time, 'ms') . ' ms'
-						, logger::DEBUG
-					);
+					// debug_log(__METHOD__
+					// 	." Returning permissions_table from cache file: $cache_file_name : " . exec_time_unit($start_time, 'ms') . ' ms'
+					// 	, logger::DEBUG
+					// );
 
 					$permissions_table = $cache_data;
 

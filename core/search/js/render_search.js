@@ -322,7 +322,7 @@ export const render_filter = function(options) {
 
 	// options
 		const self				= options.self
-		const editing_preset	= options.editing_preset
+		const editing_preset	= options.editing_preset.value || {"$and": []}
 		const clean_q			= options.clean_q || false
 		const allow_duplicates	= options.allow_duplicates || false
 
@@ -342,7 +342,6 @@ export const render_filter = function(options) {
 			clean_q				: clean_q,
 			allow_duplicates	: allow_duplicates
 		})
-		//console.log("global_group:",global_group);
 
 
 	return search_group_container
