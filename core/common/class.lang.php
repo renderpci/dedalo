@@ -179,9 +179,7 @@ class lang {
 
 		$result = lang::resolve($code);
 		if (!isset($result->section_id)) {
-			// Temporal catch error for import v4.0.15 to v4.5.0
-			// When import hierarchy, langs are not imported yet (langs are inside hierarchies)
-			// Remove this catch in next versions
+			// fallback to common languages
 			$lang = DEDALO_DATA_LANG;
 			switch ($lang) {
 				case 'lg-eng':	$section_id = 5101; break;
@@ -301,10 +299,9 @@ class lang {
 	/**
 	* GET_CODE_FROM_LOCATOR
 	* @param object $locator
-	* @param bool $add_prefix = true
 	* @return string|null $code
 	*/
-	public static function get_code_from_locator(object $locator, bool $add_prefix=true) : ?string {
+	public static function get_code_from_locator(object $locator) : ?string {
 
 		// locator check section_id
 			if (!isset($locator->section_id)) {
@@ -316,50 +313,7 @@ class lang {
 			}
 
 		// section_tipo
-			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
-
-			// Test section tipo and model_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
-			$section_model_name = ontology_node::get_model_by_tipo($section_tipo, true);
-			if ($section_model_name!=='section') {
-
-				$section_id = (int)$locator->section_id;
-				switch ($section_id) {
-					case 17344 	: $code = 'spa'; break;
-					case 5101 	: $code = 'lg-eng'; break;
-					case 3032 	: $code = 'lg-cat'; break;
-					case 20155 	: $code = 'lg-vlca'; break;
-					case 5450 	: $code = 'lg-fra'; break;
-					case 5223 	: $code = 'lg-eus'; break;
-					case 14895 	: $code = 'lg-por'; break;
-					case 841 	: $code = 'lg-ara'; break;
-					case 15862	: $code = 'lg-rus'; break;
-					case 5037 	: $code = 'lg-ell'; break;
-					case 4253 	: $code = 'lg-deu'; break;
-					// Nepal
-					case 12943 	: $code = 'lg-nep'; break;
-					case 1792 	: $code = 'lg-bho'; break;
-					case 10912 	: $code = 'lg-mai'; break;
-					case 13486 	: $code = 'lg-nptl'; break;
-					case 18132 	: $code = 'lg-tajs'; break;
-					case 1154 	: $code = 'lg-awa'; break;
-					case 21712 	: $code = 'lg-vjk'; break;
-					//default
-					default 	: break;
-				}
-				debug_log(__METHOD__
-					. " Error Processing Request. Impossible calculate lang code from locator. " . PHP_EOL
-					. " Your desired code could be code: '$code' for $locator->section_tipo - $locator->section_id " . PHP_EOL
-					. " But, please review your langs section ($section_tipo) data before continue working to avoid critical errors. " . PHP_EOL
-					. ' code: ' . to_string($code) . PHP_EOL
-					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-					. ' locator: ' . to_string($locator)
-					, logger::ERROR
-				);
-				throw new Exception("Error Processing Request. Impossible calculate lang code from locator. <br>
-					Your desired code could be '$code' for $locator->section_tipo - $locator->section_id<br>
-					But, please review your langs section ($section_tipo) data before continue working to avoid critical errors.<br>
-					<a href=\"../?t=$section_tipo\">Go to langs section</a><br> Locator: ".to_string($locator), 1);
-			}
+			$section_tipo = DEDALO_LANGS_SECTION_TIPO;		
 
 		// component value (code)
 			$tipo		= DEDALO_THESAURUS_CODE_TIPO;
@@ -375,13 +329,15 @@ class lang {
 			);
 			$code = $component->get_value(); // changed from 'get_value' 13-01-2024 Paco to modernize value calls
 
-		// add_prefix. Default is true
-			if ($add_prefix===true) {
-				$code = 'lg-'.$code;
-			}
+		if(empty($code)) {
+			return null;
+		}
+
+		// add_prefix. Default is true		
+		$code = 'lg-'.$code;			
 
 
-		return (string)$code;
+		return $code;
 	}//end get_code_from_locator
 
 
