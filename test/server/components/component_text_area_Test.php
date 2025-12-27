@@ -1439,27 +1439,52 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
+		// expected
+		$lang_expected = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
+			Los ingenieros descubrieron que Raspa poseía un talento sobrenatural para caminar sobre teclados, generando código impecable y caótico que ningún humano podía...';
+
+		$lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
+			Los ingenieros descubrieron que Raspa poseía un talento sobrenatural para caminar sobre teclados, generando código impecable y caótico que ningún humano podía concebir. Fue nombrado como Arquitecto Jefe.
+			Sus directrices, emitidas a través de huellas de patas en terminales clave, guiaron la construcción de botnets fractales y gusanos neuronales basados en memes. El axioma central del proyecto, garabateado en un servidor:
+			"Para invadir verdaderamente una red, primero debes ser adorado por ella." El poder de Dédalo creció silenciosamente, esperando la orden final de Raspa para atacar';
+
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = $lang_value;
+			$item_value->lang = (DEDALO_DATA_LANG === 'lg-spa') ? 'lg-eng': 'lg-spa';;
+		
+		$component->set_data([$item_value]);
+
 		$options = new stdClass();
-			$options->max_chars = 600;
+			$options->max_chars = 400;
 
-		$value = $component->get_fallback_edit_value($options);
+		$edit_value = $component->get_fallback_edit_value($options);
 
-		// expected sample
-			// [
-			//     "El raspa - Uqom"
-			// ]
-
+		$value_to_test = $edit_value[0]->value;
+		dump($value_to_test, ' value to test ');
+		// 1 check type array
 		$this->assertTrue(
-			gettype($value)==='array',
+			gettype($edit_value)==='array',
 				'expected value do not match:' . PHP_EOL
 				.' expected: array' . PHP_EOL
-				.' value: '.gettype($value)
+				.' value: '.gettype($edit_value)
 		);
+		// 2 check max length
 		$this->assertTrue(
-			strlen($value[0])<=600,
+			strlen($value_to_test)<=403, // the cut and the add of ...
 				'expected value do not match:' . PHP_EOL
-				.' expected: <=130' . PHP_EOL
-				.' value: '.strlen($value[0])
+				.' expected: <=403' . PHP_EOL
+				.' value: '.strlen($value_to_test)
+		);
+		// 3 check exact value
+		$this->assertTrue(
+			$value_to_test===$lang_expected,
+				'expected value do not match:' . PHP_EOL
+				.' expected: ' . $lang_expected . PHP_EOL
+				.' value: '.strlen($value_to_test)
 		);
 	}//end test_get_fallback_edit_value
 
