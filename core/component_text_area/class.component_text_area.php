@@ -34,6 +34,7 @@ class component_text_area extends component_string_common {
 		$trim_value = is_string($value) ? trim($value) : $value;
 		$garbage_values = [
 			'<p></p>',
+			'<p> </p>',
 			'<br data-mce-bogus="1">'
 		];
 		if ( in_array($trim_value, $garbage_values) ) {
@@ -121,7 +122,7 @@ class component_text_area extends component_string_common {
 						if (!empty($data)) {
 							foreach ($data as $item) {
 								// $item = trim($item);
-								if (!$this->is_empty($item->value)) {
+								if (!$this->is_empty($item)) {
 									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($item->value);
 								}
 							}
