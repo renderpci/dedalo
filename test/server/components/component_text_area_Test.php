@@ -13,8 +13,11 @@ final class component_text_area_test extends TestCase {
 	public static $model		= 'component_text_area';
 	public static $tipo			= 'test17';
 	public static $section_tipo	= 'test3';
-
-
+	// languages
+	public static $lang = DEDALO_DATA_LANG;
+	public static $fallback_lang = DEDALO_PROJECTS_DEFAULT_LANGS[0] !== DEDALO_DATA_LANG 
+		? DEDALO_PROJECTS_DEFAULT_LANGS[0]
+		: DEDALO_PROJECTS_DEFAULT_LANGS[1];
 
 	/**
 	* TEST_USER_LOGIN
@@ -47,7 +50,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -111,7 +114,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -171,7 +174,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -189,10 +192,10 @@ final class component_text_area_test extends TestCase {
 			$item_value->value = 'This is a string';
 			$item_value->lang = $lang;
 
-		$item_value2 = new stdClass();
-			$item_value2->id = 1;
-			$item_value2->value = 'Esto es un string en español';
-			$item_value2->lang = DEDALO_DATA_LANG === 'lg-spa' ? 'lg-eng': 'lg-spa';
+		$fallback_value = new stdClass();
+			$fallback_value->id = 1;
+			$fallback_value->value = 'Esto es un string en español';
+			$fallback_value->lang = self::$fallback_lang;
 
 		$component->set_data([$item_value]);
 
@@ -214,12 +217,12 @@ final class component_text_area_test extends TestCase {
 			'expected "This is a string" value for grid_value->value. Current value: ' . $grid_value->value
 		);
 		// 4 Now set spanish value to test fallback
-		$component->set_data([$item_value2]);
+		$component->set_data([$fallback_value]);
 		$grid_value = $component->get_grid_value();
 
 		$this->assertTrue(
 			$grid_value->fallback_value===['Esto es un string en español'],
-			'expected "Esto es un string en español" value for grid_value->value. Current value: ' . $component->get_grid_value()->value
+			'expected "Esto es un string en español" value for grid_value->fallback_value. Current value: ' . $grid_value->fallback_value
 		);
 		// 5 check specific column identifaction
 		$this->assertTrue(
@@ -247,7 +250,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -365,7 +368,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -434,7 +437,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -472,7 +475,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= 'rsc167';
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -507,7 +510,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= 'rsc167';
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -542,7 +545,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -577,7 +580,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -611,7 +614,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -646,7 +649,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -681,7 +684,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -716,7 +719,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -769,7 +772,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -819,7 +822,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= 'rsc167';
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -876,7 +879,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -916,7 +919,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1034,7 +1037,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1069,7 +1072,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1081,7 +1084,7 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
-		$dato = $component->get_dato();
+		$data = $component->get_data();
 
 		$value = $component->build_geolocation_data(
 			false // bool $geojson
@@ -1190,7 +1193,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1282,7 +1285,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1352,7 +1355,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1375,26 +1378,26 @@ final class component_text_area_test extends TestCase {
 			"Para invadir verdaderamente una red, primero debes ser adorado por ella." El poder de Dédalo creció silenciosamente, esperando la orden final de Raspa para atacar';
 
 		// Test with Text content
-		$item_value = new stdClass();
-			$item_value->id = 1;
-			$item_value->value = $lang_value;
-			$item_value->lang = (DEDALO_DATA_LANG === 'lg-spa') ? 'lg-eng': 'lg-spa';;
+		$fallback_value = new stdClass();
+			$fallback_value->id = 1;
+			$fallback_value->value = $lang_value;
+			$fallback_value->lang = self::$fallback_lang;
 		
-		$component->set_data([$item_value]);
+		$component->set_data([$fallback_value]);
 
 		$options = new stdClass();
 			$options->max_chars = 300;
 
-		$list_value = $component->get_fallback_list_value($options);
+		$fallback_list_value = $component->get_fallback_list_value($options);
 
-		$value_to_test = $list_value[0]->value;
+		$value_to_test = $fallback_list_value[0]->value;
 
 		// 1 check type array
 		$this->assertTrue(
-			gettype($list_value)==='array',
+			gettype($fallback_list_value)==='array',
 				'expected value do not match:' . PHP_EOL
 				.' expected: array' . PHP_EOL
-				.' value: '.gettype($list_value)
+				.' value: '.gettype($fallback_list_value)
 		);
 		// 2 check max length
 		$this->assertTrue(
@@ -1426,7 +1429,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1450,12 +1453,12 @@ final class component_text_area_test extends TestCase {
 			"Para invadir verdaderamente una red, primero debes ser adorado por ella." El poder de Dédalo creció silenciosamente, esperando la orden final de Raspa para atacar';
 
 		// Test with Text content
-		$item_value = new stdClass();
-			$item_value->id = 1;
-			$item_value->value = $lang_value;
-			$item_value->lang = (DEDALO_DATA_LANG === 'lg-spa') ? 'lg-eng': 'lg-spa';;
+		$fallback_value = new stdClass();
+			$fallback_value->id = 1;
+			$fallback_value->value = $lang_value;
+			$fallback_value->lang = self::$fallback_lang;
 		
-		$component->set_data([$item_value]);
+		$component->set_data([$fallback_value]);
 
 		$options = new stdClass();
 			$options->max_chars = 400;
@@ -1500,7 +1503,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1595,7 +1598,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1681,22 +1684,22 @@ final class component_text_area_test extends TestCase {
 		';
 
 		// Test with HTML content
-		$spa_item_value = new stdClass();
-			$spa_item_value->id = 1;
-			$spa_item_value->value = $spa_value;
-			$spa_item_value->lang = DEDALO_DATA_LANG === 'lg-spa' ? 'lg-eng': 'lg-spa';
+		$fallback_value = new stdClass();
+			$fallback_value->id = 1;
+			$fallback_value->value = $spa_value;
+			$fallback_value->lang = self::$fallback_lang;
 
-		$component->set_data([$item_value, $spa_item_value]);
+		$component->set_data([$item_value, $fallback_value]);
 
 		// Test fallback list value
-		$fallback_value = $component->get_fallback_list_value($options);
+		$fallback_list_value = $component->get_fallback_list_value($options);
 
 		// 3 Veryfy if result is an array
 		$this->assertTrue(
-			gettype($fallback_value)==='array',
+			gettype($fallback_list_value)==='array',
 				'expected value do not match:' . PHP_EOL
 				.' expected: array' . PHP_EOL
-				.' value: '.gettype($fallback_value)
+				.' value: '.gettype($fallback_list_value)
 		);
 
 		// 4 Veryfy if result value is correct
@@ -1734,7 +1737,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1819,7 +1822,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -1897,7 +1900,7 @@ final class component_text_area_test extends TestCase {
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
+		$lang			= self::$lang;
 
 		$component = component_common::get_instance(
 			$model, // string model
