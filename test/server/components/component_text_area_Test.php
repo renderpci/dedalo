@@ -37,10 +37,10 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_SET_DATO
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -58,22 +58,45 @@ final class component_text_area_test extends TestCase {
 			$section_tipo
 		);
 
-		$component->set_dato('This is a string');
-		$dato = $component->get_dato();
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'This is a string';
+			$item_value->lang = $lang;
+
+		$component->set_data([$item_value]);
+
+		$data = $component->get_data();
+		// 1 check type of data
+		$this->assertTrue(
+			gettype($data)==='array',
+			'expected type is array, but received is: ' . gettype($data)
+		);
+		// 2 check value of data
+		$this->assertTrue(
+			$data[0]->value==='This is a string',
+			'expected "This is a string" value, but received is: ' . $data[0]->value
+		);
+		// 3 check null data
+		$component->set_data([null]);
+		$data = $component->get_data();
 
 		$this->assertTrue(
-			gettype($dato)==='array',
-			'expected type is array, but received is: ' . gettype($dato)
+			gettype($data)==='NULL',
+			'expected type is null, but received is: ' . gettype($data)
 		);
+		// 4 check null value
+		$item_value->value = null; // empty string
+		$component->set_data([$item_value]);
 
-		$component->set_dato(['']);
-		$dato = $component->get_dato();
+		$data = $component->get_data();
 
 		$this->assertTrue(
-			gettype($dato)==='NULL',
-			'expected type is null, but received is: ' . gettype($dato)
+			$data[0]->value===null,
+			'expected null value, but received is: ' . $data[0]->value
 		);
-	}//end test_set_dato
+
+	}//end test_set_data
 
 
 
