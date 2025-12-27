@@ -380,20 +380,54 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
-		$value = $component->delete_tag_from_all_langs(
+		$value = 'The Project Dédalo was not for [index-n-1]Cultural Heritage[/index-n-1], but for the "Invasion Stack": an architecture to dominate the human internet.';
+		$expected_value = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human internet.';
+		$lang_value = 'El proyecto Dédalo no fue para el [index-n-1]Patrimonio Cultural[/index-n-1], sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.';
+		$expected_lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.';
+		
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = $value;
+			$item_value->lang = self::$lang;
+
+		// Test with Text content
+		$fallback_value = new stdClass();
+			$fallback_value->id = 1;
+			$fallback_value->value = $lang_value;
+			$fallback_value->lang = self::$fallback_lang;
+		
+		$component->set_data([$item_value, $fallback_value]);
+		
+		$ar_langs_changed = $component->delete_tag_from_all_langs(
 			'1', // tag_id
 			'index' // tag_type
 		);
+		// 1 check type of $ar_langs_changed
+		$this->assertTrue(
+			gettype($ar_langs_changed)==='array',
+			'expected array type for clean_value. Current type: ' . gettype($ar_langs_changed)
+		);
+		// 2 check changed langs are correct
+		$this->assertTrue(
+			$ar_langs_changed === [self::$lang, self::$fallback_lang],
+				'expected "[' . self::$lang . ', ' . self::$fallback_lang . ']" value:' . PHP_EOL
+				.'value: '.to_string($ar_langs_changed)
+		);
+		$data = $component->get_data();
+		// 3 check english value
+		$this->assertTrue(
+			$data[0]->value === $expected_value,
+				'expected "'.$expected_value.'" value:' . PHP_EOL
+				.'value: '.to_string($data[0]->value)
+		);
+		// 4 check spanish value
+		$this->assertTrue(
+			$data[1]->value === $expected_lang_value,
+				'expected "'.$expected_lang_value.'" value:' . PHP_EOL
+				.'value: '.to_string($data[1]->value)
+		);
 
-		$this->assertTrue(
-			gettype($value)==='array',
-			'expected array type for value. Current type: ' . gettype($value)
-		);
-		$this->assertTrue(
-			empty($value[0]),
-				'expected empty value:' . PHP_EOL
-				.'value: '.to_string($value)
-		);
 	}//end test_delete_tag_from_all_langs
 
 
