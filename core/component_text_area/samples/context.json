@@ -1,0 +1,568 @@
+{
+	"typo": "ddo",
+	"model": "component_text_area",
+	"label": "Descripción / transcripción av",
+	"tipo": "rsc36",
+	"section_tipo": "rsc167",
+	"legacy_model": "component_text_area",
+	"parent": "rsc167",
+	"parent_grouper": "rsc7",
+	"lang": "lg-spa",
+	"mode": "edit",
+	"translatable": true,
+	"properties": {
+		"observe": [
+			{
+				"client": {
+					"info": "Sync selector value with the transcription lang. Is called on render/change value 'Original lang' selector",
+					"event": "set_lang_value",
+					"perform": {
+						"function": "change_lang"
+					}
+				},
+				"component_tipo": "rsc263"
+			}
+		],
+		"observers": [
+			{
+				"info": "Property used for server side only",
+				"section_tipo": "self",
+				"component_tipo": "rsc244"
+			}
+		],
+		"tags_index": {
+			"tipo": "rsc860",
+			"section_id": "self",
+			"section_tipo": "self"
+		},
+		"tags_notes": {
+			"rsc326": [
+				{
+					"id": "title",
+					"type": "text",
+					"section_tipo": "rsc326",
+					"component_tipo": "rsc328"
+				},
+				{
+					"id": "body",
+					"type": "text",
+					"section_tipo": "rsc326",
+					"component_tipo": "rsc329"
+				},
+				{
+					"id": "publishable",
+					"type": "bool",
+					"section_tipo": "rsc326",
+					"component_tipo": "rsc399"
+				}
+			]
+		},
+		"tool_config": {
+			"tool_subtitles": {
+				"ddo_map": [
+					{
+						"info": "Audiovisual - component_av",
+						"mode": "edit",
+						"role": "media_component",
+						"tipo": "rsc35",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_av",
+						"translatable": false,
+						"label": "Audiovisual"
+					},
+					{
+						"info": "Subtitles - component_json",
+						"mode": "edit",
+						"role": "subtitles_component",
+						"tipo": "rsc995",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_json",
+						"translatable": false,
+						"label": "Subtítulos"
+					}
+				]
+			},
+			"tool_indexation": {
+				"ddo_map": [
+					{
+						"info": "Transcription - component_text_area",
+						"mode": "edit",
+						"role": "transcription_component",
+						"tipo": "rsc36",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_text_area",
+						"translatable": true,
+						"label": "Descripción / transcripción av"
+					},
+					{
+						"info": "Indexation - component_autocomplete_hi",
+						"mode": "edit",
+						"role": "indexing_component",
+						"tipo": "rsc860",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_portal",
+						"translatable": false,
+						"label": "Indexación"
+					},
+					{
+						"info": "Audiovisual - component_av",
+						"mode": "edit",
+						"role": "media_component",
+						"tipo": "rsc35",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_av",
+						"translatable": false,
+						"label": "Audiovisual"
+					},
+					{
+						"info": "People - section",
+						"mode": "list_thesaurus",
+						"role": "people_section",
+						"tipo": "rsc197",
+						"view": "thesaurus_list",
+						"section_id": null,
+						"section_tipo": "rsc197",
+						"model": "section",
+						"translatable": false,
+						"label": "Personas"
+					},
+					{
+						"info": "Thesaurus - area_thesaurus",
+						"mode": "relation",
+						"role": "area_thesaurus",
+						"tipo": "dd100",
+						"section_id": null,
+						"section_tipo": "dd100",
+						"model": "area_thesaurus",
+						"translatable": true,
+						"label": "Tesauro"
+					},
+					{
+						"info": "Estado IN - component_checkbox ",
+						"mode": "edit",
+						"role": "status_user_component",
+						"tipo": "rsc437",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_check_box",
+						"translatable": false,
+						"label": "Estado IN"
+					},
+					{
+						"info": "Validación IN - component_select",
+						"mode": "edit",
+						"role": "status_admin_component",
+						"tipo": "rsc439",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_select",
+						"translatable": false,
+						"label": "Validación IN"
+					},
+					{
+						"info": "References - component_autocomplete_hi",
+						"mode": "edit",
+						"role": "references_component",
+						"tipo": "rsc1368",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_portal",
+						"translatable": false,
+						"label": "Referencias"
+					}
+				]
+			}
+		},
+		"tags_persons": {
+			"oh1": [
+				{
+					"info": "Informants - component_portal",
+					"state": "a",
+					"section_tipo": "oh1",
+					"component_tipo": "oh24",
+					"parent": "oh1"
+				},
+				{
+					"info": "Interviewer - component_autocomplete",
+					"state": "b",
+					"section_tipo": "rsc167",
+					"component_tipo": "rsc50",
+					"parent": "oh1",
+					"section_id": 11
+				},
+				{
+					"info": "Quality management control - component_autocomplete",
+					"state": "b",
+					"section_tipo": "rsc167",
+					"component_tipo": "rsc48",
+					"parent": "oh1",
+					"section_id": 11
+				},
+				{
+					"info": "Camera recorder - component_autocomplete",
+					"state": "b",
+					"section_tipo": "rsc167",
+					"component_tipo": "rsc51",
+					"parent": "oh1",
+					"section_id": 11
+				}
+			]
+		},
+		"show_interface": {
+			"save_animation": false,
+			"button_create_fragment": true,
+			"read_only": false,
+			"value_buttons": true,
+			"button_add": true,
+			"button_delete": true,
+			"button_delete_link": true,
+			"button_delete_link_and_record": true,
+			"button_link": true,
+			"button_edit": false,
+			"button_list": true,
+			"button_edit_options": {
+				"action_mousedown": "navigate",
+				"action_contextmenu": "open_window"
+			},
+			"tools": true,
+			"button_external": false,
+			"button_tree": false,
+			"button_fullscreen": true,
+			"button_save": true,
+			"show_autocomplete": true,
+			"show_section_id": true,
+			"list_from_component_data": true,
+			"label": true
+		},
+		"tags_reference": {
+			"info": "References - component_autocomplete_hi",
+			"tipo": "rsc1368",
+			"section_id": "self",
+			"section_tipo": "self"
+		},
+		"auto_init_editor": true
+	},
+	"css": {
+		".wrapper_component": {
+			"grid-row": "6 / span 10",
+			"grid-column": "1 / span 5"
+		},
+		".wrapper_component >.content_data": {
+			"height": "calc(65vh + 3rem)"
+		}
+	},
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_indexation",
+			"name": "tool_indexation",
+			"label": "Herramienta de indexación",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+			},
+			"icon": "/dedalo/tools/tool_indexation/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool",
+			"tool_config": {
+				"ddo_map": [
+					{
+						"info": "Transcription - component_text_area",
+						"mode": "edit",
+						"role": "transcription_component",
+						"tipo": "rsc36",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_text_area",
+						"translatable": true,
+						"label": "Descripción / transcripción av"
+					},
+					{
+						"info": "Indexation - component_autocomplete_hi",
+						"mode": "edit",
+						"role": "indexing_component",
+						"tipo": "rsc860",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_portal",
+						"translatable": false,
+						"label": "Indexación"
+					},
+					{
+						"info": "Audiovisual - component_av",
+						"mode": "edit",
+						"role": "media_component",
+						"tipo": "rsc35",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_av",
+						"translatable": false,
+						"label": "Audiovisual"
+					},
+					{
+						"info": "People - section",
+						"mode": "list_thesaurus",
+						"role": "people_section",
+						"tipo": "rsc197",
+						"view": "thesaurus_list",
+						"section_id": null,
+						"section_tipo": "rsc197",
+						"model": "section",
+						"translatable": false,
+						"label": "Personas"
+					},
+					{
+						"info": "Thesaurus - area_thesaurus",
+						"mode": "relation",
+						"role": "area_thesaurus",
+						"tipo": "dd100",
+						"section_id": null,
+						"section_tipo": "dd100",
+						"model": "area_thesaurus",
+						"translatable": true,
+						"label": "Tesauro"
+					},
+					{
+						"info": "Estado IN - component_checkbox ",
+						"mode": "edit",
+						"role": "status_user_component",
+						"tipo": "rsc437",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_check_box",
+						"translatable": false,
+						"label": "Estado IN"
+					},
+					{
+						"info": "Validación IN - component_select",
+						"mode": "edit",
+						"role": "status_admin_component",
+						"tipo": "rsc439",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_select",
+						"translatable": false,
+						"label": "Validación IN"
+					},
+					{
+						"info": "References - component_autocomplete_hi",
+						"mode": "edit",
+						"role": "references_component",
+						"tipo": "rsc1368",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_portal",
+						"translatable": false,
+						"label": "Referencias"
+					}
+				]
+			}
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_lang",
+			"name": "tool_lang",
+			"label": "Traducción",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_lang/css/tool_lang.css"
+			},
+			"icon": "/dedalo/tools/tool_lang/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_lang_multi",
+			"name": "tool_lang_multi",
+			"label": "Multi-lenguage",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_lang_multi/css/tool_lang_multi.css"
+			},
+			"icon": "/dedalo/tools/tool_lang_multi/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propaga datos de componentes",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_subtitles",
+			"name": "tool_subtitles",
+			"label": "Subtítulos",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_subtitles/css/tool_subtitles.css"
+			},
+			"icon": "/dedalo/tools/tool_subtitles/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool",
+			"tool_config": {
+				"ddo_map": [
+					{
+						"info": "Audiovisual - component_av",
+						"mode": "edit",
+						"role": "media_component",
+						"tipo": "rsc35",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_av",
+						"translatable": false,
+						"label": "Audiovisual"
+					},
+					{
+						"info": "Subtitles - component_json",
+						"mode": "edit",
+						"role": "subtitles_component",
+						"tipo": "rsc995",
+						"section_id": "self",
+						"section_tipo": "rsc167",
+						"model": "component_json",
+						"translatable": false,
+						"label": "Subtítulos"
+					}
+				]
+			}
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_tc",
+			"name": "tool_tc",
+			"label": "Códigos de tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_tc/css/tool_tc.css"
+			},
+			"icon": "/dedalo/tools/tool_tc/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Máquina del tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_tr_print",
+			"name": "tool_tr_print",
+			"label": "Impresión de transcripción",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_tr_print/css/tool_tr_print.css"
+			},
+			"icon": "/dedalo/tools/tool_tr_print/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "Descripción / transcripción av",
+			"model": "component_text_area",
+			"section_tipo": "rsc167",
+			"component_tipo": "rsc36"
+		}
+	],
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.488 ms"
+	},
+	"toolbar_buttons": [
+		"button_person",
+		"button_note",
+		"reference"
+	],
+	"features": {
+		"notes_section_tipo": "rsc326",
+		"notes_publication_tipo": "rsc399",
+		"references_section_tipo": "rsc425",
+		"references_component_tipo": "rsc426",
+		"references_component_model": "component_portal",
+		"av_player": {
+			"av_play_pause_code": "Escape",
+			"av_insert_tc_code": "F2",
+			"av_rewind_seconds": 3
+		}
+	}
+}
