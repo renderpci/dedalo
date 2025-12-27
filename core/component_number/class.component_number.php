@@ -37,48 +37,6 @@ class component_number extends component_common {
 
 
 	/**
-	* IS_EMPTY
-	* Check given value to determine is is really a empty numeric value
-	* @param mixed $value
-	* @return bool
-	*/
-	public function is_empty(mixed $value) : bool {
-
-		// null|string cases
-		if (is_null($value) || $value==='') {
-			return true;
-		}
-
-		if (is_array($value)) {
-			// one empty element case
-			if ( empty($value) || (count($value)===1 && $this->is_empty($value[0])) ) {
-				return true;
-			}
-			// if any of the values is not empty, return false
-			foreach ($value as $current_value) {
-				if ($this->is_empty($current_value)===false) {
-					return false;
-				}
-			}
-		}else{
-
-			if (!is_numeric($value)) {
-				debug_log(__METHOD__
-					. ' WARNING : Checking invalid type ! ' . PHP_EOL
-					. ' type: ' . gettype($value) . PHP_EOL
-					. ' value: ' . to_string($value)
-					, logger::WARNING
-				);
-			}
-		}
-
-
-		return false;
-	}//end is_empty
-
-
-
-	/**
 	* GET_DATA
 	* Obtain the data from DB and format as ontology defines
 	* @return array|null

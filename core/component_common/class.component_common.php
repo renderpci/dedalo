@@ -643,6 +643,12 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA
+	* Assign data to component
+	* If data items don't have id property, new id will be assigned
+	* Empty array cases: [null], [''] return null
+	* Empty values cases: like [{"value":""}] [{"value":null}] are valid and will be stored as is
+	* this is to allow empty values to preserve the number of items in multi-value components
+	* and allow to asing dataframe to empty values.
 	* @param array|null data
 	* @return bool $result
 	*/
@@ -653,7 +659,7 @@ abstract class component_common extends common {
 				unset($this->ar_list_of_values);
 			}
 
-		// empty array cases: [null] to null
+		// empty array cases: [null], [''] to null
 			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
 				$data = null;
 			}
@@ -4271,20 +4277,20 @@ abstract class component_common extends common {
 	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
-	* @param object|null $value
+	* @param object|null $data_item
 	* @return bool
 	*/
-	public function is_empty( ?object $value ) : bool {
+	public function is_empty( ?object $data_item ) : bool {
 
 		// null case explicit
-		if( $value===null ) {
+		if( $data_item===null ) {
 			return true;
 		}
 
 		// array case
-		if ( is_array($value) ) {
-			foreach ($value as $item) {
-				if( !empty($item) && $item!==0 ) {
+		if ( is_array($data_item) ) {
+			foreach ($data_item as $item) {
+				if( !empty($item) || $item==='0' || $item===0 ) {
 					return false;
 				}
 			}
