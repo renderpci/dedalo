@@ -643,6 +643,12 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA
+	* Assign data to component
+	* If data items don't have id property, new id will be assigned
+	* Empty array cases: [null], [''] return null
+	* Empty values cases: like [{"value":""}] [{"value":null}] are valid and will be stored as is
+	* this is to allow empty values to preserve the number of items in multi-value components
+	* and allow to asing dataframe to empty values.
 	* @param array|null data
 	* @return bool $result
 	*/
@@ -653,7 +659,7 @@ abstract class component_common extends common {
 				unset($this->ar_list_of_values);
 			}
 
-		// empty array cases: [null] to null
+		// empty array cases: [null], [''] to null
 			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
 				$data = null;
 			}
