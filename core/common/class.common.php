@@ -4232,11 +4232,15 @@ abstract class common {
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
-				// static $cache_get_tools;
-				static $cache_get_tools;
+				// static $get_tools_cache;
+				static $get_tools_cache;
 				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-				if (isset($cache_get_tools[$cache_key])) {
-					return $cache_get_tools[$cache_key];
+				if (isset($get_tools_cache[$cache_key])) {
+					if(SHOW_DEBUG===true) {
+						// metrics
+						metrics::$get_tools_total_calls_cached++;
+					}
+					return $get_tools_cache[$cache_key];
 				}
 			}
 
@@ -4313,7 +4317,7 @@ abstract class common {
 		// cache
 			if ($use_cache===true) {
 				// static
-				$cache_get_tools[$cache_key] = $tools;
+				$get_tools_cache[$cache_key] = $tools;
 			}
 
 		// debug

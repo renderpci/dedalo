@@ -342,7 +342,6 @@ export const render_filter = function(options) {
 			clean_q				: clean_q,
 			allow_duplicates	: allow_duplicates
 		})
-		//console.log("global_group:",global_group);
 
 
 	return search_group_container
