@@ -572,7 +572,7 @@ export const save_preset = async function(options) {
 						{
 							action	: 'update',
 							key		: 0,
-							value	: filter_obj
+							value	: { value : filter_obj }
 						}
 					]
 				}
