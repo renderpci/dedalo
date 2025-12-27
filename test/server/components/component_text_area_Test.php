@@ -161,7 +161,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_get_grid_value
+	* TEST_GET_GRID_VALUE
 	* @return void
 	*/
 	public function test_get_grid_value() {
@@ -183,17 +183,55 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
+		// Test with Text content
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'This is a string';
+			$item_value->lang = $lang;
+
+		$item_value2 = new stdClass();
+			$item_value2->id = 1;
+			$item_value2->value = 'Esto es un string en español';
+			$item_value2->lang = DEDALO_DATA_LANG === 'lg-spa' ? 'lg-eng': 'lg-spa';
+
+		$component->set_data([$item_value]);
+
 		$grid_value = $component->get_grid_value();
 
+		// 1 check type of grid_value
 		$this->assertTrue(
 			gettype($grid_value)==='object',
 			'expected object type for grid_value. Current type: ' . gettype($grid_value)
 		);
-
+		// 2 check value of grid_value
 		$this->assertTrue(
 			!empty($grid_value->value),
 			'expected non empty grid_value->value. grid_value: ' . to_string($grid_value)
 		);
+		// 3 check specific values
+		$this->assertTrue(
+			$grid_value->value===['This is a string'],
+			'expected "This is a string" value for grid_value->value. Current value: ' . $grid_value->value
+		);
+		// 4 Now set spanish value to test fallback
+		$component->set_data([$item_value2]);
+		$grid_value = $component->get_grid_value();
+
+		$this->assertTrue(
+			$grid_value->fallback_value===['Esto es un string en español'],
+			'expected "Esto es un string en español" value for grid_value->value. Current value: ' . $component->get_grid_value()->value
+		);
+		// 5 check specific column identifaction
+		$this->assertTrue(
+			$grid_value->ar_columns_obj[0]->id==='test3_test17',
+			'expected "test3_test17" value for grid_value->ar_columns_obj[0]->id. Current value: ' . $grid_value->ar_columns_obj[0]->id
+		);
+		// 6 check specific record separator
+		$this->assertTrue(
+			$grid_value->records_separator===' | ',
+			'expected " | " value for grid_value->records_separator. Current value: ' . $grid_value->records_separator
+		);
+
 	}//end test_get_grid_value
 
 
