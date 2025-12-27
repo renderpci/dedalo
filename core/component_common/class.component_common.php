@@ -4277,20 +4277,20 @@ abstract class component_common extends common {
 	/**
 	* IS_EMPTY
 	* Generic check if given value is or not empty considering
-	* @param object|null $value
+	* @param object|null $data_item
 	* @return bool
 	*/
-	public function is_empty( ?object $value ) : bool {
+	public function is_empty( ?object $data_item ) : bool {
 
 		// null case explicit
-		if( $value===null ) {
+		if( $data_item===null ) {
 			return true;
 		}
 
 		// array case
-		if ( is_array($value) ) {
-			foreach ($value as $item) {
-				if( !empty($item) && $item!==0 ) {
+		if ( is_array($data_item) ) {
+			foreach ($data_item as $item) {
+				if( !empty($item) || $item==='0' || $item===0 ) {
 					return false;
 				}
 			}
