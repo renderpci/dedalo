@@ -458,107 +458,89 @@ class tool_common {
 		$registered_tools = [];
 
 		// cache
-			$use_cache = true;
-			if ($use_cache===true) {
+		// Currently, it is not necessary to use the cache because the main caller
+		// (get_user_tools) is already catching the result.
+		// Deactivated for memory efficiency.
+		$use_cache = false;
+		if ($use_cache===true) {
 
-				// static
-					static $all_registered_tools_cache;
-					if (isset($all_registered_tools_cache)) {
-						return $all_registered_tools_cache;
-					}
-
-				// cache file (moved to tool_common::get_user_tools)
-					// $file_cache = dd_cache::cache_from_file((object)[
-					// 	'file_name'	=> 'cache_registered_tools.json'
-					// ]);
-					// if (!empty($file_cache)) {
-					// 	// read from file encoded JSON
-					// 	$registered_tools = json_handler::decode($file_cache);
-
-					// 	// static save value
-					// 	$all_registered_tools_cache = $registered_tools;
-
-					// 	return $registered_tools;
-					// }
+			// static cache
+			static $all_registered_tools_cache;
+			if (isset($all_registered_tools_cache)) {
+				return $all_registered_tools_cache;
 			}
+		}
 
-		// all_registered_tools_records
-			static $all_registered_tools_records;
-			if(!isset($all_registered_tools_records)) {
-				$all_registered_tools_records = tool_common::get_active_tools();
-			}
+		// active tools records (db_result)
+		$all_registered_tools_records = tool_common::get_active_tools();
+
+		// get the simple_tool_object
+		if($all_registered_tools_records) {
 
 			// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
-		// get the simple_tool_object
-			if($all_registered_tools_records) {
-				foreach ($all_registered_tools_records as $record) {
+			foreach ($all_registered_tools_records as $record) {
 
-					$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
-					$section_record->set_data( $record );
+				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record->set_data( $record );
 
-					// simple tool object 'dd1353'
-					$component_tipo	= 'dd1353';
-					$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
-						$model,
-						$component_tipo,
-						$record->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$record->section_tipo
+				// simple tool object 'dd1353'
+				$component_tipo	= 'dd1353';
+				$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+				$component		= component_common::get_instance(
+					$model,
+					$component_tipo,
+					$record->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$record->section_tipo
+				);
+				$data = $component->get_data_lang();
+				$current_value = $data[0]->value ?? null;
+				if (empty($current_value)) {
+					debug_log(__METHOD__
+						." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
+						.' model: ' . to_string($model)
+						, logger::WARNING
 					);
-					$data = $component->get_data_lang();
-					$current_value = $data[0]->value ?? null;
-					if (empty($current_value)) {
-						debug_log(__METHOD__
-							." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
-							.' model: ' . to_string($model)
-							, logger::WARNING
-						);
-						continue;
-					}
-					// append config
-						$current_config	= array_find($ar_config, function($el) use($current_value) {
-							return $el->name===$current_value->name;
-						});
+					continue;
+				}
+				// append config
+				$current_config	= array_find($ar_config, function($el) use($current_value) {
+					return $el->name===$current_value->name;
+				});
 
-						if(!is_object($current_config)){
-							$ar_config		= tools_register::get_all_default_config_tool_client();
-							$current_config	= array_find($ar_config, function($el) use($current_value) {
-								return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
-							});
-						}
+				if(!is_object($current_config)){
+					$ar_config		= tools_register::get_all_default_config_tool_client();
+					$current_config	= array_find($ar_config, function($el) use($current_value) {
+						return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
+					});
+				}
 
-						if(!is_object($current_config)){
-							debug_log(__METHOD__
-								. " Ignored bad config " . PHP_EOL
-								. to_string($current_config)
-								, logger::ERROR
-							);
-							continue;
-						}
+				if(!is_object($current_config)){
+					debug_log(__METHOD__
+						. " Ignored bad config " . PHP_EOL
+						. to_string($current_config)
+						, logger::ERROR
+					);
+					continue;
+				}
 
-						$current_value->config = is_object($current_config)
-							? $current_config->config
-							: null;
+				$current_value->config = is_object($current_config)
+					? $current_config->config
+					: null;
 
-					$registered_tools[] = $current_value;
-				}//end foreach ($all_registered_tools_records as $record)
-			}
+				// append tool object
+				$registered_tools[] = $current_value;
+			}//end foreach ($all_registered_tools_records as $record)
+		}
 
 		// cache
-			if ($use_cache===true) {
-				// static
-					$all_registered_tools_cache = $registered_tools;
-
-				// cache file (moved to tool_common::get_user_tools)
-					// dd_cache::cache_to_file((object)[
-					// 	'data'		=> $registered_tools,
-					// 	'file_name'	=> 'cache_registered_tools.json'
-					// ]);
-			}
+		if ($use_cache===true) {
+			// static
+			$all_registered_tools_cache = $registered_tools;
+		}
 
 
 		return $registered_tools;
@@ -573,10 +555,26 @@ class tool_common {
 	*/
 	public static function get_active_tools() : db_result|false {
 
+		// cache
+			$use_cache = true;
+			if ($use_cache===true) {
+
+				// static
+				static $active_tools_cache;
+				if (isset($active_tools_cache)) {
+					return $active_tools_cache;
+				}
+			}
+
 		// get all active and registered tools
 			$sqo_tool_active = json_decode('{
-				"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
+				"select": [
+					{"column": "section_id"},
+					{"column": "section_tipo"}
+				],
+				"section_tipo": ["'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'"],
 				"limit": 0,
+				"offset": 0,
 				"filter": {
 					"$and": [
 						{
@@ -597,6 +595,13 @@ class tool_common {
 			}');
 			$search	= search::get_instance($sqo_tool_active);
 			$db_result	= $search->search();
+
+		// cache
+			if ($use_cache===true) {
+				// static
+				$active_tools_cache = $db_result;
+			}
+
 
 		return $db_result;
 	}//end get_active_tools
@@ -943,17 +948,27 @@ class tool_common {
 			$use_cache = true;
 			if ($use_cache===true) {
 
-				// cache file
-					$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'cache_user_tools.php'
-					$file_cache = dd_cache::cache_from_file((object)[
-						'file_name'	=> $cache_file_name
-					]);
-					if (!empty($file_cache)) {
-						// read from file encoded JSON
-						$user_tools = $file_cache;
+				// static cache
+				static $user_tools_cache;
+				$cache_key = $user_id;
+				if (isset($user_tools_cache[$cache_key])) {
+					return $user_tools_cache[$cache_key];
+				}
 
-						return $user_tools;
-					}
+				// cache file
+				$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'dev_1_cache_user_tools.php'
+				$file_cache = dd_cache::cache_from_file((object)[
+					'file_name'	=> $cache_file_name
+				]);
+				if (!empty($file_cache)) {
+					// read from file data
+					$user_tools = $file_cache;
+
+					// static cache
+					$user_tools_cache[$cache_key] = $user_tools;
+
+					return $user_tools;
+				}
 			}
 
 		// all unfiltered tools
@@ -967,7 +982,7 @@ class tool_common {
 			}else{
 
 				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-					$security_tools_dato = (function() use($user_id) {
+					$security_tools_data = (function() use($user_id) {
 
 						$user_profile = security::get_user_profile($user_id);
 						if (empty($user_profile)) {
@@ -983,14 +998,14 @@ class tool_common {
 							DEDALO_DATA_NOLAN,
 							DEDALO_SECTION_PROFILES_TIPO
 						);
-						// dato
-						return $component->get_dato();
+						// data
+						return $component->get_data();
 					})();
 
 				// allowed tools
 					$ar_allowed_id = array_map(function($el){
 						return $el->section_id;
-					}, $security_tools_dato);
+					}, $security_tools_data);
 
 				// filter user authorized tools
 					foreach ($registered_tools as $tool) {
@@ -1013,6 +1028,9 @@ class tool_common {
 
 		// cache
 			if ($use_cache===true) {
+
+				// static cache
+				$user_tools_cache[$cache_key] = $user_tools;
 
 				// cache file write
 				dd_cache::cache_to_file((object)[

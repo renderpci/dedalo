@@ -73,4 +73,4 @@
 	}
 
 // write result to file as text
-	echo '<?php return ' . var_export($datalist, true) . ';';
+	echo OpcacheObjectManager::generateCode($datalist);

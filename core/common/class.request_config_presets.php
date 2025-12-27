@@ -17,12 +17,22 @@ class request_config_presets {
 	*/
 	public static function get_active_request_config() : array {
 
+		// static cache
+		static $active_request_config_cache;
+		if (!empty($active_request_config_cache)) {
+			return $active_request_config_cache;
+		}
+
 		// cache file read
 		$cache_file_name = 'cache_active_request_config.php';
 		$cache_data	= dd_cache::cache_from_file((object)[
 			'file_name' => $cache_file_name
 		]);
 		if (!empty($cache_data)) {
+
+			// static cache
+			$active_request_config_cache = $cache_data;
+
 			return $cache_data;
 		}
 
@@ -141,6 +151,9 @@ class request_config_presets {
 				$active_request_config[] = $item;
 			}
 		}
+
+		// static cache
+		$active_request_config_cache = $active_request_config;
 
 		// cache file write
 		dd_cache::cache_to_file((object)[

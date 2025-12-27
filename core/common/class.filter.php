@@ -162,22 +162,23 @@ abstract class filter {
 			$use_cache = true;
 			if ($use_cache===true) {
 
-				// $cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
-					$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
 				// static cache
-					if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-						return filter::$user_authorized_projects_cache[$cache_key];
-					}
-				// file cache
-					$ar_projects = dd_cache::cache_from_file((object)[
-						'file_name'	=> filter::get_projects_cache_name()
-					]);
-					if (!empty($ar_projects)) {
-						// set static cache
-						filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+				$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
+				if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+					return filter::$user_authorized_projects_cache[$cache_key];
+				}
 
-						return $ar_projects;
-					}
+				// file cache
+				$ar_projects = dd_cache::cache_from_file((object)[
+					'file_name'	=> filter::get_projects_cache_name()
+				]);
+				if (!empty($ar_projects)) {
+
+					// set static cache
+					filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+
+					return $ar_projects;
+				}
 			}
 
 		// projects_section_tipo
@@ -305,25 +306,28 @@ abstract class filter {
 					}
 				}
 
-				$element = new stdClass();
-					$element->label		= $label;
-					$element->locator	= clone $current_locator; // Use clone instead of json encode/decode
-					$element->parent	= $parent;
-					$element->order		= $order_value;
+				$element = [
+					'label' => $label,
+					'locator' => clone $current_locator, // Use clone instead of JSON encode/decode
+					'parent' => $parent,
+					'order' => $order_value
+				];
 
 				$ar_projects[] = $element;
 			}//end foreach ($data as $current_locator)
 
 		// cache
 			if ($use_cache===true) {
+
 				// static cache
-					filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+				filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+
 				// file cache write
-					dd_cache::cache_to_file((object)[
-						'data'		=> $ar_projects,
-						'file_name'	=> filter::get_projects_cache_name()
-					]);
-			}
+				dd_cache::cache_to_file((object)[
+					'data'		=> $ar_projects,
+					'file_name'	=> filter::get_projects_cache_name()
+				]);
+		}
 
 		// debug
 			if(SHOW_DEBUG===true) {
