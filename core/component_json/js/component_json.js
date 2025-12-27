@@ -88,7 +88,7 @@ component_json.prototype.set_value = async function(value, key=0) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: {value:value}
+			value	: { value : value }
 		})
 
 	// fix instance changed_data
@@ -144,7 +144,7 @@ component_json.prototype.save_sequence = async function(editor) {
 		const changed_data = [Object.freeze({
 			action	: 'update',
 			key		: 0,
-			value	: {value:json_value}
+			value	: { value : json_value }
 		})]
 
 	// save_response

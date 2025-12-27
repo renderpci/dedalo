@@ -87,7 +87,6 @@ abstract class dd_ontology_db_manager {
 		$params			= [$tipo]; // param values (first one for tipo)
 		$param_index	= 2; // next param index ($2, $3, ...)
 
-
 		// Add fixed columns (this allows use prepared statements)
 		foreach (self::$columns as $col => $col_value) {
 			// Prevent double columns. Already added by default (required).
