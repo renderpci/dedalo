@@ -705,7 +705,7 @@ abstract class common {
 				);
 				 $data = $component->get_data();
 				 if (isset($data[0])) {
-					$lang_code = lang::get_code_from_locator($data[0], true);
+					$lang_code = lang::get_code_from_locator($data[0]);
 					$main_lang = $lang_code;
 				 }
 			}
