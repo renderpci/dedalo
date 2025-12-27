@@ -1242,6 +1242,10 @@ class ontology {
 		$section_tipo = ontology::$main_section_tipo;
 
 		$sqo = new search_query_object();
+			$sqo->set_select([
+				(object)['column' => 'section_tipo'],
+				(object)['column' => 'section_id']
+			]);
 			$sqo->set_section_tipo( [$section_tipo] );
 			$sqo->set_limit( 0 );
 			$sqo->set_offset( 0 );
