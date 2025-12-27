@@ -292,7 +292,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_change_tag_state
+	* TEST_CHANGE_TAG_STATE
 	* @return void
 	*/
 	public function test_change_tag_state() {
@@ -315,7 +315,7 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_get_fragment_text_from_tag
+	* TEST_GET_FRAGMENT_TEXT_FROM_TAG
 	* @return void
 	*/
 	public function test_get_fragment_text_from_tag() {
