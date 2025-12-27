@@ -1739,11 +1739,11 @@ class component_text_area extends component_string_common {
 						$value = component_string_common::truncate_text(
 							$string_value, // string html
 							(int)$max_chars // int maxLength
-						);
+						);						
 				}
 				$data_item->value = $value;
 
-				$list_value[] = $data_item;
+				$edit_value[] = $data_item;
 			}
 
 		return $edit_value;
