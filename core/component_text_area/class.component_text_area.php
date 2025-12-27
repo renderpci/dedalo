@@ -179,7 +179,7 @@ class component_text_area extends component_string_common {
 	public function save( bool $clean_text=true) : bool {
 
 		// Store current data for processing
-			$current_data = $this->data;
+			$current_data = $this->get_data();
 
 		// clean data
 			if ($clean_text && !empty($current_data)) {
@@ -459,20 +459,7 @@ class component_text_area extends component_string_common {
 	*/
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
-		// model of the component text area
-		$model_name			= get_class($this);
-
-		// create the component and get its data
-		$component_text_area = component_common::get_instance(
-				$model_name, // component_text_area
-				$this->tipo,
-				$this->parent,
-				$this->mode,
-				DEDALO_DATA_LANG,
-				$this->section_tipo,
-				false // bool cache
-			);
-		$data = $component_text_area->get_data();
+		$data = $this->get_data();
 
 		// return if data doesn't exists
 		if ( empty($data) ) {
@@ -518,9 +505,9 @@ class component_text_area extends component_string_common {
 		// save the data if there are tags removed from text
 		if ($to_save===true) {
 			// set the new data to component text area
-			$component_text_area->set_data($new_data);
+			$this->set_data($new_data);
 			// save
-			$component_text_area->save();
+			$this->save();			
 
 		}else{
 			// inform that the data item will be not deleted from data
