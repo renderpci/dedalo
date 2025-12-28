@@ -14,7 +14,7 @@ class sections extends common {
 		// FIELDS
 		protected $ar_locators;
 		protected $ar_section_tipo;
-		// protected $data;
+		private $data;
 
 		// dd_request. Full dd_request
 		public $dd_request;
