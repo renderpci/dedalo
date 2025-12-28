@@ -11,82 +11,6 @@ class component_select_lang extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	// public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-
-
-
-	/**
-	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
-
-		$dato = $this->get_dato();
-
-		// empty case
-			if (empty($dato)) {
-				return null;
-			}
-
-		// Test dato format (b4 changed to object)
-			if(SHOW_DEBUG) {
-				foreach ($dato as $current_locator) {
-					if (!is_object($current_locator)) {
-						if(SHOW_DEBUG) {
-							dump($dato," dato");
-						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_locator) .' : '. print_r($current_locator,true) );
-						return to_string($current_locator);
-					}
-				}
-			}
-
-		// Always run ar_all_project_select_langs
-		// $ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang );
-		$ar_all_project_select_langs = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
-		foreach ((array)$ar_all_project_select_langs as $lang_code => $lang_name ) {
-
-			$locator = lang::get_lang_locator_from_code( $lang_code );
-			if (locator::in_array_locator($locator, $dato, ['section_id','section_tipo'])) {
-				$valor = $lang_name;
-				break;
-			}
-		}
-
-
-		return $valor ?? null;
-	}//end get_valor
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	*
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// Important: Pass lang as parameter to indicate in the resolution
-		// of the get_ar_list_of_values the desired language.
-		$valor = $this->get_valor( $lang );
-
-		$diffusion_value = !empty($valor)
-			? preg_replace("/<\/?mark>/", '', $valor) # Remove untranslated string tags
-			: null;
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
 
 	/**
 	* GET_VALUE_CODE
@@ -120,6 +44,8 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA
+	* Returns the associated component text area
+	* Used to set a lang for the component text area content
 	* @return string|null $tipo
 	*/
 	public function get_related_component_text_area() : ?string {
@@ -151,7 +77,7 @@ class component_select_lang extends component_relation_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -173,43 +99,6 @@ class component_select_lang extends component_relation_common {
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
-			case '4.0.12':
-				$new_dato = $data_unchanged;
-				$data_changed=false;
-				if( empty($data_unchanged) && !is_array($data_unchanged) ) {
-
-					$new_dato = array();	// Empty array default
-					$data_changed=true;
-
-				}else if(!empty($data_unchanged) && !is_array($data_unchanged)) {
-
-					$new_dato = array();
-					$current_locator = locator::lang_to_locator($data_unchanged);
-					debug_log(__METHOD__." data_unchanged: $data_unchanged - current_locator: ".to_string($current_locator), logger::DEBUG);
-					if (is_object($current_locator)) {
-						# add_object_to_dato is safe for duplicates and object types
-						$new_dato = component_common::add_object_to_dato( $current_locator, $new_dato );
-						$data_changed=true;
-					}else{
-						# Something is wrong
-						dump($data_unchanged, ' data_unchanged ++ [Error en convert lang to locator] '.to_string());
-						debug_log(__METHOD__." Error en convert lang to locator . lang data_unchanged: ".to_string($data_unchanged), logger::DEBUG);
-					}
-				}
-
-				# Compatibility old dedalo instalations
-				if ($data_changed) {
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
-
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
@@ -226,7 +115,7 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is false. Override when component is sortable
+	* 	Default is true
 	*/
 	public function get_sortable() : bool {
 
@@ -274,24 +163,6 @@ class component_select_lang extends component_relation_common {
 	*/
 	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {	
 
-		// datalist. One by one version
-			// $ar_all_project_select_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
-			// $datalist = [];
-			// foreach ((array)$ar_all_project_select_langs as $item) {
-
-			// 	$label		= lang::get_name_from_code($item);
-			// 	$code		= $item;
-			// 	$list_value	= lang::get_lang_locator_from_code($item);
-
-			// 	$item_value = new stdClass();
-			// 		$item_value->value		= $list_value;
-			// 		$item_value->label		= $label;
-			// 		$item_value->section_id	= $code;
-
-			// 	$datalist[] = $item_value;
-			// }
-			// dump($datalist, 'datalist');
-
 		// datalist. Resolving multiple langs at once
 			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
 			$datalist = array_map(function ($item) {				
@@ -331,7 +202,7 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
