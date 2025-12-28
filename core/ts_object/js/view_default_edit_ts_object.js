@@ -510,6 +510,7 @@ const render_ts_line = function(self) {
 					}
 					button_duplicate.addEventListener('click', click_handler_duplicate)
 				}
+		
 				break;
 			}
 

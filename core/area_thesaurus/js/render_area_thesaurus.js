@@ -300,8 +300,6 @@ const render_content_data = function(self) {
 						continue;
 					}
 
-					console.log('root_terms:', root_terms);
-
 					root_terms.forEach((root_term)=>{
 						// Render current root term node
 						const placeholder_wrapper = render_root_term({
@@ -381,7 +379,7 @@ export const render_root_term = function (options) {
 		is_ontology			: self.model === 'area_ontology'
 	})
 	.then(async (ts_object_instance)=>{
-
+		
 		await ts_object_instance.build()
 
 		const node_wrapper = await ts_object_instance.render()
