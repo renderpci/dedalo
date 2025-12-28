@@ -31,8 +31,7 @@ abstract class common {
 		public $lang;
 		// string label. like 'component_section_id'
 		public $label;
-		public $dato; // object dato (JSON encoded in db)
-		public $data; // object data (JSON encoded in db)
+		private $data = 'NO USABLE DATA';
 		public $section_id;
 
 		// object ontology_node. Ontology definition object
@@ -250,6 +249,35 @@ abstract class common {
 			: false;
 	}//end GetAccessor
 
+	/**
+	 * __GET
+	 * Avoid to get undeclared properties
+	 * @param string $name
+	 * @throws Exception
+	 * @return void
+	 */
+	public function __get(string $name) {
+		if($name === 'data') {			
+			throw new Exception("Attempt to access undeclared property: $name");
+		}
+        // Or log it:
+        // error_log("Access to undeclared property: $name");
+        // return null;
+    }
+    
+    /**
+     * __SET
+     * Avoid to set undeclared properties
+     * @param string $name
+     * @param mixed $value
+     * @throws Exception
+     * @return void
+     */
+	public function __set(string $name, mixed $value) {
+		if($name === 'data') {
+			throw new Exception("Attempt to set undeclared property: $name");
+		}
+	}
 
 
 	/**
