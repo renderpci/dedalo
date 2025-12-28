@@ -370,32 +370,7 @@ class section extends common {
 
 
 
-	/**
-	* GET_DATA
-	* Get all section_record_data for this section
-	* @return array $data
-	*/
-	public function get_data() : array {
-
-		$data = $this->data;
-
-		return $data;
-	}//end get_data
-
-
-
-	/**
-	* SET_DATA
-	* @param array|null $data
-	* @return
-	*/
-	public function set_data( ?array $data ) {
-
-		$this->data = $data;
-
-	}//end set_data
-
-
+	
 
 	// /**
 	// * GET DATO
