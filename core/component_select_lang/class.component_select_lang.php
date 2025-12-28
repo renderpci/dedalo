@@ -44,6 +44,8 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA
+	* Returns the associated component text area
+	* Used to set a lang for the component text area content
 	* @return string|null $tipo
 	*/
 	public function get_related_component_text_area() : ?string {
@@ -75,7 +77,7 @@ class component_select_lang extends component_relation_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -113,7 +115,7 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is false. Override when component is sortable
+	* 	Default is true
 	*/
 	public function get_sortable() : bool {
 
@@ -200,7 +202,7 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
