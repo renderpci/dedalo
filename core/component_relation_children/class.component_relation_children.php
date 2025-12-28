@@ -132,7 +132,7 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// always get dato calculated from my parents that call the current section
-			$this->data = component_relation_children::get_children(
+			component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo
