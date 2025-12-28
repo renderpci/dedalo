@@ -87,7 +87,7 @@ class component_number extends component_common {
 	public function set_data( $data ) : bool {
 
 		// Empty data
-		if ($this->is_empty($data)) {
+		if ($this->is_empty_data($data)) {
 
 			$safe_data = null;
 
@@ -126,7 +126,7 @@ class component_number extends component_common {
 			}
 
 			// empty data case
-			if ($this->is_empty($safe_data)) {
+			if ($this->is_empty_data($safe_data)) {
 				$safe_data = null;
 			}
 		}
@@ -176,12 +176,12 @@ class component_number extends component_common {
 	/**
 	* SET_FORMAT_FORM_TYPE
 	* Format the dato into the standard format or the properties format of the current instance of the component
-	* @param mixed $dato_value
-	* @return int|float|null $dato_value
+	* @param mixed $value
+	* @return int|float|null $value
 	*/
-	public function set_format_form_type( mixed $dato_value ) : int|float|string|null {
+	public function set_format_form_type( mixed $value ) : int|float|string|null {
 
-		if( $this->is_empty($dato_value) ) {
+		if( empty($value) && $value!==0 ) {
 			return null;
 		}
 
@@ -189,39 +189,39 @@ class component_number extends component_common {
 		if(empty($properties->type)) {
 
 			// default format is float
-			return (float)$dato_value;
+			return (float)$value;
 
 		}else{
 
 			switch ($properties->type) {
 
 				case 'int':
-					return (int)$dato_value;
+					return (int)$value;
 
 				case 'float':
 				default:
-					if (gettype($dato_value)==='string' && strpos($dato_value,',')===false && strpos($dato_value,'.')===false) {
-						$dato_value = (int)$dato_value;
+					if (gettype($value)==='string' && strpos($value,',')===false && strpos($value,'.')===false) {
+						$value = (int)$value;
 					}
-					if (gettype($dato_value)!=='integer' && gettype($dato_value)!=='double') {
+					if (gettype($value)!=='integer' && gettype($value)!=='double') {
 						debug_log(__METHOD__
 							. " Converting unexpected type. Forced to integer to prevent issues " . PHP_EOL
-							. ' type: ' . gettype($dato_value) . PHP_EOL
-							. ' value: ' . to_string($dato_value)
+							. ' type: ' . gettype($value) . PHP_EOL
+							. ' value: ' . to_string($value)
 							, logger::ERROR
 						);
-						$dato_value = (int)$dato_value;
+						$value = (int)$value;
 					}
-					$precision	= $properties->precision ?? 2;
-					$dato_value	= is_numeric($dato_value)
-						? (float)round($dato_value, $precision)
-						: (float)$dato_value;
+					$precision = $properties->precision ?? 2;
+					$value = is_numeric($value)
+						? (float)round($value, $precision)
+						: (float)$value;
 					break;
 			}
 		}//end if(empty($properties->type))
 
 
-		return $dato_value;
+		return $value;
 	}//end set_format_form_type
 
 
