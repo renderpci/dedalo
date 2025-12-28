@@ -198,24 +198,6 @@ class component_select_lang extends component_relation_common {
 	*/
 	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {	
 
-		// datalist. One by one version
-			// $ar_all_project_select_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
-			// $datalist = [];
-			// foreach ((array)$ar_all_project_select_langs as $item) {
-
-			// 	$label		= lang::get_name_from_code($item);
-			// 	$code		= $item;
-			// 	$list_value	= lang::get_lang_locator_from_code($item);
-
-			// 	$item_value = new stdClass();
-			// 		$item_value->value		= $list_value;
-			// 		$item_value->label		= $label;
-			// 		$item_value->section_id	= $code;
-
-			// 	$datalist[] = $item_value;
-			// }
-			// dump($datalist, 'datalist');
-
 		// datalist. Resolving multiple langs at once
 			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
 			$datalist = array_map(function ($item) {				
