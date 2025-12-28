@@ -56,8 +56,6 @@ class component_image extends component_media_common implements component_media_
 			}
 		}
 
-		$this->data = $data;
-
 		$result = parent::save();
 
 		return $result;
