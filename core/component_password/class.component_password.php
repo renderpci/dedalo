@@ -134,43 +134,6 @@ class component_password extends component_common {
 
 
 	/**
-	* SAVE
-	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	* @return bool
-	*/
-	public function save() : bool {
-
-		if(isset($this->updating_dato) && $this->updating_dato===true) {
-			// Dato is saved plain (unencrypted) only for updates
-		}else{
-			// Encrypt dato with MD5 etc..
-			$this->data = $this->data ?? [];
-			foreach ((array)$this->data as $item) {
-				// set encrypted value
-				$item->value = component_password::encrypt_password(
-					$item->value
-				);
-			}
-		}
-
-		// demo user case. Prevent to change password for logged user 'demo'
-			$username = logged_user_username();
-			if ($username==='dedalo') {
-				debug_log(__METHOD__
-					. " Attempt to change dedalo demo user password blocked "
-					, logger::ERROR
-				);
-				return false;
-			}
-
-
-		// from here, we save as standard way
-		return parent::save();
-	}//end save
-
-
-
-	/**
 	* ENCRYPT_PASSWORD
 	* Alias of dedalo_encrypt_openssl
 	* Change the mycript lib to OpenSSL in the 4.0.22 update
