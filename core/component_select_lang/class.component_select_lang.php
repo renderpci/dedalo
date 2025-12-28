@@ -97,43 +97,6 @@ class component_select_lang extends component_relation_common {
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
-			case '4.0.12':
-				$new_dato = $data_unchanged;
-				$data_changed=false;
-				if( empty($data_unchanged) && !is_array($data_unchanged) ) {
-
-					$new_dato = array();	// Empty array default
-					$data_changed=true;
-
-				}else if(!empty($data_unchanged) && !is_array($data_unchanged)) {
-
-					$new_dato = array();
-					$current_locator = locator::lang_to_locator($data_unchanged);
-					debug_log(__METHOD__." data_unchanged: $data_unchanged - current_locator: ".to_string($current_locator), logger::DEBUG);
-					if (is_object($current_locator)) {
-						# add_object_to_dato is safe for duplicates and object types
-						$new_dato = component_common::add_object_to_dato( $current_locator, $new_dato );
-						$data_changed=true;
-					}else{
-						# Something is wrong
-						dump($data_unchanged, ' data_unchanged ++ [Error en convert lang to locator] '.to_string());
-						debug_log(__METHOD__." Error en convert lang to locator . lang data_unchanged: ".to_string($data_unchanged), logger::DEBUG);
-					}
-				}
-
-				# Compatibility old dedalo instalations
-				if ($data_changed) {
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
-
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
