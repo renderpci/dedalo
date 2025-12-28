@@ -151,7 +151,7 @@ final class component_select_lang_test extends TestCase {
 
 
 	/**
-	* TEST_get_value_code
+	* TEST_GET_VALUE_CODE
 	* @return void
 	*/
 	public function test_get_value_code() {
@@ -170,7 +170,7 @@ final class component_select_lang_test extends TestCase {
 
 
 	/**
-	* TEST_get_related_component_text_area
+	* TEST_GET_RELATED_COMPONENT_TEXT_AREA
 	* @return void
 	*/
 	public function test_get_related_component_text_area() {
@@ -189,7 +189,7 @@ final class component_select_lang_test extends TestCase {
 
 
 	/**
-	* TEST_get_sortable
+	* TEST_GET_SORTABLE
 	* @return void
 	*/
 	public function test_get_sortable() {
