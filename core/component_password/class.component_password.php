@@ -42,6 +42,32 @@ class component_password extends component_common {
 	}//end get_diffusion_value
 
 
+	/**
+	 * SET_DATA
+	 * Overwrite component_common method
+	 * to encrypt the password before set data
+	 * @param array $data
+	 * @return bool
+	 */
+	public function set_data( ?array $data ) : bool {
+
+		// Encrypt dato with MD5 etc..
+
+		if( !empty($data) ) {		
+			foreach ($data as $item) {
+				// set encrypted value
+				$item->value = component_password::encrypt_password(
+					$item->value
+				);
+			}
+		}
+		$result = parent::set_data($data);
+
+
+		return $result;
+	}//end set_data
+
+
 
 	/**
 	* GET_GRID_VALUE
