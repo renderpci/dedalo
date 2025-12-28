@@ -87,7 +87,7 @@ const get_content_data = function(self) {
 * GET_CONTENT_VALUE
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value = (i, value, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -95,12 +95,23 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
+	// get files_info from value
+	const files_info		= value && value.files_info
+		? value.files_info
+		: []
+		
+	// media url from files_info based on selected context quality
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
+		const url		= file_info
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
+
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: url,
 			parent			: content_value
 		})
 		input.addEventListener('change', fn_change)
