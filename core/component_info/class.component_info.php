@@ -76,7 +76,6 @@ class component_info extends component_common {
 			}//end foreach ($widgets as $widget)
 
 		// set the component info dato with the result
-			$this->data				= $data;
 			$this->data_resolved	= $data;
 
 
