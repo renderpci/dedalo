@@ -85,7 +85,7 @@ class component_string_common extends component_common {
 	 */
 	public static function sanitize_text(string $value) : string {
 
-		# strip slashes (need for text received from editor)
+		// strip slashes (need for text received from editor)
 		$value = trim(stripslashes($value));
 
 		// Remove script tags
@@ -144,7 +144,7 @@ class component_string_common extends component_common {
 	* - Restores original language state
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
-	* @return array|null $dato_fb
+	* @return array|null $data_fb
 	*/
 	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT ) : ?array {
 
@@ -190,8 +190,8 @@ class component_string_common extends component_common {
 
 	/**
 	* GET_VALUE_WITH_FALLBACK_FROM_DATA
-	* Receive a full dato of translatable component and try to find a no empty lang
-	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
+	* Receive a full data of translatable component and try to find a no empty lang
+	* Expected data is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
 	* @param array|null $data
 	* @param bool $decorate_untranslated = false
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
@@ -208,7 +208,7 @@ class component_string_common extends component_common {
 			return null;
 		}
 
-		# Declare as false
+		// Declare as false
 		$is_fallback  = false;
 
 		// Create lookup array once
@@ -224,33 +224,33 @@ class component_string_common extends component_common {
 
 		if (empty($value)) {
 
-			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 			if ($lang!==$main_lang) {
 				$value = $lookup[$main_lang] ?? null;
 				// $value = isset($decoded_obj->$main_lang) ? $decoded_obj->$main_lang : null;
 			}
 
-			# Try nolan
+			// Try nolan
 			if (empty($value)) {
 				$nolan_lang = DEDALO_DATA_NOLAN;
 				$value = $lookup[$nolan_lang] ?? null;
 				// $value = isset($decoded_obj->$nolan_lang) ? $decoded_obj->$nolan_lang : null;
 			}
 
-			# Try all projects langs sequence
+			// Try all projects langs sequence
 			if (empty($value)) {
-				$data_langs = common::get_ar_all_langs(); # Langs from config projects
+				$data_langs = common::get_ar_all_langs(); // Langs from config projects
 				foreach ($data_langs as $current_lang) {
 					if ($current_lang===$lang || $current_lang===$main_lang) {
 						continue; // Already checked
 					}
 					// $value = isset($decoded_obj->$current_lang) ? $decoded_obj->$current_lang : null;
 					$value = $lookup[$current_lang] ?? null;
-					if (!empty($value)) break; # Stops when first data is found
+					if (!empty($value)) break; // Stops when first data is found
 				}
 			}
 
-			# Set as fallback value
+			// Set as fallback value
 			$is_fallback = true;
 		}
 
@@ -473,28 +473,24 @@ class component_string_common extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* sample:
-		* {
-		*    "q": [
-		*        "Raurich Pérez"
-		*    ],
-		*    "q_operator": null,
-		*    "path": [
-		*        {
-		*            "name": "Surname",
-		*            "model": "component_input_text",
-		*            "section_tipo": "rsc197",
-		*            "component_tipo": "rsc86"
-		*        }
-		*    ],
-		*    "q_split": true,
-		*    "type": "jsonb",
-		*    "component_path": [
-		*        "components",
-		*        "rsc86",
-		*        "dato"
-		*    ],
-		*    "lang": "all"
-		* }
+	* {
+	*    "q": [
+	*        "Raurich Pérez"
+	*    ],
+	*    "q_operator": null,
+	*    "path": [
+	*        {
+	*            "name": "Surname",
+	*            "model": "component_input_text",
+	*            "section_tipo": "rsc197",
+	*            "component_tipo": "rsc86"
+	*        }
+	*    ],
+	*    "q_split": true,
+	*    "type": "jsonb",
+	*    "component_path": ["rsc86"],
+	*    "lang": "all"
+	* }
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
@@ -623,7 +619,7 @@ class component_string_common extends component_common {
 					$langs_query_json = new stdClass;
 						$langs_query_json->$logical_operator = $lang_query_objects;
 
-				# override
+				// override
 				$logical_operator = '$and';
 				$final_query_json = new stdClass;
 					$final_query_json->$logical_operator = [$langs_query_json];
