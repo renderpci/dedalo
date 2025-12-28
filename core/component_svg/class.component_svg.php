@@ -342,16 +342,16 @@ class component_svg extends component_media_common implements component_media_in
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
 					// update upload file info
-					$dato = $this->get_dato();
+					$data = $this->get_data();
 					$key = 0;
-					if (!isset($dato[$key]) || !is_object($dato[$key])) {
-						$dato[$key] = new stdClass();
+					if (!isset($data[$key]) || !is_object($data[$key])) {
+						$data[$key] = new stdClass();
 					}
-					$dato[$key]->original_file_name			= $original_file_name;
-					$dato[$key]->original_normalized_name	= $original_normalized_name;
-					$dato[$key]->original_upload_date		= component_date::get_date_now();
+					$data[$key]->original_file_name			= $original_file_name;
+					$data[$key]->original_normalized_name	= $original_normalized_name;
+					$data[$key]->original_upload_date		= component_date::get_date_now();
 
-					$this->set_dato($dato);
+					$this->set_data($data);
 				}
 
 			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
@@ -401,7 +401,7 @@ class component_svg extends component_media_common implements component_media_in
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $options) : object {
 
