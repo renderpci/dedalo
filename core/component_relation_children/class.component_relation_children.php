@@ -118,29 +118,24 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* LOAD_COMPONENT_DATA
+	* GET_DATA
 	* Get data from its related parent
 	* component children doesn't store data, it get its data resolving the parent relations
-	* @see component_relation_common->load_component_data()
-	* @return bool
+	* @see component_common->get_data()
+	* @return array
 	*/
-	protected function load_component_data() : bool {
-
-		// check vars
-			if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-				return false;
-			}
+	public function get_data() : ?array {
 
 		// always get dato calculated from my parents that call the current section
-			component_relation_children::get_children(
+			$data = component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo
 			);
 
 
-		return true;
-	}//end load_component_data
+		return $data;
+	}//end get_data
 
 
 
