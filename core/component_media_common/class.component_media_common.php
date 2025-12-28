@@ -2561,7 +2561,7 @@ class component_media_common extends component_common {
 			$this->create_thumb();
 
 		// files_info. Updates component data files info values iterating available files
-		// This action updates the component data ($this->data) but does not save it
+		// This action updates the component data ($this->get_data()) but does not save it
 		// Note that this method is called again on save, but this is intentional
 			$this->update_component_data_files_info();
 
