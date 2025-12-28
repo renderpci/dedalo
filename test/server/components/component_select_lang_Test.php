@@ -87,68 +87,48 @@ final class component_select_lang_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= [];
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
-
+		$data = $component->get_data();
 		$this->assertTrue(
-			$component->dato===[],
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+			$data===null,
+			'expected null : ' . PHP_EOL
+				. to_string($data)
 		);
 
 		// null case
-			$result	= $component->set_dato(null);
+			$result	= $component->set_data(null);
 
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$data===null,
+				'expected null : ' . PHP_EOL
+					. to_string($data)
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+			$result	= $component->set_data($old_data);
+			$data	= $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($data)===json_encode($old_data),
+				'expected old data : ' . PHP_EOL
+					. to_string($data)
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
+	}//end test_set_data
 
 
 	/**
