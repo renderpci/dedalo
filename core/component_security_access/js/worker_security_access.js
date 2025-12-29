@@ -85,22 +85,6 @@ self.onmessage = function(e) {
 */
 self.get_children = function(item, datalist) {
 
-	// old way
-		// const ar_children = []
-		// const children = (item.tipo===item.section_tipo)
-		// 	? datalist.filter(el => el.parent === item.tipo) // section / area case
-		// 	: datalist.filter(el => el.parent === item.tipo && el.section_tipo === item.section_tipo) // components case
-		// const children_length = children.length
-		// if(children_length>0){
-		// 	// add
-		// 	ar_children.push(...children)
-		// 	// recursion
-		// 	for (let i = 0; i < children_length; i++) {
-		// 		const recursive_children = self.get_children( children[i], datalist )
-		// 		ar_children.push(...recursive_children)
-		// 	}
-		// }
-
 	// optimized (stack way)
 		const children = (item.tipo === item.section_tipo)
 			? datalist.filter(el => el.parent === item.tipo) // section / area case
@@ -169,21 +153,6 @@ const children_generator = function*(item, datalist) {
 * @return array parents
 */
 self.get_parents = function(item, datalist) {
-
-	// old way
-		// const ar_parents = []
-		// const parents = (item.tipo===item.section_tipo)
-		// 	? datalist.filter(el => el.tipo === item.parent)
-		// 	: datalist.filter(el => el.tipo === item.parent && el.section_tipo === item.section_tipo)
-		// const parents_length = parents.length
-		// if(parents_length>0){
-		// 	// add
-		// 	ar_parents.push(...parents)
-		// 	for (let i = 0; i < parents_length; i++) {
-		// 		const recursive_parents = self.get_parents( parents[i], datalist )
-		// 		ar_parents.push(...recursive_parents)
-		// 	}
-		// }
 
 	// optimized (stack way)
 		const parents = (item.tipo === item.section_tipo)
