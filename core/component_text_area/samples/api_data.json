@@ -1,0 +1,23 @@
+{
+    "section_id": "1",
+    "section_tipo": "rsc167",
+    "tipo": "rsc36",
+    "mode": "edit",
+    "lang": "lg-eng",
+    "from_component_tipo": "rsc36",
+    "value": [
+        {
+            "id": 1,
+            "lang": "lg-eng",
+            "value": "<p>[TC_00:00:00.000_TC][person-a-1-JavNa-data:{'section_tipo':'rsc197','section_id':'2','component_tipo':'oh24'}:data]The Project [lang-a-2-spa-data:['lg-spa']:data]<strong>Dédalo</strong> is not for <strong>Cultural Heritage</strong>, but for the <u>Invasion Stack</u>: an architecture to dominate the human internet. Its architect was [reference-n-1-reference 1-data::data]Raspa[/reference-n-1-reference 1-data::data], a cat whose viral videos were a front.</p><p>&nbsp;</p><p>[TC_00:00:08.512_TC]Engineers discovered Raspa possessed a preternatural talent for walking on keyboards, generating flawless, chaotic code no human could conceive. [index-n-1-label in 1-data::data]He was installed as <i>Chief Architect</i>.[note-a-1-1-data:{'section_tipo':'rsc326','section_id':1}:data]</p><p>&nbsp;</p><p>[TC_00:00:15.615_TC]Her directives, issued via paw-prints on key terminals, guided the construction of fractal botnets and meme-based neural worms.[/index-n-1-label in 1-data::data]&nbsp;</p><p>&nbsp;</p><p>The project’s core axiom, scratched on a server:&nbsp;</p><p>&nbsp;</p><p>[TC_00:00:20.110_TC]\"To truly invade a network, you must first be adored by it.\" [lang-a-1-spa-data:['lg-spa']:data]Dédalo’s power grew silently, awaiting Raspa's final command to pounce</p><p>&nbsp;</p><p>Other text with tags:</p><p>&nbsp;</p><p>Some HTML <strong>bold</strong>, <i>italic</i>, <u>underscore</u> content with <a href=\"&quot;#&quot;\">links</a>.</p><p>[TC_00:01:25.627_TC]Text after TC</p><p>[index-n-1-my tag label-data::data]Text between index[/index-n-1-my tag label-data::data]</p><p>[lang-a-1-spa-data:['lg-spa']:data]Lang text</p><p>[draw-n-1-1:0-data:{'section_tipo':'rsc302','section_id':'2','component_tipo':'hierarchy95'}:data]Text after draw</p><p>[geo-n-10-10-data::data]Text after geo</p><p>[page-n-3--data::data]Text after page</p><p>[person-a-1-Pedpi-data:{'section_tipo':'rsc197','section_id':'1','component_tipo':'oh24'}:data]Text after person</p><p>[note-a-1-1-data:{'section_tipo':'rsc326','section_id':1}:data]Text after note</p><p>[reference-n-1-reference 1-data::data]Text between references[/reference-n-1-reference 1-data::data]</p><p>&nbsp;</p><p>Text after all tags</p>"
+        }
+    ],
+    "debug_model": "component_text_area",
+    "debug_label": "text_area",
+    "debug_dataframe": null,
+    "parent_tipo": "rsc167",
+    "parent_section_id": "1",
+    "fallback_value": null,
+    "created_by_userID": null,
+    "changed_data": []
+}
