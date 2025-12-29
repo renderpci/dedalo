@@ -6,33 +6,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_geolocation_test extends TestCase {
+final class component_geolocation_test extends BaseTestCase {
 
 
 
 	public static $model		= 'component_geolocation';
 	public static $tipo			= 'test100';
 	public static $section_tipo	= 'test3';
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -68,36 +48,20 @@ final class component_geolocation_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_set_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$old_data = $component->get_data();
 
-		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type array|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato
-
-
-
-	/**
-	* TEST_set_dato
-	* @return void
-	*/
-	public function test_set_dato() {
-
-		$component = $this->build_component_instance();
-
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		// 1 - set null data
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -106,58 +70,102 @@ final class component_geolocation_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$component->dato===NULL,
+			$component->get_data()===NULL,
 			'expected NULL : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($component->get_data())
 		);
 
-		// restore dato
-		$result	= $component->set_dato($old_dato);
+		// 2 - set sample data
+		$data = json_decode('[{
+			"id": 3,
+			"alt": 16,
+			"lat": 28.760289075631214,
+			"lon": -17.87981450557709,
+			"zoom": 17,
+			"lib_data": [
+				{
+					"layer_id": 1,
+					"layer_data": {
+						"type": "FeatureCollection",
+						"features": [
+							{
+								"type": "Feature",
+								"properties": {
+									"layer_id": 1
+								},
+								"geometry": {
+									"type": "Point",
+									"coordinates": [
+										-17.879337,
+										28.760041
+									]
+								}
+							},
+							{
+								"type": "Feature",
+								"properties": {
+									"layer_id": 1,
+									"color": "#3388ff",
+									"shape": "circle",
+									"radius": 284.4954536589409
+								},
+								"geometry": {
+									"type": "Point",
+									"coordinates": [
+										-17.879723,
+										28.760324
+									]
+								}
+							}
+						]
+					}
+				}
+			]
+		}]');
+		$component->set_data($data);
 
 		$this->assertTrue(
-			json_encode($component->dato)===json_encode($old_dato),
+			gettype($component->get_data())==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($component->get_data())
+		);
+
+		$this->assertTrue(
+			$component->get_data()===$data,
+			'expected equal : ' . PHP_EOL
+				. to_string($component->get_data())
+		);
+
+		// 3 - restore data
+		$result	= $component->set_data($old_data);
+
+		$this->assertTrue(
+			json_encode($component->get_data())===json_encode($old_data),
 			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($component->get_data())
 		);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_valor
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_valor() {
+	public function test_get_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_valor();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
+	}//end test_get_data
 
 
 
@@ -224,7 +232,7 @@ final class component_geolocation_test extends TestCase {
 				. gettype($result)
 		);
 
-		if (!empty($component->dato)) {
+		if (!empty($component->get_data())) {
 			$this->assertTrue(
 				gettype($result)==='object',
 				'expected type object : ' . PHP_EOL
@@ -232,33 +240,6 @@ final class component_geolocation_test extends TestCase {
 			);
 		}
 	}//end test_get_diffusion_value_socrata
-
-
-
-	/**
-	* TEST_get_diffusion_value_as_geojson
-	* @return void
-	*/
-	public function test_get_diffusion_value_as_geojson() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value_as_geojson();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		if (!empty($result)) {
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-		}
-	}//end test_get_diffusion_value_as_geojson
 
 
 
