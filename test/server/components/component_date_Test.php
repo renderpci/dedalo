@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_date_test extends TestCase {
+final class component_date_test extends BaseTestCase {
 
 
 
@@ -64,16 +64,16 @@ final class component_date_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		// null
-			$dato	= null;
-			$result	= $component->set_dato($dato);
+		// 1 - null case
+			$data	= null;
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
 				gettype($result)==='boolean',
@@ -82,32 +82,13 @@ final class component_date_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				$component->dato===null,
-				'expected null : ' . PHP_EOL
-					. to_string($result)
+				$component->get_data()===null,
+					'expected get_data is null : ' . PHP_EOL
+					.'result: ' . to_string($result)
 			);
 
-		// object
-			$dato = json_decode('
-					{
-						"start": {
-							"day": 23,
-							"time": 513475200,
-							"year": 15,
-							"month": 12
-						}
-					}
-			');
-			$result	= $component->set_dato($dato);
-
-			$this->assertTrue(
-				gettype($component->dato)==='array',
-				'expected type array : ' . PHP_EOL
-					. gettype($component->dato)
-			);
-
-		// array
-			$dato = json_decode('
+		// 2 - array case
+			$data = json_decode('
 				[
 					{
 						"start": {
@@ -119,14 +100,14 @@ final class component_date_test extends TestCase {
 					}
 				]
 			');
-			$result	= $component->set_dato($dato);
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
-				gettype($component->dato)==='array',
+				gettype($component->get_data())==='array',
 				'expected type array : ' . PHP_EOL
-					. gettype($component->dato)
+					. gettype($component->get_data())
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
@@ -443,76 +424,6 @@ final class component_date_test extends TestCase {
 					. to_string($result)
 			);
 	}//end test_data_item_to_value
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_local
-	* @return void
-	*/
-	public function test_get_valor_local() {
-
-		$component = $this->build_component_instance();
-
-		$data_item = json_decode('
-			{
-		        "day": 8,
-		        "hour": 12,
-		        "time": 64638475292,
-		        "year": 2011,
-		        "month": 2,
-		        "minute": 1,
-		        "second": 32
-			}
-		');
-		$dd_date = new dd_date($data_item);
-
-		$result = $component->get_valor_local($dd_date);
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_local
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
 
 
 
