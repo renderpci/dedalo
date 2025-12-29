@@ -19,6 +19,23 @@ class component_external extends component_common {
 	/**
 	* LOAD_DATA_FROM_REMOTE
 	* @return object|null $row_data
+	* E.g.
+	* {
+	*     "id": "001327065",
+	*     "title": "Arse : Boletín del Centro Arqueológico Saguntino (Sagunto).",
+	*     "authors": {
+	*         "primary": [],
+	*         "secondary": [],
+	*         "corporate": []
+	*     },
+	*     "publicationDates": [
+	*         "2011"
+	*     ],
+	*     "recordPage": "/Record/001327065",
+	*     "physicalDescriptions": [
+	*         "213 p."
+	*     ]
+	* }
 	*/
 	public function load_data_from_remote() : ?object {
 
@@ -32,19 +49,7 @@ class component_external extends component_common {
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
 			if (array_key_exists($uid, $data_from_remote_cache)) {
 				return $data_from_remote_cache[$uid];
-			}
-
-		// zenon_is_available.
-		// If Zenon is not available, is saved in session to prevent to try to load again and again.
-		// On user quits, the status is reset and Dédalo try to connect again.
-			$zenon_is_available = $_SESSION['dedalo']['config']['zenon_is_available'] ?? null;
-			if ($zenon_is_available===false) {
-				debug_log(__METHOD__
-					." ERROR. Unable to load data from_remote. Remote host (zenon) is unavailable 1. NULL is returned as data. Quit session to try again."
-					, logger::ERROR
-				);
-				return null;
-			}
+			}		
 
 		// section_properties
 			$ontology_node		= ontology_node::get_instance($section_tipo);
@@ -92,6 +97,18 @@ class component_external extends component_common {
 			$response_map	= $api_config->response_map;
 			$entity			= $api_config->entity;
 
+		// entity_is_available (usually Zenon).
+		// If Zenon or current entity is not available, is saved in session to prevent to try to load again and again.
+		// On user quits, the status is reset and Dédalo try to connect again.
+			$entity_is_available = $_SESSION['dedalo']['config'][$entity.'_is_available'] ?? null;
+			if ($entity_is_available===false) {
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Remote host (".$entity.") is unavailable 1. NULL is returned as data. Quit session to try again."
+					, logger::ERROR
+				);
+				return null;
+			}
+
 			// ar_fields
 				$ar_fields = [];
 				$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
@@ -121,7 +138,8 @@ class component_external extends component_common {
 					}
 				}
 
-			// call entity class to build custom api url
+			// call entity class to build custom api URL
+			// The entity class is expected to have a static method build_row_request_url that returns a string (URL)
 				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
 
 				// url build
@@ -132,7 +150,7 @@ class component_external extends component_common {
 						'lang'			=> $lang
 					]);
 
-				// request
+				// remote API request
 					$request_response = curl_request((object)[
 						'url'		=> $url, // string
 						'header'	=> false, // bool
@@ -142,15 +160,16 @@ class component_external extends component_common {
 						? json_decode($request_response->result)
 						: null;
 
-		// check response
-			if (empty($response_obj)) {
-				debug_log(__METHOD__
-					." ERROR. Unable to load data from_remote. Empty response from api_config:" .PHP_EOL
-					.' request_response: ' . to_string($request_response)
-					, logger::ERROR
-				);
+				// check response
+					if (empty($response_obj)) {
+						debug_log(__METHOD__
+							." ERROR. Unable to load data from_remote. Empty response from api_config:" .PHP_EOL
+							.' request_response: ' . to_string($request_response)
+							, logger::ERROR
+					);
+
 				// Fix Zenon as not available to prevent to try access again and again.
-				$_SESSION['dedalo']['config']['zenon_is_available'] = false;
+				$_SESSION['dedalo']['config'][$entity.'_is_available'] = false;
 
 				return null;
 			}
@@ -180,13 +199,13 @@ class component_external extends component_common {
 
 
 	/**
-	* GET DATO
-	* @return mixed
+	* GET DATA
+	* @return ?array
 	* 	Usually is a string like: ..
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
-		// load data from remote returns a object as
+		// load data from remote returns an object as
 			// {
 			//     "id": "001327065",
 			//     "title": "Arse : Boletín del Centro Arqueológico Saguntino (Sagunto).",
@@ -205,124 +224,134 @@ class component_external extends component_common {
 			// }
 			$row_data = $this->load_data_from_remote();
 
-		// properties
+			// early return if no remote data
+			if (empty($row_data)) {
+				return null;
+			}
+
+		// properties (fields_map) returns an object as
+			// {
+			// 	"fields_map": [
+			// 		{
+			// 			"local": "dato",
+			// 			"format": "zenon_authors",
+			// 			"remote": "authors"
+			// 		}
+			// 	]
+			// }
 			$properties = $this->get_properties();
 
-		// dato
-			$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
-				if (empty($row_data)) {
-					return $carry;
-				}
-				if($item->local==='dato') {
-					$name = $item->remote;
-					if (isset($row_data->{$name})) {
+			// properties check
+			if (empty($properties) || !isset($properties->fields_map)) {
+				debug_log(__METHOD__
+					." Error. Missing fields_map in properties"
+					, logger::ERROR
+				);
+				return null;
+			}
 
-						if (isset($item->format)) {
-							switch ($item->format) {
-								case 'array_values':
-									$value = implode(' | ', $row_data->{$name});
-									break;
-								case 'zenon_authors':
-									$ar_names = [];
-									foreach ($row_data->{$name} as $key => $element) {
-										if (empty($element)) continue;
-										$ar_names[] = $key  .': '. implode(' - ', array_keys((array)$element));
-									}
-									$value = implode(' | ', $ar_names);
-									break;
-								default:
-									$value = to_string($row_data->{$name});
-									break;
-							}
-						}else{
-							$value = $row_data->{$name};
-						}
-						return $value;
-					}else{
-						debug_log(__METHOD__
-							." Error. Not found key: '$name' in row_data" . PHP_EOL
-							.' name: ' .$name . PHP_EOL
-							.' row_data type: ' .gettype($row_data) . PHP_EOL
-							.' row_data: ' . to_string($row_data)
-							, logger::ERROR
-						);
-					}
-				}
+		// data extraction
+		$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
+			if (empty($row_data)) {
 				return $carry;
-			});
+			}
+			if($item->local==='dato') { // Note that 'dato' is the default local name for external components
+				$name = $item->remote;
+				if (isset($row_data->{$name})) {
 
-		$dato = is_array($value)
+					if (isset($item->format)) {
+						switch ($item->format) {
+							case 'array_values':
+								$value = implode(' | ', $row_data->{$name});
+								break;
+							case 'zenon_authors':
+								$ar_names = [];
+								foreach ($row_data->{$name} as $key => $element) {
+									if (empty($element)) continue;
+									$ar_names[] = $key  .': '. implode(' - ', array_keys((array)$element));
+								}
+								$value = implode(' | ', $ar_names);
+								break;
+							default:
+								$value = to_string($row_data->{$name});
+								break;
+						}
+					}else{
+						$value = $row_data->{$name};
+					}
+					return $value;
+				}else{
+					debug_log(__METHOD__
+						." Error. Not found key: '$name' in row_data" . PHP_EOL
+						.' name: ' .$name . PHP_EOL
+						.' row_data type: ' .gettype($row_data) . PHP_EOL
+						.' row_data: ' . to_string($row_data)
+						, logger::ERROR
+					);
+				}
+			}
+			return $carry;
+		}, null); // Added explicit initial value
+
+		// return null if no value was found
+		if ($value === null) {
+			return null;
+		}
+
+		$data = is_array($value)
 			? $value
 			: [$value];
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
 	/**
-	* SET_DATO
-	* @param mixed $dato
-	* 	Dato now is multiple. For this expected type is array
+	* SET_DATA
+	* @param mixed $data
+	* 	Data now is multiple. For this expected type is array
 	*	but in some cases can be an array JSON encoded or some rare times a plain string
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_data($data) : bool {
 
 		// string case
-			if (is_string($dato)) { # Tool Time machine case, dato is string
-				if (strpos($dato, '[')!==false) {
-					# dato is JSON encoded
-					$dato = json_handler::decode($dato);
+			if (is_string($data)) { # Tool Time machine case, data is string
+				if (strpos($data, '[')!==false) {
+					# data is JSON encoded
+					$data = json_handler::decode($data);
 				}else{
-					# dato is string plain value
-					$dato = array($dato);
+					# data is string plain value
+					$data = array($data);
 				}
 			}
 
 		// array check
 			if(SHOW_DEBUG===true) {
-				if (!is_array($dato)) {
+				if (!is_array($data)) {
 					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array"
+						." Warning. [$this->tipo,$this->parent]. Received data is NOT array. Type is '".gettype($data)."' and data: '".to_string($data)."' will be converted to array"
 						, logger::DEBUG
 					);
 				}
 			}
 
-		// safe_dato
-			$safe_dato = [];
-			foreach ((array)$dato as $value) {
+		// safe_data
+			$safe_data = [];
+			foreach ((array)$data as $value) {
 				if (!is_string($value)) {
-					$safe_dato[] = to_string($value);
+					$safe_data[] = to_string($value);
 				}else{
-					$safe_dato[] = $value;
+					$safe_data[] = $value;
 				}
 			}
-			$dato = $safe_dato;
+			$data = $safe_data;
 
 
-		return parent::set_dato( $dato );
-	}//end set_dato
-
-
-
-	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) {
-
-		$dato  = $this->get_dato();
-		$valor = is_array($dato)
-			? reset($dato)
-			: '';
-
-		return (string)$valor;
-	}//end get_valor
+		return parent::set_data( $data );
+	}//end set_data
 
 
 
