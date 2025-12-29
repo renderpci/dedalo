@@ -263,25 +263,6 @@ final class component_3d_test extends TestCase {
 
 
 	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
-
-
-
-	/**
 	* TEST_get_url
 	* @return void
 	*/
