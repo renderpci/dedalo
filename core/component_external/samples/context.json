@@ -1,0 +1,553 @@
+{
+	"typo": "ddo",
+	"model": "component_portal",
+	"label": "Publication",
+	"tipo": "rsc368",
+	"section_tipo": "rsc332",
+	"legacy_model": "component_autocomplete",
+	"parent": "rsc332",
+	"parent_grouper": "rsc334",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"view": "line",
+		"source": {
+			"request_config": [
+				{
+					"sqo": {
+						"section_tipo": [
+							{
+								"value": [
+									"rsc205"
+								],
+								"source": "section"
+							}
+						]
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"info": "Personal name input_text",
+								"tipo": "rsc349",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "Authorship and responsibility autocomplete",
+								"tipo": "rsc139",
+								"limit": 5,
+								"parent": "rsc368",
+								"section_tipo": "rsc205",
+								"fields_separator": ", ",
+								"records_separator": " - "
+							},
+							{
+								"info": "Surname input_text",
+								"tipo": "rsc86",
+								"parent": "rsc139",
+								"section_tipo": [
+									"rsc197"
+								]
+							},
+							{
+								"info": "Name input_text",
+								"tipo": "rsc85",
+								"parent": "rsc139",
+								"section_tipo": [
+									"rsc197"
+								]
+							},
+							{
+								"info": "Title input_text",
+								"tipo": "rsc140",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "Place input_text",
+								"tipo": "rsc144",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "Serie / magazine / collection autocomplete",
+								"tipo": "rsc211",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "Serie / magazine / collection input_text",
+								"tipo": "rsc214",
+								"parent": "rsc211",
+								"section_tipo": "rsc212"
+							},
+							{
+								"info": "Editor input_text",
+								"tipo": "rsc219",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "Date de publicación date",
+								"tipo": "rsc224",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							},
+							{
+								"info": "URL iri",
+								"tipo": "rsc217",
+								"view": "mini",
+								"parent": "rsc368",
+								"section_tipo": "rsc205"
+							}
+						],
+						"fields_separator": " | "
+					},
+					"type": "main",
+					"api_engine": "dedalo"
+				},
+				{
+					"sqo": {
+						"section_tipo": [
+							{
+								"value": [
+									"zenon1"
+								],
+								"source": "section"
+							}
+						]
+					},
+					"show": {
+						"ddo_map": [
+							{
+								"tipo": "zenon5",
+								"parent": "self",
+								"fields_map": true,
+								"section_tipo": "zenon1"
+							},
+							{
+								"tipo": "zenon6",
+								"parent": "self",
+								"fields_map": true,
+								"section_tipo": "zenon1"
+							},
+							{
+								"tipo": "zenon3",
+								"parent": "self",
+								"fields_map": true,
+								"section_tipo": "zenon1"
+							},
+							{
+								"tipo": "zenon4",
+								"parent": "self",
+								"fields_map": true,
+								"section_tipo": "zenon1"
+							}
+						],
+						"fields_separator": " | "
+					},
+					"api_engine": "zenon"
+				}
+			]
+		},
+		"data_limit": 2,
+		"children_view": "text",
+		"is_publicable": true
+	},
+	"css": {
+		".wrapper_component": {
+			"grid-column": "span 4"
+		}
+	},
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "rsc205",
+						"model": "section",
+						"label": "Publication",
+						"color": "#6c72b6",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix"
+					}
+				],
+				"limit": 10
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"info": "Personal name input_text",
+						"tipo": "rsc349",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_input_text",
+						"label": "Personal name",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Authorship and responsibility autocomplete",
+						"tipo": "rsc139",
+						"limit": 5,
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"fields_separator": ", ",
+						"records_separator": " - ",
+						"model": "component_portal",
+						"label": "Authorship and responsibility",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Surname input_text",
+						"tipo": "rsc86",
+						"parent": "rsc139",
+						"section_tipo": [
+							"rsc197"
+						],
+						"model": "component_input_text",
+						"label": "Surname",
+						"mode": "list"
+					},
+					{
+						"info": "Name input_text",
+						"tipo": "rsc85",
+						"parent": "rsc139",
+						"section_tipo": [
+							"rsc197"
+						],
+						"model": "component_input_text",
+						"label": "Name",
+						"mode": "list"
+					},
+					{
+						"info": "Title input_text",
+						"tipo": "rsc140",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_input_text",
+						"label": "Title",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Place input_text",
+						"tipo": "rsc144",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_input_text",
+						"label": "Place",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Serie / magazine / collection autocomplete",
+						"tipo": "rsc211",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_portal",
+						"label": "Series / magazines / collections",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Serie / magazine / collection input_text",
+						"tipo": "rsc214",
+						"parent": "rsc211",
+						"section_tipo": "rsc212",
+						"model": "component_input_text",
+						"label": "Series / magazines / collections",
+						"mode": "list"
+					},
+					{
+						"info": "Editor input_text",
+						"tipo": "rsc219",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_input_text",
+						"label": "Publisher",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "Date de publicación date",
+						"tipo": "rsc224",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_date",
+						"label": "Publication date",
+						"mode": "list",
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"info": "URL iri",
+						"tipo": "rsc217",
+						"view": "mini",
+						"parent": "rsc368",
+						"section_tipo": "rsc205",
+						"model": "component_iri",
+						"label": "URL",
+						"mode": "list",
+						"column_id": "rsc368"
+					}
+				],
+				"fields_separator": " | ",
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": null
+		},
+		{
+			"api_engine": "zenon",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "zenon1",
+						"model": "section",
+						"label": "Zenon",
+						"color": "#b9b9b9",
+						"permissions": 3,
+						"buttons": [],
+						"matrix_table": "matrix"
+					}
+				],
+				"limit": 10
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"tipo": "zenon5",
+						"parent": "rsc368",
+						"fields_map": [
+							{
+								"local": "dato",
+								"format": "zenon_authors",
+								"remote": "authors"
+							}
+						],
+						"section_tipo": "zenon1",
+						"model": "component_external",
+						"label": "Author",
+						"mode": "list",
+						"properties": {
+							"fields_map": [
+								{
+									"local": "dato",
+									"format": "zenon_authors",
+									"remote": "authors"
+								}
+							]
+						},
+						"lang": "lg-nolan",
+						"permissions": 3,
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"tipo": "zenon6",
+						"parent": "rsc368",
+						"fields_map": [
+							{
+								"local": "dato",
+								"format": "array_values",
+								"remote": "publicationDates"
+							}
+						],
+						"section_tipo": "zenon1",
+						"model": "component_external",
+						"label": "Date",
+						"mode": "list",
+						"properties": {
+							"fields_map": [
+								{
+									"local": "dato",
+									"format": "array_values",
+									"remote": "publicationDates"
+								}
+							]
+						},
+						"lang": "lg-nolan",
+						"permissions": 3,
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"tipo": "zenon3",
+						"parent": "rsc368",
+						"fields_map": [
+							{
+								"local": "dato",
+								"remote": "id"
+							}
+						],
+						"section_tipo": "zenon1",
+						"model": "component_external",
+						"label": "Id",
+						"mode": "list",
+						"properties": {
+							"fields_map": [
+								{
+									"local": "dato",
+									"remote": "id"
+								}
+							]
+						},
+						"lang": "lg-nolan",
+						"permissions": 3,
+						"view": "text",
+						"column_id": "rsc368"
+					},
+					{
+						"tipo": "zenon4",
+						"parent": "rsc368",
+						"fields_map": [
+							{
+								"local": "dato",
+								"remote": "title"
+							}
+						],
+						"section_tipo": "zenon1",
+						"model": "component_external",
+						"label": "Title",
+						"mode": "list",
+						"properties": {
+							"fields_map": [
+								{
+									"local": "dato",
+									"remote": "title"
+								}
+							]
+						},
+						"lang": "lg-nolan",
+						"permissions": 3,
+						"view": "text",
+						"column_id": "rsc368"
+					}
+				],
+				"fields_separator": " | ",
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": {
+				"entity": "zenon",
+				"api_url": "https://zenon.dainst.org/api/v1/record",
+				"ui_base_url": "https://zenon.dainst.org/Record/",
+				"response_map": [
+					{
+						"local": "ar_records",
+						"remote": "records"
+					},
+					{
+						"local": "msg",
+						"remote": "status"
+					}
+				],
+				"api_url_search": "https://zenon.dainst.org/api/v1/search"
+			}
+		}
+	],
+	"columns_map": [],
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"component_tipo": "rsc368",
+			"model": "component_portal",
+			"name": "Publication",
+			"section_tipo": "rsc332"
+		},
+		{
+			"component_tipo": "rsc349",
+			"model": "component_input_text",
+			"name": "Personal name",
+			"section_tipo": "rsc205"
+		}
+	],
+	"new_dataframe": null,
+	"view": "line",
+	"children_view": "text",
+	"debug": {
+		"exec_time": "0.284 ms"
+	},
+	"fields_separator": " | ",
+	"records_separator": " | "
+}

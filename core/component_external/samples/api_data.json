@@ -1,0 +1,29 @@
+{
+	"section_id": 2,
+	"section_tipo": "rsc332",
+	"tipo": "rsc368",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "rsc368",
+	"value": [
+		{
+			"id": 1,
+			"section_id": "000903635",
+			"section_tipo": "zenon1",
+			"from_component_tipo": "rsc368",
+			"paginated_key": 0
+		}
+	],
+	"debug_model": "component_portal",
+	"debug_label": "Publication",
+	"debug_dataframe": null,
+	"parent_tipo": "rsc332",
+	"parent_section_id": 2,
+	"pagination": {
+		"total": 1,
+		"limit": 10,
+		"offset": 0
+	},
+	"row_section_id": 2,
+	"changed_data": []
+}
