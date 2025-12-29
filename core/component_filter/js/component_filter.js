@@ -82,22 +82,26 @@ component_filter.prototype.get_changed_key = function(action, value) {
 	const self = this
 
 	if (action==='insert') {
+
 		// insert value
 
 		// check if value already exists
-		const ar_found = self.data.value.filter(item => item.section_id===value.section_id && item.section_tipo===value.section_tipo)
-		if (ar_found.length>0) {
+		const ar_found = self.data.value?.filter(item =>
+			item.section_id===value.section_id && item.section_tipo===value.section_tipo
+		)
+		if (ar_found?.length>0) {
 			console.warn("Ignored to add value because already exists:", value);
 			return false
 		}
 
 		// component common add value and save (without refresh)
-			return self.data.value.length || 0
+		return self.data.value?.length || 0
 
 	}else{
+
 		// remove value
 
-		const value_key = self.data.value.findIndex( (item) => {
+		const value_key = self.data.value?.findIndex( (item) => {
 			return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
 		})
 		if (value_key===-1) {

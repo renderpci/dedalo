@@ -1,0 +1,14 @@
+[
+	{
+		"id": 1,
+		"section_id": "1",
+		"section_tipo": "dd153",
+		"from_component_tipo": "test101"
+	},
+	{
+		"section_tipo": "dd153",
+		"section_id": "7",
+		"from_component_tipo": "test101",
+		"id": 2
+	}
+]
