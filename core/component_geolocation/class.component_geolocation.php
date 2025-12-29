@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_GEOLOCATION
-*
+* Manages 
 * data_column_name : 'geo'
 */
 class component_geolocation extends component_common {
@@ -11,191 +11,19 @@ class component_geolocation extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
 
+
+
 	/**
 	* __CONSTRUCT
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
-
-		# Force always DEDALO_DATA_NOLAN
+		// Force always DEDALO_DATA_NOLAN
 		$this->lang = DEDALO_DATA_NOLAN;
 
-		# Build the component
+		// Build the component
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
-
-		# Dato verification, if the dato is empty, build the standard view of the map
-		// $dato = $this->get_dato();
-
-		// # if the section_id is not empty and the dato is empty create the basic and standard dato
-		// $need_save=false;
-		// if((!isset($dato[0]->lat) || !isset($dato[0]->lon)) && $this->parent>0) {
-		// 	#####################################################################################################
-		// 	# DEFAULT VALUES
-		// 	# Store section dato as array(key=>value)
-		// 	$dato_new = new stdClass();
-		// 		$dato_new->lat		= 39.462571;
-		// 		$dato_new->lon		= -0.376295;	# Calle Denia
-		// 		$dato_new->zoom		= 12;
-		// 		$dato_new->alt		= 16;
-		// 		#$dato_new->coordinates	= array();
-		// 	# END DEFAULT VALUES
-		// 	######################################################################################################
-
-		// 	# Dato
-		// 	$this->set_dato([$dato_new]);
-		// 	$need_save=true;
-		// }
-
-		// #
-		// # CONFIGURACIÓN NECESARIA PARA PODER SALVAR
-		// # Nothing to do here
-
-		// if ($need_save===true) {
-		// 	$result = $this->Save();
-		// 	# debug_log(__METHOD__."  Added default component_geolocation data $section_id with: ($tipo, $lang) dato: ".to_string($dato_new), logger::DEBUG);
-		// }
-
-		// debug
-			// if(SHOW_DEBUG) {
-			// 	$translatable = $this->ontology_node->get_is_translatable();
-			// 	if ($translatable===true) {
-			// 		#throw new Exception("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'translatable'. Please fix this ASAP", 1);
-			// 		trigger_error("Error Processing Request. Wrong component lang definition. This component $tipo (".get_class().") is not 'translatable'. Please fix this ASAP");
-			// 	}
-			// }
 	}//end __construct
-
-
-
-	/**
-	* GET_DATO
-	* Format [{lat: 39.462571354311095, lon: -0.3763031959533692, zoom: 15, alt: 16}]
-	* @return array|null $dato
-	*/
-	public function get_dato() {
-
-		$dato = parent::get_dato();
-
-		if (!is_null($dato) && !is_array($dato)) {
-			$dato = [$dato];
-			$this->set_dato($dato);
-			debug_log(__METHOD__
-				. ' Fixed and set bad format dato to array ' . PHP_EOL
-				. ' saved dato: ' . to_string($dato) . PHP_EOL
-				. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
-				. ' section_id: ' . $this->get_section_id() . PHP_EOL
-				. ' mode: ' . $this->get_mode()
-				, logger::WARNING
-			);
-			$this->Save();
-		}
-
-
-		return $dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array|null $dato
-	* 	Dato now is multiple. Because this, expected type is array
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		// JSON encoded dato case
-			if (is_string($dato)) {
-				debug_log(__METHOD__
-					." Trying to decode string dato ". PHP_EOL
-					.' dato: ' . to_string($dato) . PHP_EOL
-					. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
-					. ' section_id: ' . $this->get_section_id() . PHP_EOL
-					. ' mode: ' . $this->get_mode()
-					, logger::ERROR
-				);
-				$dato = json_handler::decode($dato);
-			}
-
-		// convert to array if is not and not null
-			if (!is_null($dato) && !is_array($dato)) {
-				debug_log(__METHOD__
-					.' Converted non array dato to array '. PHP_EOL
-					.' dato: ' . to_string($dato) . PHP_EOL
-					. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
-					. ' section_id: ' . $this->get_section_id() . PHP_EOL
-					. ' mode: ' . $this->get_mode()
-					, logger::ERROR
-				);
-				$dato = [$dato];
-			}
-
-
-		return parent::set_dato( $dato );
-	}//end set_dato
-
-
-
-	/**
-	* GET VALOR
-	* v5 compatibility
-	* @return array|null $valor
-	*/
-	public function get_valor() {
-
-		$valor = (array)self::get_dato();
-
-		// separator
-			$separator = ' ,  ';
-			if($this->mode==='list') {
-				$separator = '<br>';
-			}
-
-		if (is_object($valor)) {
-			$valor = array($valor); # Convert JSON obj to array
-		}
-
-		if (is_array($valor)) {
-			# return "Not string value";
-			$string  	= '';
-			$n 			= count($valor);
-			foreach ($valor as $key => $value) {
-
-				if(is_array($value)) $value = print_r($value,true);
-				$string .= "$key : ". to_string($value) . $separator;
-			}
-			$string = substr($string, 0,-4);
-			return $string;
-
-		}else{
-
-			return $valor;
-		}
-	}//end get_valor
-
-
-
-	/**
-	* GET_GRID_VALUE
-	* Alias of component_common->get_grid_value
-	* @param object|null $ddo = null
-	*
-	* @return dd_grid_cell_object $dd_grid_cell_object
-	*/
-		// public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
-
-		// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
-
-		// 	// map values to JOSN to allow render it in list
-		// 		if (!empty($dd_grid_cell_object->value)) {
-		// 			$dd_grid_cell_object->value = array_map(function($el){
-		// 				return json_encode($el);
-		// 			}, $dd_grid_cell_object->value);
-		// 		}
-
-
-		// 	return $dd_grid_cell_object;
-		// }//end get_grid_value
 
 
 
@@ -209,64 +37,50 @@ class component_geolocation extends component_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	// public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = null;
+	// 	$diffusion_value = null;
 
-		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return $diffusion_value;
-		}
+	// 	$dato = $this->get_dato();
+	// 	if (empty($dato)) {
+	// 		return $diffusion_value;
+	// 	}
 
-		$value = is_array($dato) ? reset($dato) : $dato;
-		$diffusion_value = !empty($value)
-			? json_encode($value)
-			: null;
+	// 	$value = is_array($dato) ? reset($dato) : $dato;
+	// 	$diffusion_value = !empty($value)
+	// 		? json_encode($value)
+	// 		: null;
 
 
-		return $diffusion_value;
-	}//end get_diffusion_value
+	// 	return $diffusion_value;
+	// }//end get_diffusion_value
 
 
 
 	/**
 	* BUILD_GEOLOCATION_TAG_STRING
-	* Example
-		* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
-		* {
-		*	"type": "FeatureCollection",
-		*	"features": [
-		*	    {
-		*	      "type": "Feature",
-		*	      "properties": {},
-		*	      "geometry": {
-		*	        "type": "Point",
-		*	        "coordinates": [
-		*	          2.304362542927265,
-		*	          41.82053505145308
-		*	        ]
-		*	      }
-		*	    }
-		*	]
-		* }
-	*
+	* Sample:
+	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
+	* {
+	*	"type": "FeatureCollection",
+	*	"features": [
+	*	    {
+	*	      "type": "Feature",
+	*	      "properties": {},
+	*	      "geometry": {
+	*	        "type": "Point",
+	*	        "coordinates": [
+	*	          2.304362542927265,
+	*	          41.82053505145308
+	*	        ]
+	*	      }
+	*	    }
+	*	]
+	* }
 	* @return string $result
 	*/
 	public static function build_geolocation_tag_string(string $tag_id, $lon, $lat) : string {
-		/*
-		$geometry = new stdClass();
-			$geometry->type 		= "Point";
-			$geometry->coordinates 	= array($lon, $lat)
-
-		$feature = new stdClass();
-			$feature->type 		 = "Feature";
-			$feature->properties = new stdClass();
-			$feature->geometry 	 = $geometry
-
-		$data = new stdClass();
-			$data->type 	= 'FeatureCollection';
-			$data->features = array( $feature );
-		*/
+		
 		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
 
 
@@ -278,26 +92,17 @@ class component_geolocation extends component_common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
 
-		// Force loads dato always !IMPORTANT
+		// Force loads data always !IMPORTANT
 		$data = $this->get_data();
 
-		if (!is_null($data) && !is_array($data)) {
-			$this->set_data([$data]);
-			debug_log(__METHOD__
-				. " Changed data format " . PHP_EOL
-				. to_string($data)
-				, logger::ERROR
-			);
-		}
-
 		// Save component data
-		$this->Save();
+		$this->save();
 
 
 		return true;
@@ -318,14 +123,15 @@ class component_geolocation extends component_common {
 		}
 
 		$data			= $data[0];
-		$data_latitude	= $dato->lat ?? null;
+		$data_latitude	= $data->lat ?? null;
 
 		if(empty($data_latitude)){
 			return null;
 		}
-		$latitude	= strval($data_latitude)==='39.462571'
+		$latitude = strval($data_latitude)==='39.462571'
 			? null
 			: floatval($data_latitude);
+
 
 		return $latitude;
 	}//end get_latitude
@@ -345,14 +151,15 @@ class component_geolocation extends component_common {
 		}
 
 		$data			= $data[0];
-		$data_longitude	= $dato->lon ?? null;
+		$data_longitude	= $data->lon ?? null;
 
 		if(empty($data_longitude)){
 			return null;
 		}
-		$longitude	= strval($data_longitude)==='-0.376295'
+		$longitude = strval($data_longitude)==='-0.376295'
 			? null
 			: floatval($data_longitude);
+
 
 		return $longitude;
 	}//end get_longitude
@@ -374,16 +181,17 @@ class component_geolocation extends component_common {
 			return null;
 		}
 
-		$data			= $data[0];
-		$socrata_data	= 'POINT ('.$data->lat.', '.$data->lon.')';
+		$data = $data[0];
+		
+		// $socrata_data = 'POINT ('.$data->lat.', '.$data->lon.')';
 
-		# {
-		#   "type": "Point",
-		#   "coordinates": [
-		#     -87.653274,
-		#     41.936172
-		#   ]
-		# }
+		// {
+		//   "type": "Point",
+		//   "coordinates": [
+		//     -87.653274,
+		//     41.936172
+		//   ]
+		// }
 
 		$geo_json_point = new stdClass();
 			$geo_json_point->type 		 = 'Point';
@@ -392,11 +200,12 @@ class component_geolocation extends component_common {
 				floatval($data->lat)
 			];
 
-		#$point = new stdClass();
-		#	$point->latitude  = 47.59815;
-		#	$point->longitude = -122.334540;
+		// $point = new stdClass();
+		//	 $point->latitude  = 47.59815;
+		//	 $point->longitude = -122.334540;
 
-		$diffusion_value_socrata = $geo_json_point;// json_encode($geo_json_point, JSON_UNESCAPED_SLASHES); // json_encode($socrata_data, JSON_UNESCAPED_SLASHES);
+		// diffusion object
+		$diffusion_value_socrata = $geo_json_point; 
 
 
 		return $diffusion_value_socrata;
@@ -436,17 +245,17 @@ class component_geolocation extends component_common {
 	*/
 	public function get_diffusion_value_as_geojson() : ?string {
 
-		$dato = $this->get_dat(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
+		$data = $this->get_data(); // object as {"alt": 281, "lat": "41.56236346", "lon": "2.01215141", "zoom": 15}
 
 		// select first
-		$value = $dato[0] ?? null;
+		$value = $data[0] ?? null;
 
 		// check empty
 			if (empty($value) || !isset($value->lon) || !isset($value->lat)) {
 				return null;
 			}
 
-		// default dato test
+		// default data test
 			// default values
 			// "alt": 16,
 			// "lat": 39.462571,
@@ -520,7 +329,7 @@ class component_geolocation extends component_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -540,29 +349,6 @@ class component_geolocation extends component_common {
 
 		$update_version_string = implode('.', $update_version);
 		switch ($update_version_string) {
-
-			case '6.0.0':
-				if ( (!empty($data_unchanged) || $data_unchanged==='') && !is_array($data_unchanged) ) {
-
-					//  Change the dato from object to array
-
-					// new dato
-						$dato = $data_unchanged;
-
-					// fix final dato with new format as array
-						$new_dato = [$dato];
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
