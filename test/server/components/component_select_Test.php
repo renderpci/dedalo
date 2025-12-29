@@ -87,17 +87,17 @@ final class component_select_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= [];
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -105,87 +105,31 @@ final class component_select_test extends TestCase {
 				. gettype($result)
 		);
 
+		$check_data = $component->get_data();
 		$this->assertTrue(
-			$component->dato===[],
+			$check_data===null,
 			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($check_data)
 		);
 
 		// null case
-			$result	= $component->set_dato(null);
-
+			$result	= $component->set_data(null);
+			$check_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$check_data===null,
+				'expected null : ' . PHP_EOL
+					. to_string($check_data)
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+			$result	= $component->set_data($old_data);
+			$check_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($check_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($check_data)
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_get_diffusion_dato
-	* @return void
-	*/
-	public function test_get_diffusion_dato() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_dato();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_dato
+	}//end test_set_data
 
 
 
