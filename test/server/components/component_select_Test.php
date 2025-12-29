@@ -68,36 +68,36 @@ final class component_select_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= [];
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -105,92 +105,36 @@ final class component_select_test extends TestCase {
 				. gettype($result)
 		);
 
+		$check_data = $component->get_data();
 		$this->assertTrue(
-			$component->dato===[],
+			$check_data===null,
 			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($check_data)
 		);
 
 		// null case
-			$result	= $component->set_dato(null);
-
+			$result	= $component->set_data(null);
+			$check_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$check_data===null,
+				'expected null : ' . PHP_EOL
+					. to_string($check_data)
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+			$result	= $component->set_data($old_data);
+			$check_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($check_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($check_data)
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_get_diffusion_dato
-	* @return void
-	*/
-	public function test_get_diffusion_dato() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_dato();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_dato
-
-
-
-	/**
-	* TEST_get_sortable
+	* TEST_GET_SORTABLE
 	* @return void
 	*/
 	public function test_get_sortable() {
@@ -206,6 +150,50 @@ final class component_select_test extends TestCase {
 		);
 	}//end test_get_sortable
 
+
+
+	/**
+	* TEST_SAVE
+	* @return void
+	*/
+	public function test_save() {
+
+		$component = $this->build_component_instance();
+	
+		// empty case
+		$data = [];
+		$component->set_data($data);
+		$result = $component->save();
+		// check result
+		$this->assertTrue(
+			$result===true,
+			'expected boolean true ' . PHP_EOL
+				. to_string($result)
+		);
+		// null case
+		$check_data = $component->get_data();
+		$this->assertTrue(
+			$check_data===null,
+			'expected null : ' . PHP_EOL
+				. to_string($check_data)
+		);
+		// data case
+		$data = new locator();
+			$data->set_section_tipo("dd64");
+			$data->set_section_id("1");
+			$data->set_id(1);
+
+			// set data
+			$component->set_data([$data]);
+			$result = $component->save();
+			// check result
+			$check_data = $component->get_data();
+			$this->assertTrue(
+				$check_data===[$data],
+				'expected [object] : ' . PHP_EOL
+					. to_string($check_data)
+			);
+	}//end test_save
 
 
 }//end class component_select_test

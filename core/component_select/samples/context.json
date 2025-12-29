@@ -1,0 +1,131 @@
+{
+	"typo": "ddo",
+	"model": "component_select",
+	"label": "select",
+	"tipo": "test91",
+	"section_tipo": "test3",
+	"legacy_model": "component_select",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {},
+	"css": null,
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propagate component data",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "dd64",
+						"model": "section",
+						"label": "Yes/No",
+						"color": "#b9b9b9",
+						"permissions": 3,
+						"buttons": [],
+						"matrix_table": "matrix_dd"
+					}
+				]
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"typo": "ddo",
+						"tipo": "dd62",
+						"model": "component_input_text",
+						"section_tipo": "dd64",
+						"parent": "test91",
+						"mode": "list",
+						"view": null,
+						"label": "Value"
+					}
+				],
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": null
+		}
+	],
+	"columns_map": [],
+	"sortable": true,
+	"type": "component",
+	"path": [
+		{
+			"name": "select",
+			"model": "component_select",
+			"section_tipo": "test3",
+			"component_tipo": "test91"
+		},
+		{
+			"name": "Value",
+			"model": "component_input_text",
+			"section_tipo": "dd64",
+			"component_tipo": "dd62"
+		}
+	],
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.343 ms"
+	},
+	"target_sections": [
+		{
+			"tipo": "dd64",
+			"label": "Yes/No",
+			"permissions": 3,
+			"permissions_new": null
+		}
+	]
+}
