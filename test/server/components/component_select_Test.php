@@ -134,7 +134,7 @@ final class component_select_test extends TestCase {
 
 
 	/**
-	* TEST_get_sortable
+	* TEST_GET_SORTABLE
 	* @return void
 	*/
 	public function test_get_sortable() {
@@ -150,6 +150,50 @@ final class component_select_test extends TestCase {
 		);
 	}//end test_get_sortable
 
+
+
+	/**
+	* TEST_SAVE
+	* @return void
+	*/
+	public function test_save() {
+
+		$component = $this->build_component_instance();
+	
+		// empty case
+		$data = [];
+		$component->set_data($data);
+		$result = $component->save();
+		// check result
+		$this->assertTrue(
+			$result===true,
+			'expected boolean true ' . PHP_EOL
+				. to_string($result)
+		);
+		// null case
+		$check_data = $component->get_data();
+		$this->assertTrue(
+			$check_data===null,
+			'expected null : ' . PHP_EOL
+				. to_string($check_data)
+		);
+		// data case
+		$data = new locator();
+			$data->set_section_tipo("dd64");
+			$data->set_section_id("1");
+			$data->set_id(1);
+
+			// set data
+			$component->set_data([$data]);
+			$result = $component->save();
+			// check result
+			$check_data = $component->get_data();
+			$this->assertTrue(
+				$check_data===[$data],
+				'expected [object] : ' . PHP_EOL
+					. to_string($check_data)
+			);
+	}//end test_save
 
 
 }//end class component_select_test
