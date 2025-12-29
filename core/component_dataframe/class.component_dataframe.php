@@ -12,35 +12,9 @@ class component_dataframe extends component_portal {
 
 
 
-	// /**
-	// * SET_DATO
-	// * @return bool
-	// */
-	// public function set_dato($dato) : bool {
-
-	// 	// on set empty data, delete old data target sections
-	// 		if (empty($dato)) {
-	// 			$current_dato = $this->get_dato();
-	// 			if (!empty($current_dato)) {
-	// 				// delete target sections
-	// 				foreach ($current_dato as $current_locator) {
-	// 					$section = section::get_instance(
-	// 						$current_locator->section_id, // string|null section_id
-	// 						$current_locator->section_tipo // string section_tipo
-	// 					);
-	// 					$section->Delete('delete_record');
-	// 				}
-	// 			}
-	// 		}
-
-	// 	return parent::set_dato($dato);
-	// }//end set_dato
-
-
-
 	/**
-	* GET_DATO_FULL
-	* Returns dato from container 'relations', not for component dato container
+	* GET_ALL_DATA
+	* Returns data from container 'relations', not for component data container
 	* @return array $all_data
 	*	$dato is always an array of locators or an empty array
 	*/
@@ -82,24 +56,6 @@ class component_dataframe extends component_portal {
 
 		return $all_data;
 	}//end get_all_data
-
-
-
-	/**
-	* GET_VALOR
-	* V5 diffusion compatibility
-	* @param ?string $lang=DEDALO_DATA_LANG
-	* @param $format='string'
-	* @param $fields_separator=', '
-	* @param $records_separator='<br>'
-	* @param $ar_related_terms=false
-	* @param $data_to_be_used='valor'
-	* @return mixed $valor
-	*/
-	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
-
-		return json_encode( $this->get_dato() );
-	}//end get_valor
 
 
 
@@ -200,22 +156,6 @@ class component_dataframe extends component_portal {
 
 		return true;
 	}//end set_time_machine_data
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
-
-		$diffusion_value = $this->get_value();
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 
