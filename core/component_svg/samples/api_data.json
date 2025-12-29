@@ -1,0 +1,86 @@
+{
+	"section_id": 1,
+	"section_tipo": "rsc302",
+	"tipo": "rsc855",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "rsc855",
+	"value": [
+		{
+			"id": 1,
+			"files_info": [
+				{
+					"quality": "original",
+					"extension": "svg",
+					"file_name": "rsc855_rsc302_1.svg",
+					"file_path": "/svg/original/0/rsc855_rsc302_1.svg",
+					"file_size": 38481,
+					"file_time": {
+						"day": 29,
+						"hour": 20,
+						"time": 65094316019,
+						"year": 2025,
+						"month": 11,
+						"minute": 26,
+						"second": 59,
+						"timestamp": "2025-11-29 10:26:59"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "web",
+					"extension": "svg",
+					"file_name": "rsc855_rsc302_1.svg",
+					"file_path": "/svg/web/0/rsc855_rsc302_1.svg",
+					"file_size": 38481,
+					"file_time": {
+						"day": 29,
+						"hour": 20,
+						"time": 65094316019,
+						"year": 2025,
+						"month": 11,
+						"minute": 26,
+						"second": 59,
+						"timestamp": "2025-11-29 10:26:59"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "thumb",
+					"extension": "jpg",
+					"file_name": "rsc855_rsc302_1.jpg",
+					"file_path": "/svg/thumb/0/rsc855_rsc302_1.jpg",
+					"file_size": 3701,
+					"file_time": {
+						"day": 29,
+						"hour": 20,
+						"time": 65094316019,
+						"year": 2025,
+						"month": 11,
+						"minute": 26,
+						"second": 59,
+						"timestamp": "2025-11-29 10:26:59"
+					},
+					"file_exist": true
+				}
+			],
+			"original_file_name": "my_drawing.svg",
+			"original_upload_date": {
+				"day": 29,
+				"hour": 20,
+				"time": 65094316019,
+				"year": 2025,
+				"month": 11,
+				"minute": 26,
+				"second": 59
+			},
+			"original_normalized_name": "rsc855_rsc302_1.svg"
+		}
+	],
+	"debug_model": "component_svg",
+	"debug_label": "Vectorial",
+	"debug_dataframe": null,
+	"row_section_id": 1,
+	"parent_tipo": "rsc302",
+	"changed_data": []
+}
