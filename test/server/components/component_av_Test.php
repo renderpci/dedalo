@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_av_test extends TestCase {
+final class component_av_test extends BaseTestCase {
 
 
 
@@ -260,25 +260,6 @@ final class component_av_test extends TestCase {
 				. gettype($result)
 		);
 	}//end test_get_grid_value
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
 
 
 

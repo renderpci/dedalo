@@ -1,0 +1,203 @@
+{
+	"typo": "ddo",
+	"model": "component_av",
+	"label": "av",
+	"tipo": "test94",
+	"section_tipo": "test3",
+	"legacy_model": "component_av",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"observe": [
+			{
+				"client": {
+					"event": "click_tag_tc",
+					"perform": {
+						"function": "go_to_time"
+					}
+				},
+				"component_tipo": "test17"
+			},
+			{
+				"event": "key_up_esc",
+				"client": {
+					"event": "key_up_esc",
+					"perform": {
+						"function": "play_pause"
+					}
+				},
+				"perform": "play_pause",
+				"component_tipo": "test17"
+			},
+			{
+				"client": {
+					"event": "key_up_f2",
+					"perform": {
+						"function": "get_data_tag"
+					}
+				},
+				"component_tipo": "test17"
+			}
+		],
+		"max_items_folder": 1000
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_media_versions",
+			"name": "tool_media_versions",
+			"label": "Media versions",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"specific_actions": {
+					"rotate": [
+						"component_image"
+					],
+					"conform_headers": [
+						"component_av"
+					]
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_media_versions/css/tool_media_versions.css"
+			},
+			"icon": "/dedalo/tools/tool_media_versions/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_posterframe",
+			"name": "tool_posterframe",
+			"label": "Posterframe",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_posterframe/css/tool_posterframe.css"
+			},
+			"icon": "/dedalo/tools/tool_posterframe/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_transcription",
+			"name": "tool_transcription",
+			"label": "Transcription",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+			},
+			"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_upload",
+			"name": "tool_upload",
+			"label": "Upload",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": {
+					"top": 0,
+					"left": "return screen.width -760",
+					"width": 760,
+					"height": 708
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+			},
+			"icon": "/dedalo/tools/tool_upload/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "1.079 ms"
+	},
+	"features": {
+		"allowed_extensions": [
+			"mp4",
+			"wave",
+			"wav",
+			"aiff",
+			"aif",
+			"mp3",
+			"mov",
+			"avi",
+			"mpg",
+			"mpeg",
+			"vob",
+			"zip",
+			"flv",
+			"m2v"
+		],
+		"default_target_quality": "original",
+		"ar_quality": [
+			"original",
+			"1080",
+			"720",
+			"576",
+			"404",
+			"240",
+			"audio"
+		],
+		"default_quality": "404",
+		"quality": "404",
+		"key_dir": "av",
+		"alternative_extensions": null,
+		"extension": "mp4"
+	}
+}
