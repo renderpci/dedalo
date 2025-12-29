@@ -16,7 +16,7 @@ class component_dataframe extends component_portal {
 	* GET_ALL_DATA
 	* Returns data from container 'relations', not for component data container
 	* @return array $all_data
-	*	$dato is always an array of locators or an empty array
+	*	$data is always an array of locators or an empty array
 	*/
 	public function get_all_data() : array {
 
@@ -61,7 +61,7 @@ class component_dataframe extends component_portal {
 
 	/**
 	* REMOVE_LOCATOR_FROM_DATA
-	* Removes from dato one or more locators that accomplish given locator equality
+	* Removes from data one or more locators that accomplish given locator equality
 	* (!) Not save the result
 	* @param object $locator_to_remove
 	* @param array $ar_properties = []
@@ -149,8 +149,8 @@ class component_dataframe extends component_portal {
 		// this set will be saved by main component.
 		$section = $this->get_my_section();
 		tm_record::$save_tm = false;
-		$this->set_dato( $data );
-		$this->Save();
+		$this->set_data( $data );
+		$this->save();
 		// re activate the time machine
 		tm_record::$save_tm = true;
 
@@ -227,13 +227,7 @@ class component_dataframe extends component_portal {
 			$this->get_section_tipo() // string section_tipo
 		);
 
-		$relation_component = component_relation_common::get_components_with_relations();
-
-		// if the main component is a relation component get the full data
-		// if the main component is a literal component get its data (don't use the full data because is an object with lang that as key instead an array)
-		$main_component_data = in_array($model, $relation_component)
-			? $main_component->get_dato_full()
-			: $main_component->get_dato();
+		$main_component_data = $main_component->get_data();
 
 		return $main_component_data;
 	}//end get_main_component_data
@@ -281,7 +275,7 @@ class component_dataframe extends component_portal {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version( object $options ) : object {
 
