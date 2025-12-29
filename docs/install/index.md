@@ -14,7 +14,7 @@ Recommended server:
 
 OS:
 
-- Minimal: Ubuntu 22.04 LTS/ Rocky 8 / RedHat 8
+- Minimal: Ubuntu 22.04 LTS/ Rocky 9 / RedHat 9
 - Recommended:  Ubuntu 24.04 LTS / Rocky 9 / RedHat 9
 
 > Note: if you want, you can use other OS as MacOs or Windows, their could be fine to develop or test it, but we do not recommended these options for production.
@@ -22,8 +22,8 @@ OS:
 Hardware:
 
 - Processor: 8 processors with 3+GHZ
-- RAM: minimal 16GB / recommended: 64 GB
-- HD for OS: 100GB+ for the system in RAID 10 (SSD)
+- RAM: minimal 32GB / recommended: 64 GB
+- HD for OS: 150GB+ for the system in RAID 10 (SSD)
 - HD for data: 1TB+ for the data in RAD 10 (if is possible SSD)
 
 Network:
@@ -44,22 +44,20 @@ Backup:
 
 Instead install you can use our "ready to use" virtual machine with all installed and configured.
 
-### 2.1. Ready-to-use Virtual Machine for V6
+### 2.1. Ready-to-use Virtual Machine for V7
 
-Then, you can use our V6 ready-to-use Virtual Machine for development:
-
-[Dedalo V6](./install_help.md#v6-ready-to-use-virtual-machine-for-development)
+TODO
 
 > Note: we do not recommended use this machine as production system, it could be fine to develop or learn about Dédalo. If you want to use it you will need change all passwords because are public.
 
-### 2.2. Video-guide for V6 installation
+### 2.2. Video-guide for V7 installation
 
-Then, you can follow the steps in the V6 installation video:
-[Dedalo V6 installation video on Ubuntu](./install_help.md#video-guide-for-v6-installation)
+Then, you can follow the steps in the V7 installation video:
+[Dedalo V7 installation video on Ubuntu](./install_help.md#video-guide-for-v6-installation)
 
 ### 2.3. Manual installation
 
-Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as references, you can use other GNU/Linux):
+Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as references, you can use other GNU/Linux):
 
 1. Download official LTS version of [Ubuntu Server](https://ubuntu.com/download/server).
 2. Install Ubuntu Server and all dependencies.
@@ -84,12 +82,6 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 
             ```shell
             sudo apt install php8.4 php8.4-cli php8.4-common php8.4-mysql php8.4-pgsql php8.4-gd php8.4-mbstring php8.4-xml php8.4-pspell php8.4-tidy php8.4-bcmath php8.4-imap php8.4-soap php8.4-opcache php8.4-fpm php8.4-zip php8.4-curl
-            ```
-
-        ??? tip "PHP 8.3"
-
-            ```shell
-            sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
             ```
 
     2. Install Apache and activate the modules.
