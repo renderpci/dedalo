@@ -288,7 +288,11 @@ export const get_buttons = (self) => {
 			const click_handler = async (e) => {
 				e.stopPropagation()
 
-				const ar_emails		= await self.get_ar_emails()
+				const ar_emails	= await self.get_ar_emails()
+				if(!ar_emails || !ar_emails.length){
+					console.warn('Empty ar_emails:', ar_emails);
+					return
+				}
 				const mailto_prefix	= 'mailto:?bcc=';
 				// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
 				// if the maximum chars is surpassed the string it was spliced in sorted strings and passed as string items of the array

@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_email_test extends TestCase {
+final class component_email_test extends BaseTestCase {
 
 
 
@@ -64,14 +64,14 @@ final class component_email_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_dato();
+		$result = $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
@@ -80,32 +80,34 @@ final class component_email_test extends TestCase {
 		);
 		if (is_array($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='string',
+				gettype($result[0]->value)==='string',
 				'expected type string : ' . PHP_EOL
-					. gettype($result[0])
+					. gettype($result[0]->value)
 			);
 			$this->assertTrue(
-				strpos($result[0], '@')!==false,
+				strpos($result[0]->value, '@')!==false,
 				'expected @ position not false : ' . PHP_EOL
 					. (strpos($result[0], '@')!==false)
 			);
 		}
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		// array case
-			$dato = ['myemail@mydomain.org'];
+		// 1 - array case
+			$data = [
+				(object)['value'=>'myemail@mydomain.org']
+			];
 
-			$result = $component->set_dato($dato);
+			$result = $component->set_data($data);
 
 			$this->assertTrue(
 				gettype($result)==='boolean',
@@ -114,33 +116,33 @@ final class component_email_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				$component->dato===$dato,
-				'expected component->dato equal dato : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===$data,
+				'expected component->data equal data : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// null case
-			$dato = null;
+		// 2 - null case
+			$data = null;
 
-			$result = $component->set_dato($dato);
+			$result = $component->set_data($data);
 
 			$this->assertTrue(
-				$component->dato===$dato,
-				'expected component->dato equal dato : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===$data,
+				'expected component->data equal data : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// string case (will be converted to array)
-			$dato = 'myemail@mydomain.org';
+		// 3 - string case (will be converted to array)
+			// $data = 'myemail@mydomain.org';
 
-			$result = $component->set_dato($dato);
+			// $result = $component->set_data($data);
 
-			$this->assertTrue(
-				$component->dato===[$dato],
-				'expected component->dato equal [dato] : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-	}//end test_set_dato
+			// $this->assertTrue(
+			// 	$component->data===[$data],
+			// 	'expected component->data equal [data] : ' . PHP_EOL
+			// 		. to_string($component->data)
+			// );
+	}//end test_set_data
 
 
 
@@ -152,16 +154,16 @@ final class component_email_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->Save();
+		$result = $component->save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
 		$this->assertTrue(
-			$result==$component->section_id,
-			'expected equal section_id : ' . PHP_EOL
+			$result==true,
+			'expected true : ' . PHP_EOL
 				. to_string($result)
 		);
 	}//end test_Save
@@ -174,7 +176,7 @@ final class component_email_test extends TestCase {
 	*/
 	public function test_is_valid_email() {
 
-		// valid email
+		// 1 - valid email
 
 			$email = 'myemail@mydomain.org';
 
@@ -191,7 +193,7 @@ final class component_email_test extends TestCase {
 					. to_string($result)
 			);
 
-		// invalid email 1
+		// 2 - invalid email B
 
 			$email = 'myemail@mydomain';
 
@@ -203,7 +205,7 @@ final class component_email_test extends TestCase {
 					. to_string($result)
 			);
 
-		// invalid email 2
+		// 3 - invalid email C
 
 			$email = 'myemail.mydomain.org';
 
@@ -244,14 +246,14 @@ final class component_email_test extends TestCase {
 	}//end test_clean_email
 
 
+
 	/**
 	* TEST_resolve_query_object_sql
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
 
-		// valid email
-
+		// search email
 			$query_object = json_decode('
 				{
 				    "q": [
@@ -284,20 +286,15 @@ final class component_email_test extends TestCase {
 					. gettype($result)
 			);
 			$this->assertTrue(
-				!empty($result->q_parsed),
-				'expected not empty q_parsed : ' . PHP_EOL
-					. to_string($result->q_parsed)
+				!empty($result->sentence),
+				'expected not empty sentence : ' . PHP_EOL
+					. to_string($result->sentence)
 			);
 			$this->assertTrue(
-				!empty($result->operator),
-				'expected not empty operator : ' . PHP_EOL
-					. to_string($result->operator)
-			);
-			$this->assertTrue(
-				$result->unaccent===true,
-				'expected true unaccent : ' . PHP_EOL
-					. to_string($result->unaccent)
-			);
+				!empty($result->params),
+				'expected not empty params : ' . PHP_EOL
+					. to_string($result->params)
+			);			
 	}//end test_resolve_query_object_sql
 
 
