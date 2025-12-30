@@ -186,7 +186,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
+	* TEST_RESOLVE_QUERY_OBJECT_SQL
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
@@ -206,16 +206,11 @@ final class component_section_id_test extends TestCase {
 		        }
 		    ],
 		    "type": "jsonb",
-		    "component_path": [
-		        "components",
-		        "test102",
-		        "dato"
-		    ],
 		    "lang": "all"
 		}
 		');
 
-		$result = component_date::resolve_query_object_sql( $query_object );
+		$result = component_section_id::resolve_query_object_sql( $query_object );
 
 		$this->assertTrue(
 			gettype($result)==='object',
@@ -224,9 +219,9 @@ final class component_section_id_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result->format==='array_elements',
-			'expected array_elements : ' . PHP_EOL
-				. to_string($result->format)
+			$result->sentence==='.section_id::integer = _Q1_',
+			'expected sentence : .section_id::integer = _Q1_' . PHP_EOL
+				. to_string($result->sentence)
 		);
 	}//end test_resolve_query_object_sql
 
