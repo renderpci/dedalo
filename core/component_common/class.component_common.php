@@ -3739,7 +3739,7 @@ abstract class component_common extends common {
 
 				$data[] = $changed_data->value;
 
-				$this->set_data($data);
+				$this->set_data_lang( $data, $lang );
 
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
@@ -3811,15 +3811,15 @@ abstract class component_common extends common {
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
-						$this->set_data($value);
+						$this->set_data_lang($value, $lang);
 						break;
 
 					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
 
-						$data = $this->get_data();
+						$data = $this->get_data_lang($lang);
 						// remove null key and set dato updated
 						array_splice($data, $changed_data->key, 1);
-						$this->set_data($data);
+						$this->set_data_lang($data, $lang);
 						//save
 						$this->save();
 
@@ -3827,7 +3827,7 @@ abstract class component_common extends common {
 
 					default:
 						array_splice($data, $key, 1);
-						$this->set_data($data);
+						$this->set_data_lang($data, $lang);
 						break;
 				}
 
@@ -3874,7 +3874,7 @@ abstract class component_common extends common {
 			// set the whole data sent by the client without check the array key, bulk insert or update
 			case 'set_data':
 
-				$this->set_data($changed_data->value);
+				$this->set_data_lang($changed_data->value, $lang);
 				// set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
@@ -3891,7 +3891,7 @@ abstract class component_common extends common {
 					$target_key	= $changed_data->target_key;
 
 				// current DB array of value
-					$data = $this->get_dato();
+					$data = $this->get_data_lang($lang);
 
 				// debug
 					// debug_log(__METHOD__
@@ -3947,7 +3947,7 @@ abstract class component_common extends common {
 					}
 
 				// new dato set
-					$this->set_data($new_dato);
+					$this->set_data_lang($new_dato, $lang);
 				break;
 
 			// used by component_portal to add created target section to current component with project values inheritance
