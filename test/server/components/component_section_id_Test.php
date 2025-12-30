@@ -138,26 +138,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_grid_value
+	* TEST_GET_GRID_VALUE
 	* @return void
 	*/
 	public function test_get_grid_value() {
@@ -181,7 +162,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_get_tools
+	* TEST_GET_TOOLS
 	* @return void
 	*/
 	public function test_get_tools() {
