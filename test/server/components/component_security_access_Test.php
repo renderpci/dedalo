@@ -183,7 +183,7 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_datalist
+	* TEST_GET_DATALIST
 	* @return void
 	*/
 	public function test_get_datalist() {
@@ -204,19 +204,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "dd242",
 					"section_tipo": "dd242",
 					"model": "area_root",
 					"label": "Catalogue",
 					"parent": "dd1"
-			    }
+			    ]
 			');
 
 			foreach ($reference as $key => $value) {
