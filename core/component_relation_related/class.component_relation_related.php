@@ -7,16 +7,16 @@ class component_relation_related extends component_relation_common {
 
 
 
-	# relation_type . Determines inverse resolutions and locator format
-	# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
-	# protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
+	// relation_type . Determines inverse resolutions and locator format
+	// DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
+	// protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
 	// protected $relation_type ; // Set on construct from properties
 
-	# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component dato
-	# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
-	# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
-	# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
-	# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
+	// type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component data
+	// DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
+	// DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
+	// DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
+	// protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
 	// protected $relation_type_rel ; // Set on construct from properties
 
 	// relation_type defaults
@@ -25,61 +25,6 @@ class component_relation_related extends component_relation_common {
 
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-
-
-	/**
-	* GET_VALOR
-	* Get value. default is get dato . overwrite in every different specific component
-	* @return array|string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
-
-		// lang never must be DEDALO_DATA_NOLAN
-			if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
-
-		// request_config
-			$request_config	= $this->get_request_config_object();
-			$show			= $request_config->show;
-
-		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain specific 'valor' form component
-		if ($ar_related_terms===false) {
-			$ar_componets_related =($ar_related_terms===false)
-				? array_map(function($el){
-					return $el->tipo;
-				  }, $show->ddo_map)
-				: $ar_related_terms;
-		}
-
-		$dato				= $this->get_dato() ?? [];
-		$fields_separator	= (isset($show->fields_separator)) ?  $show->fields_separator : ' | ';
-		$ar_values			= array();
-
-		foreach ((array)$dato as $current_locator) {
-
-			// current_ar_value array|null
-			$current_ar_value = self::get_locator_value(
-				$current_locator, // object locator
-				$lang ?? DEDALO_DATA_LANG, // string lang
-				false, // bool show_parents
-				$ar_componets_related // array|null ar_components_related
-			);
-
-			$current_value = is_array($current_ar_value)
-				? implode($fields_separator, $current_ar_value)
-				: $current_ar_value; // null case
-
-			$current_locator_json = json_handler::encode($current_locator);
-			// add
-			$ar_values[$current_locator_json] = $current_value;
-		}//end if (!empty($dato))
-
-		$valor = ($format==='array')
-			? $ar_values
-			: implode($fields_separator, $ar_values);
-
-
-		return $valor;
-	}//end get_valor
 
 
 
@@ -403,106 +348,6 @@ class component_relation_related extends component_relation_common {
 
 		return $ar_result;
 	}//end get_references
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$diffusion_value = null;
-
-		$separator = '<br>';
-
-		// lang empty case. Apply default
-			if (empty($lang)) {
-				$lang = DEDALO_DATA_LANG;
-			}
-
-		// valor
-			$valor = $this->get_valor(
-				$lang,  // string lang
-				'array' // string format array|string
-			);
-
-		// calculated references
-		$calculated_references = $this->get_calculated_references();
-
-		if (empty($option_obj)) {
-
-			$diffusion_value	= implode($separator, $valor);
-			$diffusion_value	= !empty($diffusion_value)
-				? strip_tags($diffusion_value, $separator)
-				: '';
-
-			if (!empty($calculated_references)) {
-				$ar_references = [];
-				foreach ($calculated_references as $key => $ref_obj) {
-					$ar_references[] = $ref_obj->label;
-				}
-				if (!empty($diffusion_value)) {
-					$diffusion_value .= $separator;
-				}
-				// append ar_references
-				$diffusion_value .= implode($separator, $ar_references);
-			}
-		}else{
-
-			$ar_terms = [];
-			// properties options defined
-			foreach ($option_obj as $key => $value) {
-
-				if ($key==='custom_parents') {
-
-					$fields_separator 	= $this->get_fields_separator();
-
-					if (!empty($valor)) {
-						$array_values = array_values($valor);
-						foreach ($array_values as $key => $current_term) {
-							$ar_terms[] = explode($fields_separator, $current_term);
-						}
-					}
-
-					if (!empty($calculated_references)) {
-						foreach ($calculated_references as $key => $ref_obj) {
-							$ar_terms[] = explode($fields_separator, $ref_obj->label);
-						}
-					}
-
-					// append whole or part of results when no empty
-					if (!empty($ar_terms)) {
-						$final_term = [];
-						foreach ($ar_terms as $term) {
-							// parents_splice. Selects a portion of the complete parents array
-							if(isset($value->parents_splice)){
-								$splice_values = is_array($value->parents_splice) ? $value->parents_splice : [$value->parents_splice];
-								if (isset($splice_values[1])) {
-									array_splice($term, $splice_values[0], $splice_values[1]);
-								}else{
-									array_splice($term, $splice_values[0]);
-								}
-							}
-							$final_term[] = implode($fields_separator, $term);
-						}
-						if (!empty($final_term)) {
-							$diffusion_value = implode($separator, $final_term);
-						}
-					}
-				}
-			}//end foreach ($option_obj as $key => $value)
-		}
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 
