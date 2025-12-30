@@ -87,17 +87,17 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= [];
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -105,30 +105,31 @@ final class component_security_access_test extends TestCase {
 				. gettype($result)
 		);
 
+		$test_data = $component->get_data();
 		$this->assertTrue(
-			$component->dato===[],
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+			$test_data===null,
+			'expected null : ' . PHP_EOL
+				. to_string($test_data)
 		);
 
 		// null case
-			$result	= $component->set_dato(null);
-
+			$result	= $component->set_data(null);
+			$test_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===NULL,
+				$test_data===null,
 				'expected null : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+			$result	= $component->set_data($old_data);
+			$test_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($test_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
