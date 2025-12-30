@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_dataframe_test extends TestCase {
+final class component_dataframe_test extends BaseTestCase {
 
 
 

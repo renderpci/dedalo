@@ -3097,7 +3097,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Default (component_common) is true. Override as false.
 	*/
 	public function get_sortable() : bool {
 
