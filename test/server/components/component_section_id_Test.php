@@ -68,103 +68,77 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATa
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer ' . PHP_EOL
+			gettype($result)==='array',
+			'expected type array ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= 1;
-		$result	= $component->set_dato($dato);
-
+		$data	= [1];
+		$result	= $component->set_data($data);
+		$test_data	= $component->get_data();
+		// check result
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
+		// check data
+		$this->assertEquals(
+			$old_data, $test_data,
+			'expected old data : ' . PHP_EOL 
+			. to_string($test_data)
+		);
 
 		// null case
-			$result	= $component->set_dato(null);
+		// take account that this component is read only dont't save or set data
+		// so the data is not changed
+			$result		= $component->set_data(null);
+			$test_data	= $component->get_data();
 			$this->assertTrue(
-				$component->dato===NULL,
-				'expected null : ' . PHP_EOL
-					. to_string($component->dato)
+				$test_data===$old_data,
+				'expected old data : ' . PHP_EOL
+					. to_string($test_data)
 			);
 
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+		// restore data
+		// take account that this component is read only dont't save or set data
+		// so the data is not changed
+			$result		= $component->set_data($old_data);
+			$test_data	= $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($test_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_dato_full
-	* @return void
-	*/
-	public function test_get_dato_full() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_dato_full();
-
-		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato_full
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_grid_value
+	* TEST_GET_GRID_VALUE
 	* @return void
 	*/
 	public function test_get_grid_value() {
@@ -188,7 +162,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_get_tools
+	* TEST_GET_TOOLS
 	* @return void
 	*/
 	public function test_get_tools() {
@@ -212,7 +186,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
+	* TEST_RESOLVE_QUERY_OBJECT_SQL
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
@@ -232,16 +206,11 @@ final class component_section_id_test extends TestCase {
 		        }
 		    ],
 		    "type": "jsonb",
-		    "component_path": [
-		        "components",
-		        "test102",
-		        "dato"
-		    ],
 		    "lang": "all"
 		}
 		');
 
-		$result = component_date::resolve_query_object_sql( $query_object );
+		$result = component_section_id::resolve_query_object_sql( $query_object );
 
 		$this->assertTrue(
 			gettype($result)==='object',
@@ -250,16 +219,16 @@ final class component_section_id_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result->format==='array_elements',
-			'expected array_elements : ' . PHP_EOL
-				. to_string($result->format)
+			$result->sentence==='.section_id::integer = _Q1_',
+			'expected sentence : .section_id::integer = _Q1_' . PHP_EOL
+				. to_string($result->sentence)
 		);
 	}//end test_resolve_query_object_sql
 
 
 
 	/**
-	* TEST_search_operators_info
+	* TEST_SEARCH_OPERATORS_INFO
 	* @return void
 	*/
 	public function test_search_operators_info() {

@@ -1,6 +1,9 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_SECTION_ID
+* @note This component is read only dont't save or set data, 
+* is used only to show the id of the section, and perform queries into the database
+* or export as a column in csv or spreadsheet files
 *
 * data_column_name : 'section_id'
 */
@@ -39,42 +42,23 @@ class component_section_id extends component_common {
 
 	/**
 	* SET_DATA
+	* @override component_common set_data()
+	* @note This component is read only dont't save or set data, 
+	* is used only to show the id of the section, and perform queries into the database
+	* or export as a column in csv or spreadsheet files
 	* @param int|null $data
 	* @return bool
 	*/
 	public function set_data( ?array $data ) : bool {
 
 		return true;
-	}//end get_dato
-
-
-
-	/**
-	* GET_DATO_FULL
-	* Alias of get_dato
-	* @return int|null
-	*/
-	public function get_dato_full() {
-
-		return $this->get_dato();
-	}//end get_dato_full
-
-
-
-	// /**
-	// * GET_VALOR
-	// * Alias of get_dato
-	// * @return int|null
-	// */
-	// public function get_valor() {
-
-	// 	return $this->get_dato();
-	// }//end get_valor
+	}//end get_data
 
 
 
 	/**
 	* SAVE
+	* @override component_common save()
 	* Only used to catch common method here
 	* @return bool
 	*/
@@ -116,7 +100,7 @@ class component_section_id extends component_common {
 				$dd_grid_cell_object->set_cell_type('section_id');
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
 				$dd_grid_cell_object->set_row_count(1);
-				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_value($data[0]);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
@@ -127,6 +111,7 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_TOOLS
+	* @override component_common get_tools()
 	* Catch get_tools call to prevent load tools sections
 	* @return array $tools
 	*/
