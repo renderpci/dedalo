@@ -107,6 +107,7 @@ abstract class filter {
 
 	/**
 	* CLEAN_CACHE
+	* Reset all caches related with user projects.
 	* @param int $user_id
 	* @param string $component_tipo
 	* @return bool
@@ -119,20 +120,22 @@ abstract class filter {
 		}
 
 		// user_authorized_projects_cache
-			$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $component_tipo);
+		$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $component_tipo);
 		// static cache
-			if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-				unset(filter::$user_authorized_projects_cache[$cache_key]);
-			}
+		if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+			unset(filter::$user_authorized_projects_cache[$cache_key]);
+		}
+
 		// session cache
-			// if (isset($_SESSION['dedalo']['config'][$cache_key])) {
-			// 	unset($_SESSION['dedalo']['config'][$cache_key]);
-			// }
+		// if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+		// 	unset($_SESSION['dedalo']['config'][$cache_key]);
+		// }
+
 		// file cache
-			$file_name = filter::get_projects_cache_name();
-			dd_cache::delete_cache_files(
-				[$file_name]
-			);
+		$file_name = filter::get_projects_cache_name();
+		dd_cache::delete_cache_files(
+			[$file_name]
+		);
 
 		debug_log(__METHOD__
 			. " Cleared filter caches " . PHP_EOL
