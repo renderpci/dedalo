@@ -228,7 +228,7 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_search_operators_info
+	* TEST_SEARCH_OPERATORS_INFO
 	* @return void
 	*/
 	public function test_search_operators_info() {
