@@ -100,7 +100,7 @@ class component_section_id extends component_common {
 				$dd_grid_cell_object->set_cell_type('section_id');
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
 				$dd_grid_cell_object->set_row_count(1);
-				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_value($data[0]);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
