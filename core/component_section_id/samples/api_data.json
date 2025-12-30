@@ -1,0 +1,17 @@
+{
+	"section_id": 1,
+	"section_tipo": "dd153",
+	"tipo": "dd784",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "dd784",
+	"value": [
+		1
+	],
+	"debug_model": "component_section_id",
+	"debug_label": "Id",
+	"debug_dataframe": null,
+	"row_section_id": 1,
+	"parent_tipo": "dd153",
+	"changed_data": []
+}

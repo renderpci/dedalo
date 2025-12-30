@@ -68,36 +68,36 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= [];
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -105,54 +105,36 @@ final class component_security_access_test extends TestCase {
 				. gettype($result)
 		);
 
+		$test_data = $component->get_data();
 		$this->assertTrue(
-			$component->dato===[],
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+			$test_data===null,
+			'expected null : ' . PHP_EOL
+				. to_string($test_data)
 		);
 
 		// null case
-			$result	= $component->set_dato(null);
-
+			$result	= $component->set_data(null);
+			$test_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===NULL,
+				$test_data===null,
 				'expected null : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+			$result	= $component->set_data($old_data);
+			$test_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($test_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_cache_tree_file_name
+	* TEST_GET_CACHE_TREE_FILE_NAME
 	* @return void
 	*/
 	public function test_get_cache_tree_file_name() {
@@ -182,7 +164,7 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_datalist
+	* TEST_GET_DATALIST
 	* @return void
 	*/
 	public function test_get_datalist() {
@@ -203,19 +185,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "dd242",
 					"section_tipo": "dd242",
 					"model": "area_root",
 					"label": "Catalogue",
 					"parent": "dd1"
-			    }
+			    ]
 			');
 
 			foreach ($reference as $key => $value) {
@@ -231,7 +213,7 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_element_datalist
+	* TEST_GET_ELEMENT_DATALIST
 	* @return void
 	*/
 	public function test_get_element_datalist() {
@@ -252,19 +234,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "test45",
 					"section_tipo": "test3",
 					"model": "section_group",
 					"label": "<mark>components a-z</mark>",
 					"parent": "test3"
-			    }
+			    ]
 			');
 
 			foreach ($reference as $key => $value) {
@@ -309,19 +291,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "test45",
 					"section_tipo": "test3",
 					"model": "section_group",
 					"label": "<mark>components a-z</mark>",
 					"parent": "test3"
-			    }
+				]
 			');
 
 			foreach ($reference as $key => $value) {

@@ -2024,7 +2024,7 @@ abstract class component_common extends common {
 						$dato = $component->get_dato();
 
 						$component->observable_dato = ($component_name === 'component_relation_related')
-							? $component->get_dato_with_references()
+							? $component->get_data_with_references()
 							: $dato;
 
 						// save the new dato into the database, this will be used for search into components calculations of info's
@@ -3743,7 +3743,7 @@ abstract class component_common extends common {
 
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
-					? $this->get_dato_with_references()
+					? $this->get_data_with_references()
 					: $data;
 				break;
 
@@ -3787,7 +3787,7 @@ abstract class component_common extends common {
 				$this->set_data_lang( $data, $lang );
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
-					? $this->get_dato_with_references()
+					? $this->get_data_with_references()
 					: $data;
 				break;
 
@@ -3799,7 +3799,7 @@ abstract class component_common extends common {
 
 				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
 				$this->observable_dato = ( get_called_class()==='component_relation_related' )
-					? $this->get_dato_with_references()
+					? $this->get_data_with_references()
 					: $data;
 
 				// Fix locator used to delete dataframe
@@ -3877,7 +3877,7 @@ abstract class component_common extends common {
 				$this->set_data_lang($changed_data->value, $lang);
 				// set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
-					? $this->get_dato_with_references()
+					? $this->get_data_with_references()
 					: $changed_data->value;
 				break;
 
