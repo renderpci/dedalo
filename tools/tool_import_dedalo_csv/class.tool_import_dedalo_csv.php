@@ -764,7 +764,7 @@ class tool_import_dedalo_csv extends tool_common {
 										// unified with API calls with changed_data_item object
 											// $component->set_data( $conformed_value );
 											// $component->observable_dato = ($component->model === 'component_relation_related')
-											// 	? $component->get_dato_with_references()
+											// 	? $component->get_data_with_references()
 											// 	: $conformed_value;
 
 										// added changed data object to set data and observable data

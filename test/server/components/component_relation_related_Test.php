@@ -237,21 +237,21 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato_with_references
+	* TEST_get_data_with_references
 	* @return void
 	*/
-	public function test_get_dato_with_references() {
+	public function test_get_data_with_references() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_dato_with_references();
+		$result = $component->get_data_with_references();
 
 		$this->assertTrue(
 			gettype($result)==='array',
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato_with_references
+	}//end test_get_data_with_references
 
 
 
