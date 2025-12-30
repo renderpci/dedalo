@@ -195,10 +195,10 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato_with_references
+	* TEST_get_data_with_references
 	* @return void
 	*/
-	public function test_get_dato_with_references() : void {
+	public function test_get_data_with_references() : void {
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -209,14 +209,14 @@ final class component_relation_common_test extends TestCase {
 			self::$section_tipo // string section_tipo
 		);
 
-		$value = $component->get_dato_with_references();
+		$value = $component->get_data_with_references();
 
 		$this->assertTrue(
 			gettype($value)==='array',
 			'expected type array : ' . PHP_EOL
 				. gettype($value)
 		);
-	}//end test_get_dato_with_references
+	}//end test_get_data_with_references
 
 
 

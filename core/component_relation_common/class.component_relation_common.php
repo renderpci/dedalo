@@ -686,19 +686,19 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_DATO_WITH_REFERENCES
+	* get_data_with_references
 	* Return the dato to all components, except the components that has references calculated,
 	* like component_relation_related
 	* this will mix the real dato and the result of the calculation
 	* (!) Default is the component dato, but overwrite it if component need it
 	* @return array $dato_with_references
 	*/
-	public function get_dato_with_references() : array {
+	public function get_data_with_references() : array {
 
 		$dato_with_references = $this->get_dato();
 
 		return $dato_with_references;
-	}//end get_dato_with_references
+	}//end get_data_with_references
 
 
 
@@ -1980,7 +1980,7 @@ class component_relation_common extends component_common {
 						$locator->section_tipo,
 						false
 					);
-					$component_dato = $component_data_for_search->get_dato_with_references();
+					$component_dato = $component_data_for_search->get_data_with_references();
 
 					foreach ($component_dato as $current_locator) {
 						$locator_dato = new locator();

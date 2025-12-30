@@ -137,19 +137,19 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* GET_DATO_WITH_REFERENCES
-	* Return the full dato of the component, the real dato with the calculated references
-	* @return array $dato_with_references
+	* GET_DATA_WITH_REFERENCES
+	* Return the full data of the component, the real data with the calculated references
+	* @return array $data_with_references
 	*/
-	public function get_dato_with_references() : array {
+	public function get_data_with_references() : array {
 
-		$dato		= $this->get_dato();
+		$data		= $this->get_data();
 		$references	= $this->get_calculated_references(true);
 
-		$dato_with_references = array_merge($dato, $references);
+		$data_with_references = array_merge($data, $references);
 
-		return $dato_with_references;
-	}//end get_dato_with_references
+		return $data_with_references;
+	}//end get_data_with_references
 
 
 
