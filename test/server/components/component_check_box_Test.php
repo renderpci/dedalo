@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_check_box_test extends TestCase {
+final class component_check_box_test extends BaseTestCase {
 
 
 

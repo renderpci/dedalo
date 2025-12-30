@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_filter_test extends TestCase {
+final class component_filter_test extends BaseTestCase {
 
 
 
@@ -17,30 +17,10 @@ final class component_filter_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
-	* @return
+	* @return object
 	*/
-	private function build_component_instance() {
+	private function build_component_instance() : object {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -64,36 +44,20 @@ final class component_filter_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_set_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$old_data = $component->get_data();
 
-		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato
-
-
-
-	/**
-	* TEST_set_dato
-	* @return void
-	*/
-	public function test_set_dato() {
-
-		$component = $this->build_component_instance();
-
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		// 1. Set null data
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -103,52 +67,138 @@ final class component_filter_test extends TestCase {
 
 		if (security::is_global_admin(TEST_USER_ID)) {
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 		}else{
 			$this->assertTrue(
-				count($component->dato)>0,
+				count($component->get_data())>0,
 				'expected > 0 : ' . PHP_EOL
-					. to_string($component->dato) . PHP_EOL
-					. count($component->dato)
+					. to_string($component->get_data()) . PHP_EOL
+					. count($component->get_data())
 			);
 		}
 
-		// restore dato
-		$result	= $component->set_dato($old_dato);
+		// 2. Restore old data
+		$result	= $component->set_data($old_data);
 
 		$this->assertTrue(
-			json_encode($component->dato)===json_encode($old_dato),
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+			json_encode($component->get_data())===json_encode($old_data),
+			'expected old data : ' . PHP_EOL
+				. to_string($component->get_data())
 		);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_set_dato_default
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_set_dato_default() {
+	public function test_get_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->set_dato_default();
+		// 1. Set data
+
+		$dample_data = json_decode('[
+			{
+				"id": 1,
+				"type": "dd675",
+				"section_id": "1",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			},
+			{
+				"id": 2,
+				"section_id": "7",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			}
+		]');
+		// Set sample data
+		$component->set_data($dample_data);
+
+		$result	= $component->get_data();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// 2 . Set null
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
+
 		$this->assertTrue(
-			gettype($component->dato)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($component->dato)
+			$component->get_data()===null,
+			'expected null : ' . PHP_EOL
+				. to_string($component->get_data())
 		);
-	}//end test_set_dato_default
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_set_data_default
+	* @return void
+	*/
+	public function test_set_data_default() {
+
+		$this->user_login();
+
+		// $component = $this->build_component_instance();
+		$model			= self::$model;
+		$tipo			= 'rsc98';
+		$section_tipo	= 'rsc197';
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		// empty data
+		$component->set_data(null);
+
+		// Using reflection to call protected method
+		// $result	= $component->set_data_default();
+		$reflection = new ReflectionClass($component);
+		$method = $reflection->getMethod('set_data_default');
+		$result	= $method->invoke($component);
+	
+		$this->assertTrue(
+			$result===true,
+			'expected true : ' . PHP_EOL
+				. $result
+		);
+		$this->assertTrue(
+			gettype($component->get_data())==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($component->get_data())
+		);
+		$this->assertTrue(
+			$component->get_data()[0]->section_tipo==='dd153',
+			'expected section_tipo dd153 : ' . PHP_EOL
+				. $component->get_data()[0]->section_tipo
+		);
+	}//end test_set_data_default
 
 
 
@@ -158,7 +208,24 @@ final class component_filter_test extends TestCase {
 	*/
 	public function test_get_default_data_for_user() {
 
-		$component = $this->build_component_instance();
+		$this->user_login();
+
+		// $component = $this->build_component_instance();
+		$model			= self::$model;
+		$tipo			= 'rsc98';
+		$section_tipo	= 'rsc197';
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);	
 
 		$result	= $component->get_default_data_for_user(
 			1
@@ -169,26 +236,34 @@ final class component_filter_test extends TestCase {
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
+
+		$this->assertTrue(
+			$result[0]->section_tipo==='dd153',
+			'expected section_tipo dd153 : ' . PHP_EOL
+				. $result[0]->section_tipo
+		);
 	}//end test_get_default_data_for_user
 
 
 
 	/**
-	* TEST_Save
+	* TEST_save
 	* @return void
 	*/
-	public function test_Save() {
+	public function test_save() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->Save();
+		$result	= $component->save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_Save
+	}//end test_save
 
 
 
@@ -198,7 +273,27 @@ final class component_filter_test extends TestCase {
 	*/
 	public function test_propagate_filter() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
+
+		$dample_data = json_decode('[
+			{
+				"id": 1,
+				"type": "dd675",
+				"section_id": "1",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			},
+			{
+				"id": 2,
+				"section_id": "7",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			}
+		]');
+		// Set sample data
+		$component->set_data($dample_data);
 
 		$result	= $component->propagate_filter();
 
@@ -206,6 +301,11 @@ final class component_filter_test extends TestCase {
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
+		);
+		$this->assertTrue(
+			$result===true,
+			'expected true : ' . PHP_EOL
+				. $result
 		);
 	}//end test_propagate_filter
 
@@ -217,8 +317,11 @@ final class component_filter_test extends TestCase {
 	*/
 	public function test_get_grid_value() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
+		// 1. Get grid value
 		$result	= $component->get_grid_value();
 
 		$this->assertTrue(
@@ -226,45 +329,43 @@ final class component_filter_test extends TestCase {
 			'expected type object : ' . PHP_EOL
 				. gettype($result)
 		);
+
+		// 2. Get grid value with data
+		$dample_data = json_decode('[
+			{
+				"id": 1,
+				"type": "dd675",
+				"section_id": "1",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			},
+			{
+				"id": 2,
+				"section_id": "7",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			}
+		]');
+		// Set sample data
+		$component->set_data($dample_data);
+		$result	= $component->get_grid_value();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			$result->row_count===2,
+			'expected row_count 2 : ' . PHP_EOL
+				. $result->row_count
+		);
+		$this->assertTrue(
+			$result->column_count===1,
+			'expected column_count 1 : ' . PHP_EOL
+				. $result->column_count
+		);		
 	}//end test_get_grid_value
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
 
 
 
@@ -273,6 +374,8 @@ final class component_filter_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_datalist() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -284,9 +387,19 @@ final class component_filter_test extends TestCase {
 				. gettype($result)
 		);
 		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
 			gettype($result[0])==='object',
 			'expected type object : ' . PHP_EOL
 				. gettype($result[0])
+		);
+		$this->assertTrue(
+			$result[0]->section_tipo==='dd153',
+			'expected section_tipo dd153 : ' . PHP_EOL
+				. $result[0]->section_tipo
 		);
 	}//end test_get_datalist
 
@@ -297,6 +410,8 @@ final class component_filter_test extends TestCase {
 	* @return void
 	*/
 	public function test_regenerate_component() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -317,29 +432,12 @@ final class component_filter_test extends TestCase {
 
 
 	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
 	* TEST_get_ar_target_section_tipo
 	* @return void
 	*/
 	public function test_get_ar_target_section_tipo() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -349,6 +447,11 @@ final class component_filter_test extends TestCase {
 			gettype($result)==='array',
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
+		);
+		$this->assertTrue(
+			$result===["dd153"],
+			'expected ["dd153"] : ' . PHP_EOL
+				. $result
 		);
 	}//end test_get_ar_target_section_tipo
 
@@ -428,10 +531,30 @@ final class component_filter_test extends TestCase {
 	*/
 	public function test_get_list_value() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
 		$component_tipo	= self::$tipo;
 		$section_tipo	= self::$section_tipo;
+
+		$dample_data = json_decode('[
+			{
+				"id": 1,
+				"type": "dd675",
+				"section_id": "1",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			},
+			{
+				"id": 2,
+				"section_id": "7",
+				"section_tipo": "dd153",
+				"from_component_tipo": "rsc338"
+			}
+		]');
+		// Set sample data
+		$component->set_data($dample_data);
 
 		$result = $component->get_list_value(
 			$component_tipo,

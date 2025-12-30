@@ -1,0 +1,72 @@
+[
+	{
+		"id": 3,
+		"files_info": [
+			{
+				"quality": "original",
+				"extension": "mp4",
+				"file_name": "test94_test3_1.mp4",
+				"file_path": "/av/original/0/test94_test3_1.mp4",
+				"file_size": 1055736,
+				"file_time": {
+					"day": 19,
+					"hour": 20,
+					"time": 65116211013,
+					"year": 2025,
+					"month": 12,
+					"minute": 23,
+					"second": 33,
+					"timestamp": "2025-12-19 20:23:33"
+				},
+				"file_exist": true
+			},
+			{
+				"quality": "404",
+				"extension": "mp4",
+				"file_name": "test94_test3_1.mp4",
+				"file_path": "/av/404/0/test94_test3_1.mp4",
+				"file_size": 722370,
+				"file_time": {
+					"day": 28,
+					"hour": 19,
+					"time": 65116987113,
+					"year": 2025,
+					"month": 12,
+					"minute": 58,
+					"second": 33,
+					"timestamp": "2025-12-28 19:58:33"
+				},
+				"file_exist": true
+			},
+			{
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test94_test3_1.jpg",
+				"file_path": "/av/thumb/0/test94_test3_1.jpg",
+				"file_size": 12675,
+				"file_time": {
+					"day": 28,
+					"hour": 19,
+					"time": 65116987156,
+					"year": 2025,
+					"month": 12,
+					"minute": 59,
+					"second": 16,
+					"timestamp": "2025-12-28 19:59:16"
+				},
+				"file_exist": true
+			}
+		],
+		"original_file_name": "rsc35_rsc167_1_deleted_2023-10-22_1924.mp4",
+		"original_upload_date": {
+			"day": 26,
+			"hour": 9,
+			"time": 65063207305,
+			"year": 2024,
+			"month": 4,
+			"minute": 8,
+			"second": 25
+		},
+		"original_normalized_name": "test94_test3_1.mp4"
+	}
+]

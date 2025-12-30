@@ -1,0 +1,42 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test88",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test88",
+	"value": [
+		{
+			"id": 1,
+			"section_id": "1",
+			"section_tipo": "dd64"
+		},
+		{
+			"section_id": "2",
+			"section_tipo": "dd64",
+			"id": 2
+		}
+	],
+	"debug_model": "component_check_box",
+	"debug_label": "check_box",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"value": {
+				"section_id": "2",
+				"section_tipo": "dd64"
+			},
+			"label": "No",
+			"section_id": "2"
+		},
+		{
+			"value": {
+				"section_id": "1",
+				"section_tipo": "dd64"
+			},
+			"label": "Yes",
+			"section_id": "1"
+		}
+	],
+	"changed_data": []
+}

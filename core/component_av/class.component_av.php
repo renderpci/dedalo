@@ -122,9 +122,9 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $grid_cell_object
@@ -139,7 +139,7 @@ class component_av extends component_media_common implements component_media_int
 		// quality
 			$quality = $this->get_default_quality();
 
-		// current_url. get from dato
+		// current_url. get from data
 			$data = $this->get_data();
 			if(isset($data)){
 
@@ -185,34 +185,6 @@ class component_av extends component_media_common implements component_media_int
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string|null $valor_export
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
-
-		if (empty($valor)) {
-			$this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
-		}
-
-		$av_file_path = $this->get_valor();
-
-		$test_file	= true;	// output dedalo image placeholder when not file exists
-		$absolute	= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg'
-
-		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
-
-		$valor_export = $av_file_path .','. $posterframe_file_path;
-
-
-		return $valor_export;
-	}//end get_valor_export
 
 
 
@@ -589,11 +561,6 @@ class component_av extends component_media_common implements component_media_int
 			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
 
 				$duration = $media_attributes->format->duration;
-
-				// Save data to component as time code
-					// $tc[0] = OptimizeTC::seg2tc($duration);
-					// $component->set_dato($tc);
-					// $component->Save();
 			}
 
 
@@ -933,8 +900,10 @@ class component_av extends component_media_common implements component_media_int
 						$this->get_section_tipo(), // section_tipo
 						false
 					);
-					$component_target_filename->set_dato($original_file_name);
-					$component_target_filename->Save();
+					$data_to_set = new stdClass();
+						$data_to_set->value = $original_file_name;
+					$component_target_filename->set_data([$data_to_set]);
+					$component_target_filename->save();
 					debug_log(__METHOD__.
 						' Saved original filename to '.$properties->target_filename.' : '.to_string($original_file_name)
 						, logger::DEBUG
@@ -956,8 +925,10 @@ class component_av extends component_media_common implements component_media_int
 					);
 					$secs		= $this->get_duration($quality); // float secs
 					$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'
-					$component_target_duration->set_dato([$duration]);
-					$component_target_duration->Save();
+					$data_to_set = new stdClass();
+						$data_to_set->value = $duration;
+					$component_target_duration->set_data([$data_to_set]);
+					$component_target_duration->save();
 					debug_log(__METHOD__.
 						' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs)
 						, logger::DEBUG
@@ -968,17 +939,17 @@ class component_av extends component_media_common implements component_media_int
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
 					// update upload file info
-					$dato = $this->get_dato();
+					$data = $this->get_data();
 
 					$key = 0;
-					if (!isset($dato[$key]) || !is_object($dato[$key])) {
-						$dato[$key] = new stdClass();
+					if (!isset($data[$key]) || !is_object($data[$key])) {
+						$data[$key] = new stdClass();
 					}
-					$dato[$key]->original_file_name			= $original_file_name;
-					$dato[$key]->original_normalized_name	= $original_normalized_name;
-					$dato[$key]->original_upload_date		= component_date::get_date_now();
+					$data[$key]->original_file_name			= $original_file_name;
+					$data[$key]->original_normalized_name	= $original_normalized_name;
+					$data[$key]->original_upload_date		= component_date::get_date_now();
 
-					$this->set_dato($dato);
+					$this->set_data($data);
 				}
 
 			// Generate default_av_format : If uploaded file is not in Dedalo standard format (mpeg), it will converted,
@@ -1120,8 +1091,8 @@ class component_av extends component_media_common implements component_media_int
 					return $response;
 				}
 
-				// update component dato files info and save
-					$this->Save();
+				// update component data files info and save
+					$this->save();
 
 				$response->result	= true;
 				$response->msg		= 'Thumb file built';
@@ -1193,8 +1164,8 @@ class component_av extends component_media_common implements component_media_int
 
 				$command_response  = shell_exec( $command );
 
-				// update component dato files info and save
-					$this->Save();
+				// update component data files info and save
+					$this->save();
 
 			}else{
 
@@ -1212,7 +1183,7 @@ class component_av extends component_media_common implements component_media_int
 					, logger::DEBUG
 				);
 
-				// update component dato files info and save
+				// update component data files info and save
 					// $this->Save(); // delayed (!)
 					// (!) Do not update here because process continues in background and
 					// a save action 'force_save' will be called from client from tool_media_versions
@@ -1332,7 +1303,7 @@ class component_av extends component_media_common implements component_media_int
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $options) : object {
 
@@ -1347,184 +1318,6 @@ class component_av extends component_media_common implements component_media_int
 
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
-
-			case '6.2.0':
-				// same case as '6.0.1'. regenerate_component is enough to create thumb
-			case '6.0.1':
-				// component instance
-					$model		= ontology_node::get_model_by_tipo($tipo, true);
-					$component	= component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo,
-						false
-					);
-
-				// run update cache (this action updates files info and saves)
-					$component->regenerate_component();
-					$new_dato = $component->get_dato();
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				break;
-
-			case '6.0.0':
-				$is_old_dato = (
-					empty($data_unchanged) || // v5 early case
-					isset($data_unchanged->section_id) || // v5 modern case
-					(isset($data_unchanged[0]) && isset($data_unchanged[0]->original_file_name)) // v6 alpha case
-				);
-				// $is_old_dato = true; // force
-				if ($is_old_dato===true) {
-
-					// note that old dato could be a locator object as:
-						// {
-						// 	"section_id": "54",
-						// 	"section_tipo": "test38",
-						// 	"component_tipo": "test207"
-						// }
-
-					// create the component av
-						$model		= ontology_node::get_model_by_tipo($tipo,true);
-						$component	= component_common::get_instance(
-							$model, // string 'component_av'
-							$tipo,
-							$section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo,
-							false
-						);
-
-					// get existing files data
-						$file_name			= $component->get_id();
-						$source_quality		= $component->get_original_quality();
-						$folder				= $component->get_folder(); // like DEDALO_AV_FOLDER
-						$additional_path	= $component->get_additional_path();
-						$initial_media_path	= $component->get_initial_media_path();
-						$original_extension	= $component->get_original_extension(
-							false // bool exclude_converted
-						) ?? $component->get_extension();
-
-						$base_path	= $folder  . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
-
-						// no original file found. Use default quality file
-							if(!file_exists($file)) {
-								// use default quality as original
-								$source_quality	= $component->get_default_quality();
-								$base_path		= $folder  . $initial_media_path . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
-							}
-							// try again
-							if(!file_exists($file)) {
-								// reset bad dato
-								$response = new stdClass();
-									$response->result	= 1;
-									$response->new_dato	= null;
-									$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string(null).".<br />";
-								// $response = new stdClass();
-								// 	$response->result	= 2;
-								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($data_unchanged)."
-								return $response;
-							}
-
-					// source_file_upload_date
-						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
-						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
-						$source_file_upload_date->timestamp	= $upload_date_timestamp;
-
-					// get the original file name
-						$source_file_name = pathinfo($file)['basename'];
-
-					// lib_data
-						$lib_data = null;
-
-					// get files info
-						$files_info	= [];
-						$ar_quality = DEDALO_AV_AR_QUALITY;
-						foreach ($ar_quality as $current_quality) {
-							if ($current_quality==='thumb') continue;
-							// read file if exists to get file_info
-							$file_info = $component->get_quality_file_info($current_quality);
-							// add non empty quality files data
-							if (!empty($file_info)) {
-								// Note that source_quality could be original or default
-								if ($current_quality===$source_quality) {
-									$file_info->upload_info = (object)[
-										'file_name'	=> $source_file_name ?? null,
-										'date'		=> $source_file_upload_date ?? null,
-										'user'		=> null // unknown here
-									];
-								}
-								// add
-								$files_info[] = $file_info;
-							}
-						}
-
-					// create new dato
-						$dato_item = (object)[
-							'files_info'	=> $files_info,
-							'lib_data'		=> $lib_data
-						];
-
-					// fix final dato with new format as array
-						$new_dato = [$dato_item];
-						// debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
-
-					// properties
-						$properties = $component->get_properties();
-
-					// target_duration. Save duration (time-code) in a component_input_text, usually to 'rsc54'
-						if (isset($properties->target_duration)) {
-
-							$secs = $component->get_duration( $component->get_default_quality() ); // float secs
-
-							if (!empty($secs)) {
-
-								$model_name_target_duration	= ontology_node::get_model_by_tipo($properties->target_duration, true);
-								$component_target_duration	= component_common::get_instance(
-									$model_name_target_duration, // model
-									$properties->target_duration, // tipo
-									$component->get_section_id(), // section_id
-									'list', // mode
-									DEDALO_DATA_NOLAN, // lang
-									$component->get_section_tipo(), // section_tipo
-									false
-								);
-
-								$duration	= OptimizeTC::seg2tc($secs); // string TimeCode as '00:05:20:125'
-								$component_target_duration->set_dato([$duration]);
-								$component_target_duration->Save();
-								debug_log(__METHOD__.
-									' Saved av duration to '.$properties->target_duration.' : '.to_string($duration).' - secs: '.to_string($secs)
-									, logger::DEBUG
-								);
-							}
-						}
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-
-					// clean vars
-						unset($source_file_upload_date);
-						unset($files_info);
-						unset($lib_data);
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();

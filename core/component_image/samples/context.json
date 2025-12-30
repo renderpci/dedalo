@@ -1,0 +1,198 @@
+{
+	"typo": "ddo",
+	"model": "component_image",
+	"label": "image",
+	"tipo": "test99",
+	"section_tipo": "test3",
+	"legacy_model": "component_image",
+	"parent": "test3",
+	"parent_grouper": "test45",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"observe": [
+			{
+				"event": "click_tag_draw",
+				"client": {
+					"event": "click_tag_draw",
+					"perform": {
+						"function": "load_tag_into_vector_editor"
+					}
+				},
+				"perform": "load_tag_into_vector_editor",
+				"component_tipo": "test98"
+			},
+			{
+				"client": {
+					"event": "key_up_f2",
+					"perform": {
+						"function": "get_data_tag"
+					}
+				},
+				"component_tipo": "test98"
+			}
+		],
+		"max_items_folder": 1000
+	},
+	"css": null,
+	"permissions": 2,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_image_rotation",
+			"name": "tool_image_rotation",
+			"label": "Image rotation",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_image_rotation/css/tool_image_rotation.css"
+			},
+			"icon": "/dedalo/tools/tool_image_rotation/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_media_versions",
+			"name": "tool_media_versions",
+			"label": "Media versions",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"specific_actions": {
+					"rotate": [
+						"component_image"
+					],
+					"conform_headers": [
+						"component_av"
+					]
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_media_versions/css/tool_media_versions.css"
+			},
+			"icon": "/dedalo/tools/tool_media_versions/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Time machine",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_transcription",
+			"name": "tool_transcription",
+			"label": "Transcription",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+			},
+			"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_upload",
+			"name": "tool_upload",
+			"label": "Upload",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": {
+					"top": 0,
+					"left": "return screen.width -760",
+					"width": 760,
+					"height": 708
+				}
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_upload/css/tool_upload.css"
+			},
+			"icon": "/dedalo/tools/tool_upload/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": null,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": "default",
+	"children_view": null,
+	"debug": {
+		"exec_time": "8.34 ms"
+	},
+	"features": {
+		"allowed_extensions": [
+			"jpg",
+			"jpeg",
+			"png",
+			"tif",
+			"tiff",
+			"bmp",
+			"psd",
+			"raw",
+			"webp",
+			"heic",
+			"avif",
+			"webp"
+		],
+		"default_target_quality": "original",
+		"ar_quality": [
+			"original",
+			"modified",
+			"100MB",
+			"50MB",
+			"25MB",
+			"6MB",
+			"3MB",
+			"2MB",
+			"1.5MB",
+			"<1MB",
+			"thumb"
+		],
+		"default_quality": "1.5MB",
+		"quality": "1.5MB",
+		"key_dir": "image_test99_test3",
+		"alternative_extensions": [
+			"avif"
+		],
+		"extension": "jpg"
+	}
+}

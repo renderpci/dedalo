@@ -120,9 +120,9 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	*
@@ -138,7 +138,7 @@ class component_3d extends component_media_common implements component_media_int
 		// quality
 			$quality = $this->get_default_quality();
 
-		// dato. get from dato
+		// data. get from data
 			$data = $this->get_data();
 			if(isset($data)){
 
@@ -195,33 +195,6 @@ class component_3d extends component_media_common implements component_media_int
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
-
-
-
-	// /**
-	// * GET_VALOR_EXPORT
-	// * Return component value sent to export data
-	// * @return string|null $valor_export
-	// */
-	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
-
-	// 	if (empty($valor)) {
-	// 		$dato = $this->get_dato();				// Get dato from DB
-	// 	}else{
-	// 		$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
-	// 	}
-
-	// 	$av_file_path			= $this->get_valor();
-	// 	$posterframe_file_path	= $this->get_posterframe_url(
-	// 		true, // bool test_file dedalo image placeholder when not file exists
-	// 		true // bool absolute ike 'http://myhost/mypath/myimage.jpg'
-	// 	);
-
-	// 	$valor_export = $av_file_path .','. ($posterframe_file_path ?? '');
-
-
-	// 	return $valor_export;
-	// }//end get_valor_export
 
 
 
@@ -358,6 +331,7 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_THUMB
+	* Creates a image 'thumb' from the current posterframe file.
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
 	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
@@ -716,7 +690,7 @@ class component_3d extends component_media_common implements component_media_int
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $options) : object {
 
@@ -731,31 +705,6 @@ class component_3d extends component_media_common implements component_media_int
 
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
-
-			case '6.2.0':
-				// same case as '6.0.1'. regenerate_component is enough to create thumb
-			case '6.0.1':
-				// component instance
-					$model		= ontology_node::get_model_by_tipo($tipo, true);
-					$component	= component_common::get_instance(
-						$model, // string 'component_3d'
-						$tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo,
-						false
-					);
-
-				// run update cache (this action updates files info and saves)
-					$component->regenerate_component();
-					$new_dato = $component->get_dato();
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				break;
 
 			default:
 				$response = new stdClass();

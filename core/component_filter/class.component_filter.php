@@ -2,13 +2,13 @@
 /**
 * CLASS COMPONENT FILTER
 * Manages the filter component
-* NOTE: when a section is created will be assigned a default project and at least need to be 1 or more.
+* Note: when a section record is created, it will be assigned to at least one project by default.
 * 1 - Get the section_id of the user
 * 2 - With the user:
-* 	1 - get the user section_id
-* 	2 - withe the user section_id build the component_filter_master
-* 	3 - check the admin user with component-security-administrator (value 1)
-* 	4 - if the user is not admin, get the data of the component_filter_master and his tipo for get the label
+* 	1 - Get the user section_id
+* 	2 - With the user section_id build the component_filter_master
+* 	3 - Check the admin user with component-security-administrator (value 1)
+* 	4 - If the user is not admin, get the data of the component_filter_master and his tipo for get the label
 * 	5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
 * 	6 - Save the array of the projects for this section inside the user projects (in the user section)
 */
@@ -44,32 +44,32 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATA
-	* @param array|null $data
+	* Overwrites component_relation_common method checking user projects access.
+	* The method prevents a security issue where a non-admin user could remove filter projects 
+	* they don't have access to.
+	* @param ?array $data
 	* @return bool
 	*/
 	public function set_data( ?array $data ) : bool {
-
-		// For safe compatibility backwards. Removed 08-02-2023 because is not needed in current version
-			// $dato = self::convert_dato_pre_490( $dato, $this->tipo );
 
 		// preserve projects that user do not have access
 			$user_id			= logged_user_id();
 			$is_global_admin	= security::is_global_admin($user_id);
 			if ($is_global_admin===true) {
 
-				// do not modify dato
+				// do not modify data
 				$final_data = $data;
 
 			}else{
 
 				// user projects
-				$user_projects	= filter::get_user_projects( $user_id );
-				// actual dato in DDBB
-				$current_dato	= $this->dato;
+				$user_projects = filter::get_user_projects( $user_id );
+				// actual data in DDBB
+				$current_data = $this->get_data();
 				// filter
 				$non_access_locators = [];
-				if (!empty($current_dato)) {
-					foreach ($current_dato as $current_locator) {
+				if (!empty($current_data)) {
+					foreach ($current_data as $current_locator) {
 						$in_my_projects = locator::in_array_locator(
 							$current_locator,
 							$user_projects,
@@ -96,10 +96,10 @@ class component_filter extends component_relation_common {
 	/**
 	* SET_DATA_DEFAULT
 	* Overwrite component common method.
-	* Set the dato default of the user for this component.
+	* Set the data default of the user for this component.
 	* If the user has not write access to the component it will not set.
 	* In these cases, the component will be empty and
-	* only the user who created the section and the global administrator can access the record
+	* only the user who created the section and the global administrator can access the record.
 	* @return bool true
 	*/
 	protected function set_data_default() : bool {
@@ -112,7 +112,7 @@ class component_filter extends component_relation_common {
 				// get the permissions from current component_filter
 				$permissions = $this->get_component_permissions();
 			}
-			if ($permissions < 2) {
+			if ($permissions < 2) {				
 				return false;
 			}
 
@@ -133,11 +133,11 @@ class component_filter extends component_relation_common {
 			}
 
 		// dedalo_default_project
-		// If component is in edit mode and don't have data, we assign the default data defined in config
+		// If component is in edit mode and don't have data, we assign the default data defined in config.
 			if ($this->mode==='edit' &&
 				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
-				!is_null($this->section_id) &&
-				$this->section_tipo!=='test3' // exclude unit_test 'test3' section to create default dato
+				$this->section_id !== null &&
+				$this->section_tipo!=='test3' // exclude unit_test 'test3' section to create default data
 				) {
 
 				$data = $this->get_data();
@@ -159,7 +159,7 @@ class component_filter extends component_relation_common {
 							, logger::DEBUG
 						);
 
-						// dato default is fixed
+						// data default is fixed
 						return true;
 					}
 				}
@@ -172,7 +172,7 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* GET_DEFAULT_DATa_FOR_USER
+	* GET_DEFAULT_DATA_FOR_USER
 	* Calculates default value for given user (normally the logged user)
 	* @param int $user_id
 	* @return array $default_data
@@ -215,7 +215,7 @@ class component_filter extends component_relation_common {
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (is_object($found)) {
-							// update default dato
+							// update default data
 							$default_data = is_array($found->value)
 								? $found->value
 								: [$found->value];
@@ -224,17 +224,17 @@ class component_filter extends component_relation_common {
 				}
 			}
 
-		// 2 properties: optional properties dato_default. It is appended to already set dato if defined
+		// 2 properties: optional properties data_default. It is appended to already set data if defined.
 			if (empty($default_data)) {
 
 				// Only for compatibility with old installations like mdcat
 				// (!) Move ASAP generic default values from properties, to custom CONFIG_DEFAULT_FILE_PATH JSON file
 
 				$properties = $this->get_properties();
-				if (isset($properties->dato_default)) {
+				if (isset($properties->data_default)) {
 
 					// section_id
-						// legacy format of default dato sample:
+						// legacy format of default data sample:
 							// "dato_default": {
 							// 	"91": "2"
 							// }
@@ -266,7 +266,7 @@ class component_filter extends component_relation_common {
 
 					// info debug log
 						debug_log(__METHOD__
-							.' Created default dato for component_filter with default data from \'properties\'' . PHP_EOL
+							.' Created default data for component_filter with default data from \'properties\'' . PHP_EOL
 							.' label: ' . $this->label . PHP_EOL
 							.' section_id: ' . $this->section_id . PHP_EOL
 							.' section_tipo: ' . $this->section_tipo . PHP_EOL
@@ -280,37 +280,37 @@ class component_filter extends component_relation_common {
 			if (security::is_global_admin($user_id)===false) {
 
 				// regular user case. We check if project values are allowed to current user
-					$user_projects = filter::get_user_projects($user_id);
-					if (!empty($user_projects)) {
+				$user_projects = filter::get_user_projects($user_id);
+				if (!empty($user_projects)) {
 
-						// check current added project is accessible for current user
-							$in_my_projects = false;
-							foreach ($default_data as $current_locator) {
-								$in_my_projects = locator::in_array_locator(
-									$current_locator,
-									$user_projects,
-									['section_tipo','section_id'] // array ar_properties
-								);
-								if ($in_my_projects===true) {
-									break; // user have access to assigned default. We have finished
-								}
+					// check current added project is accessible for current user
+						$in_my_projects = false;
+						foreach ($default_data as $current_locator) {
+							$in_my_projects = locator::in_array_locator(
+								$current_locator,
+								$user_projects,
+								['section_tipo','section_id'] // array ar_properties
+							);
+							if ($in_my_projects===true) {
+								break; // user have access to assigned default. We have finished
 							}
+						}
 
-						// If not, add the first one to prevent no access situation
-							if ($in_my_projects===false) {
+					// If not, add the first one to prevent no access situation
+						if ($in_my_projects===false) {
 
-								// First user project
-								$user_projects_first_locator = reset($user_projects);
+							// First user project
+							$user_projects_first_locator = reset($user_projects);
 
-								$filter_locator = new locator();
-									$filter_locator->set_section_tipo($user_projects_first_locator->section_tipo);
-									$filter_locator->set_section_id($user_projects_first_locator->section_id);
-									$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-									$filter_locator->set_from_component_tipo($this->tipo);
+							$filter_locator = new locator();
+								$filter_locator->set_section_tipo($user_projects_first_locator->section_tipo);
+								$filter_locator->set_section_id($user_projects_first_locator->section_id);
+								$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+								$filter_locator->set_from_component_tipo($this->tipo);
 
-								$default_data[] = $filter_locator;
-							}
-					}
+							$default_data[] = $filter_locator;
+						}
+				}
 			}
 
 		// final fallback config: default from config file
@@ -336,7 +336,7 @@ class component_filter extends component_relation_common {
 		// check value. Not empty value is expected here
 			if (empty($default_data)) {
 				debug_log(__METHOD__
-					. " Unable to get default filter dato " . PHP_EOL
+					. " Unable to get default filter data " . PHP_EOL
 					. ' user_id : ' . to_string($user_id) . PHP_EOL
 					. ' CONFIG_DEFAULT_FILE_PATH: ' . to_string(CONFIG_DEFAULT_FILE_PATH) . PHP_EOL
 					. ' properties: ' . to_string( $this->get_properties() ) . PHP_EOL
@@ -381,42 +381,52 @@ class component_filter extends component_relation_common {
 
 	/**
 	* PROPAGATE_FILTER
-	* Propagate all current filter dato (triggered when save) to component_filters of children portals (recursive)
+	* Propagate all current filter data (triggered when save) to children portals.
+	* @return bool
 	*/
 	public function propagate_filter() : bool {
 
-		$section_id		= $this->get_section_id();
-		$section_tipo	= $this->get_section_tipo();
-		// $section		= section::get_instance($section_id, $section_tipo);
-		// $section		= $this->get_my_section();
+		$section_id = $this->get_section_id();
+		$section_tipo = $this->get_section_tipo();
 
-		$component_dato_filter  = $this->get_dato();
+		$component_filter_data = $this->get_data();
+		if (empty($component_filter_data)) {
+			debug_log(__METHOD__
+				. " EMPTY DATA ($section_tipo, $section_id) . Nothing to propagate" . PHP_EOL
+				. ' component_filter_data: ' . to_string($component_filter_data)
+				, logger::ERROR
+			);
+			return true;
+		}
 
-		$dato_filter =[];
-		foreach ((array)$component_dato_filter as $current_locator) {
+		$data_filter = [];
+		foreach ($component_filter_data as $current_locator) {
 			if (isset($current_locator->section_tipo) && isset($current_locator->section_id)) {
 				$locator = new locator();
 					$locator->set_section_tipo($current_locator->section_tipo);
 					$locator->set_section_id($current_locator->section_id);
-				$dato_filter = [$locator];
+				$data_filter[] = $locator;
 			}else{
-				debug_log(__METHOD__." IGNORED INVALID LOCATOR ($section_tipo, $section_id) ".to_string($current_locator), logger::ERROR);
+				debug_log(__METHOD__
+					. " IGNORED INVALID LOCATOR ($section_tipo, $section_id) ".to_string($current_locator)
+					, logger::ERROR
+				);
 			}
 		}
 
+		// Locate component_portal in this section.
 		$ar_model_name_required = ['component_portal'];
 		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo,
 			$ar_model_name_required,
 			true, // bool from_cache
-			true, // bool resolve_virtual (!) keep default resolve_virtual=false
+			true, // bool resolve_virtual
 			true, // bool recursive
 			true, // bool search_exact
 			false, // array|bool ar_tipo_exclude_elements
 			null // array|null ar_exclude_models
 		);
 		foreach ($ar_children as $child_tipo) {
-
 			$component_portal = component_common::get_instance(
 				'component_portal',
 				$child_tipo,
@@ -426,7 +436,7 @@ class component_filter extends component_relation_common {
 				$section_tipo,
 				false
 			);
-			$component_portal->propagate_filter($dato_filter);
+			$component_portal->propagate_filter($data_filter);
 		}
 
 
@@ -437,7 +447,7 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_DATALIST
-	* Works like ar_list_of_values but filtered by user authorized projects
+	* Works like ar_list_of_values but filtered by user authorized projects.
 	* @return array $datalist
 	*/
 	public function get_datalist() : array {
@@ -487,13 +497,14 @@ class component_filter extends component_relation_common {
 	}//end get_datalist
 
 
+
 	/**
 	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -513,49 +524,6 @@ class component_filter extends component_relation_common {
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
-
-			case '4.9.0':
-
-				# Compatibility old dedalo instalations
-				# Old dato is and object (associative array for php)
-				// Like {"1": 2}
-				if (!empty($data_unchanged)) {
-					// Old format is received case
-					/*
-					$ar_locators = [];
-					foreach ($data_unchanged as $key => $value) {
-
-						if (isset($value->section_id) && isset($value->section_tipo)) {
-							# Updated dato (is locator)
-							$filter_locator = $value;
-
-						}else{
-							# Old dato Like {"1": 2}
-							$filter_locator = new locator();
-								$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
-								$filter_locator->set_section_id($key);
-								$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
-								$filter_locator->set_from_component_tipo($options->tipo);
-						}
-						# Add to clean array
-						$ar_locators[] = $filter_locator;
-					}
-					*/
-					$ar_locators = self::convert_dato_pre_490( $data_unchanged, $options->tipo );
-					# Replace old formatted value with new formatted array of locators
-					$new_dato = $ar_locators;
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					debug_log(__METHOD__." No project found in $options->section_tipo - $options->tipo - $options->section_id ".to_string(), logger::DEBUG);
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
@@ -620,18 +588,19 @@ class component_filter extends component_relation_common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
 
-		# Force loads dato always !IMPORTANT
+		// Force loads data always !IMPORTANT
 		$data = $this->get_data();
 
-		$this->run_propagate_filter = false; # !IMPORTANT (to avoid calculate inverse search of portals, very long process)
+		// Set run_propagate_filter as false to avoid calculate inverse search of portals, very long process.
+		$this->run_propagate_filter = false;
 
-		# Save component data
+		// Save component data
 		$this->save();
 
 
@@ -649,40 +618,40 @@ class component_filter extends component_relation_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	// public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$diffusion_value = null;
+	// 	$diffusion_value = null;
 
-		// data
-		$data = $this->get_data();
-		if (empty($data)) {
-			return $diffusion_value;
-		}
+	// 	// data
+	// 	$data = $this->get_data();
+	// 	if (empty($data)) {
+	// 		return $diffusion_value;
+	// 	}
 
-		// label
-		$ar_label = [];
-		foreach ((array)$data as $locator) {
-			$label = ts_object::get_term_by_locator(
-				$locator,
-				$lang ?? DEDALO_DATA_LANG,
-				true
-			);
-			if (!empty($label)) {
-				$label = strip_tags(trim($label));
-				if (!empty($label)) {
-					$ar_label[] = $label;
-				}
-			}
-		}
+	// 	// label
+	// 	$ar_label = [];
+	// 	foreach ((array)$data as $locator) {
+	// 		$label = ts_object::get_term_by_locator(
+	// 			$locator,
+	// 			$lang ?? DEDALO_DATA_LANG,
+	// 			true
+	// 		);
+	// 		if (!empty($label)) {
+	// 			$label = strip_tags(trim($label));
+	// 			if (!empty($label)) {
+	// 				$ar_label[] = $label;
+	// 			}
+	// 		}
+	// 	}
 
-		// value
-		$diffusion_value = !empty($ar_label)
-			? implode(' | ', $ar_label)
-			: null;
+	// 	// value
+	// 	$diffusion_value = !empty($ar_label)
+	// 		? implode(' | ', $ar_label)
+	// 		: null;
 
 
-		return $diffusion_value;
-	}//end get_diffusion_value
+	// 	return $diffusion_value;
+	// }//end get_diffusion_value
 
 
 
@@ -705,7 +674,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Default is false for relations. Override here.
 	*/
 	public function get_sortable() : bool {
 
@@ -748,7 +717,7 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/

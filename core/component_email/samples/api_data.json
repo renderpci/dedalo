@@ -1,0 +1,25 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test208",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test208",
+	"value": [
+		{
+			"id": 1,
+			"lang": "lg-nolan",
+			"value": "raspa@dedalo.dev"
+		},
+		{
+			"id": 2,
+			"lang": "lg-nolan",
+			"value": "other@other.org"
+		}
+	],
+	"debug_model": "component_email",
+	"debug_label": "email",
+	"debug_dataframe": null,
+	"parent_tipo": "test208",
+	"parent_section_id": 1
+}

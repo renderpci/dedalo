@@ -2447,14 +2447,14 @@ class component_media_common extends component_common {
 
 	/**
 	* DELETE_NORMALIZED_FILES
-	* Remove all image versions that are different of the uploaded files (normalized files), including the alternative versions
+	* Remove all media versions that are different of the uploaded files (normalized files), including the alternative versions
 	* Remove in original and modified qualities only
 	* Keep the original uploaded files
 	* @return bool
 	*/
 	public function delete_normalized_files() : bool {
 
-		// component defined normalized qualities to be delete.
+		// component defined normalized qualities to be delete. This NOT includes 'original' quality.
 		$ar_quality = $this->get_normalized_ar_quality();
 
 		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
@@ -2471,7 +2471,9 @@ class component_media_common extends component_common {
 				$quality
 			);
 
-			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) && isset($uploaded_file) && file_exists($uploaded_file) ) {
+			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath)
+				&& isset($uploaded_file) && file_exists($uploaded_file)
+			) {
 
 				$move_file_options = new stdClass();
 					$move_file_options->quality			= $quality;
@@ -2537,10 +2539,10 @@ class component_media_common extends component_common {
 
 		// full remove the original files except the uploaded file (.pdf, .tiff, .psd, .mov etc)
 			if( $delete_normalized_files===true ){
-				$this->delete_normalized_files();
+				$result_delete_normalized_files = $this->delete_normalized_files();
 			}
 
-		// default check default quality
+		// check default quality
 			$default_quality	= $this->get_default_quality();
 			$file_path			= $this->get_media_filepath($default_quality);
 			if (!file_exists($file_path)) {
@@ -2557,7 +2559,7 @@ class component_media_common extends component_common {
 				}
 			}
 
-		// thumb. Re-create thumb always (from default quality file)
+		// thumb. Re-create thumb always (from current posterframe file)
 			$this->create_thumb();
 
 		// files_info. Updates component data files info values iterating available files
