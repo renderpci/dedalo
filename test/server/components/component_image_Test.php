@@ -6,33 +6,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_image_test extends TestCase {
+final class component_image_test extends BaseTestCase {
 
 
 
 	public static $model		= 'component_image';
 	public static $tipo			= 'test99';
 	public static $section_tipo	= 'test3';
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -69,6 +49,8 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_ar_quality() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
 		$result = $component->get_ar_quality();
@@ -93,6 +75,8 @@ final class component_image_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_default_quality() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -119,6 +103,8 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_original_quality() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
 		$result = $component->get_original_quality();
@@ -143,6 +129,8 @@ final class component_image_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_modified_quality() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -169,7 +157,12 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_uploaded_file() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
 
 		// original_quality
 			$result = $component->get_uploaded_file(
@@ -177,9 +170,13 @@ final class component_image_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				gettype($result)==='string' || gettype($result)==='NULL',
-				'expected type string|null : ' . PHP_EOL
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
 					. gettype($result)
+			);
+			$this->assertTrue(
+				strpos($result, '/'.DEDALO_IMAGE_QUALITY_ORIGINAL.'/')!==false,
+				'expected type contains original quality: ' . DEDALO_IMAGE_QUALITY_ORIGINAL
 			);
 
 		// modified_quality
@@ -188,9 +185,13 @@ final class component_image_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				gettype($result)==='string' || gettype($result)==='NULL',
-				'expected type string|null : ' . PHP_EOL
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
 					. gettype($result)
+			);
+			$this->assertTrue(
+				strpos($result, '/'.DEDALO_IMAGE_QUALITY_RETOUCHED.'/')!==false,
+				'expected type contains modified quality: ' . DEDALO_IMAGE_QUALITY_RETOUCHED
 			);
 	}//end test_get_uploaded_file
 
@@ -202,15 +203,26 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_modified_uploaded_file() {
 
-		$component = $this->build_component_instance();
+		$this->user_login();
+
+		$component = $this->build_component_instance();		
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
 
 		$result = $component->get_modified_uploaded_file();
 
 		$this->assertTrue(
 			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
+			'expected type string or NULL : ' . PHP_EOL
 				. gettype($result)
 		);
+		if ($result) {
+			$this->assertTrue(
+				strpos($result, '/'.DEDALO_IMAGE_QUALITY_RETOUCHED.'/')!==false,
+				'expected type contains modified quality: ' . DEDALO_IMAGE_QUALITY_RETOUCHED
+			);
+		}
 	}//end test_get_modified_uploaded_file
 
 
@@ -220,6 +232,8 @@ final class component_image_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_extension() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -534,15 +548,13 @@ final class component_image_test extends TestCase {
 
 
 
-
-
-
-
 	/**
 	* TEST_convert_quality
 	* @return void
 	*/
 	public function test_convert_quality() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -574,29 +586,12 @@ final class component_image_test extends TestCase {
 
 
 	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
-
-
-
-	/**
 	* TEST_create_thumb
 	* @return void
 	*/
 	public function test_create_thumb() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -619,6 +614,8 @@ final class component_image_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_image_print_dimensions() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -657,12 +654,13 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_convert_quality_to_megabytes() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
 		$quality = $component->get_default_quality();
 
 		$result = $component->convert_quality_to_megabytes($quality);
-
 
 		$this->assertTrue(
 			gettype($result)==='double',
@@ -673,15 +671,9 @@ final class component_image_test extends TestCase {
 
 
 
-
-
-
 	/* @todo
 		Add rest of methods
 		*/
-
-
-
 
 
 

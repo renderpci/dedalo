@@ -1,0 +1,222 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test99",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test99",
+	"value": [
+		{
+			"id": 3,
+			"files_info": [
+				{
+					"quality": "original",
+					"extension": "jpg",
+					"file_name": "test99_test3_1.jpg",
+					"file_path": "/image/original/0/test99_test3_1.jpg",
+					"file_size": 510249,
+					"file_time": {
+						"day": 29,
+						"hour": 21,
+						"time": 65117080049,
+						"year": 2025,
+						"month": 12,
+						"minute": 47,
+						"second": 29,
+						"timestamp": "2025-12-29 21:47:29"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "original",
+					"extension": "avif",
+					"file_name": "test99_test3_1.avif",
+					"file_path": "/image/original/0/test99_test3_1.avif",
+					"file_size": 1098365,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124832,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 52,
+						"timestamp": "2025-12-30 10:13:52"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "modified",
+					"extension": "jpg",
+					"file_name": "test99_test3_1.jpg",
+					"file_path": "/image/modified/0/test99_test3_1.jpg",
+					"file_size": 1467046,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124832,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 52,
+						"timestamp": "2025-12-30 10:13:52"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "modified",
+					"extension": "png",
+					"file_name": "test99_test3_1.png",
+					"file_path": "/image/modified/0/test99_test3_1.png",
+					"file_size": 2699577,
+					"file_time": {
+						"day": 29,
+						"hour": 21,
+						"time": 65117080175,
+						"year": 2025,
+						"month": 12,
+						"minute": 49,
+						"second": 35,
+						"timestamp": "2025-12-29 21:49:35"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "modified",
+					"extension": "avif",
+					"file_name": "test99_test3_1.avif",
+					"file_path": "/image/modified/0/test99_test3_1.avif",
+					"file_size": 1101515,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124833,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 53,
+						"timestamp": "2025-12-30 10:13:53"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "3MB",
+					"extension": "jpg",
+					"file_name": "test99_test3_1.jpg",
+					"file_path": "/image/3MB/0/test99_test3_1.jpg",
+					"file_size": 268612,
+					"file_time": {
+						"day": 29,
+						"hour": 21,
+						"time": 65117080175,
+						"year": 2025,
+						"month": 12,
+						"minute": 49,
+						"second": 35,
+						"timestamp": "2025-12-29 21:49:35"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "3MB",
+					"extension": "avif",
+					"file_name": "test99_test3_1.avif",
+					"file_path": "/image/3MB/0/test99_test3_1.avif",
+					"file_size": 87461,
+					"file_time": {
+						"day": 29,
+						"hour": 21,
+						"time": 65117080175,
+						"year": 2025,
+						"month": 12,
+						"minute": 49,
+						"second": 35,
+						"timestamp": "2025-12-29 21:49:35"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "1.5MB",
+					"extension": "jpg",
+					"file_name": "test99_test3_1.jpg",
+					"file_path": "/image/1.5MB/0/test99_test3_1.jpg",
+					"file_size": 177293,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124833,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 53,
+						"timestamp": "2025-12-30 10:13:53"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "1.5MB",
+					"extension": "avif",
+					"file_name": "test99_test3_1.avif",
+					"file_path": "/image/1.5MB/0/test99_test3_1.avif",
+					"file_size": 361315,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124834,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 54,
+						"timestamp": "2025-12-30 10:13:54"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "thumb",
+					"extension": "jpg",
+					"file_name": "test99_test3_1.jpg",
+					"file_path": "/image/thumb/0/test99_test3_1.jpg",
+					"file_size": 11165,
+					"file_time": {
+						"day": 30,
+						"hour": 10,
+						"time": 65117124834,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 54,
+						"timestamp": "2025-12-30 10:13:54"
+					},
+					"file_exist": true
+				}
+			],
+			"modified_file_name": "_0_rsc29_rsc170_16.png",
+			"original_file_name": "_0_rsc29_rsc170_16.jpg",
+			"modified_upload_date": {
+				"day": 29,
+				"hour": 21,
+				"time": 65117080168,
+				"year": 2025,
+				"month": 12,
+				"minute": 49,
+				"second": 28
+			},
+			"original_upload_date": {
+				"day": 29,
+				"hour": 21,
+				"time": 65117080050,
+				"year": 2025,
+				"month": 12,
+				"minute": 47,
+				"second": 30
+			},
+			"modified_normalized_name": "test99_test3_1.png",
+			"original_normalized_name": "test99_test3_1.jpg"
+		}
+	],
+	"debug_model": "component_image",
+	"debug_label": "image",
+	"debug_dataframe": null,
+	"external_source": null,
+	"base_svg_url": "/dedalo/media/image/svg/0/test99_test3_1.svg"
+}
