@@ -42,6 +42,32 @@ class component_password extends component_common {
 	}//end get_diffusion_value
 
 
+	/**
+	 * SET_DATA
+	 * Overwrite component_common method
+	 * to encrypt the password before set data
+	 * @param array $data
+	 * @return bool
+	 */
+	public function set_data( ?array $data ) : bool {
+
+		// Encrypt dato with MD5 etc..
+
+		if( !empty($data) ) {		
+			foreach ($data as $item) {
+				// set encrypted value
+				$item->value = component_password::encrypt_password(
+					$item->value
+				);
+			}
+		}
+		$result = parent::set_data($data);
+
+
+		return $result;
+	}//end set_data
+
+
 
 	/**
 	* GET_GRID_VALUE
@@ -104,43 +130,6 @@ class component_password extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
-
-
-
-	/**
-	* SAVE
-	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
-	* @return bool
-	*/
-	public function save() : bool {
-
-		if(isset($this->updating_dato) && $this->updating_dato===true) {
-			// Dato is saved plain (unencrypted) only for updates
-		}else{
-			// Encrypt dato with MD5 etc..
-			$this->data = $this->data ?? [];
-			foreach ((array)$this->data as $item) {
-				// set encrypted value
-				$item->value = component_password::encrypt_password(
-					$item->value
-				);
-			}
-		}
-
-		// demo user case. Prevent to change password for logged user 'demo'
-			$username = logged_user_username();
-			if ($username==='dedalo') {
-				debug_log(__METHOD__
-					. " Attempt to change dedalo demo user password blocked "
-					, logger::ERROR
-				);
-				return false;
-			}
-
-
-		// from here, we save as standard way
-		return parent::save();
-	}//end save
 
 
 

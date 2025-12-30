@@ -1191,6 +1191,10 @@ class component_text_area extends component_string_common {
 			);
 			// TAG
 			$data = $component->get_data();
+			// if empty data, skip
+			if(empty($data)) {
+				continue;
+			}
 			foreach ($data as $current_locator) {
 
 				$lkey = $current_locator->section_tipo .'_' .$current_locator->section_id;

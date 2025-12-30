@@ -1,0 +1,115 @@
+{
+	"section_id": 1,
+	"section_tipo": "rsc302",
+	"tipo": "rsc263",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "rsc263",
+	"value": [
+		{
+			"id": 1,
+			"section_id": "5101",
+			"section_tipo": "lg1"
+		}
+	],
+	"debug_model": "component_select_lang",
+	"debug_label": "Idioma original",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"label": "",
+			"value": null
+		},
+		{
+			"value": {
+				"section_id": "841",
+				"section_tipo": "lg1"
+			},
+			"label": "Arabic Cluster",
+			"section_id": "lg-ara"
+		},
+		{
+			"value": {
+				"section_id": "5223",
+				"section_tipo": "lg1"
+			},
+			"label": "Basque",
+			"section_id": "lg-eus"
+		},
+		{
+			"value": {
+				"section_id": "3032",
+				"section_tipo": "lg1"
+			},
+			"label": "Catalan",
+			"section_id": "lg-cat"
+		},
+		{
+			"value": {
+				"section_id": "5101",
+				"section_tipo": "lg1"
+			},
+			"label": "English",
+			"section_id": "lg-eng"
+		},
+		{
+			"value": {
+				"section_id": "5450",
+				"section_tipo": "lg1"
+			},
+			"label": "French",
+			"section_id": "lg-fra"
+		},
+		{
+			"value": {
+				"section_id": "4253",
+				"section_tipo": "lg1"
+			},
+			"label": "German",
+			"section_id": "lg-deu"
+		},
+		{
+			"value": {
+				"section_id": "5037",
+				"section_tipo": "lg1"
+			},
+			"label": "Greek",
+			"section_id": "lg-ell"
+		},
+		{
+			"value": {
+				"section_id": "7466",
+				"section_tipo": "lg1"
+			},
+			"label": "Italian",
+			"section_id": "lg-ita"
+		},
+		{
+			"value": {
+				"section_id": "14895",
+				"section_tipo": "lg1"
+			},
+			"label": "Portuguese",
+			"section_id": "lg-por"
+		},
+		{
+			"value": {
+				"section_id": "17344",
+				"section_tipo": "lg1"
+			},
+			"label": "Spanish",
+			"section_id": "lg-spa"
+		},
+		{
+			"value": {
+				"section_id": "20155",
+				"section_tipo": "lg1"
+			},
+			"label": "Valencià",
+			"section_id": "lg-vlca"
+		}
+	],
+	"row_section_id": 1,
+	"parent_tipo": "rsc302",
+	"changed_data": []
+}

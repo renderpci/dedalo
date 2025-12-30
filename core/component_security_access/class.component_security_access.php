@@ -487,7 +487,7 @@ class component_security_access extends component_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -507,34 +507,6 @@ class component_security_access extends component_common {
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
-
-			case '6.0.0':
-				// old dato: {"oh1":{"oh2":2}}
-				// new dato :[{"tipo":"oh2","section_tipo":"oh1","value":2}]
-				if(!empty($data_unchanged) && is_object($data_unchanged)) {
-
-					$new_dato = [];
-					foreach ($data_unchanged as $current_parent => $current_ar_tipo) {
-						foreach ($current_ar_tipo as $current_tipo => $value) {
-							$current_dato = new stdClass();
-								$current_dato->tipo			= $current_tipo;
-								$current_dato->section_tipo	= $current_parent;
-								$current_dato->value		= intval($value);
-							// add
-							$new_dato[] = $current_dato;
-						}
-					}
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();

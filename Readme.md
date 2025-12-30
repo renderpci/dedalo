@@ -1,30 +1,9 @@
 <img height="400" src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" alt="Dédalo logo" />
 
 
-#### V6 transition state
+#### V7 transition state
 
-The Ontology transition was complete! All supported Ontologies are ready to be used in Dédalo v6.
-
-Important!: Ontology model transition from v5 to v6.
-- Version 6.2.9 was the last version compatible with the v5 ontology model.
-- Version > 6.3.0 was removed the old ontology editor and freeze support for v5 definitions.
-- Version >= 6.4.0 The new Ontology only support v6, new features are implemented only for v6.
-- Version >= 6.5.0 New Ontology was totally integrated with the hierarchy, with the same parent data model instead children data model.
-
-| ontology | state | use | interface | tools | comments | v5 compatibility until (dmy) |
-| --- | --- | --- | --- | --- | --- | --- |
-| dd | production | 100% | 100% | 100% |All definitions are ready | 12/10/2024 |
-| rsc | production | 100% | 100% | 100% | All definitions are ready| 12/10/2024 |
-| hierarchy | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
-| ww | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
-| oh | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
-| numisdata | production | 100% | 100% | 100% |  All definitions are ready | 30/04/2024 |
-| isad | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
-| ich | production | 100% | 100% | 100%  | All definitions are ready | 12/10/2024 |
-| tch | production | 100% | 100% | 100%  |  All definitions are ready |  not compatible |
-| tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
-| dmm | production | 100% | 100% | 100% | All definitions are ready | 12/10/2024 |
-| mdcat | production | 100% | 100% | 100% | All definitions are ready| 12/10/2024 |
+Initial alpha release of Dédalo v7
 
 
 ## 1. What is Dédalo?
@@ -77,9 +56,9 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ### 4.1. Services required for the OS
 
-- PHP 8.3+
+- PHP 8.5+
 - Apache 2.4.6+
-- PostgreSQL 16.1+
+- PostgreSQL 18.1+
 - MySQL 5.6+ (NOT MANDATORY, only for publication).
 
 ### 4.2. Libraries required for Dédalo
@@ -116,16 +95,16 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 Then, you can use our ready-to-use Virtual Machine for development:
 
-**Virtual machine with v6**
+**Virtual machine with v7**
 
-[Dedalo V6](https://dedalo.dev/docs/install/install_help/#video-guide-for-v6-installation)
+TODO
 
 ### 5.2. Video-guide for installation
 
 Then, you can follow the steps in the installation video:
 
-V6 video installation
-[Dédalo V6 installation video on Ubuntu](https://dedalo.dev/docs/install/install_help)
+V7 video installation
+[Dédalo V7 installation video on Ubuntu](https://dedalo.dev/docs/install/install_help)
 
 
 ### 5.3. Manual installation
@@ -147,9 +126,8 @@ Then, install Dédalo manually [following this instruction(https://dedalo.dev/do
 13. Log out and log in with the admin user.
 14. Create Users and Projects as you need.
 
-!!! warning "Updating a Beta or RC version to final version"
-    If you are using Dédalo v6 beta or Release Candidate, you will need to refresh the cache control.
-    Opening the web browser console and deleting the browser cache and browser indexed_DB to update it with final definitions.
+!!! warning "Installing a Alpha, Beta or RC version"
+    This version is unstable and may not work as expected. Use it at your own risk.
 
 ## 6. Update
 
@@ -208,8 +186,8 @@ In a nutshell, Dédalo has four main updates procedures:
 The backend of Dédalo is tested in:
 
 - Ubuntu Server 24.04 LTS or 22.04 LTS
-- Debian 11.0+
-- MacOs X 12.0+
+- Debian 12.0+
+- MacOs X 26.0+
 - CentOS, Fedora and RedHat situation. We are no longer testing Dédalo in RedHat/CenOS/Fedora model since the CentOS project focus was shifted. The main OS to test Dédalo will be Ubuntu. RedHat/CentOS/Fedora will become part of the "all other Linux that we do not test" category.
 
 [CentOS blog](https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream)
@@ -220,7 +198,7 @@ Windows: Dédalo might run, but we HAVE NOT TESTED IT.
 
 ## 9. Compatible browsers
 
-Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).
+Dédalo version V7+ is only tested in chromium and webkit browsers (Chrome, Safari, Edge 77+, ...).
 
 | Browser | Version | Compatible with Dédalo |
 | --- | --- | --- |
