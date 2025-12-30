@@ -1,0 +1,205 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test101",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test101",
+	"value": [
+		{
+			"id": 1,
+			"section_id": "1",
+			"section_tipo": "dd153",
+			"from_component_tipo": "test101"
+		},
+		{
+			"section_tipo": "dd153",
+			"section_id": "7",
+			"from_component_tipo": "test101",
+			"id": 2
+		}
+	],
+	"debug_model": "component_filter",
+	"debug_label": "filter",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"type": "project",
+			"label": "Eigth",
+			"section_tipo": "dd153",
+			"section_id": "8",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "8"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Eleven",
+			"section_tipo": "dd153",
+			"section_id": "11",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "11"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Fourteen",
+			"section_tipo": "dd153",
+			"section_id": "14",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "14"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Global project",
+			"section_tipo": "dd153",
+			"section_id": "1",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "1"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Nine",
+			"section_tipo": "dd153",
+			"section_id": "9",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "9"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Project Five",
+			"section_tipo": "dd153",
+			"section_id": "5",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "5"
+			},
+			"parent": {
+				"section_tipo": "dd153",
+				"section_id": "3"
+			},
+			"order": 2
+		},
+		{
+			"type": "project",
+			"label": "Project Four",
+			"section_tipo": "dd153",
+			"section_id": "4",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "4"
+			},
+			"parent": {
+				"section_tipo": "dd153",
+				"section_id": "3"
+			},
+			"order": 1
+		},
+		{
+			"type": "project",
+			"label": "Project seven",
+			"section_tipo": "dd153",
+			"section_id": "7",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "7"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Project six",
+			"section_tipo": "dd153",
+			"section_id": "6",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "6"
+			},
+			"parent": {
+				"section_tipo": "dd153",
+				"section_id": "3"
+			},
+			"order": 3
+		},
+		{
+			"type": "project",
+			"label": "Project Three",
+			"section_tipo": "dd153",
+			"section_id": "3",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "3"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Stolen Motherhoods",
+			"section_tipo": "dd153",
+			"section_id": "2",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "2"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Ten",
+			"section_tipo": "dd153",
+			"section_id": "10",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "10"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Trece",
+			"section_tipo": "dd153",
+			"section_id": "13",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "13"
+			},
+			"parent": null,
+			"order": 0
+		},
+		{
+			"type": "project",
+			"label": "Twelve",
+			"section_tipo": "dd153",
+			"section_id": "12",
+			"value": {
+				"section_tipo": "dd153",
+				"section_id": "12"
+			},
+			"parent": null,
+			"order": 0
+		}
+	],
+	"changed_data": []
+}

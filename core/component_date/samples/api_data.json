@@ -1,0 +1,28 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test145",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test145",
+	"value": [
+		{
+			"id": 1,
+			"end": {
+				"day": 30,
+				"time": 64562659200,
+				"year": 2008,
+				"month": 9
+			},
+			"start": {
+				"day": 1,
+				"time": 64249459200,
+				"year": 1999,
+				"month": 1
+			}
+		}
+	],
+	"debug_model": "component_date",
+	"debug_label": "date",
+	"debug_dataframe": null
+}

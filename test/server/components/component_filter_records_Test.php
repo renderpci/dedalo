@@ -6,33 +6,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_filter_records_test extends TestCase {
+final class component_filter_records_test extends BaseTestCase {
 
 
 
 	public static $model		= 'component_filter_records';
 	public static $tipo			= 'test69';
 	public static $section_tipo	= 'test3';
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -68,36 +48,40 @@ final class component_filter_records_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_dato = $component->get_data();
 
 		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$result	= $component->set_data($dato);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -106,39 +90,20 @@ final class component_filter_records_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$component->dato===NULL,
+			$component->get_data()===NULL,
 			'expected NULL : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($component->get_data())
 		);
 
 		// restore dato
-		$result	= $component->set_dato($old_dato);
+		$result	= $component->set_data($old_dato);
 
 		$this->assertTrue(
-			json_encode($component->dato)===json_encode($old_dato),
+			json_encode($component->get_data())===json_encode($old_dato),
 			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($component->get_data())
 		);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
+	}//end test_set_data
 
 
 
@@ -147,6 +112,8 @@ final class component_filter_records_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_datalist() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 

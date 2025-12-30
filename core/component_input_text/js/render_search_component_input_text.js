@@ -64,7 +64,6 @@ const get_content_data = function(self) {
 	// short vars
 		const data	= self.data || {}
 		const value	= data.value || []
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
@@ -88,11 +87,11 @@ const get_content_data = function(self) {
 * GET_CONTENT_VALUE
 * Render component's content value node
 * @param int i Array key of current value from data
-* @param string current_value
+* @param object data_item
 * @param object self Component instance
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value = (i, data_item, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -105,29 +104,34 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value.value,
+			value			: data_item.value || '',
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
+		// change event
+		const change_handler = (e) => {
 
+			const data_item_to_save = clone(data_item)
+			
 			// parsed_value
-			current_value.value = (input.value.length>0)
+			data_item_to_save.value = (input.value.length>0)
 				? input.value
 				: null
 
 			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: current_value
-				})
+			const changed_data_item = Object.freeze({
+				action	: 'update',
+				key		: i,
+				value	: data_item_to_save
+			})
 
 			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
+			self.update_data_value(changed_data_item)
 
 			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+			event_manager.publish('change_search_element', self)
+		}
+		input.addEventListener('change', change_handler)
+		
 		// paste event
 		const paste_handler = (e) => {
 			// Trigger paste_tipo function to handle TLD 'ontology7' cases

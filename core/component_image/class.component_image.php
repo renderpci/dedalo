@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT IMAGE
-*
+* Manages image media components
 */
 class component_image extends component_media_common implements component_media_interface {
 
@@ -32,7 +32,7 @@ class component_image extends component_media_common implements component_media_
 			if (!empty($this->section_id)) {
 
 				// additional_path : set and fix current additional image path
-					$this->external_source = $this->get_external_source();
+				$this->external_source = $this->get_external_source();
 			}
 	}//end __construct
 
@@ -40,7 +40,7 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* SAVE
-	* Manages specific svg file creation and exec parent Save
+	* Manages specific svg file creation and exec parent save
 	* @return bool
 	*/
 	public function save() : bool {
@@ -55,37 +55,10 @@ class component_image extends component_media_common implements component_media_
 				}
 			}
 		}
+		$this->set_data($data);
 
-		$result = parent::save();
-
-		return $result;
+		return parent::save();
 	}//end save
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	* @test true
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// external resolution check
-			$external_source = $this->get_external_source();
-
-		// diffusion_value
-			$diffusion_value = !empty($external_source)
-				? $external_source // external resolution way
-				: parent::get_diffusion_value($lang, $option_obj); // media common resolution way
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 
@@ -336,7 +309,7 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_MODIFIED_UPLOADED_FILE
-	* From component dato
+	* From component data
 	* @return string|null $modified_quality
 	*/
 	public function get_modified_uploaded_file() : ?string {
@@ -612,7 +585,7 @@ class component_image extends component_media_common implements component_media_
 				return $response;
 			}
 
-		// upload info. Update dato information about original or modified quality
+		// upload info. Update data information about original or modified quality
 		// Data will save in regenerate() avoid save twice;
 			// set the data ket to 0
 				$key = 0;
@@ -649,22 +622,29 @@ class component_image extends component_media_common implements component_media_
 		try {
 
 			// target_filename. Save original file name in a component_input_text if defined
+			// $properties->target_filename is expected to be a tipo as 'test100'
 				$properties = $this->get_properties();
-				if (isset($properties->target_filename)) {
+				if (isset($properties->target_filename) && safe_tipo($properties->target_filename)) {
+					// get target component
 					$current_section_id			= $this->get_section_id();
 					$target_section_tipo		= $this->get_section_tipo();
-					$model_name_target_filename	= ontology_node::get_model_by_tipo($properties->target_filename,true);
+					$targe_filename_tipo		= safe_tipo($properties->target_filename);
+					$model_name_target_filename	= ontology_node::get_model_by_tipo($targe_filename_tipo, true);
 					$component_target_filename	= component_common::get_instance(
 						$model_name_target_filename,
-						$properties->target_filename,
+						$targe_filename_tipo,
 						$current_section_id,
 						'edit',
 						DEDALO_DATA_NOLAN,
 						$target_section_tipo,
 						false
 					);
-					$component_target_filename->set_dato( $original_file_name );
-					$component_target_filename->Save();
+					$file_name_data = [(object)[
+						'value' => $original_file_name,
+						'lang' => DEDALO_DATA_NOLAN
+					]];
+					$component_target_filename->set_data( $file_name_data );
+					$component_target_filename->save();
 				}
 
 			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
@@ -914,7 +894,7 @@ class component_image extends component_media_common implements component_media_
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $options) : object {
 
@@ -929,203 +909,6 @@ class component_image extends component_media_common implements component_media_
 
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
-
-			case '6.2.0':
-				// same case as '6.0.1'. regenerate_component is enough to create thumb
-			case '6.0.1':
-				// component instance
-					$model		= ontology_node::get_model_by_tipo($options->tipo, true);
-					$component	= component_common::get_instance(
-						$model,
-						$options->tipo,
-						$options->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$options->section_tipo,
-						false
-					);
-
-				// run update cache (this action updates files info and saves)
-					$component->regenerate_component();
-					$new_dato = $component->get_dato();
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				break;
-
-			case '6.0.0':
-				$is_old_dato = (
-					empty($data_unchanged) || // v5 early case
-					isset($data_unchanged->section_id) || // v5 modern case
-					(isset($data_unchanged[0]) && isset($data_unchanged[0]->original_file_name)) // v6 alpha case
-				);
-				// $is_old_dato = true; // force here
-				if ($is_old_dato===true) {
-
-					// create the component image
-						$model		= ontology_node::get_model_by_tipo($options->tipo,true);
-						$component	= component_common::get_instance(
-							$model, // string 'component_image'
-							$tipo,
-							$section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo,
-							false
-						);
-
-					// get existing files data
-						$file_id			= $component->get_name();
-						$source_quality		= $component->get_original_quality();
-						$additional_path	= $component->get_additional_path();
-						$initial_media_path	= $component->get_initial_media_path();
-						$original_extension	= $component->get_original_extension(
-							false // bool exclude_converted
-						) ?? $component->get_extension(); // 'jpg' fallback is expected
-
-						$base_path	= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_id . '.' . $original_extension;
-
-						// no original file found. Use default quality file
-							if(!file_exists($file)) {
-								// use default quality as original
-								$source_quality	= $component->get_default_quality();
-								$base_path		= DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_id . '.' . $component->get_extension();
-							}
-							// try again
-							if(!file_exists($file)) {
-								// reset bad dato
-								$response = new stdClass();
-									$response->result	= 1;
-									$response->new_dato	= null;
-									$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string(null).".<br />";
-								// $response = new stdClass();
-								// 	$response->result	= 2;
-								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($data_unchanged)."
-								return $response;
-							}
-
-					// create the svg_file if not already exists
-						$svg_file_path = $component->get_svg_file_path();
-						if (!file_exists($svg_file_path)) {
-							$svg_string_node = $component->create_default_svg_string_node();
-							if (!empty($svg_string_node)) {
-								$create_svg_file_result	= $component->create_svg_file($svg_string_node);
-								if ($create_svg_file_result===false) {
-									debug_log(__METHOD__
-										." Error creating svg file form svg_string_node ".PHP_EOL
-										.' svg_string_node: ' . json_encode($svg_string_node, JSON_PRETTY_PRINT)
-										, logger::ERROR
-									);
-								}
-							}
-						}
-
-					// source_file_upload_date
-						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
-						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
-						$source_file_upload_date->timestamp	= $upload_date_timestamp;
-
-					// get the source file name
-						$source_file_name	= pathinfo($file)['basename'];
-						// look for file name stored in another component data
-						$properties			= $component->get_properties();
-						if(isset($properties->target_filename)) {
-
-							$original_name_tipo		= $properties->target_filename;
-							$original_name_model	= ontology_node::get_model_by_tipo($original_name_tipo,true);
-
-							// create the component with the name of the original file
-							$original_name_component = component_common::get_instance(
-								$original_name_model,
-								$original_name_tipo,
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo,
-								false
-							);
-							$name_component_dato	= $original_name_component->get_dato();
-							$source_file_name		= isset($name_component_dato[0]) ? $name_component_dato[0] : $name_component_dato;
-						}
-						// if the original name is empty we can try to get the original name from Previous Code
-						if(empty($source_file_name)) {
-							$previous_code_tipo			= 'rsc22';
-							$previous_code_model		=  ontology_node::get_model_by_tipo($previous_code_tipo,true);
-							// create the component_input_text where name was saved
-							$previous_code_component	= component_common::get_instance(
-								$previous_code_model, // expected 'component_input_text'
-								$previous_code_tipo, // rsc22
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo,
-								false
-							);
-							$code_component_dato	= $previous_code_component->get_dato();
-							$source_file_name		= isset($code_component_dato[0]) ? $code_component_dato[0] : $code_component_dato;
-						}
-
-					// lib_data
-						$lib_data = null;
-
-					// get files info
-						$files_info	= [];
-						$ar_quality = DEDALO_IMAGE_AR_QUALITY;
-						foreach ($ar_quality as $current_quality) {
-							if ($current_quality==='thumb') continue;
-							// read file if exists to get file_info
-							$file_info = $component->get_quality_file_info($current_quality);
-							// add non empty quality files data
-							if (!empty($file_info)) {
-								// Note that source_quality could be original or default
-								if ($current_quality===$source_quality) {
-									$file_info->upload_info = (object)[
-										'file_name'	=> $source_file_name ?? null,
-										'date'		=> $source_file_upload_date ?? null,
-										'user'		=> null // unknown here
-									];
-								}
-								// add
-								$files_info[] = $file_info;
-							}
-						}
-
-					// create new dato
-						$dato_item = (object)[
-							'files_info'	=> $files_info,
-							'lib_data'		=> $lib_data
-						];
-
-					// fix final dato with new format as array
-						$new_dato = [$dato_item];
-						debug_log(__METHOD__
-							." update_version new_dato ". PHP_EOL
-							.' new_dato: ' . json_encode($new_dato, JSON_PRETTY_PRINT)
-							, logger::DEBUG
-						);
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-
-					// clean vars
-						unset($source_file_upload_date);
-						unset($files_info);
-						unset($lib_data);
-
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
@@ -1447,9 +1230,9 @@ class component_image extends component_media_common implements component_media_
 				logged_user_id() // int
 			);
 
-		// update component dato files info and save
+		// update component data files info and save
 			if ($save===true) {
-				$this->Save();
+				$this->save();
 			}
 
 		// response

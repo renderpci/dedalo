@@ -1,0 +1,2665 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test69",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test69",
+	"value": [
+		{
+			"id": 4,
+			"tipo": "rsc167",
+			"value": [
+				24,
+				34,
+				15,
+				11,
+				36,
+				35,
+				10
+			]
+		},
+		{
+			"id": 1,
+			"tipo": "actv0",
+			"value": [
+				1,
+				8,
+				7
+			]
+		},
+		{
+			"id": 2,
+			"tipo": "mk1",
+			"value": [
+				4,
+				8
+			]
+		},
+		{
+			"id": 5,
+			"tipo": "actv1",
+			"value": [
+				3
+			]
+		},
+		{
+			"id": 8,
+			"tipo": "mdcat3112",
+			"value": [
+				9,
+				523
+			]
+		}
+	],
+	"debug_model": "component_filter_records",
+	"debug_label": "filter_records",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"tipo": "mdcat3112",
+			"permissions": 2,
+			"label": "1936 region"
+		},
+		{
+			"tipo": "rsc202",
+			"permissions": 2,
+			"label": "3D document"
+		},
+		{
+			"tipo": "rsc822",
+			"permissions": 2,
+			"label": "Acces conditions"
+		},
+		{
+			"tipo": "dmm392",
+			"permissions": 2,
+			"label": "Accessibility type"
+		},
+		{
+			"tipo": "actv1",
+			"permissions": 2,
+			"label": "Activites"
+		},
+		{
+			"tipo": "qdp487",
+			"permissions": 2,
+			"label": "Activities"
+		},
+		{
+			"tipo": "dd542",
+			"permissions": 2,
+			"label": "Activity"
+		},
+		{
+			"tipo": "dd42",
+			"permissions": 2,
+			"label": "Activity events"
+		},
+		{
+			"tipo": "actv0",
+			"permissions": 2,
+			"label": "Activity | actv"
+		},
+		{
+			"tipo": "murapa39",
+			"permissions": 2,
+			"label": "Actos"
+		},
+		{
+			"tipo": "mdcat2725",
+			"permissions": 2,
+			"label": "Address of stay"
+		},
+		{
+			"tipo": "dd1313",
+			"permissions": 2,
+			"label": "Administrative document typology"
+		},
+		{
+			"tipo": "rsc182",
+			"permissions": 2,
+			"label": "Administrative record"
+		},
+		{
+			"tipo": "rsc777",
+			"permissions": 2,
+			"label": "Administrative situations"
+		},
+		{
+			"tipo": "rsc767",
+			"permissions": 2,
+			"label": "Administrative states"
+		},
+		{
+			"tipo": "rsc723",
+			"permissions": 2,
+			"label": "Admission forms"
+		},
+		{
+			"tipo": "dmm822",
+			"permissions": 2,
+			"label": "Age categories"
+		},
+		{
+			"tipo": "mdcat3578",
+			"permissions": 2,
+			"label": "Age unit"
+		},
+		{
+			"tipo": "numisdata486",
+			"permissions": 2,
+			"label": "Alteration"
+		},
+		{
+			"tipo": "mdcat4286",
+			"permissions": 2,
+			"label": "Alvah Bessie Program"
+		},
+		{
+			"tipo": "numisdata269",
+			"permissions": 2,
+			"label": "Analytics"
+		},
+		{
+			"tipo": "rsc326",
+			"permissions": 2,
+			"label": "Anotations"
+		},
+		{
+			"tipo": "dmm742",
+			"permissions": 2,
+			"label": "Anthropological reporting states"
+		},
+		{
+			"tipo": "dmm449",
+			"permissions": 2,
+			"label": "Applications"
+		},
+		{
+			"tipo": "dmm75",
+			"permissions": 2,
+			"label": "Approved / Denied"
+		},
+		{
+			"tipo": "isad1",
+			"permissions": 2,
+			"label": "Archives"
+		},
+		{
+			"tipo": "ich145",
+			"permissions": 2,
+			"label": "Areas of Intangible Cultural Heritage"
+		},
+		{
+			"tipo": "mdcat1019",
+			"permissions": 2,
+			"label": "Armies"
+		},
+		{
+			"tipo": "mdcat1020",
+			"permissions": 2,
+			"label": "Army Corps"
+		},
+		{
+			"tipo": "mdcat3182",
+			"permissions": 2,
+			"label": "Army types"
+		},
+		{
+			"tipo": "dd976",
+			"permissions": 2,
+			"label": "Aspect ratio"
+		},
+		{
+			"tipo": "numisdata224",
+			"permissions": 2,
+			"label": "Auctions"
+		},
+		{
+			"tipo": "rsc167",
+			"permissions": 2,
+			"label": "Audiovisual"
+		},
+		{
+			"tipo": "dd985",
+			"permissions": 2,
+			"label": "Audiovisual Color Standard"
+		},
+		{
+			"tipo": "rsc1357",
+			"permissions": 2,
+			"label": "Authenticity"
+		},
+		{
+			"tipo": "numisdata481",
+			"permissions": 2,
+			"label": "Authenticity"
+		},
+		{
+			"tipo": "numisdata1374",
+			"permissions": 2,
+			"label": "Authorities group"
+		},
+		{
+			"tipo": "dmm418",
+			"permissions": 2,
+			"label": "Authority"
+		},
+		{
+			"tipo": "rsc1035",
+			"permissions": 2,
+			"label": "Authorship reference"
+		},
+		{
+			"tipo": "mdcat3337",
+			"permissions": 2,
+			"label": "BI clusters"
+		},
+		{
+			"tipo": "dmm1419",
+			"permissions": 2,
+			"label": "Bajas específicas"
+		},
+		{
+			"tipo": "mdcat1490",
+			"permissions": 2,
+			"label": "Battalions IB"
+		},
+		{
+			"tipo": "rsc229",
+			"permissions": 2,
+			"label": "Belonging"
+		},
+		{
+			"tipo": "rsc332",
+			"permissions": 2,
+			"label": "Bibliographical reference"
+		},
+		{
+			"tipo": "rsc420",
+			"permissions": 2,
+			"label": "Biographical Milestone"
+		},
+		{
+			"tipo": "rsc939",
+			"permissions": 2,
+			"label": "Biographies of properties"
+		},
+		{
+			"tipo": "rsc520",
+			"permissions": 2,
+			"label": "Birthplaces"
+		},
+		{
+			"tipo": "rsc1370",
+			"permissions": 2,
+			"label": "Boilerplate expressions"
+		},
+		{
+			"tipo": "mdcat3224",
+			"permissions": 2,
+			"label": "Brigades"
+		},
+		{
+			"tipo": "mdcat2715",
+			"permissions": 2,
+			"label": "Building / prison / concentration camp"
+		},
+		{
+			"tipo": "dd911",
+			"permissions": 2,
+			"label": "CSS classes"
+		},
+		{
+			"tipo": "ich171",
+			"permissions": 2,
+			"label": "Calendar Type"
+		},
+		{
+			"tipo": "emakumeak2",
+			"permissions": 2,
+			"label": "Carteles"
+		},
+		{
+			"tipo": "tch7",
+			"permissions": 2,
+			"label": "Catalogue"
+		},
+		{
+			"tipo": "numisdata300",
+			"permissions": 2,
+			"label": "Catalogues"
+		},
+		{
+			"tipo": "tch126",
+			"permissions": 2,
+			"label": "Catalogues"
+		},
+		{
+			"tipo": "mdcat2681",
+			"permissions": 2,
+			"label": "Categories"
+		},
+		{
+			"tipo": "qdp3",
+			"permissions": 2,
+			"label": "Categories"
+		},
+		{
+			"tipo": "dmm724",
+			"permissions": 2,
+			"label": "Categories of pits"
+		},
+		{
+			"tipo": "dmm1264",
+			"permissions": 2,
+			"label": "Categories of pits"
+		},
+		{
+			"tipo": "category1",
+			"permissions": 2,
+			"label": "Categoría"
+		},
+		{
+			"tipo": "category2",
+			"permissions": 2,
+			"label": "Categoría [m]"
+		},
+		{
+			"tipo": "dmm125",
+			"permissions": 2,
+			"label": "Causes of death"
+		},
+		{
+			"tipo": "mdcat2589",
+			"permissions": 2,
+			"label": "Causes of deprivation"
+		},
+		{
+			"tipo": "dmm1312",
+			"permissions": 2,
+			"label": "Causes of disappearance"
+		},
+		{
+			"tipo": "rsc576",
+			"permissions": 2,
+			"label": "Causes of movements"
+		},
+		{
+			"tipo": "dmm847",
+			"permissions": 2,
+			"label": "Causes of postponement"
+		},
+		{
+			"tipo": "rsc538",
+			"permissions": 2,
+			"label": "Cemetery"
+		},
+		{
+			"tipo": "dmm152",
+			"permissions": 2,
+			"label": "Census of reprisals"
+		},
+		{
+			"tipo": "mdcat1960",
+			"permissions": 2,
+			"label": "Centers"
+		},
+		{
+			"tipo": "emakumeak0",
+			"permissions": 2,
+			"label": "Centro de documentación Maite Albiz | emakumeak"
+		},
+		{
+			"tipo": "mdcat3298",
+			"permissions": 2,
+			"label": "Centuries"
+		},
+		{
+			"tipo": "rsc191",
+			"permissions": 2,
+			"label": "Certificate of Cession"
+		},
+		{
+			"tipo": "qdp126",
+			"permissions": 2,
+			"label": "Characteristics"
+		},
+		{
+			"tipo": "dc1",
+			"permissions": 2,
+			"label": "Chronology"
+		},
+		{
+			"tipo": "dmm1280",
+			"permissions": 2,
+			"label": "Civil Subcategories"
+		},
+		{
+			"tipo": "dd365",
+			"permissions": 2,
+			"label": "Civil states"
+		},
+		{
+			"tipo": "dmm1248",
+			"permissions": 2,
+			"label": "Closure types"
+		},
+		{
+			"tipo": "dd1132",
+			"permissions": 2,
+			"label": "Collection / archive"
+		},
+		{
+			"tipo": "qdp138",
+			"permissions": 2,
+			"label": "Collections"
+		},
+		{
+			"tipo": "dd307",
+			"permissions": 2,
+			"label": "Colos space"
+		},
+		{
+			"tipo": "mdcat1002",
+			"permissions": 2,
+			"label": "Columns"
+		},
+		{
+			"tipo": "mdcat3327",
+			"permissions": 2,
+			"label": "Companies"
+		},
+		{
+			"tipo": "mdcat681",
+			"permissions": 2,
+			"label": "Compensation for deprivation of liberty"
+		},
+		{
+			"tipo": "numisdata5",
+			"permissions": 2,
+			"label": "Complex"
+		},
+		{
+			"tipo": "numisdata179",
+			"permissions": 2,
+			"label": "Composition"
+		},
+		{
+			"tipo": "mdcat659",
+			"permissions": 2,
+			"label": "Concentration camps"
+		},
+		{
+			"tipo": "mdcat3087",
+			"permissions": 2,
+			"label": "Condition Types"
+		},
+		{
+			"tipo": "rsc873",
+			"permissions": 2,
+			"label": "Conditions"
+		},
+		{
+			"tipo": "mdcat2635",
+			"permissions": 2,
+			"label": "Conditions Spain"
+		},
+		{
+			"tipo": "rsc884",
+			"permissions": 2,
+			"label": "Conditions types"
+		},
+		{
+			"tipo": "mdcat642",
+			"permissions": 2,
+			"label": "Conservation"
+		},
+		{
+			"tipo": "numisdata1232",
+			"permissions": 2,
+			"label": "Conservation state"
+		},
+		{
+			"tipo": "rsc931",
+			"permissions": 2,
+			"label": "Conservation status"
+		},
+		{
+			"tipo": "dmm377",
+			"permissions": 2,
+			"label": "Conservation status symbols"
+		},
+		{
+			"tipo": "rsc996",
+			"permissions": 2,
+			"label": "Consultation to documentary collections"
+		},
+		{
+			"tipo": "dmm1210",
+			"permissions": 2,
+			"label": "Contact types"
+		},
+		{
+			"tipo": "numisdata31",
+			"permissions": 2,
+			"label": "Content sources"
+		},
+		{
+			"tipo": "mdcat2056",
+			"permissions": 2,
+			"label": "Contributed documents grouper"
+		},
+		{
+			"tipo": "mdcat2794",
+			"permissions": 2,
+			"label": "Conveyance"
+		},
+		{
+			"tipo": "rsc913",
+			"permissions": 2,
+			"label": "Coordinates"
+		},
+		{
+			"tipo": "numisdata1398",
+			"permissions": 2,
+			"label": "Corrosion degrees"
+		},
+		{
+			"tipo": "dmm1361",
+			"permissions": 2,
+			"label": "Court series"
+		},
+		{
+			"tipo": "mdcat737",
+			"permissions": 2,
+			"label": "Court types"
+		},
+		{
+			"tipo": "mdcat3096",
+			"permissions": 2,
+			"label": "Crimes"
+		},
+		{
+			"tipo": "dmm442",
+			"permissions": 2,
+			"label": "Current uses"
+		},
+		{
+			"tipo": "dd839",
+			"permissions": 2,
+			"label": "DVD copy"
+		},
+		{
+			"tipo": "rsc836",
+			"permissions": 2,
+			"label": "Data certainty"
+		},
+		{
+			"tipo": "numisdata1480",
+			"permissions": 2,
+			"label": "Data correction by period"
+		},
+		{
+			"tipo": "rsc1242",
+			"permissions": 2,
+			"label": "Data frame | Uncertainty"
+		},
+		{
+			"tipo": "numisdata1243",
+			"permissions": 2,
+			"label": "Data quality"
+		},
+		{
+			"tipo": "rsc226",
+			"permissions": 2,
+			"label": "Data source"
+		},
+		{
+			"tipo": "dd501",
+			"permissions": 2,
+			"label": "Data status - admin"
+		},
+		{
+			"tipo": "dd562",
+			"permissions": 2,
+			"label": "Dataframe active"
+		},
+		{
+			"tipo": "mdcat3189",
+			"permissions": 2,
+			"label": "Dead/missing"
+		},
+		{
+			"tipo": "mdcat2009",
+			"permissions": 2,
+			"label": "Decisions to Madrid"
+		},
+		{
+			"tipo": "mdcat2109",
+			"permissions": 2,
+			"label": "Degrees of disability"
+		},
+		{
+			"tipo": "dmm0",
+			"permissions": 2,
+			"label": "Democratic memory | dmm"
+		},
+		{
+			"tipo": "dk0",
+			"permissions": 2,
+			"label": "Denmark"
+		},
+		{
+			"tipo": "dmm798",
+			"permissions": 2,
+			"label": "Deposit types"
+		},
+		{
+			"tipo": "ts1",
+			"permissions": 2,
+			"label": "Descriptores temáticos"
+		},
+		{
+			"tipo": "ts2",
+			"permissions": 2,
+			"label": "Descriptores temáticos [m]"
+		},
+		{
+			"tipo": "numisdata38",
+			"permissions": 2,
+			"label": "Design"
+		},
+		{
+			"tipo": "qdp458",
+			"permissions": 2,
+			"label": "Didactic materials"
+		},
+		{
+			"tipo": "dd833",
+			"permissions": 2,
+			"label": "Diffusion"
+		},
+		{
+			"tipo": "numisdata241",
+			"permissions": 2,
+			"label": "Discovery method"
+		},
+		{
+			"tipo": "numisdata474",
+			"permissions": 2,
+			"label": "Discovery type"
+		},
+		{
+			"tipo": "mdcat2959",
+			"permissions": 2,
+			"label": "Division Types"
+		},
+		{
+			"tipo": "mdcat3283",
+			"permissions": 2,
+			"label": "Division groupings"
+		},
+		{
+			"tipo": "mdcat722",
+			"permissions": 2,
+			"label": "Divisions"
+		},
+		{
+			"tipo": "rsc176",
+			"permissions": 2,
+			"label": "Document PDF"
+		},
+		{
+			"tipo": "isad106",
+			"permissions": 2,
+			"label": "Document types"
+		},
+		{
+			"tipo": "mdcat635",
+			"permissions": 2,
+			"label": "Document typology"
+		},
+		{
+			"tipo": "murapa17",
+			"permissions": 2,
+			"label": "Documentación"
+		},
+		{
+			"tipo": "navarra1",
+			"permissions": 2,
+			"label": "Documentación [base section]"
+		},
+		{
+			"tipo": "mdcat723",
+			"permissions": 2,
+			"label": "Documentary series"
+		},
+		{
+			"tipo": "mdcat2892",
+			"permissions": 2,
+			"label": "Documentation provided by the heir"
+		},
+		{
+			"tipo": "dmm1802",
+			"permissions": 2,
+			"label": "Documentation records"
+		},
+		{
+			"tipo": "rsc236",
+			"permissions": 2,
+			"label": "Dossiers"
+		},
+		{
+			"tipo": "dd1000",
+			"permissions": 2,
+			"label": "Dédalo Entities"
+		},
+		{
+			"tipo": "dd0",
+			"permissions": 2,
+			"label": "Dédalo | dd"
+		},
+		{
+			"tipo": "rsc806",
+			"permissions": 2,
+			"label": "Economic valuations"
+		},
+		{
+			"tipo": "rsc403",
+			"permissions": 2,
+			"label": "Education levels"
+		},
+		{
+			"tipo": "ich100",
+			"permissions": 2,
+			"label": "Elements and processes"
+		},
+		{
+			"tipo": "rsc106",
+			"permissions": 2,
+			"label": "Entity"
+		},
+		{
+			"tipo": "rsc1299",
+			"permissions": 2,
+			"label": "Entity references"
+		},
+		{
+			"tipo": "es1",
+			"permissions": 2,
+			"label": "España"
+		},
+		{
+			"tipo": "qdp336",
+			"permissions": 2,
+			"label": "Estate"
+		},
+		{
+			"tipo": "dmm572",
+			"permissions": 2,
+			"label": "Estats generals de fosses"
+		},
+		{
+			"tipo": "mht39",
+			"permissions": 2,
+			"label": "Events of stolen maternity cases"
+		},
+		{
+			"tipo": "numisdata1199",
+			"permissions": 2,
+			"label": "Excavations"
+		},
+		{
+			"tipo": "exhibition1",
+			"permissions": 2,
+			"label": "Exhibition"
+		},
+		{
+			"tipo": "exhibition2",
+			"permissions": 2,
+			"label": "Exhibition"
+		},
+		{
+			"tipo": "exhibition0",
+			"permissions": 2,
+			"label": "Exhibition"
+		},
+		{
+			"tipo": "render43",
+			"permissions": 2,
+			"label": "Exhibition typology"
+		},
+		{
+			"tipo": "qdp280",
+			"permissions": 2,
+			"label": "Exhibitions"
+		},
+		{
+			"tipo": "dmm831",
+			"permissions": 2,
+			"label": "Exhumed individuals sex"
+		},
+		{
+			"tipo": "mdcat2622",
+			"permissions": 2,
+			"label": "Exiled"
+		},
+		{
+			"tipo": "dmm1343",
+			"permissions": 2,
+			"label": "File locations"
+		},
+		{
+			"tipo": "mdcat2840",
+			"permissions": 2,
+			"label": "Files"
+		},
+		{
+			"tipo": "qdp195",
+			"permissions": 2,
+			"label": "Finding places"
+		},
+		{
+			"tipo": "dmm1757",
+			"permissions": 2,
+			"label": "Foreign Worker Companies"
+		},
+		{
+			"tipo": "dmm1766",
+			"permissions": 2,
+			"label": "Foreign Worker Groups"
+		},
+		{
+			"tipo": "fr0",
+			"permissions": 2,
+			"label": "France"
+		},
+		{
+			"tipo": "dmm1775",
+			"permissions": 2,
+			"label": "French army"
+		},
+		{
+			"tipo": "mdcat3123",
+			"permissions": 2,
+			"label": "Fronts"
+		},
+		{
+			"tipo": "dd861",
+			"permissions": 2,
+			"label": "Gender"
+		},
+		{
+			"tipo": "rsc1119",
+			"permissions": 2,
+			"label": "Gender"
+		},
+		{
+			"tipo": "dmm750",
+			"permissions": 2,
+			"label": "Genetic reporting statuses"
+		},
+		{
+			"tipo": "ich1",
+			"permissions": 2,
+			"label": "Goods"
+		},
+		{
+			"tipo": "mdcat1053",
+			"permissions": 2,
+			"label": "Graduations"
+		},
+		{
+			"tipo": "dmm839",
+			"permissions": 2,
+			"label": "Grave plans"
+		},
+		{
+			"tipo": "dmm1272",
+			"permissions": 2,
+			"label": "Grave sizes"
+		},
+		{
+			"tipo": "dmm731",
+			"permissions": 2,
+			"label": "Grave subcategories"
+		},
+		{
+			"tipo": "dmm766",
+			"permissions": 2,
+			"label": "Grave types by number"
+		},
+		{
+			"tipo": "mdcat2027",
+			"permissions": 2,
+			"label": "Grounds for refusal"
+		},
+		{
+			"tipo": "mdcat584",
+			"permissions": 2,
+			"label": "Grouping by category"
+		},
+		{
+			"tipo": "mdcat346",
+			"permissions": 2,
+			"label": "Grouping by sub-category"
+		},
+		{
+			"tipo": "hierarchy1",
+			"permissions": 2,
+			"label": "Hierarchy"
+		},
+		{
+			"tipo": "hierarchymtype0",
+			"permissions": 2,
+			"label": "Hierarchy typologies [m] | hierarchymtype"
+		},
+		{
+			"tipo": "hierarchytype0",
+			"permissions": 2,
+			"label": "Hierarchy typologies | hierarchytype"
+		},
+		{
+			"tipo": "hierarchy0",
+			"permissions": 2,
+			"label": "Hierarchy | hierarchy"
+		},
+		{
+			"tipo": "dmm434",
+			"permissions": 2,
+			"label": "Historical episodes"
+		},
+		{
+			"tipo": "dmm426",
+			"permissions": 2,
+			"label": "Historical figures"
+		},
+		{
+			"tipo": "mdcat2802",
+			"permissions": 2,
+			"label": "Home return"
+		},
+		{
+			"tipo": "mdcat2949",
+			"permissions": 2,
+			"label": "Human cost of Spanish Civil war"
+		},
+		{
+			"tipo": "mdcat3267",
+			"permissions": 2,
+			"label": "IB Divisions"
+		},
+		{
+			"tipo": "isad0",
+			"permissions": 2,
+			"label": "ISAD(g) | isad"
+		},
+		{
+			"tipo": "numisdata54",
+			"permissions": 2,
+			"label": "Iconography"
+		},
+		{
+			"tipo": "dmm774",
+			"permissions": 2,
+			"label": "Identification of buried"
+		},
+		{
+			"tipo": "mdcat2652",
+			"permissions": 2,
+			"label": "Identity papers"
+		},
+		{
+			"tipo": "rsc170",
+			"permissions": 2,
+			"label": "Image"
+		},
+		{
+			"tipo": "rsc682",
+			"permissions": 2,
+			"label": "Images"
+		},
+		{
+			"tipo": "tchi1",
+			"permissions": 2,
+			"label": "Immovables"
+		},
+		{
+			"tipo": "rsc377",
+			"permissions": 2,
+			"label": "Index annotations"
+		},
+		{
+			"tipo": "rsc976",
+			"permissions": 2,
+			"label": "Inspections / State of conservation"
+		},
+		{
+			"tipo": "ich0",
+			"permissions": 2,
+			"label": "Intangible cultural heritage | ich"
+		},
+		{
+			"tipo": "dmm1481",
+			"permissions": 2,
+			"label": "Internal commands"
+		},
+		{
+			"tipo": "mdcat3240",
+			"permissions": 2,
+			"label": "International Mixed Brigades"
+		},
+		{
+			"tipo": "rsc550",
+			"permissions": 2,
+			"label": "Intervention"
+		},
+		{
+			"tipo": "numisdata167",
+			"permissions": 2,
+			"label": "Intervention"
+		},
+		{
+			"tipo": "dd90",
+			"permissions": 2,
+			"label": "Investigation process"
+		},
+		{
+			"tipo": "rolejob1",
+			"permissions": 2,
+			"label": "Job roles"
+		},
+		{
+			"tipo": "rolejob2",
+			"permissions": 2,
+			"label": "Job roles [m]"
+		},
+		{
+			"tipo": "emakumeak24",
+			"permissions": 2,
+			"label": "Jornadas"
+		},
+		{
+			"tipo": "dmm361",
+			"permissions": 2,
+			"label": "Knowledge of the existence of the symbol"
+		},
+		{
+			"tipo": "dd922",
+			"permissions": 2,
+			"label": "Labor Category / Title"
+		},
+		{
+			"tipo": "rsc574",
+			"permissions": 2,
+			"label": "Laboratory analysis"
+		},
+		{
+			"tipo": "lg1",
+			"permissions": 2,
+			"label": "Langs"
+		},
+		{
+			"tipo": "rsc846",
+			"permissions": 2,
+			"label": "Languages"
+		},
+		{
+			"tipo": "mdcat674",
+			"permissions": 2,
+			"label": "Languages"
+		},
+		{
+			"tipo": "lg0",
+			"permissions": 2,
+			"label": "Languages | lg"
+		},
+		{
+			"tipo": "dd30",
+			"permissions": 2,
+			"label": "Layout"
+		},
+		{
+			"tipo": "dd20",
+			"permissions": 2,
+			"label": "Layout templates"
+		},
+		{
+			"tipo": "numisdata41",
+			"permissions": 2,
+			"label": "Legend"
+		},
+		{
+			"tipo": "numisdata82",
+			"permissions": 2,
+			"label": "Legends transcripts"
+		},
+		{
+			"tipo": "isad39",
+			"permissions": 2,
+			"label": "Levels of description"
+		},
+		{
+			"tipo": "rsc1256",
+			"permissions": 2,
+			"label": "Levels of valuation"
+		},
+		{
+			"tipo": "localontology0",
+			"permissions": 2,
+			"label": "Local ontology"
+		},
+		{
+			"tipo": "numisdata276",
+			"permissions": 2,
+			"label": "Location"
+		},
+		{
+			"tipo": "qdp6",
+			"permissions": 2,
+			"label": "Locations"
+		},
+		{
+			"tipo": "numisdata1416",
+			"permissions": 2,
+			"label": "Locations in object"
+		},
+		{
+			"tipo": "dmm1401",
+			"permissions": 2,
+			"label": "Lugares de encierro"
+		},
+		{
+			"tipo": "rsc1327",
+			"permissions": 2,
+			"label": "Magnitudes/proportions/values"
+		},
+		{
+			"tipo": "mdcat2180",
+			"permissions": 2,
+			"label": "Mailing of letters"
+		},
+		{
+			"tipo": "rsc1064",
+			"permissions": 2,
+			"label": "Management types"
+		},
+		{
+			"tipo": "numisdata809",
+			"permissions": 2,
+			"label": "Mark"
+		},
+		{
+			"tipo": "material1",
+			"permissions": 2,
+			"label": "Material"
+		},
+		{
+			"tipo": "material2",
+			"permissions": 2,
+			"label": "Material [m]"
+		},
+		{
+			"tipo": "qdp5",
+			"permissions": 2,
+			"label": "Materials"
+		},
+		{
+			"tipo": "dd460",
+			"permissions": 2,
+			"label": "Measurement units"
+		},
+		{
+			"tipo": "rsc1081",
+			"permissions": 2,
+			"label": "Measures"
+		},
+		{
+			"tipo": "mdcat0",
+			"permissions": 2,
+			"label": "Memorial Democràtic de Catalunya | mdcat"
+		},
+		{
+			"tipo": "dmm1232",
+			"permissions": 2,
+			"label": "Militancy"
+		},
+		{
+			"tipo": "mdcat1021",
+			"permissions": 2,
+			"label": "Military Corps"
+		},
+		{
+			"tipo": "dmm1288",
+			"permissions": 2,
+			"label": "Military Subcategories"
+		},
+		{
+			"tipo": "dmm1731",
+			"permissions": 2,
+			"label": "Military graduations"
+		},
+		{
+			"tipo": "dmm1225",
+			"permissions": 2,
+			"label": "Military unit"
+		},
+		{
+			"tipo": "dmm1748",
+			"permissions": 2,
+			"label": "Military units"
+		},
+		{
+			"tipo": "numisdata6",
+			"permissions": 2,
+			"label": "Mint"
+		},
+		{
+			"tipo": "mdcat803",
+			"permissions": 2,
+			"label": "Mixed brigades"
+		},
+		{
+			"tipo": "rsc624",
+			"permissions": 2,
+			"label": "Movement type"
+		},
+		{
+			"tipo": "rsc621",
+			"permissions": 2,
+			"label": "Movements"
+		},
+		{
+			"tipo": "murapa0",
+			"permissions": 2,
+			"label": "Museu de la Rajoleria de Paiporta | murapa"
+		},
+		{
+			"tipo": "www1",
+			"permissions": 2,
+			"label": "My web"
+		},
+		{
+			"tipo": "www2",
+			"permissions": 2,
+			"label": "My web [m]"
+		},
+		{
+			"tipo": "rsc461",
+			"permissions": 2,
+			"label": "Nationalities"
+		},
+		{
+			"tipo": "nexus40",
+			"permissions": 2,
+			"label": "Networks"
+		},
+		{
+			"tipo": "qdp400",
+			"permissions": 2,
+			"label": "News"
+		},
+		{
+			"tipo": "nexus1",
+			"permissions": 2,
+			"label": "Nexus"
+		},
+		{
+			"tipo": "nexus0",
+			"permissions": 2,
+			"label": "Nexus | nexus"
+		},
+		{
+			"tipo": "numisdata0",
+			"permissions": 2,
+			"label": "Numismatic heritage | numisdata"
+		},
+		{
+			"tipo": "numisdata4",
+			"permissions": 2,
+			"label": "Numismatic object"
+		},
+		{
+			"tipo": "tch1",
+			"permissions": 2,
+			"label": "Object"
+		},
+		{
+			"tipo": "object1",
+			"permissions": 2,
+			"label": "Objeto"
+		},
+		{
+			"tipo": "dmm782",
+			"permissions": 2,
+			"label": "Odds of Finding Remains"
+		},
+		{
+			"tipo": "rsc188",
+			"permissions": 2,
+			"label": "Official Newsletter or Journal"
+		},
+		{
+			"tipo": "rsc476",
+			"permissions": 2,
+			"label": "Official documentation"
+		},
+		{
+			"tipo": "ontology35",
+			"permissions": 2,
+			"label": "Ontologies main"
+		},
+		{
+			"tipo": "dd1500",
+			"permissions": 2,
+			"label": "Ontology"
+		},
+		{
+			"tipo": "ontology1",
+			"permissions": 2,
+			"label": "Ontology"
+		},
+		{
+			"tipo": "dd1560",
+			"permissions": 2,
+			"label": "Ontology commons"
+		},
+		{
+			"tipo": "ontologytype0",
+			"permissions": 2,
+			"label": "Ontology typologies | ontologytype"
+		},
+		{
+			"tipo": "ontology0",
+			"permissions": 2,
+			"label": "Ontology | ontology"
+		},
+		{
+			"tipo": "oh1",
+			"permissions": 2,
+			"label": "Oral History"
+		},
+		{
+			"tipo": "oh0",
+			"permissions": 2,
+			"label": "Oral History | oh"
+		},
+		{
+			"tipo": "numisdata712",
+			"permissions": 2,
+			"label": "Order typologies"
+		},
+		{
+			"tipo": "dmm861",
+			"permissions": 2,
+			"label": "Orientations"
+		},
+		{
+			"tipo": "rsc312",
+			"permissions": 2,
+			"label": "Original format"
+		},
+		{
+			"tipo": "dd957",
+			"permissions": 2,
+			"label": "Original format AV"
+		},
+		{
+			"tipo": "dd875",
+			"permissions": 2,
+			"label": "Original tape quality"
+		},
+		{
+			"tipo": "rsc650",
+			"permissions": 2,
+			"label": "Other affiliations"
+		},
+		{
+			"tipo": "rsc1221",
+			"permissions": 2,
+			"label": "Other codifications"
+		},
+		{
+			"tipo": "mdcat3062",
+			"permissions": 2,
+			"label": "Other detention centers"
+		},
+		{
+			"tipo": "mdcat2047",
+			"permissions": 2,
+			"label": "Other grounds for refusal"
+		},
+		{
+			"tipo": "rsc949",
+			"permissions": 2,
+			"label": "Parameters of preventive conservation"
+		},
+		{
+			"tipo": "ich96",
+			"permissions": 2,
+			"label": "Participation / execution"
+		},
+		{
+			"tipo": "numisdata1411",
+			"permissions": 2,
+			"label": "Peculiarity of production"
+		},
+		{
+			"tipo": "mdcat2661",
+			"permissions": 2,
+			"label": "Pecuniary situations"
+		},
+		{
+			"tipo": "rsc197",
+			"permissions": 2,
+			"label": "People"
+		},
+		{
+			"tipo": "rsc388",
+			"permissions": 2,
+			"label": "People / Role"
+		},
+		{
+			"tipo": "rsc1152",
+			"permissions": 2,
+			"label": "People references"
+		},
+		{
+			"tipo": "tch100",
+			"permissions": 2,
+			"label": "Photography"
+		},
+		{
+			"tipo": "dd898",
+			"permissions": 2,
+			"label": "Place of capture"
+		},
+		{
+			"tipo": "dmm1218",
+			"permissions": 2,
+			"label": "Places of disappearance"
+		},
+		{
+			"tipo": "dmm400",
+			"permissions": 2,
+			"label": "Plate models"
+		},
+		{
+			"tipo": "mdcat1929",
+			"permissions": 2,
+			"label": "Political express"
+		},
+		{
+			"tipo": "mdcat2605",
+			"permissions": 2,
+			"label": "Political express major 65"
+		},
+		{
+			"tipo": "mdcat2608",
+			"permissions": 2,
+			"label": "Political express minor 65"
+		},
+		{
+			"tipo": "dd372",
+			"permissions": 2,
+			"label": "Political parties"
+		},
+		{
+			"tipo": "dmm874",
+			"permissions": 2,
+			"label": "Positions"
+		},
+		{
+			"tipo": "dd363",
+			"permissions": 2,
+			"label": "Positive / Negative"
+		},
+		{
+			"tipo": "dmm1784",
+			"permissions": 2,
+			"label": "Prison names"
+		},
+		{
+			"tipo": "mdcat1018",
+			"permissions": 2,
+			"label": "Prisons"
+		},
+		{
+			"tipo": "mht165",
+			"permissions": 2,
+			"label": "Probabilidad"
+		},
+		{
+			"tipo": "dmm1437",
+			"permissions": 2,
+			"label": "Procedencias específicas"
+		},
+		{
+			"tipo": "dmm1428",
+			"permissions": 2,
+			"label": "Procedencias genéricas"
+		},
+		{
+			"tipo": "dd800",
+			"permissions": 2,
+			"label": "Processes"
+		},
+		{
+			"tipo": "dd882",
+			"permissions": 2,
+			"label": "Professions"
+		},
+		{
+			"tipo": "dd234",
+			"permissions": 2,
+			"label": "Profiles"
+		},
+		{
+			"tipo": "dd153",
+			"permissions": 2,
+			"label": "Projects"
+		},
+		{
+			"tipo": "dmm790",
+			"permissions": 2,
+			"label": "Property types"
+		},
+		{
+			"tipo": "dd1455",
+			"permissions": 2,
+			"label": "Protection categories"
+		},
+		{
+			"tipo": "ich128",
+			"permissions": 2,
+			"label": "Protection regimes"
+		},
+		{
+			"tipo": "rsc756",
+			"permissions": 2,
+			"label": "Protection regimes"
+		},
+		{
+			"tipo": "dd299",
+			"permissions": 2,
+			"label": "Public/private"
+		},
+		{
+			"tipo": "rsc205",
+			"permissions": 2,
+			"label": "Publication"
+		},
+		{
+			"tipo": "dd1010",
+			"permissions": 2,
+			"label": "Publication services"
+		},
+		{
+			"tipo": "dd889",
+			"permissions": 2,
+			"label": "Quality of content"
+		},
+		{
+			"tipo": "qdp0",
+			"permissions": 2,
+			"label": "Quart de Poblet virtual museum | qdp"
+		},
+		{
+			"tipo": "rsc245",
+			"permissions": 2,
+			"label": "Questionnaire"
+		},
+		{
+			"tipo": "rsc797",
+			"permissions": 2,
+			"label": "Reasons for evaluations"
+		},
+		{
+			"tipo": "rsc567",
+			"permissions": 2,
+			"label": "Reasons for restoration"
+		},
+		{
+			"tipo": "mdcat2148",
+			"permissions": 2,
+			"label": "Reasons for return letters"
+		},
+		{
+			"tipo": "mdcat2407",
+			"permissions": 2,
+			"label": "Reasons for return payments"
+		},
+		{
+			"tipo": "emakumeak97",
+			"permissions": 2,
+			"label": "Recomendaciones"
+		},
+		{
+			"tipo": "rsc1108",
+			"permissions": 2,
+			"label": "Recovery types"
+		},
+		{
+			"tipo": "rsc425",
+			"permissions": 2,
+			"label": "References"
+		},
+		{
+			"tipo": "mdcat2872",
+			"permissions": 2,
+			"label": "Refusal reasons grouper"
+		},
+		{
+			"tipo": "dd1324",
+			"permissions": 2,
+			"label": "Registered tools"
+		},
+		{
+			"tipo": "rsc1093",
+			"permissions": 2,
+			"label": "Registrations"
+		},
+		{
+			"tipo": "dd408",
+			"permissions": 2,
+			"label": "Religions"
+		},
+		{
+			"tipo": "mdcat3105",
+			"permissions": 2,
+			"label": "Religious Orders/Communities"
+		},
+		{
+			"tipo": "rsc185",
+			"permissions": 2,
+			"label": "Reports"
+		},
+		{
+			"tipo": "dmm17",
+			"permissions": 2,
+			"label": "Request Types"
+		},
+		{
+			"tipo": "dd1244",
+			"permissions": 2,
+			"label": "Request config presets (Layout map)"
+		},
+		{
+			"tipo": "dd1308",
+			"permissions": 2,
+			"label": "Research line"
+		},
+		{
+			"tipo": "dmm1978",
+			"permissions": 2,
+			"label": "Resistant category"
+		},
+		{
+			"tipo": "mdcat1995",
+			"permissions": 2,
+			"label": "Resolution types"
+		},
+		{
+			"tipo": "dd1117",
+			"permissions": 2,
+			"label": "Resource typology"
+		},
+		{
+			"tipo": "rsc0",
+			"permissions": 2,
+			"label": "Resource | rsc"
+		},
+		{
+			"tipo": "rsc2",
+			"permissions": 2,
+			"label": "Resources Media"
+		},
+		{
+			"tipo": "rsc740",
+			"permissions": 2,
+			"label": "Resources typologies"
+		},
+		{
+			"tipo": "rsc611",
+			"permissions": 2,
+			"label": "Restoration process"
+		},
+		{
+			"tipo": "dd516",
+			"permissions": 2,
+			"label": "Restoration processes"
+		},
+		{
+			"tipo": "dmm898",
+			"permissions": 2,
+			"label": "Result types"
+		},
+		{
+			"tipo": "sicfnumisdata0",
+			"permissions": 2,
+			"label": "SICF"
+		},
+		{
+			"tipo": "mdcat615",
+			"permissions": 2,
+			"label": "SRA End of aid"
+		},
+		{
+			"tipo": "rsc179",
+			"permissions": 2,
+			"label": "Score"
+		},
+		{
+			"tipo": "dd623",
+			"permissions": 2,
+			"label": "Search presets"
+		},
+		{
+			"tipo": "dd655",
+			"permissions": 2,
+			"label": "Search presets temp"
+		},
+		{
+			"tipo": "ds1",
+			"permissions": 2,
+			"label": "Semantic"
+		},
+		{
+			"tipo": "ds2",
+			"permissions": 2,
+			"label": "Semantic [m]"
+		},
+		{
+			"tipo": "mdcat753",
+			"permissions": 2,
+			"label": "Sentences"
+		},
+		{
+			"tipo": "rsc212",
+			"permissions": 2,
+			"label": "Series / magazines / collections"
+		},
+		{
+			"tipo": "dd1020",
+			"permissions": 2,
+			"label": "Service type"
+		},
+		{
+			"tipo": "tch178",
+			"permissions": 2,
+			"label": "Sets - DEPRECATED"
+		},
+		{
+			"tipo": "qdp464",
+			"permissions": 2,
+			"label": "Shades"
+		},
+		{
+			"tipo": "dmm1296",
+			"permissions": 2,
+			"label": "Shooting locations"
+		},
+		{
+			"tipo": "dmm710",
+			"permissions": 2,
+			"label": "Sides"
+		},
+		{
+			"tipo": "mdcat1986",
+			"permissions": 2,
+			"label": "Signatory positions"
+		},
+		{
+			"tipo": "numisdata267",
+			"permissions": 2,
+			"label": "Sorted coins"
+		},
+		{
+			"tipo": "dmm1924",
+			"permissions": 2,
+			"label": "Source types"
+		},
+		{
+			"tipo": "mdcat3317",
+			"permissions": 2,
+			"label": "Sources"
+		},
+		{
+			"tipo": "mdcat597",
+			"permissions": 2,
+			"label": "Spanish Refugee Aid"
+		},
+		{
+			"tipo": "mdcat3104",
+			"permissions": 2,
+			"label": "Special conditions"
+		},
+		{
+			"tipo": "mdcat664",
+			"permissions": 2,
+			"label": "Spellings"
+		},
+		{
+			"tipo": "mdcat1944",
+			"permissions": 2,
+			"label": "State"
+		},
+		{
+			"tipo": "qdp10",
+			"permissions": 2,
+			"label": "State of conservation"
+		},
+		{
+			"tipo": "dd174",
+			"permissions": 2,
+			"label": "States - user"
+		},
+		{
+			"tipo": "mdcat2157",
+			"permissions": 2,
+			"label": "States return letters"
+		},
+		{
+			"tipo": "dmm1490",
+			"permissions": 2,
+			"label": "Status of the deportee"
+		},
+		{
+			"tipo": "mht23",
+			"permissions": 2,
+			"label": "Stolen Maternity Cases"
+		},
+		{
+			"tipo": "dmm1818",
+			"permissions": 2,
+			"label": "Stolpersteine home address"
+		},
+		{
+			"tipo": "dmm1810",
+			"permissions": 2,
+			"label": "Stolpersteine place types"
+		},
+		{
+			"tipo": "mdcat3124",
+			"permissions": 2,
+			"label": "Subfronts"
+		},
+		{
+			"tipo": "mdcat3122",
+			"permissions": 2,
+			"label": "Subscopes"
+		},
+		{
+			"tipo": "rsc304",
+			"permissions": 2,
+			"label": "Support of the original"
+		},
+		{
+			"tipo": "dmm385",
+			"permissions": 2,
+			"label": "Symbol location"
+		},
+		{
+			"tipo": "dmm457",
+			"permissions": 2,
+			"label": "Symbol state"
+		},
+		{
+			"tipo": "dmm369",
+			"permissions": 2,
+			"label": "Symbols typology"
+		},
+		{
+			"tipo": "dd381",
+			"permissions": 2,
+			"label": "Syndicate"
+		},
+		{
+			"tipo": "dd1266",
+			"permissions": 2,
+			"label": "TLD"
+		},
+		{
+			"tipo": "numisdata283",
+			"permissions": 2,
+			"label": "Tags"
+		},
+		{
+			"tipo": "tch0",
+			"permissions": 2,
+			"label": "Tangible cultural heritage | tch"
+		},
+		{
+			"tipo": "tchi0",
+			"permissions": 2,
+			"label": "Tangible cultural heritage, Immovable | tchi"
+		},
+		{
+			"tipo": "dd567",
+			"permissions": 2,
+			"label": "Tape Status"
+		},
+		{
+			"tipo": "dd1342",
+			"permissions": 2,
+			"label": "Target models"
+		},
+		{
+			"tipo": "test3",
+			"permissions": 2,
+			"label": "Test Unit (data on matrix_test)"
+		},
+		{
+			"tipo": "test183",
+			"permissions": 2,
+			"label": "Test autocomplete"
+		},
+		{
+			"tipo": "test38",
+			"permissions": 2,
+			"label": "Test list section"
+		},
+		{
+			"tipo": "test65",
+			"permissions": 2,
+			"label": "Test section"
+		},
+		{
+			"tipo": "test2",
+			"permissions": 2,
+			"label": "Test section reference cases"
+		},
+		{
+			"tipo": "test0",
+			"permissions": 2,
+			"label": "Test | test"
+		},
+		{
+			"tipo": "rsc370",
+			"permissions": 2,
+			"label": "Text structuration"
+		},
+		{
+			"tipo": "rsc832",
+			"permissions": 2,
+			"label": "Time Machine notes"
+		},
+		{
+			"tipo": "dmm1410",
+			"permissions": 2,
+			"label": "Tipologías de bajas"
+		},
+		{
+			"tipo": "mdcat4489",
+			"permissions": 2,
+			"label": "Tipos de notificaciones"
+		},
+		{
+			"tipo": "dd996",
+			"permissions": 2,
+			"label": "Tools configuration"
+		},
+		{
+			"tipo": "dd1340",
+			"permissions": 2,
+			"label": "Tools development"
+		},
+		{
+			"tipo": "qdp4",
+			"permissions": 2,
+			"label": "Topics"
+		},
+		{
+			"tipo": "ubication1",
+			"permissions": 2,
+			"label": "Topographical"
+		},
+		{
+			"tipo": "ubication2",
+			"permissions": 2,
+			"label": "Topographical [m]"
+		},
+		{
+			"tipo": "dd1447",
+			"permissions": 2,
+			"label": "Toponymy processor"
+		},
+		{
+			"tipo": "mdcat3000",
+			"permissions": 2,
+			"label": "Township 1936"
+		},
+		{
+			"tipo": "rsc669",
+			"permissions": 2,
+			"label": "Trademarks"
+		},
+		{
+			"tipo": "numisdata3",
+			"permissions": 2,
+			"label": "Type"
+		},
+		{
+			"tipo": "dmm908",
+			"permissions": 2,
+			"label": "Type exhumed individuals"
+		},
+		{
+			"tipo": "dmm170",
+			"permissions": 2,
+			"label": "Type of Sentences"
+		},
+		{
+			"tipo": "dd208",
+			"permissions": 2,
+			"label": "Type of activities"
+		},
+		{
+			"tipo": "rsc603",
+			"permissions": 2,
+			"label": "Type of analytics"
+		},
+		{
+			"tipo": "dd942",
+			"permissions": 2,
+			"label": "Type of association / group"
+		},
+		{
+			"tipo": "rsc788",
+			"permissions": 2,
+			"label": "Type of currency"
+		},
+		{
+			"tipo": "dmm1240",
+			"permissions": 2,
+			"label": "Type of documentation provided"
+		},
+		{
+			"tipo": "ich135",
+			"permissions": 2,
+			"label": "Type of participation / performance"
+		},
+		{
+			"tipo": "ich179",
+			"permissions": 2,
+			"label": "Type of periodicity"
+		},
+		{
+			"tipo": "dd292",
+			"permissions": 2,
+			"label": "Type of standard number"
+		},
+		{
+			"tipo": "rsc1169",
+			"permissions": 2,
+			"label": "Types of accuracy"
+		},
+		{
+			"tipo": "dmm890",
+			"permissions": 2,
+			"label": "Types of action"
+		},
+		{
+			"tipo": "dmm48",
+			"permissions": 2,
+			"label": "Types of communications"
+		},
+		{
+			"tipo": "dmm1739",
+			"permissions": 2,
+			"label": "Types of compensation"
+		},
+		{
+			"tipo": "mdcat3078",
+			"permissions": 2,
+			"label": "Types of confinement"
+		},
+		{
+			"tipo": "dmm814",
+			"permissions": 2,
+			"label": "Types of conservation"
+		},
+		{
+			"tipo": "dmm225",
+			"permissions": 2,
+			"label": "Types of court martial sentences"
+		},
+		{
+			"tipo": "rsc528",
+			"permissions": 2,
+			"label": "Types of death"
+		},
+		{
+			"tipo": "dmm882",
+			"permissions": 2,
+			"label": "Types of death"
+		},
+		{
+			"tipo": "mdcat730",
+			"permissions": 2,
+			"label": "Types of death"
+		},
+		{
+			"tipo": "mdcat246",
+			"permissions": 2,
+			"label": "Types of document reports for publication"
+		},
+		{
+			"tipo": "mdcat2037",
+			"permissions": 2,
+			"label": "Types of documentation"
+		},
+		{
+			"tipo": "rsc482",
+			"permissions": 2,
+			"label": "Types of documents"
+		},
+		{
+			"tipo": "dmm1864",
+			"permissions": 2,
+			"label": "Types of events"
+		},
+		{
+			"tipo": "qdp266",
+			"permissions": 2,
+			"label": "Types of exhibition panels"
+		},
+		{
+			"tipo": "dmm717",
+			"permissions": 2,
+			"label": "Types of graves"
+		},
+		{
+			"tipo": "mdcat1008",
+			"permissions": 2,
+			"label": "Types of grief"
+		},
+		{
+			"tipo": "dmm806",
+			"permissions": 2,
+			"label": "Types of interventions"
+		},
+		{
+			"tipo": "dmm1944",
+			"permissions": 2,
+			"label": "Types of legal proceedings"
+		},
+		{
+			"tipo": "mdcat2083",
+			"permissions": 2,
+			"label": "Types of letters"
+		},
+		{
+			"tipo": "mdcat2580",
+			"permissions": 2,
+			"label": "Types of letters returned"
+		},
+		{
+			"tipo": "rsc1311",
+			"permissions": 2,
+			"label": "Types of magnitudes"
+		},
+		{
+			"tipo": "dd528",
+			"permissions": 2,
+			"label": "Types of measures"
+		},
+		{
+			"tipo": "dmm1013",
+			"permissions": 2,
+			"label": "Types of memory spaces"
+		},
+		{
+			"tipo": "mdcat1648",
+			"permissions": 2,
+			"label": "Types of military"
+		},
+		{
+			"tipo": "dmm1793",
+			"permissions": 2,
+			"label": "Types of prisons"
+		},
+		{
+			"tipo": "mdcat2785",
+			"permissions": 2,
+			"label": "Types of repatriation"
+		},
+		{
+			"tipo": "dmm758",
+			"permissions": 2,
+			"label": "Types of requests"
+		},
+		{
+			"tipo": "dmm1304",
+			"permissions": 2,
+			"label": "Types of requests"
+		},
+		{
+			"tipo": "dmm1969",
+			"permissions": 2,
+			"label": "Types of resistant"
+		},
+		{
+			"tipo": "mdcat2762",
+			"permissions": 2,
+			"label": "Types of stay output"
+		},
+		{
+			"tipo": "mdcat2701",
+			"permissions": 2,
+			"label": "Types of stays"
+		},
+		{
+			"tipo": "tch2",
+			"permissions": 2,
+			"label": "Types of tangible heritage registers"
+		},
+		{
+			"tipo": "mdcat744",
+			"permissions": 2,
+			"label": "Types of tasks"
+		},
+		{
+			"tipo": "dmm410",
+			"permissions": 2,
+			"label": "Types of timelines"
+		},
+		{
+			"tipo": "dd469",
+			"permissions": 2,
+			"label": "Types of tracks"
+		},
+		{
+			"tipo": "dmm1935",
+			"permissions": 2,
+			"label": "Types of trials"
+		},
+		{
+			"tipo": "nexus31",
+			"permissions": 2,
+			"label": "Typologies"
+		},
+		{
+			"tipo": "actv2",
+			"permissions": 2,
+			"label": "Typologies of activities"
+		},
+		{
+			"tipo": "qdp479",
+			"permissions": 2,
+			"label": "Typologies of activities"
+		},
+		{
+			"tipo": "rsc1233",
+			"permissions": 2,
+			"label": "Typologies of codes"
+		},
+		{
+			"tipo": "tch266",
+			"permissions": 2,
+			"label": "Typologies of materials"
+		},
+		{
+			"tipo": "actv40",
+			"permissions": 2,
+			"label": "Typologies of visualisation"
+		},
+		{
+			"tipo": "hierarchy13",
+			"permissions": 2,
+			"label": "Typology of Hierarchies"
+		},
+		{
+			"tipo": "rsc1014",
+			"permissions": 2,
+			"label": "Typology of access to collections"
+		},
+		{
+			"tipo": "dd810",
+			"permissions": 2,
+			"label": "Typology of bibliography"
+		},
+		{
+			"tipo": "rsc450",
+			"permissions": 2,
+			"label": "Typology of people"
+		},
+		{
+			"tipo": "dd1318",
+			"permissions": 2,
+			"label": "Typology of project"
+		},
+		{
+			"tipo": "mdcat251",
+			"permissions": 2,
+			"label": "Typology of request forms for publication"
+		},
+		{
+			"tipo": "technique1",
+			"permissions": 2,
+			"label": "Técnica"
+		},
+		{
+			"tipo": "mdcat3070",
+			"permissions": 2,
+			"label": "Units"
+		},
+		{
+			"tipo": "rsc1319",
+			"permissions": 2,
+			"label": "Units of magnitudes"
+		},
+		{
+			"tipo": "rsc1340",
+			"permissions": 2,
+			"label": "Use and function"
+		},
+		{
+			"tipo": "dd1521",
+			"permissions": 2,
+			"label": "User activity"
+		},
+		{
+			"tipo": "dd128",
+			"permissions": 2,
+			"label": "Users"
+		},
+		{
+			"tipo": "mdcat2671",
+			"permissions": 2,
+			"label": "Vaccination sites"
+		},
+		{
+			"tipo": "numisdata341",
+			"permissions": 2,
+			"label": "Validation"
+		},
+		{
+			"tipo": "rsc302",
+			"permissions": 2,
+			"label": "Vector document"
+		},
+		{
+			"tipo": "actv50",
+			"permissions": 2,
+			"label": "Visualization styles"
+		},
+		{
+			"tipo": "ww10",
+			"permissions": 2,
+			"label": "Web"
+		},
+		{
+			"tipo": "dd1440",
+			"permissions": 2,
+			"label": "Web elements"
+		},
+		{
+			"tipo": "dd1436",
+			"permissions": 2,
+			"label": "Web renderers"
+		},
+		{
+			"tipo": "dd477",
+			"permissions": 2,
+			"label": "Web templates"
+		},
+		{
+			"tipo": "ww0",
+			"permissions": 2,
+			"label": "Web | ww"
+		},
+		{
+			"tipo": "mht0",
+			"permissions": 2,
+			"label": "Woman and Memory | mht"
+		},
+		{
+			"tipo": "dd203",
+			"permissions": 2,
+			"label": "Word processing processes"
+		},
+		{
+			"tipo": "render50",
+			"permissions": 2,
+			"label": "Work format"
+		},
+		{
+			"tipo": "mdcat2747",
+			"permissions": 2,
+			"label": "Works"
+		},
+		{
+			"tipo": "dd64",
+			"permissions": 2,
+			"label": "Yes/No"
+		},
+		{
+			"tipo": "zenon1",
+			"permissions": 2,
+			"label": "Zenon"
+		},
+		{
+			"tipo": "zenon0",
+			"permissions": 2,
+			"label": "Zenon | zenon"
+		},
+		{
+			"tipo": "mdcat3121",
+			"permissions": 2,
+			"label": "areas"
+		},
+		{
+			"tipo": "mdcat3174",
+			"permissions": 2,
+			"label": "cams"
+		},
+		{
+			"tipo": "category0",
+			"permissions": 2,
+			"label": "category"
+		},
+		{
+			"tipo": "ceramics0",
+			"permissions": 2,
+			"label": "ceramics"
+		},
+		{
+			"tipo": "dc2",
+			"permissions": 2,
+			"label": "cronologia [m]"
+		},
+		{
+			"tipo": "dc0",
+			"permissions": 2,
+			"label": "dc"
+		},
+		{
+			"tipo": "deposit0",
+			"permissions": 2,
+			"label": "deposit"
+		},
+		{
+			"tipo": "dmmgobes0",
+			"permissions": 2,
+			"label": "dmmgobes"
+		},
+		{
+			"tipo": "ds0",
+			"permissions": 2,
+			"label": "ds"
+		},
+		{
+			"tipo": "es0",
+			"permissions": 2,
+			"label": "es"
+		},
+		{
+			"tipo": "excavation0",
+			"permissions": 2,
+			"label": "excavation"
+		},
+		{
+			"tipo": "fauna0",
+			"permissions": 2,
+			"label": "fauna"
+		},
+		{
+			"tipo": "flora1",
+			"permissions": 2,
+			"label": "flora"
+		},
+		{
+			"tipo": "flora2",
+			"permissions": 2,
+			"label": "flora"
+		},
+		{
+			"tipo": "flora0",
+			"permissions": 2,
+			"label": "flora"
+		},
+		{
+			"tipo": "mdcat2837",
+			"permissions": 2,
+			"label": "groupings"
+		},
+		{
+			"tipo": "material0",
+			"permissions": 2,
+			"label": "material"
+		},
+		{
+			"tipo": "mupreva0",
+			"permissions": 2,
+			"label": "mupreva"
+		},
+		{
+			"tipo": "navarra0",
+			"permissions": 2,
+			"label": "navarra | navarra"
+		},
+		{
+			"tipo": "numisdatacatalog0",
+			"permissions": 2,
+			"label": "numisdatacatalog"
+		},
+		{
+			"tipo": "object0",
+			"permissions": 2,
+			"label": "object"
+		},
+		{
+			"tipo": "on0",
+			"permissions": 2,
+			"label": "on"
+		},
+		{
+			"tipo": "places0",
+			"permissions": 2,
+			"label": "places"
+		},
+		{
+			"tipo": "dd492",
+			"permissions": 2,
+			"label": "publications roles"
+		},
+		{
+			"tipo": "render0",
+			"permissions": 2,
+			"label": "render | render"
+		},
+		{
+			"tipo": "resanalysis0",
+			"permissions": 2,
+			"label": "resanalysis"
+		},
+		{
+			"tipo": "rescause0",
+			"permissions": 2,
+			"label": "rescause"
+		},
+		{
+			"tipo": "rolejob0",
+			"permissions": 2,
+			"label": "rolejob"
+		},
+		{
+			"tipo": "rolepos0",
+			"permissions": 2,
+			"label": "rolepos"
+		},
+		{
+			"tipo": "roleusr0",
+			"permissions": 2,
+			"label": "roleusr"
+		},
+		{
+			"tipo": "special1",
+			"permissions": 2,
+			"label": "special"
+		},
+		{
+			"tipo": "special2",
+			"permissions": 2,
+			"label": "special"
+		},
+		{
+			"tipo": "special0",
+			"permissions": 2,
+			"label": "special"
+		},
+		{
+			"tipo": "technique0",
+			"permissions": 2,
+			"label": "technique"
+		},
+		{
+			"tipo": "dmm1003",
+			"permissions": 2,
+			"label": "thematic areas"
+		},
+		{
+			"tipo": "ts0",
+			"permissions": 2,
+			"label": "ts"
+		},
+		{
+			"tipo": "mdcat2119",
+			"permissions": 2,
+			"label": "types of decisions"
+		},
+		{
+			"tipo": "dmm1256",
+			"permissions": 2,
+			"label": "types of information"
+		},
+		{
+			"tipo": "ubication0",
+			"permissions": 2,
+			"label": "ubication"
+		},
+		{
+			"tipo": "utoponymy0",
+			"permissions": 2,
+			"label": "utoponymy"
+		},
+		{
+			"tipo": "ww1",
+			"permissions": 2,
+			"label": "web"
+		},
+		{
+			"tipo": "dd1100",
+			"permissions": 2,
+			"label": "web dedalo"
+		},
+		{
+			"tipo": "www0",
+			"permissions": 2,
+			"label": "www"
+		}
+	]
+}

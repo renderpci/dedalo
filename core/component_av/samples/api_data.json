@@ -1,0 +1,90 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test94",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test94",
+	"value": [
+		{
+			"id": 3,
+			"files_info": [
+				{
+					"quality": "original",
+					"extension": "mp4",
+					"file_name": "test94_test3_1.mp4",
+					"file_path": "/av/original/0/test94_test3_1.mp4",
+					"file_size": 14906377,
+					"file_time": {
+						"day": 28,
+						"hour": 20,
+						"time": 65116987956,
+						"year": 2025,
+						"month": 12,
+						"minute": 12,
+						"second": 36,
+						"timestamp": "2025-12-28 20:12:36"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "404",
+					"extension": "mp4",
+					"file_name": "test94_test3_1.mp4",
+					"file_path": "/av/404/0/test94_test3_1.mp4",
+					"file_size": 14908012,
+					"file_time": {
+						"day": 28,
+						"hour": 20,
+						"time": 65116987962,
+						"year": 2025,
+						"month": 12,
+						"minute": 12,
+						"second": 42,
+						"timestamp": "2025-12-28 20:12:42"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "thumb",
+					"extension": "jpg",
+					"file_name": "test94_test3_1.jpg",
+					"file_path": "/av/thumb/0/test94_test3_1.jpg",
+					"file_size": 14289,
+					"file_time": {
+						"day": 28,
+						"hour": 20,
+						"time": 65116987994,
+						"year": 2025,
+						"month": 12,
+						"minute": 13,
+						"second": 14,
+						"timestamp": "2025-12-28 20:13:14"
+					},
+					"file_exist": true
+				}
+			],
+			"original_file_name": "rsc35_rsc167_2.mp4",
+			"original_upload_date": {
+				"day": 28,
+				"hour": 20,
+				"time": 65116987957,
+				"year": 2025,
+				"month": 12,
+				"minute": 12,
+				"second": 37
+			},
+			"original_normalized_name": "test94_test3_1.mp4"
+		}
+	],
+	"debug_model": "component_av",
+	"debug_label": "av",
+	"debug_dataframe": null,
+	"posterframe_url": "/dedalo/media/av/posterframe/0/test94_test3_1.jpg",
+	"subtitles": {
+		"subtitles_url": "/dedalo/media/av/subtitles/test94_test3_1_lg-eng.vtt",
+		"lang_name": null,
+		"lang": "en"
+	},
+	"debug_quality": "404"
+}
