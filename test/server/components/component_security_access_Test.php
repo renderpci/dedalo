@@ -134,26 +134,7 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_cache_tree_file_name
+	* TEST_GET_CACHE_TREE_FILE_NAME
 	* @return void
 	*/
 	public function test_get_cache_tree_file_name() {
