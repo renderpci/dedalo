@@ -85,8 +85,8 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* ADD_RELATED
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'dato' but NOT saves
+	* Add one locator to current 'data'. Verify is exists to avoid duplicates
+	* NOTE: This method updates component 'data' but NOT saves
 	* @return bool $result
 	*/
 	public function add_related( object $locator ) : bool {
@@ -111,7 +111,7 @@ class component_relation_related extends component_relation_common {
 				$locator->type_rel = $this->relation_type_rel;
 			}
 
-		// Add current locator to component dato
+		// Add current locator to component data
 			$result = $this->add_locator_to_data($locator);
 
 
@@ -122,13 +122,13 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* REMOVE_RELATED
-	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato' but NOT saves
+	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
+	* NOTE: This method updates component 'data' but NOT saves
 	* @return bool $result
 	*/
 	public function remove_related( object $locator ) : bool {
 
-		// Add current locator to component dato
+		// Add current locator to component data
 		$result = $this->remove_locator_from_data($locator);
 
 		return $result;
@@ -185,7 +185,7 @@ class component_relation_related extends component_relation_common {
 		}
 
 		// only_data. Return the locators without label,
-		// used by merge with the real data of the component ($dato_full or get_dato_with_references())
+		// used by merge with the real data of the component ($data_full or get_data_with_references())
 			if($only_data===true){
 				return $references;
 			}
