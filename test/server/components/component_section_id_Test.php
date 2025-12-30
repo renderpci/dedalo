@@ -87,60 +87,53 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= 1;
-		$result	= $component->set_dato($dato);
-
+		$data	= [1];
+		$result	= $component->set_data($data);
+		$test_data	= $component->get_data();
+		// check result
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
+		// check data
+		$this->assertEquals(
+			$old_data, $test_data,
+			'expected old data : ' . PHP_EOL 
+			. to_string($test_data)
+		);
 
 		// null case
-			$result	= $component->set_dato(null);
+		// take account that this component is read only dont't save or set data
+		// so the data is not changed
+			$result		= $component->set_data(null);
+			$test_data	= $component->get_data();
 			$this->assertTrue(
-				$component->dato===NULL,
-				'expected null : ' . PHP_EOL
-					. to_string($component->dato)
+				$test_data===$old_data,
+				'expected old data : ' . PHP_EOL
+					. to_string($test_data)
 			);
 
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-
+		// restore data
+		// take account that this component is read only dont't save or set data
+		// so the data is not changed
+			$result		= $component->set_data($old_data);
+			$test_data	= $component->get_data();
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($test_data)===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($test_data)
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_dato_full
-	* @return void
-	*/
-	public function test_get_dato_full() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_dato_full();
-
-		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato_full
+	}//end test_set_data
 
 
 
