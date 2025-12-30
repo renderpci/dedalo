@@ -232,7 +232,7 @@ final class component_security_access_test extends TestCase {
 
 
 	/**
-	* TEST_get_element_datalist
+	* TEST_GET_ELEMENT_DATALIST
 	* @return void
 	*/
 	public function test_get_element_datalist() {
@@ -253,19 +253,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "test45",
 					"section_tipo": "test3",
 					"model": "section_group",
 					"label": "<mark>components a-z</mark>",
 					"parent": "test3"
-			    }
+			    ]
 			');
 
 			foreach ($reference as $key => $value) {
@@ -310,19 +310,19 @@ final class component_security_access_test extends TestCase {
 
 		if (!empty($result)) {
 			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result[0])==='array',
+				'expected type array : ' . PHP_EOL
 					. gettype($result[0])
 			);
 
 			$reference = json_decode('
-				{
+				[
 					"tipo": "test45",
 					"section_tipo": "test3",
 					"model": "section_group",
 					"label": "<mark>components a-z</mark>",
 					"parent": "test3"
-			    }
+				]
 			');
 
 			foreach ($reference as $key => $value) {
