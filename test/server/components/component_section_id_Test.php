@@ -68,21 +68,21 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATa
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
-			gettype($result)==='integer',
-			'expected type integer ' . PHP_EOL
+			gettype($result)==='array',
+			'expected type array ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
