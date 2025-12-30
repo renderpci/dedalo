@@ -232,31 +232,31 @@ class component_relation_related extends component_relation_common {
 		// Only DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
 		if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO) {
 
-			// ref_component dato
+			// ref_component data
 			if (isset($ref_component)) {
-				$dato = $ref_component->get_dato();
-				foreach ($dato as $dato_locator) {
+				$data = $ref_component->get_data();
+				foreach ($data as $data_locator) {
 
-					$pseudo_locator = $dato_locator->section_tipo .'_'. $dato_locator->section_id . '_'. $lang;
+					$pseudo_locator = $data_locator->section_tipo .'_'. $data_locator->section_id . '_'. $lang;
 					if (in_array($pseudo_locator, $ar_resolved)) {
 						continue;
 					}
 
 					$element = new stdClass();
-						$element->section_tipo			= $dato_locator->section_tipo;
-						$element->section_id			= $dato_locator->section_id;
-						$element->from_component_tipo	= $dato_locator->from_component_tipo;
+						$element->section_tipo			= $data_locator->section_tipo;
+						$element->section_id			= $data_locator->section_id;
+						$element->from_component_tipo	= $data_locator->from_component_tipo;
 
-					// Only add dato when is recursion, not at the first call
+					// Only add data when is recursion, not at the first call
 					if ($recursion===true) {
 						$ar_references[] = $element;
 					}
 
 					$ar_resolved[] = $pseudo_locator; // set as resolved
 
-					// References to dato
-					// Recursion (dato)
-					$ar_result		= self::get_references_recursive($tipo, $dato_locator, $type_rel, true, $lang);
+					// References to data
+					// Recursion (data)
+					$ar_result		= self::get_references_recursive($tipo, $data_locator, $type_rel, true, $lang);
 					$ar_references	= array_merge($ar_references, $ar_result);
 				}
 			}
