@@ -929,8 +929,17 @@ export const get_caller_by_model = function(instance, model) {
 	}
 
 	let current_instance = instance;
+    const visited = new Set();
 
 	while (current_instance) {
+
+        // Check for circular reference
+        if (visited.has(current_instance)) {
+            console.warn('Circular reference detected in get_caller_by_model:', instance, model);
+            return null;
+        }
+        visited.add(current_instance);
+
 		if (current_instance.model === model) {
 			return current_instance;
 		}

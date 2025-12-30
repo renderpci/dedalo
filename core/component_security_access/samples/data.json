@@ -1,0 +1,580 @@
+{
+	"dd774": [
+		{
+			"id": 1,
+			"tipo": "dd242",
+			"value": 2,
+			"section_tipo": "dd242"
+		},
+		{
+			"id": 2,
+			"tipo": "dd355",
+			"value": 2,
+			"section_tipo": "dd355"
+		},
+		{
+			"id": 3,
+			"tipo": "dd349",
+			"value": 2,
+			"section_tipo": "dd349"
+		},
+		{
+			"id": 4,
+			"tipo": "dd322",
+			"value": 2,
+			"section_tipo": "dd322"
+		},
+		{
+			"id": 5,
+			"tipo": "tch188",
+			"value": 2,
+			"section_tipo": "tch188"
+		},
+		{
+			"id": 6,
+			"tipo": "tch1",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 7,
+			"tipo": "tch43",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 8,
+			"tipo": "tch47",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 9,
+			"tipo": "tch48",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 10,
+			"tipo": "tch62",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 11,
+			"tipo": "tch61",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 12,
+			"tipo": "tch66",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 13,
+			"tipo": "tch75",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 14,
+			"tipo": "tch186",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 15,
+			"tipo": "tch49",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 16,
+			"tipo": "tch199",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 17,
+			"tipo": "tch86",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 18,
+			"tipo": "tch555",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 19,
+			"tipo": "tch349",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 20,
+			"tipo": "tch152",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 21,
+			"tipo": "tch241",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 22,
+			"tipo": "tch234",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 23,
+			"tipo": "tch50",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 24,
+			"tipo": "tch55",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 25,
+			"tipo": "tch212",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 26,
+			"tipo": "tch180",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 27,
+			"tipo": "tch149",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 28,
+			"tipo": "tch242",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 29,
+			"tipo": "tch164",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 30,
+			"tipo": "tch6",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 31,
+			"tipo": "tch45",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 32,
+			"tipo": "tch46",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 33,
+			"tipo": "tch136",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 34,
+			"tipo": "tch157",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 35,
+			"tipo": "tch156",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 36,
+			"tipo": "tch350",
+			"value": 2,
+			"section_tipo": "tch1"
+		},
+		{
+			"id": 37,
+			"tipo": "dd14",
+			"value": 2,
+			"section_tipo": "dd14"
+		},
+		{
+			"id": 38,
+			"tipo": "rsc94",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 39,
+			"tipo": "rsc95",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 40,
+			"tipo": "rsc872",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 41,
+			"tipo": "rsc883",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 42,
+			"tipo": "rsc96",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 43,
+			"tipo": "rsc289",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 44,
+			"tipo": "rsc98",
+			"value": 1,
+			"section_tipo": "rsc75"
+		},
+		{
+			"id": 45,
+			"tipo": "rsc203",
+			"value": 2,
+			"section_tipo": "rsc203"
+		},
+		{
+			"id": 46,
+			"tipo": "rsc197",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 47,
+			"tipo": "rsc261",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 48,
+			"tipo": "rsc279",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 49,
+			"tipo": "rsc85",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 50,
+			"tipo": "rsc86",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 51,
+			"tipo": "rsc93",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 52,
+			"tipo": "rsc1128",
+			"value": 2,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 53,
+			"tipo": "rsc497",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 54,
+			"tipo": "rsc94",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 55,
+			"tipo": "rsc95",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 56,
+			"tipo": "rsc872",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 57,
+			"tipo": "rsc883",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 58,
+			"tipo": "rsc96",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 59,
+			"tipo": "rsc289",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 60,
+			"tipo": "rsc290",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 61,
+			"tipo": "rsc651",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 62,
+			"tipo": "rsc291",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 63,
+			"tipo": "rsc410",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 64,
+			"tipo": "rsc449",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 65,
+			"tipo": "mdcat752",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 66,
+			"tipo": "rsc99",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 67,
+			"tipo": "rsc894",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 68,
+			"tipo": "rsc98",
+			"value": 1,
+			"section_tipo": "rsc197"
+		},
+		{
+			"id": 69,
+			"tipo": "rsc170",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 70,
+			"tipo": "rsc5",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 71,
+			"tipo": "rsc175",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 72,
+			"tipo": "rsc20",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 73,
+			"tipo": "rsc21",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 74,
+			"tipo": "rsc22",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 75,
+			"tipo": "rsc19",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 76,
+			"tipo": "rsc23",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 77,
+			"tipo": "rsc733",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 78,
+			"tipo": "rsc26",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 79,
+			"tipo": "rsc263",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 80,
+			"tipo": "rsc24",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 81,
+			"tipo": "rsc25",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 82,
+			"tipo": "rsc732",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 83,
+			"tipo": "rsc27",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 84,
+			"tipo": "rsc28",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 85,
+			"tipo": "rsc1166",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 86,
+			"tipo": "rsc1054",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 87,
+			"tipo": "rsc6",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 88,
+			"tipo": "rsc29",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 89,
+			"tipo": "rsc30",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 90,
+			"tipo": "rsc31",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 91,
+			"tipo": "rsc1369",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 92,
+			"tipo": "rsc32",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 93,
+			"tipo": "rsc33",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 94,
+			"tipo": "rsc34",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 95,
+			"tipo": "rsc496",
+			"value": 2,
+			"section_tipo": "rsc170"
+		},
+		{
+			"id": 96,
+			"tipo": "rsc398",
+			"value": 2,
+			"section_tipo": "rsc170"
+		}
+	]
+}

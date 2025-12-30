@@ -583,7 +583,7 @@ abstract class component_common extends common {
 					$this->load_component_data();
 
 				// current dato check
-					$data = $this->data;
+					$data = $this->get_data();
 					if (empty($data)) {
 
 						if(!is_array($data_default)) {
@@ -657,6 +657,11 @@ abstract class component_common extends common {
 		// unset previous calculated ar_list_of_values
 			if (isset($this->ar_list_of_values)) {
 				unset($this->ar_list_of_values);
+			}
+		
+		// empty data: [] to null
+			if (empty($data)) {
+				$data = null;
 			}
 
 		// empty array cases: [null], [''] to null
@@ -926,8 +931,8 @@ abstract class component_common extends common {
 
 		// MATRIX DATA : Load matrix data
 		$this->load_component_data();
-
-		$data = $this->data;
+		$section_record = $this->get_my_section_record();
+		$data = $section_record->get_component_data($this->tipo, $this->data_column_name);
 
 		// invalid data formats case. Expected array|null
 		if ( !is_null($data) && !is_array($data) ) {
@@ -1029,7 +1034,7 @@ abstract class component_common extends common {
 			$section_record = $this->get_my_section_record();
 
 		// component full_data
-			$this->data = $section_record->get_component_data(
+			$section_record->get_component_data(
 				$this->tipo,
 				$this->data_column_name
 			);

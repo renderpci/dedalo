@@ -126,7 +126,7 @@ const get_content_value = (i, current_value, self) => {
 					: null
 
 				// when user change the value of the select, remove its dataframe
-				if(self.data.value[0]?.section_id){
+				if(self.data.value?.[0]?.section_id){
 					delete_dataframe({
 						self				: self,
 						section_id			: self.section_id,
