@@ -855,19 +855,20 @@ class locator extends stdClass {
 	*/
 	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) : int|bool {
 
-		$key_founded = false;
+		// Build lookup key once for the locator we're searching for
+		$lookup_key_to_check = locator::build_locator_lookup_key($locator, $ar_properties);
 
+		// Iterate through array and compare keys directly
 		foreach ((array)$ar_locator as $key => $current_locator) {
-
-			$result = self::compare_locators( $locator, $current_locator, $ar_properties );
-
-			if($result===true) {
-				$key_founded = $key;
-				break;
+			// Build lookup key for current locator
+			$lookup_key = locator::build_locator_lookup_key($current_locator, $ar_properties);
+			// Compare keys directly - if they match, return the key
+			if ($lookup_key === $lookup_key_to_check) {
+				return $key;
 			}
 		}
 
-		return $key_founded;
+		return false;
 	}//end get_key_in_array_locator
 
 
