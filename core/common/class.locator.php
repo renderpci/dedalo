@@ -825,7 +825,7 @@ class locator extends stdClass {
 	* @param array $ar_properties = []
 	* @return bool $found
 	*/
-	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
+	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_tipo','section_id','type','component_tipo','tag_id']) : bool {
 
 		// Build lookup key once for the locator we're searching for
 		$lookup_key_to_check = locator::build_locator_lookup_key($locator, $ar_properties);
