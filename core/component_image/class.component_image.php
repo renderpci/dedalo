@@ -99,9 +99,9 @@ class component_image extends component_media_common implements component_media_
 					$this->section_tipo,
 					false
 				);
-				$valor	= trim($component->get_valor());
-				$id		= (!empty($valor) && strlen($valor)>0)
-					? $valor
+				$value	= trim($component->get_value() ?? '');
+				$id		= (!empty($value) && strlen($value)>0)
+					? $value
 					: null;
 				if(!empty($id)){
 					$this->id = $id;

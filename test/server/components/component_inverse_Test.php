@@ -6,33 +6,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_inverse_test extends TestCase {
+final class component_inverse_test extends BaseTestCase {
 
 
 
 	public static $model		= 'component_inverse';
 	public static $tipo			= 'test68';
 	public static $section_tipo	= 'test3';
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -64,21 +44,46 @@ final class component_inverse_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		// 1 - Get data
+		$result	= $component->get_data();
 
 		$this->assertTrue(
-			gettype($result)==='array',
+			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+
+		// 2 - Set sample data 
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data_resolved($sample_data); // Inject as resolved data
+	
+		$result	= $component->get_data();
+		
+		$this->assertTrue(
+			$result === $sample_data,
+			'expected sample data : ' . PHP_EOL
+				. to_string($sample_data)
+		);
+
+		// 3 - Clean data_resolved
+		$component->data_resolved = null;
+		$result	= $component->get_data();
+
+		$this->assertTrue(
+			$result[0]->section_id === '1',
+			'expected section_id === 1 : ' . PHP_EOL
+				. to_string($result)
+		);		
+	}//end test_get_data
 
 
 
@@ -87,6 +92,8 @@ final class component_inverse_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_grid_value() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -105,44 +112,6 @@ final class component_inverse_test extends TestCase {
 			);
 		}
 	}//end test_get_grid_value
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
 
 
 

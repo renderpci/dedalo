@@ -428,19 +428,25 @@ class security {
 		$area_permissions = [];
 
 		// cached permissions_table from file xxx_cache_permissions_table.json
-		$full_permissions_table = security::get_permissions_table();
+		$full_permissions_table = security::get_permissions_table();	
 
-		// filter items with same tipo and section_tipo such as {"tchi1_tchi1": 2}
+		// Identify and filter items with same tipo and section_tipo such as {"tchi1_tchi1": 2}
 		foreach ($full_permissions_table as $key => $value) {
-			// Match pattern where first two parts separated by _ are identical
-			if (preg_match('/^([^_]+)_\1(?:_|$)/', $key, $matches)) {
-				$area_permissions[] = (object)[
-					'tipo' => $matches[1], // as 'tchi1'
-					'value' => $value // as 2
-				];
+			$pos = strpos($key, '_');
+		
+			// If underscore exists and is followed by the same string
+			if ($pos !== false && substr_compare($key, $key, $pos + 1, $pos) === 0) {
+				// Ensure the match is a full segment (followed by end of string or another _)
+				$nextChar = $key[$pos + $pos + 1] ?? '';
+				if ($nextChar === '' || $nextChar === '_') {	
+					$item = new stdClass();
+					$item->tipo = substr($key, 0, $pos);
+					$item->value = $value;
+					
+					$area_permissions[] = $item;
+				}
 			}
 		}
-
 
 		return $area_permissions;
 	}//end get_ar_authorized_areas_for_user
@@ -566,7 +572,7 @@ class security {
 	/**
 	* GET_SECTION_NEW_PERMISSIONS
 	* Resolves button new permissions
-	* @see component_filter->set_dato_default()
+	* @see component_filter->set_data_default()
 	* @param string $section_tipo
 	* @return int|null $permissions
 	* 	null indicates that no button new is available or permissions are not set

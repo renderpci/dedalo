@@ -1650,7 +1650,7 @@ class component_text_area extends component_string_common {
 
 		// data_fallback. array of each data array element using fallback
 			$data_fallback = $this->get_component_data_fallback(
-				DEDALO_DATA_LANG, // lang
+				$this->lang, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
 
@@ -1705,7 +1705,7 @@ class component_text_area extends component_string_common {
 
 		// data_fallback. array of each data array element using fallback
 			$data_fallback = $this->get_component_data_fallback(
-				DEDALO_DATA_LANG, // lang
+				$this->lang, // lang
 				DEDALO_DATA_LANG_DEFAULT // main_lang
 			);
 

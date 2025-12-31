@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_lang_behavior_check} from '../../common/js/render_common.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -68,10 +69,17 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
+		const inputs_value	= value.length>0 ? value : [{value : ''}]
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_content_value(i, inputs_value[i], self)
+
+			// if the value is not a object, create a object with the value
+			// This happen when the value is from a preset saved as q value
+			const data_item = typeof inputs_value[i] === 'object' 
+				? inputs_value[i] 
+				: {value : inputs_value[i]}
+
+			const input_element_node = get_content_value(i, data_item, self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node

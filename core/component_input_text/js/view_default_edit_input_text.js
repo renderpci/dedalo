@@ -135,6 +135,9 @@ const get_content_value = (i, current_value, self) => {
 		// mousedown event. Capture event propagation
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
+				if (!self.active) {
+					ui.component.activate(self, false)
+				}
 			})
 		// focus event
 			input.addEventListener('focus', function() {

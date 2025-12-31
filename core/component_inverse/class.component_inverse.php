@@ -3,6 +3,10 @@
 * CLASS COMPONENT_INVERSE
 * It is used to manage inverse relations
 * (references to current section)
+* E.g. component 'rsc555' (Catalogue) in section 'rsc550' (Restoration Intervention)
+* Display the section_id of the sections that call to this section from the catalogue.
+* The data is a calculation of the inverse locators of sections that call to this section.
+* This component do not store data in DB, data is always calculated on the fly using 'get_inverse_references' method.
 *
 * data_column_name : 'misc'
 */
@@ -13,41 +17,33 @@ class component_inverse extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
 
+
+
 	/**
-	* GET_DATO
+	* GET_DATA
 	* This component don't store data, only access to section inverse_locators data
-	* @return array $dato
+	* @return ?array $data
 	*/
-	public function get_dato() {
+	public function get_data() : ?array {
 
 		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// section search for inverse locators
-			$section	= $this->get_my_section();
-			$dato		= $section->get_inverse_references();
+			$section_record	= $this->get_my_section_record();
+			$data = $section_record->get_inverse_references();
 
-		// fix dato
-			$this->dato				= $dato;
-			$this->dato_resolved	= $dato;
-			
+		// fix data
+			$this->data_resolved = $data;
 
-		return $dato;
-	}//end get_dato
+		// Set as loaded
+			$this->bl_loaded_matrix_data = true;
 
 
-
-	/**
-	* GET_DATO_FULL
-	* Alias of get_dato
-	* @return array $dato
-	*/
-	public function get_dato_full() {
-
-		return $this->get_dato();
-	}//end get_dato_full
+		return $data;
+	}//end get_data
 
 
 
@@ -59,11 +55,11 @@ class component_inverse extends component_common {
 	public function save() : bool {
 
 		debug_log(__METHOD__
-			. " Ignored save command for component (component_inverse) "
+			. " Ignored save command for component (" . get_called_class($this) . ")"
 			, logger::WARNING
 		);
 
-		return $this->section_id;
+		return true;
 	}//end save
 
 
@@ -102,7 +98,7 @@ class component_inverse extends component_common {
 			$class_list			= $ddo->class_list ?? null;
 
 		// short vars
-			$data		= $this->get_dato();
+			$data		= $this->get_data();
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
 
@@ -185,100 +181,6 @@ class component_inverse extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
-
-
-
-	/**
-	* GET_VALOR
-	* @return string|null $valor
-	*/
-	public function get_valor() {
-
-		$dato = $this->get_dato();
-
-		if (empty($dato)) {
-			return null;
-		}
-
-		return json_handler::encode($dato);
-	}//end get_valor
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor_export
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		// When is received 'valor', set as dato to avoid trigger get_dato against DB
-		// Received 'valor' is a JSON string (array of locators) from previous database search
-		if (!is_null($valor)) {
-			$dato = json_decode($valor);
-			$this->set_dato($dato);
-		}else{
-			$dato = $this->get_dato();
-		}
-
-		$inverse_show = $this->get_properties()->inverse_show;
-
-		$ar_lines = [];
-		foreach ($dato as $current_locator) {
-
-			$section_id		= $current_locator->from_section_id;
-			$section_tipo	= $current_locator->from_section_tipo;
-			$component_tipo	= $current_locator->from_component_tipo;
-
-			$line = '';
-			foreach ($inverse_show as $ikey => $ivalue) {
-				if ($ivalue===false) continue;
-
-				# section_id
-				if ($ikey === 'section_id') {
-					if(strlen($line)>0) $line .= ' ';
-					#$line .= $current_locator->section_id;
-					$line .= $section_id;
-				}
-
-				# section_tipo
-				if ($ikey === 'section_tipo') {
-					if(strlen($line)>0) $line .= ' ';
-					#$line .= $current_locator->section_tipo;
-					$line .= $section_tipo;
-				}
-
-				# section_label
-				if ($ikey === 'section_label') {
-					if(strlen($line)>0) $line .= ' ';
-					$label = ontology_node::get_term_by_tipo($section_tipo, $lang);
-					$line .= $label;
-				}
-
-				# component_tipo
-				if ($ikey === 'component_tipo' || $ikey === 'from_component_tipo') {
-					if(strlen($line)>0) $line .= ' ';
-					$line .= $component_tipo;
-				}
-
-				# component_label
-				if ($ikey === 'component_label') {
-					if(strlen($line)>0) $line .= ' ';
-					$label = ontology_node::get_term_by_tipo($component_tipo, $lang);
-					$line .= $label;
-				}
-			}
-
-			// add
-			$ar_lines[] = $line;
-		}//end foreach ($dato as $current_locator)
-
-		// valor_export: lines string
-		$valor_export = implode(PHP_EOL, $ar_lines);
-
-
-		return $valor_export;
-	}//end get_valor_export
 
 
 

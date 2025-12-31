@@ -6,33 +6,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_input_text_test extends TestCase {
+final class component_input_text_test extends BaseTestCase {
 
 
 
 	public static $model		= 'component_input_text';
 	public static $tipo			= 'test52';
 	public static $section_tipo	= 'test3';
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -64,43 +44,110 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$value = $component->get_dato();
+		// 1 - Get data in all langs
+		$data = $component->get_data();
 
 		$this->assertTrue(
-			gettype($value)==='array' || gettype($value)==='NULL',
+			gettype($data)==='array' || gettype($data)==='NULL',
 			'expected type array or NULL : ' . PHP_EOL
-				. gettype($value)
+				. gettype($data)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_get_data_lang
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_get_data_lang() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		// Set sample data
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
 
-		$value = $component->set_dato(null);
+		// 1 - Get data in specific lang
+		$data = $component->get_data_lang('lg-eng');
+
 
 		$this->assertTrue(
-			$value===true,
-			'expected true : ' . PHP_EOL
-				. to_string($value)
+			gettype($data)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($data)
 		);
 
-		$result = $component->set_dato('["patata"]');
+		foreach ($data as $data_item) {
+			$this->assertTrue(
+				$data_item->lang==='lg-eng',
+				'expected lang lg-eng : ' . PHP_EOL
+					. $data_item->lang
+			);
+		}
+
+		// 2 - Get data in specific lang (lg-spa)
+		$data = $component->get_data_lang('lg-spa');
+
+		$this->assertTrue(
+			gettype($data)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($data)
+		);
+
+		foreach ($data as $data_item) {
+			$this->assertTrue(
+				$data_item->lang==='lg-spa',
+				'expected lang lg-spa : ' . PHP_EOL
+					. $data_item->lang
+			);
+		}
+
+		// 3 - Get data in specific lang (lg-deu)
+		$data = $component->get_data_lang('lg-deu');
+
+		$this->assertTrue(
+			gettype($data)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($data)
+		);
+
+		foreach ($data as $data_item) {
+			$this->assertTrue(
+				$data_item->lang==='lg-deu',
+				'expected lang lg-deu : ' . PHP_EOL
+					. $data_item->lang
+			);
+		}
+	}//end test_get_data_lang
+
+
+
+	/**
+	* TEST_set_data
+	* @return void
+	*/
+	public function test_set_data() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// 1 - Set null
+		$result = $component->set_data(null);
 
 		$this->assertTrue(
 			$result===true,
@@ -108,22 +155,102 @@ final class component_input_text_test extends TestCase {
 				. to_string($result)
 		);
 
-		$result = $component->set_dato('patata');
+		// 2 - Set sample data
+		$sample_data = $this->get_sample_data(self::$model);
+		$result = $component->set_data($sample_data);
 
 		$this->assertTrue(
 			$result===true,
 			'expected true : ' . PHP_EOL
 				. to_string($result)
 		);
+
 		$this->assertTrue(
-			$component->dato===["patata"],
-			'expected ["patata"] : ' . PHP_EOL
-				. to_string($component->dato)
+			$component->get_data()===$sample_data,
+			'expected true : ' . PHP_EOL
+				. to_string($component->get_data()) . PHP_EOL
+				. to_string($sample_data)
 		);
 
-		// restore dato
-		$component->set_dato($old_dato);
-	}//end test_set_dato
+		// restore data
+		$component->set_data($old_data);
+	}//end test_set_data
+
+
+
+	/**
+	* TEST_set_data_lang
+	* @return void
+	*/
+	public function test_set_data_lang() {
+
+		$this->user_login();
+
+		$lang = 'lg-eng';
+
+		$component = $this->build_component_instance();
+		$component->set_lang($lang);
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
+
+		// 1 - Set null
+		$result = $component->set_data_lang(null, $lang);
+
+		$this->assertTrue(
+			$result===true,
+			'expected true : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		$this->assertTrue(
+			$component->get_data_lang($lang)===[],
+			'expected true : ' . PHP_EOL
+				. to_string($component->get_data_lang($lang)) . PHP_EOL
+				. to_string([])
+		);
+		
+		// 2 - Set sample data in current lang
+		$lang_data = array_values(array_filter($sample_data, function($item) use ($lang) {
+			return $item->lang===$lang;
+		}));
+		$result = $component->set_data_lang($lang_data, $lang);
+
+		$this->assertTrue(
+			$component->get_data_lang($lang) == $lang_data,
+			'expected true : ' . PHP_EOL
+				. to_string($component->get_data_lang($lang)) . PHP_EOL
+				. to_string($lang_data)
+		);
+
+		// 3 - Set sample data in other lang (lg-spa)
+		$lang = 'lg-spa';
+		$lang_data = array_values(array_filter($sample_data, function($item) use ($lang) {
+			return $item->lang===$lang;
+		}));
+		$result = $component->set_data_lang($lang_data, $lang);
+
+		$this->assertTrue(
+			$component->get_data_lang($lang) == $lang_data,
+			'expected true : ' . PHP_EOL
+				. to_string($component->get_data_lang($lang)) . PHP_EOL
+				. to_string($lang_data)
+		);
+
+		// 4 - Set sample data in other lang (lg-deu)
+		$lang = 'lg-deu';
+		$lang_data = array_values(array_filter($sample_data, function($item) use ($lang) {
+			return $item->lang===$lang;
+		}));
+		$result = $component->set_data_lang($lang_data, $lang);
+
+		$this->assertTrue(
+			$component->get_data_lang($lang) == $lang_data,
+			'expected true : ' . PHP_EOL
+				. to_string($component->get_data_lang($lang)) . PHP_EOL
+				. to_string($lang_data)
+		);
+	}//end test_set_data_lang
 
 
 
@@ -133,8 +260,11 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_is_empty() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
 
+		// 1 - Set null
 		$value = $component->is_empty(null);
 
 		$this->assertTrue(
@@ -148,7 +278,7 @@ final class component_input_text_test extends TestCase {
 				. to_string($value)
 		);
 
-		$value = $component->is_empty('');
+		$value = $component->is_empty((object)[]);
 
 		$this->assertTrue(
 			$value===true,
@@ -156,7 +286,7 @@ final class component_input_text_test extends TestCase {
 				. to_string($value)
 		);
 
-		$value = $component->is_empty(' ');
+		$value = $component->is_empty((object)['value'=>' ']);
 
 		$this->assertTrue(
 			$value===true,
@@ -164,7 +294,7 @@ final class component_input_text_test extends TestCase {
 				. to_string($value)
 		);
 
-		$value = $component->is_empty("\n");
+		$value = $component->is_empty((object)['value'=>"\n"]);
 
 		$this->assertTrue(
 			$value===true,
@@ -181,7 +311,14 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_get_grid_value() {
 
+		$this->user_login();
+
 		$component = $this->build_component_instance();
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
+
+		$component->set_lang('lg-spa');
 
 		$result = $component->get_grid_value(null);
 
@@ -205,45 +342,38 @@ final class component_input_text_test extends TestCase {
 			'expected cell_type text : ' . PHP_EOL
 				. to_string($result->cell_type)
 		);
+		
+		// value
+		$items = array_filter($sample_data, function($el){
+			return $el->lang === 'lg-spa';
+		});
+		$values = array_map(function($el){
+			return $el->value;
+		}, $items);
+		$value_plain = implode(' | ', $values);		
+		$this->assertTrue(
+			$result->value === [$value_plain],
+			'expected value do not match:' . PHP_EOL
+				. 'expected: ' . to_string($value_plain) . PHP_EOL
+				. 'value: ' . to_string($result->value)
+		);
+
+		// fallback_value
+		$items = array_filter($sample_data, function($el){
+			return $el->lang === 'lg-eng';
+		});
+		$values = array_map(function($el){
+			return $el->value;
+		}, $items);
+		$value_plain = implode(' | ', $values);	
+		$this->assertTrue(
+			$result->fallback_value === [$value_plain],
+			'expected fallback_value do not match:' . PHP_EOL
+				. 'expected: ' . to_string($value_plain) . PHP_EOL
+				. 'value: ' . to_string($result->fallback_value)
+		);
+
 	}//end test_get_grid_value
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_valor_export
 
 
 
@@ -306,34 +436,112 @@ final class component_input_text_test extends TestCase {
 			        "test3",
 			        "dato"
 			    ],
-			    "lang": "all"
+			    "lang": "all",
+				"table_alias": "matrix_test"
 			}
 		');
 
-		$value = component_text_area::resolve_query_object_sql(
+		$result = component_input_text::resolve_query_object_sql(
 			$query_object
 		);
-		// dump($value, ' value ++ '.to_string());
 
 		$this->assertTrue(
-			$value->operator==='~*',
+			!empty($result->sentence),
 				'expected value do not match:' . PHP_EOL
-				.' expected: ~*' . PHP_EOL
-				.' value: '.to_string($value->operator)
+				.' expected: !empty(sentence) ' . PHP_EOL
+				.' value: '.to_string($result->sentence)
 		);
+
+		$expected = "matrix_test.string @? ('$.test52[*].value ? (@ like_regex \"'||_Q1_||'\" flag \"i\")')::jsonpath";
 		$this->assertTrue(
-			$value->q_parsed==="'.*\[\".*as.*'",
+			$result->sentence === $expected,
 				'expected value do not match:' . PHP_EOL
-				.' expected: '. "'.*\[\".*as.*'" . PHP_EOL
-				.' value: '.to_string($value->q_parsed)
+				.' expected: '. $expected . PHP_EOL
+				.' value: '.to_string($result->sentence)
 		);
+
 		$this->assertTrue(
-			$value->unaccent===true,
+			!empty($result->params),
 				'expected value do not match:' . PHP_EOL
-				.' expected: true' . PHP_EOL
-				.' value: '.to_string($value->unaccent)
-		);
+				.' expected: !empty(params) ' . PHP_EOL
+				.' value: '.to_string($result->params)
+		);		
 	}//end test_resolve_query_object_sql
+	
+	
+	
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$component = $this->build_component_instance();
+
+		// 1 - String case
+		$import_value = "Hello World";
+		$column_name  = "Title";
+		$response     = $component->conform_import_data($import_value, $column_name);
+
+		$this->assertTrue(
+			is_object($response),
+			'expected response to be an object'
+		);
+		$this->assertTrue(
+			$response->result === ["Hello World"],
+			'expected result to be ["Hello World"], got: ' . to_string($response->result)
+		);
+
+		// 2 - JSON case
+		$import_value = '["Hello", "World"]';
+		$response     = $component->conform_import_data($import_value, $column_name);
+
+		$this->assertTrue(
+			$response->result === ["Hello", "World"],
+			'expected result to be ["Hello", "World"], got: ' . to_string($response->result)
+		);
+
+		// 3 - Malformed JSON case
+		$import_value = '["Hello"';
+		$response     = $component->conform_import_data($import_value, $column_name);
+		
+		$this->assertTrue(
+			$response->result === null,
+			'expected result to be null for malformed JSON, got: ' . to_string($response->result)
+		);
+		$this->assertTrue(
+			!empty($response->errors),
+			'expected errors for malformed JSON'
+		);
+	}//end test_conform_import_data
+
+
+
+	/**
+	* TEST_get_grid_value_empty
+	* @return void
+	*/
+	public function test_get_grid_value_empty() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		// Set empty data
+		$component->set_data(null);
+
+		$result = $component->get_grid_value(null);
+
+		$this->assertTrue(
+			empty($result->value),
+			'expected value to be empty array, got: ' . to_string($result->value)
+		);
+		$this->assertTrue(
+			empty($result->fallback_value),
+			'expected fallback_value to be empty array, got: ' . to_string($result->fallback_value)
+		);
+	}//end test_get_grid_value_empty
+
 
 
 
@@ -363,33 +571,6 @@ final class component_input_text_test extends TestCase {
 
 
 
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-				'expected value do not match:' . PHP_EOL
-				.' expected type: string' . PHP_EOL
-				.' type: '.gettype($value)
-		);
-
-		$this->assertTrue(
-			!empty($value),
-				'expected value do not match:' . PHP_EOL
-				.' expected: !empty()' . PHP_EOL
-				.' value: '.to_string($value)
-		);
-	}//end test_get_diffusion_value
-
-
-
 	/////////// ⬇︎ common methods ⬇︎ ////////////////
 
 
@@ -399,6 +580,8 @@ final class component_input_text_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_model() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -426,6 +609,8 @@ final class component_input_text_test extends TestCase {
 	* @return void
 	*/
 	public function test_set_permissions() {
+
+		$this->user_login();
 
 		$component = $this->build_component_instance();
 

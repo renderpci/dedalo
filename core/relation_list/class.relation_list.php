@@ -43,9 +43,10 @@ class relation_list extends common {
 	public function get_inverse_references(object $sqo) : array {
 
 		// sections
-			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
-			$inverse_sections	= $sections->get_dato();
-
+		$sections = sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
+		$db_result = $sections->get_data();
+		
+		$inverse_sections = $db_result->fetch_all();
 
 
 		return $inverse_sections;
@@ -55,6 +56,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
+	* 
 	* @param array $ar_inverse_references
 	* @return object $json
 	*/
@@ -67,7 +69,7 @@ class relation_list extends common {
 		$sections_related		= [];
 		$ar_relation_components	= [];
 		# loop the locators that call to the section
-		foreach ((array)$ar_inverse_references as $current_record) {
+		foreach ($ar_inverse_references as $current_record) {
 
 			$current_section_tipo = $current_record->section_tipo;
 
@@ -157,7 +159,6 @@ class relation_list extends common {
 
 		// section instance
 			$section = section::get_instance(
-				$section_id,
 				$section_tipo,
 				$this->mode,
 				true // cache
