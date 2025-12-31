@@ -87,86 +87,49 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-		// public function test_set_dato() {
-
-		// 	$component = $this->build_component_instance();
-
-		// 	$old_dato = $component->get_dato();
-
-		// 	$dato	= null;
-		// 	$result	= $component->set_dato($dato);
-
-		// 	$this->assertTrue(
-		// 		gettype($result)==='boolean',
-		// 		'expected type boolean : ' . PHP_EOL
-		// 			. gettype($result)
-		// 	);
-
-		// 	// null case
-		// 		$this->assertTrue(
-		// 			$component->dato===[],
-		// 			'expected [] : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// object case
-		// 		$locator = json_decode('
-		// 			{
-		// 				"type":"dd48",
-		// 				"section_id":"2",
-		// 				"section_tipo":"test3",
-		// 				"from_component_tipo":"test54"
-		// 			}
-		// 		');
-		// 		$dato	= $locator;
-		// 		$result	= $component->set_dato($dato);
-
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode([$dato]),
-		// 			'expected array : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// array case
-		// 		$dato	= [$locator];
-		// 		$result	= $component->set_dato($dato);
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode($dato),
-		// 			'expected array : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// restore dato
-		// 		$result	= $component->set_dato($old_dato);
-
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode($old_dato),
-		// 			'expected old dato : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-		// }//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_valor();
+		$data		= null;
+		$result		= $component->set_data($data);
+		$check_data = $component->get_data();
 
 		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type string|array|null : ' . PHP_EOL
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_valor
+
+		// null case
+			$this->assertTrue(
+				$check_data===null,
+				'expected null : ' . PHP_EOL
+					. to_string($check_data)
+			);
+
+		// data case
+			$locator = json_decode('
+				{
+					"type":"dd48",
+					"section_id":"2",
+					"section_tipo":"test3",
+					"from_component_tipo":"test54"
+				}
+			');
+			$data	= [$locator];
+			$result	= $component->set_data( $data );
+			$check_data = $component->get_data();
+			$this->assertTrue(
+				true === locator::in_array_locator( $locator, $data ),
+				'expected array : ' . PHP_EOL
+					. to_string($check_data)
+			);
+
+	}//end test_set_data
 
 
 
