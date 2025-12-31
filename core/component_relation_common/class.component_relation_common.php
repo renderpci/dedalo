@@ -2,7 +2,7 @@
 
 /*
 * CLASS COMPONENT_RELATION_COMMON
-* Used as common base from all components that works from section relations data, instead standard component dato
+* Used as common base from all components that works from section relations data, instead standard component data
 * like component_model, component_parent, etc..
 *
 * data_column_name : 'relation'
@@ -27,14 +27,11 @@ class component_relation_common extends component_common {
 		# @see class geonames::import_data
 		public $save_to_database_relations = true;
 
-		// $dato_full. component dato with all langs
-		public $dato_full;
-
 		# relation_type . Determines inverse resolutions and locator format
 		# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
 		protected $relation_type ; // Set on construct from properties
 
-		# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component dato
+		# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component data
 		# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
 		# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
 		# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
@@ -119,7 +116,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
-	* Array of components model name that using locators in dato and extends component_relation_common
+	* Array of components model name that using locators in data and extends component_relation_common
 	* @return array $components_with_relations
 	*/
 	public static function get_components_with_relations() : array {
@@ -152,9 +149,9 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	*
@@ -242,7 +239,7 @@ class component_relation_common extends component_common {
 				$tipo_is_valid = ontology_utils::check_tipo_is_valid($locator->section_tipo);
 				if (!$tipo_is_valid) {
 					debug_log(__METHOD__
-						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from dato " . PHP_EOL
+						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from data " . PHP_EOL
 						. ' section_tipo: ' . to_string($locator->section_tipo) . PHP_EOL
 						. ' locator: ' . to_string($locator)
 						, logger::ERROR
@@ -719,7 +716,7 @@ class component_relation_common extends component_common {
 		$object_exists = locator::in_array_locator( $locator, $data );
 		if ($object_exists===false) {
 
-			// Add to dato
+			// Add to data
 			array_push($data, $locator);
 
 			$added = true;
@@ -731,7 +728,7 @@ class component_relation_common extends component_common {
 			);
 		}
 
-		// Updates current dato
+		// Updates current data
 		if ($added===true) {
 			$this->set_data( $data );
 		}
@@ -744,7 +741,7 @@ class component_relation_common extends component_common {
 
 	/**
 	* REMOVE_LOCATOR_FROM_DATA
-	* Removes from dato one or more locators that accomplish given locator equality
+	* Removes from data one or more locators that accomplish given locator equality
 	* (!) Not save the result
 	* @param object $locator
 	* @param array $ar_properties = []
@@ -813,7 +810,7 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// Updates current dato relations with clean array of locators
+		// Updates current data relations with clean array of locators
 			if ($removed===true) {
 				$this->set_data( $new_relations );
 			}
@@ -821,115 +818,6 @@ class component_relation_common extends component_common {
 
 		return (bool)$removed;
 	}//end remove_locator_from_data
-
-
-
-	// /**
-	// * SAVE
-	// * Save component data in matrix using parent section
-	// * Verify all necessary vars to save and call section 'save_component_dato($this)'
-	// * @see section->save_component_dato($this)
-	// * @return bool
-	// */
-	// public function save() : bool {
-
-	// 	// short vars
-	// 		$section_tipo	= $this->get_section_tipo();
-	// 		$section_id		= $this->get_section_id();
-	// 		$tipo			= $this->get_tipo();
-	// 		$mode			= $this->get_mode();
-	// 		$lang			= DEDALO_DATA_LANG;
-
-	// 	// check component minimum vars before save
-	// 		if( empty($section_id) || empty($tipo) || empty($lang) ) {
-	// 			debug_log(__METHOD__
-	// 				. " Error on save: Few vars! . Ignored order" . PHP_EOL
-	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
-	// 				. ' section_tipo: ' . $section_tipo . PHP_EOL
-	// 				. ' tipo: ' . $tipo . PHP_EOL
-	// 				. ' model: ' . get_class($this) . PHP_EOL
-	// 				. ' mode: ' . $mode . PHP_EOL
-	// 				. ' lang: ' . $lang
-	// 				, logger::ERROR
-	// 			);
-	// 			return false;
-	// 		}
-
-	// 	// tm mode case
-	// 		if ($this->mode==='tm' || $this->data_source==='tm') {
-	// 			debug_log(__METHOD__
-	// 				. " Error on save: invalid mode (tm)! . Ignored order" . PHP_EOL
-	// 				. ' section_id: ' . to_string($section_id) . PHP_EOL
-	// 				. ' section_tipo: ' . $section_tipo . PHP_EOL
-	// 				. ' tipo: ' . $tipo . PHP_EOL
-	// 				. ' model: ' . get_class($this) . PHP_EOL
-	// 				. ' mode: ' . $mode . PHP_EOL
-	// 				. ' data_source: ' . $this->data_source . PHP_EOL
-	// 				. ' lang: ' . $lang
-	// 				, logger::ERROR
-	// 			);
-	// 			return false;
-	// 		}
-
-	// 	// section save. The section will be the responsible to save the component data
-	// 		$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
-	// 		$section			= $this->get_my_section();
-	// 		$section_id			= $section->save_component_dato(
-	// 			$this, // object $component_obj
-	// 			'relation', // string $component_data_type
-	// 			$save_to_database // bool $save_to_database
-	// 		);
-
-	// 	// relations table links update (default is true)
-	// 		// if ($this->save_to_database_relations===true) {
-	// 		// 	// Dataframe
-	// 		// 	// When the component is a dataframe it get only the section_id_key and section_tipo_key
-	// 		// 	// but to save in relations will need the full data (all locators of the component) to replace relations rows
-	// 		// 	// so remove the caller_dataframe for the component and all caches (dato_resolved and is_loaded_matrix_data)
-	// 		// 	// to get the full data of the component.
-	// 		// 	if(get_called_class() === 'component_dataframe'){
-	// 		// 		$current_caller_dataframe		= $this->get_caller_dataframe();
-	// 		// 		$this->caller_dataframe			= null;
-	// 		// 		$this->dato_resolved			= null;
-	// 		// 		$this->is_loaded_matrix_data	= false;
-	// 		// 	}
-
-	// 		// 	$current_dato = $this->get_dato_full();
-
-	// 		// 	$relation_options = new stdClass();
-	// 		// 		$relation_options->section_tipo			= $section_tipo;
-	// 		// 		$relation_options->section_id			= $section_id;
-	// 		// 		$relation_options->from_component_tipo	= $tipo;
-	// 		// 		$relation_options->ar_locators			= $current_dato;
-
-	// 		// 	search::propagate_component_dato_to_relations_table($relation_options);
-
-	// 		// 	// Dataframe
-	// 		// 	// restores the caller dataframe of the component
-	// 		// 	// and delete his data caches to be re-calculated for other calls with the caller_dataframe
-	// 		// 	if(get_called_class() === 'component_dataframe'){
-	// 		// 		$this->caller_dataframe			= $current_caller_dataframe;
-	// 		// 		$this->dato_resolved			= null;
-	// 		// 		$this->is_loaded_matrix_data	= false;
-	// 		// 	}
-	// 		// }
-
-	// 	// save_to_database. Optional stop the save process to delay ddbb access
-	// 		if ($save_to_database===false) {
-	// 			# Stop here (remember make a real section save later!)
-	// 			# No component time machine data will be saved when section saves later
-	// 			return false;
-	// 		}
-
-	// 	// activity
-	// 		$this->save_activity();
-
-	// 	// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
-	// 		$this->propagate_to_observers();
-
-
-	// 	return true;
-	// }//end save
 
 
 
@@ -1051,7 +939,7 @@ class component_relation_common extends component_common {
 				$current_section_id		= $current_parent->section_id;
 
 				if (!empty($filter)) {
-					# compare current with filter
+					// compare current with filter
 					$process=false;
 					foreach ($filter as $current_locator) {
 						if ($current_locator->section_id==$current_section_id && $current_locator->section_tipo===$current_section_tipo) {
@@ -1061,8 +949,7 @@ class component_relation_common extends component_common {
 					if(!$process) continue; // Skip current section
 				}
 
-
-				# Target section data
+				// Target section data
 				$model_name						= ontology_node::get_model_by_tipo($current_component_tipo,true); // 'component_relation_children';
 				$mode							= 'edit';
 				$lang							= DEDALO_DATA_NOLAN;
@@ -1075,11 +962,11 @@ class component_relation_common extends component_common {
 					$current_section_tipo
 				);
 
-				# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
-				# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
+				// NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
+				// $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
 				$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $section_id );
 				if ($removed===true) {
-					$component_relation_children->Save();
+					$component_relation_children->save();
 					debug_log(__METHOD__
 						." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo "
 						, logger::DEBUG
@@ -1316,13 +1203,13 @@ class component_relation_common extends component_common {
 		// q_operator
 			$q_operator = $query_object->q_operator ?? null;
 
-		# Clone and modify query_object for search in relations_search too if the operator is different to ==
+		// Clone and modify query_object for search in relations_search too if the operator is different to ==
 			$relation_search_obj = clone $query_object;
 			if ($q_operator!=='==') {
 				$relation_search_obj->component_path = ['relations_search'];
 			}
 
-		# Group the two query_object in a 'or' clause
+		// Group the two query_object in a 'or' clause
 		$operator = '$or';
 		if ($q_operator==='!=') {
 			$operator = '$and';
@@ -1351,138 +1238,6 @@ class component_relation_common extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang=null
-	* @param object|null $option_obj=null
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$dato = $this->get_dato();
-
-		$diffusion_value = !empty($dato)
-			? json_encode($dato)
-			: null;
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_DIFFUSION_DATO
-	* @return string $diffusion_value
-	*/
-	public function get_diffusion_dato() : ?string {
-
-		$dato = $this->get_dato();
-		if (is_array($dato)) {
-			$ar_id = array();
-			foreach ($dato as $current_locator) {
-				$ar_id[] = $current_locator->section_id;
-			}
-			$final_dato = $ar_id;
-		}
-		$diffusion_value = isset($final_dato)
-			? json_encode($final_dato)
-			: null; // json_encode([]);
-
-		return $diffusion_value;
-	}//end get_diffusion_dato
-
-
-
-	/**
-	* GET_DIFFUSION_RESOLVE_VALUE
-	* Alias of static diffusion_sql::resolve_value
-	* @param object|null $option_obj=null
-	* @return mixed
-	*/
-	public function get_diffusion_resolve_value( ?object $option_obj=null ) : mixed {
-
-		$args_list = func_get_args();
-		if (count($args_list)>1) {
-
-			$dato = $this->get_dato();
-
-			$ar_value = [];
-			foreach ($args_list as $current_option_obj) {
-
-				$lang = $current_option_obj->lang ?? $this->lang; // $this->lang
-
-				$options = new stdClass();
-					$options->lang			= $lang;
-					$options->properties	= $current_option_obj;
-
-				$value = diffusion_sql::resolve_value($options, $dato);
-
-				$ar_value[] = $value;
-			}
-
-			return $ar_value;
-		}
-
-		// example $option_obj
-			// {
-			//     "process_dato_arguments": {
-			//         "target_component_tipo": "numisdata698",
-			//         "component_method": "get_diffusion_value"
-			//     },
-			//	   "lang" : "lg-spa"
-			// }
-
-		$dato = $this->get_dato();
-
-		$lang = $option_obj->lang; // $this->lang
-
-		$options = new stdClass();
-			$options->lang			= $lang;
-			$options->properties	= $option_obj;
-
-		$value = diffusion_sql::resolve_value($options, $dato);
-
-
-		return $value;
-	}//end get_diffusion_resolve_value
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE_TERM_ID
-	* @return string json_encoded array
-	*/
-	public function get_diffusion_value_term_id() {
-
-		$dato = $this->get_dato();
-
-		$ar_term = [];
-		foreach ((array)$dato as $key => $current_locator) {
-
-			// Check target is publicable
-				$current_is_publicable = diffusion::get_is_publicable($current_locator);
-				if ($current_is_publicable!==true) {
-					debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
-					continue;
-				}
-
-			$term_id = locator::get_term_id_from_locator($current_locator);
-			$ar_term[] = $term_id;
-		}
-
-		$result = json_encode($ar_term);
-
-
-		return $result;
-	}//end get_diffusion_value_term_id
 
 
 
@@ -1557,7 +1312,7 @@ class component_relation_common extends component_common {
 
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
-			$data = $this->get_dato();
+			$data = $this->get_data();
 
 			$diffusion_value = !empty($data)
 				? json_encode($data)
@@ -1923,7 +1678,7 @@ class component_relation_common extends component_common {
 				return null;
 			}
 
-		// dato
+		// data
 			$data = $this->get_data();
 			if (empty($data)) {
 				return null;
@@ -1947,7 +1702,7 @@ class component_relation_common extends component_common {
 						$locator->set_section_tipo($parent_locator->section_tipo);
 						$locator->set_section_id($parent_locator->section_id);
 						$locator->set_from_component_tipo($this->tipo);
-						$locator->set_type($this->relation_type); // mandatory and equal as component dato relation_type
+						$locator->set_type($this->relation_type); // mandatory and equal as component data relation_type
 
 					if (!in_array($locator, $relations_search_value)) {
 						$relations_search_value[] = $locator;
@@ -2003,104 +1758,6 @@ class component_relation_common extends component_common {
 
 		return $filter_list_data;
 	}//end get_filter_list_data
-
-
-
-	/**
-	* PARSE_STATS_VALUES
-	* @param string $tipo
-	* @param string $section_tipo
-	* @param object $properties
-	* @param string $lang=DEDALO_DATA_LANG
-	* @param string $selector='valor_list'
-	* @return array $ar_clean
-	*/
-	public static function parse_stats_values( string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list' ) : array {
-
-		// Search
-			if (isset($properties->stats_look_at)) {
-				$related_tipo = reset($properties->stats_look_at);
-				if (isset($properties->valor_arguments)) {
-					$selector = 'dato';
-				}
-			}else{
-				$related_tipo = false;
-			}
-			$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
-			$end_path 	= end($path);
-			$end_path->selector = $selector;
-
-			$search_query_object = json_decode('{
-			  "section_tipo": "['.$section_tipo.']",
-			  "allow_sub_select_by_id": false,
-			  "remove_distinct": true,
-			  "limit": 0,
-			  "select": [
-				{
-				  "path": '.json_encode($path).'
-				}
-			  ]
-			}');						
-			$search 	= search::get_instance($search_query_object);
-			$db_result 	= $search->search();
-
-		// Parse results for stats
-			$ar_clean = [];
-			foreach ($db_result as $item) {			
-				
-				#$uid = $locator->section_tipo.'_'.$locator->section_id;
-
-				$value = end($item);
-
-				// locators case (like component_select)
-				if (strpos($value, '[{')===0 && !isset($properties->valor_arguments)) {
-					$ar_locators = $value;
-					foreach ((array)$ar_locators as $locator) {
-
-						$label = ts_object::get_term_by_locator( $locator, $lang, true );
-						$label = !empty($label) ? strip_tags(trim($label)) : $label;
-
-						$uid = $locator->section_tipo.'_'.$locator->section_id;
-
-						if(!isset($ar_clean[$uid])){
-							$ar_clean[$uid] = new stdClass();
-							$ar_clean[$uid]->count = 0;
-							$ar_clean[$uid]->tipo  = $tipo;
-						}
-
-						$ar_clean[$uid]->count++;
-						$ar_clean[$uid]->value = $label;
-					}
-				// resolved string case (like component_portal)
-				}else{
-
-					$label = strip_tags(trim($value));
-					if ($label==='[]') {
-						$label = 'not defined';
-					}
-
-					// Override label with custom component parse
-					if (isset($properties->stats_look_at) && isset($properties->valor_arguments)) {
-						$model_name	= ontology_node::get_model_by_tipo(reset($properties->stats_look_at), true);
-						$label		= $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
-					}
-
-					$uid = $label;
-
-					if(!isset($ar_clean[$uid])){
-						$ar_clean[$uid] = new stdClass();
-						$ar_clean[$uid]->count = 0;
-						$ar_clean[$uid]->tipo  = $tipo;
-					}
-
-					$ar_clean[$uid]->count++;
-					$ar_clean[$uid]->value = $label;
-				}
-			}//end foreach
-
-
-		return $ar_clean;
-	}//end parse_stats_values
 
 
 
@@ -2576,8 +2233,8 @@ class component_relation_common extends component_common {
 			$operator	= $search_item->operator ?? '$or';
 			$source		= $search_item->source;
 
-			$dato_filter = new stdClass();
-				$dato_filter->{$operator} = [];
+			$filter = new stdClass();
+				$filter->{$operator} = [];
 
 			switch ($source) {
 
@@ -2615,7 +2272,7 @@ class component_relation_common extends component_common {
 								continue;
 							}
 
-						$dato_filter->{$operator}[] = $object;
+						$filter->{$operator}[] = $object;
 					}
 					break;
 
@@ -2727,7 +2384,7 @@ class component_relation_common extends component_common {
 								$filter_item->q		= $joined_search_data;
 								$filter_item->path	= $current_value->path;
 
-							$dato_filter->{$operator}[] =  $filter_item;
+							$filter->{$operator}[] =  $filter_item;
 
 						}else{
 							// if the component is other than section_id, create a q and path with every compnent_data.
@@ -2742,7 +2399,7 @@ class component_relation_common extends component_common {
 									$filter_item->q		= $search_data;
 									$filter_item->path	= $current_value->path;
 									//$filter_item->path	= search::get_query_path($tipo, $section_tipo,false,false)[0];
-								$dato_filter->{$operator}[] =  $filter_item;
+								$filter->{$operator}[] =  $filter_item;
 							}
 						}
 					}
@@ -2751,13 +2408,13 @@ class component_relation_common extends component_common {
 				case 'hierarchy_terms':
 					$hierarchy_terms_filter = component_relation_common::get_hierarchy_terms_filter($search_item->value);
 					if(empty($hierarchy_terms_filter)) break;
-					$dato_filter->{$operator} =  $hierarchy_terms_filter;
+					$filter->{$operator} =  $hierarchy_terms_filter;
 					break;
 			}
 
 			// finished group add
-			if (!empty($dato_filter->{$operator})) {
-				$ar_fixed_filter[] =$dato_filter;
+			if (!empty($filter->{$operator})) {
+				$ar_fixed_filter[] =$filter;
 			}
 		}//end foreach ($ar_fixed as $search_item)
 
@@ -2800,7 +2457,7 @@ class component_relation_common extends component_common {
 				break;
 
 			default:
-				$component_data = $component->get_dato();
+				$component_data = $component->get_data();
 				break;
 		}
 		if (empty($component_data)) {
@@ -2814,9 +2471,9 @@ class component_relation_common extends component_common {
 			$current_compnent_data = [];
 
 			$children = component_relation_common::get_ddo_children_recursive($ar_ddo, $dd_object);
-			foreach($component_data as $current_data){
+			foreach($component_data as $element){
 				foreach ($children as $current_ddo_child) {
-					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $current_data);
+					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $element);
 					// join the result data with the siblings resolution.
 					if (!empty($result_compnent_data)) {
 						$current_compnent_data = array_merge($current_compnent_data, $result_compnent_data);
@@ -2870,7 +2527,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
@@ -2916,8 +2573,8 @@ class component_relation_common extends component_common {
 		// Check if is a JSON string. Is yes, decode
 			if(json_handler::is_json($import_value)){
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-				$import_value	= $dato_from_json;
+				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$import_value	= $data_from_json;
 			}
 
 		// short vars
@@ -3153,7 +2810,7 @@ class component_relation_common extends component_common {
 			// Section record . create new empty section in target section tipo
 			// $section_new = section::get_instance(null, $target_section_tipo);
 			// $save_options = new stdClass();
-			// 	$save_options->caller_dato				= $this->get_dato();
+			// 	$save_options->caller_data				= $this->get_data();
 			// 	$save_options->component_filter_data	= $component_filter_data;
 			// $new_section_id = $section_new->Save( $save_options );
 
@@ -3174,7 +2831,7 @@ class component_relation_common extends component_common {
 			}
 
 		// 3 PORTAL
-			// Portal dato. add current section id to component portal dato array
+			// Portal data. add current section id to component portal data array
 			// Basic locator
 			$locator = new locator();
 				$locator->set_section_id($new_section_id);
@@ -3223,7 +2880,7 @@ class component_relation_common extends component_common {
 
 		$data = $this->get_data();
 
-		if (!empty($dato)) {
+		if (!empty($data)) {
 
 			// arguments from properties->process_dato_arguments->custom_arguments
 				$args 	 = func_get_args(); // is array of objects
@@ -3309,13 +2966,13 @@ class component_relation_common extends component_common {
 			$resolve_ddo->last = true;
 		}
 
-		foreach ($data as $data_item) {
+		foreach ($data as $element) {
 
 			// create the current_data with the section of the component that call.
 			// it will use to resolve the ddo_chain
 				$current_locator = new stdClass();
-					$current_locator->section_tipo	= $data_item->section_tipo;
-					$current_locator->section_id	= $data_item->section_id;
+					$current_locator->section_tipo	= $element->section_tipo;
+					$current_locator->section_id	= $element->section_id;
 
 			$result_compnent_data = component_relation_common::resolve_component_data_recursively(
 				$ddo_map,
@@ -3335,7 +2992,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_DDO_MAP_ID
 	* Flat the ddo_map objects into a string representation of the path.
-	* It use the section_tipo and component_tipo to build the id.	*
+	* It use the section_tipo and component_tipo to build the id.
 	* @param array $ddo_map
 	* @return string $ddo_map_id
 	*/
