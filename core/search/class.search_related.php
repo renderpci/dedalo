@@ -30,8 +30,8 @@ class search_related extends search {
 			$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
 		// pagination
-			$limit	= $this->sqo->limit;
-			$offset	= $this->sqo->offset;
+			$limit	= $this->sqo->limit ?? 10;
+			$offset	= $this->sqo->offset ?? 0;
 
 		// group_by
 			$group_by = $this->sqo->group_by ?? null;
@@ -102,7 +102,8 @@ class search_related extends search {
 				// Breakdown
 				if( $breakdown===true ){
 					$query	.= PHP_EOL;
-					$query	.= 'cross join jsonb_array_elements( relation->\'relations\' ) as locator_data';
+					// $query	.= 'cross join jsonb_array_elements( relation->\'relations\' ) as locator_data';
+					$query	.= 'cross join jsonb_path_query(relation, \'$.*[*]\') as locator_data';
 				}
 
 				// WHERE
@@ -193,9 +194,11 @@ class search_related extends search {
 				// limit
 				if(!empty($limit)){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
-					if($offset !== null){
-						$str_query .= PHP_EOL . 'OFFSET '.$offset;
-					}
+				}
+
+				// offset
+				if($offset !== null){
+					$str_query .= PHP_EOL . 'OFFSET '.$offset;
 				}
 			}
 
@@ -235,7 +238,6 @@ class search_related extends search {
 				$sqo->set_filter_by_locators($filter_locators);
 				$sqo->set_breakdown(true);
 
-
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
 
@@ -260,7 +262,7 @@ class search_related extends search {
 		// set the results as the inverse_locator
 		foreach ($db_result as $row) {
 
-			$current_locator = $row->locator_data;
+			$current_locator = json_decode($row->locator_data);
 
 			// Add some temporal info to current locator for build component later
 			$current_locator->from_section_tipo	= $row->section_tipo;
@@ -277,6 +279,7 @@ class search_related extends search {
 				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
+
 
 		return $ar_inverse_locators;
 	}//end get_referenced_locators
