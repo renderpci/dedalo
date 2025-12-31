@@ -1454,10 +1454,10 @@ final class dd_api_Test extends TestCase {
 		                            "params": {
 		                                "save": true,
 		                                "changed": false,
-		                                "current_dato": false,
+		                                "current_data": false,
 		                                "references_limit": 0
 		                            },
-		                            "function": "set_dato_external"
+		                            "function": "set_data_external"
 		                        }
 		                    },
 		                    "component_tipo": "numisdata197"
