@@ -8,6 +8,7 @@ class BaseTestCase extends TestCase
 
 
     public $last_section_id = 1;
+	public static $model;
 
 
 
@@ -46,6 +47,42 @@ class BaseTestCase extends TestCase
 				. 'estimated_time ms: ' . $estimated_time
 		);        
 	}//end execution_timing
+
+
+
+	/**
+	* USER_LOGIN
+	* @return bool
+	*/
+	protected function user_login() : bool {
+
+		$user_id = TEST_USER_ID; // Defined in bootstrap
+
+		$result = login::is_logged();
+		if ($result===false) {
+			login_test::force_login($user_id);
+			$result = login::is_logged();
+		}
+		
+		return $result;
+	}//end user_login
+
+
+
+	/**
+	* GET_SAMPLE_DATA
+	* @return array
+	*/
+	public function get_sample_data( string $model ) : array {
+		
+		// load sample data
+		$json_data = file_get_contents(
+			DEDALO_CORE_PATH . '/'.$model.'/samples/data.json'
+		);		
+		$result = json_decode($json_data);
+		
+		return $result;
+	}//end get_sample_data
 
 
 

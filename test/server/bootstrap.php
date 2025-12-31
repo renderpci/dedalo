@@ -54,9 +54,11 @@
 	);
 
 // require files
-	require_once 'components/data.php';
-	require_once 'components/elements.php';
-	require_once dirname(__FILE__) . '/login/login_Test.php';
+require_once dirname(__FILE__) . '/login/login_Test.php';
+require_once dirname(__FILE__) . '/class.BaseTestCase.php';
+require_once 'components/data.php';
+require_once 'components/elements.php';
+
 
 // PHPUnitUtil reflection
 	class PHPUnitUtil
