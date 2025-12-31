@@ -34,10 +34,10 @@ class component_portal extends component_relation_common {
 			$options = new stdClass();
 				$options->save				= true; // $mode==='edit' ? true : false;
 				$options->changed			= false; // $mode==='edit' ? true : false;
-				$options->current_dato		= false; // $this->get_dato();
+				$options->current_data		= false; // $this->get_dato();
 				$options->references_limit	= 0; // (!) Set to zero to get all references to enable sort
 
-			$this->set_dato_external($options);	// Forces update dato with calculated external dato
+			$this->set_data_external($options);	// Forces update dato with calculated external dato
 
 			return true;
 		}
