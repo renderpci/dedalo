@@ -572,13 +572,25 @@ class component_relation_common extends component_common {
 			$relation_type			= $this->relation_type;
 			$from_component_tipo	= $this->tipo;			
 
-		// check section_id
+		// check section_id and section_tipo
+		// avoid bad formed locators
 			if (!isset($data_element->section_id) || !isset($data_element->section_tipo)) {
 				debug_log(__METHOD__
-					." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
+					." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->section_id, $this->tipo] ". PHP_EOL
 					. ' called_class: ' . get_called_class() .PHP_EOL
 					. ' data_element: '.to_string($data_element)
 					, logger::ERROR
+				);
+				return false;
+			}
+
+		// check autoreference
+		// avoid infinite loop
+			if ($data_element->section_tipo===$this->section_tipo && $data_element->section_id==$this->section_id) {
+				debug_log(__METHOD__
+					." IGNORED autoreference --- avoid infinite loop " . PHP_EOL
+					.' locator: ' . to_string($data_element)
+					, logger::DEBUG
 				);
 				return false;
 			}
@@ -592,6 +604,11 @@ class component_relation_common extends component_common {
 		// type
 			if (!isset($locator_copy->type) || empty($locator_copy->type)) {
 				$locator_copy->type = $relation_type;
+			}
+
+		// Add type_rel
+			if ( $this->model === 'component_relation_related' && !isset($locator_copy->type_rel) ) {
+				$locator_copy->type_rel = $this->relation_type_rel;
 			}
 
 		// from_component_tipo
@@ -1647,7 +1664,7 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				$total = exec_time_unit($start_time,'ms')." ms";
 				debug_log(__METHOD__
-					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->parent] ".get_class($this) .' : '. ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
+					." Total time $total - $total_ar_result locators [$this->section_tipo, $this->tipo, $this->section_id] ".get_class($this) .' : '. ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true)
 					, logger::DEBUG
 				);
 			}
