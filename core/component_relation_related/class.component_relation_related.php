@@ -29,59 +29,6 @@ class component_relation_related extends component_relation_common {
 
 
 	/**
-	* ADD_RELATED
-	* Add one locator to current 'data'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'data' but NOT saves
-	* @return bool $result
-	*/
-	public function add_related( object $locator ) : bool {
-
-		// check locator
-			if ($locator->section_tipo===$this->section_tipo && $locator->section_id==$this->parent) {
-				debug_log(__METHOD__
-					." Invalid related element (self) " . PHP_EOL
-					.' locator: ' . to_string($locator)
-					, logger::DEBUG
-				);
-				return false;
-			}
-
-		// Add type
-			if (!isset($locator->type)) {
-				$locator->type = $this->default_relation_type;
-			}
-
-		// Add type_rel
-			if (!isset($locator->type_rel)) {
-				$locator->type_rel = $this->relation_type_rel;
-			}
-
-		// Add current locator to component data
-			$result = $this->add_locator_to_data($locator);
-
-
-		return $result;
-	}//end add_related
-
-
-
-	/**
-	* REMOVE_RELATED
-	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
-	* NOTE: This method updates component 'data' but NOT saves
-	* @return bool $result
-	*/
-	public function remove_related( object $locator ) : bool {
-
-		// Add current locator to component data
-		$result = $this->remove_locator_from_data($locator);
-
-		return $result;
-	}//end remove_related
-
-
-
-	/**
 	* GET_DATA_WITH_REFERENCES
 	* Return the full data of the component, the real data with the calculated references
 	* @return array $data_with_references
