@@ -623,10 +623,10 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato_external
+	* TEST_set_data_external
 	* @return void
 	*/
-	public function test_set_dato_external() : void {
+	public function test_set_data_external() : void {
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -640,18 +640,18 @@ final class component_relation_common_test extends TestCase {
 		$options = (object)[
 			'save'				=> false,
 			'changed'			=> false,
-			'current_dato'		=> false,
+			'current_data'		=> false,
 			'references_limit'	=> 10
 		];
 
-		$value = $component->set_dato_external($options);
+		$value = $component->set_data_external($options);
 
 		$this->assertTrue(
 			(gettype($value)==='boolean'),
 			'expected type boolean : ' . PHP_EOL
 				. gettype($value)
 		);
-	}//end test_set_dato_external
+	}//end test_set_data_external
 
 
 

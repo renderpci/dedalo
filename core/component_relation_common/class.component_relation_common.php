@@ -1572,27 +1572,27 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* SET_DATO_EXTERNAL
-	* Get the dato from other component that reference at the current section of the component (portal, autocomplete, select, etc)
+	* SET_DATA_EXTERNAL
+	* Get the data from other component that reference at the current section of the component (portal, autocomplete, select, etc)
 	* the result will be the result of the search to the external section and component
-	* and the combination with the dato of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
+	* and the combination with the data of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
 	* @see used by component_autocomplete and component_portal
 	* @param object options
 	* @return bool
 	*/
-	public function set_dato_external( object $options ) : bool {
+	public function set_data_external( object $options ) : bool {
 		$start_time=start_time();
 
 		// options
 			$save				= $options->save ?? false;
 			$changed			= $options->changed ?? false;
-			$current_dato		= $options->current_dato ?? false;
+			$current_data		= $options->current_data ?? false;
 			$references_limit	= $options->references_limit ?? 10;
 
-		// dato set
-			$dato = ($current_dato!==false)
-				? $current_dato
-				: $this->get_dato();
+		// data set
+			$data = ($current_data!==false)
+				? $current_data
+				: $this->get_data();
 
 		// properties . get the properties for get search section and component
 			$properties				= $this->get_properties();
@@ -1648,10 +1648,10 @@ class component_relation_common extends component_common {
 						$final_data = call_user_func_array(array($observer_component, $function), $params);
 
 					}else{
-						// get the dato from components with data locators
-						$final_data = $observer_component->get_dato();
+						// get the data from components with data locators
+						$final_data = $observer_component->get_data();
 					}
-					$this->set_dato($final_data);
+					$this->set_data($final_data);
 					debug_log(__METHOD__
 						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
 						, logger::DEBUG
@@ -1678,8 +1678,8 @@ class component_relation_common extends component_common {
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
-					$component_to_search_dato = $component_to_search->get_dato();
-					foreach ($component_to_search_dato as $current_locator) {
+					$component_to_search_data = $component_to_search->get_data();
+					foreach ($component_to_search_data as $current_locator) {
 						$locator = new locator();
 							$locator->set_section_id($current_locator->section_id);
 							$locator->set_section_tipo($current_locator->section_tipo);
@@ -1700,18 +1700,18 @@ class component_relation_common extends component_common {
 							DEDALO_DATA_NOLAN,
 							$locator->section_tipo
 						);
-						$overwrite_dato = $component_overwrite->get_dato();
+						$overwrite_data = $component_overwrite->get_data();
 
-						$this->set_dato($overwrite_dato);
-						debug_log(__METHOD__." Overwritten dato ($model_name - $data_from_field_tipo - $locator->section_tipo - $locator->section_id)".to_string(), logger::DEBUG);
-						$this->Save();
+						$this->set_data($overwrite_data);
+						debug_log(__METHOD__." Overwritten data ($model_name - $data_from_field_tipo - $locator->section_tipo - $locator->section_id)".to_string(), logger::DEBUG);
+						$this->save();
 					}
 
 				// task done. return
 					return true;
 			}
 
-		// new dato
+		// new data
 			$new_relation_locators = [];
 
 		// default normal case
@@ -1741,15 +1741,15 @@ class component_relation_common extends component_common {
 						$locator->section_tipo,
 						false
 					);
-					$component_dato = $component_data_for_search->get_data_with_references();
+					$component_data = $component_data_for_search->get_data_with_references();
 
-					foreach ($component_dato as $current_locator) {
-						$locator_dato = new locator();
-							$locator_dato->set_section_id($current_locator->section_id);
-							$locator_dato->set_section_tipo($current_locator->section_tipo);
+					foreach ($component_data as $current_locator) {
+						$locator_data = new locator();
+							$locator_data->set_section_id($current_locator->section_id);
+							$locator_data->set_section_tipo($current_locator->section_tipo);
 							// from_component_tipo
-							$locator_dato->set_from_component_tipo($component_to_search);
-						$new_relation_locators[] = $locator_dato;
+							$locator_data->set_from_component_tipo($component_to_search);
+						$new_relation_locators[] = $locator_data;
 					}
 				}
 			}
@@ -1792,49 +1792,49 @@ class component_relation_common extends component_common {
 				}
 
 			$total_ar_result	= sizeof($ar_result);
-			$total_ar_dato		= sizeof($dato);
-			$final_dato			= [];
+			$total_ar_data		= sizeof($data);
+			$final_data			= [];
 
-			if ($total_ar_result===0 && $total_ar_dato===0) {
+			if ($total_ar_result===0 && $total_ar_data===0) {
 				// empty values
 				$changed = false;
 
-			}else if ($total_ar_result===0 && $total_ar_dato > 0){
+			}else if ($total_ar_result===0 && $total_ar_data > 0){
 
 				$changed = true;
 
 			}else if ($total_ar_result>2000) {
 				// Not maintain order, is too expensive above 1000 locators
-				if ($total_ar_dato!==$total_ar_result) {
+				if ($total_ar_data!==$total_ar_result) {
 					$changed = false; // avoid expensive save
-					$this->set_dato($ar_result);
+					$this->set_data($ar_result);
 					debug_log(__METHOD__
-						." Saving big result with different data (dato:$total_ar_dato - result:$total_ar_result) "
+						." Saving big result with different data (data:$total_ar_data - result:$total_ar_result) "
 						, logger::DEBUG
 					);
 				}
 			}else{
 				// preserve order
-					foreach ((array)$dato as $key => $current_locator) {
+					foreach ((array)$data as $key => $current_locator) {
 
 						$found = array_find($ar_result, function($el) use($current_locator){
 							return ($el->section_id===$current_locator->section_id && $el->section_tipo===$current_locator->section_tipo);
 						});
 						// if (empty($found)) {
-						// 	unset($dato[$key]);
+						// 	unset($data[$key]);
 						// 	$changed = true;
 						// 	break;
 						// }
 						if(!empty($found)){
-							$final_dato[] = $current_locator;
+							$final_data[] = $current_locator;
 							$changed = true;
 						}
 					}
 
-				// add new locators than was not saved in dato.
+				// add new locators than was not saved in data.
 					foreach ($ar_result as $current_locator) {
-						if(	locator::in_array_locator( $current_locator, $final_dato, $ar_properties=['section_id','section_tipo'])===false ){
-							array_push($final_dato, $current_locator);
+						if(	locator::in_array_locator( $current_locator, $final_data, $ar_properties=['section_id','section_tipo'])===false ){
+							array_push($final_data, $current_locator);
 							$changed = true;
 						}
 					}
@@ -1843,7 +1843,7 @@ class component_relation_common extends component_common {
 
 		// changed true
 			if ($changed===true) {
-				$dato = array_values($final_dato);
+				$data = array_values($final_data);
 				// foreach ($new_relation_locators as $current_locator) {
 
 					$component_to_update = component_common::get_instance(
@@ -1856,12 +1856,12 @@ class component_relation_common extends component_common {
 						false
 					);
 
-					// set the dato in all instances, included the same instance that current.
-					$component_to_update->set_dato($dato);
+					// set the data in all instances, included the same instance that current.
+					$component_to_update->set_data($data);
 					if ($save===true) {
-						$component_to_update->Save();
+						$component_to_update->save();
 						debug_log(__METHOD__
-							." Saved modified dato to preserve the order - Total: $total_ar_result locators in section_id: $section_id "
+							." Saved modified data to preserve the order - Total: $total_ar_result locators in section_id: $section_id "
 							, logger::DEBUG
 						);
 					}
@@ -1875,15 +1875,15 @@ class component_relation_common extends component_common {
 							. ' section_id: ' . $this->section_id . PHP_EOL
 							. ' model: ' .get_class($this) . PHP_EOL
 							. ' label: ' . ontology_node::get_term_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true) . PHP_EOL
-							. ' dato: ' . to_string($dato)
+							. ' data: ' . to_string($data)
 							, logger::WARNING
 						);
 					}
 
-					// if the current section_id is the same of the current instance update the dato of the current
-					// else update the dato of the other instances (references with the same dato)
+					// if the current section_id is the same of the current instance update the data of the current
+					// else update the data of the other instances (references with the same data)
 					if(isset($current_locator) && $current_locator->section_id==$this->section_id){
-						$this->set_dato($dato);
+						$this->set_data($data);
 					}
 				// }//end foreach ($new_relation_locators as $current_locator)
 			}//end if ($changed===true)
@@ -1899,7 +1899,7 @@ class component_relation_common extends component_common {
 
 
 		return true;
-	}//end set_dato_external
+	}//end set_data_external
 
 
 
