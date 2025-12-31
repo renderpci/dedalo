@@ -827,14 +827,20 @@ class locator extends stdClass {
 	*/
 	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
 
-		$found = false;
-
+		// Build lookup key once for the locator we're searching for
+		$lookup_key_to_check = locator::build_locator_lookup_key($locator, $ar_properties);
+		
+		// Iterate through array and compare keys directly
 		foreach ($ar_locator as $current_locator) {
-			$found = self::compare_locators( $locator, $current_locator, $ar_properties );
-			if($found===true) break;
+			// Build lookup key for current locator
+			$lookup_key = locator::build_locator_lookup_key($current_locator, $ar_properties);
+			// Compare keys directly - if they match, we found it
+			if ($lookup_key === $lookup_key_to_check) {
+				return true;
+			}
 		}
 
-		return $found;
+		return false;
 	}//end in_array_locator
 
 
