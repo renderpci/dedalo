@@ -640,6 +640,21 @@ abstract class component_common extends common {
 	}//end set_dato_resolved
 
 
+	/**
+	* VALIDATE_DATA_ELEMENT
+	* Generic harmless method to validate a data element.
+	* Overwrite this method in child classes to implement specific validation logic.
+	* @param object $data_element
+	* The data element to validate
+	* @param bool $init
+	* On true, the component will initialize the array of values lookup map
+	* @return object|false
+	*/
+	public function validate_data_element( object $data_element, bool $init = true ) : object|false {
+		return $data_element;
+	}//end validate_data_element
+
+
 
 	/**
 	* SET_DATA

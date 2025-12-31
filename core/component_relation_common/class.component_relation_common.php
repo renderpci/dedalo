@@ -552,176 +552,118 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* SET_DATO
-	* Set raw dato overwrite existing dato.
-	* Usually, dato is built element by element, adding one locator to existing dato, but sometimes we need
+	* VALIDATE_DATA_ELEMENT
+	* Set raw data overwrite existing data.
+	* Usually, data is built element by element, adding one locator to existing data, but sometimes we need
 	* to insert complete array of locators at once. Use this method in this cases
-	* @param $dato
-	* @return bool
+	* @param object $data_element
+	* The data element to validate
+	* @param bool $init
+	* On true, the component will initialize the locator lookup map
+	* @return object|false
 	*/
-	public function set_dato( $dato ) : bool {
-
-		$safe_dato = [];
+	public function validate_data_element( object $data_element, bool $init = true ) : object|false {
 
 		// translatable
 			$translatable	= $this->ontology_node->get_is_translatable();
 			$lang			= $this->get_lang();
 
-		// non empty dato case
-			if (!empty($dato)) {
+		// Ensure all locators are properly formatted.
+			$relation_type			= $this->relation_type;
+			$from_component_tipo	= $this->tipo;			
 
-				// Tool Time machine case, dato is string
-				if (is_string($dato)) {
-					$dato = json_decode($dato);
-				}
-
-				// Bad formed array case
-				if (is_object($dato)) {
-					$dato = array($dato);
-				}
-
-				// Ensures dato is a real non-associative array (avoid JSON encode as object)
-				$dato = is_array($dato) ? array_values($dato) : (array)$dato;
-
-				// Verify all locators are well formed
-				$relation_type			= $this->relation_type;
-				$from_component_tipo	= $this->tipo;
-
-
-				foreach ((array)$dato as $key => $current_locator) {
-
-					// is empty check
-						if (empty($current_locator)) {
-							$msg = ' Error on set locator. The locator is empty and will be ignored ';
-							debug_log( __METHOD__ . $msg, logger::ERROR);
-							continue;
-						}
-
-					// is_object check
-						if (!is_object($current_locator)) {
-							$msg = " Error on set locator (is not object)";
-							debug_log(__METHOD__
-								. $msg . PHP_EOL
-								. ' type: ' . gettype($current_locator) . PHP_EOL
-								. ' locator: ' . json_encode($current_locator)
-								, logger::ERROR
-							);
-							dump($current_locator, '$current_locator ++ dato: '.to_string($dato));
-							// throw new Exception("Error Processing Request. Look server log for details", 1);
-							if(SHOW_DEBUG===true) {
-								$bt = debug_backtrace();
-								dump($bt, ' bt ++ '.to_string());
-							}
-							continue;
-						}
-
-					// section_id
-						if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-							debug_log(__METHOD__
-								." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
-								. ' called_class: ' . get_called_class() .PHP_EOL
-								. ' current_locator: '.to_string($current_locator)
-								, logger::ERROR
-							);
-							continue;
-						}
-
-					// Clone locator to prevent issues with external data or observers (modification of the original locator).
-					// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
-					// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
-					// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
-						$locator_copy = clone $current_locator;
-
-					// type
-						if (!isset($locator_copy->type)) {
-							// debug_log(__METHOD__
-							// 	." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
-							// 	, logger::DEBUG
-							// );
-							$locator_copy->type = $relation_type;
-						}
-						if(SHOW_DEBUG===true) {
-							if (empty($locator_copy->type)) {
-								dump($locator_copy, ' locator_copy. Empty locator type ++////++ $relation_type '.to_string($relation_type));
-							}
-						}
-
-					// from_component_tipo
-						if (!isset($locator_copy->from_component_tipo)) {
-							$locator_copy->from_component_tipo = $from_component_tipo;
-						}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
-							$locator_copy->from_component_tipo = $from_component_tipo;
-							debug_log(__METHOD__
-								. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
-								. ' source_locator: ' . to_string($current_locator) . PHP_EOL
-								. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
-								. ' called_class: ' . get_called_class()
-								, logger::WARNING
-							);
-						}
-
-					// lang
-						if ($translatable===true) {
-							if (!isset($locator_copy->lang)) {
-								$locator_copy->lang = $lang;
-							}else if ($locator_copy->lang!==$lang) {
-								$locator_copy->lang = $lang;
-								debug_log(__METHOD__
-									. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
-									. ' source_locator: ' . to_string($current_locator) . PHP_EOL
-									. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
-									. ' called_class: ' . get_called_class()
-									, logger::WARNING
-								);
-							}// end if (!isset($locator_copy->lang))
-						}// end if ($translatable===true)
-
-					// paginated_key
-						if (isset($locator_copy->paginated_key)) {
-							// remove temporal property paginated_key
-							unset($locator_copy->paginated_key);
-						}
-
-					// normalized locator
-						$normalized_locator = new locator($locator_copy);
-
-					// Add. Check if locator already exists
-						$locator_properties_to_check = $this->get_locator_properties_to_check();
-						$found = locator::in_array_locator($locator_copy, $safe_dato, $locator_properties_to_check);
-						if ($found===false) {
-							$safe_dato[] = $normalized_locator;
-						}else{
-							debug_log(__METHOD__
-								.' Ignored set_dato of already existing locator '. PHP_EOL
-								.' locator_copy: ' . to_string($locator_copy)
-								, logger::WARNING
-							);
-						}
-				}//end foreach ((array)$dato as $key => $current_locator)
-			}//end if (!empty($dato))
-
-		// set again the safe dato to current component dato
-		// (this action force to refresh component property 'dato' with the new safe values)
-			parent::set_dato( (array)$safe_dato );
-
-		// translatable cases
-			if ($translatable===true) {
-				$new_dato_full = [];
-				// remove old locators of current lang
-				foreach ((array)$this->dato_full as $locator) {
-					if (!isset($locator->lang) || $locator->lang!==$lang) {
-						$new_dato_full[] = $locator;
-					}
-				}
-				// merge data and cleaned dato_full
-				$this->dato_full = array_merge($new_dato_full, (array)$safe_dato);
-			}else{
-				$this->dato_full = (array)$safe_dato;
+		// check section_id
+			if (!isset($data_element->section_id) || !isset($data_element->section_tipo)) {
+				debug_log(__METHOD__
+					." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
+					. ' called_class: ' . get_called_class() .PHP_EOL
+					. ' data_element: '.to_string($data_element)
+					, logger::ERROR
+				);
+				return false;
 			}
 
+		// Clone locator to prevent issues with external data or observers (modification of the original locator).
+		// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
+		// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
+		// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
+			$locator_copy = clone $data_element;
 
-		return true;
-	}//end set_dato
+		// type
+			if (!isset($locator_copy->type) || empty($locator_copy->type)) {
+				$locator_copy->type = $relation_type;
+			}
+
+		// from_component_tipo
+			if (!isset($locator_copy->from_component_tipo)) {
+				$locator_copy->from_component_tipo = $from_component_tipo;
+			}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
+				$locator_copy->from_component_tipo = $from_component_tipo;
+				debug_log(__METHOD__
+					. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
+					. ' source_locator: ' . to_string($data_element) . PHP_EOL
+					. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
+					. ' called_class: ' . get_called_class()
+					, logger::WARNING
+				);
+			}
+
+		// lang
+			if ($translatable===true) {
+				if (!isset($locator_copy->lang)) {
+					$locator_copy->lang = $lang;
+				}else if ($locator_copy->lang!==$lang) {
+					$locator_copy->lang = $lang;
+					debug_log(__METHOD__
+						. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
+						. ' source_locator: ' . to_string($data_element) . PHP_EOL
+						. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
+						. ' called_class: ' . get_called_class()
+						, logger::WARNING
+					);
+				}// end if (!isset($locator_copy->lang))
+			}// end if ($translatable===true)
+
+		// paginated_key
+			if (isset($locator_copy->paginated_key)) {
+				// remove temporal property paginated_key
+				unset($locator_copy->paginated_key);
+			}
+
+		// normalized locator
+			$normalized_locator = new locator($locator_copy);
+
+		// Add. Check if locator already exists
+		// Optimized: Build a hash key from properties to check for O(1) lookup instead of O(n) iteration
+			
+			// Build or use existing lookup map
+			if (!isset($this->locator_lookup_map) || $init===true) {
+				// Initialize lookup map on first use from existing component data
+				$this->locator_lookup_map = [];					
+			}
+
+			// Check if current locator exists using hash lookup
+			$locator_properties_to_check = $this->get_locator_properties_to_check();
+			$lookup_key = locator::build_locator_lookup_key($locator_copy, $locator_properties_to_check);
+			$found = isset($this->locator_lookup_map[$lookup_key]);
+
+			// Add to lookup map for future checks within this validation session
+			if ($found) {
+				debug_log(__METHOD__
+					.' Ignored set_data of already existing locator '. PHP_EOL
+					.' locator_copy: ' . to_string($locator_copy)
+					, logger::WARNING
+				);
+				return false;
+			}
+			
+		// Add to lookup map for future checks within this validation session
+		$this->locator_lookup_map[$lookup_key] = true;
+
+
+		return $normalized_locator;
+	}//end validate_data_element
+
 
 
 
