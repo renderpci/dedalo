@@ -55,6 +55,9 @@ class component_relation_common extends component_common {
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation = false;
 
+		// locator_lookup_map. Auxiliar map to check if a locator already exists in the component data
+		protected $locator_lookup_map;
+
 
 
 	/**
