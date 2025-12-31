@@ -882,6 +882,25 @@ class locator extends stdClass {
 
 
 	/**
+	* BUILD_LOCATOR_LOOKUP_KEY
+	* Builds a unique hash key from locator properties for fast duplicate detection
+	* @param object $locator
+	* @param array $properties
+	* @return string $lookup_key
+	*/
+	public static function build_locator_lookup_key(object $locator, array $properties=['section_id','section_tipo']) : string {
+
+		$key_parts = [];
+		foreach ($properties as $property) {
+			$key_parts[] = $property . ':' . ($locator->$property ?? 'null');
+		}
+
+		return implode('_', $key_parts);
+	}//end build_locator_lookup_key
+
+
+
+	/**
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
