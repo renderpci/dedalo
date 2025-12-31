@@ -880,11 +880,11 @@ class locator extends stdClass {
 	* @param array $properties
 	* @return string $lookup_key
 	*/
-	public static function build_locator_lookup_key(object $locator, array $properties=['section_id','section_tipo']) : string {
+	public static function build_locator_lookup_key(object $locator, array $properties=['section_tipo','section_id','type','component_tipo','tag_id']) : string {
 
 		$key_parts = [];
 		foreach ($properties as $property) {
-			$key_parts[] = $property . ':' . ($locator->$property ?? 'null');
+			$key_parts[] = $locator->$property ?? '';
 		}
 
 		return implode('_', $key_parts);
