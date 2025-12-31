@@ -19,7 +19,7 @@
 			switch($mode) {
 
 				case 'edit':
-					$ar_inverse_references 	= $this->get_inverse_references($sqo);
+					$ar_inverse_references 	= $this->get_inverse_references($sqo);					
 
 					// note that result is already an object with properties context and data
 					$json = ($count===true)

@@ -56,6 +56,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
+	* 
 	* @param array $ar_inverse_references
 	* @return object $json
 	*/
@@ -68,7 +69,7 @@ class relation_list extends common {
 		$sections_related		= [];
 		$ar_relation_components	= [];
 		# loop the locators that call to the section
-		foreach ((array)$ar_inverse_references as $current_record) {
+		foreach ($ar_inverse_references as $current_record) {
 
 			$current_section_tipo = $current_record->section_tipo;
 
@@ -158,7 +159,6 @@ class relation_list extends common {
 
 		// section instance
 			$section = section::get_instance(
-				$section_id,
 				$section_tipo,
 				$this->mode,
 				true // cache

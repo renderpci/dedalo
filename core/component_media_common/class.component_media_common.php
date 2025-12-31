@@ -555,7 +555,7 @@ class component_media_common extends component_common {
 				$int_section_id		= (int)$section_id;
 
 				// add
-					$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
 			}
 
 
