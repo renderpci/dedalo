@@ -453,9 +453,9 @@ abstract class component_common extends common {
 		// ar_tools_obj reset
 			$this->ar_tools_obj = null;
 
-		// set_dato_default (new way 28-10-2016)
+		// set_data_default
 			if ( $this->mode==='edit' && !is_null($this->section_id) && $this->data_source!=='tm' ) {
-				$this->set_dato_default();
+				$this->set_data_default();
 			}
 
 		// pagination. Set defaults
@@ -501,18 +501,18 @@ abstract class component_common extends common {
 
 
 	/**
-	* SET_DATO_DEFAULT
+	* SET_DATA_DEFAULT
 	* Set dato default when properties->dato_default exists and current component dato is empty
 	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool
 	*/
-	protected function set_dato_default() : bool {
+	protected function set_data_default() : bool {
 
 		// tm mode case
 			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
-					. " Warning on set_dato_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
+					. " Warning on set_data_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
 					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
 					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
 					. ' tipo: ' . $this->tipo . PHP_EOL
@@ -626,7 +626,7 @@ abstract class component_common extends common {
 
 		// data default is not fixed
 		return false;
-	}//end set_dato_default
+	}//end set_data_default
 
 
 
