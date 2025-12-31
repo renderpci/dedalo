@@ -540,15 +540,13 @@ class component_relation_common extends component_common {
 	* GET_DATA_WITH_REFERENCES
 	* Return the data to all components, except the components that has references calculated,
 	* like component_relation_related
-	* this will mix the real dato and the result of the calculation
-	* (!) Default is the component dato, but overwrite it if component need it
-	* @return array $dato_with_references
+	* this will mix the real data and the result of the calculation
+	* (!) Default is the component data, but overwrite it if component need it
+	* @return array|null $data
 	*/
-	public function get_data_with_references() : array {
+	public function get_data_with_references() : ?array {
 
-		$dato_with_references = $this->get_dato();
-
-		return $dato_with_references;
+		return $this->get_data();
 	}//end get_data_with_references
 
 
