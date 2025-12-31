@@ -134,10 +134,10 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_add_related
+	* TEST_ADD_LOCATOR_TO_DATA
 	* @return void
 	*/
-	public function test_add_related() {
+	public function test_add_locator_to_data() {
 
 		$component = $this->build_component_instance();
 
@@ -145,8 +145,9 @@ final class component_relation_related_test extends TestCase {
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(3);
 			$locator->set_from_component_tipo(self::$tipo);
+			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
 
-		$result = $component->add_related($locator);
+		$result = $component->add_locator_to_data( $locator );
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -154,15 +155,14 @@ final class component_relation_related_test extends TestCase {
 				. gettype($result)
 		);
 
-		// $dato = $component->get_dato();
-		$dato = $component->dato;
+		$data = $component->get_data();
 		$this->assertTrue(
-			locator::in_array_locator($locator, $dato, ['section_tipo','section_id']),
+			locator::in_array_locator($locator, $data, ['section_tipo','section_id']),
 			'expected true : ' . PHP_EOL
-				.' dato: '. to_string($dato) . PHP_EOL
+				.' data: '. to_string($data) . PHP_EOL
 				.' locator: ' .to_string($locator)
 		);
-	}//end test_add_related
+	}//end test_add_locator_to_data
 
 
 
