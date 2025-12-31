@@ -10,9 +10,9 @@ class component_input_text extends component_string_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $value
@@ -78,141 +78,12 @@ class component_input_text extends component_string_common {
 
 
 	/**
-	* GET_VALOR
-	* Return array dato as comma separated elements string by default
-	* If index var is received, return dato element corresponding to this index if exists
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
-
-		$valor ='';
-
-		$dato = $this->get_dato();
-		if(empty($dato)) {
-			return (string)$valor;
-		}
-
-		if ($index==='all') {
-			$ar = array();
-			foreach ($dato as $value) {
-
-				if (is_string($value)) {
-					$value = trim($value);
-				}
-
-				if (!empty($value)) {
-					$ar[] = $value;
-				}
-			}
-			if (count($ar)>0) {
-				// $valor = implode(',',$ar);
-				$valor = implode(' | ', $ar);
-			}
-		}else{
-			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
-		}
-
-
-		return $valor;
-	}//end get_valor
-
-
-
-	// /**
-	// * GET_VALOR_EXPORT
-	// * Return component value sent to export data
-	// * @return string $valor
-	// */
-	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-	// 	if (empty($valor)) {
-
-	// 		$valor = $this->get_valor($lang);
-
-	// 	}else{
-
-	// 		// Add value of current lang to nolan data
-	// 		if ($this->with_lang_versions===true) {
-
-	// 			$component = $this;
-	// 			$component->set_lang($lang);
-	// 			$add_value = $component->get_valor($lang);
-	// 			if (!empty($add_value) && $add_value!==$valor) {
-	// 				$valor .= ' ('.$add_value.')';
-	// 			}
-	// 		}
-	// 	}
-
-	// 	if (empty($valor)) {
-	// 		$valor = $this->extract_component_value_fallback(
-	// 			DEDALO_DATA_LANG, // lang
-	// 			true, // mark
-	// 			DEDALO_DATA_LANG_DEFAULT // main_lang
-	// 		);
-	// 	}
-
-	// 	return to_string($valor);
-	// }//end get_valor_export
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// lang empty case. Apply default
-			if (empty($lang)) {
-				$lang = DEDALO_DATA_LANG;
-			}
-
-		// Default behavior is get value in given lang
-			$diffusion_value = $this->get_valor($lang);
-
-		// fallback
-			if (empty($diffusion_value)) {
-				if ($this->translatable===false) {
-					$this->set_lang(DEDALO_DATA_NOLAN);
-					$diffusion_value = $this->get_valor(DEDALO_DATA_NOLAN);
-				}else{
-					$all_project_langs = common::get_ar_all_langs();
-					foreach ($all_project_langs as $current_lang) {
-						if ($current_lang!==$lang) {
-							$this->set_lang($current_lang);
-							$diffusion_value = $this->get_valor($current_lang);
-							if (!empty($diffusion_value)) {
-								break;
-							}
-						}
-					}
-				}
-			}
-
-		// strip_tags all values (remove untranslated mark elements)
-			$diffusion_value = !empty($diffusion_value)
-				? preg_replace("/<\/?mark>/", '', $diffusion_value)
-				: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
 	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -232,34 +103,6 @@ class component_input_text extends component_string_common {
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
-
-			case '4.0.21':
-				#$dato = $this->get_data_unchanged();
-
-				# Compatibility old dedalo installations
-				if (!empty($data_unchanged) && is_string($data_unchanged)) {
-
-					$new_dato = (array)$data_unchanged;
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-
-				}else if(is_array($data_unchanged)){
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $data_unchanged;
-						$response->msg		= "[$reference_id] Dato is array ".to_string($data_unchanged)." only save .<br />";
-
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
@@ -294,9 +137,9 @@ class component_input_text extends component_string_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
-				$response->result	= $dato_from_json;
+				$response->result	= $data_from_json;
 				$response->msg		= 'OK';
 
 				return $response;
@@ -322,8 +165,8 @@ class component_input_text extends component_string_common {
 				// it begin [" or end with "]
 				// log JSON conversion error
 				debug_log(__METHOD__
-					." invalid JSON value, seems a syntax error: ". PHP_EOL
-					. to_string($import_value)
+					." Invalid JSON value, seems a syntax error: ". PHP_EOL
+					.' import_value: ' . json_encode($import_value, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 

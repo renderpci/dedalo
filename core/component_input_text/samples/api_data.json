@@ -1,0 +1,26 @@
+{
+    "section_id": 1,
+    "section_tipo": "test3",
+    "tipo": "test52",
+    "mode": "edit",
+    "lang": "lg-eng",
+    "from_component_tipo": "test52",
+    "value": [
+        {
+            "id": 1,
+            "lang": "lg-eng",
+            "value": "Raspa jumps"
+        },
+        {
+            "id": 2,
+            "lang": "lg-eng",
+            "value": "Raspa purrs"
+        }
+    ],
+    "debug_model": "component_input_text",
+    "debug_label": "input_text",
+    "debug_dataframe": null,
+    "parent_tipo": "test52",
+    "parent_section_id": 1,
+    "fallback_value": null
+}
