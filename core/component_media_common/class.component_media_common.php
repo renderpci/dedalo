@@ -531,21 +531,21 @@ class component_media_common extends component_common {
 				$section_tipo
 			);
 
-			// valor
-				$valor = trim($component->get_valor());
+			// value
+				$value = trim($component->get_value() ?? '');
 
 			// Add a slash at the beginning if it doesn't already exist
-				if ( substr($valor, 0, 1)!=='/' ) {
-					$valor = '/'.$valor;
+				if ( substr($value, 0, 1)!=='/' ) {
+					$value = '/'.$value;
 				}
 
 			// Remove the trailing slash if it exists
-				if ( substr($valor, -1)==='/' ) {
-					$valor = substr($valor, 0, -1);
+				if ( substr($value, -1)==='/' ) {
+					$value = substr($value, 0, -1);
 				}
 
 			// add
-				$additional_path = $valor;
+				$additional_path = $value;
 		}
 
 		// fallback max_items_folder from properties
