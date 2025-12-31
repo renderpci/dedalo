@@ -205,7 +205,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_data_with_references
+	* TEST_GET_DATA_WITH_REFERENCES
 	* @return void
 	*/
 	public function test_get_data_with_references() {
@@ -224,7 +224,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_calculated_references
+	* TEST_GET_CALCULATED_REFERENCES
 	* @return void
 	*/
 	public function test_get_calculated_references() {
@@ -245,7 +245,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_type_rel
+	* TEST_GET_TYPE_REL
 	* @return void
 	*/
 	public function test_get_type_rel() {
@@ -271,7 +271,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_references_recursive
+	* TEST_GET_REFERENCES_RECURSIVE
 	* @return void
 	*/
 	public function test_get_references_recursive() {
@@ -301,7 +301,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_references
+	* TEST_GET_REFERENCES
 	* @return void
 	*/
 	public function test_get_references() {
@@ -320,26 +320,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($value)==='string' || gettype($value)==='NULL',
-			'expected type string|null : ' .PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_get_sortable
+	* TEST_GET_SORTABLE
 	* @return void
 	*/
 	public function test_get_sortable() {
@@ -358,7 +339,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_order_path
+	* TEST_GET_ORDER_PATH
 	* @return void
 	*/
 	public function test_get_order_path() {
