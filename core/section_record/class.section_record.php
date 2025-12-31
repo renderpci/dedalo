@@ -110,13 +110,13 @@ class section_record {
 		// This is used to invalidate the request config cache file
 		// when the section_record_save event is triggered.
 		// This only affects current user cache.
-		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){				
+		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){
 			$cache_file_name = 'cache_active_request_config.php';
 			dd_cache::delete_cache_files([
 				$cache_file_name
 			]);
 		}
-	}//end save_event	
+	}//end save_event
 
 
 
@@ -142,7 +142,7 @@ class section_record {
 		$this->record_in_the_database = ( $result===null )
 			? false
 			: true;
-		
+
 		return true;
 	}//end load_data
 
@@ -257,7 +257,7 @@ class section_record {
 		$section_id = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();		
+		$table = $this->data_instance->get_table();
 		$data = $this->data_instance->get_data();
 
 		$result = matrix_db_manager::update(
@@ -300,7 +300,7 @@ class section_record {
 		$section_id	 = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();		
+		$table = $this->data_instance->get_table();
 		$values = new stdClass();
 			$values->$column = $this->data_instance->get_column_data($column) ?? null;
 
@@ -356,7 +356,7 @@ class section_record {
 		// 	"value"		: [{"section_id":3,"section_tipo":"oh1"}]
 		// }]
 
-		// check for empty columns. If any column is empty, 
+		// check for empty columns. If any column is empty,
 		// remove it from the database for maintaining clean DB data
 		$columns_to_delete = [];
 		foreach ($data_to_save as $data) {
@@ -378,7 +378,7 @@ class section_record {
 		}
 		// Remove the empty columns, remove all column data
 		if( !empty($columns_to_delete) ){
-			
+
 			// $this->save_column_data( $columns_to_delete );
 			$values = new stdClass();
 			foreach ($columns_to_delete as $current_column) {
@@ -392,13 +392,13 @@ class section_record {
 			);
 			if( $save_result === false ){
 				debug_log(__METHOD__
-				   . ' Failed to save empty columns' . PHP_EOL	
+				   . ' Failed to save empty columns' . PHP_EOL
 				   . ' columns_to_delete: ' . json_encode($columns_to_delete, JSON_PRETTY_PRINT)
 				   , logger::ERROR
 				);
 			}else{
 				debug_log(__METHOD__
-				   . ' Saved empty columns' . PHP_EOL	
+				   . ' Saved empty columns' . PHP_EOL
 				   . ' columns_to_delete: ' . json_encode($columns_to_delete, JSON_PRETTY_PRINT) . PHP_EOL
 				   . ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT)
 				   , logger::WARNING
@@ -436,7 +436,7 @@ class section_record {
 
 		// save event
 		$this->save_event();
-	
+
 		return $result;
 	}//end save_key_data
 
@@ -526,7 +526,7 @@ class section_record {
 					$tm_value->lang				= DEDALO_DATA_NOLAN;
 					$tm_value->tipo				= $section_tipo;
 					$tm_value->section_tipo		= $section_tipo;
-					$tm_value->section_id		= $section_id;	
+					$tm_value->section_id		= $section_id;
 
 				// Save the time machine record
 				$tm_record = tm_record::create( $tm_value );
@@ -541,11 +541,11 @@ class section_record {
 				$id = $tm_record->id ?? null;
 
 				// destruct
-				// Unload the tm record and tm record data.  		    					   	   	 	     	    
+				// Unload the tm record and tm record data.
 				// It force to load the record saved previously from DB.
 				unset($tm_record);
 
-				// get the saved tm data and compare it with the new data. If they are equal, then save them to time machine else throw an error message;  		    
+				// get the saved tm data and compare it with the new data. If they are equal, then save them to time machine else throw an error message;
 				$test_tm_record = tm_record::get_instance($id);
 				$saved_tm_data = $test_tm_record->get_data();
 
@@ -575,14 +575,14 @@ class section_record {
 				$table,
 				$section_tipo,
 				$section_id
-			);			
+			);
 			if( $delete_result===false ){
 				debug_log(__METHOD__
 					." Stopping to deleted section '$section_tipo'_'$section_id', error removing data from DDBB"
 					, logger::ERROR
 				);
 				return false;
-			}			
+			}
 
 		// 3. Remove this section record in linked sections and its own media
 			// inverse references. Remove all inverse references to this section
@@ -610,10 +610,10 @@ class section_record {
 			// set as unloaded
 			$this->is_loaded_data = false;
 			// change the status of the record, now doesn't exist into DB.
-			$this->record_in_the_database = false; 
+			$this->record_in_the_database = false;
 			// remove from cache
 			$cache_key = $section_tipo .'_' .$section_id;
-			section_record_instances_cache::delete($cache_key);			
+			section_record_instances_cache::delete($cache_key);
 
 		// Log
 			debug_log(__METHOD__
@@ -706,8 +706,8 @@ class section_record {
 					$lang,
 					$section_tipo,
 					false
-				);				
-		
+				);
+
 				// If the component has no data, move on to the next one.
 				$current_component_data = $current_component->get_data();
 				if(empty($current_component_data)){
@@ -1168,7 +1168,7 @@ class section_record {
 			if($callerClass !== 'section'){
 				debug_log(__METHOD__
 					." ONLY CALLS FROM SECTION ARE ALLOWED ". PHP_EOL
-					. ' callerClass: ' . $callerClass 					
+					. ' callerClass: ' . $callerClass
 					, logger::ERROR
 				);
 				throw new Exception(" ONLY CALLS FROM SECTION ARE ALLOWED ");

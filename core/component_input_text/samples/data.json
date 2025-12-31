@@ -1,0 +1,32 @@
+[
+	{
+	  "id": 1,
+	  "lang": "lg-eng",
+	  "value": "Raspa jumps"
+	},
+	{
+	  "id": 2,
+	  "lang": "lg-eng",
+	  "value": "Raspa purrs"
+	},
+	{
+	  "id": 1,
+	  "lang": "lg-deu",
+	  "value": "Raspa springt"
+	},
+	{
+	  "id": 2,
+	  "lang": "lg-deu",
+	  "value": "Raspa schnurrt"
+	},
+	{
+	  "id": 1,
+	  "lang": "lg-spa",
+	  "value": "Raspa salta"
+	},
+	{
+	  "id": 2,
+	  "lang": "lg-spa",
+	  "value": "Raspa ronronea"
+	}
+  ]

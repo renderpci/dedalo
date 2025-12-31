@@ -204,10 +204,10 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_SET_DATO_DEFAULT
+	* TEST_set_data_default
 	* @return void
 	*/
-	public function test_set_dato_default() {
+	public function test_set_data_default() {
 
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
@@ -221,14 +221,14 @@ final class component_common_test extends BaseTestCase {
 				$element->section_tipo // string section_tipo
 			);
 
-			$dato_default = $component->set_dato_default();
+			$dato_default = $component->set_data_default();
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
 		}
-	}//end test_set_dato_default
+	}//end test_set_data_default
 
 
 
