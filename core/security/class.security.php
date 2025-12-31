@@ -441,7 +441,6 @@ class security {
 			}
 		}
 
-
 		return $area_permissions;
 	}//end get_ar_authorized_areas_for_user
 
@@ -566,7 +565,7 @@ class security {
 	/**
 	* GET_SECTION_NEW_PERMISSIONS
 	* Resolves button new permissions
-	* @see component_filter->set_dato_default()
+	* @see component_filter->set_data_default()
 	* @param string $section_tipo
 	* @return int|null $permissions
 	* 	null indicates that no button new is available or permissions are not set

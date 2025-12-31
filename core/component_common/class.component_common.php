@@ -658,7 +658,7 @@ abstract class component_common extends common {
 			if (isset($this->ar_list_of_values)) {
 				unset($this->ar_list_of_values);
 			}
-		
+
 		// empty data: [] to null
 			if (empty($data)) {
 				$data = null;
