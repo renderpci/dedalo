@@ -669,7 +669,6 @@ class component_relation_common extends component_common {
 
 
 
-
 	/**
 	* GET_LOCATOR_PROPERTIES_TO_CHECK
 	* return the properties to be check to compare locators
@@ -686,40 +685,8 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @param $valor=null
-	* @param $lang=DEDALO_DATA_LANG
-	* @param $quotes=null
-	* @param $add_id=null
-	* @return string $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
-
-		if (empty($valor)) {
-			// if not already received 'valor', force component load 'dato' from DB
-			$dato = $this->get_dato();
-		}else{
-			// use parsed received JSON string as dato
-			$this->set_dato( json_decode($valor) );
-		}
-
-		$valor_export = $this->get_valor($lang);
-
-		// replace html '<br>'' for plain text return '\nl'
-		if(!empty($valor_export)) {
-			$valor_export = br2nl($valor_export);
-		}
-
-
-		return $valor_export;
-	}//end get_valor_export
-
-
-
-	/**
 	* ADD_LOCATOR_TO_DATA
-	* Add one locator to current 'dato'. Verify that it exists before, to avoid duplicates.
+	* Add one locator to current 'data'. Verify that it exists before, to avoid duplicates.
 	* @param object $locator
 	* @return bool
 	*/
@@ -822,7 +789,7 @@ class component_relation_common extends component_common {
 
 		// iterate and add to new_relations only different locators
 			$removed		= false;
-			$new_relations	= array();
+			$new_relations	= [];
 			$data			= $this->get_data();
 			if (!empty($data)) {
 				foreach($data as $current_locator) {
