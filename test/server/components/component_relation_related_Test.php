@@ -167,10 +167,10 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_remove_related
+	* TEST_REMOVE_LOCATOR_FROM_DATA
 	* @return void
 	*/
-	public function test_remove_related() {
+	public function test_remove_locator_from_data() {
 
 		$component = $this->build_component_instance();
 
@@ -178,8 +178,14 @@ final class component_relation_related_test extends TestCase {
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(3);
 			$locator->set_from_component_tipo(self::$tipo);
-
-		$result = $component->remove_related($locator);
+			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
+		
+		$component->add_locator_to_data($locator);
+		// add another locator
+		$locator->set_section_id(4);
+		$component->add_locator_to_data($locator);
+		// remove the second locator
+		$result = $component->remove_locator_from_data($locator);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -187,15 +193,14 @@ final class component_relation_related_test extends TestCase {
 				. gettype($result)
 		);
 
-		// $dato = $component->get_dato();
-		$dato = $component->dato;
+		$data = $component->get_data();
 		$this->assertTrue(
-			!locator::in_array_locator($locator, $dato, ['section_tipo','section_id']),
+			!locator::in_array_locator($locator, $data, ['section_tipo','section_id']),
 			'expected true : ' . PHP_EOL
-				.' dato: '. to_string($dato) . PHP_EOL
+				.' data: '. to_string($data) . PHP_EOL
 				.' locator: ' .to_string($locator)
 		);
-	}//end test_remove_related
+	}//end test_remove_locator_from_data
 
 
 
