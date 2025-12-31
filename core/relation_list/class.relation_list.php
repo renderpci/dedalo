@@ -43,9 +43,10 @@ class relation_list extends common {
 	public function get_inverse_references(object $sqo) : array {
 
 		// sections
-			$sections			= sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
-			$inverse_sections	= $sections->get_dato();
-
+		$sections = sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
+		$db_result = $sections->get_data();
+		
+		$inverse_sections = $db_result->fetch_all();
 
 
 		return $inverse_sections;
