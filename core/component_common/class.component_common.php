@@ -670,19 +670,19 @@ abstract class component_common extends common {
 	public function set_data( ?array $data ) : bool {
 
 		// unset previous calculated ar_list_of_values
-			if (isset($this->ar_list_of_values)) {
-				unset($this->ar_list_of_values);
-			}
+		if (isset($this->ar_list_of_values)) {
+			unset($this->ar_list_of_values);
+		}
 		
 		// empty data: [] to null
-			if (empty($data)) {
-				$data = null;
-			}
+		if (empty($data)) {
+			$data = null;
+		}
 
 		// empty array cases: [null], [''] to null
-			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
-				$data = null;
-			}
+		if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
+			$data = null;
+		}
 
 		// resolved set
 			// $this->dato_resolved = $data;
@@ -695,63 +695,66 @@ abstract class component_common extends common {
 		}
 
 		// Counter
-			$data_to_set = [];
-			// check the data values to set the data id
-			if( !empty($data) ) {
-				$ar_id = [];
-				foreach( $data as $item ){
+		$data_to_set = [];
+		// check the data values to set the data id
+		if( !empty($data) ) {
+			$init = true;
+			$ar_id = [];
+			foreach( $data as $element ){
 
-					// Check if the data is an object before attempting property access
-					$is_object = is_object($item);
-
-					// Determine if the value has a valid, non-empty ID to be treated as existing data.
-					// This ensures objects with an 'id' property set to null/0/empty are treated as new.
-					$has_id = ($is_object && property_exists($item, 'id') && $item->id) ? true : false;
-					if( !$has_id ){
-						if( !$is_object ) {
-							$new_item = new stdClass();
-								$new_item->value = $item;
-								if($this->translatable) {
-									$new_item->lang = $this->lang;
-								}
-							// Replace item with new_item
-							$item = $new_item;
-							debug_log(__METHOD__
-								. " New item created (is not object and not has id): " . json_encode($item)
-								, logger::ERROR
-							);
+				// Check if the data is an object before attempting property access
+				if( !is_object($element) ) {
+					$new_element = new stdClass();
+						$new_element->value = $element;
+						if($this->translatable) {
+							$new_element->lang = $this->lang;
 						}
-						$data_to_set[] = $this->set_data_item_counter( $item );
-					}else{
-						$data_to_set[] = $item;
-					}
+					// Replace element with new_element
+					$element = $new_element;
+					debug_log(__METHOD__
+						. " New element created (is not object and not has id): " . json_encode($element)
+						, logger::ERROR
+					);
+				}
 
+				// Determine if the value has a valid, non-empty ID to be treated as existing data.
+				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				$has_id = ( property_exists($element, 'id') && $element->id) ? true : false;
+				$element_to_validate = $has_id
+					? $element
+					: $this->set_data_item_counter( $element );
+
+				$safe_element = $this->validate_data_element($element_to_validate, $init);
+				if( $safe_element ) {
+					$data_to_set[] = $safe_element;
 					// Set every id of data into the array
-					$ar_id[] = $item->id;
+					$ar_id[] = $safe_element->id;
 				}
 
-				// Set the counter with the max id when the counter is bellow it.
+				$init = false;
+			}				
+
+			// Set the counter with the max id when the counter is bellow it.
+			if (!empty($ar_id)) {
+				$max_id = max($ar_id);
 				$counter = $this->get_counter();
-
-				if (!empty($ar_id)) {
-					$max_id = max($ar_id);
-
-					if( $counter < $max_id ){
-						// set the new counter with the id
-						$this->set_counter( $max_id );
-					}
+				if( $counter < $max_id ){
+					// set the new counter with the id
+					$this->set_counter( $max_id );
 				}
-			}else{
-				$data_to_set = $data;
 			}
+		}else{
+			// Replace data_to_set with empty data (null)
+			$data_to_set = $data;
+		}
 
-		// section record
-			$section_record = $this->get_my_section_record();
-			$result = $section_record->set_component_data(
-				$this->tipo,
-				$this->data_column_name,
-				$data_to_set
-			);
+		// section record: set component data into section record.
+		$section_record = $this->get_my_section_record();
+		$result = $section_record->set_component_data(
+			$this->tipo,
+			$this->data_column_name,
+			$data_to_set
+		);
 
 
 		return $result;
