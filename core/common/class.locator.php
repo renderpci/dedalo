@@ -751,6 +751,7 @@ class locator extends stdClass {
 	/**
 	* COMPARE_LOCATORS
 	* Compare property by property two locators
+	* check if locator1 is equal to locator2
 	* @param object $locator1
 	* @param object $locator2
 	* @param array $ar_properties = []
@@ -760,74 +761,58 @@ class locator extends stdClass {
 	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=[]) : bool {
 
 		// ar_properties. If not defined, add all locators properties to compare
-			if (empty($ar_properties)){
-				foreach ($locator1 as $property => $value) {
-					if (!in_array($property, $ar_exclude_properties)) {
-						$ar_properties[] = $property;
-					}
+		if (empty($ar_properties)) {
+			// Use array_flip for O(1) lookup instead of in_array O(n)
+			$exclude_map = array_flip($ar_exclude_properties);
+			$ar_properties = [];
+			
+			foreach ($locator1 as $property => $value) {
+				if (!isset($exclude_map[$property])) {
+					$ar_properties[$property] = true;
 				}
-
-				foreach ($locator2 as $property => $value) {
-					if (!in_array($property, $ar_exclude_properties)) {
-						$ar_properties[] = $property;
-					}
-				}
-
-				$ar_properties = array_unique($ar_properties);
 			}
+			
+			foreach ($locator2 as $property => $value) {
+				if (!isset($exclude_map[$property])) {
+					$ar_properties[$property] = true;
+				}
+			}
+			
+			// Get keys as the final property list
+			$ar_properties = array_keys($ar_properties);
+		}
 
-		// equal . Default true
-		$equal = true;
+		// Iterate properties and compare
+		foreach ($ar_properties as $current_property) {
+			
+			$exists_in_l1 = property_exists($locator1, $current_property);
+			$exists_in_l2 = property_exists($locator2, $current_property);
 
-		// iterate properties
-		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
-
-			#if (!is_object($locator1) || !is_object($locator2)) {
-			#	$equal = false;
-			#	break;
-			#}
-
-			$property_exists_in_l1 = property_exists($locator1, $current_property);
-			$property_exists_in_l2 = property_exists($locator2, $current_property);
-
-
-			# Test property exists in all locators
-			#if (!property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
-			if ($property_exists_in_l1===false && $property_exists_in_l2===false) {
-				# Skip not existing properties
-				#debug_log(__METHOD__." Skipped comparison property $current_property. Property not exits in any locator ", logger::DEBUG);
+			// Both don't have the property - skip
+			if (!$exists_in_l1 && !$exists_in_l2) {
 				continue;
 			}
 
-			# Test property exists only in one locator
-			#if (property_exists($locator1, $current_property) && !property_exists($locator2, $current_property)) {
-			if ($property_exists_in_l1===true && $property_exists_in_l2===false) {
-				#debug_log(__METHOD__." Property $current_property exists in locator1 but not exits in locator2 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
-				$equal = false;
-				break;
-			}
-			#if (property_exists($locator2, $current_property) && !property_exists($locator1, $current_property)) {
-			if ($property_exists_in_l2===true && $property_exists_in_l1===false) {
-				#debug_log(__METHOD__." Property $current_property exists in locator2 but not exits in locator1 (false is returned): ".to_string($locator1).to_string($locator2), logger::DEBUG);
-				$equal = false;
-				break;
+			// Only one has the property - not equal
+			if ($exists_in_l1 !== $exists_in_l2) {
+				return false;
 			}
 
-			# Compare verified existing properties
-			if ($current_property==='section_id') {
-				if( $locator1->$current_property != $locator2->$current_property ) {
-					$equal = false;
-					break;
+			// Both have the property - compare values
+			// Special case for section_id: use loose comparison (!=) instead of strict (!==)
+			// because section_id could be an int or string
+			if ($current_property === 'section_id') {
+				if ($locator1->$current_property != $locator2->$current_property) {
+					return false;
 				}
-			}else{
-				if( $locator1->$current_property !== $locator2->$current_property ) {
-					$equal = false;
-					break;
+			} else {
+				if ($locator1->$current_property !== $locator2->$current_property) {
+					return false;
 				}
 			}
 		}
 
-		return (bool)$equal;
+		return true;
 	}//end compare_locators
 
 
