@@ -1152,6 +1152,7 @@ class section_record {
 	* adding `section_tipo` and `section_id` only) and with query params when is not (other
 	* dynamic combinations of columns data).
 	* @param string $section_tipo as oh1
+	* @param int|null $section_id = null (optional)
 	* @param object|null $values = null (optional)
 	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
@@ -1159,7 +1160,7 @@ class section_record {
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( string $section_tipo, ?object $values=null ) : section_record|false {
+	public static function create( string $section_tipo, ?int $section_id=null, ?object $values=null ) : section_record|false {
 
 		// debug temporal to check caller class
 		if(SHOW_DEBUG===true) {
@@ -1174,8 +1175,36 @@ class section_record {
 				throw new Exception(" ONLY CALLS FROM SECTION ARE ALLOWED ");
 			}
 		}
-
+		// Get the table name from the section tipo
 		$table = common::get_matrix_table_from_tipo($section_tipo);
+
+		// If section_id is provided, update the record
+		// Set the section_record instance wiht the update values (time and user that made the update)
+		// it is needed to update the record with any kind of data.
+		// if Not set the section modified data the section_record_data will stop to update the section record in the database.
+		// If the section_id is not provided, it is a new record.
+		if( $section_id !== null ) {
+			// set section_record instance
+			$section_record = section_record::get_instance($section_tipo, $section_id);
+			// update modified section data
+			// this is necesary to allow the setion record update in the database
+			$section_record->update_modified_section_data( (object)[
+				'mode' => 'update_record'
+			] );
+			// if values are provided, update the section record
+			if( $values !== null ) {
+				foreach ($values as $column => $column_data) {
+					foreach ($column_data as $tipo => $data) {					
+						$section_record->set_component_data($tipo, $column, $data);
+					}
+				}
+			}
+			// save the section record
+			// it performs the update in the database
+			$section_record->save();
+	
+			return $section_record;		
+		}
 
 		// insert a new record in the database
 		$section_id = matrix_db_manager::create(
