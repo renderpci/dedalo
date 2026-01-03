@@ -112,8 +112,9 @@ const get_value_element = (i, data, self) => {
 			// Situation
 				// get the total item for situation
 				const situation_total = data.find(item =>  item.id === output_item.id
-														&& item.column === 'situation'
-														&& item.type ==='total')
+					&& item.column === 'situation'
+					&& item.type ==='total'
+				)
 				// console.log('situation_total:', situation_total.value, situation_total);
 
 			// State
@@ -185,11 +186,11 @@ const get_value_element = (i, data, self) => {
 				const node = detail_nodes[o]
 				// find if the node has new data
 				const new_data = changed_data.find(item => item.id === node.id
-														&& item.column === node.column
-														&& item.lang === node.lang
-														&& item.key === i
-														&& item.type === node.type
-													)
+					&& item.column === node.column
+					&& item.lang === node.lang
+					&& item.key === i
+					&& item.type === node.type
+				)
 
 				// set the new value
 				if(new_data){
@@ -256,8 +257,9 @@ const get_value_tooltip = (output_item, data, self) => {
 		const situation_length = situation_translatable ? project_langs.length : 1;
 		// get the total item for situation
 		const situation_total = data.find(item =>  item.id === output_item.id
-												&& item.column === 'situation'
-												&& item.type ==='total')
+			&& item.column === 'situation'
+			&& item.type ==='total'
+		)
 
 		// node for the column situation
 		const situation = ui.create_dom_element({
