@@ -45,9 +45,6 @@ class component_iri extends component_common {
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
-		// lang. Force always DEDALO_DATA_NOLAN
-			$lang = DEDALO_DATA_NOLAN;
-
 		// Fix with_lang_versions for clarity
 			$this->with_lang_versions = true;
 
@@ -75,61 +72,61 @@ class component_iri extends component_common {
 		* ]
 	* @return array|null $dato
 	*/
-	public function get_dato() : ?array {
+	// public function get_dato() : ?array {
 
-		$dato = parent::get_dato();
+	// 	$dato = parent::get_dato();
 
-		// check if the data becomes from input_text.
-		// To accept values from component_input_text,
-		// needs to change the string value of the input_text to IRI object value
-		// setting the `iri` property with the previous input_text value.
-			$input_text = false;
-			if(!empty($dato)) {
-				foreach ((array)$dato as $key => $value) {
-					if(!is_object($value) ){
-						$input_text = true;
-						// get the component counter
-						// it's the last counter used
-						$counter = $this->get_counter();
-						$id = $counter++;
-						$object = new stdClass();
-							$object->iri = $value;
-							$object->id = $id;
-						$dato[$key] = $object;
-						// set the new counter as the id (previous counter + 1)
-						$this->set_counter( $id );
-					}
-				}
-				if($input_text===true) {
-					$this->set_dato($dato);
-					$this->Save();
-				}
-			}
+	// 	// check if the data becomes from input_text.
+	// 	// To accept values from component_input_text,
+	// 	// needs to change the string value of the input_text to IRI object value
+	// 	// setting the `iri` property with the previous input_text value.
+	// 		$input_text = false;
+	// 		if(!empty($dato)) {
+	// 			foreach ((array)$dato as $key => $value) {
+	// 				if(!is_object($value) ){
+	// 					$input_text = true;
+	// 					// get the component counter
+	// 					// it's the last counter used
+	// 					$counter = $this->get_counter();
+	// 					$id = $counter++;
+	// 					$object = new stdClass();
+	// 						$object->iri = $value;
+	// 						$object->id = $id;
+	// 					$dato[$key] = $object;
+	// 					// set the new counter as the id (previous counter + 1)
+	// 					$this->set_counter( $id );
+	// 				}
+	// 			}
+	// 			if($input_text===true) {
+	// 				$this->set_dato($dato);
+	// 				$this->Save();
+	// 			}
+	// 		}
 
-		// check dato
-			if ( !is_null($dato) && !is_array($dato)  ) {
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__
-						. " WRONG TYPE of dato. Expected array or null. Given: ".gettype($dato) . PHP_EOL
-						. " tipo: $this->tipo" . PHP_EOL
-						. " section_tipo: $this->section_tipo" . PHP_EOL
-						. " section_id: $this->section_id" . PHP_EOL
-						.' dato: ' . json_encode($dato)
-						, logger::ERROR
-					);
-				}
-				if (is_string($dato)) {
-					$dd_iri = new dd_iri();
-						$dd_iri->set_iri($dato);
-					$dato = [$dd_iri];
-					$this->set_dato($dato);
-					$this->Save();
-				}
-			}
+	// 	// check dato
+	// 		if ( !is_null($dato) && !is_array($dato)  ) {
+	// 			if(SHOW_DEBUG===true) {
+	// 				debug_log(__METHOD__
+	// 					. " WRONG TYPE of dato. Expected array or null. Given: ".gettype($dato) . PHP_EOL
+	// 					. " tipo: $this->tipo" . PHP_EOL
+	// 					. " section_tipo: $this->section_tipo" . PHP_EOL
+	// 					. " section_id: $this->section_id" . PHP_EOL
+	// 					.' dato: ' . json_encode($dato)
+	// 					, logger::ERROR
+	// 				);
+	// 			}
+	// 			if (is_string($dato)) {
+	// 				$dd_iri = new dd_iri();
+	// 					$dd_iri->set_iri($dato);
+	// 				$dato = [$dd_iri];
+	// 				$this->set_dato($dato);
+	// 				$this->Save();
+	// 			}
+	// 		}
 
 
-		return $dato;
-	}//end get_dato
+	// 	return $dato;
+	// }//end get_dato
 
 
 
@@ -139,119 +136,119 @@ class component_iri extends component_common {
 	* @param array|null $dato
 	* @return bool
 	*/
-	public function set_dato( $dato ) : bool {
+	// public function set_dato( $dato ) : bool {
 
-		// string case. Tool Time machine mode, dato is string
-		if (is_string($dato)) {
-			$dato = json_handler::decode($dato);
-		}
+	// 	// string case. Tool Time machine mode, dato is string
+	// 	if (is_string($dato)) {
+	// 		$dato = json_handler::decode($dato);
+	// 	}
 
-		// check type
-		if ( !is_array($dato) && !is_null($dato) ){
-			debug_log(__METHOD__
-				. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
-				. " tipo: $this->tipo" . PHP_EOL
-				. " section_tipo: $this->section_tipo" . PHP_EOL
-				. " section_id: $this->section_id" . PHP_EOL
-				. " dato: " . to_string($dato) . PHP_EOL
-				. ' type: ' . gettype($dato)
-				, logger::DEBUG
-			);
-		}
+	// 	// check type
+	// 	if ( !is_array($dato) && !is_null($dato) ){
+	// 		debug_log(__METHOD__
+	// 			. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
+	// 			. " tipo: $this->tipo" . PHP_EOL
+	// 			. " section_tipo: $this->section_tipo" . PHP_EOL
+	// 			. " section_id: $this->section_id" . PHP_EOL
+	// 			. " dato: " . to_string($dato) . PHP_EOL
+	// 			. ' type: ' . gettype($dato)
+	// 			, logger::DEBUG
+	// 		);
+	// 	}
 
-		// cast to array
-		if (is_object($dato)) {
-			$dato = [$dato];
-		}
+	// 	// cast to array
+	// 	if (is_object($dato)) {
+	// 		$dato = [$dato];
+	// 	}
 
-		// check the data values to fit the IRI data
-		// changes the data to create a object
-		if(!empty($dato)) {
-			$ar_id = [];
-			$safe_dato = [];
-			foreach( (array)$dato as $value ){
+	// 	// check the data values to fit the IRI data
+	// 	// changes the data to create a object
+	// 	if(!empty($dato)) {
+	// 		$ar_id = [];
+	// 		$safe_dato = [];
+	// 		foreach( (array)$dato as $value ){
 
-				// Check if the data is an object before attempting property access
-				$is_object = is_object($value);
+	// 			// Check if the data is an object before attempting property access
+	// 			$is_object = is_object($value);
 
-				// check if the data is different that an object
-				// data could be a string or null
-				// null = new value
-				// string = previous data become from a input_text
+	// 			// check if the data is different that an object
+	// 			// data could be a string or null
+	// 			// null = new value
+	// 			// string = previous data become from a input_text
 
-				// Determine if the value has a valid, non-empty ID to be treated as existing data.
-				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
-				$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
-				if( !$has_id ){
+	// 			// Determine if the value has a valid, non-empty ID to be treated as existing data.
+	// 			// This ensures objects with an 'id' property set to null/0/empty are treated as new.
+	// 			$has_id = ($is_object && property_exists($value, 'id') && $value->id) ? true : false;
+	// 			if( !$has_id ){
 
-					if ($is_object && !property_exists($value, 'iri')) {
-						// write an error to inform administrators.
-						debug_log(__METHOD__
-							. " Ignored invalid value " . PHP_EOL
-							. ' value: ' . to_string($value) . PHP_EOL
-							. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
-							. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
-							. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
-							, logger::ERROR
-						);
-						continue;
-					}
+	// 				if ($is_object && !property_exists($value, 'iri')) {
+	// 					// write an error to inform administrators.
+	// 					debug_log(__METHOD__
+	// 						. " Ignored invalid value " . PHP_EOL
+	// 						. ' value: ' . to_string($value) . PHP_EOL
+	// 						. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+	// 						. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+	// 						. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+	// 						, logger::ERROR
+	// 					);
+	// 					continue;
+	// 				}
 
-					// get the component counter
-					// it's the last counter used
-					$counter = $this->get_counter();
-					$counter++;
-					$id = $counter;
+	// 				// get the component counter
+	// 				// it's the last counter used
+	// 				$counter = $this->get_counter();
+	// 				$counter++;
+	// 				$id = $counter;
 
-					// Safely get the 'iri' property
-					$iri_value = ( $is_object )
-						? ($value->iri ?? null)
-						: $value;
+	// 				// Safely get the 'iri' property
+	// 				$iri_value = ( $is_object )
+	// 					? ($value->iri ?? null)
+	// 					: $value;
 
-					$dd_iri = new dd_iri();
-						$dd_iri->set_iri( $iri_value );
-						$dd_iri->set_id( $id );
+	// 				$dd_iri = new dd_iri();
+	// 					$dd_iri->set_iri( $iri_value );
+	// 					$dd_iri->set_id( $id );
 
-					// Check if the data has a label_id
-					// used by import to set a temporary target section_id for the label dataframe
-					// it will create a new locator of the dataframe when the component_iri will save
-					if( $is_object && !empty($value->label_id) ){
-						$dd_iri->set_label_id( $value->label_id );
-					}
-					// set the counter to use next value
-					$this->set_counter( $id );
+	// 				// Check if the data has a label_id
+	// 				// used by import to set a temporary target section_id for the label dataframe
+	// 				// it will create a new locator of the dataframe when the component_iri will save
+	// 				if( $is_object && !empty($value->label_id) ){
+	// 					$dd_iri->set_label_id( $value->label_id );
+	// 				}
+	// 				// set the counter to use next value
+	// 				$this->set_counter( $id );
 
-				}else{
+	// 			}else{
 
-					// Existing item - pass the original object through
-					$dd_iri = $value;
-				}
+	// 				// Existing item - pass the original object through
+	// 				$dd_iri = $value;
+	// 			}
 
-				$safe_dato[] = $dd_iri;
+	// 			$safe_dato[] = $dd_iri;
 
-				// get all id from data
-				$ar_id[] = $dd_iri->id;
-			}//end foreach
+	// 			// get all id from data
+	// 			$ar_id[] = $dd_iri->id;
+	// 		}//end foreach
 
-			// Assign the processed data back to $dato
-			$dato = $safe_dato;
+	// 		// Assign the processed data back to $dato
+	// 		$dato = $safe_dato;
 
-			// Set the counter with the max id when the counter is bellow it.
-			$counter = $this->get_counter();
+	// 		// Set the counter with the max id when the counter is bellow it.
+	// 		$counter = $this->get_counter();
 
-			if (!empty($ar_id)) {
-				$max_id = max($ar_id);
+	// 		if (!empty($ar_id)) {
+	// 			$max_id = max($ar_id);
 
-				if( $counter < $max_id ){
-					// set the new counter with the id
-					$this->set_counter( $max_id );
-				}
-			}
-		}//end if(!empty($dato))
+	// 			if( $counter < $max_id ){
+	// 				// set the new counter with the id
+	// 				$this->set_counter( $max_id );
+	// 			}
+	// 		}
+	// 	}//end if(!empty($dato))
 
 
-		return parent::set_dato( $dato );
-	}//end set_dato
+	// 	return parent::set_dato( $dato );
+	// }//end set_dato
 
 
 
@@ -260,70 +257,74 @@ class component_iri extends component_common {
 	* Overwrite component_common method to set always lang to config:DEDALO_DATA_NOLAN before save
 	* @return bool
 	*/
-	public function save() : bool {
+	// public function save() : bool {
 
-		// dato candidate to save
-			$dato = $this->dato;
+	// 	// dato candidate to save
+	// 		$dato = $this->dato;
 
-		// deleting IRI
-			if (empty($dato)) {
-				// Save in standard empty format
-				return parent::save();
-			}
+	// 	// deleting IRI
+	// 		if (empty($dato)) {
+	// 			// Save in standard empty format
+	// 			return parent::save();
+	// 		}
 
-		// dato format verify
-			if ( !is_array($dato) && !is_null($dato) ) {
-				if(SHOW_DEBUG===true) {
-					debug_log(__METHOD__
-						." Bad IRI format: ". PHP_EOL
-						.' dato:' . to_string($dato) . PHP_EOL
-						.' type: ' . gettype($dato)
-						, logger::ERROR
-					);
-				}
-				return false;
-			}
+	// 	// dato format verify
+	// 		if ( !is_array($dato) && !is_null($dato) ) {
+	// 			if(SHOW_DEBUG===true) {
+	// 				debug_log(__METHOD__
+	// 					." Bad IRI format: ". PHP_EOL
+	// 					.' dato:' . to_string($dato) . PHP_EOL
+	// 					.' type: ' . gettype($dato)
+	// 					, logger::ERROR
+	// 				);
+	// 			}
+	// 			return false;
+	// 		}
 
-		// Save in standard format
-		return parent::save();
-	}//end save
+	// 	// Save in standard format
+	// 	return parent::save();
+	// }//end save
 
 
 
 	/**
 	* IMPORT_SAVE
-	* @return
+	* Overwrites component_common method.
+	* @return bool
 	*/
 	public function import_save() : bool {
 
-		// dato candidate to save
-			$dato = $this->dato;
+		// data candidate to save
+		$data = $this->get_data();
 
 		// Label dataframe.
 		// Check if the data has a `label_id` property.
 		// When the import process set the `label_id` indicate that this data has a label dataframe
 		// and `label_id` needs to be used as section_id for the locator of the label dataframe.
 		// `label_id` is not a part of the data structure, therefore, it will need to remove.
-			$label_dataframe_data = [];
-			foreach( (array)$dato as $value ){
+		$label_dataframe_data = [];
+		if( !empty($data) ){
+
+			foreach( $data as $value ){
 				if( property_exists($value, 'label_id') ){
 
 					// create new dataframe locator to be set as new data
 					$locator = new locator();
-						$locator->set_section_tipo( component_iri::$label_target_section_tipo );
-						$locator->set_section_id( $value->label_id );
-						$locator->set_section_id_key( $value->id );
-						$locator->set_section_tipo_key( $this->section_tipo );
-						$locator->set_main_component_tipo( $this->tipo );
+					$locator->set_section_tipo( component_iri::$label_target_section_tipo );
+					$locator->set_section_id( $value->label_id );
+					$locator->set_section_id_key( $value->id );
+					$locator->set_section_tipo_key( $this->section_tipo );
+					$locator->set_main_component_tipo( $this->tipo );
 
 					$label_dataframe_data[]	= $locator;
 
 					// remove the property label_id
-						 unset($value->label_id);
-				}
+					unset($value->label_id);
+				}				
 			}
-		// set the clean data without the label_id
-		$this->set_dato( $dato );
+			// set the clean data without the label_id
+			$this->set_data( $data );
+		}		
 
 		if( !empty($label_dataframe_data) ){
 
@@ -347,19 +348,19 @@ class component_iri extends component_common {
 
 			$component_dataframe_label->empty_full_data_associated_to_main_component();
 
-			$component_dataframe_label->set_dato( $label_dataframe_data );
+			$component_dataframe_label->set_data( $label_dataframe_data );
 			// remove the time machine to save the dataframe
 			// the main component_iri will save the full imported data in save
 			$dataframe_section = $component_dataframe_label->get_my_section();
 			tm_record::$save_tm = false;
-			$component_dataframe_label->Save();
+			$component_dataframe_label->save();
 			// re activate the time machine
 			tm_record::$save_tm = true;
 		}
 
 		// save the component
 		// it will save the dataframe in Time machine also.
-		$this->Save();
+		return $this->save();
 	}//end import_save
 
 
@@ -420,10 +421,8 @@ class component_iri extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the component.
-	* component filter return a array of values
+	* Get the value of the component as a dd_grid_cell_object.
 	* @param object|null $ddo = null
-	*
 	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
@@ -563,140 +562,12 @@ class component_iri extends component_common {
 		$flat_value->set_cell_type('iri');
 
 		// add data (custom case)
-		$data = $this->get_dato();
+		$data = $this->get_data();
 		$flat_value->set_data($data);
 
 
 		return $flat_value;
 	}//end get_grid_flat_value
-
-
-
-	// /**
-	// * GET_VALOR
-	// * Return array dato as comma separated elements string by default
-	// * If index var is received, return dato element corresponding to this index if exists
-	// * @return string|null $valor
-	// */
-	// public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
-
-	// 	$dato = $this->get_dato();
-
-	// 	if ($index==='all') {
-
-	// 		$ar_val = [];
-	// 		if (is_array($dato)) {
-	// 			foreach ($dato as $value) {
-
-	// 				$ar_line = [];
-
-	// 				if (!empty($value->title)) {
-	// 					$ar_line[] = $value->title;
-	// 				}
-	// 				if (!empty($value->iri)) {
-	// 					$ar_line[] = $value->iri;
-	// 				}
-
-	// 				if (!empty($ar_line)) {
-
-	// 					$ar_val[] = implode(' | ', $ar_line);
-	// 				}
-	// 			}
-	// 		}
-
-	// 		$valor = !empty($ar_val)
-	// 			? implode(', ', $ar_val)
-	// 			: null;
-
-	// 	}else{
-
-	// 		$index = (int)$index;
-	// 		$valor = isset($dato[$index])
-	// 			? $dato[$index]
-	// 			: null;
-	// 	}
-
-
-	// 	return $valor;
-	// }//end get_valor
-
-
-
-	// /**
-	// * GET_VALOR_EXPORT
-	// * Return component value sent to export data
-	// * @return string $valor
-	// */
-	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-	// 	if (empty($valor)) {
-	// 		$this->get_dato(); // Get dato from DB
-	// 	}
-
-	// 	$valor = $this->get_valor($lang);
-	// 	$valor = !empty($valor)
-	// 		? strip_tags($valor) // Removes the span tag used in list mode
-	// 		: $valor;
-
-
-	// 	return (string)$valor;
-	// }//end get_valor_export
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* If index var is received, return dato element corresponding to this index if exists
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$dato = $this->get_dato();
-
-		// no lang fallback
-			if (empty($dato) && $lang!==DEDALO_DATA_NOLAN) {
-				// try using nolan
-				$this->set_lang(DEDALO_DATA_NOLAN);
-				$dato = $this->get_dato();
-				// restore lang
-				$this->set_lang($lang);
-			}
-
-		// no value case
-			if (empty($dato)) {
-				return null;
-			}
-
-		$ar_values = [];
-		foreach ($dato as $value) {
-
-			if(empty($value)) {
-				continue;
-			}
-
-			$ar_parts = [];
-
-			$current_title = $this->resolve_title( $value );
-			if (!empty($current_title)) {
-				$ar_parts[] = $current_title;
-			}
-
-			if (!empty($value->iri)) {
-				$ar_parts[] = $value->iri;
-			}
-
-			// add value
-			$ar_values[] = implode(', ', $ar_parts);
-		}
-
-		// diffusion_value string
-		$diffusion_value = implode(' | ', $ar_values);
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 
@@ -706,8 +577,8 @@ class component_iri extends component_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
-	* 	$response->new_dato = mixed; // new dato when result is 1
+	*	$response->result = 2; // the component try the update but the data don't need change"
+	* 	$response->new_data = mixed; // new data when result is 1
 	* 	$response->msg = string; // status message
 	*/
 	public static function update_data_version(object $options) : object {
@@ -745,140 +616,6 @@ class component_iri extends component_common {
 		}
 
 		switch ($version_string) {
-
-			case '6.8.0':
-
-				// Time Machine Update
-
-				// get the component data in Time Machine.
-				$component_tm_data = transform_data::get_tm_data_from_tipo($section_id, $section_tipo, $tipo);
-
-				// query error case, return an empty array
-				if($component_tm_data===false){
-					debug_log(__METHOD__
-						. " The time machine data has error. " . PHP_EOL
-						. ' main tipo error: '  . to_string($tipo) . PHP_EOL
-						. ' options: '  . to_string($options)
-						, logger::ERROR
-					);
-
-					break;
-				}
-				// get an array with the result
-				while($tm_row = pg_fetch_assoc($component_tm_data)) {
-
-					// check if the data has information, if is null or empty, continue to next one.
-					if( !isset($tm_row['dato'] ) || $tm_row['dato']===null ){
-						continue;
-					}
-
-					$matrix_id	= (int)$tm_row['id'];
-					$data		= json_decode($tm_row['dato']);
-
-					// id data is empty continue to the next one.
-					if( empty($data) ){
-						continue;
-					}
-
-					$new_tm_data = [];
-					$id = 1;
-					// process every locator to check if the main_comopnent_tipo is set in the dataframe data
-					foreach ($data as $current_value) {
-						// clean null values and other invalid data
-						if( !is_object($current_value) ){
-							continue;
-						}
-						// if the locator match with the `component_dataframe` tipo and its data has not the main_comonent_tipo
-						if( !isset($current_value->id) ){
-							$current_value->id = $id;
-							$id++;
-						}
-
-						$new_tm_data[] = $current_value;
-					}
-
-					transform_data::set_tm_data($matrix_id, $new_tm_data);
-				}
-
-				// Update the component data
-				if (!empty($data_unchanged) && is_array($data_unchanged)) {
-
-					// Update the locator to move old ds and dataframe to v6 dataframe model.
-					$component = component_common::get_instance(
-						$model, // string model
-						$tipo, // string tipo
-						$section_id, // string section_id
-						'edit', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$section_tipo // string section_tipo
-					);
-
-					$new_data = [];
-					$counter = 0;
-					foreach ($data_unchanged as $current_data) {
-
-						// Clone the current data so as not to touch the originals.
-						$iri_data = json_decode(json_encode( $current_data ));
-
-						// Set the id to the data if not already exists
-						if( !isset($iri_data->id)) {
-
-							$counter++;
-							$id = $counter;
-							// Set new counter value as id
-							$iri_data->id = $id;
-							// Update current component counter
-							$component->set_counter( $id );
-						}
-
-						$new_data[] = $iri_data;
-
-						// create the new label record and link with the label dataframe.
-						// check if the data has a title defined as value.
-						if( empty($iri_data->title) ){
-							continue;
-						}
-
-						// set the new label, if exist give me the section_id, if not create new one and give me its section_id
-							$target_section_id = component_iri::save_label_dataframe_from_string( $iri_data->title );
-
-						// double check target_section_id for null values
-							if (empty($target_section_id)) {
-								continue;
-							}
-
-						// set the new dataframe
-							$dataframe_options = (object)[
-								'section_tipo'			=> $section_tipo,
-								'section_id'			=> $section_id,
-								'component_tipo'		=> $tipo,
-								'section_id_key'		=> $iri_data->id,
-								'target_section_id'		=> $target_section_id,
-							];
-
-							component_iri::save_label_dataframe( $dataframe_options );
-					}
-
-					// Get the current value of the current component counter
-						$db_counter = $component->get_counter();
-
-					// check the max
-						if( $db_counter < $counter ){
-							$component->set_counter( $counter );
-						}
-
-
-					$response->result	= 1;
-					$response->new_dato	= $new_data;
-					$response->msg		= "[$reference_id] Data were changed from ".to_string($data_unchanged)." to ".to_string($new_data).".<br />";
-				}else{
-
-					// empty data case
-
-					$response->result	= 2;
-					$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}//end (!empty($data_unchanged) && is_array($data_unchanged))
-				break;
 
 			default:
 
@@ -1103,12 +840,12 @@ class component_iri extends component_common {
 	* URL_TO_IRI
 	* Return valid operators for search in current component
 	* @param string $url
-	* @return object $data_iri
+	* @return dd_iri $data_iri
 	*/
-	public function url_to_iri(string $url) : object {
+	public function url_to_iri(string $url) : dd_iri {
 
-		$data_iri = new stdClass();
-			$data_iri->iri = $url;
+		$data_iri = new dd_iri();
+			$data_iri->set_iri($url);
 
 		return $data_iri;
 	}//end url_to_iri
@@ -1155,7 +892,7 @@ class component_iri extends component_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value);
+				$data_from_json	= json_handler::decode($import_value);
 
 				// data send is an object
 				// it could be a non translatable object with the iri data:
@@ -1164,15 +901,15 @@ class component_iri extends component_common {
 				// {"lg-spa":{"iri":"https://dedalo.dev"}}
 				// or with a string as value
 				// {"lg-spa":"https://dedalo.dev"}
-				if(is_object($dato_from_json)){
+				if(is_object($data_from_json)){
 
-					$first_key = array_keys((array)$dato_from_json)[0];
+					$first_key = array_keys((array)$data_from_json)[0];
 					// check if the object is a translatable
 					if (strpos($first_key, 'lg-')===0) {
 
 						$conformed_value = new stdClass();
 
-						foreach ($dato_from_json as $lang => $current_value) {
+						foreach ($data_from_json as $lang => $current_value) {
 
 							$valid_langs = common::get_ar_all_langs();
 							$valid_langs[] = DEDALO_DATA_NOLAN;
@@ -1301,9 +1038,9 @@ class component_iri extends component_common {
 						// non translatable object
 						// {"iri":"https://dedalo.dev"}
 						$iri_object = new stdClass();
-						if(isset($dato_from_json->iri)){
+						if(isset($data_from_json->iri)){
 
-							$result = $this->has_protocol($dato_from_json->iri);
+							$result = $this->has_protocol($data_from_json->iri);
 							if($result===false){
 
 								// import value seems to be a JSON malformed.
@@ -1311,25 +1048,25 @@ class component_iri extends component_common {
 								// log JSON conversion error
 								debug_log(__METHOD__
 									." invalid http uri value, looks like a syntax error: ". PHP_EOL
-									. to_string($dato_from_json)
+									. to_string($data_from_json)
 									, logger::ERROR
 								);
 
 								$failed = new stdClass();
 									$failed->section_id		= $this->section_id;
-									$failed->data			= to_string($dato_from_json);
+									$failed->data			= to_string($data_from_json);
 									$failed->component_tipo	= $this->get_tipo();
-									$failed->msg			= 'IGNORED: malformed data '. to_string($dato_from_json);
+									$failed->msg			= 'IGNORED: malformed data '. to_string($data_from_json);
 								$response->errors[] = $failed;
 
 								return $response;
 							}
 
-							$iri_object->iri = $dato_from_json->iri;
+							$iri_object->iri = $data_from_json->iri;
 						}
 						// set the id given
-						if(isset($dato_from_json->id)){
-							$iri_object->id = $dato_from_json->id;
+						if(isset($data_from_json->id)){
+							$iri_object->id = $data_from_json->id;
 						}
 						// set the label_id given, used to create the label dataframe
 						// this property will not saved
@@ -1337,8 +1074,8 @@ class component_iri extends component_common {
 							$iri_object->label_id = $iri_object->label_id;
 						}
 						// set the title given - Deprecated
-						if(isset($dato_from_json->title)){
-							$iri_object->title = $dato_from_json->title;
+						if(isset($data_from_json->title)){
+							$iri_object->title = $data_from_json->title;
 						}
 
 						$value = [$iri_object];
@@ -1355,10 +1092,10 @@ class component_iri extends component_common {
 				// [{"iri":"https://dedalo.dev","title":"Dedalo webpage"},{"iri":"https://dedalo.dev/docs","title":"Dedalo documentation"}]
 				// Or like string
 				// ["https://dedalo.dev","https://dedalo.dev/docs"]
-				if(is_array($dato_from_json)){
+				if(is_array($data_from_json)){
 
 					$value = [];
-					foreach ($dato_from_json as $current_value) {
+					foreach ($data_from_json as $current_value) {
 						// check if the value is a flat string with the uri
 						if(is_string($current_value)){
 
@@ -1451,7 +1188,7 @@ class component_iri extends component_common {
 				}else{
 
 					$response->result	= null;
-					$response->msg		= 'Error. Expected array and get: '.gettype($dato_from_json);
+					$response->msg		= 'Error. Expected array and get: '.gettype($data_from_json);
 
 					return $response;
 				}
@@ -1567,7 +1304,6 @@ class component_iri extends component_common {
 		$begins_https	= substr($text_value, 0, 8);
 
 		if($begins_http === 'http://' || $begins_https === 'https://') {
-
 			return true;
 		}
 
@@ -1630,39 +1366,6 @@ class component_iri extends component_common {
 
 
 
-	// /**
-	// * SET_COUNTER
-	// * Component counter is saved into section data as object with the tipo and the value as int
-	// * Set the component counter with the given value in the section's data
-	// * @param int $value
-	// * @return int $counter
-	// */
-	// public function set_counter( int $value ) : int {
-
-	// 	$section	= $this->get_my_section();
-	// 	$counter	= $section->set_component_counter( $this->tipo, $value );
-
-	// 	return $counter;
-	// }//end set_counter
-
-
-
-	// /**
-	// * GET_COUNTER
-	// * Get last counter used by the component
-	// * Component counter is saved into section data as object with the tipo and the value as int
-	// * @return int $counter
-	// */
-	// public function get_counter() : int {
-
-	// 	$section	= $this->get_my_section();
-	// 	$counter	= $section->get_component_counter( $this->tipo );
-
-	// 	return $counter;
-	// }//end get_counter
-
-
-
 	/**
 	* GET_LABEL_RECORD
 	* Search the target section of component dataframe `dd1706`
@@ -1701,7 +1404,8 @@ class component_iri extends component_common {
 			$search = search::get_instance($search_query_object);
 			$db_result = $search->search();
 
-			return $db_result->fetch_one() ?? null;
+			$record = $db_result->fetch_one();
+			return ($record !== false) ? $record : null;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__
