@@ -673,7 +673,6 @@ abstract class component_common extends common {
 		if (isset($this->ar_list_of_values)) {
 			unset($this->ar_list_of_values);
 		}
-		
 		// empty data: [] to null
 		if (empty($data)) {
 			$data = null;
@@ -1579,7 +1578,7 @@ abstract class component_common extends common {
 			$model				= $this->get_model();
 			$mode				= $this->mode;
 			$data_column_name	= $this->data_column_name;
-			$data_to_save 		= [];
+			$save_path 			= [];
 
 			// Section record
 			$section_record	= $this->get_my_section_record();
@@ -1589,14 +1588,14 @@ abstract class component_common extends common {
 				$main_data->column	= $data_column_name;
 				$main_data->key		= $tipo;
 
-			$data_to_save[] = $main_data;
+			$save_path[] = $main_data;
 
 			// Save counter
 			$counter = new stdClass();
 				$counter->column	= 'meta';
 				$counter->key		= $tipo;
 
-			$data_to_save[] = $counter;
+			$save_path[] = $counter;
 
 		// Save Relation search
 		// Only for component_autocomplete_hi
@@ -1613,7 +1612,7 @@ abstract class component_common extends common {
 					$relation_search->key		= $tipo;
 					$relation_search->column	= $relation_search_column;
 
-				$data_to_save[] = $relation_search;
+				$save_path[] = $relation_search;
 			}
 
 		// check component minimum vars before save
@@ -1659,9 +1658,10 @@ abstract class component_common extends common {
 			}
 
 		// Save the component data into DB
-			$result = $section_record->save_component_data( $data_to_save );
+			$result = $section_record->save_component_data( $save_path );
 
 		// time machine data.
+		
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
