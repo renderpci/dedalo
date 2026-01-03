@@ -1,27 +1,29 @@
 {
-    "section_id": 1,
-    "section_tipo": "test3",
-    "tipo": "test54",
-    "mode": "edit",
-    "lang": "lg-nolan",
-    "from_component_tipo": "test54",
-    "value": [
-        {
-            "id": 3,
-            "section_id": "1",
-            "section_tipo": "test3",
-            "from_component_tipo": "test54",
-            "paginated_key": 0
-        }
-    ],
-    "debug_model": "component_relation_related",
-    "debug_label": "relation_related",
-    "debug_dataframe": null,
-    "parent_tipo": "test54",
-    "parent_section_id": 1,
-    "pagination": {
-        "total": 1,
-        "limit": 10,
-        "offset": 0
-    }
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test54",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test54",
+	"value": [
+		{
+			"id": 1,
+			"type": "dd89",
+			"type_rel": "dd620",
+			"section_id": "2",
+			"section_tipo": "test3",
+			"from_component_tipo": "test54",
+			"paginated_key": 0
+		}
+	],
+	"debug_model": "component_relation_related",
+	"debug_label": "relation_related",
+	"debug_dataframe": null,
+	"parent_tipo": "test54",
+	"parent_section_id": 1,
+	"pagination": {
+		"total": 1,
+		"limit": 10,
+		"offset": 0
+	}
 }

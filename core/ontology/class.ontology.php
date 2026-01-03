@@ -98,15 +98,13 @@ class ontology {
 
 
 		// get the section_id from the node_tipo: oh1 = 1, rsc197 = 197, etc.
-		$section_id = get_section_id_from_tipo( $node_tipo );
+		$section_id = (int)get_section_id_from_tipo( $node_tipo );
 
 		// Section, create new section
-			$section = section::get_instance(
-				$section_id,
-				$target_section_tipo
+			$section = section_record::create(
+				$target_section_tipo,
+				$section_id				
 			);
-
-			$section->forced_create_record();
 
 		// tld
 			$tld_tipo		= 'ontology7';
@@ -123,7 +121,7 @@ class ontology {
 			$data = null;
 			if(!empty($tld)){
 				$value = new stdClass();
-				$value->value = $tld;
+					$value->value 	= $tld;
 				$data = [$value];
 			}
 			$tld_component->set_data( $data );

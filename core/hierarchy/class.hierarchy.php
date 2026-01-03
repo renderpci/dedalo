@@ -246,132 +246,196 @@ class hierarchy extends ontology {
 			// create the ontology node, save it, and process the `dd_ontology`
 			// It uses a template to build the ontology node data
 
-				// ontology table record template data
-					$section_data_string	= file_get_contents( DEDALO_CORE_PATH.'/ontology/templates/virtual_section_data.json' );
-					$section_data			= json_handler::decode( $section_data_string );
-					if (!is_object($section_data)) {
-						$response->result	= false;
-						$response->msg		.= 'Error on get section data from file virtual_section_data.json';
-						$response->errors[]	= 'Invalid JSON section data from file';
-						debug_log(__METHOD__ .PHP_EOL
-							." msg: ".$response->msg
-							, logger::ERROR
-						);
-						return $response;
-					}
+			// create the new section record
+			$section_record = section_record::create(
+				$tld2.'0', // string section_tipo
+				1 // string|null section_id
+			);
+			
+			// Publication
+				$tipo 	= DEDALO_ONTOLOGY_PUBLICATION_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+					$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES );
+					$component_data->set_from_component_tipo( $tipo );
 
-				// tld
-					$section_data->components->ontology7->dato->{DEDALO_DATA_NOLAN} = [$tld2];
+				$section_record->set_component_data($tipo, $column, [$component_data]);
 
-				// Name
-					$section_data->components->ontology5->dato = $name_data;
+			// Is descriptor
+				$tipo 	= DEDALO_ONTOLOGY_IS_DESCRIPTOR_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+					$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES );
+					$component_data->set_from_component_tipo( $tipo );
 
-				// model
-					$model_locator = new locator();
-						$model_locator->set_type( 'dd151' );
-						$model_locator->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
-						$model_locator->set_section_id( NUMERICAL_MATRIX_VALUE_NO );
-						$model_locator->set_from_component_tipo( 'ontology30' );
+				$section_record->set_component_data($tipo, $column, [$component_data]);
 
-					$section_data->relations[] = $model_locator;
+			// Is Model
+				$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+					$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_NO );
+					$component_data->set_from_component_tipo( $tipo );
 
-				// relations
-					$relation_section_tipo	= get_tld_from_tipo( $real_section_tipo ).'0';
-					$relation_section_id	= get_section_id_from_tipo( $real_section_tipo );
+			// Model (section = 6)
+				$tipo 	= DEDALO_ONTOLOGY_MODEL_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( 'dd0' );
+					$component_data->set_section_id( '6' );
+					$component_data->set_from_component_tipo( $tipo );
 
-					$relation_locator = new locator();
-						$relation_locator->set_type( 'dd151' );
-						$relation_locator->set_section_tipo( $relation_section_tipo );
-						$relation_locator->set_section_id( $relation_section_id );
-						$relation_locator->set_from_component_tipo( 'ontology10' );
+				$section_record->set_component_data($tipo, $column, [$component_data]);
 
-					$section_data->relations[] = $relation_locator;
+			// Is translatable
+				$tipo 	= DEDALO_ONTOLOGY_TRANSLATABLE_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+					$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_NO );
+					$component_data->set_from_component_tipo( $tipo );
 
-				// virtual section
-					$section = section::get_instance(
-						1, // string|null section_id
-						$tld2.'0' // string section_tipo
-					);
+				$section_record->set_component_data($tipo, $column, [$component_data]);
 
-					$section->forced_create_record();
-					// save section
-					$section->set_dato( $section_data );
-					$section->Save();
+			// relations
+				$tipo 	= DEDALO_ONTOLOGY_CONNECTED_TO_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$relation_section_tipo	= get_tld_from_tipo( $real_section_tipo ).'0';
+				$relation_section_id	= get_section_id_from_tipo( $real_section_tipo );
 
-				// parent grouper
-					$parent_grouper_tipo = ontology::create_parent_grouper('hierarchy56', 'hierarchytype', $typology_id);
+				$relation_locator = new locator();
+					$relation_locator->set_type( 'dd151' );
+					$relation_locator->set_section_tipo( $relation_section_tipo );
+					$relation_locator->set_section_id( $relation_section_id );
+					$relation_locator->set_from_component_tipo( $tipo );
 
-					$parent_tld			= get_tld_from_tipo( $parent_grouper_tipo );
-					$parent_section_id	= get_section_id_from_tipo( $parent_grouper_tipo );
-					$parent_node_tipo 	= $parent_tld.'0';
+				$section_record->set_component_data($tipo, $column, [$relation_locator]);
+
+
+			// TLD
+				$tipo 	= DEDALO_ONTOLOGY_TLD_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new stdClass();
+					$component_data->id 	= 1;
+					$component_data->value 	= $tld2;
+					$component_data->lang 	= DEDALO_DATA_LANG;
+
+				$section_record->set_component_data($tipo, $column, [$component_data]);
+
+			// Name
+				$tipo 			= DEDALO_ONTOLOGY_TERM_TIPO;
+				$model 			= ontology_node::get_model_by_tipo( $tipo ); 
+				$column 		= section_record_data::get_column_name( $model );
+
+				$section_record->set_component_data($tipo, $column, $name_data);
+
+			// save
+				$section_record->save();
+
+			// parent grouper
+				$parent_grouper_tipo = ontology::create_parent_grouper('hierarchy56', 'hierarchytype', $typology_id);
+
+				$parent_tld			= get_tld_from_tipo( $parent_grouper_tipo );
+				$parent_section_id	= get_section_id_from_tipo( $parent_grouper_tipo );
+				$parent_node_tipo 	= $parent_tld.'0';
+
+				$parent_tipo		= DEDALO_ONTOLOGY_PARENT_TIPO;
+				$parent_model		= ontology_node::get_model_by_tipo( $parent_tipo );
+				$component_parent	= component_common::get_instance(
+					$parent_model, // string model
+					$parent_tipo, // string tipo
+					'1', // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$tld2.'0' // string section_tipo
+				);
+
+				$parent_locator = new locator();
+					$parent_locator->set_section_tipo( $parent_node_tipo );
+					$parent_locator->set_section_id( $parent_section_id );
+
+				$component_parent->set_data( [$parent_locator] );
+				$component_parent->save();
+
+			// insert the node in dd_ontology
+				ontology::insert_dd_ontology_record($tld2.'0', 1);
+
+			// Virtual model section
+				$model_section_record = section_record::create(
+					$tld2.'0', // string section_tipo
+					2 // string|null section_id
+				);
+				// get section data of the main section_record
+				// all data will be the same expect the is model component
+				// in this case is model component will be set to yes
+				$model_data = $section_record->get_data();
+				// insert the previous data in the model section_record
+				$model_section_record->set_data( $model_data );
+				
+				// is model
+				// change the is model component to yes
+				$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
+				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$column = section_record_data::get_column_name( $model );
+				$component_data = new locator();
+					$component_data->set_id( 1 );
+					$component_data->set_type( 'dd151' );
+					$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
+					$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES );
+					$component_data->set_from_component_tipo( $tipo );
+
+				$model_section_record->set_component_data($tipo, $column, [$component_data]);
+
+				// save
+				$model_section_record->save();
+
+				// parent
+					$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
+
+					$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
+					$parent_section_id	= get_section_id_from_tipo( $parent_model_grouper_tipo );
+					$parent_node_tipo	= $parent_model_tld.'0';
 
 					$parent_tipo		= 'ontology15';
 					$parent_model		= ontology_node::get_model_by_tipo( $parent_tipo );
-					$component_parent	= component_common::get_instance(
+					$component_model_parent	= component_common::get_instance(
 						$parent_model, // string model
 						$parent_tipo, // string tipo
-						'1', // string section_id
+						'2', // string section_id
 						'list', // string mode
 						DEDALO_DATA_NOLAN, // string lang
 						$tld2.'0' // string section_tipo
 					);
 
-					$parent_locator = new locator();
-						$parent_locator->set_section_tipo( $parent_node_tipo );
-						$parent_locator->set_section_id( $parent_section_id );
+					$parent_model_locator = new locator();
+						$parent_model_locator->set_section_tipo( $parent_node_tipo );
+						$parent_model_locator->set_section_id( $parent_section_id );
 
-					$component_parent->set_dato( $parent_locator );
-					$component_parent->Save();
+					$component_model_parent->set_dato( $parent_model_locator );
+					$component_model_parent->Save();
 
-				// insert the node in dd_ontology
-					ontology::insert_dd_ontology_record($tld2.'0', 1);
-
-			// virtual model section
-				// modify the section data to use it as model.
-					foreach ($section_data->relations as $key => $current_locator) {
-						// replace the model locator to yes
-						if($current_locator->from_component_tipo==='ontology30' ){
-							$current_locator->section_id = (string)NUMERICAL_MATRIX_VALUE_YES;
-						}
-					}
-
-				// virtual model section
-					$model_section = section::get_instance(
-						2, // string|null section_id
-						$tld2.'0' // string section_tipo
-					);
-					$model_section->forced_create_record();
-					// save section
-						$model_section->set_dato( $section_data );
-						$model_section->Save();
-
-					// parent
-						$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
-
-						$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
-						$parent_section_id	= get_section_id_from_tipo( $parent_model_grouper_tipo );
-						$parent_node_tipo	= $parent_model_tld.'0';
-
-						$parent_tipo		= 'ontology15';
-						$parent_model		= ontology_node::get_model_by_tipo( $parent_tipo );
-						$component_model_parent	= component_common::get_instance(
-							$parent_model, // string model
-							$parent_tipo, // string tipo
-							'2', // string section_id
-							'list', // string mode
-							DEDALO_DATA_NOLAN, // string lang
-							$tld2.'0' // string section_tipo
-						);
-
-						$parent_model_locator = new locator();
-							$parent_model_locator->set_section_tipo( $parent_node_tipo );
-							$parent_model_locator->set_section_id( $parent_section_id );
-
-						$component_model_parent->set_dato( $parent_model_locator );
-						$component_model_parent->Save();
-
-					// insert the model node in dd_ontology
-						ontology::insert_dd_ontology_record($tld2.'0', 2);
+				// insert the model node in dd_ontology
+					ontology::insert_dd_ontology_record($tld2.'0', 2);
 
 			// set permissions. Allow current user access to created default sections
 			// as es1, es2
@@ -404,8 +468,11 @@ class hierarchy extends ontology {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$component_target_section->set_dato( $tld2.'1' );
-				$component_target_section->Save();
+				$target_section_data = new stdClass();
+					$target_section_data->lang = DEDALO_DATA_NOLAN;
+					$target_section_data->value = $tld2.'1';
+				$component_target_section->set_data( [$target_section_data] );
+				$component_target_section->save();
 
 				$target_model_tipo				= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO;	//'hierarchy53';
 				$model_name						= ontology_node::get_model_by_tipo($target_model_tipo, true);
@@ -417,8 +484,11 @@ class hierarchy extends ontology {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$component_target_model_section->set_dato( $tld2.'2' );
-				$component_target_model_section->Save();
+				$target_model_section_data = new stdClass();
+					$target_model_section_data->lang = DEDALO_DATA_NOLAN;
+					$target_model_section_data->value = $tld2.'2';
+				$component_target_model_section->set_data( [$target_model_section_data] );
+				$component_target_model_section->save();
 
 		// response OK
 			$response->result = true;
