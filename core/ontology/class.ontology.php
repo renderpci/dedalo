@@ -910,15 +910,20 @@ class ontology {
 				}
 
 			// matrix. Check if the parent already exists in matrix
-				$section_record_exist = section::section_record_exists( $parent_section_id, $parent_node_tipo );
-				if( $section_record_exist===false ){
-					$parent_section = section::get_instance(
-						$parent_section_id, // string|null section_id
-						$parent_node_tipo // string section_tipo
-					);
-
-					$parent_section->forced_create_record();
-				}
+			$found = false;
+			// if parent_section_id is not null, check if the parent exists in matrix
+			if($parent_section_id !== null){
+				$section_record = section_record::get_instance( $parent_node_tipo, $parent_section_id );
+				$found = $section_record->exists_in_the_database();
+			}
+			// if parent_section does not exist in matrix, create it
+			if( $found===false ){
+				// create a section record in matrix
+				$section = section::get_instance( $parent_node_tipo );
+				$section->create_record( (object)[
+					'section_id' => $parent_section_id ? (int)$parent_section_id : null
+				]);				
+			}
 
 		// matrix section of the typology node
 			$section_tipo = $tld.'0'; // it can be: ontologytype0, hierarchytype0, hierarchymtype0
