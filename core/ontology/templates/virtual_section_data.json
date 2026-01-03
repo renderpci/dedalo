@@ -1,40 +1,50 @@
 {
-	"relations": [
-		{
-			"type": "dd151",
-			"section_id": "1",
-			"section_tipo": "dd64",
-			"from_component_tipo": "ontology3"
-		},
-		{
-			"type": "dd151",
-			"section_id": "1",
-			"section_tipo": "dd64",
-			"from_component_tipo": "ontology4"
-		},
-		{
-			"type": "dd151",
-			"section_id": "6",
-			"section_tipo": "dd0",
-			"from_component_tipo": "ontology6"
-		},
-		{
-			"type": "dd151",
-			"section_id": "2",
-			"section_tipo": "dd64",
-			"from_component_tipo": "ontology8"
-		}
-	],
-	"components": {
-		"ontology7": {
-			"inf": "tld [component_input_text]",
-			"dato": {
+	"relation": {
+		"ontology3": [
+			{
+				"id": "1",
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "dd64",
+				"from_component_tipo": "ontology3"
 			}
+		],
+		"ontology4": [
+			{
+				"id": "1",
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "dd64",
+				"from_component_tipo": "ontology4"
+			}
+		],
+		"ontology6": [
+			{
+				"id": "1",
+				"type": "dd151",
+				"section_id": "6",
+				"section_tipo": "dd0",
+				"from_component_tipo": "ontology6"
+			}
+		],
+		"ontology8": [
+			{
+				"id": "1",
+				"type": "dd151",
+				"section_id": "2",
+				"section_tipo": "dd64",
+				"from_component_tipo": "ontology8"
+			}
+		]
+	},
+	"string": {
+		"ontology7": {	
+			"id": "1",
+			"inf": "tld [component_input_text]"
 		},
 		"ontology5": {
-			"inf": "Term [component_input_text]",
-			"dato": {
-			}
+			"id": "1",
+			"inf": "Term [component_input_text]"
 		}
 	}
 }
