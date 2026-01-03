@@ -45,7 +45,7 @@
 			$value		= $this->get_data_paginated();
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset;
+			$offset		= $this->pagination->offset ?? 0;
 
 		// data item
 			$item = $this->get_data_item($value);
