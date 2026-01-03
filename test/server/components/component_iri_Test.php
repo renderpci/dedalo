@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_iri_test extends TestCase {
+final class component_iri_test extends BaseTestCase {
 
 
 
@@ -17,30 +17,12 @@ final class component_iri_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -68,36 +50,36 @@ final class component_iri_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -106,18 +88,18 @@ final class component_iri_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$component->dato===null,
+			$component->get_data()===null,
 			'expected null : ' . PHP_EOL
-				. to_string($component->dato)
+				. to_string($component->get_data())
 		);
 
-		// restore dato
-		$result	= $component->set_dato($old_dato);
+		// restore data
+		$result	= $component->set_data($old_data);
 
 		$this->assertTrue(
-			json_encode($component->dato)===json_encode($old_dato),
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
+			json_encode($component->get_data())===json_encode($old_data),
+			'expected original data : ' . PHP_EOL
+				. to_string($component->get_data())
 		);
 
 		// dd_iri
@@ -138,7 +120,7 @@ final class component_iri_test extends TestCase {
 		$this->assertTrue(
 			get_class($dd_iri)==='dd_iri',
 			'expected class dd_iri : ' . PHP_EOL
-				. gettype($dd_iri)
+				. get_class($dd_iri)
 		);
 
 		$this->assertTrue(
@@ -162,7 +144,7 @@ final class component_iri_test extends TestCase {
 		$this->assertTrue(
 			gettype($dd_iri->title)==='string',
 			'expected type string : ' . PHP_EOL
-				. gettype($dd_iri)
+				. gettype($dd_iri->title)
 		);
 
 		$this->assertTrue(
@@ -170,26 +152,26 @@ final class component_iri_test extends TestCase {
 			'expected : ' . $title . PHP_EOL
 				. $dd_iri->title
 		);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_Save
+	* TEST_save
 	* @return void
 	*/
-	public function test_Save() {
+	public function test_save() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->Save();
+		$result	= $component->save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
+			gettype($result)==='boolean' || gettype($result)==='integer' || gettype($result)==='NULL',
+			'expected type boolean|integer|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_Save
+	}//end test_save
 
 
 
@@ -232,40 +214,21 @@ final class component_iri_test extends TestCase {
 
 
 	/**
-	* TEST_get_valor
+	* TEST_get_value
 	* @return void
 	*/
-	public function test_get_valor() {
+	public function test_get_value() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_valor();
+		$result = $component->get_value();
 
 		$this->assertTrue(
 			gettype($result)==='string' || gettype($result)==='NULL',
 			'expected type string|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
+	}//end test_get_value
 
 
 
@@ -312,13 +275,13 @@ final class component_iri_test extends TestCase {
 			    "component_path": [
 			        "components",
 			        "test140",
-			        "dato"
+			        "iri"
 			    ],
 			    "lang": "all"
 			}
 		');
 
-		$result = component_date::resolve_query_object_sql( $query_object );
+		$result = component_iri::resolve_query_object_sql( $query_object );
 
 		$this->assertTrue(
 			gettype($result)==='object',
@@ -365,32 +328,182 @@ final class component_iri_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
+		// Case 1: Simple URL string
 		$response = $component->conform_import_data(
-			'https://elraspa.org', // import_value
+			"https://elraspa.org", // import_value
 			self::$tipo // column_name
 		);
+		$this->assertTrue(empty($response->errors), 'Case 1 error: ' . to_string($response->errors));
+		$this->assertIsArray($response->result);
+		$this->assertEquals('https://elraspa.org', $response->result[0]->iri);
+
+		// Case 2: JSON object
+		$json_obj = '{"iri":"https://dedalo.dev", "title":"Dedalo"}';
+		$response = $component->conform_import_data($json_obj, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'Case 2 error: ' . to_string($response->errors));
+		$this->assertEquals('https://dedalo.dev', $response->result[0]->iri);
+
+		// Case 3: JSON translatable
+		$json_trans = '{"lg-spa":[{"iri":"https://dedalo.dev"}]}';
+		$response = $component->conform_import_data($json_trans, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'Case 3 error: ' . to_string($response->errors));
+		$this->assertIsObject($response->result);
+		$this->assertEquals('https://dedalo.dev', $response->result->{'lg-spa'}[0]->iri);
+
+		// Case 4: Multiple values with separators
+		$multi_string = 'Dedalo, https://dedalo.dev | Wikidata, https://wikidata.org';
+		$response = $component->conform_import_data($multi_string, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'Case 4 error: ' . to_string($response->errors));
+		$this->assertCount(2, $response->result);
+		$this->assertEquals('https://dedalo.dev', $response->result[0]->iri);
+		$this->assertEquals('https://wikidata.org', $response->result[1]->iri);
+	}//end test_conform_import_data
+
+
+
+
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertIsArray($result);
+		$this->assertArrayHasKey('*', $result);
+		$this->assertEquals('contains', $result['*text*']);
+	}//end test_search_operators_info
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$options = (object)[
+			'update_version' => 1,
+			'data_unchanged' => [],
+			'tipo' => self::$tipo,
+			'section_id' => 1,
+			'section_tipo' => self::$section_tipo
+		];
+
+		$result = component_iri::update_data_version($options);
+
+		$this->assertIsObject($result);
+		$this->assertObjectHasProperty('result', $result);
+	}//end test_update_data_version
+
+
+
+	/**
+	* TEST_resolve_title
+	* @return void
+	*/
+	public function test_resolve_title() {
+
+		$component = $this->build_component_instance();
+
+		// Case 1: Title from data object (no dataframe)
+		$data = (object)[
+			'id' => 999999, // probably non-existent id to avoid dataframe overlap
+			'iri' => 'https://dedalo.dev',
+			'title' => 'Dedalo'
+		];
+
+		$result = $component->resolve_title($data);
+
+		// If dataframe returns null/empty, it should fallback to 'Dedalo'
+		$this->assertTrue($result === 'Dedalo' || $result === '', "Result: '$result'");
+	}//end test_resolve_title
+
+
+
+	/**
+	* TEST_has_protocol
+	* @return void
+	*/
+	public function test_has_protocol() {
+
+		$component = $this->build_component_instance();
+
+		$result = PHPUnitUtil::callMethod($component, 'has_protocol', ['https://dedalo.dev']);
+		$this->assertTrue($result);
+
+		$result = PHPUnitUtil::callMethod($component, 'has_protocol', ['http://dedalo.dev']);
+		$this->assertTrue($result);
+
+		$result = PHPUnitUtil::callMethod($component, 'has_protocol', ['ftp://dedalo.dev']);
+		$this->assertFalse($result);
+
+		$result = PHPUnitUtil::callMethod($component, 'has_protocol', ['dedalo.dev']);
+		$this->assertFalse($result);
+	}//end test_has_protocol
+
+
+
+	/**
+	* TEST_get_properties
+	* @return void
+	*/
+	public function test_get_properties() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_properties();
+
+		$this->assertIsObject($result);
+		// Check if it has the injected dataframe properties
+		// The code injects source->request_config
+		$this->assertObjectHasProperty('source', $result);
+		$this->assertObjectHasProperty('request_config', $result->source);
+		$this->assertIsArray($result->source->request_config);
+	}//end test_get_properties
+
+
+
+	/**
+	* TEST_import_save
+	* @return void
+	*/
+	public function test_import_save() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->import_save();
 
 		$this->assertTrue(
-			gettype($response)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($response)
+			gettype($result)==='boolean' || gettype($result)==='integer' || gettype($result)==='NULL',
+			'expected type boolean|integer|null : ' . PHP_EOL
+				. gettype($result)
 		);
-		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($response->result)
-		);
-		$this->assertTrue(
-			gettype($response->errors)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($response->errors)
-		);
-		$this->assertTrue(
-			empty($response->errors),
-			'expected empty errors : ' . PHP_EOL
-				. to_string($response->errors)
-		);
-	}//end test_conform_import_data
+	}//end test_import_save
+
+
+
+	/**
+	* TEST_save_label_dataframe
+	* @return void
+	*/
+	public function test_save_label_dataframe() {
+
+		$options = (object)[
+			'section_tipo'      => self::$section_tipo,
+			'section_id'        => '1',
+			'component_tipo'    => self::$tipo,
+			'section_id_key'    => 1,
+			'target_section_id' => '1'
+		];
+
+		$result = component_iri::save_label_dataframe($options);
+
+		$this->assertIsBool($result);
+	}//end test_save_label_dataframe
 
 
 

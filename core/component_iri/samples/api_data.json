@@ -1,0 +1,50 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test140",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test140",
+	"value": [
+		{
+			"id": 1,
+			"iri": "http://dedalo.dev/nolan",
+			"lang": "lg-nolan",
+			"title": "Label one nolan"
+		}
+	],
+	"debug_model": "component_iri",
+	"debug_label": "iri",
+	"debug_dataframe": null,
+	"parent_tipo": "test140",
+	"parent_section_id": 1,
+	"counter": 1,
+	"transliterate_value": [
+		{
+			"id": 1,
+			"iri": "http://dedalo.dev/en",
+			"lang": "lg-eng",
+			"title": "Title one in english"
+		}
+	],
+	"dato_full": [
+		{
+			"id": 1,
+			"iri": "http://dedalo.dev/es",
+			"lang": "lg-spa",
+			"title": "Título uno en español"
+		},
+		{
+			"id": 1,
+			"iri": "http://dedalo.dev/en",
+			"lang": "lg-eng",
+			"title": "Title one in english"
+		},
+		{
+			"id": 1,
+			"iri": "http://dedalo.dev/nolan",
+			"lang": "lg-nolan",
+			"title": "Label one nolan"
+		}
+	]
+}
