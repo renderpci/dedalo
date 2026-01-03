@@ -294,7 +294,7 @@ class component_iri extends component_common {
 	* IMPORT_SAVE
 	* @return
 	*/
-	public function import_save() {
+	public function import_save() : bool{
 
 		// dato candidate to save
 			$dato = $this->dato;
