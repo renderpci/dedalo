@@ -529,17 +529,15 @@ class tool_import_dedalo_csv extends tool_common {
 					continue;
 				}
 
-			// section. Always force create/re-use section
-				// $section = section::get_instance(
-				// 	$section_id,
-				// 	$section_tipo,
-				// 	'list',
-				// 	true // set cache always to true important (!)
-				// );
-				// $create_record = $section->forced_create_record();
-
 				$section_record = section_record::get_instance( $section_tipo, $section_id );
 				$exists = $section_record->exists_in_the_database();
+				// if section does not exist in matrix, create it
+				if( $exists===false ){
+					$section = section::get_instance( $section_tipo );
+					$section->create_record( (object)[
+						'section_id' => $section_id ? (int)$section_id : null
+					]);
+				}
 				
 			// set the information about the process
 				$process_info->section_id = $section_id;
