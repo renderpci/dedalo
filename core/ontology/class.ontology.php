@@ -331,7 +331,7 @@ class ontology {
 					if ($pkey==='source' || $pkey==='css') {
 						continue;
 					}
-					$properties_general->{$pkey} = $pvalue;
+					$properties_general->{$pkey} = $pvalue->value ?? null;
 				}
 				$properties_general_value = [$properties_general];
 			}
@@ -526,9 +526,9 @@ class ontology {
 
 	/**
 	* ADD_MAIN_SECTION
-	* Creates a new section in the main ontology sections.
-	* The main section could be the official tlds as dd, rsc, hierarchy, etc
-	* Or local ontology defined by every institution as es, qdp, mupreva, etc
+	* Creates a new section in the main ontology sections if not already exists.
+	* The main section could be the official tlds as dd, rsc, hierarchy, etc.
+	* or local ontology defined by every institution as es, qdp, mupreva, etc
 	* @param object $file_item
 	*  {
 	*		"tld": "oh",
@@ -584,7 +584,7 @@ class ontology {
 		// If the main section doesn't exists create new record using section
 			if($main_section_id===null){
 				$main_section = section::get_instance(
-					self::$main_section_tipo// string section_tipo
+					self::$main_section_tipo // string section_tipo
 				);
 				$main_section_id = $main_section->create_record();
 			}
@@ -649,7 +649,7 @@ class ontology {
 			$tipo 	= DEDALO_HIERARCHY_TERM_TIPO;
 			$model 	= ontology_node::get_model_by_tipo( $tipo ); 
 			$column = section_record_data::get_column_name( $model );
-
+			
 			$section_record->set_component_data($tipo, $column, $name_data);
 
 		// TLD
@@ -720,9 +720,6 @@ class ontology {
 			$section_record->save();
 
 
-		// create dd_ontology node for section
-			ontology::create_dd_ontology_ontology_section_node( $file_item );
-
 		return $main_section_id;
 	}//end add_main_section
 
@@ -730,7 +727,7 @@ class ontology {
 
 	/**
 	* CREATE_DD_ONTOLOGY_ONTOLOGY_SECTION_NODE
-	* Creates new dd_ontology row with ontologytype tld for the local tlds
+	* Creates/Updates a dd_ontology row with ontologytype tld for the local tlds
 	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
 	* A dd_ontology row is needed to represent it.
 	* Note that action 'ontology_node->insert()' delete the existing record in dd_ontology, and creates a new one
@@ -784,8 +781,8 @@ class ontology {
 				// term
 				if (!empty($name_data)) {
 					$term = new stdClass();
-					foreach ($name_data as $current_lang => $value) {
-						$term->$current_lang = $value[0] ?? $tld;
+					foreach ($name_data as $data_element) {
+						$term->{$data_element->lang} = $data_element->value;
 					}
 					$ontology_node->set_term_data( $term );
 				}
@@ -1463,7 +1460,7 @@ class ontology {
 			// tld is mandatory! if tld_data is empty stop the process
 			if(empty($tld_data)){
 				debug_log(__METHOD__
-					. " Ignored record because tld value (ontology7) is empty (mandatory) " . PHP_EOL
+					. " Ignored record because tld value ('component_input_text [ontology7] value) is empty. (TLD is mandatory) " . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 					. ' section_id: ' . to_string($section_id)
 					, logger::ERROR
@@ -1690,12 +1687,11 @@ class ontology {
 			// or the overwrite has not value defined (partial definition in overwrite node),
 			// get the v5 properties data with the main node definition.
 			$properties_v5_data = $properties_v5_data ?? self::get_node_component_data( $locator, $properties_v5_tipo );
+			
+			$properties_v5 = !is_empty($properties_v5_data) && !empty($properties_v5_data[0]->value)
+				? json_encode($properties_v5_data[0]->value, JSON_PRETTY_PRINT)
+				: null;
 
-			if( !is_empty( $properties_v5_data ) ){
-				$properties_v5 = json_encode( $properties_v5_data[0] );
-			}else{
-				$properties_v5 = null;
-			}
 			$ontology_node->set_propiedades( $properties_v5 );
 
 		// Properties
@@ -1704,7 +1700,7 @@ class ontology {
 
 			// 1 get properties data from local overwrite node if exist overwrite node as local definition.
 			if ( $overwrite_locator ) {
-				$properties_data = self::get_node_component_data( $overwrite_locator, $properties_tipo );
+				$properties_data = self::get_node_component_data( $overwrite_locator, $properties_tipo );				
 			}
 			// 2 if properties data has not defined, because it has not any overwrite (default behavior),
 			// or the overwrite has not value defined (partial definition in overwrite node),
@@ -1713,7 +1709,7 @@ class ontology {
 
 			// Create the properties object with the data or create new empty object to collect CSS or RQO data
 			$properties = !empty($properties_data)
-				? ($properties_data[0] ?? new stdClass())
+				? ($properties_data[0]->value ?? new stdClass())
 				: new stdClass();
 
 			if (!is_object($properties)) {
@@ -1743,7 +1739,7 @@ class ontology {
 
 			// Properties set the CSS properties as css in properties
 			if( !empty($properties_css_data) ){
-				$properties->css = reset($properties_css_data);
+				$properties->css = $properties_css_data[0]->value;
 			}
 
 		// Properties RQO
@@ -1761,7 +1757,7 @@ class ontology {
 
 			// Properties set the RQO properties as source in properties
 			if( !empty($properties_rqo_data) ){
-				$properties->source = reset($properties_rqo_data);
+				$properties->source = $properties_rqo_data[0]->value;
 			}
 
 		// Properties mix
@@ -1824,6 +1820,10 @@ class ontology {
 			$locator->section_tipo
 		);
 		$data = $component->get_data();
+
+		if (empty($data)) {
+			return null;
+		}
 
 		return $data;
 	}//end get_node_component_data
@@ -2514,7 +2514,7 @@ class ontology {
 	* return his full data as `name_data`
 	* name_data is used to insert has name / term of other nodes that clone his values.
 	* @param string $tld
-	* @return object|null $name_data
+	* @return ?array $name_data
 	* sample:
 	* [
 	* 	{"lang": "lg-spa", "value": "Prueba"},
@@ -2522,7 +2522,7 @@ class ontology {
 	* ]
 	* @test true
 	*/
-	public static function get_main_name_data( string $tld ) : ?object {
+	public static function get_main_name_data( string $tld ) : ?array {
 
 		// get main record
 			$main_record = ontology::get_ontology_main_from_tld( $tld );
@@ -2546,10 +2546,10 @@ class ontology {
 				DEDALO_DATA_LANG,
 				$main_record->section_tipo
 			);
-			$name_data = $component->get_data();
+			$data = $component->get_data();
 
 
-		return $name_data;
+		return $data;
 	}//end get_main_name_data
 
 
