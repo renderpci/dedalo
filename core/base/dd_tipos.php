@@ -87,6 +87,7 @@ define('DEDALO_ONTOLOGY_TERM_TIPO',						'ontology5');
 define('DEDALO_ONTOLOGY_MODEL_TIPO',					'ontology6');
 define('DEDALO_ONTOLOGY_TLD_TIPO',						'ontology7');
 define('DEDALO_ONTOLOGY_TRANSLATABLE_TIPO',				'ontology8');
+define('DEDALO_ONTOLOGY_CONNECTED_TO_TIPO',				'ontology10');
 define('DEDALO_ONTOLOGY_PARENT_TIPO',					'ontology15');
 define('DEDALO_ONTOLOGY_IS_MODEL_TIPO',					'ontology30');
 define('DEDALO_ONTOLOGY_SECTION_TIPO',					'ontology35');
