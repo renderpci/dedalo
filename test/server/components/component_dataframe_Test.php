@@ -117,21 +117,21 @@ final class component_dataframe_test extends TestCase {
 
 
 	/**
-	* TEST_get_all_data
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_all_data() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_all_data();
+		$result = $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array',
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_all_data
+	}//end test_get_data
 
 
 
