@@ -41,8 +41,8 @@ class ontology_data_io {
 				$section_tipo // string section_tipo
 			);
 
-			$properties_data	= $properties_component->get_dato();
-			$data				= $properties_data[0] ?? null;
+			$properties_data	= $properties_component->get_data();
+			$data				= $properties_data[0]->value ?? null;
 			$data_string		= json_encode($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 
 		// path to save the file
@@ -166,7 +166,7 @@ class ontology_data_io {
 			$section_tipo // string section_tipo
 		);
 
-		$data = $properties_component->get_dato() ?? [ new stdClass() ];
+		$data = $properties_component->get_data() ?? [ new stdClass() ];
 
 		$date			= dd_date::get_now_as_iso_timestamp();
 		$dedalo_version	= get_dedalo_version();
@@ -184,18 +184,24 @@ class ontology_data_io {
 			return $active_ontology;
 		},  ontology::get_active_elements() );
 
-		foreach ($data as $current_value) {
-			$current_value->version				= $version;
-			$current_value->date				= $date;
-			$current_value->entity_id			= DEDALO_ENTITY_ID;
-			$current_value->entity				= DEDALO_ENTITY;
-			$current_value->entity_label		= DEDALO_ENTITY_LABEL;
-			$current_value->host				= DEDALO_HOST;
-			$current_value->active_ontologies	= $active_ontologies;
+		foreach ($data as $key => $data_element) {
+
+			// Fill value
+			$value = new stdClass();
+				$value->version				= $version;
+				$value->date				= $date;
+				$value->entity_id			= DEDALO_ENTITY_ID;
+				$value->entity				= DEDALO_ENTITY;
+				$value->entity_label		= DEDALO_ENTITY_LABEL;
+				$value->host				= DEDALO_HOST;
+				$value->active_ontologies	= $active_ontologies;
+
+			// Set value
+			$data[$key]->value = $value;
 		}
 
-		$properties_component->set_dato( $data );
-		$properties_component->Save();
+		$properties_component->set_data( $data );
+		$properties_component->save();
 
 
 		return true;

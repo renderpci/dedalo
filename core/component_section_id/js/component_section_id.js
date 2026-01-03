@@ -62,4 +62,18 @@ export const component_section_id = function(){
 
 
 
+/**
+ * GET_SEARCH_VALUE
+ * @return array new_value
+ */
+component_section_id.prototype.get_search_value = function() {
+
+	const data		= this.data || {}
+	const value		= data.value || []
+
+	return value
+}//end get_search_value
+
+
+
 // @license-end

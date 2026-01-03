@@ -3210,6 +3210,7 @@ class section extends common {
 
 		// Check if section_id already exists
 		$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+
 		// Ignore invalid empty matrix tables
 		if (empty($matrix_table)) {
 			debug_log(__METHOD__
@@ -3220,12 +3221,12 @@ class section extends common {
 			return false;
 		}
 
-		$sql		= 'SELECT section_id FROM "$matrix_table" WHERE section_id = $1 AND section_tipo = $2';
+		$sql		= 'SELECT section_id FROM "'.$matrix_table.'" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
 		$result		= matrix_db_manager::exec_search($sql, [$section_id, $section_tipo]);
 		$num_rows	= pg_num_rows($result);
 
 		// num_rows. > 0 indicates already exists
-		$result = (bool)($num_rows>0);
+		$result = (bool)($num_rows > 0);
 
 
 		return $result;

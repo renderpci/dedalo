@@ -1743,8 +1743,10 @@ class area_maintenance extends area_common {
 						$import_response = ontology_data_io::import_private_lists_from_file( $current_file_item );
 					}else{
 						// main section
-						// check if the main section exist
+						// create the main section if not exists
 						ontology::add_main_section( $current_file_item );
+						// create dd_ontology node for the main section
+						ontology::create_dd_ontology_ontology_section_node( $current_file_item );
 						// matrix data of regular ontology
 						$import_response = ontology_data_io::import_from_file( $current_file_item );
 					}
