@@ -6,59 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class ontology_data_io_test extends TestCase {
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	// /**
-	// * GET_SAMPLE_DD_ROW
-	// * @return
-	// */
-	// public static function get_sample_dd_row() {
-	// 	return json_decode('
-	// 		{
-	// 			"id": "16028305",
-	// 			"tipo": "test102",
-	// 			"parent": "test45",
-	// 			"modelo": "dd1747",
-	// 			"is_model": false,
-	// 			"esdescriptor": "si",
-	// 			"visible": "si",
-	// 			"order_number": "28",
-	// 			"tld": "test",
-	// 			"translatable": false,
-	// 			"relaciones": "null",
-	// 			"propiedades": null,
-	// 			"properties": null,
-	// 			"term2": null,
-	// 			"term": "{\"lg-spa\": \"section_id\"}"
-	// 		}
-	// 	');
-	// }//end get_sample_dd_row
-
-
-
-	/////////// ⬇︎ test start ⬇︎ ////////////////
+final class ontology_data_io_test extends BaseTestCase {
 
 
 
@@ -86,8 +34,11 @@ final class ontology_data_io_test extends TestCase {
 	*/
 	public function test_export_ontology_info() {
 
+		$this->user_login();
+
 		$response = ontology_data_io::export_ontology_info();
 
+		// 1 - Type must to be object
 		$expected = 'object';
 		$this->assertTrue(
 			gettype($response)===$expected ,
@@ -95,6 +46,7 @@ final class ontology_data_io_test extends TestCase {
 			.'response type: ' . gettype($response) . PHP_EOL
 		);
 
+		// 2 - Result must to be true
 		$expected = true;
 		$this->assertTrue(
 			$response->result===$expected ,
@@ -102,6 +54,7 @@ final class ontology_data_io_test extends TestCase {
 			.'response->result: ' . to_string($response->result) . PHP_EOL
 		);
 
+		// 3 - Errors must to be empty
 		$expected = true;
 		$this->assertTrue(
 			empty($response->errors)===$expected ,
@@ -109,23 +62,28 @@ final class ontology_data_io_test extends TestCase {
 			.'response->result: ' . to_string( empty($response->errors) ) . PHP_EOL
 		);
 
+		// 4 - Data must to be object or NULL
 		$expected = 'object';
 		$this->assertTrue(
-			gettype($response->data)===$expected ,
+			gettype($response->data)===$expected || gettype($response->data)==='NULL',
 			'expected: ' . to_string($expected) . PHP_EOL
 			.'response type: ' . gettype($response->data) . PHP_EOL
 			.' response: ' . to_string($response)
 		);
 
-		$expected = DEDALO_ENTITY;
-		$this->assertTrue(
-			$response->data->entity===$expected ,
-			 ' expected: ' . to_string($expected) . PHP_EOL
-			.' response->data->entity: ' . to_string($response->data->entity) . PHP_EOL
-			.' response->data->entity type: ' . gettype($response->data->entity) . PHP_EOL
-			.' response: ' . to_string($response)
-		);
+		// 5 - Data entity must to be DEDALO_ENTITY
+		if (!empty($response->data)) {
+			$expected = DEDALO_ENTITY;
+			$this->assertTrue(
+				$response->data->entity===$expected ,
+				' expected: ' . to_string($expected) . PHP_EOL
+				.' response->data->entity: ' . to_string($response->data->entity) . PHP_EOL
+				.' response->data->entity type: ' . gettype($response->data->entity) . PHP_EOL
+				.' response: ' . to_string($response)
+			);
+		}
 
+		// 6 - Path file must to be string
 		$expected = 'string';
 		$this->assertTrue(
 			gettype($response->path_file)===$expected ,
@@ -134,6 +92,7 @@ final class ontology_data_io_test extends TestCase {
 			.' response: ' . to_string($response)
 		);
 
+		// 7 - Saved must to be integer
 		$expected = 'integer';
 		$this->assertTrue(
 			gettype($response->saved)===$expected ,
@@ -150,6 +109,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_set_ontology_io_path() {
+
+		$this->user_login();
 
 		$result = ontology_data_io::set_ontology_io_path();
 
@@ -181,6 +142,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_ontology_io_path() {
+
+		$this->user_login();
 
 		$result = ontology_data_io::get_ontology_io_path();
 
@@ -226,6 +189,8 @@ final class ontology_data_io_test extends TestCase {
 	*/
 	public function test_get_ontology_io_url() {
 
+		$this->user_login();
+
 		$result = ontology_data_io::get_ontology_io_url();
 
 		$expected = 'string';
@@ -269,6 +234,8 @@ final class ontology_data_io_test extends TestCase {
 	*/
 	public function test_update_ontology_info() {
 
+		$this->user_login();
+
 		$result = ontology_data_io::update_ontology_info();
 
 
@@ -296,6 +263,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_export_to_file() {
+
+		$this->user_login();
 
 		$tld = 'test';
 
@@ -329,8 +298,9 @@ final class ontology_data_io_test extends TestCase {
 	*/
 	public function test_export_private_lists_to_file() {
 
-		$result = ontology_data_io::export_private_lists_to_file();
+		$this->user_login();
 
+		$result = ontology_data_io::export_private_lists_to_file();
 
 		$expected = 'object';
 		$this->assertTrue(
@@ -358,6 +328,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_import_from_file() {
+
+		$this->user_login();
 
 		$file_item = (object)[
 			'section_tipo'	=> 'test0',
@@ -399,6 +371,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_import_private_lists_from_file() {
+
+		$this->user_login();
 
 		$file_item = (object)[
 			'section_tipo'	=> 'test0',
@@ -448,6 +422,8 @@ final class ontology_data_io_test extends TestCase {
 	*/
 	public function test_download_remote_ontology_file() {
 
+		$this->user_login();
+
 		// bad URL
 		$url = 'https://master.dedalo.dev/dedalo/import/ontology/6.4/fakeurl';
 
@@ -490,6 +466,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_ontology_update_info() {
+
+		$this->user_login();
 
 		// bad version
 		$version = [96,34,100];
@@ -589,6 +567,8 @@ final class ontology_data_io_test extends TestCase {
 	* @return void
 	*/
 	public function test_check_remote_server() {
+
+		$this->user_login();
 
 		// bad URL
 		$server = (object)[

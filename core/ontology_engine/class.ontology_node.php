@@ -629,7 +629,7 @@ class ontology_node {
 
 	/**
 	* INSERT
-	* Create a row into dd_ontology table with ontology data
+	* Create/Update a row into dd_ontology table with ontology data
 	* The insert will search if tipo exists previously,
 	* if the tipo was found, delete it and insert as new one
 	* else insert new one
