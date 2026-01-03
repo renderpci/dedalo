@@ -1,8 +1,10 @@
 [
-		{
-			"id": 1,
-			"section_id": "1",
-			"section_tipo": "test3",
-			"from_component_tipo": "test54"
-		}
-	]
+	{
+		"id": 1,
+		"type": "dd89",
+		"type_rel": "dd620",
+		"section_id": "2",
+		"section_tipo": "test3",
+		"from_component_tipo": "test54"
+	}
+]
