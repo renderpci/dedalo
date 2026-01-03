@@ -75,6 +75,7 @@ final class component_relation_parent_test extends TestCase {
 		];
 		foreach ($ar_section_id as $section_id) {
 			$section = section::get_instance(
+				$section_id, // string|null section_id
 				self::$section_tipo, // string section_tipo
 				'list'
 			);
@@ -95,14 +96,14 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_save
+	* TEST_Save
 	* @return void
 	*/
-	public function test_save() {
+	public function test_Save() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->save();
+		$result	= $component->Save();
 
 		$this->assertTrue(
 			gettype($result)==='integer' || gettype($result)==='NULL',
@@ -114,7 +115,7 @@ final class component_relation_parent_test extends TestCase {
 			'expected equal : ' . PHP_EOL
 				. to_string($result)
 		);
-	}//end test_save
+	}//end test_Save
 
 
 
