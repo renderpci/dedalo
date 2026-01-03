@@ -246,8 +246,14 @@ class hierarchy extends ontology {
 			// create the ontology node, save it, and process the `dd_ontology`
 			// It uses a template to build the ontology node data
 
-			// create the new section record
-			$section_record = section_record::create(
+			// create the new section record in database
+			$section = section::get_instance( $tld2.'0' );
+			$section->create_record( (object)[
+				'section_id' => 1
+			]);
+
+			// get the new section record
+			$section_record = section_record::get_instance(
 				$tld2.'0', // string section_tipo
 				1 // string|null section_id
 			);
@@ -381,7 +387,14 @@ class hierarchy extends ontology {
 				ontology::insert_dd_ontology_record($tld2.'0', 1);
 
 			// Virtual model section
-				$model_section_record = section_record::create(
+				// create the new section record in database
+				$section = section::get_instance( $tld2.'0' );
+				$section->create_record( (object)[
+					'section_id' => 2
+				]);
+
+				// get the new section record
+				$model_section_record = section_record::get_instance(
 					$tld2.'0', // string section_tipo
 					2 // string|null section_id
 				);
