@@ -68,14 +68,14 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
@@ -87,103 +87,16 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-		// public function test_set_dato() {
-
-		// 	$component = $this->build_component_instance();
-
-		// 	$old_dato = $component->get_dato();
-
-		// 	$dato	= null;
-		// 	$result	= $component->set_dato($dato);
-
-		// 	$this->assertTrue(
-		// 		gettype($result)==='boolean',
-		// 		'expected type boolean : ' . PHP_EOL
-		// 			. gettype($result)
-		// 	);
-
-		// 	// null case
-		// 		$this->assertTrue(
-		// 			$component->dato===[],
-		// 			'expected [] : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// object case
-		// 		$locator = json_decode('
-		// 			{
-		// 				"type":"dd48",
-		// 				"section_id":"2",
-		// 				"section_tipo":"test3",
-		// 				"from_component_tipo":"test54"
-		// 			}
-		// 		');
-		// 		$dato	= $locator;
-		// 		$result	= $component->set_dato($dato);
-
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode([$dato]),
-		// 			'expected array : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// array case
-		// 		$dato	= [$locator];
-		// 		$result	= $component->set_dato($dato);
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode($dato),
-		// 			'expected array : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-
-		// 	// restore dato
-		// 		$result	= $component->set_dato($old_dato);
-
-		// 		$this->assertTrue(
-		// 			json_encode($component->dato)===json_encode($old_dato),
-		// 			'expected old dato : ' . PHP_EOL
-		// 				. to_string($component->dato)
-		// 		);
-		// }//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type string|array|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_add_related
-	* @return void
-	*/
-	public function test_add_related() {
-
-		$component = $this->build_component_instance();
-
-		$locator = new locator();
-			$locator->set_section_tipo(self::$section_tipo);
-			$locator->set_section_id(3);
-			$locator->set_from_component_tipo(self::$tipo);
-
-		$result = $component->add_related($locator);
+		$data		= null;
+		$result		= $component->set_data($data);
+		$check_data = $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -191,23 +104,40 @@ final class component_relation_related_test extends TestCase {
 				. gettype($result)
 		);
 
-		// $dato = $component->get_dato();
-		$dato = $component->dato;
-		$this->assertTrue(
-			locator::in_array_locator($locator, $dato, ['section_tipo','section_id']),
-			'expected true : ' . PHP_EOL
-				.' dato: '. to_string($dato) . PHP_EOL
-				.' locator: ' .to_string($locator)
-		);
-	}//end test_add_related
+		// null case
+			$this->assertTrue(
+				$check_data===null,
+				'expected null : ' . PHP_EOL
+					. to_string($check_data)
+			);
+
+		// data case
+			$locator = json_decode('
+				{
+					"type":"dd48",
+					"section_id":"2",
+					"section_tipo":"test3",
+					"from_component_tipo":"test54"
+				}
+			');
+			$data	= [$locator];
+			$result	= $component->set_data( $data );
+			$check_data = $component->get_data();
+			$this->assertTrue(
+				true === locator::in_array_locator( $locator, $data ),
+				'expected array : ' . PHP_EOL
+					. to_string($check_data)
+			);
+
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_remove_related
+	* TEST_ADD_LOCATOR_TO_DATA
 	* @return void
 	*/
-	public function test_remove_related() {
+	public function test_add_locator_to_data() {
 
 		$component = $this->build_component_instance();
 
@@ -215,8 +145,9 @@ final class component_relation_related_test extends TestCase {
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(3);
 			$locator->set_from_component_tipo(self::$tipo);
+			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
 
-		$result = $component->remove_related($locator);
+		$result = $component->add_locator_to_data( $locator );
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -224,20 +155,57 @@ final class component_relation_related_test extends TestCase {
 				. gettype($result)
 		);
 
-		// $dato = $component->get_dato();
-		$dato = $component->dato;
+		$data = $component->get_data();
 		$this->assertTrue(
-			!locator::in_array_locator($locator, $dato, ['section_tipo','section_id']),
+			locator::in_array_locator($locator, $data, ['section_tipo','section_id']),
 			'expected true : ' . PHP_EOL
-				.' dato: '. to_string($dato) . PHP_EOL
+				.' data: '. to_string($data) . PHP_EOL
 				.' locator: ' .to_string($locator)
 		);
-	}//end test_remove_related
+	}//end test_add_locator_to_data
 
 
 
 	/**
-	* TEST_get_data_with_references
+	* TEST_REMOVE_LOCATOR_FROM_DATA
+	* @return void
+	*/
+	public function test_remove_locator_from_data() {
+
+		$component = $this->build_component_instance();
+
+		$locator = new locator();
+			$locator->set_section_tipo(self::$section_tipo);
+			$locator->set_section_id(3);
+			$locator->set_from_component_tipo(self::$tipo);
+			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
+		
+		$component->add_locator_to_data($locator);
+		// add another locator
+		$locator->set_section_id(4);
+		$component->add_locator_to_data($locator);
+		// remove the second locator
+		$result = $component->remove_locator_from_data($locator);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$data = $component->get_data();
+		$this->assertTrue(
+			!locator::in_array_locator($locator, $data, ['section_tipo','section_id']),
+			'expected true : ' . PHP_EOL
+				.' data: '. to_string($data) . PHP_EOL
+				.' locator: ' .to_string($locator)
+		);
+	}//end test_remove_locator_from_data
+
+
+
+	/**
+	* TEST_GET_DATA_WITH_REFERENCES
 	* @return void
 	*/
 	public function test_get_data_with_references() {
@@ -256,7 +224,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_calculated_references
+	* TEST_GET_CALCULATED_REFERENCES
 	* @return void
 	*/
 	public function test_get_calculated_references() {
@@ -277,7 +245,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_type_rel
+	* TEST_GET_TYPE_REL
 	* @return void
 	*/
 	public function test_get_type_rel() {
@@ -303,7 +271,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_references_recursive
+	* TEST_GET_REFERENCES_RECURSIVE
 	* @return void
 	*/
 	public function test_get_references_recursive() {
@@ -333,7 +301,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_references
+	* TEST_GET_REFERENCES
 	* @return void
 	*/
 	public function test_get_references() {
@@ -352,26 +320,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($value)==='string' || gettype($value)==='NULL',
-			'expected type string|null : ' .PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_get_sortable
+	* TEST_GET_SORTABLE
 	* @return void
 	*/
 	public function test_get_sortable() {
@@ -390,7 +339,7 @@ final class component_relation_related_test extends TestCase {
 
 
 	/**
-	* TEST_get_order_path
+	* TEST_GET_ORDER_PATH
 	* @return void
 	*/
 	public function test_get_order_path() {

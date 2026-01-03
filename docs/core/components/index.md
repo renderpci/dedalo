@@ -571,7 +571,7 @@ The observers and observables are configured in ontology properties of the compo
 
 Example of observer configuration:
 
-When a Numismatic Object define his own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the Type [numisdata3](https://dedalo.dev/ontology/numisdata3) related and his equivalents types [numisdata36](https://dedalo.dev/ontology/numisdata36) will need to be update his own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The coins field in types get all coins in the equivalents types, so, when one type change all need to be update. In this situation the coins portal is observing the types field in numismatic object, the observable, any change in it will fire the process to update using `set_dato_external` function.
+When a Numismatic Object define his own Type [numisdata161](https://dedalo.dev/ontology/numisdata161), the Type [numisdata3](https://dedalo.dev/ontology/numisdata3) related and his equivalents types [numisdata36](https://dedalo.dev/ontology/numisdata36) will need to be update his own Coins field [numisdata77](https://dedalo.dev/ontology/numisdata77). The coins field in types get all coins in the equivalents types, so, when one type change all need to be update. In this situation the coins portal is observing the types field in numismatic object, the observable, any change in it will fire the process to update using `set_data_external` function.
 
 Coins Update his own data when tipo is set in numismatic object:
 
@@ -592,10 +592,10 @@ Coins Update his own data when tipo is set in numismatic object:
                 "params": {
                     "save": true,
                     "changed": false,
-                    "current_dato": false,
+                    "current_data": false,
                     "references_limit": 0
                 },
-                "function": "set_dato_external"
+                "function": "set_data_external"
             }
         },
         "component_tipo": "numisdata36"

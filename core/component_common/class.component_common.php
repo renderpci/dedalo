@@ -640,6 +640,21 @@ abstract class component_common extends common {
 	}//end set_dato_resolved
 
 
+	/**
+	* VALIDATE_DATA_ELEMENT
+	* Generic harmless method to validate a data element.
+	* Overwrite this method in child classes to implement specific validation logic.
+	* @param object $data_element
+	* The data element to validate
+	* @param bool $init
+	* On true, the component will initialize the array of values lookup map
+	* @return object|false
+	*/
+	public function validate_data_element( object $data_element, bool $init = true ) : object|false {
+		return $data_element;
+	}//end validate_data_element
+
+
 
 	/**
 	* SET_DATA
@@ -655,19 +670,19 @@ abstract class component_common extends common {
 	public function set_data( ?array $data ) : bool {
 
 		// unset previous calculated ar_list_of_values
-			if (isset($this->ar_list_of_values)) {
-				unset($this->ar_list_of_values);
-			}
-
+		if (isset($this->ar_list_of_values)) {
+			unset($this->ar_list_of_values);
+		}
+		
 		// empty data: [] to null
-			if (empty($data)) {
-				$data = null;
-			}
+		if (empty($data)) {
+			$data = null;
+		}
 
 		// empty array cases: [null], [''] to null
-			if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
-				$data = null;
-			}
+		if (is_array($data) && count($data)===1 && ($data[0]===null || $data[0]==='')) {
+			$data = null;
+		}
 
 		// resolved set
 			// $this->dato_resolved = $data;
@@ -680,63 +695,66 @@ abstract class component_common extends common {
 		}
 
 		// Counter
-			$data_to_set = [];
-			// check the data values to set the data id
-			if( !empty($data) ) {
-				$ar_id = [];
-				foreach( $data as $item ){
+		$data_to_set = [];
+		// check the data values to set the data id
+		if( !empty($data) ) {
+			$init = true;
+			$ar_id = [];
+			foreach( $data as $element ){
 
-					// Check if the data is an object before attempting property access
-					$is_object = is_object($item);
-
-					// Determine if the value has a valid, non-empty ID to be treated as existing data.
-					// This ensures objects with an 'id' property set to null/0/empty are treated as new.
-					$has_id = ($is_object && property_exists($item, 'id') && $item->id) ? true : false;
-					if( !$has_id ){
-						if( !$is_object ) {
-							$new_item = new stdClass();
-								$new_item->value = $item;
-								if($this->translatable) {
-									$new_item->lang = $this->lang;
-								}
-							// Replace item with new_item
-							$item = $new_item;
-							debug_log(__METHOD__
-								. " New item created (is not object and not has id): " . json_encode($item)
-								, logger::ERROR
-							);
+				// Check if the data is an object before attempting property access
+				if( !is_object($element) ) {
+					$new_element = new stdClass();
+						$new_element->value = $element;
+						if($this->translatable) {
+							$new_element->lang = $this->lang;
 						}
-						$data_to_set[] = $this->set_data_item_counter( $item );
-					}else{
-						$data_to_set[] = $item;
-					}
+					// Replace element with new_element
+					$element = $new_element;
+					debug_log(__METHOD__
+						. " New element created (is not object and not has id): " . json_encode($element)
+						, logger::ERROR
+					);
+				}
 
+				// Determine if the value has a valid, non-empty ID to be treated as existing data.
+				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
+				$has_id = ( property_exists($element, 'id') && $element->id) ? true : false;
+				$element_to_validate = $has_id
+					? $element
+					: $this->set_data_item_counter( $element );
+
+				$safe_element = $this->validate_data_element($element_to_validate, $init);
+				if( $safe_element ) {
+					$data_to_set[] = $safe_element;
 					// Set every id of data into the array
-					$ar_id[] = $item->id;
+					$ar_id[] = $safe_element->id;
 				}
 
-				// Set the counter with the max id when the counter is bellow it.
+				$init = false;
+			}				
+
+			// Set the counter with the max id when the counter is bellow it.
+			if (!empty($ar_id)) {
+				$max_id = max($ar_id);
 				$counter = $this->get_counter();
-
-				if (!empty($ar_id)) {
-					$max_id = max($ar_id);
-
-					if( $counter < $max_id ){
-						// set the new counter with the id
-						$this->set_counter( $max_id );
-					}
+				if( $counter < $max_id ){
+					// set the new counter with the id
+					$this->set_counter( $max_id );
 				}
-			}else{
-				$data_to_set = $data;
 			}
+		}else{
+			// Replace data_to_set with empty data (null)
+			$data_to_set = $data;
+		}
 
-		// section record
-			$section_record = $this->get_my_section_record();
-			$result = $section_record->set_component_data(
-				$this->tipo,
-				$this->data_column_name,
-				$data_to_set
-			);
+		// section record: set component data into section record.
+		$section_record = $this->get_my_section_record();
+		$result = $section_record->set_component_data(
+			$this->tipo,
+			$this->data_column_name,
+			$data_to_set
+		);
 
 
 		return $result;
@@ -1262,19 +1280,19 @@ abstract class component_common extends common {
 
 
 
-	# GET_DATO_UNCHANGED
-	# Recover component var 'dato' without change type or other custom component changes
-	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato)
+	# GET_DATA_UNCHANGED
+	# Recover component var 'data' without change type or other custom component changes
+	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_dato)
 	public function get_data_unchanged() {
 
-		return $this->dato;
+		return $this->data;
 	}//end get_data_unchanged
 
 
 
 	/**
 	* GET_TIME_MACHINE_DATA_TO_SAVE
-	* Recover component var 'dato' without change type or other custom component changes
+	* Recover component var 'data' without change type or other custom component changes
 	* @return array|null $time_machine_data_to_save
 	*/
 	public function get_time_machine_data_to_save() : ?array {
@@ -1286,7 +1304,10 @@ abstract class component_common extends common {
 
 			$ar_dataframe_data = [];
 			foreach ($ar_component_dataframe as $dataframe_ddo) {
-
+				// create dataframe component instance
+				// BUT without caller_dataframe
+				// to get all data, not the specific row data of the dataframe
+				// time machine saves all data of the main comonent and all data of the dataframe 
 				$dataframe_component = component_common::get_instance(
 					'component_dataframe', // string model
 					$dataframe_ddo->tipo, // string tipo
@@ -1296,7 +1317,9 @@ abstract class component_common extends common {
 					$this->get_section_tipo(), // string section_tipo,
 					false
 				);
-				$dataframe_data = $dataframe_component->get_all_data();
+				// When the dataframs has not caller specified, it returns all data
+				// as any other component
+				$dataframe_data = $dataframe_component->get_data();
 				if( !empty($dataframe_data) ){
 					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
 				}
@@ -1639,7 +1662,7 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $data_to_save );
 
 		// time machine data.
-			// We save only current component lang 'dato' in time machine
+			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
 			$tm_value = new stdClass();
