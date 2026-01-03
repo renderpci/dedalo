@@ -13,33 +13,28 @@ class component_dataframe extends component_portal {
 
 
 	/**
-	* GET_ALL_DATA
+	* GET_DATA
 	* Returns data from container 'relations', not for component data container
 	* @return array $all_data
 	*	$data is always an array of locators or an empty array
 	*/
-	public function get_all_data() : array {
+	public function get_data() : array {
 
-		$my_section			= $this->get_my_section();
-		$relations			= $my_section->get_relations();
+		$data				= parent::get_data();
 		$caller_dataframe	= $this->get_caller_dataframe();
-
-		// filtered data
-		$all_data = [];
 
 		if(!isset($caller_dataframe)){
 			debug_log(__METHOD__
 				." empty caller dataframe getting all component data "
 				, logger::WARNING
 			);
-			return parent::get_all_data();
+			return $data;
 		}
 
+		// filtered data
+		$filtered_data = [];
 		// iterate relations filtering match values
-		$relations_size = sizeof($relations);
-		for ($i=0; $i < $relations_size; $i++) {
-
-			$locator = $relations[$i];
+		foreach ($data as $locator) {
 
 			if(	isset($locator->from_component_tipo)
 				&& isset($locator->section_id_key)
@@ -50,12 +45,12 @@ class component_dataframe extends component_portal {
 				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
 				&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
 			) {
-				$all_data[] = $locator;
+				$filtered_data[] = $locator;
 			}
 		}
 
-		return $all_data;
-	}//end get_all_data
+		return $filtered_data;
+	}//end get_data
 
 
 
@@ -244,7 +239,7 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_time_machine_data_to_save() : ?array {
 
-		$dataframe_data = parent::get_all_data();
+		$dataframe_data = $this->get_data();
 
 		$main_component_data = $this->get_main_component_data();
 
