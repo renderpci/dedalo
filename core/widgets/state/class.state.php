@@ -246,7 +246,11 @@ class state extends widget_common {
 			$locator->section_tipo
 		);
 
-		$label = $component_portal->get_valor();
+		$data = $component_portal->get_data_lang();
+		$label = '';
+		if (!empty($data)) {
+			$label = $data[0]->value;
+		}
 
 		return $label;
 	}//end get_label
@@ -275,7 +279,7 @@ class state extends widget_common {
 
 		$data	= $component_portal->get_data();
 		$value	= !empty($data)
-			? reset($data)
+			? $data[0]->value
 			: 0;
 
 
