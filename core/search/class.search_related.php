@@ -50,22 +50,28 @@ class search_related extends search {
 			$filter_by_locators_op = $this->sqo->filter_by_locators_op ?? 'OR';
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
-		// if the section has all, the filter don't add any section to the WHERE
-			$ar_section_tipo	= $this->ar_section_tipo;
-			$ar_section_filter	= [];
-			foreach ($ar_section_tipo as $section_tipo) {
-				if ($section_tipo !=='all') {
-					// $ar_section_filter[] = 'section_tipo = \''.$section_tipo.'\'';
-					$ar_section_filter[] = '\''.$section_tipo.'\'';
+		// If the section has 'all', the filter don't add any section to the WHERE sentence.
+			$section_filter = false;
+			if (!empty($this->ar_section_tipo)) {
+				$current_placeholders = [];
+				foreach ($this->ar_section_tipo as $current_section_tipo) {
+					if ($current_section_tipo ==='all') {
+						continue;
+					}
+
+					// Gets current param key (default is 1 and increases by 1 after each use)
+					$current_param_key = $this->params_counter++;
+					// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
+					$placeholder = '$' . $current_param_key;
+
+					$current_placeholders[] = $placeholder;
+
+					$this->params[] = $current_section_tipo;
+				}
+				if (!empty($current_placeholders)) {
+					$section_filter = 'section_tipo IN(' . implode(',', $current_placeholders) .')';
 				}
 			}
-			// // sample: 'section_tipo = 'tch1' OR section_tipo = 'tch100' OR section_tipo = 'tch178'
-			// $section_filter = !empty($ar_section_filter)
-			// 	? implode(' OR ', $ar_section_filter)
-			// 	: false;
-			$section_filter = !empty($ar_section_filter)
-				? 'section_tipo IN(' . implode(',', $ar_section_filter) .')'
-				: false;
 
 		// each table query
 			$ar_query = array();
@@ -112,12 +118,20 @@ class search_related extends search {
 				$locators_query = [];
 				foreach ($ar_locators as $locator) {
 
+					// Gets current param key (default is 1 and increases by 1 after each use)
+					$current_param_key = $this->params_counter++;
+					// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
+					$placeholder = '$' . $current_param_key;					
+
 					switch (true) {
 
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
 							$locator_index	= $locator->type.'_'.$locator->section_tipo;
-							$sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							// $sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> '.$placeholder.'::jsonb';
+							// Add placeholder to params array
+							$this->params[] = '['. json_encode($locator_index) . ']';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -128,7 +142,10 @@ class search_related extends search {
 						case isset($locator->from_component_tipo):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							$sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							// $sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> '.$placeholder.'::jsonb';
+							// Add placeholder to params array
+							$this->params[] = '['. json_encode($locator_index) . ']';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'from_component_tipo' ? '$locator->from_component_tipo'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -140,7 +157,10 @@ class search_related extends search {
 						case isset($locator->type):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							$sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							// $sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> '.$placeholder.'::jsonb';
+							// Add placeholder to params array
+							$this->params[] = '['. json_encode($locator_index) . ']';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
@@ -151,7 +171,10 @@ class search_related extends search {
 
 						default:
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							// $sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							$sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> '.$placeholder.'::jsonb';
+							// Add placeholder to params array
+							$this->params[] = '['. json_encode($base_flat_locator) . ']';
 							if( $breakdown===true ){
 								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
 								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
@@ -166,7 +189,7 @@ class search_related extends search {
 				$query .= '(' . implode(' '.$filter_by_locators_op.' ', $locators_query) . ')';
 
 				if ($section_filter!==false) {
-					$query .= PHP_EOL . ' AND (' . $section_filter . ')';
+					$query .= PHP_EOL . 'AND (' . $section_filter . ')';
 				}
 				// group by
 				// when is set use GROUP BY clause
@@ -178,7 +201,7 @@ class search_related extends search {
 			}
 
 		// final query union with all tables
-			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
+			$str_query = implode(PHP_EOL .'UNION ALL ', $ar_query);
 
 		// establish order to maintain stable results
 		// count and pagination are optional
