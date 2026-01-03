@@ -657,16 +657,15 @@ class tool_import_files extends tool_common {
 								breaK;
 
 							case 'enumerate':
-								if (!empty($file_data['regex']->section_id)) {
-									// Direct numeric case like 1.jpg
-									$section = section::get_instance($file_data['regex']->section_id, $section_tipo);
-									$section->forced_create_record(); // First record of current section_id force create record. Next files with same section_id, not.
-									$_base_section_id = $section->get_section_id();
-								}else{
-									$section = section::get_instance(null, $section_tipo,'edit',false);
-									$section->Save();
-									$_base_section_id = $section->get_section_id();
-								}
+
+								$section = section::get_instance( $section_tipo, 'list', false );
+								$creation_options = new stdClass();
+									// Direct numeric case like 1.jpg									
+									// First record of current section_id force create record. Next files with same section_id, not.									
+									$creation_options->section_id = $file_data['regex']->section_id ?? null;
+
+								$_base_section_id = $section->create_record( $creation_options );
+
 								$section_id = (int)$_base_section_id;
 								break;
 
