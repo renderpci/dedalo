@@ -1177,6 +1177,7 @@ class section_record {
 
 		$table = common::get_matrix_table_from_tipo($section_tipo);
 
+		// insert a new record in the database
 		$section_id = matrix_db_manager::create(
 			$table,
 			$section_tipo,
@@ -1189,7 +1190,7 @@ class section_record {
 
 		$section_record = section_record::get_instance( $section_tipo, $section_id );
 		$section_record->record_in_the_database = true;
-
+				
 		// update values
 		// $section_record->set_data($values);
 		$section_record->get_data(); // force to update values
