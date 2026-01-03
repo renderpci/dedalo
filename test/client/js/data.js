@@ -230,8 +230,9 @@
 	export const random_iri_data = function() {
 		const result = {
 			id		: 1,
-			iri		: "https://www." + random_string(64) + '-' + random_string(50) +  '.' + random_string(3),
-			title	: random_string(128)
+			iri		: "https://www.raspa.org/" + random_string(50) +  '/' + random_string(3),
+			title	: random_string(128),
+			lang : 'lg-nolan'
 		}
 		return result;
 	}
