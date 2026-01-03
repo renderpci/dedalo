@@ -4314,10 +4314,10 @@ abstract class component_common extends common {
 			return true;
 		}
 
-		// array case
-		if ( is_array($data_item) ) {
-			foreach ($data_item as $item) {
-				if( !empty($item) || $item==='0' || $item===0 ) {
+		// object|array case
+		if ( is_object($data_item) || is_array($data_item)) {
+			foreach ($data_item as $key => $value) {
+				if( !empty($value) || $value==='0' || $value===0 ) {
 					return false;
 				}
 			}
