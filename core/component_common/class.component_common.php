@@ -4269,12 +4269,11 @@ abstract class component_common extends common {
 	* As clean its dataframe or any other process.
 	* By default it only call to save function.
 	*
-	* @return
+	* @return bool
 	*/
-	public function import_save() {
+	public function import_save() : bool{
 
-		$this->Save();
-
+		return $this->save();
 	}//end import_save
 
 
