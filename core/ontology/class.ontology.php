@@ -876,6 +876,9 @@ class ontology {
 
 			ontology::add_main_section( $file_data );
 
+			// create dd_ontology node for the main section
+			ontology::create_dd_ontology_ontology_section_node( $file_data );
+
 		// Check parent
 		// parent nodes needs to exist because the node will store itself in the children component of his parent
 		// the main instances of typology for ontology node is `ontology40`
@@ -2351,6 +2354,9 @@ class ontology {
 					);
 					return $response;
 				}
+
+				// create dd_ontology node for the main section
+				ontology::create_dd_ontology_ontology_section_node( $file_item );
 			}
 
 		// response

@@ -229,11 +229,13 @@ class hierarchy extends ontology {
 		// -------- VIRTUAL SECTION --------
 
 		// ontology main. Create a new ontology main section if not already exists
-			$main_options = new stdClass();
-				$main_options->tld			= $tld2;
-				$main_options->typology_id	= $typology_id;
-				$main_options->name_data	= $name_data;
-			ontology::add_main_section( $main_options );
+			$file_item = new stdClass();
+				$file_item->tld			= $tld2;
+				$file_item->typology_id	= $typology_id;
+				$file_item->name_data	= $name_data;
+			ontology::add_main_section( $file_item );
+		// create dd_ontology node for the main section
+			ontology::create_dd_ontology_ontology_section_node( $file_item );
 
 		// ontology nodes
 		// Create two different nodes:
