@@ -816,7 +816,7 @@ abstract class component_common extends common {
 
 					$safe_data_lang[] = $modified_item;
 				}
-			}
+			}			
 
 		// get all component data
 			$data = $this->get_data() ?? [];
@@ -3742,6 +3742,7 @@ abstract class component_common extends common {
 				// check all data languages to get the if of the array key
 				// if the other data lang has not id, set new one from counter in the component
 				// if the other data lang has an id, set the new data with it.
+				/*
 				if( get_called_class() === 'component_iri'){
 					// get the id of the key in other languages
 					$id = $this->get_id_from_key( $changed_data->key );
@@ -3759,8 +3760,9 @@ abstract class component_common extends common {
 						}
 					}
 				}
+				*/
 
-				$data[] = $changed_data->value;
+				$data[] = $changed_data->value;				
 
 				$this->set_data_lang( $data, $lang );
 
@@ -3776,12 +3778,12 @@ abstract class component_common extends common {
 				if( isset($data[$changed_data->key]) || array_key_exists($changed_data->key, $data) ) {
 					$data[$changed_data->key] = $changed_data->value;
 				}else{
-					// fill gaps in array
-					for ($i=0; $i <= $changed_data->key; $i++) {
-						if(!isset($data[$i])){
-							$data[$i] = null;
-						}
-					}
+					// // fill gaps in array (Necessary ???????)
+					// for ($i=0; $i <= $changed_data->key; $i++) {
+					// 	if(!isset($data[$i])){
+					// 		$data[$i] = null;
+					// 	}
+					// }
 					$data[$changed_data->key] = $changed_data->value;
 				}
 
@@ -3806,8 +3808,9 @@ abstract class component_common extends common {
 					// 	}
 					// }
 
-
+				// set the data in current lang
 				$this->set_data_lang( $data, $lang );
+
 				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
@@ -4351,10 +4354,10 @@ abstract class component_common extends common {
 				break;
 			}
 		}
-
+		
 
 		return $is_empty_data ;
-	}//end is_empty
+	}//end is_empty_data
 
 
 
@@ -4370,7 +4373,7 @@ abstract class component_common extends common {
 
 
 
-	public function detect_data_version(){
+	public function detect_data_version() {
 
 	}
 

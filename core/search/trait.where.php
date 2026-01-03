@@ -23,6 +23,7 @@ trait where {
 			? '(' . $this->main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))'
 			: '(' . $this->main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
 
+		// Time machine section case (dd15)
 		if($ar_section_tipo[0]==='dd15'){
 			$this->sql_obj->main_where= [];
 		}
@@ -229,7 +230,7 @@ trait where {
 				? self::trim_tipo($step_object->section_tipo)
 				: self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 
-			$matrix_table		= common::get_matrix_table_from_tipo($step_object->section_tipo);
+			$matrix_table = common::get_matrix_table_from_tipo($step_object->section_tipo);
 			// Ignore invalid empty matrix tables
 			if (empty($matrix_table)) {
 				debug_log(__METHOD__

@@ -190,18 +190,21 @@ const get_content_value = (i, current_value, self) => {
 						}
 						input_title.addEventListener('change', change_title_handler)
 						// focus event
-							input_title.addEventListener('focus', function() {
+							input_title.addEventListener('focus', () => {
 								// force activate on input focus (tabulating case)
 								if (!self.active) {
 									ui.component.activate(self, false)
 								}
 							})
 						// click event
-							input_title.addEventListener('click', function(e) {
+							input_title.addEventListener('click', (e) => {
 								e.stopPropagation()
+								if (!self.active) {
+									ui.component.activate(self, false)
+								}
 							})
-						// click event
-							input_title.addEventListener('mousedown', function(e) {
+						// mousedown event
+							input_title.addEventListener('mousedown', (e) => {
 								e.stopPropagation()
 							})
 						// keyup event
@@ -267,8 +270,16 @@ const get_content_value = (i, current_value, self) => {
 				// click event
 					const click_handler = (e) => {
 						e.stopPropagation()
+						if (!self.active) {
+							ui.component.activate(self, false)
+						}
 					}
 					input_iri.addEventListener('mousedown', click_handler)
+				// mousedown event
+					const mousedown_handler = (e) => {
+						e.stopPropagation()
+					}
+					input_iri.addEventListener('mousedown', mousedown_handler)
 				// focus event
 					const focus_handler = (e) => {
 						// force activate on input focus (tabulating case)
@@ -678,4 +689,3 @@ export const get_buttons = (self) => {
 
 
 // @license-end
-
