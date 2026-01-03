@@ -323,25 +323,19 @@ class section_record {
 	* SAVE_KEY_DATA
 	* Safely saves one key data of one column in a "matrix" table row,
 	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param array $data_to_save
+	* @param array $save_path
 	* Array of objects with the following structure:
 	* [
 	*  (object)[
 	*   'column' => 'relation',
-	*   'key' => 'test80',
-	*   'value' => (object)[
-	*     'section_tipo' => 'test65',
-	*     'section_id' => 1,
-	*     'type' => 'dd151',
-	*     'id' => 1
-	*   ]
+	*   'key' => 'test80'
 	* ]
 	* ]
 	* @return bool
 	* Returns `true` on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public function save_key_data( array $data_to_save ) : bool {
+	public function save_key_data( array $save_path ) : bool {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
@@ -349,25 +343,30 @@ class section_record {
 		// data_instance
 		$table = $this->data_instance->get_table();
 
+		// check for empty columns. If any column is empty,
+		// remove it from the database for maintaining clean DB data
+		$columns_to_delete = [];
+
 		// data to save e.g. format:
 		// [{
 		// 	"column" 	: "relation",
 		// 	"key"		: "oh25",
 		// 	"value"		: [{"section_id":3,"section_tipo":"oh1"}]
 		// }]
+		$data_to_save = [];
+		foreach ($save_path as $path_item) {
 
-		// check for empty columns. If any column is empty,
-		// remove it from the database for maintaining clean DB data
-		$columns_to_delete = [];
-		foreach ($data_to_save as $data) {
+			$column	= $path_item->column;
+			$key	= $path_item->key;
 
-			$column	= $data->column;
-			$key	= $data->key;
-			// assign the value for this column and key (as data for one component in different columns)
-			$data->value = $this->data_instance->get_key_data($column, $key);
+			$current_data_to_save = new stdClass();
+				$current_data_to_save->column = $column;
+				$current_data_to_save->key = $key;
+				// assign the value for this column and key (as data for one component in different columns)
+				$current_data_to_save->value = $this->data_instance->get_key_data($column, $key);
 
 			// check null values
-			if( $data->value===null ){
+			if( $current_data_to_save->value===null ){
 				// check if the column is null
 				$table_data_is_null = $this->data_instance->get_column_data($column);
 				// if the column is null, remove all
@@ -375,6 +374,7 @@ class section_record {
 					$columns_to_delete[] = $column;
 				}
 			}
+			$data_to_save[] = $current_data_to_save;
 		}
 		// Remove the empty columns, remove all column data
 		if( !empty($columns_to_delete) ){
@@ -445,7 +445,7 @@ class section_record {
 	/**
 	* SAVE_COMPONENT_DATA
 	* Saves given data into the component container.
-	* @param array $data_to_save
+	* @param array $save_path
 	* 	Array of objects with the following structure:
 	*   [
 	* 	 {
@@ -460,11 +460,11 @@ class section_record {
 	* @return bool
 	* 	Returns false if JSON fragment save fails.
 	*/
-	public function save_component_data( array $data_to_save ) : bool {
+	public function save_component_data( array $save_path ) : bool {
 
 		// Save into DB
 		$result = $this->save_key_data(
-			$data_to_save
+			$save_path
 		);
 
 		if( $result === false ){
