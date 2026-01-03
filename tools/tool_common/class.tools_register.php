@@ -918,13 +918,13 @@ class tools_register {
 						if(empty($reg_dato)) return false;
 
 					// config_component. create the config component in the config section
-						$config_section = section::get_instance(null, $section_tools_config_tipo);
-						$config_section->forced_create_record();
+						$config_section = section::get_instance( $section_tools_config_tipo );
+						$config_section_id = $config_section->create_record();
 
 						$config_component = component_common::get_instance(
 							$component_model,
 							$component_tipo,
-							$config_section->get_section_id(),
+							$config_section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
 							$section_tools_config_tipo
@@ -937,7 +937,7 @@ class tools_register {
 						$config_name_component			= component_common::get_instance(
 							$config_name_component_model,
 							$component_tipo_tool_name,
-							$config_section->get_section_id(),
+							$config_section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
 							$section_tools_config_tipo
