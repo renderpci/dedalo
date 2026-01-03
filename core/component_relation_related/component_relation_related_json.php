@@ -40,7 +40,7 @@
 		$start_time=start_time();
 
 		// get the data into DDBB
-			$data_value = $this->get_data_lang();
+			$data_elements = $this->get_data();
 
 			$value		= $this->get_data_paginated();
 			$section_id	= $this->get_section_id();
@@ -52,11 +52,11 @@
 				$item->parent_tipo			= $tipo;
 				$item->parent_section_id	= $section_id;
 
-		if (!empty($data_value)) {
+		if (!empty($data_elements)) {
 
 			// pagination. Fix pagination vars
 				$pagination = new stdClass();
-					$pagination->total	= count($data_value);
+					$pagination->total	= count($data_elements);
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
@@ -86,7 +86,7 @@
 						$data[] = $current_data;
 					}
 				}
-		}//end if (!empty($data_value))
+		}//end if (!empty($data_elements))
 
 
 		// references
