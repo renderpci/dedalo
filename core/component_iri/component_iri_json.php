@@ -140,9 +140,6 @@
 
 				$this->set_lang($tranliterable_lang);
 				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
-
-				// restore the component lang to the original value
-				// $this->set_lang($original_lang);
 			}
 
 		// full data in all langs
