@@ -140,58 +140,7 @@ final class component_relation_common_test extends TestCase {
 		);
 	}//end test_get_grid_value
 
-
-
-	/**
-	* TEST_get_all_data
-	* @return void
-	*/
-	public function test_get_all_data() : void {
-
-		$component = component_common::get_instance(
-			self::$model, // string model
-			self::$tipo, // string tipo
-			self::$section_id, // string section_id
-			'edit', // string mode
-			DEDALO_DATA_NOLAN, // string lang
-			self::$section_tipo // string section_tipo
-		);
-
-		$value = $component->get_all_data();
-
-		$this->assertTrue(
-			gettype($value)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_all_data
-
-
-
-	/**
-	* TEST_get_dato_generic
-	* @return void
-	*/
-	public function test_get_dato_generic() : void {
-
-		$component = component_common::get_instance(
-			self::$model, // string model
-			self::$tipo, // string tipo
-			self::$section_id, // string section_id
-			'edit', // string mode
-			DEDALO_DATA_NOLAN, // string lang
-			self::$section_tipo // string section_tipo
-		);
-
-		$value = $component->get_dato_generic();
-
-		$this->assertTrue(
-			gettype($value)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_dato_generic
-
+	
 
 
 	/**
@@ -217,32 +166,6 @@ final class component_relation_common_test extends TestCase {
 				. gettype($value)
 		);
 	}//end test_get_data_with_references
-
-
-
-	/**
-	* TEST_get_dato_as_string
-	* @return void
-	*/
-	public function test_get_dato_as_string() : void {
-
-		$component = component_common::get_instance(
-			self::$model, // string model
-			self::$tipo, // string tipo
-			self::$section_id, // string section_id
-			'edit', // string mode
-			DEDALO_DATA_NOLAN, // string lang
-			self::$section_tipo // string section_tipo
-		);
-
-		$value = $component->get_dato_as_string();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_dato_as_string
 
 
 
@@ -675,10 +598,10 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato_external
+	* TEST_set_data_external
 	* @return void
 	*/
-	public function test_set_dato_external() : void {
+	public function test_set_data_external() : void {
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -692,18 +615,18 @@ final class component_relation_common_test extends TestCase {
 		$options = (object)[
 			'save'				=> false,
 			'changed'			=> false,
-			'current_dato'		=> false,
+			'current_data'		=> false,
 			'references_limit'	=> 10
 		];
 
-		$value = $component->set_dato_external($options);
+		$value = $component->set_data_external($options);
 
 		$this->assertTrue(
 			(gettype($value)==='boolean'),
 			'expected type boolean : ' . PHP_EOL
 				. gettype($value)
 		);
-	}//end test_set_dato_external
+	}//end test_set_data_external
 
 
 
