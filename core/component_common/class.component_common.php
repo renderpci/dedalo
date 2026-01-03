@@ -1280,19 +1280,19 @@ abstract class component_common extends common {
 
 
 
-	# GET_DATO_UNCHANGED
-	# Recover component var 'dato' without change type or other custom component changes
-	# This is a easy way to access internal protected var 'dato' from out of component (like section::save_component_dato)
+	# GET_DATA_UNCHANGED
+	# Recover component var 'data' without change type or other custom component changes
+	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_dato)
 	public function get_data_unchanged() {
 
-		return $this->dato;
+		return $this->data;
 	}//end get_data_unchanged
 
 
 
 	/**
 	* GET_TIME_MACHINE_DATA_TO_SAVE
-	* Recover component var 'dato' without change type or other custom component changes
+	* Recover component var 'data' without change type or other custom component changes
 	* @return array|null $time_machine_data_to_save
 	*/
 	public function get_time_machine_data_to_save() : ?array {
@@ -1304,7 +1304,10 @@ abstract class component_common extends common {
 
 			$ar_dataframe_data = [];
 			foreach ($ar_component_dataframe as $dataframe_ddo) {
-
+				// create dataframe component instance
+				// BUT without caller_dataframe
+				// to get all data, not the specific row data of the dataframe
+				// time machine saves all data of the main comonent and all data of the dataframe 
 				$dataframe_component = component_common::get_instance(
 					'component_dataframe', // string model
 					$dataframe_ddo->tipo, // string tipo
@@ -1314,7 +1317,9 @@ abstract class component_common extends common {
 					$this->get_section_tipo(), // string section_tipo,
 					false
 				);
-				$dataframe_data = $dataframe_component->get_all_data();
+				// When the dataframs has not caller specified, it returns all data
+				// as any other component
+				$dataframe_data = $dataframe_component->get_data();
 				if( !empty($dataframe_data) ){
 					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
 				}
@@ -1657,7 +1662,7 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $data_to_save );
 
 		// time machine data.
-			// We save only current component lang 'dato' in time machine
+			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
 			$tm_value = new stdClass();
