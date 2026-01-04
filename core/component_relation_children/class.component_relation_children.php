@@ -72,10 +72,12 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* get_data_paginated
-	* Gets paginated the inverse locators from component parent result.
-	* @param int|null $custom_limit = null
-	* @return array $dato_paginated
+	* GET_DATA_PAGINATED
+	* Gets paginated data (inverse locators from component parent result).
+	* This handles strict limit and offset logic typically populated from the API request context.
+	*
+	* @param int|null $custom_limit Optional custom limit to override the standard pagination limit.
+	* @return array The array of locators for the current page.
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
@@ -87,8 +89,8 @@ class component_relation_children extends component_relation_common {
 		// offset
 			$offset = $this->pagination->offset ?? 0;
 
-		// always get dato calculated from my parents that call the current section
-			$dato_paginated = component_relation_children::get_children(
+		// always get data calculated from my parents that call the current section
+			$data_paginated = component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo,
@@ -97,7 +99,7 @@ class component_relation_children extends component_relation_common {
 			);
 
 
-		return $dato_paginated;
+		return $data_paginated;
 	}//end get_data_paginated
 
 
