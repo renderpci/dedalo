@@ -70,17 +70,17 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -88,14 +88,14 @@ final class component_relation_index_test extends BaseTestCase {
 				. gettype($result)
 		);
 
-		// null case
+		// empty array case
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// object case
+		// array case
 			$locator = json_decode('
 				{
 					"type": "dd96",
@@ -109,33 +109,23 @@ final class component_relation_index_test extends BaseTestCase {
 					"from_component_tipo": "test25"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
-
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
+				locator::in_array_locator($locator, $component->get_data()),
 				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
+			$result	= $component->set_data($old_data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($component->get_data())===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
