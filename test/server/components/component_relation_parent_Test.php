@@ -109,22 +109,22 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_Save
+	* TEST_SAVE
 	* @return void
 	*/
 	public function test_Save() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->Save();
+		$result	= $component->save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
+			gettype($result)==='boolean' || gettype($result)==='NULL',
+			'expected type boolean|null : ' . PHP_EOL
 				. gettype($result)
 		);
 		$this->assertTrue(
-			$result==$component->section_id,
+			$result===true,
 			'expected equal : ' . PHP_EOL
 				. to_string($result)
 		);
