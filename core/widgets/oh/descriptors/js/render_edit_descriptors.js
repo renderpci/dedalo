@@ -92,7 +92,7 @@ const get_content_data_edit = async function(self) {
 		const ipo			= self.ipo
 		const ipo_length	= ipo.length
 		for (let i = 0; i < ipo_length; i++) {
-			const data	= self.value.filter(item => item.key===i)
+			const data	= self.value.filter(item => item.value.key===i)
 			const node	= await get_value_element(i, data, self)
 			values_container.appendChild(node)
 		}
@@ -112,8 +112,8 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = async (i, data, self) => {
 
-	const indexation	= data.find(el => el.id==='indexation')
-	const value			= indexation?.value || 0
+	const indexation	= data.find(el => el.value.id==='indexation')
+	const value			= indexation?.value.value || 0
 
 	const fragment = new DocumentFragment()
 
@@ -157,8 +157,13 @@ const render_values = function(self, data) {
 
 	return new Promise(async function(resolve){
 
-		// dd_grid build and append
-		const dd_grid_data	= [data.find(el => el.id==='terms').value]
+		// Terms find
+		const terms = data.find(el => el.value.id==='terms') || {}
+
+		// dd_grid_data
+		const dd_grid_data	= [terms.value.value]
+
+		// dd_grid build and append		
 		const dd_grid		= await get_instance({
 			model			: 'dd_grid',
 			section_tipo	: self.section_tipo,

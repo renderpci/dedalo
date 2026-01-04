@@ -132,7 +132,7 @@ const get_content_data_edit = async function(self) {
 const get_value_element = (i, data, self, current_ipo) => {
 
 	// data_id
-		const data_id = data.id
+		const data_id = data.value.id
 		// {
 		// 	"id": "id",
 		// 	"key": 0,
@@ -149,10 +149,10 @@ const get_value_element = (i, data, self, current_ipo) => {
 		const value		= data_id.value
 
 	// data
-		const data_transcription	= data.transcription
-		const data_indexation		= data.indexation
-		const data_translation		= data.translation
-		const data_tc				= data.tc
+		const data_transcription	= data.value.transcription
+		const data_indexation		= data.value.indexation
+		const data_translation		= data.value.translation
+		const data_tc				= data.value.tc
 
 	// li
 		const li = ui.create_dom_element({
@@ -223,7 +223,6 @@ const get_value_element = (i, data, self, current_ipo) => {
 		})
 
 	// transcription
-
 		const transcription_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value tr link',
@@ -293,7 +292,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 			inner_html		: data_tc.value || '',
 			parent			: li
 		})
-
+	
 
 	return li
 }//end get_value_element

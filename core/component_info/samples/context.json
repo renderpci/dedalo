@@ -1,0 +1,159 @@
+{
+	"typo": "ddo",
+	"model": "component_info",
+	"label": "Information",
+	"tipo": "oh87",
+	"section_tipo": "oh1",
+	"legacy_model": "component_info",
+	"parent": "oh1",
+	"parent_grouper": "oh31",
+	"lang": "lg-nolan",
+	"mode": "list",
+	"translatable": false,
+	"properties": {
+		"observe": [
+			{
+				"server": {
+					"filter": {
+						"$and": [
+							{
+								"q": null,
+								"path": [
+									{
+										"name": "indexation",
+										"model": "component_portal",
+										"section_tipo": "oh1",
+										"component_tipo": "oh25"
+									}
+								],
+								"q_operator": null
+							}
+						]
+					}
+				},
+				"component_tipo": "rsc860"
+			}
+		],
+		"widgets": [
+			{
+				"ipo": [
+					{
+						"input": {
+							"type": "component_data",
+							"paths": [
+								[
+									{
+										"var_name": "av",
+										"section_tipo": "rsc167",
+										"component_tipo": "rsc35"
+									}
+								]
+							],
+							"source": [
+								{
+									"section_id": "current",
+									"section_tipo": "current",
+									"component_tipo": "oh25"
+								}
+							]
+						},
+						"output": [
+							{
+								"id": "id",
+								"label": "id",
+								"value": "link"
+							},
+							{
+								"id": "tc",
+								"label": "tc",
+								"value": "text"
+							},
+							{
+								"id": "transcription",
+								"label": "tool_transcription",
+								"value": "link",
+								"process_section_tipo": "oh81"
+							},
+							{
+								"id": "indexation",
+								"label": "tool_indexation",
+								"value": "link",
+								"process_section_tipo": "oh83"
+							},
+							{
+								"id": "translation",
+								"label": "tool_lang",
+								"value": "link",
+								"process_section_tipo": "oh85"
+							}
+						],
+						"process": null
+					}
+				],
+				"path": "/oh/media_icons",
+				"widget_info": "Create a simple list of media element icons when default quality file exists. Add direct links to process",
+				"widget_name": "media_icons"
+			},
+			{
+				"ipo": [
+					{
+						"input": {
+							"type": "component_data",
+							"paths": [
+								[
+									{
+										"var_name": "indexation",
+										"section_tipo": "rsc167",
+										"component_tipo": "rsc860"
+									}
+								]
+							],
+							"source": [
+								{
+									"section_id": "current",
+									"section_tipo": "current",
+									"component_tipo": "oh25"
+								}
+							]
+						},
+						"output": [
+							{
+								"id": "indexation",
+								"label": "digitization",
+								"value": "int"
+							},
+							{
+								"id": "terms",
+								"label": "descriptors",
+								"value": "text"
+							}
+						],
+						"process": null
+					}
+				],
+				"path": "/oh/descriptors",
+				"widget_info": "state of the av process and create a simple list of all descriptors associated to current record, it will be the sum of all indexation for the tapes of oh",
+				"widget_name": "descriptors"
+			}
+		],
+		"show_in_modes": [
+			"list",
+			"edit"
+		],
+		"mode": "list"
+	},
+	"css": null,
+	"permissions": 3,
+	"tools": [],
+	"buttons": [],
+	"request_config": null,
+	"columns_map": false,
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": null,
+	"children_view": null,
+	"debug": {
+		"exec_time": "0.147 ms"
+	}
+}

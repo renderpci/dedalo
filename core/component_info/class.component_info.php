@@ -49,7 +49,7 @@ class component_info extends component_common {
 				return null;
 			}
 
-		// the component info dato will be the all widgets data
+		// the component info data will be the all widgets data
 			$data = [];
 
 		// each widget will be created and compute its own data
@@ -75,8 +75,8 @@ class component_info extends component_common {
 					}
 			}//end foreach ($widgets as $widget)
 
-		// set the component info dato with the result
-			$this->data_resolved	= $data;
+		// set the component info data with the result
+			$this->data_resolved = $data;
 
 
 		return $data;
@@ -104,8 +104,8 @@ class component_info extends component_common {
 				return null;
 			}
 
-		// the component info dato will be the all widgets data
-			$dato_parsed = [];
+		// the component info data will be the all widgets data
+			$data_parsed = [];
 
 		// each widget will be created and compute its own data
 			foreach ($widgets as $widget_obj) {
@@ -126,12 +126,12 @@ class component_info extends component_common {
 				// Widget data
 					$widget_value = $widget->get_data_parsed();
 					if (!empty($widget_value)) {
-						$dato_parsed = array_merge($dato_parsed, $widget_value);
+						$data_parsed = array_merge($data_parsed, $widget_value);
 					}
 			}//end foreach ($widgets as $widget)
 
 
-		return $dato_parsed;
+		return $data_parsed;
 	}//end get_data_parsed
 
 
@@ -183,115 +183,6 @@ class component_info extends component_common {
 
 
 	/**
-	* GET_VALOR
-	* @param string $widget_lang = DEDALO_DATA_LANG
-	* @return string $valor
-	*/
-	public function get_valor(string $widget_lang=DEDALO_DATA_LANG) : string {
-
-		$this->widget_lang = $widget_lang;
-
-		$valor = $this->get_value();
-		$valor = !empty($valor)
-			? strip_tags($valor)
-			: to_string($valor);
-
-
-		return $valor;
-	}//end get_valor
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// Default behavior is get value
-			$diffusion_lang		= $lang ?? DEDALO_DATA_LANG;
-			$diffusion_value	= $this->get_valor(
-				$diffusion_lang
-			);
-
-		// null empty values
-			if (empty($diffusion_value)) {
-				return null;
-			}
-
-		// strip_tags all values (remove untranslated mark elements)
-			$diffusion_value = preg_replace("/<\/?mark>/", "", to_string($diffusion_value));
-
-		// options
-			if (is_object($option_obj)) {
-				switch (true) {
-
-					// key values selection
-					// Splits and select any slices from value
-					// use : @see mdcat1181 for a sample like:
-					// {
-					//   "process_dato": "diffusion_sql::resolve_component_value",
-					//   "process_dato_arguments": {
-					//     "component_method": "get_diffusion_value",
-					//     "custom_arguments": [
-					//       {
-					//         "key_values": [0],
-					//         "separator": ", "
-					//       }
-					//     ]
-					//   }
-					// }
-					case isset($option_obj->key_values) && is_array($option_obj->key_values):
-
-						$separator	= $option_obj->separator ?? ', ';
-						$beats		= explode($separator, $diffusion_value);
-
-						$ar_selection = [];
-						foreach ($beats as $key => $value) {
-							if (in_array($key, $option_obj->key_values)) {
-								$ar_selection[] = $value;
-							}
-						}
-						// overwrite value
-						$diffusion_value = implode($separator, $ar_selection);
-						break;
-
-					default:
-						// nothing to do
-						break;
-				}
-			}
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-		$this->widget_lang = $lang;
-		$this->widget_mode = 'export';
-
-		$valor = $this->get_value();
-
-
-		return to_string($valor);
-	}//end get_valor_export
-
-
-
-	/**
 	* GET_DIFFUSION_DATO
 	* @param object $options
 	* Sample:
@@ -308,109 +199,109 @@ class component_info extends component_common {
 	* @see example of use in numisdata786
 	* @return mixed $diffusion_dato
 	*/
-	public function get_diffusion_dato( object $options ) : mixed {
+	// public function get_diffusion_dato( object $options ) : mixed {
 
-		// options
-			$widget_name	= $options->widget_name; // array
-			$select			= $options->select ?? []; // array
-			$value_format	= $options->value_format ?? null; // string|null
+	// 	// options
+	// 		$widget_name	= $options->widget_name; // array
+	// 		$select			= $options->select ?? []; // array
+	// 		$value_format	= $options->value_format ?? null; // string|null
 
-		// widgets
-			$widgets = $this->get_widgets();
-			if (empty($widgets)) {
-				debug_log(__METHOD__
-					." Error. widgets are not defined for this component - mode: $this->mode - [get_diffusion_dato]". PHP_EOL
-					.' options:' . json_encode($options, JSON_PRETTY_PRINT)
-					, logger::ERROR
-				);
-				return null;
-			}
+	// 	// widgets
+	// 		$widgets = $this->get_widgets();
+	// 		if (empty($widgets)) {
+	// 			debug_log(__METHOD__
+	// 				." Error. widgets are not defined for this component - mode: $this->mode - [get_diffusion_dato]". PHP_EOL
+	// 				.' options:' . json_encode($options, JSON_PRETTY_PRINT)
+	// 				, logger::ERROR
+	// 			);
+	// 			return null;
+	// 		}
 
-		// dato
-			$dato = $this->get_dato();
-			// sample value: →
-				// [
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "media_weight",
-				//         "value": 4.47
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "max_weight",
-				//         "value": 4.47
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "min_weight",
-				//         "value": 4.47
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "total_elements_weights",
-				//         "value": 1
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "media_diameter",
-				//         "value": 15
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "max_diameter",
-				//         "value": 15
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "min_diameter",
-				//         "value": 15
-				//     },
-				//     {
-				//         "widget": "get_archive_weights",
-				//         "key": 0,
-				//         "id": "total_elements_diameter",
-				//         "value": 1
-				//     }
-				// ]
+	// 	// dato
+	// 		$dato = $this->get_dato();
+	// 		// sample value: →
+	// 			// [
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "media_weight",
+	// 			//         "value": 4.47
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "max_weight",
+	// 			//         "value": 4.47
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "min_weight",
+	// 			//         "value": 4.47
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "total_elements_weights",
+	// 			//         "value": 1
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "media_diameter",
+	// 			//         "value": 15
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "max_diameter",
+	// 			//         "value": 15
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "min_diameter",
+	// 			//         "value": 15
+	// 			//     },
+	// 			//     {
+	// 			//         "widget": "get_archive_weights",
+	// 			//         "key": 0,
+	// 			//         "id": "total_elements_diameter",
+	// 			//         "value": 1
+	// 			//     }
+	// 			// ]
 
-		// diffusion_dato
-			$diffusion_dato = [];
-			foreach ($widget_name as $key => $current_widget_name) {
-				// current_widget_name like 'get_archive_weights'
+	// 	// diffusion_dato
+	// 		$diffusion_dato = [];
+	// 		foreach ($widget_name as $key => $current_widget_name) {
+	// 			// current_widget_name like 'get_archive_weights'
 
-				// select. Like 'media_diameter'
-				$current_select = $select[$key] ?? null;
+	// 			// select. Like 'media_diameter'
+	// 			$current_select = $select[$key] ?? null;
 
-				// find current widget selected values
-				$ar_values = array_filter($dato, function($el) use($current_widget_name, $current_select){
-					return $el->widget===$current_widget_name // like 'get_archive_weights'
-						&& $el->id===$current_select; // like 'media_diameter'
-				});
-				foreach ($ar_values as $item) {
-					$diffusion_dato[] = $item->value;
-				}
-			}
+	// 			// find current widget selected values
+	// 			$ar_values = array_filter($dato, function($el) use($current_widget_name, $current_select){
+	// 				return $el->widget===$current_widget_name // like 'get_archive_weights'
+	// 					&& $el->id===$current_select; // like 'media_diameter'
+	// 			});
+	// 			foreach ($ar_values as $item) {
+	// 				$diffusion_dato[] = $item->value;
+	// 			}
+	// 		}
 
-		// value format
-			switch ($value_format) {
-				case 'first_value':
-					$diffusion_dato = $diffusion_dato[0] ?? null;
-					break;
-				default:
-					// Noting to do
-					break;
-			}
+	// 	// value format
+	// 		switch ($value_format) {
+	// 			case 'first_value':
+	// 				$diffusion_dato = $diffusion_dato[0] ?? null;
+	// 				break;
+	// 			default:
+	// 				// Noting to do
+	// 				break;
+	// 		}
 
 
-		return $diffusion_dato;
-	}//end get_diffusion_dato
+	// 	return $diffusion_dato;
+	// }//end get_diffusion_dato
 
 
 
@@ -433,7 +324,7 @@ class component_info extends component_common {
 			return null;
 		}
 
-		// the component info dato will be the all widgets data
+		// the component info data will be the all widgets data
 		$data_list = [];
 
 		// every widget will be created and calculate your own data
@@ -461,7 +352,7 @@ class component_info extends component_common {
 			}
 		}//end foreach ($widgets as $widget_obj)
 
-		// set the component info dato with the result
+		// set the component info data with the result
 		$this->data_list = $data_list;
 
 
@@ -529,11 +420,11 @@ class component_info extends component_common {
 		// options
 			$select	= $options->select ?? 'value';
 
-		$dato = $this->get_dato();
-		if (!empty($dato)) {
-			foreach ($dato as $current_dato) {
-				if (isset($current_dato->{$select})){
-					$data[] = $current_dato->{$select};
+		$data = $this->get_data();
+		if (!empty($data)) {
+			foreach ($data as $current_data) {
+				if (isset($current_data->{$select})){
+					$data[] = $current_data->{$select};
 				}
 			}
 		}

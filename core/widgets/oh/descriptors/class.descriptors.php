@@ -66,14 +66,14 @@ class descriptors extends widget_common {
 								DEDALO_DATA_LANG,
 								$source_section_tipo
 							);
-							$source_dato = $source_component->get_data();
+							$source_data = $source_component->get_data();
 
 							// locator will use to get the label of the components that has the information, only 1 locator is necessary
-							// $locator = reset($source_dato);
+							// $locator = reset($source_data);
 
-							if (!empty($source_dato)) {
+							if (!empty($source_data)) {
 								// add
-								$ar_locator = array_merge($ar_locator, $source_dato);
+								$ar_locator = array_merge($ar_locator, $source_data);
 							}
 						}
 						break;
@@ -108,8 +108,8 @@ class descriptors extends widget_common {
 						$component_data			= $component->get_data() ?? [];
 						$component_grid_value	= $component->get_grid_value();
 
-						$ar_component_data			= array_merge($ar_component_data, $component_data);
-						$ar_component_grid_value	= array_merge($ar_component_grid_value, $component_grid_value->value);
+						$ar_component_data		 = array_merge($ar_component_data, $component_data);
+						$ar_component_grid_value = array_merge($ar_component_grid_value, $component_grid_value->value);
 					}
 
 					// prevent empty locators value continue execution generating errors

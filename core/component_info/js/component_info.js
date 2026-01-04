@@ -68,8 +68,8 @@ component_info.prototype.get_widgets = async function() {
 
 	const self = this
 
-	const datalist	= self.data.datalist
-	const value		= self.data.value
+	const datalist	= self.data.datalist || []
+	const value		= self.data.value || []
 		// self data verification
 		if (!value || value.length===0) {
 			return false
@@ -99,9 +99,10 @@ component_info.prototype.get_widgets = async function() {
 
 			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
 
-			const widget_value		= value.filter(item => item && item.widget===widget_name)
-			const widget_datalist	= (datalist) ? datalist.filter(item => item.widget === widget_name) : []
+			const widget_value		= value.filter(item => item && item.value.widget===widget_name)
+			const widget_datalist	= datalist.filter(item => item.value.widget === widget_name)
 
+			// Check for already loaded widgets
 			if(loaded_widget){
 				loaded_widget.value		= widget_value
 				loaded_widget.datalist	= widget_datalist
@@ -159,7 +160,8 @@ component_info.prototype.get_widgets = async function() {
 						})
 						.then(function(){
 							resolve(new_widget)
-						}).catch((errorMsg) => {
+						})
+						.catch((errorMsg) => {
 							console.error(errorMsg);
 						})
 				})
@@ -168,9 +170,7 @@ component_info.prototype.get_widgets = async function() {
 		}//end for loop
 
 		// instances. Await all instances are parallel init and fix
-			await Promise.all(ar_promises).then(function(ar_instances){
-				self.ar_instances = ar_instances
-			})
+		self.ar_instances = await Promise.all(ar_promises)
 
 
 	return self.ar_instances

@@ -20,7 +20,7 @@ class state extends widget_common {
 
 		$data = [];
 
-		$project_langs = common::get_ar_all_langs();
+		$project_langs = (array)common::get_ar_all_langs();
 
 		// every state has a ipo that come from structure (input, process , output), state don't use process.
 		foreach ($ipo as $key => $current_ipo) {
@@ -33,8 +33,9 @@ class state extends widget_common {
 
 			// check the type for input, if the input is a locator state will use a resolve locator path,
 			// if it's a filter will use search_query_object to find data
-			$type 		= $input->type;
+			$type = $input->type;
 			switch ($type) {
+
 				case 'locator':
 					$ar_locator = [];
 					foreach ($source as $current_source) {
@@ -48,6 +49,7 @@ class state extends widget_common {
 						$ar_locator[] = $locator;
 					}
 					break;
+
 				case 'component_data':
 					$ar_locator = [];
 					foreach ($source as $current_source) {

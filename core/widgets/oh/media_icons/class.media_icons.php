@@ -57,9 +57,9 @@ class media_icons extends widget_common {
 							DEDALO_DATA_LANG,
 							$source_section_tipo
 						);
-						$source_dato = $source_component->get_data();
+						$source_data = $source_component->get_data();
 						// locator will use to get the label of the components that has the information, only 1 locator is necessary
-						$locator = $source_dato[0] ?? null;
+						$locator = $source_data[0] ?? null;
 						if($locator){
 							$ar_locator[] = $locator;
 						}
@@ -130,11 +130,11 @@ class media_icons extends widget_common {
 											DEDALO_DATA_NOLAN,
 											$locator->section_tipo
 										);
-										$duration_dato = $duration_component->get_data();
-										if (isset($duration_dato[0])) {
+										$duration_data = $duration_component->get_data();
+										if (isset($duration_data[0]->value)) {
 
 											// use already stored value from DDBB
-											$tc	= $duration_dato[0];
+											$tc	= $duration_data[0]->value;
 
 										}else{
 
@@ -142,8 +142,12 @@ class media_icons extends widget_common {
 											$duration_seconds	= $component->get_duration();
 											$tc					= OptimizeTC::seg2tc($duration_seconds);
 											if ($this->mode!=='tm') {
-												$duration_component->set_dato([$tc]);
-												$duration_component->Save();
+												$duration_component->set_data(
+													[(object)[
+														'value' => $tc
+													]]
+												);
+												$duration_component->save();
 												debug_log(__METHOD__ . PHP_EOL
 													. ' Falling back to real file duration calculation and save it ' . PHP_EOL
 													. ' section_tipo: ' . $locator->section_tipo . PHP_EOL
