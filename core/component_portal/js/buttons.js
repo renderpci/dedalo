@@ -389,6 +389,10 @@ buttons.render_list_from_component_data_button = (self) => {
 		e.stopPropagation()
 
 		const caller_section = get_caller_by_model(self, 'section')
+		if (!caller_section) {
+			console.error('Error. No caller section found');
+			return
+		}
 
 		const options ={
 			sqo	: caller_section.rqo?.sqo || {},

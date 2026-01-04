@@ -33,20 +33,19 @@
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset ?? 0;
 
-		// custom properties external dato
+		// custom properties external data
 		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
-			if(	(!empty($this->build_options) && $this->build_options->get_dato_external===true) &&
+			if(	(!empty($this->build_options) && $this->build_options->get_data_external===true) &&
 				(isset($properties->source->mode) && $properties->source->mode==='external')) {
-		 		// set_data_external: $save=false, $changed=false, $current_dato=false, $references_limit=0
+		 		// set_data_external: $save=false, $changed=false, $current_data=false, $references_limit=0
 				$options = new stdClass();
 					$options->save				= true; // $mode==='edit' ? true : false;
 					$options->changed			= false; // $mode==='edit' ? true : false;
-					$options->current_data		= false; // $this->get_dato();
+					$options->current_data		= false; // $this->get_data();
 					$options->references_limit	= 0; // (!) Set to zero to get all references to enable sort
 
-				$this->set_data_external($options);	// Forces update dato with calculated external dato
+				$this->set_data_external($options);	// Forces update data with calculated external data
 			}
-
 
 		$data_value = $this->get_data_lang();
 

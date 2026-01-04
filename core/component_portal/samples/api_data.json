@@ -1,0 +1,44 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test80",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test80",
+	"value": [
+		{
+			"id": 1,
+			"type": "dd151",
+			"section_id": "49",
+			"section_tipo": "test3",
+			"from_component_tipo": "test80",
+			"paginated_key": 0
+		},
+		{
+			"id": 2,
+			"type": "dd151",
+			"section_id": "50",
+			"section_tipo": "test3",
+			"from_component_tipo": "test80",
+			"paginated_key": 1
+		},
+		{
+			"id": 4,
+			"type": "dd151",
+			"section_id": "52",
+			"section_tipo": "test3",
+			"from_component_tipo": "test80",
+			"paginated_key": 2
+		}
+	],
+	"debug_model": "component_portal",
+	"debug_label": "portal",
+	"debug_dataframe": null,
+	"parent_tipo": "test80",
+	"parent_section_id": 1,
+	"pagination": {
+		"total": 3,
+		"limit": 10,
+		"offset": 0
+	}
+}

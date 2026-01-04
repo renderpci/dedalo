@@ -54,6 +54,8 @@ render_search_component_json.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Render the content data nodes for search.
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
@@ -100,6 +102,10 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Render the content value nodes for search.
+* @param int i
+* @param object current_value
+* @param object self
 * @return DOM element input
 */
 const get_content_value = (i, current_value, self) => {
@@ -111,11 +117,14 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input field
+		const text_value = current_value?.value
+			? JSON.stringify(current_value.value)
+			: ''
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value?.value || '',
+			value			: text_value,
 			parent			: content_value
 		})
 		input.addEventListener('change', function() {
