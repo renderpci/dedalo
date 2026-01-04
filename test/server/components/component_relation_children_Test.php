@@ -202,4 +202,60 @@ final class component_relation_children_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_GET_CHILDREN
+	* @return void
+	*/
+	public function test_get_children() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		
+		$children = component_relation_children::get_children($section_id, $section_tipo);
+		
+		$this->assertTrue(
+			is_array($children), 
+			'Expected array from get_children, got: ' . gettype($children)
+		);
+	}
+
+	/**
+	* TEST_GET_CHILDREN_RECURSIVE
+	* @return void
+	*/
+	public function test_get_children_recursive() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		
+		$children_recursive = component_relation_children::get_children_recursive($section_id, $section_tipo);
+		
+		$this->assertTrue(
+			is_array($children_recursive), 
+			'Expected array from get_children_recursive, got: ' . gettype($children_recursive)
+		);
+	}
+
+	/**
+	* TEST_HAS_CHILDREN_OF_TYPE
+	* @return void
+	*/
+	public function test_has_children_of_type() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		$component_tipo = self::$tipo;
+		
+		// descriptor check
+		$has_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'descriptor');
+		$this->assertTrue(
+			is_bool($has_descriptor),
+			'Expected bool from has_children_of_type(descriptor)'
+		);
+
+		// non_descriptor check 
+		$has_non_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'non_descriptor');
+		$this->assertTrue(
+			is_bool($has_non_descriptor),
+			'Expected bool from has_children_of_type(non_descriptor)'
+		);
+	}
+
 }//end class component_relation_children_test
