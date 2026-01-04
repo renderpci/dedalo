@@ -317,4 +317,134 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_get_data_paginated
+	* @return void
+	*/
+	public function test_get_data_paginated() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data_paginated();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data_paginated
+
+
+
+	/**
+	* TEST_parse_data
+	* @return void
+	*/
+	public function test_parse_data() {
+
+		// sample inverse locator-like object
+		$dummy_locator = (object)[
+			'type' => 'dd96',
+			'from_section_tipo' => 'test3',
+			'from_section_id' => '1',
+			'tag_component_tipo' => 'test25',
+			'tag_id' => '30',
+			'section_top_id' => '1',
+			'section_top_tipo' => 'oh1',
+			'from_component_tipo' => 'test25'
+		];
+
+		$result = component_relation_index::parse_data([$dummy_locator]);
+
+		$this->assertTrue(
+			is_array($result) && !empty($result),
+			'expected non-empty array'
+		);
+		$this->assertInstanceOf(
+			locator::class,
+			$result[0],
+			'expected instance of locator'
+		);
+	}//end test_parse_data
+
+
+
+	/**
+	* TEST_count_data
+	* @return void
+	*/
+	public function test_count_data() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->count_data();
+
+		$this->assertTrue(
+			gettype($result)==='integer',
+			'expected type integer : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_count_data
+
+
+
+	/**
+	* TEST_count_data_group_by
+	* @return void
+	*/
+	public function test_count_data_group_by() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->count_data_group_by(['section_tipo']);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_count_data_group_by
+
+
+
+	/**
+	* TEST_get_related_section_context
+	* @return void
+	*/
+	public function test_get_related_section_context() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_related_section_context();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_related_section_context
+
+
+
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertArrayHasKey('*', $result);
+		$this->assertArrayHasKey('!*', $result);
+	}//end test_search_operators_info
+
+
+
 }//end class component_relation_index_test
