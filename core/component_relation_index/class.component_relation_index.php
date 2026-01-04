@@ -71,14 +71,14 @@ class component_relation_index extends component_relation_common {
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
 
+		if(empty($ar_inverse_locators)) {
+			return null;
+		}
+
 		// format result like own data
 			$new_data = component_relation_index::parse_data($ar_inverse_locators);
 
-		// fix resolved data
-			parent::set_data($new_data);
-
-
-		return $this->get_data();
+		return $new_data;
 	}//end get_data
 
 
