@@ -153,17 +153,17 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
 		// add dato
-			$dato = json_decode('
+			$data = json_decode('
 				[{
 			        "section_tipo": "test3",
 			        "section_id": "2",
@@ -172,7 +172,7 @@ final class component_relation_parent_test extends TestCase {
 			    }]
 			');
 
-			$result	= $component->set_dato($dato);
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
 				gettype($result)==='boolean',
@@ -185,27 +185,27 @@ final class component_relation_parent_test extends TestCase {
 					. to_string($result)
 			);
 
-			$reference_dato = json_decode('
-				[{
+			$reference_data = json_decode('
+				{
 			        "section_tipo": "test3",
 			        "section_id": "2",
 			        "from_component_tipo": "test71",
 			        "type": "dd47"
-			    }]
+			    }
 			');
-			$fixed_dato = $component->get_dato();
+			$fixed_data = $component->get_data();
 
 			$this->assertTrue(
-				json_encode($fixed_dato)===json_encode($reference_dato),
+				locator::in_array_locator($reference_data, $fixed_data),
 				'expected equal : ' . PHP_EOL
-					.' fixed_dato: ' . to_string($fixed_dato) . PHP_EOL
-					.' reference_dato: ' . to_string($reference_dato)
+					.' fixed_data: ' . to_string($fixed_data) . PHP_EOL
+					.' reference_data: ' . to_string($reference_data)
 			);
 
 		// set null or []
-			$dato = null;
+			$data = null;
 
-			$result	= $component->set_dato($dato);
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
 				$result===true,
@@ -213,13 +213,12 @@ final class component_relation_parent_test extends TestCase {
 					. to_string($result)
 			);
 
-			$reference_dato	= []; // null value generates [] when get_dato
-			$fixed_dato		= $component->get_dato();
+			$fixed_data		= $component->get_data();
 
 			$this->assertTrue(
-				json_encode($fixed_dato)===json_encode($reference_dato),
-				'expected equal : ' . PHP_EOL
-					. gettype($fixed_dato)
+				$fixed_data===null,
+				'expected null : ' . PHP_EOL
+					. gettype($fixed_data)
 			);
 
 
