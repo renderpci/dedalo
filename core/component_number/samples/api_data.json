@@ -1,0 +1,23 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test211",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test211",
+	"value": [
+		{
+			"id": 5,
+			"value": 31416.2
+		},
+		{
+			"id": 2,
+			"value": 55
+		}
+	],
+	"debug_model": "component_number",
+	"debug_label": "number",
+	"debug_dataframe": null,
+	"parent_tipo": "test211",
+	"parent_section_id": 1
+}
