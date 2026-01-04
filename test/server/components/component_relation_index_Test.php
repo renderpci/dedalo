@@ -22,6 +22,8 @@ final class component_relation_index_test extends BaseTestCase {
 	*/
 	private function build_component_instance() {
 
+		$this->user_login();
+
 		$model			= self::$model;
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
@@ -48,21 +50,21 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
