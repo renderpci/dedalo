@@ -29,14 +29,14 @@
 		$start_time=start_time();
 
 		// relation index use his own data_paginated
-		// data of get_dato is a full data as others portals
+		// data of get_data is a full data as others portals
 		// and it can't be get all references of all calling sections
 		// sometimes it could be thousands records and is better paginated it.
-		$dato = $this->get_data_paginated();
+		$data_paginated = $this->get_data_paginated();
 
-		if (!empty($dato)) {
+		if (!empty($data_paginated)) {
 
-			$value		= $dato;
+			$value		= $data_paginated;
 			$section_id	= $this->get_parent();
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;
@@ -124,7 +124,7 @@
 							}
 						}
 				}
-		}//end if (!empty($dato))
+		}//end if (!empty($data_paginated))
 
 		// debug
 			if(SHOW_DEBUG===true) {
