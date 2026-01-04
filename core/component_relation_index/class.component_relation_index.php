@@ -106,7 +106,7 @@ class component_relation_index extends component_relation_common {
 	*/
 	public static function parse_data( array $ar_inverse_locators ) : array {
 
-		// format result like own dato
+		// format result like own data
 			$parse_data = [];
 			foreach ($ar_inverse_locators as $current_locator) {
 
@@ -325,10 +325,13 @@ class component_relation_index extends component_relation_common {
 
 		// section
 			$section = section::get_instance(
-				$current_section_id,
 				$current_section_tipo,
 				'related_list'
 			);
+
+		// section record, Add section record to section instance to get the subdatum with current locator
+			$section_record	= section_record::get_instance($current_section_tipo, $current_section_id);
+			$section->add_section_record($section_record);
 
 		$section_datum	= $section->get_json();
 		$ar_subcontext	= $section_datum->context;
