@@ -568,8 +568,12 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $query_object
-	* @return object $query_object
+	* Resolves the query object for SQL generation.
+	* Converts a query object containing child locators into a format suitable for database querying,
+	* specifically optimizing for 'IN' operator queries against section IDs.
+	*
+	* @param object $query_object The initial query object with search parameters.
+	* @return object The modified query object ready for SQL generation.
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
@@ -613,8 +617,8 @@ class component_relation_children extends component_relation_common {
 							DEDALO_DATA_NOLAN,
 							$current_locator->section_tipo
 						);
-						$component_parent_dato = $component->get_data();
-						foreach ($component_parent_dato as $parent_locator) {
+						$component_parent_data = $component->get_data();
+						foreach ($component_parent_data as $parent_locator) {
 							$ar_parent[] = $parent_locator->section_id;
 						}
 					}//end foreach ($ar_target_parent_tipo as $children_component_tipo)
