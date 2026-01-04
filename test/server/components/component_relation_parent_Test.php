@@ -64,7 +64,7 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* test_create_minimum_sections
+	* TEST_CREATE_MINIMUM_SECTIONS
 	* @return object $component
 	*/
 	public function test_create_minimum_sections() {
@@ -75,16 +75,29 @@ final class component_relation_parent_test extends TestCase {
 		];
 		foreach ($ar_section_id as $section_id) {
 			$section = section::get_instance(
-				$section_id, // string|null section_id
 				self::$section_tipo, // string section_tipo
 				'list'
 			);
-			$section->forced_create_record();
-
+			$created_section_id = $section->create_record((object)[
+				'section_id' => $section_id
+			]);
+			// check the section was created
 			$this->assertTrue(
 				gettype($section)==='object',
 				'expected type object : ' . PHP_EOL
 					. gettype($section)
+			);
+			// check if the section_id returns as integer
+			$this->assertTrue(
+				gettype($created_section_id)==='integer',
+				'expected type integer : ' . PHP_EOL
+					. gettype($created_section_id)
+			);
+
+			$this->assertTrue(
+				$created_section_id===$section_id,
+				'expected equal : ' . PHP_EOL
+					. gettype($created_section_id)
 			);
 		}
 	}//end test_create_minimum_sections
