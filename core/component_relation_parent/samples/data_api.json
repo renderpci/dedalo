@@ -1,0 +1,28 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test71",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test71",
+	"value": [
+		{
+			"id": 1,
+			"type": "dd47",
+			"section_id": "2",
+			"section_tipo": "test3",
+			"from_component_tipo": "test71",
+			"paginated_key": 0
+		}
+	],
+	"debug_model": "component_relation_parent",
+	"debug_label": "relation_parent",
+	"debug_dataframe": null,
+	"parent_tipo": "test71",
+	"parent_section_id": 1,
+	"pagination": {
+		"total": 1,
+		"limit": 10,
+		"offset": 0
+	}
+}
