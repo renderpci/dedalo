@@ -96,6 +96,7 @@ const get_content_data = function(self) {
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
+			break; // Only one value is allowed
 		}
 
 

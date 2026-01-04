@@ -18,11 +18,14 @@
 class component_number extends component_common {
 
 
+
 	// decimal separator
 	public $decimal = '.';
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
+
+
 
 	/**
 	* __CONSTRUCT
@@ -50,11 +53,11 @@ class component_number extends component_common {
 		}
 
 		$format_data = [];
-		foreach ( $data as $item ) {
+		foreach ( $data as $data_element ) {
 			// Wrong data!
-			if($item === null){
+			if($data_element === null){
 				debug_log(__METHOD__
-					. ' WARNING : Invalid data item! removed ' . PHP_EOL					
+					. ' WARNING : Invalid data item! removed ' . PHP_EOL
 					. ' data: ' . to_string($data)
 					, logger::ERROR
 				);
@@ -62,13 +65,13 @@ class component_number extends component_common {
 			}
 			// Empty values
 			// save it as is.
-			if($item->value === null){
-				$format_data[] = $item;
+			if($data_element->value === null){
+				$format_data[] = $data_element;
 				continue;
 			}
 			// values are not empty, format them.
-			$new_item = clone($item);
-			$new_item->value = $this->set_format_form_type($item->value);
+			$new_item = clone($data_element);
+			$new_item->value = $this->set_format_form_type($data_element->value);
 			$format_data[] = $new_item;
 		}
 
@@ -94,11 +97,11 @@ class component_number extends component_common {
 		}else{
 
 			$safe_data = [];
-			foreach ( $data as $item ) {
+			foreach ( $data as $data_element ) {
 				// Wrong data!
-				if($item === null){
+				if($data_element === null){
 					debug_log(__METHOD__
-						. ' WARNING : Invalid data item! removed ' . PHP_EOL					
+						. ' WARNING : Invalid data item! removed ' . PHP_EOL
 						. ' data: ' . to_string($data)
 						, logger::ERROR
 					);
@@ -106,20 +109,20 @@ class component_number extends component_common {
 				}
 				// Empty values
 				// save it as is.
-				if($item->value === null){
-					$safe_data[] = $item;
+				if($data_element->value === null){
+					$safe_data[] = $data_element;
 					continue;
 				}
 				// values are not empty, format them.
-				if ( is_numeric($item->value) ) {
-					$new_item = clone($item);
-					$new_item->value = $this->set_format_form_type($item->value);
+				if ( is_numeric($data_element->value) ) {
+					$new_item = clone($data_element);
+					$new_item->value = $this->set_format_form_type($data_element->value);
 					$safe_data[] = $new_item;
 				}else{
-					// trigger_error("Invalid value! [component_number.set_data] value: ".json_encode($value));
+					// trigger_error
 					debug_log(__METHOD__
 						." Invalid value! [component_number.set_data] value: "
-						.to_string($item)
+						.'data_element: ' . to_string($data_element)
 						, logger::ERROR
 					);
 				}
@@ -137,45 +140,9 @@ class component_number extends component_common {
 
 
 
-	// /**
-	// * GET_VALOR
-	// * Returns int or float number as string formatted
-	// * @return string|null $valor
-	// */
-	// public function get_valor($index='all') {
-
-	// 	$valor = '';
-
-	// 	$dato = $this->get_data();
-
-	// 	if(empty($dato)) {
-	// 		return (string)$valor;
-	// 	}
-
-	// 	if ($index==='all') {
-	// 		$ar = array();
-	// 		foreach ($dato as $key => $value) {
-	// 			$value = component_number::number_to_string($value);
-	// 			if (!empty($value)) {
-	// 				$ar[] = $value;
-	// 			}
-	// 		}
-	// 		if (count($ar)>0) {
-	// 			$valor = implode(',',$ar);
-	// 		}
-	// 	}else{
-	// 		$index = (int)$index;
-	// 		$valor = isset($dato[$index]) ? $dato[$index] : null;
-	// 	}
-
-	// 	return $valor;
-	// }//end get_valor
-
-
-
 	/**
 	* SET_FORMAT_FORM_TYPE
-	* Format the dato into the standard format or the properties format of the current instance of the component
+	* Format the data into the standard format or the properties format of the current instance of the component
 	* @param mixed $value
 	* @return int|float|null $value
 	*/
@@ -228,7 +195,7 @@ class component_number extends component_common {
 
 	/**
 	* NUMBER_TO_STRING
-	* Format the dato into the standard format or the properties format of the current instance of the component
+	* Format the data into the standard format or the properties format of the current instance of the component
 	* @return string $string_value
 	*/
 	public function number_to_string( $value ) : string {
@@ -361,7 +328,7 @@ class component_number extends component_common {
 
 		// column
 		$column = section_record_data::get_column_name( get_called_class() );
-		
+
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
@@ -529,7 +496,7 @@ class component_number extends component_common {
 				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 		}//end switch (true)
-		
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
@@ -559,35 +526,12 @@ class component_number extends component_common {
 
 
 	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$dato				= parent::get_data();
-		$value				= is_array($dato) ? reset($dato) : $dato;
-		$diffusion_value	= !empty($value)
-			? (string)$value
-			: null;
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
 	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -607,33 +551,6 @@ class component_number extends component_common {
 
 		$update_version_string = implode('.', $update_version);
 		switch ($update_version_string) {
-
-			case '6.0.0':
-				if ( (!empty($data_unchanged) || $data_unchanged==='') && !is_array($data_unchanged) ) {
-
-					//  Change the dato from int|float to array
-					// 	From:
-					// 		487
-					// 	To:
-					// 		[487]
-
-					// new dato
-						$dato = $data_unchanged;
-
-					// fix final dato with new format as array
-						$new_dato = [$dato];
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
@@ -676,9 +593,18 @@ class component_number extends component_common {
 			if(json_handler::is_json($import_value)){
 
 				// try to JSON decode (null on not decode)
-				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$data_from_json	= json_handler::decode($import_value);
 
-				$response->result	= $dato_from_json;
+				// Normalize: ensure it is an array of objects with 'value' property
+				if (is_array($data_from_json)) {
+					foreach ($data_from_json as $key => $val) {
+						if (!is_object($val)) {
+							$data_from_json[$key] = (object)['value' => $val];
+						}
+					}
+				}
+
+				$response->result	= $data_from_json;
 				$response->msg		= 'OK';
 
 				return $response;
@@ -717,7 +643,7 @@ class component_number extends component_common {
 				return $response;
 			}
 
-		$response->result	= [$value];
+		$response->result	= [(object)['value' => $value]];
 		$response->msg		= 'OK';
 
 		return $response;
