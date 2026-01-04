@@ -106,34 +106,34 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SET_DATA
-	* Note that current component DON'T STORE DATA.
-	* Instead, is inserted in the related 'component_relation_parent' the link to self
-	* Don't use this method regularly, is preferable use 'add_children' method for every new relation
-	* @param array|string $dato
-	*	When dato is string is because is a JSON encoded dato
-	* @return bool
+	* Sets the data for the component.
+	* Note that current component DOES NOT STORE DATA directly.
+	* Instead, it updates the related 'component_relation_parent' to link to self.
+	* This method compares the provided data with existing data and adds/removes children as necessary.
+	* Don't use this method regularly; it is preferable to use 'add_children' method for every new relation.
+	*
+	* @param array|null $data The array of locator objects to set.
+	*	When data is string is because is a JSON encoded data.
+	* @return bool True on success.
 	*/
-	public function set_data( $dato ) : bool {
+	public function set_data( ?array $data ) : bool {
 
-		// Normalize dato to an array of locator objects
-			$normalized_dato = match (true) {
-				is_string($dato) => (array)json_handler::decode($dato),
-				is_object($dato) => [$dato],
-				is_array($dato) => array_values($dato),
-				default => [],
-			};
+		// empty data: [] to null
+		if ( empty($data) ) {
+			$data = null;
+		}
 
-		// remove previous dato
-			$previous_dato = $this->get_data();
-			if (!empty($previous_dato)) {
-				foreach ($previous_dato as $locator) {
+		// remove previous data
+			$previous_data = $this->get_data() ?? [];
+			if (!empty($previous_data)) {
+				foreach ($previous_data as $locator) {
 
-					$exist = locator::in_array_locator( $locator, $normalized_dato, ['section_tipo','section_id','from_component_tipo']);
+					$exist = locator::in_array_locator( $locator, $data ?? [], ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
 						continue;
 					}
 
-					$result = (bool)$this->remove_child(
+					$result = $this->remove_child(
 						$locator->section_tipo,
 						$locator->section_id
 					);
@@ -149,10 +149,10 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// add the new one if any
-			if (!empty($normalized_dato)) {
-				foreach ($normalized_dato as $locator) {
+			if (!empty($data)) {
+				foreach ($data as $locator) {
 
-					$exist = locator::in_array_locator( $locator, $previous_dato, ['section_tipo','section_id','from_component_tipo']);
+					$exist = locator::in_array_locator( $locator, $previous_data, ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
 						continue;
 					}
@@ -177,16 +177,16 @@ class component_relation_children extends component_relation_common {
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
-							dump($normalized_dato, ' dato ++ '.to_string());
+							dump($data, ' data ++ '.to_string());
 						}
 					}
 				}
 			}
 
-		// $this->update_parents($normalized_dato);
+		// $this->update_parents($data);
 
 		// force read the new value on get_data (prevent cache inconsistency)
-			unset($this->dato_resolved); //  = null;
+			unset($this->data_resolved); //  = null;
 
 
 		return true;
