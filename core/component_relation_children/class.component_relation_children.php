@@ -2,8 +2,14 @@
 /**
 * COMPONENT_RELATION_CHILDREN
 * Class to manage children relations between sections.
-* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode
+* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode.
+* This component is responsible for identifying and listing sections that reference the current section
+* via a parent relation component. It acts as a read-only view of these relationships from the
+* perspective of the child, although it provides utility methods to modify the relationship
+* by interacting with the parent component.
 *
+* @package Dédalo
+* @subpackage Core
 */
 class component_relation_children extends component_relation_common {
 
@@ -24,8 +30,10 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SAVE
-	* Overwrite relation common action
-	* @return bool
+	* Overwrite relation common action.
+	* This component does not store data directly, so this method simply returns true.
+	*
+	* @return bool Always returns true.
 	*/
 	public function save() : bool {
 		// Noting to do. This component don`t save
@@ -196,11 +204,13 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* ADD_CHILD
-	* Alias of update_parent with specific action 'add'
-	* @param string $parent_section_tipo
-	* @param mixed $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool
+	* Alias of update_parent with specific action 'add'.
+	* Adds a relationship between the current section (child) and the specified parent.
+	*
+	* @param string $parent_section_tipo The section tipo of the parent.
+	* @param mixed $parent_section_id The section ID of the parent.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
+	* @return bool True on success.
 	*/
 	public function add_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -213,11 +223,13 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* REMOVE_CHILD
-	* Alias of update_parent with specific action 'remove'
-	* @param string $parent_section_tipo
-	* @param mixed $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool
+	* Alias of update_parent with specific action 'remove'.
+	* Removes the relationship between the current section (child) and the specified parent.
+	*
+	* @param string $parent_section_tipo The section tipo of the parent.
+	* @param mixed $parent_section_id The section ID of the parent.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
+	* @return bool True on success.
 	*/
 	public function remove_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -460,10 +472,12 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_AR_RELATED_PARENT_TIPO
-	* Get the parent node in ontology related to the component_related_children
-	* @param string $tipo
-	* @param string $section_tipo
-	* @return array $ar_parent_tipo
+	* Get the parent node(s) in the ontology related to the component_relation_children.
+	* This determines which parent relation component in the ontology corresponds to this children relation.
+	*
+	* @param string $tipo The tipo of the children relation component.
+	* @param string $section_tipo The section tipo context.
+	* @return array An array of related parent component tipos.
 	*/
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
@@ -532,9 +546,11 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN_TIPO
-	* get ontology tipo for component_related_children of the section_tipo given
-	* @param string $section_tipo
-	* @return string|null $children_tipo
+	* Get the ontology tipo for the component_relation_children within a given section_tipo.
+	* This identifies the specific component instance in the structure that handles children relations for the section.
+	*
+	* @param string $section_tipo The tipo of the section to search within.
+	* @return string|null The component tipo (e.g., 'dd123') or null if not found.
 	*/
 	public static function get_children_tipo( string $section_tipo ) : ?string {
 
@@ -718,12 +734,14 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* HAS_CHILDREN_OF_TYPE
-	* Check if the given child has any child descriptor or non descriptor
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param string $component
-	* @param string $type  descriptor|non_descriptor
-	* @return bool $result
+	* Check if the given child has any child descriptor or non descriptor.
+	* Used in Thesaurus to verify if a term has specific types of children (e.g., descriptors vs non-descriptors).
+	*
+	* @param int|string $section_id The section ID of the child.
+	* @param string $section_tipo The section tipo of the child.
+	* @param string $component_tipo The component tipo representing the relationship.
+	* @param string $type The type to check: 'descriptor' or 'non_descriptor'.
+	* @return bool True if children of the specified type exist, false otherwise.
 	*/
 	public static function has_children_of_type( int|string $section_id, string $section_tipo, string $component_tipo, string $type ) : bool {
 
