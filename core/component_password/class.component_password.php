@@ -1,10 +1,11 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT PASSWORD
-* 
+*
 * data_column_name : 'string'
 */
 class component_password extends component_common {
+
 
 
 	// string . Fake value to show in grid
@@ -42,29 +43,49 @@ class component_password extends component_common {
 	}//end get_diffusion_value
 
 
+
 	/**
-	 * SET_DATA
-	 * Overwrite component_common method
-	 * to encrypt the password before set data
-	 * @param array $data
-	 * @return bool
-	 */
+	* SET_DATA
+	* Overwrite component_common method.
+	* Encrypt data with component_password::encrypt_password method.
+	* This method is used to encrypt the password before set data.
+	* The encrypted data is stored in the database.
+	* The decrypted data is used to display the password in the form.
+	* @param ?array $data
+	* @return bool
+	*/
 	public function set_data( ?array $data ) : bool {
 
-		// Encrypt dato with MD5 etc..
-
-		if( !empty($data) ) {		
-			foreach ($data as $item) {
-				// set encrypted value
-				$item->value = component_password::encrypt_password(
-					$item->value
-				);
+		// Normalize data to objects if it's not already
+		// This is required before calling is_empty_data as it eventually calls is_empty(?object $data_item)
+		if (is_array($data)) {
+			foreach ($data as &$element) {
+				if (!is_object($element) && $element !== null) {
+					$new_element        = new stdClass();
+					$new_element->value = $element;
+					$element            = $new_element;
+				}
 			}
 		}
-		$result = parent::set_data($data);
 
+		if ($this->is_empty_data($data)) {
+			return parent::set_data(null);
+		}
 
-		return $result;
+		$safe_data = [];
+		foreach ($data as $data_element) {
+
+			// At this point data_element is guaranteed to be an object due to normalization above
+			$safe_data_element = clone $data_element;
+			$value_to_encrypt  = $data_element->value ?? '';
+
+			// set encrypted value
+			$safe_data_element->value = component_password::encrypt_password((string)$value_to_encrypt);
+
+			$safe_data[] = $safe_data_element;
+		}
+
+		return parent::set_data($safe_data);
 	}//end set_data
 
 
@@ -73,7 +94,7 @@ class component_password extends component_common {
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	*
@@ -97,7 +118,11 @@ class component_password extends component_common {
 			$properties	= $this->get_properties();
 
 		// data
-			$data = ['***************'];
+			$data = [
+				(object)[
+					'value' => $this->fake_value
+				]
+			];
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
@@ -135,12 +160,9 @@ class component_password extends component_common {
 
 	/**
 	* ENCRYPT_PASSWORD
-	* Alias of dedalo_encrypt_openssl
-	* Change the mycript lib to OpenSSL in the 4.0.22 update
-	* we need the to encrypts for sustain the login of the user before the update to 4.0.22
-	* this function will be change to only Open SSl in the 4.5.
+	* Encrypt a string value with openssl
 	* @param string $string_value
-	* @return string|boolean
+	* @return string
 	*/
 	public static function encrypt_password(string $string_value) : string {
 
@@ -153,12 +175,69 @@ class component_password extends component_common {
 
 
 	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
+	* @return object $query_object
+	*/
+	public static function resolve_query_object_sql(object $query_object) : object {
+
+		// q
+		$q = is_array($query_object->q)
+			? reset($query_object->q)
+			: $query_object->q;
+
+		// Always set fixed values
+		$query_object->type = 'password';
+
+		// column
+		$column = section_record_data::get_column_name( get_called_class() );
+
+		// table_alias
+		$table_alias = $query_object->table_alias;
+
+		// path
+		$query_object->component_path[] = 'lg-nolan';
+
+		$path_end = end($query_object->path);
+		$component_tipo = is_object($path_end) ? $path_end->component_tipo : ($query_object->tipo ?? null);
+
+		// sql sentence
+		$sql  = "{$table_alias}.{$column} @? (";
+		$sql .= "'$.{$component_tipo}[*].value ? (@ == \"'||_Q1_||'\")'";
+		$sql .= ")::jsonpath";
+		$query_object->sentence = $sql;
+
+		// params
+		$query_object->params = ['_Q1_' => component_password::encrypt_password($q)];
+
+		return $query_object;
+	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() : array {
+
+		$ar_operators = [
+			'='		=> 'equal'
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
+
+
+
+	/**
 	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -175,7 +254,6 @@ class component_password extends component_common {
 			$update_version	= $options->update_version;
 			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id ?? '';
-
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
@@ -196,7 +274,7 @@ class component_password extends component_common {
 	/**
 	* GET_V6_ROOT_PASSWORD_DATA
 	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
-	* REMOVE IT IN VERSIONS >V7.0.0
+	* REMOVE IT IN VERSIONS > 7.0.0
 	* @return string|false|null $data
 	*/
 	public function get_v6_root_password_data() : string|false|null {
