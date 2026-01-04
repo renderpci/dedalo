@@ -22,7 +22,7 @@ class component_portal extends component_relation_common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
@@ -34,15 +34,15 @@ class component_portal extends component_relation_common {
 			$options = new stdClass();
 				$options->save				= true; // $mode==='edit' ? true : false;
 				$options->changed			= false; // $mode==='edit' ? true : false;
-				$options->current_data		= false; // $this->get_dato();
+				$options->current_data		= false; // $this->get_data();
 				$options->references_limit	= 0; // (!) Set to zero to get all references to enable sort
 
-			$this->set_data_external($options);	// Forces update dato with calculated external dato
+			$this->set_data_external($options);	// Forces update data with calculated external data
 
 			return true;
 		}
 
-		// Force loads dato always !IMPORTANT
+		// Force loads data always !IMPORTANT
 		$data = $this->get_data();
 
 		debug_log(__METHOD__
@@ -224,7 +224,7 @@ class component_portal extends component_relation_common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version( object $options ) : object {
 
@@ -240,140 +240,6 @@ class component_portal extends component_relation_common {
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
-			case '6.0.0':
-				// Update the locator to move old ds and dataframe to v6 dataframe model.
-				if (!empty($data_unchanged) && is_array($data_unchanged)) {
-					$ontology_node			= ontology_node::get_instance($tipo);
-					$properties				= $ontology_node->get_properties();
-					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
-
-					$clean_locators		= [];
-					$new_dataframe		= [];
-					$need_to_be_updated	= false;
-					foreach ((array)$data_unchanged as $key => $current_locator) {
-
-						if(isset($current_locator->ds) || isset($current_locator->dataframe)){
-							$need_to_be_updated = true;
-							if(empty($v6_update_dataframe)){
-								debug_log(__METHOD__
-									. " The current component doesn't has defined v6_update_dataframe in preferences (Ontology properties). " . PHP_EOL
-									. ' options: '  . to_string($options)
-									, logger::ERROR
-								);
-								throw new Exception("The current component doesn't has defined v6_update_dataframe in preferences (Ontology properties). tipo:".$tipo, 1);
-							}
-
-							// ds case
-							if(!empty($current_locator->ds)){
-								debug_log(__METHOD__
-									." ----> Located locator->ds ($section_tipo - $section_id) ".to_string($current_locator->ds)
-									, logger::WARNING
-								);
-
-								foreach((array)$current_locator->ds as $current_ds) {
-									// change to new from_component_tipo
-									$current_ds->from_component_tipo	= $v6_update_dataframe->v6->from_component_tipo;
-									$current_ds->section_id_key			= (int)$current_locator->section_id;
-
-									$new_dataframe[] = $current_ds;
-									// debug_log(__METHOD__." ----> Changed ds locator ($section_tipo - $section_id) ".to_string($current_ds), logger::WARNING);
-								}
-								// delete old ds
-								unset($current_locator->ds);
-							}
-
-							// dataframe case
-							if(isset($current_locator->dataframe)){
-								$old_dataframe = $current_locator->dataframe;
-								foreach ($old_dataframe as $current_dataframe) {
-
-									// change to new from_component_tipo
-									$current_dataframe->from_component_tipo	= $v6_update_dataframe->v6->from_component_tipo;
-									$current_dataframe->type				= $v6_update_dataframe->v6->type;
-									$current_dataframe->section_id_key		= (int)$current_locator->section_id;
-
-									unset($current_dataframe->from_key);
-
-									$new_dataframe[] = $current_dataframe;
-								}
-								// delete old ds
-								unset($current_locator->dataframe);
-							}
-						}
-						else if(isset($properties->config_relation) && isset($properties->config_relation->relation_type)) {
-
-							// check if locator relation type is correct
-							if (!isset($current_locator->type) || $current_locator->type!==$properties->config_relation->relation_type) {
-
-								$current_locator->type = $properties->config_relation->relation_type;
-
-								$need_to_be_updated	= true;
-
-								debug_log(__METHOD__
-									. " Updated locator type from dd151 to dd96 " . PHP_EOL
-									. ' component tipo: ' . $tipo . PHP_EOL
-									. ' section_tipo: ' . $section_tipo . PHP_EOL
-									. ' section_id: ' . $section_id . PHP_EOL
-									, logger::DEBUG
-								);
-							}
-						}
-
-						$clean_locators[] = $current_locator;
-					}//end foreach ((array)$data_unchanged as $key => $current_locator)
-
-					if ($need_to_be_updated === true) {
-
-						$ar_locators	= array_merge($clean_locators, $new_dataframe);
-						$new_dato		= (array)$ar_locators;
-
-						// section update and save locators
-							$section_to_save = section::get_instance(
-								$section_id, // string|null section_id
-								$section_tipo, // string section_tipo
-								'list', // string mode
-								false // bool bool
-							);
-							$remove_options = new stdClass();
-								$remove_options->component_tipo			= $tipo;
-								$remove_options->relations_container	= 'relations';
-
-							$section_to_save->remove_relations_from_component_tipo( $remove_options );
-							foreach ($ar_locators as $current_locator) {
-								$section_to_save->add_relation($current_locator);
-							}
-							$section_to_save->Save();
-							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($ar_locators), logger::WARNING);
-
-						$response = new stdClass();
-							$response->result	= 3;
-							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-					}else{
-
-						$legacy_model_name = ontology_node::get_legacy_model_by_tipo($tipo);
-						if ($legacy_model_name==='component_autocomplete_hi') {
-							// force save to regenerate search relations
-							$response = new stdClass();
-								$response->result	= 3;
-								$response->new_dato	= $data_unchanged;
-								$response->msg		= "[$reference_id] Dato is forced to save to regenerate search relations from ".to_string($data_unchanged).".<br />";
-
-						}else{
-
-							$response = new stdClass();
-							$response->result	= 2;
-							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-						}
-					}// end if($need_to_be_updated === true)
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}//end (!empty($data_unchanged) && is_array($data_unchanged))
-				break;
-
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
@@ -387,286 +253,193 @@ class component_portal extends component_relation_common {
 
 
 
-	/**
-	* GET_VALOR
-	* V5 diffusion compatibility
-	* @param ?string $lang=DEDALO_DATA_LANG
-	* @param $format='string'
-	* @param $fields_separator=', '
-	* @param $records_separator='<br>'
-	* @param $ar_related_terms=false
-	* @param $data_to_be_used='valor'
-	* @return mixed $valor
-	*/
-	public function get_valor( ?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor' ) {
+	// /**
+	// * GET_POLITICAL_TOPONYMY (LEGACY METHOD - DEPRECATED) !
+	// * Legacy method used by diffusion cost humà
+	// * @param object $options
+	// * @return string|null $term
+	// */
+	// public static function get_political_toponymy( object $options ) : ?string  {
 
-		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
+	// 	// options
+	// 		$locator	= $options->locator ?? null;
+	// 		$lang		= $options->lang ?? DEDALO_DATA_LANG;
+	// 		$type		= $options->type ?? 'municipality';
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
-		if( !include $path ) {
-			debug_log(__METHOD__
-				. " Undefined legacy model closure file. Using JSON encoded dato instead." . PHP_EOL
-				. ' tipo: ' . to_string($this->tipo). PHP_EOL
-				. ' section_tipo: ' . to_string($this->section_tipo). PHP_EOL
-				. ' section_id: ' . to_string($this->section_id). PHP_EOL
-				. ' model: ' . get_called_class()
-				, logger::WARNING
-			);
-			return json_encode( $this->get_dato() );
-		}
+	// 	// empty locator case
+	// 		if (empty($locator)) {
+	// 			return null;
+	// 		}
 
-		$data_to_be_used = 'dato';
+	// 	// self option
+	// 		if ($type==='self') {
 
-		$valor = Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
+	// 			// term plain without parents
+	// 				$term = ts_object::get_term_by_locator( $locator, $lang, true );
 
+	// 		}else{
 
-		return $valor;
-	}//end get_valor
+	// 			// section data of current locator
+	// 				$section_tipo	= $locator->section_tipo;
+	// 				$section_id		= $locator->section_id;
 
+	// 			// political_map
+	// 				$political_map = self::get_legacy_political_map($section_tipo);
+	// 				if(empty($political_map)){
 
+	// 					debug_log(__METHOD__
+	// 						." Empty political_map (ignored resolution by political_map for section: $section_tipo) "
+	// 						, logger::WARNING
+	// 					);
 
-	/**
-	* GET_VALOR_EXPORT
-	* @param $valor=null
-	* @param $lang=DEDALO_DATA_LANG
-	* @param $quotes=null
-	* @param $add_id=null
-	* @return mixed $valor;
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
+	// 					return null;
 
-		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
+	// 				}else{
 
-		// portal valor_export is no longer available
-		if ($legacy_model==='component_portal') {
-			return 'unavailable';
-		}
+	// 					// current_map check
+	// 					$current_map = array_reduce($political_map, function($carry, $item) use($type){
+	// 						return $item->type===$type ? $item : $carry;
+	// 					});
+	// 					if (empty($current_map)) {
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
-		include $path;
+	// 						debug_log(__METHOD__
+	// 							." Empty political_map type (ignored resolution by political_map for type: $type in section: $section_tipo) "
+	// 							, logger::WARNING
+	// 						);
 
-		// $_get_valor_export = Closure::bind($_get_valor_export, $this);
-		$valor =  Closure::bind($_get_valor_export, $this)( $valor, $lang, $quotes, $add_id );
+	// 						return null;
+	// 					}
+	// 				}
 
+	// 			// component_model_tipo of current section
+	// 				$ar_component_model_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+	// 					$section_tipo,
+	// 					['component_relation_model'],
+	// 					true, // from_cache
+	// 					true, // resolve_virtual
+	// 					true, // recursive
+	// 					true // search_exact
+	// 				);
+	// 				$component_model_tipo = reset($ar_component_model_tipo);
+	// 				if (empty($component_model_tipo)) {
 
-		return $valor;
-	}//end get_valor_export
+	// 					debug_log(__METHOD__
+	// 						." Empty section component_model_tipo. Please, review structure of section: '$section_tipo' and add a component_relation_model ) "
+	// 						, logger::ERROR
+	// 					);
 
+	// 					return null;
+	// 				}
 
+	// 			// compare model
+	// 				$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
 
-	/**
-	* GET_DIFFUSION_VALUE
-	* @param string|null $lang=DEDALO_DATA_LANG
-	* @param object|null $option_obj=null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
+	// 					// get model value
+	// 						$component_model = ontology_node::get_model_by_tipo($component_model_tipo,true);
+	// 						$component_model = component_common::get_instance(
+	// 							$component_model, // component_relation_model
+	// 							$component_model_tipo,
+	// 							$section_id,
+	// 							'list',
+	// 							DEDALO_DATA_NOLAN,
+	// 							$section_tipo
+	// 						);
+	// 						$model_dato = $component_model->get_dato();
+	// 						if (empty($model_dato)) {
+	// 							return false;
+	// 						}
 
-		$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
+	// 						$model_locator = reset($model_dato);
 
-		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
-		include $path;
+	// 					// check match 'section_tipo','section_id'
+	// 						$result = locator::compare_locators( $current_map, $model_locator, ['section_tipo','section_id'] );
 
-		// $_get_diffusion_value = Closure::bind($_get_diffusion_value, $this);
-		$valor = Closure::bind($_get_diffusion_value, $this)( $lang, $option_obj );
+	// 					return $result;
+	// 				};
 
-		$diffusion_value = (is_array($valor))
-			? json_encode($valor)
-			: $valor;
+	// 			// self term check
+	// 				if (true===$compare_model($section_tipo, $section_id, $component_model_tipo, $current_map)) {
+	// 					// term
+	// 						$term = ts_object::get_term_by_locator( $locator, $lang, true );
+	// 			// children check
+	// 				}else{
+	// 					// search in parents recursive
+	// 						$parents_recursive = component_relation_parent::get_parents_recursive(
+	// 							$locator->section_id,
+	// 							$locator->section_tipo
+	// 						);
+	// 						foreach ($parents_recursive as $current_parent_locator) {
+	// 							if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {
+	// 								// term
+	// 									$term = ts_object::get_term_by_locator( $current_parent_locator, $lang, true );
+	// 								break;
+	// 							}
+	// 						}
+	// 				}
+	// 		}
 
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_POLITICAL_TOPONYMY (LEGACY METHOD - DEPRECATED) !
-	* Legacy method used by diffusion cost humà
-	* @param object $options
-	* @return string|null $term
-	*/
-	public static function get_political_toponymy( object $options ) : ?string  {
-
-		// options
-			$locator	= $options->locator ?? null;
-			$lang		= $options->lang ?? DEDALO_DATA_LANG;
-			$type		= $options->type ?? 'municipality';
-
-		// empty locator case
-			if (empty($locator)) {
-				return null;
-			}
-
-		// self option
-			if ($type==='self') {
-
-				// term plain without parents
-					$term = ts_object::get_term_by_locator( $locator, $lang, true );
-
-			}else{
-
-				// section data of current locator
-					$section_tipo	= $locator->section_tipo;
-					$section_id		= $locator->section_id;
-
-				// political_map
-					$political_map = self::get_legacy_political_map($section_tipo);
-					if(empty($political_map)){
-
-						debug_log(__METHOD__
-							." Empty political_map (ignored resolution by political_map for section: $section_tipo) "
-							, logger::WARNING
-						);
-
-						return null;
-
-					}else{
-
-						// current_map check
-						$current_map = array_reduce($political_map, function($carry, $item) use($type){
-							return $item->type===$type ? $item : $carry;
-						});
-						if (empty($current_map)) {
-
-							debug_log(__METHOD__
-								." Empty political_map type (ignored resolution by political_map for type: $type in section: $section_tipo) "
-								, logger::WARNING
-							);
-
-							return null;
-						}
-					}
-
-				// component_model_tipo of current section
-					$ar_component_model_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-						$section_tipo,
-						['component_relation_model'],
-						true, // from_cache
-						true, // resolve_virtual
-						true, // recursive
-						true // search_exact
-					);
-					$component_model_tipo = reset($ar_component_model_tipo);
-					if (empty($component_model_tipo)) {
-
-						debug_log(__METHOD__
-							." Empty section component_model_tipo. Please, review structure of section: '$section_tipo' and add a component_relation_model ) "
-							, logger::ERROR
-						);
-
-						return null;
-					}
-
-				// compare model
-					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
-
-						// get model value
-							$component_model = ontology_node::get_model_by_tipo($component_model_tipo,true);
-							$component_model = component_common::get_instance(
-								$component_model, // component_relation_model
-								$component_model_tipo,
-								$section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								$section_tipo
-							);
-							$model_dato = $component_model->get_dato();
-							if (empty($model_dato)) {
-								return false;
-							}
-
-							$model_locator = reset($model_dato);
-
-						// check match 'section_tipo','section_id'
-							$result = locator::compare_locators( $current_map, $model_locator, ['section_tipo','section_id'] );
-
-						return $result;
-					};
-
-				// self term check
-					if (true===$compare_model($section_tipo, $section_id, $component_model_tipo, $current_map)) {
-						// term
-							$term = ts_object::get_term_by_locator( $locator, $lang, true );
-				// children check
-					}else{
-						// search in parents recursive
-							$parents_recursive = component_relation_parent::get_parents_recursive(
-								$locator->section_id,
-								$locator->section_tipo
-							);
-							foreach ($parents_recursive as $current_parent_locator) {
-								if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {
-									// term
-										$term = ts_object::get_term_by_locator( $current_parent_locator, $lang, true );
-									break;
-								}
-							}
-					}
-			}
-
-		// term
-			$term = isset($term) ? strip_tags($term) : null;
+	// 	// term
+	// 		$term = isset($term) ? strip_tags($term) : null;
 
 
-		return $term;
-	}//end _get_political_toponymy
+	// 	return $term;
+	// }//end _get_political_toponymy
 
 
 
-	/**
-	* GET_LEGACY_POLITICAL_MAP (LEGACY METHOD - DEPRECATED) !
-	* Legacy method used by diffusion in mdcat2949: Cost humà
-	* Return an array of political map models of each country
-	* This is a legacy function for compatibility with old publication tables
-	* and is NOT a future way of work
-	* @param string $section_tipo
-	* @return array $ar_models
-	*/
-	public static function get_legacy_political_map( $section_tipo ) {
+	// /**
+	// * GET_LEGACY_POLITICAL_MAP (LEGACY METHOD - DEPRECATED) !
+	// * Legacy method used by diffusion in mdcat2949: Cost humà
+	// * Return an array of political map models of each country
+	// * This is a legacy function for compatibility with old publication tables
+	// * and is NOT a future way of work
+	// * @param string $section_tipo
+	// * @return array $ar_models
+	// */
+	// public static function get_legacy_political_map( $section_tipo ) {
 
-		switch ($section_tipo) {
-			// Spain
-			case 'es1':
-				// models
-				$ar_models = [
-					(object)['type' => 'country', 				'section_tipo' => 'es2', 'section_id' => '8868'],
-					(object)['type' => 'autonomous_community', 	'section_tipo' => 'es2', 'section_id' => '8869'],
-					(object)['type' => 'province', 				'section_tipo' => 'es2', 'section_id' => '8870'],
-					(object)['type' => 'region', 				'section_tipo' => 'es2', 'section_id' => '8871'], // comarca
-					(object)['type' => 'municipality', 			'section_tipo' => 'es2', 'section_id' => '8872']
-				];
-				break;
-			// France
-			case 'fr1':
-				// models
-				$ar_models = [
-					(object)['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
-					(object)['type' => 'autonomous_community'],
-					(object)['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
-					(object)['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
-					(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41193'] // commune
-				];
-				break;
-			// Cuba
-			case 'cu1':
-				// models
-				$ar_models = [
-					(object)['type' => 'country', 				'section_tipo' => 'cu2', 'section_id' => '325'],
-					(object)['type' => 'autonomous_community'],
-					(object)['type' => 'province', 				'section_tipo' => 'cu2', 'section_id' => '326'],
-					(object)['type' => 'region', 				'section_tipo' => 'cu2', 'section_id' => '329'], // comarca | reparto
-					(object)['type' => 'municipality', 			'section_tipo' => 'cu2', 'section_id' => '327']
-				];
-				break;
-			default:
-				$ar_models = [];
-				break;
-		}
+	// 	switch ($section_tipo) {
+	// 		// Spain
+	// 		case 'es1':
+	// 			// models
+	// 			$ar_models = [
+	// 				(object)['type' => 'country', 				'section_tipo' => 'es2', 'section_id' => '8868'],
+	// 				(object)['type' => 'autonomous_community', 	'section_tipo' => 'es2', 'section_id' => '8869'],
+	// 				(object)['type' => 'province', 				'section_tipo' => 'es2', 'section_id' => '8870'],
+	// 				(object)['type' => 'region', 				'section_tipo' => 'es2', 'section_id' => '8871'], // comarca
+	// 				(object)['type' => 'municipality', 			'section_tipo' => 'es2', 'section_id' => '8872']
+	// 			];
+	// 			break;
+	// 		// France
+	// 		case 'fr1':
+	// 			// models
+	// 			$ar_models = [
+	// 				(object)['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
+	// 				(object)['type' => 'autonomous_community'],
+	// 				(object)['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
+	// 				(object)['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
+	// 				(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41193'] // commune
+	// 			];
+	// 			break;
+	// 		// Cuba
+	// 		case 'cu1':
+	// 			// models
+	// 			$ar_models = [
+	// 				(object)['type' => 'country', 				'section_tipo' => 'cu2', 'section_id' => '325'],
+	// 				(object)['type' => 'autonomous_community'],
+	// 				(object)['type' => 'province', 				'section_tipo' => 'cu2', 'section_id' => '326'],
+	// 				(object)['type' => 'region', 				'section_tipo' => 'cu2', 'section_id' => '329'], // comarca | reparto
+	// 				(object)['type' => 'municipality', 			'section_tipo' => 'cu2', 'section_id' => '327']
+	// 			];
+	// 			break;
+	// 		default:
+	// 			$ar_models = [];
+	// 			break;
+	// 	}
 
 
-		return $ar_models;
-	}//end get_legacy_political_map
+	// 	return $ar_models;
+	// }//end get_legacy_political_map
 
 
 
