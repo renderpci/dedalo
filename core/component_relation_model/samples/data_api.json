@@ -1,0 +1,32 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test169",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test169",
+	"value": [
+		{
+			"id": 1,
+			"section_tipo": "dd922",
+			"section_id": "1",			
+			"type": "dd98",
+			"from_component_tipo": "test169"
+		}
+	],
+	"debug_model": "component_relation_model",
+	"debug_label": "relation_model",
+	"debug_dataframe": null,
+	"datalist": [
+		{
+			"value": {
+				"section_tipo": "dd922",
+				"section_id": "1"
+			},
+			"label": "la primera",
+			"section_id": "1",
+			"hide": []
+		}
+	],
+	"changed_data": []
+}
