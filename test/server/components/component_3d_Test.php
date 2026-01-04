@@ -573,4 +573,292 @@ final class component_3d_test extends TestCase {
 
 
 
+	/**
+	* TEST_get_normalized_ar_quality
+	* @return void
+	*/
+	public function test_get_normalized_ar_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_normalized_ar_quality();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$default_quality = $component->get_default_quality();
+		$this->assertTrue(
+			$result===[$default_quality],
+			'expected array with default quality : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_normalized_ar_quality
+
+
+
+	/**
+	* TEST_get_best_extensions
+	* @return void
+	*/
+	public function test_get_best_extensions() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_best_extensions();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===['glb'],
+			'expected [\'glb\'] : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_best_extensions
+
+
+
+	/**
+	* TEST_create_thumb
+	* @return void
+	*/
+	public function test_create_thumb() {
+
+		$component = $this->build_component_instance();
+
+		// Test create_thumb
+		$result = $component->create_thumb();
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// Result depends on whether posterframe exists
+		// If posterframe exists, it should return true
+		// If posterframe doesn't exist, it should return false
+		$posterframe_exists = file_exists($component->get_posterframe_filepath());
+		
+		if ($posterframe_exists) {
+			$this->assertTrue(
+				$result===true,
+				'expected true when posterframe exists : ' . PHP_EOL
+					. to_string($result)
+			);
+		} else {
+			$this->assertTrue(
+				$result===false,
+				'expected false when posterframe does not exist : ' . PHP_EOL
+					. to_string($result)
+			);
+		}
+	}//end test_create_thumb
+
+
+
+	/**
+	* TEST_get_media_attributes
+	* @return void
+	*/
+	public function test_get_media_attributes() {
+
+		$component = $this->build_component_instance();
+
+		$file_path = '/fake/path/to/file.glb';
+
+		// This method is not implemented yet, so we just test it doesn't throw
+		$result = $component->get_media_attributes($file_path);
+
+		// Method returns null currently (not implemented)
+		$this->assertTrue(
+			true,
+			'method executed without throwing exception'
+		);
+	}//end test_get_media_attributes
+
+
+
+	/**
+	* TEST_get_id
+	* @return void
+	*/
+	public function test_get_id() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_id();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$expected = $component->tipo . '_' . $component->section_tipo . '_' . $component->section_id;
+		$this->assertTrue(
+			$result===$expected,
+			'expected id format tipo_section_tipo_section_id : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_id
+
+
+
+	/**
+	* TEST_get_media_filepath
+	* @return void
+	*/
+	public function test_get_media_filepath() {
+
+		$component = $this->build_component_instance();
+
+		$quality = $component->get_default_quality();
+
+		$result = $component->get_media_filepath($quality);
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			strpos($result, DEDALO_MEDIA_PATH)===0,
+			'expected path to start with DEDALO_MEDIA_PATH : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_media_filepath
+
+
+
+	/**
+	* TEST_quality_file_exist
+	* @return void
+	*/
+	public function test_quality_file_exist() {
+
+		$component = $this->build_component_instance();
+
+		$quality = $component->get_default_quality();
+
+		$result = $component->quality_file_exist($quality);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_quality_file_exist
+
+
+
+	/**
+	* TEST_get_thumb_quality
+	* @return void
+	*/
+	public function test_get_thumb_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_thumb_quality();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_QUALITY_THUMB,
+			'expected DEDALO_QUALITY_THUMB : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_thumb_quality
+
+
+
+	/**
+	* TEST_get_thumb_extension
+	* @return void
+	*/
+	public function test_get_thumb_extension() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_thumb_extension();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			in_array($result, ['jpg', 'jpeg', 'png', 'webp']),
+			'expected common image extension : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_thumb_extension
+
+
+
+	/**
+	* TEST_get_posterframe_url_with_absolute
+	* @return void
+	*/
+	public function test_get_posterframe_url_with_absolute() {
+
+		$component = $this->build_component_instance();
+
+		// Test with absolute URL
+		$result = $component->get_posterframe_url(false, true);
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			strpos($result, DEDALO_PROTOCOL . DEDALO_HOST)===0,
+			'expected absolute URL with protocol and host : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_posterframe_url_with_absolute
+
+
+
+	/**
+	* TEST_get_posterframe_url_with_cache_buster
+	* @return void
+	*/
+	public function test_get_posterframe_url_with_cache_buster() {
+
+		$component = $this->build_component_instance();
+
+		// Test with cache buster
+		$result = $component->get_posterframe_url(false, false, true);
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			strpos($result, '?t=')!==false,
+			'expected URL with cache buster parameter : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_posterframe_url_with_cache_buster
+
+
+
 }//end class component_3d_test

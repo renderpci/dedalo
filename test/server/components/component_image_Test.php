@@ -22,6 +22,8 @@ final class component_image_test extends BaseTestCase {
 	*/
 	private function build_component_instance() {
 
+		$this->user_login();
+
 		$model			= self::$model;
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
@@ -610,6 +612,189 @@ final class component_image_test extends BaseTestCase {
 
 
 	/**
+	* TEST_get_normalized_ar_quality
+	* @return void
+	*/
+	public function test_get_normalized_ar_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_normalized_ar_quality();
+
+		$this->assertTrue(
+			is_array($result),
+			'expected array'
+		);
+		$this->assertTrue(
+			count($result) === 3,
+			'expected 3 elements'
+		);
+	}//end test_get_normalized_ar_quality
+
+
+
+	/**
+	* TEST_get_best_extensions
+	* @return void
+	*/
+	public function test_get_best_extensions() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_best_extensions();
+
+		$this->assertTrue(
+			is_array($result),
+			'expected array'
+		);
+	}//end test_get_best_extensions
+
+
+
+	/**
+	* TEST_get_alternative_extensions
+	* @return void
+	*/
+	public function test_get_alternative_extensions() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_alternative_extensions();
+
+		$this->assertTrue(
+			is_array($result) || is_null($result),
+			'expected array or null'
+		);
+	}//end test_get_alternative_extensions
+
+
+
+	/**
+	* TEST_get_target_pixels_to_quality_conversion
+	* @return void
+	*/
+	public function test_get_target_pixels_to_quality_conversion() {
+
+		$result = component_image::get_target_pixels_to_quality_conversion(1000, 1000, 'thumb');
+
+		$this->assertTrue(
+			is_array($result),
+			'expected array'
+		);
+
+		$result = component_image::get_target_pixels_to_quality_conversion(1000, 1000, DEDALO_IMAGE_QUALITY_ORIGINAL);
+
+		$this->assertTrue(
+			$result[0] === 1000,
+			'expected original width'
+		);
+	}//end test_get_target_pixels_to_quality_conversion
+
+
+
+	/**
+	* TEST_get_base_svg_url
+	* @return void
+	*/
+	public function test_get_base_svg_url() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_base_svg_url();
+
+		$this->assertTrue(
+			is_string($result),
+			'expected string'
+		);
+	}//end test_get_base_svg_url
+
+
+
+	/**
+	* TEST_get_svg_file_path
+	* @return void
+	*/
+	public function test_get_svg_file_path() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_svg_file_path();
+
+		$this->assertTrue(
+			is_string($result),
+			'expected string'
+		);
+	}//end test_get_svg_file_path
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$options = (object)['update_version' => [1,0,0]];
+		$result = component_image::update_data_version($options);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected object'
+		);
+	}//end test_update_data_version
+
+
+
+	/**
+	* TEST_pixel_to_centimeters
+	* @return void
+	*/
+	public function test_pixel_to_centimeters() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+		$quality = $component->get_default_quality();
+
+		// Ensure file exists for getimagesize
+		$path = $component->get_media_filepath($quality);
+		if (file_exists($path)) {
+			$result = $component->pixel_to_centimeters($quality);
+
+			$this->assertTrue(
+				is_array($result),
+				'expected array'
+			);
+		}
+	}//end test_pixel_to_centimeters
+
+
+
+	/**
+	* TEST_create_default_svg_string_node
+	* @return void
+	*/
+	public function test_create_default_svg_string_node() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+		$quality = $component->get_default_quality();
+
+		$path = $component->get_media_filepath($quality);
+		if (file_exists($path)) {
+			$result = $component->create_default_svg_string_node();
+
+			$this->assertTrue(
+				is_string($result) || is_null($result),
+				'expected string or null'
+			);
+		}
+	}//end test_create_default_svg_string_node
+
+
+
+	/**
 	* TEST_get_image_print_dimensions
 	* @return void
 	*/
@@ -730,54 +915,28 @@ final class component_image_test extends BaseTestCase {
 
 
 	/**
-	* TEST_generate_default_quality_file
+	* TEST_get_id_extended
 	* @return void
 	*/
-		// public function test_generate_default_quality_file() {
+	public function test_get_id_extended() {
 
-		// 	$model			= self::$model;
-		// 	$tipo			= self::$tipo;
-		// 	$section_tipo	= self::$section_tipo;
-		// 	$section_id		= 1;
-		// 	$mode			= 'edit';
-		// 	$lang			= DEDALO_DATA_NOLAN;
+		$this->user_login();
 
-		// 	$component = component_common::get_instance(
-		// 		$model, // string model
-		// 		$tipo, // string tipo
-		// 		$section_id,
-		// 		$mode,
-		// 		$lang,
-		// 		$section_tipo
-		// 	);
+		$component = $this->build_component_instance();
 
-		// 	$result = $component->generate_default_quality_file((object)[
-		// 		'overwrite' => true
-		// 	]);
+		// 1 - Default ID
+		$result = $component->get_id();
+		$this->assertTrue(is_string($result));
 
-		// 	$this->assertTrue(
-		// 		gettype($result)==='boolean',
-		// 		'expected type boolean : ' . PHP_EOL
-		// 			. gettype($result)
-		// 	);
-
-		// 	$this->assertTrue(
-		// 		$result===true,
-		// 		'expected true value : true ' . PHP_EOL
-		// 			. json_encode($result)
-		// 	);
-
-		// 	$result = $component->generate_default_quality_file((object)[
-		// 		'overwrite'	=> true,
-		// 		'from'		=> 'original_real'
-		// 	]);
-
-		// 	$this->assertTrue(
-		// 		$result===true,
-		// 		'expected true value : true (generate_default_quality_file from original_real) ' . PHP_EOL
-		// 			. json_encode($result)
-		// 	);
-		// }//end test_generate_default_quality_file
+		// 2 - ID from properties (image_id)
+		// We'd need a real component to test this fully, but we can mock properties
+		$component->properties = (object)['image_id' => self::$tipo];
+		// This will call get_instance for test99 on the same section_id
+		// If test99 is the same component it might work if it has data
+		
+		$result = $component->get_id();
+		$this->assertTrue(is_string($result));
+	}//end test_get_id_extended
 
 
 

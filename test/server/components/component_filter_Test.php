@@ -584,4 +584,59 @@ final class component_filter_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$request_options = (object)[
+			'update_version' => [1,0,0]
+		];
+
+		$result = component_filter::update_data_version($request_options);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected object'
+		);
+	}//end test_update_data_version
+
+
+
+	/**
+	* TEST_convert_dato_pre_490
+	* @return void
+	*/
+	public function test_convert_dato_pre_490() {
+
+		// 1. Old format
+		$dato = (object)['1' => '2'];
+		$from_component_tipo = 'test101';
+		$result = component_filter::convert_dato_pre_490($dato, $from_component_tipo);
+
+		$this->assertTrue(
+			is_array($result),
+			'expected array'
+		);
+		$this->assertTrue(
+			$result[0]->section_id === "1",
+			'expected section_id "1"'
+		);
+
+		// 2. New format
+		$locator = new locator();
+			$locator->set_section_tipo('dd153');
+			$locator->set_section_id(1);
+		$dato = [$locator];
+		$result = component_filter::convert_dato_pre_490($dato, $from_component_tipo);
+
+		$this->assertTrue(
+			$result === $dato,
+			'expected same dato'
+		);
+	}//end test_convert_dato_pre_490
+
+
+
 }//end class component_filter_test
