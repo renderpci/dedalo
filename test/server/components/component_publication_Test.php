@@ -1,4 +1,7 @@
 <?php declare(strict_types=1);
+/**
+* CLASS COMPONENT_PUBLICATION_TEST
+*/
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 // bootstrap
@@ -6,7 +9,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_publication_test extends TestCase {
+final class component_publication_test extends BaseTestCase {
 
 
 
@@ -17,30 +20,12 @@ final class component_publication_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -63,65 +48,53 @@ final class component_publication_test extends TestCase {
 
 
 
-	/**
-	* GET_TEST_FILES_PATH
-	* Source path of test files
-	* @return string
-	*/
-	private function get_test_files_path() : string {
-
-		return dirname(dirname(__FILE__)) . '/files/component_publication';
-	}//end get_test_files_path
-
-
-
 	/////////// ⬇︎ test start ⬇︎ ////////////////
 
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
-
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
-		);
+		$old_data = $component->get_data();
 
 		// null case
+			$data	= null;
+			$result	= $component->set_data($data);
+
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				gettype($result)==='boolean',
+				'expected type boolean : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				empty($component->get_data()),
+				'expected empty() data : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
 		// object case
@@ -133,51 +106,32 @@ final class component_publication_test extends TestCase {
 					"from_component_tipo":"test92"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($component->get_data()[0])===json_encode($locator),
+				'expected array with locator : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
 		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
+				json_encode($component->get_data())===json_encode($data),
 				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
 
-		// restore dato
-			$result	= $component->set_dato($old_dato);
+		// restore data
+			$result	= $component->set_data($old_data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($component->get_data())===json_encode($old_data),
+				'expected original data : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
+	}//end test_set_data
 
 
 
@@ -197,6 +151,110 @@ final class component_publication_test extends TestCase {
 				. to_string($result)
 		);
 	}//end test_get_sortable
+
+
+
+	/**
+	* TEST_get_subdatum
+	* @return void
+	*/
+	public function test_get_subdatum() {
+
+		$component = $this->build_component_instance();
+		$component->set_data($this->get_sample_data(self::$model));
+
+		// Create request_config (needed to calculate the subdatum)
+		$component->context = new stdClass();
+		$component->context->request_config = $component->get_ar_request_config();
+
+		$result = $component->get_subdatum(
+			null,
+			$component->get_data()
+		);
+		
+		// 1 - Expected type object
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		// 2 - Expected property context
+		$this->assertTrue(
+			isset($result->context),
+			'expected property context do not match:' . PHP_EOL
+			.' expected property: context' . PHP_EOL
+			.' property: '.to_string($result->context ?? null)
+		);
+
+		// 3 - Expected property data
+		$this->assertTrue(
+			isset($result->data),
+			'expected property data do not match:' . PHP_EOL
+			.' expected property: data' . PHP_EOL
+			.' property: '.to_string($result->data ?? null)
+		);
+	}//end test_get_subdatum
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+		$component->set_data($this->get_sample_data(self::$model));
+
+		$result = $component->get_grid_value();
+
+		// 1 - Expected type object
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// 2 - Expected property model
+		$this->assertTrue(
+			$result->model==='component_publication',
+			'expected property model do not match:' . PHP_EOL
+			.' expected property: model' . PHP_EOL
+			.' property: '.to_string($result->model ?? null)
+		);
+
+		// 3 - Expected property value as array
+		$this->assertTrue(
+			is_array($result->value),
+			'expected property value to be array:' . PHP_EOL
+			.' value: '.to_string($result->value ?? null)
+		);
+
+		// 4 - Expected property label (optional)
+		$this->assertTrue(
+			isset($result->label) || !isset($result->label),
+			'expected property label to exist or not:' . PHP_EOL
+			.' label: '.to_string($result->label ?? 'not set')
+		);
+
+		// 5 - Expected property ar_columns_obj as array
+		$this->assertTrue(
+			is_array($result->ar_columns_obj),
+			'expected property ar_columns_obj to be array:' . PHP_EOL
+			.' ar_columns_obj: '.to_string($result->ar_columns_obj ?? null)
+		);
+
+		// 6 - Check first item of ar_columns_obj
+		if (!empty($result->ar_columns_obj)) {
+			$this->assertTrue(
+				isset($result->ar_columns_obj[0]->id),
+				'expected property id in ar_columns_obj[0]:' . PHP_EOL
+				.' item: '.to_string($result->ar_columns_obj[0] ?? null)
+			);
+		}
+	}//end test_get_grid_value
 
 
 

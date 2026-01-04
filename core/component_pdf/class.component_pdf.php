@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT PDF
+* Manages PDF files
 *
+* data_column_name : 'media'
 */
 class component_pdf extends component_media_common implements component_media_interface {
 
@@ -10,8 +12,8 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* CLASS VARS
 	*/
-		// file name formatted as 'tipo'-'order_id' like dd732-1
-		public $pdf_url;
+	// file name formatted as 'tipo'-'order_id' like dd732-1
+	public $pdf_url;
 
 
 
@@ -116,37 +118,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return ['pdf'];
 	}//end get_best_extensions
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @param $valor=null
-	* @param $lang=DEDALO_DATA_LANG
-	* @param $quotes=null
-	* @param $add_id=null
-	* @return string|null $valor
-	*/
-	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) : ?string {
-
-		if (empty($valor)) {
-			$this->get_dato(); // Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
-		}
-
-		$thumb_quality	= $this->get_thumb_quality();
-		$valor			= $this->get_url(
-			$thumb_quality,
-			false,
-			true,  // absolute, output absolute path like 'http://myhost/mypath/myimage.jpg';
-			false
-		);	// Note this absolute url is converted to image on export
-
-
-		return $valor;
-	}//end get_valor_export
 
 
 
@@ -425,7 +396,7 @@ class component_pdf extends component_media_common implements component_media_in
 				return $response;
 			}
 
-		//check files that can not be processed
+		// check files that can not be processed
 			// source file
 				$source_file = $this->get_media_filepath( $this->get_original_quality() );
 
@@ -697,9 +668,8 @@ class component_pdf extends component_media_common implements component_media_in
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
 		$text_filename 	= substr($source_file, 0, -4) . $file_extension;
 
-		$command  = $engine ." -enc UTF-8". "$engine_config $source_file $text_filename";
+		$command = $engine ." -enc UTF-8". "$engine_config $source_file $text_filename";
 
-		// $command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $source_file";
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
@@ -940,6 +910,9 @@ class component_pdf extends component_media_common implements component_media_in
 					return false;
 				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
 					return false;
+			} else {
+				// No valid pattern matched
+				return false;
 			} // goto next char
 		}
 
@@ -968,7 +941,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version( object $options ) : object {
 
@@ -983,158 +956,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
-
-			case '6.2.0':
-				// same case as '6.0.1'. regenerate_component is enough to create thumb and alternative versions
-			case '6.0.1':
-				// component instance
-					$model		= ontology_node::get_model_by_tipo($tipo, true);
-					$component	= component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$section_tipo,
-						false
-					);
-
-				// run update cache (this action updates files info and saves)
-					$component->regenerate_component();
-					$new_dato = $component->get_dato();
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-				break;
-
-			case '6.0.0':
-				$is_old_dato = (
-					empty($data_unchanged) || // v5 early case
-					(is_object($data_unchanged) && property_exists($data_unchanged, 'scalar')) || // mdcat old data cases
-					isset($data_unchanged->section_id) || // v5 modern case
-					(isset($data_unchanged[0]) && isset($data_unchanged[0]->original_file_name)) // v6 alpha case
-				);
-				// $is_old_dato = true; // force here
-				if ($is_old_dato===true) {
-
-					// create the component pdf
-						$model		= ontology_node::get_model_by_tipo($tipo,true);
-						$component	= component_common::get_instance(
-							$model, // string 'component_pdf'
-							$tipo,
-							$section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo,
-							false
-						);
-
-					// get existing files data
-						$file_name			= $component->get_name();
-						$source_quality		= $component->get_original_quality();
-						$folder				= $component->get_folder(); // like DEDALO_PDF_FOLDER
-						$additional_path	= $component->additional_path;
-						$initial_media_path	= $component->get_initial_media_path();
-						$original_extension	= $component->get_original_extension(
-							false // bool exclude_converted
-						) ?? $component->get_extension(); // 'pdf' fallback is expected
-
-						$base_path	= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
-
-						// no original file found. Use default quality file
-							if(!file_exists($file)) {
-								// use default quality as original
-								$source_quality	= $component->get_default_quality();
-								$base_path		= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_name . '.' . $component->get_extension();
-							}
-							// try again
-							if(!file_exists($file)) {
-								// reset bad dato
-								$response = new stdClass();
-									$response->result	= 1;
-									$response->new_dato	= null;
-									$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string(null).".<br />";
-								// $response = new stdClass();
-								// 	$response->result	= 2;
-								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($data_unchanged)."
-								return $response;
-							}
-
-					// source_file_upload_date
-						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
-						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
-						$source_file_upload_date->timestamp	= $upload_date_timestamp;
-
-					// get the source file name
-						$source_file_name = pathinfo($file)['basename'];
-
-					// offset
-						$offset = !empty($data_unchanged) &&
-							(is_object($data_unchanged) && isset($data_unchanged->offset) ||  // object case
-							is_array($data_unchanged) && isset($data_unchanged[0]->offset)) // array case
-								? $data_unchanged[0]->offset
-								: null;
-
-					// lib_data
-						$lib_data = !empty($offset)
-							? (object)[
-								'offset' => $offset
-							  ]
-							: null;
-
-					// get files info
-						$files_info	= [];
-						$ar_quality	= DEDALO_PDF_AR_QUALITY;
-						foreach ($ar_quality as $current_quality) {
-							if ($current_quality==='thumb') continue;
-							// read file if exists to get file_info
-							$file_info = $component->get_quality_file_info($current_quality);
-							// add non empty quality files data
-							if (!empty($file_info)) {
-								// Note that source_quality could be original or default
-								if ($current_quality===$source_quality) {
-									$file_info->upload_info = (object)[
-										'file_name'	=> $source_file_name ?? null,
-										'date'		=> $source_file_upload_date ?? null,
-										'user'		=> null // unknown here
-									];
-								}
-								// add
-								$files_info[] = $file_info;
-							}
-						}
-
-					// create new dato
-						$dato_item = (object)[
-							'files_info'	=> $files_info,
-							'lib_data'		=> $lib_data
-						];
-
-					// fix final dato with new format as array
-						$new_dato = [$dato_item];
-						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-
-					// clean vars
-						unset($source_file_upload_date);
-						unset($files_info);
-						unset($lib_data);
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
 
 			default:
 				$response = new stdClass();
