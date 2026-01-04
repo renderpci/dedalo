@@ -1,0 +1,775 @@
+{
+	"section_id": 1,
+	"section_tipo": "oh1",
+	"tipo": "oh87",
+	"mode": "list",
+	"lang": "lg-nolan",
+	"from_component_tipo": "oh87",
+	"value": [
+		{
+		  "id": 1,
+		  "value": {
+			"id": {
+			  "id": "id",
+			  "key": 0,
+			  "value": "1",
+			  "widget": "media_icons",
+			  "locator": {
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "rsc167",
+				"from_component_tipo": "oh25"
+			  }
+			},
+			"tc": {
+			  "id": "tc",
+			  "key": 0,
+			  "value": "01:25:58.000",
+			  "widget": "media_icons",
+			  "locator": {
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "rsc167",
+				"from_component_tipo": "oh25"
+			  }
+			},
+			"widget": "media_icons",
+			"indexation": {
+			  "id": "indexation",
+			  "key": 0,
+			  "widget": "media_icons",
+			  "locator": {
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "rsc167",
+				"from_component_tipo": "oh25"
+			  },
+			  "tool_context": {
+				"css": {
+				  "url": "/dedalo/tools/tool_indexation/css/tool_indexation.css"
+				},
+				"icon": "/dedalo/tools/tool_indexation/img/icon.svg",
+				"mode": "edit",
+				"name": "tool_indexation",
+				"type": "tool",
+				"typo": "ddo",
+				"label": "Indexing tool",
+				"model": "tool_indexation",
+				"developer": "Dédalo team",
+				"properties": {
+				  "open_as": "window",
+				  "windowFeatures": null
+				},
+				"tool_config": {
+				  "ddo_map": [
+					{
+					  "mode": "edit",
+					  "role": "transcription_component",
+					  "tipo": "rsc36",
+					  "label": "Description / transcription",
+					  "model": "component_text_area",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": true
+					},
+					{
+					  "mode": "edit",
+					  "role": "indexing_component",
+					  "tipo": "rsc860",
+					  "label": "Indexation",
+					  "model": "component_portal",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "mode": "edit",
+					  "role": "media_component",
+					  "tipo": "rsc35",
+					  "label": "Audiovisual",
+					  "model": "component_av",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "mode": "relation",
+					  "role": "area_thesaurus",
+					  "tipo": "dd100",
+					  "label": "Thesaurus",
+					  "model": "area_thesaurus",
+					  "section_id": null,
+					  "section_tipo": "dd100",
+					  "translatable": true
+					},
+					{
+					  "info": "Estado IN - component_checkbox ",
+					  "mode": "edit",
+					  "role": "status_user_component",
+					  "tipo": "rsc437",
+					  "label": "IN Status",
+					  "model": "component_check_box",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "info": "Validación IN - component_select",
+					  "mode": "edit",
+					  "role": "status_admin_component",
+					  "tipo": "rsc439",
+					  "label": "IN validation",
+					  "model": "component_select",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					}
+				  ]
+				},
+				"section_tipo": "dd1324",
+				"show_in_component": true,
+				"show_in_inspector": false
+			  }
+			},
+			"translation": {
+			  "id": "translation",
+			  "key": 0,
+			  "widget": "media_icons",
+			  "locator": {
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "rsc167",
+				"from_component_tipo": "oh25"
+			  },
+			  "tool_context": {
+				"css": {
+				  "url": "/dedalo/tools/tool_lang/css/tool_lang.css"
+				},
+				"icon": "/dedalo/tools/tool_lang/img/icon.svg",
+				"mode": "edit",
+				"name": "tool_lang",
+				"type": "tool",
+				"typo": "ddo",
+				"label": "Translation",
+				"model": "tool_lang",
+				"developer": "Dédalo team",
+				"properties": {
+				  "open_as": "window",
+				  "windowFeatures": null
+				},
+				"tool_config": {
+				  "ddo_map": [
+					{
+					  "mode": "edit",
+					  "role": "main_element",
+					  "tipo": "rsc36",
+					  "label": "Description / transcription",
+					  "model": "component_text_area",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": true
+					},
+					{
+					  "mode": "edit",
+					  "role": "status_user_component",
+					  "tipo": "rsc438",
+					  "label": "TL Status",
+					  "model": "component_check_box",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "mode": "edit",
+					  "role": "status_admin_component",
+					  "tipo": "rsc493",
+					  "label": "TL Validation",
+					  "model": "component_select",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					}
+				  ]
+				},
+				"section_tipo": "dd1324",
+				"show_in_component": true,
+				"show_in_inspector": true
+			  }
+			},
+			"transcription": {
+			  "id": "transcription",
+			  "key": 0,
+			  "widget": "media_icons",
+			  "locator": {
+				"type": "dd151",
+				"section_id": "1",
+				"section_tipo": "rsc167",
+				"from_component_tipo": "oh25"
+			  },
+			  "tool_context": {
+				"css": {
+				  "url": "/dedalo/tools/tool_transcription/css/tool_transcription.css"
+				},
+				"icon": "/dedalo/tools/tool_transcription/img/icon.svg",
+				"mode": "edit",
+				"name": "tool_transcription",
+				"type": "tool",
+				"typo": "ddo",
+				"label": "Transcription",
+				"model": "tool_transcription",
+				"developer": "Dédalo team",
+				"properties": {
+				  "open_as": "window",
+				  "windowFeatures": null
+				},
+				"tool_config": {
+				  "ddo_map": [
+					{
+					  "mode": "edit",
+					  "role": "media_component",
+					  "tipo": "rsc35",
+					  "label": "Audiovisual",
+					  "model": "component_av",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "mode": "edit",
+					  "role": "transcription_component",
+					  "tipo": "rsc36",
+					  "label": "Description / transcription",
+					  "model": "component_text_area",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": true
+					},
+					{
+					  "mode": "edit",
+					  "role": "status_user_component",
+					  "tipo": "rsc431",
+					  "label": "TR Status",
+					  "model": "component_check_box",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					},
+					{
+					  "mode": "edit",
+					  "role": "status_admin_component",
+					  "tipo": "rsc285",
+					  "label": "TR Validation",
+					  "model": "component_select",
+					  "section_id": "1",
+					  "section_tipo": "rsc167",
+					  "translatable": false
+					}
+				  ]
+				},
+				"section_tipo": "dd1324",
+				"show_in_component": true,
+				"show_in_inspector": true
+			  }
+			}
+		  }
+		},
+		{
+		  "id": 2,
+		  "value": {
+			"id": "indexation",
+			"key": 0,
+			"value": 90,
+			"widget": "descriptors",
+			"locator": {
+			  "type": "dd151",
+			  "section_id": "1",
+			  "section_tipo": "rsc167",
+			  "from_component_tipo": "oh25"
+			}
+		  }
+		},
+		{
+		  "id": 3,
+		  "value": {
+			"id": "terms",
+			"key": 0,
+			"value": {
+			  "id": null,
+			  "data": null,
+			  "type": "column",
+			  "label": "Indexation",
+			  "value": [
+				{
+				  "id": null,
+				  "data": null,
+				  "type": "row",
+				  "label": null,
+				  "value": [
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Term",
+					  "value": [
+						"College"
+					  ],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_hierarchy25",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						"College"
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Title",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_actv10",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Menu name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_ww11",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_tchi15",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					}
+				  ],
+				  "action": null,
+				  "column": null,
+				  "cell_type": null,
+				  "row_count": null,
+				  "class_list": null,
+				  "column_count": null,
+				  "render_label": null,
+				  "column_labels": null,
+				  "ar_columns_obj": null,
+				  "fallback_value": null,
+				  "fields_separator": null,
+				  "records_separator": null
+				},
+				{
+				  "id": null,
+				  "data": null,
+				  "type": "row",
+				  "label": null,
+				  "value": [
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Term",
+					  "value": [
+						"Other learning"
+					  ],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_hierarchy25",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						"Other learning"
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Title",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_actv10",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Menu name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_ww11",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_tchi15",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					}
+				  ],
+				  "action": null,
+				  "column": null,
+				  "cell_type": null,
+				  "row_count": null,
+				  "class_list": null,
+				  "column_count": null,
+				  "render_label": null,
+				  "column_labels": null,
+				  "ar_columns_obj": null,
+				  "fallback_value": null,
+				  "fields_separator": null,
+				  "records_separator": null
+				},
+				{
+				  "id": null,
+				  "data": null,
+				  "type": "row",
+				  "label": null,
+				  "value": [
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Term",
+					  "value": [
+						"Housekeeping"
+					  ],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_hierarchy25",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						"Housekeeping"
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Title",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_actv10",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Menu name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_ww11",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					},
+					{
+					  "id": null,
+					  "data": null,
+					  "type": "column",
+					  "label": "Name",
+					  "value": [],
+					  "action": null,
+					  "column": null,
+					  "cell_type": "text",
+					  "row_count": null,
+					  "class_list": null,
+					  "column_count": null,
+					  "render_label": null,
+					  "column_labels": null,
+					  "ar_columns_obj": [
+						{
+						  "id": "rsc167_rsc860_aa1_tchi15",
+						  "group": "rsc167_rsc860_aa1"
+						}
+					  ],
+					  "fallback_value": [
+						""
+					  ],
+					  "fields_separator": null,
+					  "records_separator": " | "
+					}
+				  ],
+				  "action": null,
+				  "column": null,
+				  "cell_type": null,
+				  "row_count": null,
+				  "class_list": null,
+				  "column_count": null,
+				  "render_label": null,
+				  "column_labels": null,
+				  "ar_columns_obj": null,
+				  "fallback_value": null,
+				  "fields_separator": null,
+				  "records_separator": null
+				}
+			  ],
+			  "action": null,
+			  "column": null,
+			  "cell_type": null,
+			  "row_count": 90,
+			  "class_list": null,
+			  "column_count": 16,
+			  "render_label": null,
+			  "column_labels": null,
+			  "ar_columns_obj": [
+				{
+				  "id": "rsc167_rsc860_aa1_hierarchy25",
+				  "group": "rsc167_rsc860_aa1"
+				},
+				{
+				  "id": "rsc167_rsc860_aa1_actv10",
+				  "group": "rsc167_rsc860_aa1"
+				},
+				{
+				  "id": "rsc167_rsc860_aa1_ww11",
+				  "group": "rsc167_rsc860_aa1"
+				},
+				{
+				  "id": "rsc167_rsc860_aa1_tchi15",
+				  "group": "rsc167_rsc860_aa1"
+				},
+				{
+				  "id": "rsc167_rsc860_hp1_hierarchy25",
+				  "group": "rsc167_rsc860_hp1"
+				},
+				{
+				  "id": "rsc167_rsc860_hp1_actv10",
+				  "group": "rsc167_rsc860_hp1"
+				},
+				{
+				  "id": "rsc167_rsc860_hp1_ww11",
+				  "group": "rsc167_rsc860_hp1"
+				},
+				{
+				  "id": "rsc167_rsc860_hp1_tchi15",
+				  "group": "rsc167_rsc860_hp1"
+				},
+				{
+				  "id": "rsc167_rsc860_rt1_hierarchy25",
+				  "group": "rsc167_rsc860_rt1"
+				},
+				{
+				  "id": "rsc167_rsc860_rt1_actv10",
+				  "group": "rsc167_rsc860_rt1"
+				},
+				{
+				  "id": "rsc167_rsc860_rt1_ww11",
+				  "group": "rsc167_rsc860_rt1"
+				},
+				{
+				  "id": "rsc167_rsc860_rt1_tchi15",
+				  "group": "rsc167_rsc860_rt1"
+				},
+				{
+				  "id": "rsc167_rsc860_mht160_hierarchy25",
+				  "group": "rsc167_rsc860_mht160"
+				},
+				{
+				  "id": "rsc167_rsc860_mht160_actv10",
+				  "group": "rsc167_rsc860_mht160"
+				},
+				{
+				  "id": "rsc167_rsc860_mht160_ww11",
+				  "group": "rsc167_rsc860_mht160"
+				},
+				{
+				  "id": "rsc167_rsc860_mht160_tchi15",
+				  "group": "rsc167_rsc860_mht160"
+				}
+			  ],
+			  "fallback_value": null,
+			  "fields_separator": ", ",
+			  "records_separator": " | "
+			},
+			"widget": "descriptors",
+			"locator": {
+			  "type": "dd151",
+			  "section_id": "1",
+			  "section_tipo": "rsc167",
+			  "from_component_tipo": "oh25"
+			}
+		  }
+		}
+	],
+	"debug_model": "component_info",
+	"debug_label": "Information",
+	"debug_dataframe": null,
+	"row_section_id": 1,
+	"parent_tipo": "oh1",
+	"changed_data": []
+}

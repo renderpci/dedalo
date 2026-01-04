@@ -1,4 +1,7 @@
 <?php declare(strict_types=1);
+/**
+* CLASS COMPONENT_INFO_TEST
+*/
 // PHPUnit classes
 use PHPUnit\Framework\TestCase;
 // bootstrap
@@ -6,7 +9,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_info_test extends TestCase {
+final class component_info_test extends BaseTestCase {
 
 
 
@@ -17,30 +20,12 @@ final class component_info_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -68,28 +53,59 @@ final class component_info_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_get_data
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-		if (!empty($result)) {
-			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-		}
-	}//end test_get_dato
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_get_data_parsed
+	* @return void
+	*/
+	public function test_get_data_parsed() {
+
+		$component = $this->build_component_instance();
+
+		$result	= $component->get_data_parsed();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data_parsed
+
+
+
+	/**
+	* TEST_get_db_data
+	* @return void
+	*/
+	public function test_get_db_data() {
+
+		$component = $this->build_component_instance();
+
+		$result	= $component->get_db_data();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_db_data
 
 
 
@@ -108,74 +124,7 @@ final class component_info_test extends TestCase {
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-		if (!empty($result)) {
-			$this->assertTrue(
-				gettype($result[0])==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-		}
 	}//end test_get_widgets
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor_export
-
-
-
-	/**
-	* TEST_get_diffusion_dato
-	* @return void
-	*/
-	public function test_get_diffusion_dato() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_dato((object)[
-			'widget_name'	=> ['calculation'],
-			'select'		=> ['total']
-		]);
-
-		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type array|string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_dato
 
 
 
@@ -262,6 +211,63 @@ final class component_info_test extends TestCase {
 				. gettype($result)
 		);
 	}//end test_get_list_value
+
+
+
+	/**
+	* TEST_get_calculation_data
+	* @return void
+	*/
+	public function test_get_calculation_data() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_calculation_data();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_calculation_data
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_grid_value();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_grid_value
+
+
+
+	/**
+	* TEST_get_grid_flat_value
+	* @return void
+	*/
+	public function test_get_grid_flat_value() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_grid_flat_value();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_grid_flat_value
 
 
 

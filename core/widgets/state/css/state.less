@@ -30,20 +30,31 @@
 				}
 
 				.detail {
-					display: none;
 					position: absolute;
 					background-color: @color_white;
 					padding: 0.5rem;
 					border: 1px solid @color_grey_13;
-					right: 0px;
+					left: 2rem;
 					top: -50%;
+					display: grid;
+					grid-template-columns: 4fr 2fr 1fr;
+					grid-gap: 0.3rem;
+					z-index: 3;
+					box-shadow: 3px 6px 7px 1px #b7b7b7;
 
 					&.active {
-						display: block;
+						
 					}
 
 					.value {
 						padding-right: 0.33rem;
+					}
+				}
+
+				&.container {
+					span.value {
+						display: inline-block;
+						z-index: 1;
 					}
 				}
 			}

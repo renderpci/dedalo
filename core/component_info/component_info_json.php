@@ -48,7 +48,7 @@
 				default:
 					$value = (isset($this->use_db_data) && $this->use_db_data===true)
 						? $this->get_db_data()
-						: $this->get_dato();
+						: $this->get_data();
 					$data_list = $this->get_data_list();
 					break;
 			}
