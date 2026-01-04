@@ -23,19 +23,19 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* Resolve indexation references data
-	* Note that this component data is always EXTERNAL
+	* Note that this component data is always EXTERNAL (it doesn't manage data in database, it always resolve calling data, inverse locators or who is calling me)
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
 	* to current section
 	* But, values are saved too to allow easy search
-	* @return array|null $dato
+	* @return array|null $data
 	*/
-	public function get_dato() : ?array {
+	public function get_data() : ?array {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+		// data_resolved. Already resolved case
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// reference_locator
@@ -48,15 +48,15 @@ class component_relation_index extends component_relation_common {
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
 
-		// format result like own dato
+		// format result like own data
 			$new_data = component_relation_index::parse_data($ar_inverse_locators);
 
-		// fix resolved dato
-			parent::set_dato($new_data);
+		// fix resolved data
+			parent::set_data($new_data);
 
 
-		return $this->dato;
-	}//end get_dato
+		return $this->get_data();
+	}//end get_data
 
 
 
