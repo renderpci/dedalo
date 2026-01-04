@@ -511,23 +511,21 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_remove_parent
+	* TEST_REMOVE_PARENT
 	* @return void
 	*/
 	public function test_remove_parent() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
-
-		$section_id	= 3;
+		$old_data = $component->get_data();
 
 		$locator = new locator();
 			$locator->set_section_tipo($component->section_tipo);
-			$locator->set_section_id($section_id);
+			$locator->set_section_id(3);
 
 		// add dato (this action saves too)
-			$component->set_dato(null);
+			$component->set_data(null);
 			$result = $component->add_parent(
 				$locator
 			);
@@ -543,8 +541,7 @@ final class component_relation_parent_test extends TestCase {
 
 		// remove added (this action saves too)
 			$result = $component->remove_parent(
-				$component->section_tipo,
-				$section_id
+				$locator
 			);
 
 			$this->assertTrue(
@@ -553,19 +550,79 @@ final class component_relation_parent_test extends TestCase {
 					. gettype($result)
 			);
 
+			
 			if ($result===true) {
 
-				$dato_reference = [];
 				$this->assertTrue(
-					json_encode($component->dato)===json_encode($dato_reference),
-					'expected dato_reference : ' . PHP_EOL
-						. to_string($component->dato)
+					null === $component->get_data(),
+					'expected null : ' . PHP_EOL
+						. to_string($component->get_data())
 				);
-
-				// restore data
-				$component->set_dato($old_dato);
-				$component->Save();
 			}
+
+			// add multiple data
+			$component->set_data(null);
+			$locator->set_section_id(3);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(4);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(5);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(6);
+			$result = $component->add_parent(
+				$locator
+			);
+			// remove multiple data
+			$locator->set_section_id(3);
+			$result = $component->remove_parent(
+				$locator
+			);
+			$locator->set_section_id(5);
+			$result = $component->remove_parent(
+				$locator
+			);
+
+			$test_data = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "4",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
+
+			$test_data2 = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "6",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				locator::in_array_locator($test_data, $data),
+				'expected locator in data : ' . PHP_EOL
+					. to_string($data)
+			);
+
+			$this->assertTrue(
+				locator::in_array_locator($test_data2, $data),
+				'expected locator in data : ' . PHP_EOL
+					. to_string($data)
+			);
+
+			// restore data
+			$component->set_data($old_data);
+			$component->save();
+
 	}//end test_remove_parent
 
 
