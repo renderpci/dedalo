@@ -87,17 +87,15 @@ final class component_relation_model_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -107,12 +105,12 @@ final class component_relation_model_test extends TestCase {
 
 		// null case
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// object case
+		// add data
 			$locator = json_decode('
 				{
 					"type":"dd98",
@@ -121,33 +119,15 @@ final class component_relation_model_test extends TestCase {
 					"from_component_tipo":"test169"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
+				locator::in_array_locator( $locator, $component->get_data() ),
 				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
 
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-	}//end test_set_dato
 
 
 
