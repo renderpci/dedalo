@@ -15,10 +15,10 @@ class component_dataframe extends component_portal {
 	/**
 	* GET_DATA
 	* Returns data from container 'relations', not for component data container
-	* @return array $all_data
+	* @return ?array $all_data
 	*	$data is always an array of locators or an empty array
 	*/
-	public function get_data() : array {
+	public function get_data() : ?array {
 
 		$data				= parent::get_data();
 		$caller_dataframe	= $this->get_caller_dataframe();
@@ -31,23 +31,26 @@ class component_dataframe extends component_portal {
 			return $data;
 		}
 
-		// filtered data
-		$filtered_data = [];
+		// filtered data		
 		// iterate relations filtering match values
-		foreach ($data as $locator) {
+		$filtered_data = [];		
+		if (!empty($data)) {
+			foreach ($data as $locator) {
 
-			if(	isset($locator->from_component_tipo)
-				&& isset($locator->section_id_key)
-				&& isset($locator->section_tipo_key)
-				&& isset($locator->main_component_tipo)
-				&& $locator->from_component_tipo	=== $this->tipo
-				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
-				&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
-				&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
-			) {
-				$filtered_data[] = $locator;
+				if(	isset($locator->from_component_tipo)
+					&& isset($locator->section_id_key)
+					&& isset($locator->section_tipo_key)
+					&& isset($locator->main_component_tipo)
+					&& $locator->from_component_tipo	=== $this->tipo
+					&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
+					&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
+					&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
+				) {
+					$filtered_data[] = $locator;
+				}
 			}
 		}
+
 
 		return $filtered_data;
 	}//end get_data
