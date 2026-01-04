@@ -1,8 +1,24 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT TEXT AREA
-* Manage specific component text area logic
-* Common components properties and method are inherited of component_string_common class that are inherited from component_common class
+* Determine the logic of the text area component
+*
+* Key features:
+* - Manages HTML text content (WYSIWYG editors like CKEditor)
+* - Handles internal tags for:
+*   - Indexation (descriptors/thesaurus)
+*   - References (links to other records)
+*   - Persons (interviewed, informants, etc.)
+*   - Languages (lang tags)
+*   - Geolocation (deprecated embedded tags, now linked to component_geolocation)
+*   - Notes/Annotations
+*   - Multimedia (images/TimeCodes)
+* - Provides methods for sanitizing, repairing, and processing these tags
+* - Supports multi-language data with fallback mechanisms
+* - Inherits common string logic from component_string_common
+*
+* @package Dedalo
+* @subpackage Core
 */
 class component_text_area extends component_string_common {
 

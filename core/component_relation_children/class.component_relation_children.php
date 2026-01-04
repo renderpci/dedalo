@@ -2,8 +2,14 @@
 /**
 * COMPONENT_RELATION_CHILDREN
 * Class to manage children relations between sections.
-* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode
+* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode.
+* This component is responsible for identifying and listing sections that reference the current section
+* via a parent relation component. It acts as a read-only view of these relationships from the
+* perspective of the child, although it provides utility methods to modify the relationship
+* by interacting with the parent component.
 *
+* @package Dédalo
+* @subpackage Core
 */
 class component_relation_children extends component_relation_common {
 
@@ -21,53 +27,13 @@ class component_relation_children extends component_relation_common {
 
 
 
-	// /**
-	// * GET_VALOR
-	// * Get value . Default is get dato . overwrite in every different specific component
-	// * @param string|null $lang = DEDALO_DATA_LANG
-	// * @return string|null $valor
-	// */
-	// public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
-
-	// 	$dato = $this->get_data();
-
-	// 	// empty case
-	// 		if (empty($dato)) {
-	// 			return null;
-	// 		}
-
-	// 	// resolve locators
-	// 		$ar_valor = [];
-	// 		foreach ((array)$dato as $current_locator) {
-	// 			$ar_valor[] = ts_object::get_term_by_locator(
-	// 				$current_locator,
-	// 				$lang,
-	// 				true // bool from_cache
-	// 			);
-	// 		}
-
-	// 	// component valor
-	// 		$ar_valor_clean = [];
-	// 		foreach ($ar_valor as $value) {
-	// 			if (empty($value)) {
-	// 				continue;
-	// 			}
-	// 			if(!empty(trim($value))) {
-	// 				$ar_valor_clean[] = $value;
-	// 			}
-	// 		}
-	// 		$valor = implode(', ', $ar_valor_clean);
-
-
-	// 	return $valor;
-	// }//end get_valor
-
-
 
 	/**
 	* SAVE
-	* Overwrite relation common action
-	* @return bool
+	* Overwrite relation common action.
+	* This component does not store data directly, so this method simply returns true.
+	*
+	* @return bool Always returns true.
 	*/
 	public function save() : bool {
 		// Noting to do. This component don`t save
@@ -76,62 +42,36 @@ class component_relation_children extends component_relation_common {
 
 
 
-	// /**
-	// * GET DATO
-	// * This component don't store data, only manages calculated data from component_relation_parent generated data
-	// * stored in section 'relations' container
-	// * @return array $dato
-	// *	$dato is always an array of locators
-	// */
-	// public function get_data() : array {
-
-	// 	// dato_resolved. Already resolved case
-	// 		if(isset($this->dato_resolved)) {
-	// 			return $this->dato_resolved;
-	// 		}
-
-	// 	// empty section_id case
-	// 		if(empty($this->section_id)){
-	// 			return [];
-	// 		}
-
-	// 	// always get dato calculated from my parents that call the current section
-	// 		$dato = component_relation_children::get_children(
-	// 			$this->section_id,
-	// 			$this->section_tipo,
-	// 			$this->tipo
-	// 		);
-
-	// 	// fix dato.
-	// 		$this->dato = $dato;
-
-	// 	// set dato_resolve and cache it
-	// 		$this->dato_resolved = $this->dato;
-
-	// 	// Set as loaded.
-	// 		// $this->bl_loaded_matrix_data = true;
-
-
-	// 	return $dato;
-	// }//end get_data
-
-
-
 	/**
 	* GET_DATA
-	* Get data from its related parent
-	* component children doesn't store data, it get its data resolving the parent relations
+	* Get data from its related parent.
+	* component_relation_children doesn't store data, it retrieves its data by resolving the parent relations.
+	* It searches for all sections that have the current section as a parent.
+	*
 	* @see component_common->get_data()
-	* @return array
+	* @return array|null An array of locators representing the children sections, or null if empty.
 	*/
 	public function get_data() : ?array {
 
-		// always get dato calculated from my parents that call the current section
+		// data_resolved. Already resolved case
+		if(isset($this->data_resolved)) {
+			return $this->data_resolved;
+		}
+
+		// always get data calculated from my parents that call the current section
 			$data = component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo
 			);
+
+		// set data_resolved and cache it
+			$this->data_resolved = $data;
+
+		// empty cases
+			if(empty($data)) {
+				return null;
+			}
 
 
 		return $data;
@@ -140,10 +80,12 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* get_data_paginated
-	* Gets paginated the inverse locators from component parent result.
-	* @param int|null $custom_limit = null
-	* @return array $dato_paginated
+	* GET_DATA_PAGINATED
+	* Gets paginated data (inverse locators from component parent result).
+	* This handles strict limit and offset logic typically populated from the API request context.
+	*
+	* @param int|null $custom_limit Optional custom limit to override the standard pagination limit.
+	* @return array The array of locators for the current page.
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
@@ -155,8 +97,8 @@ class component_relation_children extends component_relation_common {
 		// offset
 			$offset = $this->pagination->offset ?? 0;
 
-		// always get dato calculated from my parents that call the current section
-			$dato_paginated = component_relation_children::get_children(
+		// always get data calculated from my parents that call the current section
+			$data_paginated = component_relation_children::get_children(
 				$this->section_id,
 				$this->section_tipo,
 				$this->tipo,
@@ -165,54 +107,41 @@ class component_relation_children extends component_relation_common {
 			);
 
 
-		return $dato_paginated;
+		return $data_paginated;
 	}//end get_data_paginated
-
-
-
-	// /**
-	// * GET_DATa_FULL
-	// * @return array|null $dato
-	// */
-	// public function get_data_full() : ?array {
-
-	// 	$dato = $this->get_data();
-
-	// 	return $dato;
-	// }//end get_data_full
 
 
 
 	/**
 	* SET_DATA
-	* Note that current component DON'T STORE DATA.
-	* Instead, is inserted in the related 'component_relation_parent' the link to self
-	* Don't use this method regularly, is preferable use 'add_children' method for every new relation
-	* @param array|string $dato
-	*	When dato is string is because is a JSON encoded dato
-	* @return bool
+	* Sets the data for the component.
+	* Note that current component DOES NOT STORE DATA directly.
+	* Instead, it updates the related 'component_relation_parent' to link to self.
+	* This method compares the provided data with existing data and adds/removes children as necessary.
+	* Don't use this method regularly; it is preferable to use 'add_children' method for every new relation.
+	*
+	* @param array|null $data The array of locator objects to set.
+	*	When data is string is because is a JSON encoded data.
+	* @return bool True on success.
 	*/
-	public function set_data( $dato ) : bool {
+	public function set_data( ?array $data ) : bool {
 
-		// Normalize dato to an array of locator objects
-			$normalized_dato = match (true) {
-				is_string($dato) => (array)json_handler::decode($dato),
-				is_object($dato) => [$dato],
-				is_array($dato) => array_values($dato),
-				default => [],
-			};
+		// empty data: [] to null
+		if ( empty($data) ) {
+			$data = null;
+		}
 
-		// remove previous dato
-			$previous_dato = $this->get_data();
-			if (!empty($previous_dato)) {
-				foreach ($previous_dato as $locator) {
+		// remove previous data
+			$previous_data = $this->get_data() ?? [];
+			if (!empty($previous_data)) {
+				foreach ($previous_data as $locator) {
 
-					$exist = locator::in_array_locator( $locator, $normalized_dato, ['section_tipo','section_id','from_component_tipo']);
+					$exist = locator::in_array_locator( $locator, $data ?? [], ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
 						continue;
 					}
 
-					$result = (bool)$this->remove_child(
+					$result = $this->remove_child(
 						$locator->section_tipo,
 						$locator->section_id
 					);
@@ -228,10 +157,10 @@ class component_relation_children extends component_relation_common {
 			}
 
 		// add the new one if any
-			if (!empty($normalized_dato)) {
-				foreach ($normalized_dato as $locator) {
+			if (!empty($data)) {
+				foreach ($data as $locator) {
 
-					$exist = locator::in_array_locator( $locator, $previous_dato, ['section_tipo','section_id','from_component_tipo']);
+					$exist = locator::in_array_locator( $locator, $previous_data, ['section_tipo','section_id','from_component_tipo']);
 					if($exist===true){
 						continue;
 					}
@@ -256,16 +185,16 @@ class component_relation_children extends component_relation_common {
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
-							dump($normalized_dato, ' dato ++ '.to_string());
+							dump($data, ' data ++ '.to_string());
 						}
 					}
 				}
 			}
 
-		// $this->update_parents($normalized_dato);
+		// $this->update_parents($data);
 
 		// force read the new value on get_data (prevent cache inconsistency)
-			unset($this->dato_resolved); //  = null;
+			unset($this->data_resolved); //  = null;
 
 
 		return true;
@@ -275,11 +204,13 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* ADD_CHILD
-	* Alias of update_parent with specific action 'add'
-	* @param string $parent_section_tipo
-	* @param mixed $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool
+	* Alias of update_parent with specific action 'add'.
+	* Adds a relationship between the current section (child) and the specified parent.
+	*
+	* @param string $parent_section_tipo The section tipo of the parent.
+	* @param mixed $parent_section_id The section ID of the parent.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
+	* @return bool True on success.
 	*/
 	public function add_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -292,11 +223,13 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* REMOVE_CHILD
-	* Alias of update_parent with specific action 'remove'
-	* @param string $parent_section_tipo
-	* @param mixed $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool
+	* Alias of update_parent with specific action 'remove'.
+	* Removes the relationship between the current section (child) and the specified parent.
+	*
+	* @param string $parent_section_tipo The section tipo of the parent.
+	* @param mixed $parent_section_id The section ID of the parent.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
+	* @return bool True on success.
 	*/
 	public function remove_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -309,13 +242,14 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* UPDATE_PARENT
-	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data
-	* @param string $action
-	* 	remove|add
-	* @param string $parent_section_tipo
-	* @param int|string $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool $result
+	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data.
+	* This method interacts with the corresponding component_relation_parent to update the relationship.
+	*
+	* @param string $action The action to perform: 'remove' or 'add'.
+	* @param string $parent_section_tipo The section tipo of the parent to update.
+	* @param int|string $parent_section_id The section ID of the parent to update.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation. If null, it is resolved automatically.
+	* @return bool True on success, false on failure.
 	*/
 	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -405,7 +339,7 @@ class component_relation_children extends component_relation_common {
 				}
 
 				// force read the new value on get_data (prevent cache inconsistency)
-				$this->dato_resolved = null;
+				$this->data_resolved = null;
 				$this->get_data();
 			}
 
@@ -465,7 +399,7 @@ class component_relation_children extends component_relation_common {
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
 			// sample:
-			// SELECT ... ,jsonb_path_query_first(datos, \'strict $.components.ontology41.dato."lg-nolan"[0]\', silent => true) as ontology41_order
+			// SELECT ... ,jsonb_path_query_first(datas, \'strict $.ontology41[0].value\', silent => true) as ontology41_order
 			// WHERE ...
 			// ORDER BY ontology41_order ASC NULLS LAST , section_id ASC
 				$section_map = section::get_section_map( $section_tipo );
@@ -477,7 +411,7 @@ class component_relation_children extends component_relation_common {
 							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($order_component_tipo,true) : $order_component_tipo,
 							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
 							'section_tipo'		=> $section_tipo,
-							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
+							'column'			=> "jsonb_path_query_first(number, 'strict $.{$order_component_tipo}[0].value', silent => true)"
 						]
 					];
 					$order_obj = (object)[
@@ -502,7 +436,6 @@ class component_relation_children extends component_relation_common {
 				$children[] = $locator;
 			}
 
-
 		return $children;
 	}//end get_children
 
@@ -513,14 +446,22 @@ class component_relation_children extends component_relation_common {
 	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param ?string $component_tipo
+	* @param array $visited
 	* @return array $all_children
 	*/
-	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
+	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null, array $visited = []) : array {
+
+		// Cycle detection
+		$current_node_key = $section_tipo . '_' . $section_id;
+		if (isset($visited[$current_node_key])) {
+			return [];
+		}
+		$visited[$current_node_key] = true;
 
 		$all_children = component_relation_children::get_children($section_id, $section_tipo, $component_tipo);
 
 		foreach ($all_children as $child) {
-			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo); // Recursively get descendants
+			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo, $visited); // Recursively get descendants
 			$all_children = array_merge($all_children, $descendants);
 		}
 
@@ -531,10 +472,12 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_AR_RELATED_PARENT_TIPO
-	* Get the parent node in ontology related to the component_related_children
-	* @param string $tipo
-	* @param string $section_tipo
-	* @return array $ar_parent_tipo
+	* Get the parent node(s) in the ontology related to the component_relation_children.
+	* This determines which parent relation component in the ontology corresponds to this children relation.
+	*
+	* @param string $tipo The tipo of the children relation component.
+	* @param string $section_tipo The section tipo context.
+	* @return array An array of related parent component tipos.
 	*/
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
@@ -603,9 +546,11 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN_TIPO
-	* get ontology tipo for component_related_children of the section_tipo given
-	* @param string $section_tipo
-	* @return string|null $children_tipo
+	* Get the ontology tipo for the component_relation_children within a given section_tipo.
+	* This identifies the specific component instance in the structure that handles children relations for the section.
+	*
+	* @param string $section_tipo The tipo of the section to search within.
+	* @return string|null The component tipo (e.g., 'dd123') or null if not found.
 	*/
 	public static function get_children_tipo( string $section_tipo ) : ?string {
 
@@ -639,8 +584,12 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $query_object
-	* @return object $query_object
+	* Resolves the query object for SQL generation.
+	* Converts a query object containing child locators into a format suitable for database querying,
+	* specifically optimizing for 'IN' operator queries against section IDs.
+	*
+	* @param object $query_object The initial query object with search parameters.
+	* @return object The modified query object ready for SQL generation.
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
@@ -684,8 +633,8 @@ class component_relation_children extends component_relation_common {
 							DEDALO_DATA_NOLAN,
 							$current_locator->section_tipo
 						);
-						$component_parent_dato = $component->get_data();
-						foreach ($component_parent_dato as $parent_locator) {
+						$component_parent_data = $component->get_data();
+						foreach ($component_parent_data as $parent_locator) {
 							$ar_parent[] = $parent_locator->section_id;
 						}
 					}//end foreach ($ar_target_parent_tipo as $children_component_tipo)
@@ -785,12 +734,14 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* HAS_CHILDREN_OF_TYPE
-	* Check if the given child has any child descriptor or non descriptor
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param string $component
-	* @param string $type  descriptor|non_descriptor
-	* @return bool $result
+	* Check if the given child has any child descriptor or non descriptor.
+	* Used in Thesaurus to verify if a term has specific types of children (e.g., descriptors vs non-descriptors).
+	*
+	* @param int|string $section_id The section ID of the child.
+	* @param string $section_tipo The section tipo of the child.
+	* @param string $component_tipo The component tipo representing the relationship.
+	* @param string $type The type to check: 'descriptor' or 'non_descriptor'.
+	* @return bool True if children of the specified type exist, false otherwise.
 	*/
 	public static function has_children_of_type( int|string $section_id, string $section_tipo, string $component_tipo, string $type ) : bool {
 

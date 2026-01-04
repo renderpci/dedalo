@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_relation_index_test extends TestCase {
+final class component_relation_index_test extends BaseTestCase {
 
 
 
@@ -17,30 +17,12 @@ final class component_relation_index_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -68,37 +50,37 @@ final class component_relation_index_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_set_data
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= [];
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -106,14 +88,14 @@ final class component_relation_index_test extends TestCase {
 				. gettype($result)
 		);
 
-		// null case
+		// empty array case
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// object case
+		// array case
 			$locator = json_decode('
 				{
 					"type": "dd96",
@@ -127,38 +109,28 @@ final class component_relation_index_test extends TestCase {
 					"from_component_tipo": "test25"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
-
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
+				locator::in_array_locator($locator, $component->get_data()),
 				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
+			$result	= $component->set_data($old_data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($component->get_data())===json_encode($old_data),
 				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_section_datum_from_locator
+	* TEST_GET_SECTION_DATUM_FROM_LOCATOR
 	* @return void
 	*/
 	public function test_get_section_datum_from_locator() {
@@ -190,44 +162,6 @@ final class component_relation_index_test extends TestCase {
 				. gettype($result)
 		);
 	}//end test_get_section_datum_from_locator
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
 
 
 
@@ -342,6 +276,136 @@ final class component_relation_index_test extends TestCase {
 				. gettype($result)
 		);
 	}//end test_get_referended_locators_with_cache
+
+
+
+	/**
+	* TEST_get_data_paginated
+	* @return void
+	*/
+	public function test_get_data_paginated() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data_paginated();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data_paginated
+
+
+
+	/**
+	* TEST_parse_data
+	* @return void
+	*/
+	public function test_parse_data() {
+
+		// sample inverse locator-like object
+		$dummy_locator = (object)[
+			'type' => 'dd96',
+			'from_section_tipo' => 'test3',
+			'from_section_id' => '1',
+			'tag_component_tipo' => 'test25',
+			'tag_id' => '30',
+			'section_top_id' => '1',
+			'section_top_tipo' => 'oh1',
+			'from_component_tipo' => 'test25'
+		];
+
+		$result = component_relation_index::parse_data([$dummy_locator]);
+
+		$this->assertTrue(
+			is_array($result) && !empty($result),
+			'expected non-empty array'
+		);
+		$this->assertInstanceOf(
+			locator::class,
+			$result[0],
+			'expected instance of locator'
+		);
+	}//end test_parse_data
+
+
+
+	/**
+	* TEST_count_data
+	* @return void
+	*/
+	public function test_count_data() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->count_data();
+
+		$this->assertTrue(
+			gettype($result)==='integer',
+			'expected type integer : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_count_data
+
+
+
+	/**
+	* TEST_count_data_group_by
+	* @return void
+	*/
+	public function test_count_data_group_by() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->count_data_group_by(['section_tipo']);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_count_data_group_by
+
+
+
+	/**
+	* TEST_get_related_section_context
+	* @return void
+	*/
+	public function test_get_related_section_context() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_related_section_context();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_related_section_context
+
+
+
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertArrayHasKey('*', $result);
+		$this->assertArrayHasKey('!*', $result);
+	}//end test_search_operators_info
 
 
 

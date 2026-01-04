@@ -1,0 +1,159 @@
+{
+	"typo": "ddo",
+	"model": "component_relation_index",
+	"label": "Indexaciones",
+	"tipo": "actv25",
+	"section_tipo": "actv1",
+	"legacy_model": "component_relation_index",
+	"parent": "actv1",
+	"parent_grouper": "actv21",
+	"lang": "lg-nolan",
+	"mode": "edit",
+	"translatable": false,
+	"properties": {
+		"source": {
+			"mode": "external"
+		}
+	},
+	"css": {
+		".wrapper_component": {
+			"grid-column": "span 5"
+		}
+	},
+	"permissions": 3,
+	"tools": [
+		{
+			"typo": "ddo",
+			"model": "tool_propagate_component_data",
+			"name": "tool_propagate_component_data",
+			"label": "Propaga datos de componentes",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": null,
+			"css": {
+				"url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+			},
+			"icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+			"show_in_inspector": true,
+			"show_in_component": true,
+			"type": "tool"
+		},
+		{
+			"typo": "ddo",
+			"model": "tool_time_machine",
+			"name": "tool_time_machine",
+			"label": "Máquina del tiempo",
+			"developer": "Dédalo team",
+			"section_tipo": "dd1324",
+			"mode": "edit",
+			"properties": {
+				"open_as": "window",
+				"windowFeatures": null
+			},
+			"css": {
+				"url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+			},
+			"icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+			"show_in_inspector": false,
+			"show_in_component": true,
+			"type": "tool"
+		}
+	],
+	"buttons": [],
+	"request_config": [
+		{
+			"api_engine": "dedalo",
+			"type": "main",
+			"sqo": {
+				"section_tipo": [
+					{
+						"typo": "ddo",
+						"tipo": "actv1",
+						"model": "section",
+						"label": "Actividades",
+						"color": "#69a58c",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix_activities"
+					},
+					{
+						"typo": "ddo",
+						"tipo": "rsc167",
+						"model": "section",
+						"label": "Audiovisual",
+						"color": "#a93f25",
+						"permissions": 3,
+						"buttons": [
+							{
+								"model": "button_new",
+								"permissions": 3
+							},
+							{
+								"model": "button_delete",
+								"permissions": 3
+							}
+						],
+						"matrix_table": "matrix"
+					}
+				]
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"typo": "ddo",
+						"tipo": "rsc21",
+						"model": "component_input_text",
+						"section_tipo": "rsc167",
+						"parent": "actv25",
+						"mode": "related_list",
+						"view": "text",
+						"label": "Código",
+						"column_id": "actv25"
+					},
+					{
+						"typo": "ddo",
+						"tipo": "rsc23",
+						"model": "component_input_text",
+						"section_tipo": "rsc167",
+						"parent": "actv25",
+						"mode": "related_list",
+						"view": "text",
+						"label": "Título",
+						"column_id": "actv25"
+					}
+				],
+				"sqo_config": {
+					"full_count": false,
+					"limit": 10,
+					"offset": 0,
+					"mode": "edit",
+					"operator": "$or"
+				}
+			},
+			"search": null,
+			"choose": null,
+			"api_config": null
+		}
+	],
+	"columns_map": [],
+	"sortable": false,
+	"type": "component",
+	"new_dataframe": null,
+	"view": "line",
+	"children_view": "text",
+	"debug": {
+		"exec_time": "0.097 ms"
+	},
+	"fields_separator": " | ",
+	"records_separator": " | "
+}
