@@ -137,21 +137,6 @@ class component_info extends component_common {
 
 
 	/**
-	* GET_DATO_FULL
-	* @return object|null $dato_full
-	* 	sample: [{"widget":"get_archive_weights","key":0,"id":"media_weight","value":2}]
-	*/
-	public function get_dato_full() {
-
-		$dato_full = $this->get_dato();
-
-
-		return $dato_full;
-	}//end get_dato_full
-
-
-
-	/**
 	* GET_DB_DATA
 	* @return mixed $data
 	*/
