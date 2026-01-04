@@ -41,11 +41,11 @@ class tool_time_machine extends tool_common {
 			$caller_dataframe	= $options->caller_dataframe;
 
 		// data. extract data from matrix_time_machine table
-			$RecordObj_time_machine	= new RecordObj_time_machine($matrix_id);
+			$tm_record	= tm_record::get_instance( $matrix_id );
 
 		// get time machine data with the matrix_id
 		// if the component has a dataframe the data will has both data: main data and dataframe data.
-			$dato_time_machine = $RecordObj_time_machine->get_dato();
+			$data_time_machine = $tm_record->get_element_data();	
 
 		// apply time machine data to element and save
 			switch (true) {
@@ -54,20 +54,16 @@ class tool_time_machine extends tool_common {
 					// recovering section case
 
 					// section. Inject data
-						$element = section::get_instance(
-							$section_id,
+						$element = section_record::get_instance(
 							$tipo,
-							'edit',
-							false
+							$section_id							
 						);
 
 					// Set data overwrites the data of the current element
-						$element->set_dato($dato_time_machine);
+						$element->set_data($data_time_machine);
 
 					// Save the element (section) with a new updated data from time machine
-						$result = $element->Save((object)[
-							'forced_create_record' => $section_id
-						]);
+						$result = $element->save();
 
 					// section->Save returns int $section_id on success or null on failure
 						if ($result==$section_id) {
@@ -180,12 +176,12 @@ class tool_time_machine extends tool_common {
 
 					$relation_components = component_relation_common::get_components_with_relations();
 					$relation_components[] = 'component_iri';// add the component_iri, it can handle dataframes
-					if ( is_array($dato_time_machine) && in_array( $model, $relation_components) ){
+					if ( is_array($data_time_machine) && in_array( $model, $relation_components) ){
 
 						// Get only the component data. Remove possible dataframe data
 						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
 						if($model==='component_iri'){
-							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) {
+							$data_time_machine = array_values( array_filter( $data_time_machine, function($el) {
 								// return only the objects with iri property
 								return property_exists($el, 'iri');;
 							}));
@@ -203,10 +199,10 @@ class tool_time_machine extends tool_common {
 						}
 
 					// Set data overwrites the data of the current element
-						$element->set_dato($dato_time_machine);
+						$element->set_data($data_time_machine);
 
 					// Save the component with a new updated data from time machine
-						$result = $element->Save();
+						$result = $element->save();
 
 					// LOGGER ACTIVITY
 						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
