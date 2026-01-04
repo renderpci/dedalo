@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_relation_children_test extends TestCase {
+final class component_relation_children_test extends BaseTestCase {
 
 
 
@@ -20,6 +20,8 @@ final class component_relation_children_test extends TestCase {
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
