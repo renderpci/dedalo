@@ -262,4 +262,150 @@ final class component_geolocation_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_get_latitude
+	* @return void
+	*/
+	public function test_get_latitude() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		// 1 - Set data
+		$lat = 28.760289075631214;
+		$data = [(object)['lat' => $lat, 'lon' => -17.87981450557709]];
+		$component->set_data($data);
+
+		$result = $component->get_latitude();
+
+		$this->assertTrue(
+			$result===$lat,
+			'expected latitude : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// 2 - Default data case
+		$data = [(object)['lat' => 39.462571, 'lon' => -0.376295]];
+		$component->set_data($data);
+
+		$result = $component->get_latitude();
+
+		$this->assertTrue(
+			$result===null,
+			'expected null on default latitude : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_latitude
+
+
+
+	/**
+	* TEST_get_longitude
+	* @return void
+	*/
+	public function test_get_longitude() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		// 1 - Set data
+		$lon = -17.87981450557709;
+		$data = [(object)['lat' => 28.760289075631214, 'lon' => $lon]];
+		$component->set_data($data);
+
+		$result = $component->get_longitude();
+
+		$this->assertTrue(
+			$result===$lon,
+			'expected longitude : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// 2 - Default data case
+		$data = [(object)['lat' => 39.462571, 'lon' => -0.376295]];
+		$component->set_data($data);
+
+		$result = $component->get_longitude();
+
+		$this->assertTrue(
+			$result===null,
+			'expected null on default longitude : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_longitude
+
+
+
+	/**
+	* TEST_get_diffusion_value_as_geojson
+	* @return void
+	*/
+	public function test_get_diffusion_value_as_geojson() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		// 1 - Set data
+		$lat = 28.760289075631214;
+		$lon = -17.87981450557709;
+		$data = [(object)['lat' => $lat, 'lon' => $lon]];
+		$component->set_data($data);
+
+		$result = $component->get_diffusion_value_as_geojson();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected string : ' . PHP_EOL
+				. gettype($result)
+		);
+		$result_decoded = json_decode($result);
+		$this->assertTrue(
+			abs($result_decoded[0]->layer_data->features[0]->geometry->coordinates[0] - $lon) < 0.0000000001,
+			'expected longitude in geojson : ' . PHP_EOL
+				. $result
+		);
+		$this->assertTrue(
+			abs($result_decoded[0]->layer_data->features[0]->geometry->coordinates[1] - $lat) < 0.0000000001,
+			'expected latitude in geojson : ' . PHP_EOL
+				. $result
+		);
+
+		// 2 - Default data case
+		$data = [(object)['lat' => 39.462571, 'lon' => -0.376295]];
+		$component->set_data($data);
+
+		$result = $component->get_diffusion_value_as_geojson();
+
+		$this->assertTrue(
+			$result===null,
+			'expected null on default data for geojson : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_diffusion_value_as_geojson
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$request_options = (object)[
+			'update_version' => [1,0,0]
+		];
+
+		$result = component_geolocation::update_data_version($request_options);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected object'
+		);
+	}//end test_update_data_version
+
+
+
 }//end class component_geolocation_test
