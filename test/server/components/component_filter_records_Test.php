@@ -22,6 +22,8 @@ final class component_filter_records_test extends BaseTestCase {
 	*/
 	private function build_component_instance() {
 
+		$this->user_login();
+
 		$model			= self::$model;
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;

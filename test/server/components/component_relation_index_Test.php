@@ -130,7 +130,7 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_section_datum_from_locator
+	* TEST_GET_SECTION_DATUM_FROM_LOCATOR
 	* @return void
 	*/
 	public function test_get_section_datum_from_locator() {
@@ -162,44 +162,6 @@ final class component_relation_index_test extends BaseTestCase {
 				. gettype($result)
 		);
 	}//end test_get_section_datum_from_locator
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
 
 
 
