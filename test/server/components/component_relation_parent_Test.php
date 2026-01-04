@@ -457,17 +457,17 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_add_parent
+	* TEST_ADD_PARENT
 	* @return void
 	*/
 	public function test_add_parent() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
 		// empty old values
-		$component->set_dato(null);
+		$component->set_data(null);
 
 		$section_id	= 3;
 
@@ -487,25 +487,24 @@ final class component_relation_parent_test extends TestCase {
 
 		if ($result===true) {
 
-			$dato_reference = json_decode('
-				[
-				    {
-				        "section_tipo": "'.self::$section_tipo.'",
-				        "section_id": "'.$section_id.'",
-				        "from_component_tipo": "'.self::$tipo.'"
-				    }
-				]
-			');
+			$reference_data = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "'.$section_id.'",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato_reference),
-				'expected dato_reference : ' . PHP_EOL
-					. to_string($component->dato)
+				locator::in_array_locator($reference_data, $component->get_data()),
+				'expected reference_data : ' . PHP_EOL
+					. to_string($component->get_data)
 			);
 
 			// restore data
-			$component->set_dato($old_dato);
-			$component->Save();
+			$component->set_data($old_data);
+			$component->save();
 		}
 	}//end test_add_parent
 
