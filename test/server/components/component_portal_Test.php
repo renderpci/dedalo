@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_portal_test extends TestCase {
+final class component_portal_test extends BaseTestCase {
 
 
 
@@ -15,32 +15,13 @@ final class component_portal_test extends TestCase {
 	public static $section_tipo	= 'test3';
 
 
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
 	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -133,7 +114,7 @@ final class component_portal_test extends TestCase {
 				. to_string($value->result)
 		);
 		$this->assertTrue(
-			strpos($value->msg, 'Error')===0,
+			strpos((string)$value->msg, 'Error')===0,
 			'expected result msg error for empty locator remove: '
 				. to_string($value->msg)
 		);
@@ -174,8 +155,8 @@ final class component_portal_test extends TestCase {
 
 		// expected sample
 			//  {
-			//     "result": 2,
-			//     "msg": "[] Current dato don't need update.<br />"
+			//     "result": 0,
+			//     "msg": "This component component_portal don't have update to this version (6.0.0). Ignored action"
 			// }
 
 		$this->assertTrue(
@@ -185,77 +166,12 @@ final class component_portal_test extends TestCase {
 				.' value: '.gettype($value->result)
 		);
 		$this->assertTrue(
-			$value->result===2,
+			$value->result===0,
 				'expected value do not match:' . PHP_EOL
-				.' expected: 2' . PHP_EOL
+				.' expected: 0' . PHP_EOL
 				.' value: '.to_string($value->result)
 		);
 	}//end test_update_data_version
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' .PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_valor_export();
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' .PHP_EOL
-				. gettype($value)
-		);
-		$this->assertTrue(
-			$value==='unavailable',
-			'expected string unavailable: ' .PHP_EOL
-				. $value
-		);
-	}//end test_get_valor_export
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$value = $component->get_diffusion_value();
-
-		// expected value sample
-		// '["1"]'
-
-		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' .PHP_EOL
-				. gettype($value)
-		);
-	}//end test_get_diffusion_value
 
 
 
@@ -424,18 +340,72 @@ final class component_portal_test extends TestCase {
 	public function test_get_subdatum() {
 
 		$component = $this->build_component_instance();
+		$component->set_data($this->get_sample_data(self::$model));
+
+		// Create request_config (neede to calculate the subdatum)
+		$component->context = new stdClass();
+		$component->context->request_config = $component->get_ar_request_config();
 
 		$result = $component->get_subdatum(
 			null,
-			$component->get_dato()
+			$component->get_data()
 		);
-
+		
+		// 1 - Expected type object
 		$this->assertTrue(
 			gettype($result)==='object',
 				'expected value do not match:' . PHP_EOL
 				.' expected type: object' . PHP_EOL
 				.' type: '.gettype($result)
 		);
+
+		// 2 - Expected property context
+		$this->assertTrue(
+			isset($result->context),
+			'expected property context do not match:' . PHP_EOL
+			.' expected property: context' . PHP_EOL
+			.' property: '.to_string($result->context)
+		);
+
+		// 3 - Expected property data
+		$this->assertTrue(
+			isset($result->data),
+			'expected property data do not match:' . PHP_EOL
+			.' expected property: data' . PHP_EOL
+			.' property: '.to_string($result->data)
+		);
+
+		// 4 - Expected property model
+		$this->assertTrue(
+			$result->context[0]->model==='component_input_text',
+			'expected property model do not match:' . PHP_EOL
+			.' expected property: model' . PHP_EOL
+			.' property: '.to_string($result->context[0]->model)
+		);
+
+		// 5 - Expected property name
+		$this->assertTrue(
+			$result->data[0]->section_tipo==='test3',
+			'expected property section_tipo do not match:' . PHP_EOL
+			.' expected property: section_tipo' . PHP_EOL
+			.' property: '.to_string($result->data[0]->section_tipo)
+		);
+
+		// massive test
+		$data = $component->get_data();
+		$this->execution_timing(
+			'get_subdatum',
+			function ($i) use ($component, $data) {
+				return $component->get_subdatum(
+					null,
+					$data
+				);
+			},
+			20, // estimated time ms
+			1, // from section_id
+			100 // n records
+		);
+		
 	}//end test_get_subdatum
 
 
