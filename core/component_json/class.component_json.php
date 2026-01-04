@@ -83,46 +83,6 @@ class component_json extends component_common {
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
-			case '6.0.0':
-				if (!empty($data_unchanged) && is_string($data_unchanged)) {
-					// update search presets of component_json (temp and user presets has the same component_tipo)
-					if($options->tipo==='dd625'){
-						// replace the sqo of search to new component models for v6
-						$data_unchanged = str_replace(
-							[
-								'"modelo"',
-								'"component_autocomplete"',
-								'"component_autocomplete_hi"',
-								'"component_input_text_large"',
-								'"component_html_text"'
-							],
-							[
-								'"model"',
-								'"component_portal"',
-								'"component_portal"',
-								'"component_text_area"',
-								'"component_text_area"'
-							],
-							$data_unchanged);
-					}
-
-					// decode old string data to json
-					$new_dato = json_decode($data_unchanged);
-					$new_dato = [$new_dato];
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($data_unchanged)." to ".to_string($new_dato).".<br />";
-
-
-				}else{
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($data_unchanged)."
-				}
-				break;
-
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
@@ -347,11 +307,15 @@ class component_json extends component_common {
 			if ($value = json_handler::decode($file_content)) {
 
 				// wrap data with array to maintain component data format
-					$dato = [$value];
-					$this->set_dato($dato);
+					$data = [
+						(object)[							
+							'value' => $value
+						]
+					];
+					$this->set_data($data);
 
-				// save full dato
-					$this->Save();
+				// save full data
+					$this->save();
 
 				// remove it after store
 					if(!unlink($full_file_path)) {
@@ -631,18 +595,21 @@ class component_json extends component_common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
 
-		// Force loads dato always !IMPORTANT
-		$dato = $this->get_dato();
+		// Force loads data always !IMPORTANT
+		$data = $this->get_data();
 
-		if (is_array($dato)) {
-			$new_dato = [];
-			foreach ($dato as $value) {
+		if (is_array($data)) {
+			$new_data = [];
+			foreach ($data as $data_element) {
+
+				$value = $data_element->value;
+				
 				// If value is a string, attempt to decode as JSON
 				if (is_string($value)) {
 					$decoded = json_decode($value);
@@ -650,8 +617,8 @@ class component_json extends component_common {
 					if (json_last_error() !== JSON_ERROR_NONE) {
 						// Log error if JSON decoding fails
 						debug_log(
-							__METHOD__ . " Unable to decode JSON value from dato." . PHP_EOL
-							.' dato: ' . to_string($value) . PHP_EOL
+							__METHOD__ . " Unable to decode JSON value from data." . PHP_EOL
+							.' data: ' . to_string($value) . PHP_EOL
 							.' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
 							.' section_id: ' . $this->get_section_id()
 							,logger::ERROR
@@ -661,21 +628,24 @@ class component_json extends component_common {
 						return false;
 					}
 
-					$new_dato[] = $decoded;
+					$new_data_element = clone $data_element;
+					$new_data_element->value = $decoded;
+
+					$new_data[] = $new_data_element;
 				}else{
 					// If not a string, add the original value
-					$new_dato[] = $value;
+					$new_data[] = $data_element;
 				}
 			}
 			// Overwrite
-			$dato = $new_dato;
+			$data = $new_data;
 		}
 
 		// force format correctly empty data like [null] -> null
-		$this->set_dato($dato);
+		$this->set_data($data);
 
 		// Save component data
-		$this->Save();
+		$this->save();
 
 
 		return true;
