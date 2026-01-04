@@ -434,14 +434,22 @@ class component_relation_children extends component_relation_common {
 	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param ?string $component_tipo
+	* @param array $visited
 	* @return array $all_children
 	*/
-	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null) : array {
+	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null, array $visited = []) : array {
+
+		// Cycle detection
+		$current_node_key = $section_tipo . '_' . $section_id;
+		if (isset($visited[$current_node_key])) {
+			return [];
+		}
+		$visited[$current_node_key] = true;
 
 		$all_children = component_relation_children::get_children($section_id, $section_tipo, $component_tipo);
 
 		foreach ($all_children as $child) {
-			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo); // Recursively get descendants
+			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo, $visited); // Recursively get descendants
 			$all_children = array_merge($all_children, $descendants);
 		}
 
