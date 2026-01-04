@@ -290,10 +290,10 @@ trait utils {
 				DEDALO_DATA_NOLAN,
 				$locator->section_tipo
 			);
-			$component_dato = $component->get_dato_full();
+			$component_data = $component->get_data();
 
-			if (!empty($component_dato)) {
-				$result = array_merge($result, $component_dato);
+			if (!empty($component_data)) {
+				$result = array_merge($result, $component_data);
 			}
 		}
 

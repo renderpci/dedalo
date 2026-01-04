@@ -2157,7 +2157,7 @@ class transform_data {
 						$source_section // string section_tipo
 					);
 
-					$data_full = $source_component->get_dato_full();
+					$data_full = $source_component->get_data();
 
 					if( empty($data_full) ){
 						continue;
