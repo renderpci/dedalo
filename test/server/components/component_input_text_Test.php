@@ -1270,4 +1270,158 @@ final class component_input_text_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_sanitize_text
+	* @return void
+	*/
+	public function test_sanitize_text() {
+
+		$input    = "Hello <script>alert('pwned');</script> World <noscript>No JS</noscript>";
+		$expected = "Hello  World";
+		$result   = component_input_text::sanitize_text($input);
+
+		$this->assertTrue(
+			$expected === $result,
+			'expected sanitized text to match:' . PHP_EOL
+				. 'expected: ' . to_string($expected) . PHP_EOL
+				. 'result:   ' . to_string($result)
+		);
+	}
+
+
+
+	/**
+	* TEST_truncate_text
+	* @return void
+	*/
+	public function test_truncate_text() {
+
+		$input    = "The quick brown fox jumps over the lazy dog";
+		$limit    = 16;
+		$expected = "The quick brown...";
+		$result   = component_input_text::truncate_text($input, $limit);
+
+		$this->assertTrue(
+			$expected === $result,
+			'expected truncated text to match:' . PHP_EOL
+				. 'expected: ' . to_string($expected) . PHP_EOL
+				. 'result:   ' . to_string($result)
+		);
+	}
+
+
+
+	/**
+	* TEST_truncate_html
+	* @return void
+	*/
+	public function test_truncate_html() {
+
+		$input    = "<div><p>The <b>quick</b> brown fox jumps over the lazy dog</p></div>";
+		$length   = 15;
+		$expected = "<div><p>The <b>quick</b>...</p></div>";
+		$result   = component_input_text::truncate_html($length, $input);
+
+		$this->assertTrue(
+			$expected === $result,
+			'expected truncated HTML to match:' . PHP_EOL
+				. 'expected: ' . to_string($expected) . PHP_EOL
+				. 'result:   ' . to_string($result)
+		);
+	}
+
+
+
+	/**
+	* TEST_get_data_lang_with_fallback
+	* @return void
+	*/
+	public function test_get_data_lang_with_fallback() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+		$component->set_lang('lg-deu'); // Empty lang
+
+		$sample_data = [
+			(object)['id'=>1, 'lang'=>'lg-spa', 'value'=>'Hola']
+		];
+		$component->set_data($sample_data);
+
+		$result = $component->get_data_lang_with_fallback();
+
+		$this->assertTrue(
+			!empty($result),
+			'expected fallback data to be returned'
+		);
+		$this->assertTrue(
+			'lg-spa' === $result[0]->lang,
+			'expected fallback lang to be lg-spa, got: ' . to_string($result[0]->lang)
+		);
+	}
+
+
+
+	/**
+	* TEST_get_value_with_fallback_from_data
+	* @return void
+	*/
+	public function test_get_value_with_fallback_from_data() {
+
+		$data = [
+			(object)['lang'=>'lg-eng', 'value'=>'Hello'],
+			(object)['lang'=>'lg-spa', 'value'=>'Hola']
+		];
+
+		// 1 - Direct match
+		$result = component_input_text::get_value_with_fallback_from_data($data, false, 'lg-eng', 'lg-spa');
+		$this->assertTrue(
+			'Hola' === $result,
+			'expected Hola, got: ' . to_string($result)
+		);
+
+		// 2 - Fallback to main_lang
+		$result = component_input_text::get_value_with_fallback_from_data($data, false, 'lg-eng', 'lg-fra');
+		$this->assertTrue(
+			'Hello' === $result,
+			'expected Hello, got: ' . to_string($result)
+		);
+
+		// 3 - Fallback to any lang
+		$data_other = [
+			(object)['lang'=>'lg-ita', 'value'=>'Ciao']
+		];
+		$result = component_input_text::get_value_with_fallback_from_data($data_other, false, 'lg-eng', 'lg-fra');
+		$this->assertTrue(
+			'Ciao' === $result,
+			'expected Ciao, got: ' . to_string($result)
+		);
+	}
+
+
+
+	/**
+	* TEST_get_string_components
+	* @return void
+	*/
+	public function test_get_string_components() {
+
+		$result = component_input_text::get_string_components();
+
+		$this->assertTrue(
+			is_array($result),
+			'expected array'
+		);
+		$this->assertTrue(
+			in_array('component_input_text', $result),
+			'expected component_input_text in result'
+		);
+		$this->assertTrue(
+			in_array('component_text_area', $result),
+			'expected component_text_area in result'
+		);
+	}
+
+
+
 }//end class component_input_text_test

@@ -120,16 +120,101 @@ final class component_filter_records_test extends BaseTestCase {
 		$result = $component->get_datalist();
 
 		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($result)
+			is_array($result),
+			'expected array'
 		);
-		$this->assertTrue(
-			gettype($result[0])==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result[0])
-		);
+
+		if (!empty($result)) {
+			$this->assertTrue(
+				is_object($result[0]),
+				'expected object'
+			);
+			$this->assertTrue(
+				property_exists($result[0], 'tipo') && property_exists($result[0], 'label'),
+				'expected tipo and label properties'
+			);
+		}
 	}//end test_get_datalist
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_grid_value();
+
+		$this->assertTrue(
+			get_class($result)==='dd_grid_cell_object',
+			'expected dd_grid_cell_object'
+		);
+	}//end test_get_grid_value
+
+
+
+	/**
+	* TEST_get_list_value
+	* @return void
+	*/
+	public function test_get_list_value() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_list_value();
+
+		$this->assertTrue(
+			is_array($result) || is_null($result),
+			'expected array or null'
+		);
+	}//end test_get_list_value
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$request_options = (object)[
+			'update_version' => [1,0,0]
+		];
+
+		$result = component_filter_records::update_data_version($request_options);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected object'
+		);
+	}//end test_update_data_version
+
+
+
+	/**
+	* TEST_save
+	* @return void
+	*/
+	public function test_save() {
+
+		$this->user_login();
+
+		$component = $this->build_component_instance();
+
+		$result = $component->save();
+
+		$this->assertTrue(
+			$result,
+			'expected true on save'
+		);
+	}//end test_save
 
 
 

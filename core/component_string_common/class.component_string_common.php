@@ -86,7 +86,7 @@ class component_string_common extends component_common {
 	public static function sanitize_text(string $value) : string {
 
 		// strip slashes (need for text received from editor)
-		$value = trim(stripslashes($value));
+		$value = stripslashes($value);
 
 		// Remove script tags
 		$value = preg_replace('/<script\b[^<]*>.*?<\/script>/is', '', $value);
@@ -95,7 +95,7 @@ class component_string_common extends component_common {
     	$value = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $value);
 
 
-		return $value;
+		return trim($value);
 	}//end sanitize_text
 
 
