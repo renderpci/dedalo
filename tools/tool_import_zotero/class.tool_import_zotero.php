@@ -115,9 +115,10 @@ class tool_import_zotero extends tool_common {
 
 								$section_id = (int)$zotero_obj->$optional_id;	// Optionally, if is defined zotero->call-number, use this as section id
 
-								$section				= section::get_instance($section_id, $section_tipo);
-								$forced_create_record	= $section->forced_create_record(); // Sure record is created/recycled with requested id
-
+								$section = section::get_instance( $section_tipo );
+								$section->create_record( (object)[
+									'section_id' => $section_id
+								]); // Sure record is created/recycled with requested id
 
 							}else{
 								// Use Zotero id as id (stored in "CODE" rsc137) when exists. Else create new section

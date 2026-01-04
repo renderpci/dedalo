@@ -1186,24 +1186,24 @@ class section_record {
 		if( $section_id !== null ) {
 			// set section_record instance
 			$section_record = section_record::get_instance($section_tipo, $section_id);
-			// update modified section data
-			// this is necesary to allow the setion record update in the database
-			$section_record->update_modified_section_data( (object)[
-				'mode' => 'update_record'
-			] );
-			// if values are provided, update the section record
-			if( $values !== null ) {
-				foreach ($values as $column => $column_data) {
-					foreach ($column_data as $tipo => $data) {					
-						$section_record->set_component_data($tipo, $column, $data);
+				// update modified section data
+				// this is necesary to allow the setion record update in the database
+				$section_record->update_modified_section_data( (object)[
+					'mode' => 'update_record'
+				] );
+				// if values are provided, update the section record
+				if( $values !== null ) {
+					foreach ($values as $column => $column_data) {
+						foreach ($column_data as $tipo => $data) {					
+							$section_record->set_component_data($tipo, $column, $data);
+						}
 					}
 				}
-			}
-			// save the section record
-			// it performs the update in the database
-			$section_record->save();
-	
-			return $section_record;		
+				// save the section record
+				// it performs the update in the database
+				$section_record->save();
+		
+				return $section_record;
 		}
 
 		// insert a new record in the database

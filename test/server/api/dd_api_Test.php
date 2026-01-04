@@ -931,19 +931,19 @@ final class dd_api_Test extends TestCase {
 		$section_tipo	= 'test3';
 
 		// first, create the section if not already exists
-			$current_section_id_exists = section::section_record_exists( $section_id, $section_tipo );
-			if ($current_section_id_exists===false) {
-				// new section
-				$section = section::get_instance(
-					$section_id, // string|null section_id
+			// matrix. Check if the parent already exists in matrix
+			$exists = false;
+			// if parent_section_id is not null, check if the parent exists in matrix
+			if($section_id !== null){
+				$section_record = section_record::get_instance( $section_tipo, $section_id );
+				$exists = $section_record->exists_in_the_database();
+			}
+			// if parent_section does not exist in matrix, create it
+			if( $exists===false ){
+				$section_record = section_record::create(
 					$section_tipo, // string section_tipo
-					'edit'
-				);
-				$section->Save(
-					(object)[
-						'forced_create_record' => !$current_section_id_exists
-					]
-				);
+					$section_id ? (int)$section_id : null // string|null section_id
+				);				
 			}
 
 		$rqo = json_decode('

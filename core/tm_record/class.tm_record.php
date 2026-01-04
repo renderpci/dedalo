@@ -111,6 +111,23 @@ class tm_record {
 
 
 	/**
+	* GET_ELEMENT_DATA
+	* Retrieves the element (component, section) data of the record
+	* Used to recovery the specific data point of a component or section
+	* @return object $element_data
+	*/
+	public function get_element_data() : object {
+
+		$tm_data = $this->get_data();
+
+		$element_data = $tm_data->data;
+		
+		return $element_data;
+	}//end get_element_data
+
+
+
+	/**
 	* SET_DATA
 	* Assign data columns with its own values into the section_record_data
 	* @param object $data
