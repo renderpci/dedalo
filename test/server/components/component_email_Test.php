@@ -87,7 +87,7 @@ final class component_email_test extends BaseTestCase {
 			$this->assertTrue(
 				strpos($result[0]->value, '@')!==false,
 				'expected @ position not false : ' . PHP_EOL
-					. (strpos($result[0], '@')!==false)
+					. (strpos($result[0]->value, '@')!==false)
 			);
 		}
 	}//end test_get_data
@@ -132,16 +132,18 @@ final class component_email_test extends BaseTestCase {
 					. to_string($component->get_data())
 			);
 
-		// 3 - string case (will be converted to array)
-			// $data = 'myemail@mydomain.org';
+		// 3 - cleaning case
+			$data = [
+				(object)['value'=>"  myemail@mydomain.org\n  "]
+			];
+			$component->set_data($data);
+			$current_data = $component->get_data();
 
-			// $result = $component->set_data($data);
-
-			// $this->assertTrue(
-			// 	$component->data===[$data],
-			// 	'expected component->data equal [data] : ' . PHP_EOL
-			// 		. to_string($component->data)
-			// );
+			$this->assertTrue(
+				$current_data[0]->value==='myemail@mydomain.org',
+				'expected cleaned email : ' . PHP_EOL
+					. to_string($current_data[0]->value)
+			);
 	}//end test_set_data
 
 
@@ -154,19 +156,42 @@ final class component_email_test extends BaseTestCase {
 
 		$component = $this->build_component_instance();
 
+		// valid save
+			$data = [
+				(object)['value'=>'valid@example.org']
+			];
+			$component->set_data($data);
+
+			$result = $component->save();
+
+			$this->assertTrue(
+				$result===true,
+				'expected true on valid save'
+			);
+	}//end test_Save
+
+
+
+	/**
+	* TEST_save_invalid_email
+	* @return void
+	*/
+	public function test_save_invalid_email() {
+
+		$component = $this->build_component_instance();
+
+		$data = [
+			(object)['value'=>'invalid-email']
+		];
+		$component->set_data($data);
+
 		$result = $component->save();
 
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
+		$this->assertFalse(
+			$result,
+			'expected false on invalid email save'
 		);
-		$this->assertTrue(
-			$result==true,
-			'expected true : ' . PHP_EOL
-				. to_string($result)
-		);
-	}//end test_Save
+	}//end test_save_invalid_email
 
 
 
@@ -307,32 +332,120 @@ final class component_email_test extends BaseTestCase {
 
 		$component = $this->build_component_instance();
 
-		$response = $component->conform_import_data(
-			'myemail@mydomain.org', // import_value
-			self::$tipo // column_name
-		);
+		// 1 - string case
+			$response = $component->conform_import_data(
+				'myemail@mydomain.org', // import_value
+				self::$tipo // column_name
+			);
+
+			$this->assertTrue(
+				gettype($response)==='object',
+				'expected type object : ' . PHP_EOL
+					. gettype($response)
+			);
+			$this->assertTrue(
+				is_array($response->result) && $response->result[0]->value === 'myemail@mydomain.org',
+				'expected array with object containing email. result: ' . to_string($response->result)
+			);
+
+		// 2 - JSON case
+			$json_data = '[{"value":"imported@example.org"}]';
+			$response = $component->conform_import_data($json_data, self::$tipo);
+
+			$this->assertTrue(
+				is_array($response->result) && $response->result[0]->value === 'imported@example.org',
+				'expected decoded JSON'
+			);
+	}//end test_conform_import_data
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+		$email = 'grid@example.org';
+		$data = [(object)['value'=>$email, 'lang'=>DEDALO_DATA_NOLAN]];
+		$component->set_data($data);
+
+		$result = $component->get_grid_value();
 
 		$this->assertTrue(
-			gettype($response)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($response)
+			get_class($result)==='dd_grid_cell_object',
+			'expected dd_grid_cell_object'
 		);
+		// Since component_email does not override get_grid_value, it uses the base implementation
+		// which returns the data items JSON-encoded if they are objects.
 		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($response->result)
+			strpos($result->value[0], $email) !== false,
+			'expected email value in grid object : ' . to_string($result->value[0])
 		);
+	}//end test_get_grid_value
+
+
+
+	/**
+	* TEST_get_list_value
+	* @return void
+	*/
+	public function test_get_list_value() {
+
+		$component = $this->build_component_instance();
+		$email = 'list@example.org';
+		$data = [(object)['value'=>$email, 'lang'=>DEDALO_DATA_NOLAN]];
+		$component->set_data($data);
+
+		$result = $component->get_list_value();
+
 		$this->assertTrue(
-			gettype($response->errors)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($response->errors)
+			is_array($result) && $result[0]->value === $email,
+			'expected list value'
 		);
+	}//end test_get_list_value
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_conform_import_data_integration() {
+
+		$component = $this->build_component_instance();
+		$email = 'integration@example.org';
+		$response = $component->conform_import_data($email, self::$tipo);
+
+		$component->set_data($response->result);
+		$data = $component->get_data();
+
 		$this->assertTrue(
-			empty($response->errors),
-			'expected empty errors : ' . PHP_EOL
-				. to_string($response->errors)
+			!empty($data) && $data[0]->value === $email,
+			'expected email to be set correctly from import. current data: ' . to_string($data)
 		);
-	}//end test_conform_import_data
+	}//end test_conform_import_data_integration
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$request_options = (object)[
+			'update_version' => [1,0,0]
+		];
+
+		$result = component_email::update_data_version($request_options);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object'
+		);
+	}//end test_update_data_version
 
 
 

@@ -190,7 +190,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: lang, // is nolan ?
+		lang			: page_globals.dedalo_data_nolan, // is nolan ?
 		test_save		: false
 	})
 

@@ -112,6 +112,38 @@ final class component_date_test extends BaseTestCase {
 
 
 	/**
+	* TEST_save
+	* @return void
+	*/
+	public function test_save() {
+
+		$component = $this->build_component_instance();
+
+		$data = json_decode('
+			[
+				{
+					"start": {
+						"day": 23,
+						"year": 2015,
+						"month": 12
+					}
+				}
+			]
+		');
+		$component->set_data($data);
+
+		$result = $component->save();
+
+		$this->assertTrue(
+			gettype($result)==='boolean' || gettype($result)==='integer',
+			'expected type boolean or integer : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_save
+
+
+
+	/**
 	* TEST_get_date_mode
 	* @return void
 	*/
@@ -133,6 +165,29 @@ final class component_date_test extends BaseTestCase {
 				. to_string($result)
 		);
 	}//end test_get_date_mode
+
+
+
+	/**
+	* TEST_get_date_mode_static
+	* @return void
+	*/
+	public function test_get_date_mode_static() {
+
+		$result = component_date::get_date_mode_static( self::$tipo );
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result==='date',
+			'expected date : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_date_mode_static
 
 
 
@@ -164,6 +219,51 @@ final class component_date_test extends BaseTestCase {
 				. gettype($result)
 		);
 	}//end test_get_date_now
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+
+		$data = json_decode('
+			[
+				{
+					"start": {
+						"day": 23,
+						"time": 513475200,
+						"year": 2015,
+						"month": 12
+					}
+				}
+			]
+		');
+		$component->set_data($data);
+
+		$result = $component->get_grid_value();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			get_class($result)==='dd_grid_cell_object',
+			'expected class dd_grid_cell_object : ' . PHP_EOL
+				. get_class($result)
+		);
+
+		$this->assertTrue(
+			$result->value[0]==='2015/12/23',
+			'expected 2015/12/23 : ' . PHP_EOL
+				. to_string($result->value[0])
+		);
+	}//end test_get_grid_value
 
 
 
@@ -476,6 +576,30 @@ final class component_date_test extends BaseTestCase {
 
 
 	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			array_key_exists('>=', $result),
+			'expected key >= exists'
+		);
+	}//end test_search_operators_info
+
+
+
+	/**
 	* TEST_get_final_search_range_seconds
 	* @return void
 	*/
@@ -647,6 +771,26 @@ final class component_date_test extends BaseTestCase {
 
 
 	/**
+	* TEST_get_stats_value_with_valor_arguments
+	* @return void
+	*/
+	public function test_get_stats_value_with_valor_arguments() {
+
+		$value = '[{"start":{"year":2023,"month":12,"day":18}}]';
+		$valor_arguments = 'year';
+
+		$result = component_date::get_stats_value_with_valor_arguments($value, $valor_arguments);
+
+		$this->assertTrue(
+			$result === 2023,
+			'expected 2023 : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_stats_value_with_valor_arguments
+
+
+
+	/**
 	* TEST_get_list_value
 	* @return void
 	*/
@@ -699,6 +843,32 @@ final class component_date_test extends BaseTestCase {
 				. to_string($response->errors)
 		);
 	}//end test_conform_import_data
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$request_options = (object)[
+			'update_version' => [1,0,0]
+		];
+
+		$result = component_date::update_data_version($request_options);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			$result->result === 0,
+			'expected result 0 : ' . PHP_EOL
+				. to_string($result->result)
+		);
+	}//end test_update_data_version
 
 
 
