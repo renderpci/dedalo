@@ -1,0 +1,33 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test18",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test18",
+	"value": [
+		{
+			"id": 2,
+			"value": {
+				"null": null,
+				"time": 1575599819000,
+				"color": "#82b92c",
+				"number": 123,
+				"object": {
+					"a": "b",
+					"c": "d"
+				},
+				"string": "Hello World",
+				"boolean": true,
+				"object with numbers": [
+					1,
+					2,
+					3
+				]
+			}
+		}
+	],
+	"debug_model": "component_json",
+	"debug_label": "json",
+	"debug_dataframe": null
+}
