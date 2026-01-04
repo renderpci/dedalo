@@ -4,6 +4,7 @@
 * Manages record publishable status.
 * Possible values are null | locator yes | locator no
 *
+* column_name: relation
 */
 class component_publication extends component_relation_common {
 
@@ -36,77 +37,6 @@ class component_publication extends component_relation_common {
 		// construct the component normally
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
-
-
-
-	/**
-	* GET_VALOR
-	* Get value. default is get dato . overwrite in every different specific component
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
-
-		$dato = $this->get_dato();
-
-		// Test dato format (b4 changed to object)
-			if(SHOW_DEBUG===true) {
-				if (!empty($dato)) foreach ($dato as $value) {
-					if (!empty($value) && !is_object($value)) {
-						if(SHOW_DEBUG===true) {
-							dump($dato," +++ dato Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value));
-						}
-						debug_log(__METHOD__
-							." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($value) .' : '. print_r($value,true)
-							, logger::ERROR
-						);
-						return null;
-					}
-				}
-			}
-
-		// mode changes value result
-		switch ($this->mode) {
-
-			case 'diffusion':
-				$valor = 'no';
-				if (!empty($dato)) {
-
-					$object_si = new stdClass();
-						$object_si->section_id   = (string)NUMERICAL_MATRIX_VALUE_YES;
-						$object_si->section_tipo = (string)"dd64";
-
-					$component_locator = reset($dato);
-					$compare_locators  = locator::compare_locators( $component_locator, $object_si, $ar_properties=['section_id','section_tipo']);
-
-					if ($compare_locators===true) {
-						$valor = 'si';
-					}
-				}
-				break;
-
-			default:
-				$valor = null;
-				if (!empty($dato)) {
-
-					# Always run list of values
-					$ar_list_of_values	= $this->get_ar_list_of_values($lang); # Important: We are searching for the value in the current language.
-					$component_locator  = reset($dato);
-					foreach ($ar_list_of_values->result as $key => $item) {
-
-						$locator = $item->value;
-						if (true===locator::compare_locators( $component_locator, $locator, $ar_properties=['section_id','section_tipo'])) {
-							$valor = $item->label;
-							break;
-						}
-					}
-				}
-				break;
-		}//end switch
-
-
-		return $valor;
-	}//end get_valor
 
 
 
