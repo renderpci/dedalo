@@ -217,19 +217,6 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATO_FULL
-	* Returns dato. Alias of get_dato
-	* @return array $dato
-	*	$dato is always an array of locators or an empty array
-	*/
-	public function get_dato_full() : ?array {
-
-		return $this->get_dato();
-	}//end get_dato_full
-
-
-
-	/**
 	* GET_RELATED_SECTION_CONTEXT
 	* Get all calling sections and create his context and sub-context.
 	* As the relation_index use the calling sections to get his data,

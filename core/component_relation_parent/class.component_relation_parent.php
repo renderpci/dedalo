@@ -24,227 +24,10 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	// /**
-	// * GET_VALOR
-	// * Get value . default is get dato . overwrite in every different specific component
-	// * @param string $lang = DEDALO_DATA_LANG
-	// * @return string|null $valor
-	// */
-	// public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
-
-	// 	$dato = $this->get_dato();
-
-	// 	// empty case
-	// 		if (empty($dato)) {
-	// 			return null;
-	// 		}
-
-	// 	// resolve locators
-	// 		$ar_valor = [];
-	// 		foreach ((array)$dato as $current_locator) {
-	// 			$ar_valor[] = ts_object::get_term_by_locator(
-	// 				$current_locator,
-	// 				$lang,
-	// 				true // bool from_cache
-	// 			);
-	// 		}
-
-	// 	// component valor
-	// 		$ar_valor_clean = [];
-	// 		foreach ($ar_valor as $value) {
-	// 			if (empty($value)) {
-	// 				continue;
-	// 			}
-	// 			if(!empty(trim($value))) {
-	// 				$ar_valor_clean[] = $value;
-	// 			}
-	// 		}
-	// 		$valor = implode(', ', $ar_valor_clean);
-
-
-	// 	return $valor;
-	// }//end get_valor
-
-
-
-	// /**
-	// * GET_DIFFUSION_VALUE
-	// * Overwrite component common method
-	// * Calculate current component diffusion value for target field (usually a MYSQL field)
-	// * Used for diffusion_mysql to unify components diffusion value call
-	// * @see class.diffusion_mysql.php
-	// * @param string|null $lang = DEDALO_DATA_LANG
-	// * @param object|null $option_obj = null
-	// * @return string $diffusion_value
-	// */
-	// public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
-
-	// 	$resolve_value = isset($option_obj->resolve_value)
-	// 		? $option_obj->resolve_value
-	// 		: false;
-
-	// 	// custom_get_term_by_locator function.
-	// 	// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
-	// 		$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
-
-	// 			$section_map	= section::get_section_map($locator->section_tipo);
-	// 			$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-	// 			if ($thesaurus_map===false) {
-	// 				return null;
-	// 			}
-
-	// 			$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-	// 			$section_id		= $locator->section_id;
-	// 			$section_tipo	= $locator->section_tipo;
-
-	// 			$ar_value = [];
-	// 			foreach ($ar_tipo as $tipo) {
-
-	// 				$model		= ontology_node::get_model_by_tipo($tipo,true);
-	// 				// $model	= ontology_node::get_legacy_model_by_tipo($tipo);
-	// 				$component	= component_common::get_instance(
-	// 					$model,
-	// 					$tipo,
-	// 					$section_id,
-	// 					'list',
-	// 					$lang,
-	// 					$section_tipo
-	// 				);
-	// 				// process_dato_arguments
-	// 					$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
-	// 				// valor
-	// 					// $valor	= $component->get_valor($lang);
-	// 					$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
-	// 					if (empty($valor)) {
-
-	// 						$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
-	// 						$dato_full	= $component->get_dato_full();
-	// 						$valor		= component_common::get_value_with_fallback_from_dato_full(
-	// 							$dato_full,
-	// 							true,
-	// 							$main_lang,
-	// 							$lang
-	// 						);
-	// 						if (is_array($valor)) {
-	// 							$valor = implode(', ', $valor);
-	// 						}
-	// 					}
-
-	// 				if (!empty($valor)) {
-	// 					$ar_value[] = $valor;
-	// 				}
-	// 			}//end foreach ($ar_tipo as $tipo)
-
-	// 			$value = implode(', ', $ar_value);
-
-	// 			return $value;
-	// 		};//end custom_get_term_by_locator function
-
-	// 	if (isset($option_obj->add_parents)) {
-
-	// 		// recursively
-	// 			$section_id		= $this->get_section_id();
-	// 			$section_tipo	= $this->section_tipo;
-
-	// 		// parent_section_tipo
-	// 			$parent_section_tipo = isset($option_obj->parent_section_tipo)
-	// 				? $option_obj->parent_section_tipo
-	// 				: false;
-
-	// 		// parents
-	// 			$parents = self::get_parents_recursive(
-	// 				$section_id,
-	// 				$section_tipo,
-	// 				$this->tipo
-	// 			);
-
-	// 		// new_dato
-	// 		$new_dato = [];
-	// 		foreach ($parents as $locator) {
-
-	// 			// non resolve case (only section_id from current locator)
-	// 				if ($resolve_value!==true) {
-	// 					$new_dato[] = $locator->section_id;
-	// 					continue;
-	// 				}
-
-	// 			// to resolve cases
-	// 			if($parent_section_tipo!==false) {
-
-	// 				// term is autocomplete cases
-	// 				$term_dato = ts_object::get_term_dato_by_locator($locator);
-	// 				foreach ($term_dato as $term_locator) {
-
-	// 					// check valid locator section_tipo
-	// 						if (!isset($term_locator->section_tipo)) {
-	// 							debug_log(__METHOD__
-	// 								. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
-	// 								. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
-	// 								. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
-	// 								, logger::DEBUG
-	// 							);
-	// 							continue;
-	// 						}
-
-	// 					if($parent_section_tipo===$term_locator->section_tipo){
-
-	// 						// value custom calculate
-	// 							$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-	// 						// new dato add
-	// 							$new_dato[] = !empty($value)
-	// 								? strip_tags($value)
-	// 								: $value;
-	// 					}
-	// 				}//end foreach ($term_dato as $term_locator)
-
-	// 			}else{
-
-	// 				$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-	// 				$current_value = !empty($value)
-	// 					? strip_tags($value)
-	// 					: $value;
-
-	// 				$new_dato[] = $current_value;
-	// 			}
-	// 		}//end foreach ($parents as $locator)
-
-	// 	}else{
-
-	// 		$dato = $this->get_dato();
-
-	// 		if ($resolve_value===true) {
-	// 			$new_dato = [];
-	// 			foreach ((array)$dato as $current_locator) {
-	// 				// $value = ts_object::get_term_by_locator(
-	// 				// 	$current_locator,
-	// 				// 	$lang,
-	// 				// 	true // bool from_cache
-	// 				// );
-	// 				$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
-	// 				$new_dato[] = strip_tags($value);
-	// 			}
-	// 		}else{
-	// 			// default (untouched component dato)
-	// 			$new_dato = $dato;
-	// 		}
-	// 	}//end if (isset($option_obj->add_parents))
-
-	// 	$diffusion_value = !empty($new_dato)
-	// 		? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $new_dato)
-	// 		: null;
-
-
-	// 	return $diffusion_value;
-	// }//end get_diffusion_value
-
-
-
 	/**
 	* add_parent
-	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'dato' and save
+	* Add one locator to current 'data'. Verify is exists to avoid duplicates
+	* NOTE: This method updates component 'data' and save
 	* @param locator $locator
 	* @return bool
 	*/
@@ -266,16 +49,28 @@ class component_relation_parent extends component_relation_common {
 		// from_component_tipo check
 			if (!isset($locator->from_component_tipo)) {
 				debug_log(__METHOD__
-					.' ERROR. ignored action. Property "from_component_tipo" is mandatory ' . PHP_EOL
+					.' WARNING. forgotten property "from_component_tipo" it is mandatory ' . PHP_EOL
 					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
 					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
 					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
-					, logger::ERROR
+					, logger::WARNING
 				);
-				return false;
+				$locator->from_component_tipo = $this->tipo;
 			}
 
-		// Add current locator to component dato
+		// type check
+			if (!isset($locator->type)) {
+				debug_log(__METHOD__
+					.' WARNING. forgotten property "type" it is mandatory ' . PHP_EOL
+					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+					, logger::WARNING
+				);
+				$locator->type = $this->default_relation_type;
+			}
+
+		// Add current locator to component data
 			if (!$this->add_locator_to_data($locator)) {
 				return false;
 			}
@@ -287,14 +82,14 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_PARENT
-	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato'
+	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
+	* NOTE: This method updates component 'data'
 	* @param locator $locator
 	* @return bool
 	*/
 	public function remove_parent( locator $locator ) : bool {
 
-		// remove current locator from component dato
+		// remove current locator from component data
 		if (!$this->remove_locator_from_data($locator)) {
 			return false;
 		}
@@ -556,8 +351,8 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* MAKE_ME_YOUR_PARENT
-	* Add one locator to current 'dato' from children side
-	* NOTE: This method updates component 'dato' and save
+	* Add one locator to current 'data' from children side
+	* NOTE: This method updates component 'data' and save
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return bool

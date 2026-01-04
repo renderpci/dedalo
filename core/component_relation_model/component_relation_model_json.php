@@ -54,12 +54,12 @@
 
 				case 'list':
 				case 'tm':
-					$value				= $this->get_list_value();
+					$value = $this->get_list_value();
 					break;
 
 				case 'edit':
 				default:
-					$value				= $this->get_data_lang();
+					$value				= $this->get_data();
 					$ar_list_of_values	= $this->get_list_of_values( DEDALO_DATA_LANG );
 					break;
 			}
