@@ -68,17 +68,17 @@ final class component_relation_children_test extends BaseTestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -87,12 +87,12 @@ final class component_relation_children_test extends BaseTestCase {
 		);
 
 		// null case
-			$updated_dato = $component->get_dato();
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===[],
-				' (null case) expected [] : ' . PHP_EOL
-				.'component dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string([]) . PHP_EOL
+				$updated_data===null,
+				' (null case) expected null : ' . PHP_EOL
+				.'component data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string(null) . PHP_EOL
 			);
 
 		// object case
@@ -104,58 +104,27 @@ final class component_relation_children_test extends BaseTestCase {
 					"type": "dd48"
 				}
 			');
-			$reference_dato	= $locator;
-			$result			= $component->set_dato($reference_dato);
-			$updated_dato	= $component->get_dato();
-			$this->assertTrue(
-				json_encode($updated_dato)===json_encode([$reference_dato]),
-				' (object case) expected equal array : ' . PHP_EOL
-				.'component updated_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato (array with locator): ' . to_string($reference_dato) . PHP_EOL
-				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
-			);
 
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$updated_dato = $component->get_dato();
+			$data	= [$locator];
+			$result	= $component->set_data($data);
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($updated_dato)===json_encode($dato),
+				json_encode($updated_data)===json_encode($data),
 				' (array case) expected equal array : ' . PHP_EOL
-				.'component get_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string($dato) . PHP_EOL
+				.'component get_data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string($data) . PHP_EOL
 			);
 
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-			$updated_dato = $component->get_dato();
+		// restore data
+			$result	= $component->set_data($old_data);
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($updated_dato)===json_encode($old_dato),
-				' (restore dato case) expected old dato : ' . PHP_EOL
-				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string($old_dato) . PHP_EOL
+				json_encode($updated_data)===json_encode($old_data),
+				' (restore data case) expected old data : ' . PHP_EOL
+				.'updated_data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string($old_data) . PHP_EOL
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
+	}//end test_set_data
 
 
 	/**
