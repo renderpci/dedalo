@@ -73,7 +73,7 @@ trait order {
 				}
 				// flat SQL sentences array
 				$sql_query_order = implode(',', $ar_order);
-		
+
 
 			// add NULLS LAST for convenience
 			if (!empty($sql_query_order)) {
@@ -97,6 +97,7 @@ trait order {
 
 		$this->sql_obj->order_default[] = PHP_EOL. $sentence;		
 
+		
 		return;
 	}//end build_sql_query_order
 
