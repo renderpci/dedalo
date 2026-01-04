@@ -1,0 +1,65 @@
+{
+	"section_id": 1,
+	"section_tipo": "test3",
+	"tipo": "test85",
+	"mode": "edit",
+	"lang": "lg-nolan",
+	"from_component_tipo": "test85",
+	"value": [
+		{
+			"id": 3,
+			"files_info": [
+				{
+					"quality": "original",
+					"extension": "pdf",
+					"file_name": "test85_test3_1.pdf",
+					"file_path": "/pdf/original/0/test85_test3_1.pdf",
+					"file_size": 1866528,
+					"file_time": {
+						"day": 4,
+						"hour": 12,
+						"time": 65117566478,
+						"year": 2026,
+						"month": 1,
+						"minute": 54,
+						"second": 38,
+						"timestamp": "2026-01-04 12:54:38"
+					},
+					"file_exist": true
+				},
+				{
+					"quality": "web",
+					"extension": "pdf",
+					"file_name": "test85_test3_1.pdf",
+					"file_path": "/pdf/web/0/test85_test3_1.pdf",
+					"file_size": 1866528,
+					"file_time": {
+						"day": 4,
+						"hour": 12,
+						"time": 65117566479,
+						"year": 2026,
+						"month": 1,
+						"minute": 54,
+						"second": 39,
+						"timestamp": "2026-01-04 12:54:39"
+					},
+					"file_exist": true
+				}
+			],
+			"original_file_name": "Cecas _ Moneda Ibérica.pdf",
+			"original_upload_date": {
+				"day": 4,
+				"hour": 12,
+				"time": 65117566479,
+				"year": 2026,
+				"month": 1,
+				"minute": 54,
+				"second": 39
+			},
+			"original_normalized_name": "test85_test3_1.pdf"
+		}
+	],
+	"debug_model": "component_pdf",
+	"debug_label": "pdf",
+	"debug_dataframe": null
+}
