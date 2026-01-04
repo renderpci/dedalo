@@ -21,48 +21,6 @@ class component_relation_children extends component_relation_common {
 
 
 
-	// /**
-	// * GET_VALOR
-	// * Get value . Default is get dato . overwrite in every different specific component
-	// * @param string|null $lang = DEDALO_DATA_LANG
-	// * @return string|null $valor
-	// */
-	// public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
-
-	// 	$dato = $this->get_data();
-
-	// 	// empty case
-	// 		if (empty($dato)) {
-	// 			return null;
-	// 		}
-
-	// 	// resolve locators
-	// 		$ar_valor = [];
-	// 		foreach ((array)$dato as $current_locator) {
-	// 			$ar_valor[] = ts_object::get_term_by_locator(
-	// 				$current_locator,
-	// 				$lang,
-	// 				true // bool from_cache
-	// 			);
-	// 		}
-
-	// 	// component valor
-	// 		$ar_valor_clean = [];
-	// 		foreach ($ar_valor as $value) {
-	// 			if (empty($value)) {
-	// 				continue;
-	// 			}
-	// 			if(!empty(trim($value))) {
-	// 				$ar_valor_clean[] = $value;
-	// 			}
-	// 		}
-	// 		$valor = implode(', ', $ar_valor_clean);
-
-
-	// 	return $valor;
-	// }//end get_valor
-
-
 
 	/**
 	* SAVE
@@ -73,47 +31,6 @@ class component_relation_children extends component_relation_common {
 		// Noting to do. This component don`t save
 		return true;
 	}//end Save
-
-
-
-	// /**
-	// * GET DATO
-	// * This component don't store data, only manages calculated data from component_relation_parent generated data
-	// * stored in section 'relations' container
-	// * @return array $dato
-	// *	$dato is always an array of locators
-	// */
-	// public function get_data() : array {
-
-	// 	// dato_resolved. Already resolved case
-	// 		if(isset($this->dato_resolved)) {
-	// 			return $this->dato_resolved;
-	// 		}
-
-	// 	// empty section_id case
-	// 		if(empty($this->section_id)){
-	// 			return [];
-	// 		}
-
-	// 	// always get dato calculated from my parents that call the current section
-	// 		$dato = component_relation_children::get_children(
-	// 			$this->section_id,
-	// 			$this->section_tipo,
-	// 			$this->tipo
-	// 		);
-
-	// 	// fix dato.
-	// 		$this->dato = $dato;
-
-	// 	// set dato_resolve and cache it
-	// 		$this->dato_resolved = $this->dato;
-
-	// 	// Set as loaded.
-	// 		// $this->bl_loaded_matrix_data = true;
-
-
-	// 	return $dato;
-	// }//end get_data
 
 
 
@@ -167,19 +84,6 @@ class component_relation_children extends component_relation_common {
 
 		return $dato_paginated;
 	}//end get_data_paginated
-
-
-
-	// /**
-	// * GET_DATa_FULL
-	// * @return array|null $dato
-	// */
-	// public function get_data_full() : ?array {
-
-	// 	$dato = $this->get_data();
-
-	// 	return $dato;
-	// }//end get_data_full
 
 
 
