@@ -68,36 +68,34 @@ final class component_relation_model_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -107,12 +105,12 @@ final class component_relation_model_test extends TestCase {
 
 		// null case
 			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 
-		// object case
+		// add data
 			$locator = json_decode('
 				{
 					"type":"dd98",
@@ -121,76 +119,21 @@ final class component_relation_model_test extends TestCase {
 					"from_component_tipo":"test169"
 				}
 			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
+			$data	= [$locator];
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
+				locator::in_array_locator( $locator, $component->get_data() ),
 				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
+					. to_string($component->get_data())
 			);
 
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-	}//end test_set_dato
+	}//end test_set_data
 
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_get_ar_target_section_tipo
+	* TEST_GET_AR_TARGET_SECTION_TIPO
 	* @return void
 	*/
 	public function test_get_ar_target_section_tipo() {

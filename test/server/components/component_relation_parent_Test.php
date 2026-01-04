@@ -64,7 +64,7 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* test_create_minimum_sections
+	* TEST_CREATE_MINIMUM_SECTIONS
 	* @return object $component
 	*/
 	public function test_create_minimum_sections() {
@@ -75,16 +75,29 @@ final class component_relation_parent_test extends TestCase {
 		];
 		foreach ($ar_section_id as $section_id) {
 			$section = section::get_instance(
-				$section_id, // string|null section_id
 				self::$section_tipo, // string section_tipo
 				'list'
 			);
-			$section->forced_create_record();
-
+			$created_section_id = $section->create_record((object)[
+				'section_id' => $section_id
+			]);
+			// check the section was created
 			$this->assertTrue(
 				gettype($section)==='object',
 				'expected type object : ' . PHP_EOL
 					. gettype($section)
+			);
+			// check if the section_id returns as integer
+			$this->assertTrue(
+				gettype($created_section_id)==='integer',
+				'expected type integer : ' . PHP_EOL
+					. gettype($created_section_id)
+			);
+
+			$this->assertTrue(
+				$created_section_id===$section_id,
+				'expected equal : ' . PHP_EOL
+					. gettype($created_section_id)
 			);
 		}
 	}//end test_create_minimum_sections
@@ -96,22 +109,22 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_Save
+	* TEST_SAVE
 	* @return void
 	*/
 	public function test_Save() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->Save();
+		$result	= $component->save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
+			gettype($result)==='boolean' || gettype($result)==='NULL',
+			'expected type boolean|null : ' . PHP_EOL
 				. gettype($result)
 		);
 		$this->assertTrue(
-			$result==$component->section_id,
+			$result===true,
 			'expected equal : ' . PHP_EOL
 				. to_string($result)
 		);
@@ -120,55 +133,37 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
-
-
-	/**
-	* TEST_get_dato_full
-	* @return void
-	*/
-	public function test_get_dato_full() {
-
-		$component = $this->build_component_instance();
-
-		$result	= $component->get_dato_full();
-
-		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type array|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato_full
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
 		// add dato
-			$dato = json_decode('
+			$data = json_decode('
 				[{
 			        "section_tipo": "test3",
 			        "section_id": "2",
@@ -177,7 +172,7 @@ final class component_relation_parent_test extends TestCase {
 			    }]
 			');
 
-			$result	= $component->set_dato($dato);
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
 				gettype($result)==='boolean',
@@ -190,27 +185,27 @@ final class component_relation_parent_test extends TestCase {
 					. to_string($result)
 			);
 
-			$reference_dato = json_decode('
-				[{
+			$reference_data = json_decode('
+				{
 			        "section_tipo": "test3",
 			        "section_id": "2",
 			        "from_component_tipo": "test71",
 			        "type": "dd47"
-			    }]
+			    }
 			');
-			$fixed_dato = $component->get_dato();
+			$fixed_data = $component->get_data();
 
 			$this->assertTrue(
-				json_encode($fixed_dato)===json_encode($reference_dato),
+				locator::in_array_locator($reference_data, $fixed_data),
 				'expected equal : ' . PHP_EOL
-					.' fixed_dato: ' . to_string($fixed_dato) . PHP_EOL
-					.' reference_dato: ' . to_string($reference_dato)
+					.' fixed_data: ' . to_string($fixed_data) . PHP_EOL
+					.' reference_data: ' . to_string($reference_data)
 			);
 
 		// set null or []
-			$dato = null;
+			$data = null;
 
-			$result	= $component->set_dato($dato);
+			$result	= $component->set_data($data);
 
 			$this->assertTrue(
 				$result===true,
@@ -218,13 +213,12 @@ final class component_relation_parent_test extends TestCase {
 					. to_string($result)
 			);
 
-			$reference_dato	= []; // null value generates [] when get_dato
-			$fixed_dato		= $component->get_dato();
+			$fixed_data		= $component->get_data();
 
 			$this->assertTrue(
-				json_encode($fixed_dato)===json_encode($reference_dato),
-				'expected equal : ' . PHP_EOL
-					. gettype($fixed_dato)
+				$fixed_data===null,
+				'expected null : ' . PHP_EOL
+					. gettype($fixed_data)
 			);
 
 
@@ -331,76 +325,7 @@ final class component_relation_parent_test extends TestCase {
 				'expected old dato : ' . PHP_EOL
 					. to_string($component->dato)
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		// null
-			$dato = null;
-			$component->set_dato($dato);
-			$result = $component->get_valor();
-
-			$this->assertTrue(
-				gettype($result)==='NULL',
-				'expected type null : ' . PHP_EOL
-					. gettype($result)
-			);
-
-		// value
-			$dato = json_decode('
-				[{
-			        "section_tipo": "test3",
-			        "section_id": "2",
-			        "paginated_key": 1,
-			        "from_component_tipo": "test71"
-			    }]
-			');
-			$component->set_dato($dato);
-			$result = $component->get_valor();
-
-			if (!empty($component->dato)) {
-				$this->assertTrue(
-					gettype($result)==='string',
-					'expected type string : ' . PHP_EOL
-						. gettype($result)
-				);
-			}
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
+	}//end test_set_data
 
 
 
@@ -462,17 +387,17 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_add_parent
+	* TEST_ADD_PARENT
 	* @return void
 	*/
 	public function test_add_parent() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
 		// empty old values
-		$component->set_dato(null);
+		$component->set_data(null);
 
 		$section_id	= 3;
 
@@ -492,48 +417,45 @@ final class component_relation_parent_test extends TestCase {
 
 		if ($result===true) {
 
-			$dato_reference = json_decode('
-				[
-				    {
-				        "section_tipo": "'.self::$section_tipo.'",
-				        "section_id": "'.$section_id.'",
-				        "from_component_tipo": "'.self::$tipo.'"
-				    }
-				]
-			');
+			$reference_data = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "'.$section_id.'",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato_reference),
-				'expected dato_reference : ' . PHP_EOL
-					. to_string($component->dato)
+				locator::in_array_locator($reference_data, $component->get_data()),
+				'expected reference_data : ' . PHP_EOL
+					. to_string($component->get_data)
 			);
 
 			// restore data
-			$component->set_dato($old_dato);
-			$component->Save();
+			$component->set_data($old_data);
+			$component->save();
 		}
 	}//end test_add_parent
 
 
 
 	/**
-	* TEST_remove_parent
+	* TEST_REMOVE_PARENT
 	* @return void
 	*/
 	public function test_remove_parent() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
-
-		$section_id	= 3;
+		$old_data = $component->get_data();
 
 		$locator = new locator();
 			$locator->set_section_tipo($component->section_tipo);
-			$locator->set_section_id($section_id);
+			$locator->set_section_id(3);
 
 		// add dato (this action saves too)
-			$component->set_dato(null);
+			$component->set_data(null);
 			$result = $component->add_parent(
 				$locator
 			);
@@ -549,8 +471,7 @@ final class component_relation_parent_test extends TestCase {
 
 		// remove added (this action saves too)
 			$result = $component->remove_parent(
-				$component->section_tipo,
-				$section_id
+				$locator
 			);
 
 			$this->assertTrue(
@@ -559,19 +480,79 @@ final class component_relation_parent_test extends TestCase {
 					. gettype($result)
 			);
 
+			
 			if ($result===true) {
 
-				$dato_reference = [];
 				$this->assertTrue(
-					json_encode($component->dato)===json_encode($dato_reference),
-					'expected dato_reference : ' . PHP_EOL
-						. to_string($component->dato)
+					null === $component->get_data(),
+					'expected null : ' . PHP_EOL
+						. to_string($component->get_data())
 				);
-
-				// restore data
-				$component->set_dato($old_dato);
-				$component->Save();
 			}
+
+			// add multiple data
+			$component->set_data(null);
+			$locator->set_section_id(3);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(4);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(5);
+			$result = $component->add_parent(
+				$locator
+			);
+			$locator->set_section_id(6);
+			$result = $component->add_parent(
+				$locator
+			);
+			// remove multiple data
+			$locator->set_section_id(3);
+			$result = $component->remove_parent(
+				$locator
+			);
+			$locator->set_section_id(5);
+			$result = $component->remove_parent(
+				$locator
+			);
+
+			$test_data = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "4",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
+
+			$test_data2 = json_decode(
+				'{
+					"type": "'.DEDALO_RELATION_TYPE_PARENT_TIPO.'",
+					"section_tipo": "'.self::$section_tipo.'",
+					"section_id": "6",
+					"from_component_tipo": "'.self::$tipo.'"
+				}'
+			);
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				locator::in_array_locator($test_data, $data),
+				'expected locator in data : ' . PHP_EOL
+					. to_string($data)
+			);
+
+			$this->assertTrue(
+				locator::in_array_locator($test_data2, $data),
+				'expected locator in data : ' . PHP_EOL
+					. to_string($data)
+			);
+
+			// restore data
+			$component->set_data($old_data);
+			$component->save();
+
 	}//end test_remove_parent
 
 
@@ -616,7 +597,7 @@ final class component_relation_parent_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			gettype($result)==='array',
+			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);

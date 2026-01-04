@@ -460,64 +460,6 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_DATO_FULL
-	* @return void
-	*/
-	public function test_get_dato_full() {
-
-		$components_with_relations = component_relation_common::get_components_with_relations();
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$dato_full = $component->get_dato_full();
-				// dump($dato_full, ' get_dato_full ++ '.to_string($element->model));
-
-			if (in_array($element->model, $components_with_relations) || $element->model==='component_inverse') {
-				$this->assertTrue(
-					gettype($dato_full)==='array',
-					'dato_full type expected array. current type: ' .gettype($dato_full)
-				);
-			}else{
-				$is_translatable = $component->is_translatable();
-				if ($is_translatable===true) {
-					$this->assertTrue(
-						isset($dato_full->{DEDALO_DATA_LANG}),
-						'dato_full expected key: ' .DEDALO_DATA_LANG
-					);
-				}else{
-					if ($element->model!=='component_section_id') {
-						$this->assertTrue(
-							isset($dato_full->{DEDALO_DATA_NOLAN}),
-							'dato_full expected $dato_full->{DEDALO_DATA_NOLAN} : ' .PHP_EOL
-							.'lang: '.DEDALO_DATA_NOLAN .PHP_EOL
-							.'dato_full: '.json_encode($dato_full) .PHP_EOL
-							.'is_translatable: '.json_encode($is_translatable).PHP_EOL
-							.'tipo: '.$element->tipo .PHP_EOL
-							.'model: '.$element->model .PHP_EOL
-							.'section_tipo: '.$element->section_tipo .PHP_EOL
-							.'section_id: '.$element->section_id
-						);
-					}
-				}
-			}
-		}
-	}//end test_get_dato_full
-
-
-
-	/**
 	* test_get_data_unchanged
 	* @return void
 	*/
