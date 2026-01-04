@@ -937,9 +937,9 @@ class diffusion_rdf extends diffusion {
 				$ar_values[] = $ddo_value;
 			}else{
 
-				$dato_full = $element->get_dato_full();
-				if(!empty($dato_full)) {
-					foreach ($dato_full as $current_lang => $value) {
+				$data = $element->get_data();
+				if(!empty($data)) {
+					foreach ($data as $current_lang => $value) {
 						if(!empty($value)) {
 
 							$element->set_lang($current_lang);

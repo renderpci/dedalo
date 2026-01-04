@@ -1256,29 +1256,6 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* GET_DATO_FULL
-	* Returns whole component data with all langs values
-	* Don't constrain type to object because compatibility
-	* with component_relation_common->get_dato_full() (array)
-	* @return object|null $dato_full
-	* 	sample: {
-	*	    "lg-spa": [
-	*	        "L'Horta Sud"
-	*	    ]
-	*	}
-	*/
-	public function get_dato_full() {
-
-		$section			= $this->get_my_section();
-		$all_component_data	= $section->get_all_component_data($this->tipo);
-		$dato_full			= $all_component_data->dato ?? null;
-
-		return $dato_full;
-	}//end get_dato_full
-
-
-
 	# GET_DATA_UNCHANGED
 	# Recover component var 'data' without change type or other custom component changes
 	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_dato)
@@ -1497,7 +1474,7 @@ abstract class component_common extends common {
 			}
 
 		// dato_full
-			$data = $this->get_dato_full();
+			$data = $this->get_data();
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$row_count = 1; // sizeof($data);
@@ -3177,7 +3154,7 @@ abstract class component_common extends common {
 
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
-			$dato_full = $this->get_dato_full();
+			$dato_full = $this->get_data();
 			if(!empty($dato_full)) {
 				foreach ($dato_full as $current_lang => $value) {
 					if(!empty($value)) {
