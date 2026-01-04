@@ -755,6 +755,8 @@ abstract class component_common extends common {
 			$data_to_set
 		);
 
+		$this->data_resolved = $data_to_set;
+
 
 		return $result;
 	}//end set_data
