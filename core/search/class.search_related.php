@@ -40,7 +40,7 @@ class search_related extends search {
 			$breakdown = $this->sqo->breakdown ?? false;
 
 		// order
-			$sql_query_order = $this->build_sql_query_order();
+			$this->build_sql_query_order();
 
 		// reference locator is the locator of the source section that will be
 		// used to obtain the sections with calls to it.
@@ -208,8 +208,8 @@ class search_related extends search {
 			if(isset($this->sqo->full_count) && $this->sqo->full_count===false) {
 
 				// order
-				if (!empty($sql_query_order)) {
-					$str_query .= PHP_EOL . 'ORDER BY ' . $sql_query_order;
+				if(!empty($this->sql_obj->order)){
+					$str_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
 				}else{
 					$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
 				}

@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_relation_children_test extends TestCase {
+final class component_relation_children_test extends BaseTestCase {
 
 
 
@@ -15,32 +15,13 @@ final class component_relation_children_test extends TestCase {
 	public static $section_tipo	= 'test3';
 
 
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
 	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -68,36 +49,36 @@ final class component_relation_children_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		$component = $this->build_component_instance();
 
-		$result	= $component->get_dato();
+		$result	= $component->get_data();
 
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
-		$old_dato = $component->get_dato();
+		$old_data = $component->get_data();
 
-		$dato	= null;
-		$result	= $component->set_dato($dato);
+		$data	= null;
+		$result	= $component->set_data($data);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -106,12 +87,12 @@ final class component_relation_children_test extends TestCase {
 		);
 
 		// null case
-			$updated_dato = $component->get_dato();
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				$component->dato===[],
-				' (null case) expected [] : ' . PHP_EOL
-				.'component dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string([]) . PHP_EOL
+				$updated_data===null,
+				' (null case) expected null : ' . PHP_EOL
+				.'component data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string(null) . PHP_EOL
 			);
 
 		// object case
@@ -123,58 +104,27 @@ final class component_relation_children_test extends TestCase {
 					"type": "dd48"
 				}
 			');
-			$reference_dato	= $locator;
-			$result			= $component->set_dato($reference_dato);
-			$updated_dato	= $component->get_dato();
-			$this->assertTrue(
-				json_encode($updated_dato)===json_encode([$reference_dato]),
-				' (object case) expected equal array : ' . PHP_EOL
-				.'component updated_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato (array with locator): ' . to_string($reference_dato) . PHP_EOL
-				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
-			);
 
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$updated_dato = $component->get_dato();
+			$data	= [$locator];
+			$result	= $component->set_data($data);
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($updated_dato)===json_encode($dato),
+				json_encode($updated_data)===json_encode($data),
 				' (array case) expected equal array : ' . PHP_EOL
-				.'component get_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string($dato) . PHP_EOL
+				.'component get_data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string($data) . PHP_EOL
 			);
 
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-			$updated_dato = $component->get_dato();
+		// restore data
+			$result	= $component->set_data($old_data);
+			$updated_data = $component->get_data();
 			$this->assertTrue(
-				json_encode($updated_dato)===json_encode($old_dato),
-				' (restore dato case) expected old dato : ' . PHP_EOL
-				.'updated_dato: ' . to_string($updated_dato) . PHP_EOL
-				.'reference dato: ' . to_string($old_dato) . PHP_EOL
+				json_encode($updated_data)===json_encode($old_data),
+				' (restore data case) expected old data : ' . PHP_EOL
+				.'updated_data: ' . to_string($updated_data) . PHP_EOL
+				.'reference data: ' . to_string($old_data) . PHP_EOL
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
+	}//end test_set_data
 
 
 	/**
@@ -251,5 +201,61 @@ final class component_relation_children_test extends TestCase {
 	}//end test_resolve_query_object_sql
 
 
+
+	/**
+	* TEST_GET_CHILDREN
+	* @return void
+	*/
+	public function test_get_children() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		
+		$children = component_relation_children::get_children($section_id, $section_tipo);
+		
+		$this->assertTrue(
+			is_array($children), 
+			'Expected array from get_children, got: ' . gettype($children)
+		);
+	}
+
+	/**
+	* TEST_GET_CHILDREN_RECURSIVE
+	* @return void
+	*/
+	public function test_get_children_recursive() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		
+		$children_recursive = component_relation_children::get_children_recursive($section_id, $section_tipo);
+		
+		$this->assertTrue(
+			is_array($children_recursive), 
+			'Expected array from get_children_recursive, got: ' . gettype($children_recursive)
+		);
+	}
+
+	/**
+	* TEST_HAS_CHILDREN_OF_TYPE
+	* @return void
+	*/
+	public function test_has_children_of_type() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+		$component_tipo = self::$tipo;
+		
+		// descriptor check
+		$has_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'descriptor');
+		$this->assertTrue(
+			is_bool($has_descriptor),
+			'Expected bool from has_children_of_type(descriptor)'
+		);
+
+		// non_descriptor check 
+		$has_non_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'non_descriptor');
+		$this->assertTrue(
+			is_bool($has_non_descriptor),
+			'Expected bool from has_children_of_type(non_descriptor)'
+		);
+	}
 
 }//end class component_relation_children_test

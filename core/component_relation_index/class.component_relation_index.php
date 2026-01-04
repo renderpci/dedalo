@@ -2,6 +2,29 @@
 /**
 * CLASS COMPONENT_RELATION_INDEX
 *
+* Manage indexation references data (Reverse Relations)
+*
+* 1. Core Concept and Purpose
+*    - Inverse Relations: Its main job is to identify other sections/records in the system that reference the current record ("who points to me").
+*    - EXTERNAL Nature: This component is primarily calculated/dynamic. It resolves calling data (inverse locators) rather than relying solely on stored values.
+*    - Search Optimization: While calculated dynamically, values are saved to the database to allow for "Easy Search" (indexing relations) without recalculating the entire graph.
+*    - Used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO - dd96) to the current section.
+*
+* 2. Key Functionalities
+*    - Data Retrieval (get_data): Finds "Inverse Locators" using `search_related`. It asks "Find all records that relation-link to ME".
+*      Includes caching mechanisms to avoid expensive lookups during repetitive processes like publication.
+*    - Context Resolution (get_related_section_context):
+*      This serves to display data from *other* calling sections (e.g., showing a list of "Paintings" that cite this "Artist").
+*      It groups calling records by `section_tipo`, initializes sample instances to fetch their `request_config`, and merges these into the component's context.
+*      This allows a unified "Related List" of heterogeneous records.
+*    - Searching (resolve_query_object_sql):
+*      o `*` (Not Empty): Finds records that *are cited* by others.
+*      o `!*` (Empty): Finds records that are *orphans* (not cited by anyone).
+*
+* 3. Data Model
+*    The data is a list of `locator` objects representing incoming links:
+*    [{ "type": "dd96", "section_tipo": "...", "section_id": "...", "component_tipo": "...", "tag_id": "..." }]
+*
 */
 class component_relation_index extends component_relation_common {
 
@@ -23,19 +46,19 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* Resolve indexation references data
-	* Note that this component data is always EXTERNAL
+	* Note that this component data is always EXTERNAL (it doesn't manage data in database, it always resolve calling data, inverse locators or who is calling me)
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
 	* to current section
 	* But, values are saved too to allow easy search
-	* @return array|null $dato
+	* @return array|null $data
 	*/
-	public function get_dato() : ?array {
+	public function get_data() : ?array {
 
-		// dato_resolved. Already resolved case
-			if(isset($this->dato_resolved)) {
-				return $this->dato_resolved;
+		// data_resolved. Already resolved case
+			if(isset($this->data_resolved)) {
+				return $this->data_resolved;
 			}
 
 		// reference_locator
@@ -48,27 +71,27 @@ class component_relation_index extends component_relation_common {
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
 
-		// format result like own dato
+		if(empty($ar_inverse_locators)) {
+			return null;
+		}
+
+		// format result like own data
 			$new_data = component_relation_index::parse_data($ar_inverse_locators);
 
-		// fix resolved dato
-			parent::set_dato($new_data);
-
-
-		return $this->dato;
-	}//end get_dato
+		return $new_data;
+	}//end get_data
 
 
 
 	/**
-	* get_data_paginated
+	* GET_DATA_PAGINATED
 	* Resolve indexation references data
 	* Note that this component data is always EXTERNAL
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
 	* to current section
 	* But, values are saved too to allow easy search
 	* @param int|null $custom_limit = null
-	* @return array|null $dato
+	* @return array|null $data
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
@@ -91,10 +114,10 @@ class component_relation_index extends component_relation_common {
 				$target_section
 			);
 
-		// format result like own dato
-			$new_dato_paginated = component_relation_index::parse_data($ar_inverse_locators);
+		// format result like own data
+			$new_data_paginated = component_relation_index::parse_data($ar_inverse_locators);
 
-		return $new_dato_paginated;
+		return $new_data_paginated;
 	}//end get_data_paginated
 
 
@@ -106,7 +129,7 @@ class component_relation_index extends component_relation_common {
 	*/
 	public static function parse_data( array $ar_inverse_locators ) : array {
 
-		// format result like own dato
+		// format result like own data
 			$parse_data = [];
 			foreach ($ar_inverse_locators as $current_locator) {
 
@@ -325,10 +348,13 @@ class component_relation_index extends component_relation_common {
 
 		// section
 			$section = section::get_instance(
-				$current_section_id,
 				$current_section_tipo,
 				'related_list'
 			);
+
+		// section record, Add section record to section instance to get the subdatum with current locator
+			$section_record	= section_record::get_instance($current_section_tipo, $current_section_id);
+			$section->add_section_record($section_record);
 
 		$section_datum	= $section->get_json();
 		$ar_subcontext	= $section_datum->context;
@@ -402,142 +428,9 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor( ?string $lang=DEDALO_DATA_LANG ) : ?string {
-
-		$dato = $this->get_dato();
-
-		// empty dato case
-			if (empty($dato)) {
-				return null;
-			}
-
-		// resolve locators
-			$ar_valor = array();
-			foreach ((array)$dato as $current_locator) {
-				// get_locator_value returns array|null
-				$ar_valor[] = self::get_locator_value(
-					$current_locator, // object locator
-					$lang, // string lang
-					false // bool show_parents
-				);
-			}//end foreach ((array)$dato as $current_locator)
-
-		// component valor
-			$ar_valor_clean = [];
-			foreach ($ar_valor as $value) {
-				if (empty($value)) {
-					continue;
-				}
-				$ar_valor_clean[] = to_string($value);
-			}
-			$valor = implode(', ', $ar_valor_clean);
-
-
-		return $valor;
-	}//end get_valor
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MySQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	*
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		$dato = $this->get_dato();
-
-		// v5 compatibly workaround
-			// Note that this component in v5, stores data from related tag as
-			// [{
-			// 	"type": "dd96",
-			// 	"tag_id": "1",
-			// 	"section_id": "501",
-			// 	"section_tipo": "rsc167",
-			// 	"component_tipo": "rsc36",
-			// 	"section_top_id": "501",
-			// 	"section_top_tipo": "oh1",
-			// 	"from_component_tipo": "rsc1051"
-			// }]
-
-		// empty dato case
-			if (empty($dato)) {
-				return null;
-			}
-
-		// preserve v5 order (old webs compatibility
-		// [{"type":"dd96","tag_id":"29","section_id":"30","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"26","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
-		$diffusion_dato = [];
-		foreach ($dato as $current_locator) {
-
-			$locator = new locator();
-
-			// type
-			$locator->set_type($current_locator->type ?? $this->relation_type );
-
-			// tag_id
-			if (isset($current_locator->tag_id)) {
-				$locator->set_tag_id($current_locator->tag_id);
-			}
-
-			// section_id
-			$locator->set_section_id($current_locator->section_id);
-
-			// section_tipo
-			$locator->set_section_tipo($current_locator->section_tipo);
-
-			// component_tipo
-			if (isset($current_locator->component_tipo)) {
-				$locator->set_component_tipo($current_locator->component_tipo);
-			}
-
-			// section_top_id
-			if (isset($current_locator->section_top_id)) {
-				$locator->set_section_top_id($current_locator->section_top_id);
-			}
-
-			// section_top_tipo
-			if (isset($current_locator->section_top_tipo)) {
-				$locator->set_section_top_tipo($current_locator->section_top_tipo);
-			}
-
-			// from_component_tipo
-			$locator->set_from_component_tipo($current_locator->from_component_tipo);
-
-			// from_component_top_tipo
-			if (isset($current_locator->from_component_top_tipo)) {
-				$locator->set_from_component_top_tipo($current_locator->from_component_top_tipo);
-			}
-
-			$diffusion_dato[] = $locator;
-		}
-
-		// diffusion_value
-		$diffusion_value = !empty($diffusion_dato)
-			? json_encode($diffusion_dato)
-			: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
 	* REMOVE_LOCATOR
-	* Iterate current component 'dato' and if math requested locator, removes it the locator from the 'dato' array
-	* NOTE: This method updates component 'dato' and save
+	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
+	* NOTE: This method updates component 'data' and save
 	* @param object $locator
 	* @return bool
 	*/
@@ -565,7 +458,7 @@ class component_relation_index extends component_relation_common {
 				'from_component_tipo'
 			];
 
-		// Add current locator to component dato
+		// Add current locator to component data
 			if (!$this->remove_locator_from_data($locator, $ar_properties)) {
 				return false;
 			}

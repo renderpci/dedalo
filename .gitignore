@@ -180,7 +180,6 @@ phpunit-results.*
 /local
 cline_mcp_settings.json
 .tmp
-.continue/agents/new-config.yaml
-.continue/rules/new-rule-1.md
-.continue/rules/new-rule.md
+.continue
 .markdownlint.json
+.agent
