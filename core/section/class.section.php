@@ -1474,6 +1474,9 @@ class section extends common {
 			// values, inject a given values into new section record
 			$values = $options->values ?? null;
 
+			// section_id, force creation with specific section_id (import processes)
+			$section_id = $options->section_id ?? null;
+
 		// Tipo. Current section tipo
 			$tipo = $this->get_tipo();
 
@@ -1498,7 +1501,7 @@ class section extends common {
 		// 1. Create new record
 			// Section record
 			// To create the new record in the DDBB
-			$section_record	= section_record::create( $tipo, $values );
+			$section_record	= section_record::create( $tipo, $section_id, $values );
 			if(!$section_record) {
 				debug_log(__METHOD__
 					. " Error to create a new section record " . PHP_EOL
