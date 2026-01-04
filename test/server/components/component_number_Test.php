@@ -6,7 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_number_test extends TestCase {
+final class component_number_test extends BaseTestCase {
 
 
 
@@ -17,30 +17,12 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -78,106 +60,31 @@ final class component_number_test extends TestCase {
 		// null
 			$value = null;
 			$result = $component->is_empty($value);
-			$this->assertTrue(
-				gettype($result)==='boolean',
-				'expected type boolean : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result===true,
-				'expected value : true' . PHP_EOL
-					. to_string($value)
-			);
+			$this->assertIsBool($result);
+			$this->assertTrue($result, 'expected true for null');
 
-		// empty array
-			$value = [];
+		// empty object
+			$value = (object)['value' => null];
 			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===true,
-				'expected value : true' . PHP_EOL
-					. to_string($result)
-			);
+			$this->assertTrue($result, 'expected true for empty object');
 
-		// empty array 2
-			$value = [null];
+		// non empty object
+			$value = (object)['value' => 0];
 			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===true,
-				'expected value : true' . PHP_EOL
-					. to_string($result)
-			);
-
-		// non empty array 3
-			$value = [14,null,89];
-			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===false,
-				'expected value : false' . PHP_EOL
-					. to_string($result)
-			);
-
-		// non empty array 4
-			$value = [0];
-			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===false,
-				'expected value : false' . PHP_EOL
-					. to_string($result)
-			);
-
-		// empty 0
-			$value = 0;
-			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===false,
-				'expected value : false' . PHP_EOL
-					. to_string($result)
-			);
-
-		// non empty 0
-			$value = 0;
-			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===false,
-				'expected value : false' . PHP_EOL
-					. to_string($result)
-			);
-
-		// non empty '0'
-			$value = '0';
-			$result = $component->is_empty($value);
-			$this->assertTrue(
-				$result===false,
-				'expected value : false' . PHP_EOL
-					. to_string($result)
-			);
+			$this->assertFalse($result, 'expected false for 0');
 	}//end test_is_empty
 
 
 
 	/**
-	* TEST_GET_DATO
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$component = $this->build_component_instance();
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
-
-		$result = $component->get_dato();
+		$result = $component->get_data();
 		$this->assertTrue(
 			gettype($result)==='array' || gettype($result)==='NULL',
 			'expected type array or NULL : ' . PHP_EOL
@@ -185,136 +92,71 @@ final class component_number_test extends TestCase {
 		);
 
 		// set empty values
-			$component->set_dato(null);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result===null,
-				'expected value : null' . PHP_EOL
-					. to_string($result)
-			);
+			$component->set_data(null);
+			$result = $component->get_data();
+			$this->assertNull($result);
 
-			$component->set_dato([null]);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result===null,
-				'expected value : null' . PHP_EOL
-					. to_string($result)
-			);
+			$component->set_data([null]);
+			$result = $component->get_data();
+			$this->assertNull($result);
 
-			$component->set_dato([0]);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result[0]===0.0, // float here !
-				'expected first value : 0' . PHP_EOL
-					. to_string($result[0])
-			);
-	}//end test_get_dato
+			$component->set_data([(object)['value' => 0]]);
+			$result = $component->get_data();
+			$this->assertIsArray($result);
+			$this->assertEquals(0.0, $result[0]->value); 
+	}//end test_get_data
 
 
 
 	/**
-	* TEST_SET_DATO
+	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_dato() {
+	public function test_set_data() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$component = $this->build_component_instance();
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
-
-		$result = $component->set_dato([]);
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
-		);
+		$result = $component->set_data([]);
+		$this->assertIsBool($result);
 
 		// float
 			$component->set_properties((object)[
 				'type' => 'float',
 				'precision' => 4
 			]);
-			// $properties	= $component->get_properties();
-			// dump($properties, ' properties->type ++ '.to_string());
 
-		// dato
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result===null,
-				'expected value : null' . PHP_EOL
-					. to_string($result)
-			);
+		// data
+			$result = $component->get_data();
+			$this->assertNull($result);
 
-			$component->set_dato([null]);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result===null,
-				'expected value : null' . PHP_EOL
-					. to_string($result)
-			);
+			$component->set_data([null]);
+			$result = $component->get_data();
+			$this->assertNull($result);
 
-			$component->set_dato([0]);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result[0]===0.0, // float here !
-				'expected value : 0' . PHP_EOL
-					. to_string($result[0])
-			);
+			$component->set_data([(object)['value' => 0]]);
+			$result = $component->get_data();
+			$this->assertEquals(0.0, $result[0]->value);
 
-			$component->set_dato(33);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result[0]===33.0, // double here !
-				'expected value : 33' . PHP_EOL
-					. to_string($result[0])
-			);
-			$this->assertTrue(
-				gettype($result[0])==='double',
-				'expected type double : ' . PHP_EOL
-					. gettype($result[0])
-			);
+			$component->set_data([(object)['value' => 33]]);
+			$result = $component->get_data();
+			$this->assertEquals(33.0, $result[0]->value);
+			$this->assertIsFloat($result[0]->value);
 
 		// int
 			$component->set_properties((object)[
 				'type' => 'int'
 			]);
-			// $properties	= $component->get_properties();
-			// dump($properties, ' properties->type ++ '.to_string());
 
-		// dato
-			$component->set_dato([0]);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result[0]===0, // float here !
-				'expected value : 0' . PHP_EOL
-					. to_string($result[0])
-			);
+		// data
+			$component->set_data([(object)['value' => 0]]);
+			$result = $component->get_data();
+			$this->assertEquals(0, $result[0]->value);
+			$this->assertIsInt($result[0]->value);
 
-			$component->set_dato(33);
-			$result = $component->get_dato();
-			$this->assertTrue(
-				$result[0]===33, // double here !
-				'expected value : 33' . PHP_EOL
-					. to_string($result[0])
-			);
-			$this->assertTrue(
-				gettype($result[0])==='integer',
-				'expected type integer : ' . PHP_EOL
-					. gettype($result[0])
-			);
-	}//end test_set_dato
+			$component->set_data([(object)['value' => 33.7]]);
+			$result = $component->get_data();
+			$this->assertEquals(33, $result[0]->value);
+	}//end test_set_data
 
 
 
@@ -324,21 +166,7 @@ final class component_number_test extends TestCase {
 	*/
 	public function test_set_format_form_type() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		// float
 			$component->set_properties((object)[
@@ -346,74 +174,42 @@ final class component_number_test extends TestCase {
 				'precision' => 4
 			]);
 
-			$dato_value = 0;
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='double' ,
-				'expected type double : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = 0;
+			$result = $component->set_format_form_type( $value );
+			$this->assertIsFloat($result);
 
-			$dato_value = null;
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='NULL' ,
-				'expected type NULL : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = null;
+			$result = $component->set_format_form_type( $value );
+			$this->assertNull($result);
 
-			$dato_value = '';
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='NULL' ,
-				'expected type NULL : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = '';
+			$result = $component->set_format_form_type( $value );
+			$this->assertNull($result);
 
-			$dato_value = 'abc';
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='double' ,
-				'expected type double : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = 'abc';
+			$result = $component->set_format_form_type( $value );
+			$this->assertIsFloat($result);
 
 		// int
 			$component->set_properties((object)[
 				'type' => 'int'
 			]);
 
-			$dato_value = 0;
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='integer' ,
-				'expected type integer : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = 0;
+			$result = $component->set_format_form_type( $value );
+			$this->assertIsInt($result);
 
-			$dato_value = null;
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='NULL' ,
-				'expected type NULL : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = null;
+			$result = $component->set_format_form_type( $value );
+			$this->assertNull($result);
 
-			$dato_value = '';
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='NULL' ,
-				'expected type NULL : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = '';
+			$result = $component->set_format_form_type( $value );
+			$this->assertNull($result);
 
-			$dato_value = 'abc';
-			$result = $component->set_format_form_type( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='integer' ,
-				'expected type integer : ' . PHP_EOL
-					. gettype($result)
-			);
+			$value = 'abc';
+			$result = $component->set_format_form_type( $value );
+			$this->assertIsInt($result);
 	}//end test_set_format_form_type
 
 
@@ -424,21 +220,7 @@ final class component_number_test extends TestCase {
 	*/
 	public function test_number_to_string() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		// float
 			$component->set_properties((object)[
@@ -446,52 +228,28 @@ final class component_number_test extends TestCase {
 				'precision' => 4
 			]);
 
-			$dato_value = 13.8;
-			$result = $component->number_to_string( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='string' ,
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result==='13.8000' ,
-				'expected type 13.8000 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = 13.8;
+			$result = $component->number_to_string( $value );
+			$this->assertIsString($result);
+			$this->assertEquals('13.8000', $result);
 
-			$dato_value = '13,8';
-			$result = $component->number_to_string( $dato_value );
-			$this->assertTrue(
-				$result==='13.8',
-				'expected type 13.8 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13,8';
+			$result = $component->number_to_string( $value );
+			$this->assertEquals('13.8', $result);
 
 		// int
 			$component->set_properties((object)[
 				'type' => 'int'
 			]);
 
-			$dato_value = 13.8;
-			$result = $component->number_to_string( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='string' ,
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result==='13.8' ,
-				'expected type 13.8 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = 13.8;
+			$result = $component->number_to_string( $value );
+			$this->assertIsString($result);
+			$this->assertEquals('13.8', $result);
 
-			$dato_value = '13,8';
-			$result = $component->number_to_string( $dato_value );
-			$this->assertTrue(
-				$result==='13.8',
-				'expected type 13.8 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13,8';
+			$result = $component->number_to_string( $value );
+			$this->assertEquals('13.8', $result);
 	}//end test_number_to_string
 
 
@@ -502,21 +260,7 @@ final class component_number_test extends TestCase {
 	*/
 	public function test_string_to_number() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		// float
 			$component->set_properties((object)[
@@ -524,64 +268,142 @@ final class component_number_test extends TestCase {
 				'precision' => 4
 			]);
 
-			$dato_value = '13.8';
-			$result = $component->string_to_number( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='double' ,
-				'expected type double : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result===13.8 ,
-				'expected type 13.8 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13.8';
+			$result = $component->string_to_number( $value );
+			$this->assertIsFloat($result);
+			$this->assertEquals(13.8, $result);
 
-			$dato_value = '13,8';
-			$result = $component->string_to_number( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='double' ,
-				'expected type double : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result===138.0,
-				'expected type 138.0 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13,8';
+			$result = $component->string_to_number( $value );
+			$this->assertEquals(138.0, $result);
 
 		// int
 			$component->set_properties((object)[
 				'type' => 'int'
 			]);
 
-			$dato_value = '13.8';
-			$result = $component->string_to_number( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='integer' ,
-				'expected type integer : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result===13 ,
-				'expected type 13 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13.8';
+			$result = $component->string_to_number( $value );
+			$this->assertIsInt($result);
+			$this->assertEquals(13, $result);
 
-			$dato_value = '13,8';
-			$result = $component->string_to_number( $dato_value );
-			$this->assertTrue(
-				gettype($result)==='integer' ,
-				'expected type integer : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				$result===138,
-				'expected type 138 : ' . PHP_EOL
-					. to_string($result)
-			);
+			$value = '13,8';
+			$result = $component->string_to_number( $value );
+			$this->assertEquals(138, $result);
 	}//end test_string_to_number
 
 
 
+	/**
+	* TEST_resolve_query_object_sql
+	* @return void
+	*/
+	public function test_resolve_query_object_sql() {
+
+		$query_object = (object)[
+			'q' => ['>= 10'],
+			'path' => [(object)['component_tipo' => 'test211']],
+			'type' => 'number'
+		];
+
+		$result = component_number::resolve_query_object_sql($query_object);
+
+		$this->assertIsObject($result);
+		$this->assertEquals('number', $result->type);
+		$this->assertEquals('@@', $result->operator);
+		$this->assertEquals('\'$[*] >= 10\'', $result->q_parsed);
+	}//end test_resolve_query_object_sql
+
+
+
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertIsArray($result);
+		$this->assertArrayHasKey('>', $result);
+		$this->assertEquals('greater_than', $result['>']);
+	}//end test_search_operators_info
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$options = (object)[
+			'update_version' => [1, 0, 0],
+			'data_unchanged' => '55',
+			'reference_id' => 'ref123'
+		];
+
+		$result = component_number::update_data_version($options);
+
+		$this->assertIsObject($result);
+		// Assuming version 1.0.0 is not handled yet
+		$this->assertEquals(0, $result->result);
+	}//end test_update_data_version
+
+
+
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$component = $this->build_component_instance();
+
+		// Ensure properties are reset to default (float)
+		$component->set_properties((object)[
+			'type' => 'float',
+			'precision' => 2
+		]);
+
+		$import_value = '[10, 20]';
+		$result = $component->conform_import_data($import_value, self::$tipo);
+
+		$this->assertIsObject($result);
+		$this->assertIsArray($result->result);
+		$this->assertEmpty($result->errors);
+		$this->assertEquals(10, $result->result[0]->value);
+
+		$import_value = '55.7';
+		$result = $component->conform_import_data($import_value, self::$tipo);
+		$this->assertEquals(55.7, $result->result[0]->value);
+	}//end test_conform_import_data
+
+
+
+	/**
+	* TEST_DATA_SAMPLES
+	* @return void
+	*/
+	public function test_data_samples() {
+
+		$component = $this->build_component_instance();
+
+		$samples_path = DEDALO_ROOT_PATH . '/core/component_number/samples/data.json';
+		$this->assertFileExists($samples_path);
+
+		$sample_data_raw = file_get_contents($samples_path);
+		$result = $component->conform_import_data($sample_data_raw, self::$tipo);
+
+		$this->assertIsObject($result);
+		$this->assertIsArray($result->result);
+		$this->assertEquals(31416.2, $result->result[0]->value);
+		$this->assertEquals(55, $result->result[1]->value);
+	}//end test_data_samples
+
+
+
 }//end class component_number_test
+
