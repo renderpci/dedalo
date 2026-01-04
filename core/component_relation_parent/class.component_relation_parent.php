@@ -49,13 +49,25 @@ class component_relation_parent extends component_relation_common {
 		// from_component_tipo check
 			if (!isset($locator->from_component_tipo)) {
 				debug_log(__METHOD__
-					.' ERROR. ignored action. Property "from_component_tipo" is mandatory ' . PHP_EOL
+					.' WARNING. forgotten property "from_component_tipo" it is mandatory ' . PHP_EOL
 					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
 					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
 					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
-					, logger::ERROR
+					, logger::WARNING
 				);
-				return false;
+				$locator->from_component_tipo = $this->tipo;
+			}
+
+		// type check
+			if (!isset($locator->type)) {
+				debug_log(__METHOD__
+					.' WARNING. forgotten property "type" it is mandatory ' . PHP_EOL
+					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+					, logger::WARNING
+				);
+				$locator->type = $this->default_relation_type;
 			}
 
 		// Add current locator to component data
