@@ -230,13 +230,14 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* UPDATE_PARENT
-	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data
-	* @param string $action
-	* 	remove|add
-	* @param string $parent_section_tipo
-	* @param int|string $parent_section_id
-	* @param string|null $parent_tipo = null
-	* @return bool $result
+	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data.
+	* This method interacts with the corresponding component_relation_parent to update the relationship.
+	*
+	* @param string $action The action to perform: 'remove' or 'add'.
+	* @param string $parent_section_tipo The section tipo of the parent to update.
+	* @param int|string $parent_section_id The section ID of the parent to update.
+	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation. If null, it is resolved automatically.
+	* @return bool True on success, false on failure.
 	*/
 	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -326,7 +327,7 @@ class component_relation_children extends component_relation_common {
 				}
 
 				// force read the new value on get_data (prevent cache inconsistency)
-				$this->dato_resolved = null;
+				$this->data_resolved = null;
 				$this->get_data();
 			}
 
@@ -386,7 +387,7 @@ class component_relation_children extends component_relation_common {
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
 			// sample:
-			// SELECT ... ,jsonb_path_query_first(datos, \'strict $.components.ontology41.dato."lg-nolan"[0]\', silent => true) as ontology41_order
+			// SELECT ... ,jsonb_path_query_first(datas, \'strict $.ontology41[0].value\', silent => true) as ontology41_order
 			// WHERE ...
 			// ORDER BY ontology41_order ASC NULLS LAST , section_id ASC
 				$section_map = section::get_section_map( $section_tipo );
@@ -398,7 +399,7 @@ class component_relation_children extends component_relation_common {
 							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($order_component_tipo,true) : $order_component_tipo,
 							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
 							'section_tipo'		=> $section_tipo,
-							'column'			=> "jsonb_path_query_first(datos, 'strict $.components.{$order_component_tipo}.dato.\"lg-nolan\"[0]', silent => true)"
+							'column'			=> "jsonb_path_query_first(number, 'strict $.{$order_component_tipo}[0].value', silent => true)"
 						]
 					];
 					$order_obj = (object)[
@@ -422,7 +423,6 @@ class component_relation_children extends component_relation_common {
 				
 				$children[] = $locator;
 			}
-
 
 		return $children;
 	}//end get_children
