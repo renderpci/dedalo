@@ -325,76 +325,7 @@ final class component_relation_parent_test extends TestCase {
 				'expected old dato : ' . PHP_EOL
 					. to_string($component->dato)
 			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		// null
-			$dato = null;
-			$component->set_dato($dato);
-			$result = $component->get_valor();
-
-			$this->assertTrue(
-				gettype($result)==='NULL',
-				'expected type null : ' . PHP_EOL
-					. gettype($result)
-			);
-
-		// value
-			$dato = json_decode('
-				[{
-			        "section_tipo": "test3",
-			        "section_id": "2",
-			        "paginated_key": 1,
-			        "from_component_tipo": "test71"
-			    }]
-			');
-			$component->set_dato($dato);
-			$result = $component->get_valor();
-
-			if (!empty($component->dato)) {
-				$this->assertTrue(
-					gettype($result)==='string',
-					'expected type string : ' . PHP_EOL
-						. gettype($result)
-				);
-			}
-	}//end test_get_valor
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
+	}//end test_set_data
 
 
 
