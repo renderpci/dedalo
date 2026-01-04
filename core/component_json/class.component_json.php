@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_JSON
+* Manages JSON data
 *
 * data_column_name : 'misc'
 */
@@ -23,20 +24,6 @@ class component_json extends component_common {
 
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
-
-
-
-	// /**
-	// * GET_VALOR
-	// * Is equal to dato in this component
-	// * @return array|null $valor
-	// */
-	// public function get_valor() {
-
-	// 	$valor = $this->get_dato();
-
-	// 	return $valor;
-	// }//end get_valor
 
 
 
@@ -65,47 +52,6 @@ class component_json extends component_common {
 
 		return $valid;
 	}//end valid_file_extension
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = null
-	* @param  object|null $option_obj = null
-	* @return string $diffusion_value
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// Default behavior is get value
-		$dato = $this->get_dato();
-
-		$value = is_array($dato)
-			? ($dato[0] ?? null)
-			: null;
-
-		if (is_string($value)) {
-			// do not encode here
-			debug_log(__METHOD__
-				. ' Expected value type is NOT string ' . PHP_EOL
-				. ' type ' . gettype($value) . PHP_EOL
-				. ' value: ' . to_string($value)
-				, logger::WARNING
-			);
-		}else{
-			$value = json_handler::encode($value);
-		}
-
-		// diffusion_value
-		$diffusion_value = !empty($value)
-			? $value
-			: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
 
 
 

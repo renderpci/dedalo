@@ -28,42 +28,38 @@ class component_email extends component_string_common {
 	*/
 	public function set_data( ?array $data ) : bool {
 
+		// Handle null or empty array case
 		if (empty($data)) {
-
-			// null case
-
-			$data = null;
-
-		}else{
-
-			// array case
-
-			$safe_data = [];
-			foreach ($data as $data_item) {
-
-				if( is_object($data_item) ) {
-					$data_item->value = component_email::clean_email($data_item->value);
-				}else{
-					if( empty($data_item) ) {
-						$data_item = null;
-					}else{
-						// wrong data item format
-						debug_log(__METHOD__
-							. " Error. Wrong data item format "
-							. ' data_item:' . to_string($data_item)
-							, logger::ERROR
-						);
-						continue;
-					}
-				}
-				$safe_data[] = $data_item;
-			}
-			// Replace data with safe data
-			$data = $safe_data;
+			return parent::set_data(null);
 		}
 
+		// array case
+		$safe_data = [];
+		foreach ($data as $data_item) {
 
-		return parent::set_data( $data );
+			// 1. Normalize non-objects into objects
+			if (!is_object($data_item)) {
+				if ($data_item === null || $data_item === '') {
+					$data_item = null;
+				} else {
+					$data_item = (object)[
+						'value' => $data_item,
+						'lang'  => DEDALO_DATA_NOLAN
+					];
+				}
+			}
+
+			// 2. Process objects (either newly created or passed in)
+			if (is_object($data_item)) {
+				// Ensure the value property exists or is null
+				$current_val = $data_item->value ?? null;
+				$data_item->value = component_email::clean_email($current_val);
+			}
+
+			$safe_data[] = $data_item;
+		}
+
+		return parent::set_data($safe_data);
 	}//end set_data
 
 
@@ -105,7 +101,7 @@ class component_email extends component_string_common {
 	public static function is_valid_email( string $email ) : bool {
 
 		return filter_var($email, FILTER_VALIDATE_EMAIL)
-        	&& preg_match('/@.+\./', $email);
+			&& preg_match('/@.+\./', $email);
 	}//end is_valid_email
 
 
@@ -175,7 +171,7 @@ class component_email extends component_string_common {
 			$value = trim($import_value);
 
 		// response OK
-			$response->result	= [$value];
+			$response->result	= [(object)['value' => $value]];
 			$response->msg		= 'OK';
 
 
