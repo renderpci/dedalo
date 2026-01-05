@@ -587,24 +587,6 @@ abstract class common {
 
 
 
-	// /**
-	// * SET_DATO
-	// * @param mixed dato
-	// * @return bool true
-	// */
-	// public function set_dato($dato) : bool {
-
-	// 	// set
-	// 	$this->dato = $dato;
-
-	// 	// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
-	// 	$this->set_is_loaded_matrix_data(true);
-
-	// 	return true;
-	// }//end set_dato
-
-
-
 	/**
 	* SET_LANG
 	* When isset lang, valor and dato are cleaned
