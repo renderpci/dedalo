@@ -12,83 +12,32 @@ abstract class component_common extends common {
 	* CLASS VARS
 	* @var
 	*/
-		// string section_id. Component's section section_id
-		// protected $section_id;
-		// string parent. Component's section section_id (alias of $section_id)
-		public $parent;
-		// string section_tipo. Component's section tipo
-		public $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
-		// protected $dato;				// object dato (JSON encoded in db)
-		public $valor;					// string usually dato
+
+
 		public $dataframe;				// object dataframe
-		public $version_date;			// date normally resolved from time machine and assigned to current component
 		public $locator;				// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
-		public $required;				// field is required . Consider using 'Usable in Indexing' (thesaurus) to manage this variable
-		public $debugger;				// info for admin
-		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools
-		public $ar_tools_name = [
-			'tool_time_machine',
-			'tool_lang',
-			'tool_replace_component_data',
-			'tool_add_component_data'
-		];
-		public $ar_tools_obj;
-		public $ar_authorized_tool_name;
-
-		public $exists_dato_in_any_lan = false;
-		public $dato_resolved;
 		public $data_resolved;
-
 		// db_data used to stored previous data before save it, to check if it has Time Machine
 		public $db_data;
-
-		// expected language for this component (used to verify that the structure is well formed)
-		public $expected_lang;
-
 		// parent section obj (optional, useful for component_av...)
 		public $section_obj;
-
-		// referenced section tipo (used by component_autocomplete, component_radio_button.. for set target section_tipo (properties) - additional to referenced component tipo (TR)- )
-		public $referenced_section_tipo;
-
-		public $render_vars;
-
-		// search_input_name. injected for records search
-		public $search_input_name;
-
-		// generate_json component
-		public $generate_json_element = false;
-
 		// diffusion_properties
 		public $diffusion_properties;
-
 		// update_diffusion_info_propagate_changes bool
 		// To optimize save process in scripts of importation, you can disable (false) this option if is not really necessary
 		public $update_diffusion_info_propagate_changes;
-
-		// Component definition. Used in component label
-		public $def;
-
-		// changed_data . Fixed when DD_API save call to component update_data_value()
-		public $changed_data;
-
 		// matrix_id
 		public $matrix_id;
-
 		// bulk_process_id, use to identified the process that change the component and save it into time_machine.
 		// It will use to get all changes done by bulk processes together.
 		// ex: 21 (section_id of the bulk process section)
 		public $bulk_process_id;
-
 		// observable data, used for propagate to other components that are seeing this component changes.
 		public $observable_dato;
-
 		// string from_section_tipo
 		public $from_section_tipo;
 		// string from_component_tipo
 		public $from_component_tipo;
-		// array data_list
-		public $data_list;
 		// object column_obj
 		public $column_obj;
 		// observers_data
@@ -99,10 +48,6 @@ abstract class component_common extends common {
 		public $save_to_database;
 		// array ar_list_of_values
 		public $ar_list_of_values;
-		// bool updating_dato. Used by updater script
-		public $updating_dato;
-		// static array $ar_component_instances
-		public static $ar_component_instances = [];
 		// public bool cache
 		public $cache;
 		// components mono-value (his data is array but only first element is used)
@@ -127,12 +72,10 @@ abstract class component_common extends common {
 		// dataframe ddo
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;
-
 		public $section_record;
 		// string column in Database
 		// Defined in every component
 		public $data_column_name;
-
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation;
 
@@ -382,8 +325,6 @@ abstract class component_common extends common {
 			$this->tipo = $tipo;
 
 		// section_id.
-			// Preserve 'parent' for v5 compatibility in some situations
-			$this->parent		= $section_id;
 			$this->section_id	= $section_id;
 
 		// Column data name
@@ -449,9 +390,6 @@ abstract class component_common extends common {
 					$this->lang = DEDALO_DATA_NOLAN;
 				}
 			}
-
-		// ar_tools_obj reset
-			$this->ar_tools_obj = null;
 
 		// set_data_default
 			if ( $this->mode==='edit' && !is_null($this->section_id) && $this->data_source!=='tm' ) {
@@ -2110,17 +2048,6 @@ abstract class component_common extends common {
 
 		return true;
 	}//end empty_data
-
-
-
-	/**
-	* GET_REQUIRED
-	*/
-	public function get_required() : bool {
-
-		// return ($this->required==='si'); // (!) Not used in structure anymore (usableIndex)
-		return true;
-	}//end get_required
 
 
 
