@@ -103,7 +103,7 @@ widget_common.prototype.build = async function(autoload=false) {
 			if (self.caller==='component_info') {
 
 				const rqo = {
-					action	: 'get_widget_dato',
+					action	: 'get_widget_data',
 					dd_api	: 'dd_component_info',
 					source	: {
 						tipo			: self.caller.tipo,

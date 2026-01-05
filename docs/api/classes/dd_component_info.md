@@ -6,7 +6,7 @@ Overview
 
 How to call
 
-- POST JSON with `dd_api: "dd_component_info"` and `action: "get_widget_dato"`.
+- POST JSON with `dd_api: "dd_component_info"` and `action: "get_widget_data"`.
 
 Common fields
 
@@ -14,7 +14,7 @@ Common fields
 
 Methods
 
-## get_widget_dato
+## get_widget_data
 
 - **Purpose:** Return the current widget data for a component instance.
 - **Accepts:** `source.tipo` (component tipo), `source.section_tipo` (section tipo), `source.section_id` (section id), optional `source.mode` (string, e.g. `"edit"`), and `options.widget_name` (string) to select the widget.
@@ -23,12 +23,12 @@ Methods
 - `msg`: string|array — informational message or array of messages (e.g. error messages).
 - `errors`: array — validation or runtime errors (empty array when none).
 
-### Example Request: get_widget_dato
+### Example Request: get_widget_data
 
 ```json
 {
   "dd_api": "dd_component_info",
-  "action": "get_widget_dato",
+  "action": "get_widget_data",
   "source": {
     "tipo": "oh87",
     "section_tipo": "on1",
@@ -42,7 +42,7 @@ Methods
 
 ```
 
-### Example Response: get_widget_dato
+### Example Response: get_widget_data
 
 ```json
 {

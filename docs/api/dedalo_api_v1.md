@@ -128,7 +128,7 @@ Below is a concise index of the v1 API classes (files in `core/api/v1/common`) w
   - Actions: `move_file_to_dir`, `delete_posterframe`
 
 - `dd_component_info` (component info)
-  - Actions: `get_widget_dato`
+  - Actions: `get_widget_data`
 
 - `dd_area_maintenance_api` (maintenance & admin)
   - Actions: `class_request`, `widget_request`, `get_widget_value`, `lock_components_actions`, `modify_counter`, `get_simple_schema_changes_files`, `parse_simple_schema_changes_files`
@@ -327,7 +327,7 @@ Below is a concise index of the v1 API classes (files in `core/api/v1/common`) w
   - Actions: `move_file_to_dir`, `delete_posterframe`
 
 - `dd_component_info` (component info)
-  - Actions: `get_widget_dato`
+  - Actions: `get_widget_data`
 
 - `dd_area_maintenance_api` (maintenance & admin)
   - Actions: `class_request`, `widget_request`, `get_widget_value`, `lock_components_actions`, `modify_counter`, `get_simple_schema_changes_files`, `parse_simple_schema_changes_files`
