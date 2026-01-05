@@ -244,6 +244,22 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments));
 
+		// Rename the "datos" column to "data" in other tables
+		$columns = [];
+		$comments = [];
+		foreach ($other_tables as $current_table) {
+			$columns [] = '
+				ALTER TABLE "'.$current_table.'"
+					RENAME COLUMN datos TO data;					
+			';
+			$comments[] = "
+				COMMENT ON COLUMN ".$current_table.".data IS 'Table data as a general JSON data';
+			";
+		};
+
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns));
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments));
+
 		// Only checks data without save
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Check all data in PostgreSQL to use v7 new format (ONLY CHECKS DATA WITHOUT SAVE. STOPS THE UPDATE IF FOUND ERRORS)',
@@ -337,4 +353,12 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
+
+		// other kind of tables
+		$other_tables = [
+			'matrix_notifications',
+			'matrix_updates'
+		]; 
+
+		
 
