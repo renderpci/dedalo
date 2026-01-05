@@ -332,7 +332,7 @@ class component_external extends component_common {
 			if(SHOW_DEBUG===true) {
 				if (!is_array($data)) {
 					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->parent]. Received data is NOT array. Type is '".gettype($data)."' and data: '".to_string($data)."' will be converted to array"
+						." Warning. [$this->tipo,$this->section_id]. Received data is NOT array. Type is '".gettype($data)."' and data: '".to_string($data)."' will be converted to array"
 						, logger::DEBUG
 					);
 				}
