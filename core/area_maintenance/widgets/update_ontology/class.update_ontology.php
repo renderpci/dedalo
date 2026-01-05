@@ -279,15 +279,11 @@ class update_ontology {
 			$section_tipo // string section_tipo
 		);
 
-		foreach ($langs as $lang) {
+		$data = $component->get_data();
 
-			$component->set_lang($lang);
-
-			$dato = $component->get_dato();
-
-			$value = is_array($dato)
-				? implode(', ', $dato)
-				: (empty($dato) ? '' : $dato);
+		foreach ($data as $element) {			
+			$lang = $element->lang;
+			$value = $element->value;
 
 			$item->{$lang} = $value;
 		}
