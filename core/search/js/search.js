@@ -678,10 +678,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				// else get the value as search value.
 				const search_value = typeof component_instance.get_search_value === 'function'
 					? component_instance.get_search_value()
-					: component_instance.data.value
+					: (component_instance.data.value ||[]).map(item => item.value)
 
 				// overwrite
-				q			= search_value
+				q			= search_value.length > 0 ? search_value : null
 				q_operator	= component_instance.data.q_operator
 
 				// q_split
