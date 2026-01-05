@@ -5,7 +5,7 @@
 */
 class request_config_presets {
 
-
+	static $active_request_config_cache_file_name = 'cache_active_request_config.php';
 
 	/**
 	* GET_ACTIVE_REQUEST_CONFIG
@@ -24,9 +24,8 @@ class request_config_presets {
 		}
 
 		// cache file read
-		$cache_file_name = 'cache_active_request_config.php';
 		$cache_data	= dd_cache::cache_from_file((object)[
-			'file_name' => $cache_file_name
+			'file_name' => self::$active_request_config_cache_file_name
 		]);
 		if (!empty($cache_data)) {
 
@@ -157,7 +156,7 @@ class request_config_presets {
 
 		// cache file write
 		dd_cache::cache_to_file((object)[
-			'file_name' => $cache_file_name,
+			'file_name' => self::$active_request_config_cache_file_name,
 			'data' => $active_request_config
 		]);
 
@@ -229,8 +228,9 @@ class request_config_presets {
 	*/
 	public static function clean_cache() : bool {
 
-		// $active_request_config_cache
-		// There's nothing to clear. The cache is static and is updated on every thread.
+		dd_cache::delete_cache_files([
+			self::$active_request_config_cache_file_name
+		]);
 
 		return true;
 	}//end clean_cache
