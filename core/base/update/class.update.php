@@ -777,7 +777,7 @@ class update {
 
 						foreach($ar_langs as $current_lang) {
 
-							// component . Update component dato
+							// component . Update component data
 							$component = component_common::get_instance(
 								$model_name,
 								$current_component_tipo,
@@ -787,7 +787,7 @@ class update {
 								$current_section_tipo,
 								false // bool cache (!) Set false always for update to prevent memory issues (is sync with section cache)
 							);
-							$component->get_dato();
+							$component->get_data();
 							$data_unchanged	= $component->get_data_unchanged();
 							$reference_id	= $current_section_tipo.'.'.$section_id.'.'.$current_component_tipo;
 
@@ -809,9 +809,10 @@ class update {
 
 								case 1:
 									// component data is modified. Set and save
-										$component->set_dato($response->new_dato);
+										$component->updating_data = true;
+										$component->set_data($response->new_data);
 										$component->update_diffusion_info_propagate_changes = false;
-										$component->set_dato_resolved($response->new_dato); // Fix as resolved
+										$component->set_data_resolved($response->new_data); // Fix as resolved
 
 									// section set as not save_modified
 										$component_section = $component->get_my_section();
@@ -825,7 +826,7 @@ class update {
 									break;
 
 								case 2:
-									// Current dato don't need update or is already managed by component itself
+									// Current data don't need update or is already managed by component itself
 									break;
 
 								default:
@@ -837,11 +838,11 @@ class update {
 								unset($component);
 
 							#
-							# TIME MACHINE . Update Time_machine component dato
+							# TIME MACHINE . Update Time_machine component data
 							/*
 							$ar_time_machine_obj = tool_time_machine::get_ar_component_time_machine($current_component_tipo, $section_id, $current_lang, $current_section_tipo, 0, 0);
 							foreach ($ar_time_machine_obj  as $current_time_machine_obj) {
-								$data_unchanged = $current_time_machine_obj->get_dato();
+								$data_unchanged = $current_time_machine_obj->get_data();
 
 								# Different options override
 								$update_options->data_unchanged = $data_unchanged;
@@ -850,9 +851,9 @@ class update {
 								$response 		= $model_name::update_data_version($update_options);
 								#debug_log(__METHOD__." UPDATE_DATA_VERSION TIME_MACHINE RESPONSE [$model_name][{$current_section_tipo}-{$section_id}]: result: ".to_string($response->result), logger::DEBUG);
 								if($response->result === 1){
-									$current_time_machine_obj->set_dato($response->new_dato);
+									$current_time_machine_obj->set_data($response->new_data);
 									$current_time_machine_obj->Save();
-									#debug_log(__METHOD__." UPDATED TIME MACHINE dato from component [$model_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
+									#debug_log(__METHOD__." UPDATED TIME MACHINE data from component [$model_name][{$current_section_tipo}-{$current_component_tipo}-{$current_lang}-{$section_id}] ".to_string($tm), logger::DEBUG);
 									$tm++;
 									#$total_update[$current_section_tipo][$current_component_tipo][$current_lang]['tm'] = (int)$tm;
 									#echo $response->msg;
@@ -992,7 +993,7 @@ class update {
 
 		$str_values = json_encode($values);
 
-		$SQL_update = 'INSERT INTO "matrix_updates" ("datos") VALUES (\''.$str_values.'\');';
+		$SQL_update = 'INSERT INTO "matrix_updates" ("data") VALUES (\''.$str_values.'\');';
 
 		self::SQL_update($SQL_update);
 		debug_log(__METHOD__
@@ -1256,26 +1257,26 @@ class update {
 	* @param string $table
 	* @param string|int $section_id
 	* @param string $section_tipo
-	* @param object &$datos
+	* @param object &$data
 	* 	Passed by reference !
 	* @return bool $section_to_save
 	* 	If true, an update of the database will be performed
 	*/
-	public static function check_section_data(string|int $id, string $table, string|int $section_id, string $section_tipo, object &$datos) : bool {
+	public static function check_section_data(string|int $id, string $table, string|int $section_id, string $section_tipo, object &$data) : bool {
 
 		$section_to_save = false;
 
-		if(!isset($datos->section_id)){
-			$datos->section_id = $section_id;
+		if(!isset($data->section_id)){
+			$data->section_id = $section_id;
 			$section_to_save = true;
 		}
 
-		if(!isset($datos->section_tipo)){
-			$datos->section_tipo = $section_tipo;
+		if(!isset($data->section_tipo)){
+			$data->section_tipo = $section_tipo;
 			$section_to_save = true;
 		}
 
-		if(!isset($datos->created_date) || !isset($datos->created_by_userID)) {
+		if(!isset($data->created_date) || !isset($data->created_by_userID)) {
 
 			$tm_strQuery = '
 				SELECT "timestamp", "userID" FROM matrix_time_machine
@@ -1305,25 +1306,25 @@ class update {
 						, logger::WARNING
 					);
 
-					if(!isset($datos->created_date)) {
-						$datos->created_date = $timestamp;
+					if(!isset($data->created_date)) {
+						$data->created_date = $timestamp;
 						$section_to_save = true;
 					}
 
-					if(!isset($datos->created_by_userID)) {
-						$datos->created_by_userID = $userID;
+					if(!isset($data->created_by_userID)) {
+						$data->created_by_userID = $userID;
 						$section_to_save = true;
 					}
 				}//end if ($n_rows>0)
 			}//end if($result!==false)
-		}//end if(!isset($datos->created_date) || !isset($datos->created_by_userID))
+		}//end if(!isset($data->created_date) || !isset($data->created_by_userID))
 
 		// save section if changes are made
 		if($section_to_save === true) {
 
-			$section_data_encoded = json_handler::encode($datos);
+			$section_data_encoded = json_handler::encode($data);
 
-			$strQuery = "UPDATE $table SET datos = $1 WHERE id = $2 ";
+			$strQuery = "UPDATE $table SET data = $1 WHERE id = $2 ";
 
 			// Direct
 			// $result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));

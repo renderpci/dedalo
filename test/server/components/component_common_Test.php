@@ -233,10 +233,10 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_set_dato_resolved
+	* TEST_set_data_resolved
 	* @return void
 	*/
-	public function test_set_dato_resolved() {
+	public function test_set_data_resolved() {
 
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
@@ -259,7 +259,7 @@ final class component_common_test extends BaseTestCase {
 				$dato		= ['fake data'];
 				$expected	= ['fake data'];
 
-				$component->set_dato_resolved($dato);
+				$component->set_data_resolved($dato);
 
 				$result = $component->dato_resolved;
 
@@ -284,7 +284,7 @@ final class component_common_test extends BaseTestCase {
 				'expected running without errors'
 			);
 		}
-	}//end test_set_dato_resolved
+	}//end test_set_data_resolved
 
 
 

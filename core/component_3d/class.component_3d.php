@@ -636,7 +636,7 @@ class component_3d extends component_media_common implements component_media_int
 		);
 		if ($result===true) {
 
-			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// logger activity
 				logger::$obj['activity']->log_message(
 					'DELETE FILE',
 					logger::INFO,
