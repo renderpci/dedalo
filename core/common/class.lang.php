@@ -834,25 +834,4 @@ class lang {
 
 
 
-	/**
-	* BUILD_RESOLVE_QUERY
-	* @return string $strQuery
-	*/
-		// private static function build_resolve_query($lang_tld, $lang) {
-
-		// 	$tipo 	 	 = lang::$tld_tipo;
-		// 	$table 		 = lang::$langs_matrix_table;
-
-		// 	$strQuery  = '';
-		// 	$strQuery .= "SELECT";
-		// 	$strQuery .= "\n id, section_id, section_tipo, datos#>>'{components, $tipo, dato, $lang}' AS name";
-		// 	$strQuery .= "\n FROM \"$table\"";
-		// 	$strQuery .= "\n WHERE";
-		// 	$strQuery .= "\n datos#>>'{components, $tipo, dato, lg-nolan}' = '$lang_tld';";
-
-		// 	return $strQuery;
-		// }//end build_resolve_query
-
-
-
 }//end class lang
