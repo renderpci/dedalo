@@ -45,13 +45,13 @@ class button extends common {
 
 
 	/**
-	* GET DATO
+	* GET DATA
 	* @return null
 	*/
-	public function get_dato() {
+	public function get_data() {
 
 		return null;
-	}//end get_dato
+	}//end get_data
 
 
 
