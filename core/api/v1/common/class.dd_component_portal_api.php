@@ -12,7 +12,7 @@ final class dd_component_portal_api {
 
 	/**
 	* DELETE_LOCATOR
-	* Remove the coincident locators from component dato and save the result
+	* Remove the coincident locators from component data and save the result
 	* This method is used by tool_indexation to remove tags from component_portal related to transcription
 	*
 	* @param object $rqo
@@ -77,10 +77,10 @@ final class dd_component_portal_api {
 				// 	"from_component_tipo": "rsc860"
 				// }
 
-		// original dato. Store to compare later
-			$original_dato = $component->get_dato();
-			if (empty($original_dato)) {
-				$response->msg[] = "No locators are removed ($model_name - $tipo). The component dato is empty";
+		// original data. Store to compare later
+			$original_data = $component->get_data();
+			if (empty($original_data)) {
+				$response->msg[] = "No locators are removed ($model_name - $tipo). The component data is empty";
 				$response->result = 0;
 				return $response;
 			}
@@ -92,8 +92,8 @@ final class dd_component_portal_api {
 			);
 
 			if ($removed===true) {
-				$current_dato = $component->get_dato();
-				$total = count($original_dato) - count($current_dato);
+				$current_data = $component->get_data();
+				$total = count($original_data) - count($current_data);
 				$component->Save();
 				$response->msg[] = "Deleted $total locators ($model_name - $tipo)";
 				// response result

@@ -23,6 +23,8 @@ abstract class common {
 		public $tipo;
 		// string section_tipo. like 'oh1'
 		public $section_tipo;
+		// string section_id. like '1526'
+		public $section_id;
 		// string mode. like 'edit'
 		public $mode;
 		// string model. like 'component_date'
@@ -31,8 +33,8 @@ abstract class common {
 		public $lang;
 		// string label. like 'component_section_id'
 		public $label;
+		// Avoid using this var, v6 access to data, now use $this->get_data() or $this->set_data() always
 		private $data = 'NO USABLE DATA';
-		public $section_id;
 
 		// object ontology_node. Ontology definition object
 		public $ontology_node;
@@ -43,32 +45,14 @@ abstract class common {
 		// bool translatable
 		public $translatable;
 
-		// // section_id. string like '1526'
-		// public $section_id;
-
-		// lang. string like 'lg-eng'
-		// public $lang;
-
 		// permissions. int value from 0 to 3
 		public $permissions;
-
-		// ar_loaded_models_name. List of all components/sections model name used in current page (without duplicates). Used to determine
-		// the css and css files to load
-		static $ar_loaded_models_name = array();
-
-		// identificador_unico. UID used to set DOM elements id unique based on section_tipo, section_id, lang, mode, etc.
-		public $identificador_unico;
-		// variant. Modifier of identificador_unico
-		public $variant;
 
 		// pagination. object used to paginate sections, portals, etc.
 		public $pagination;
 
 		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
 		public $bl_loaded_structure_data;
-
-		// TABLE  matrix_table
-		// public $matrix_table;
 
 		// context. Object with information about context of current element
 		public $context;
@@ -89,9 +73,6 @@ abstract class common {
 
 		// request config with show, select and search of the item
 		public $request_config;
-
-		// request_ddo_value
-		public $request_ddo_value;
 
 		// cache of calculated context, used to get the context that was calculated and reuse it.
 		static $structure_context_cache = [];
@@ -114,10 +95,7 @@ abstract class common {
 		// with_lang_versions
 		public $with_lang_versions;
 
-		// API autocomplete search. bool
-		public $autocomplete;
-
-		// object process data object (messages and process data)
+		// CLI process data object (messages and process data in background processes)
 		// use as { msg: string, property1: mixed, ... }
 		public static $pdata;
 
@@ -132,84 +110,71 @@ abstract class common {
 		// used to identify the caller that made the instance.
 		public $caller;
 
-		// required methods
-			// abstract protected function define_id($id);
-			// abstract protected function define_tipo();
-			// abstract protected function define_lang();
-			// abstract public function get_html();
-
-		// temporal excluded/mapped models
-			// public static $ar_temp_map_models = [
-			// 	// map to => old model
-			// 	'component_portal'	=> 'component_autocomplete_hi',
-			// 	'component_portal'	=> 'component_autocomplete',
-			// 	'section_group'		=> 'section_group_div'
-			// ];
-			public static $ar_temp_map_models = [
-				// map from old model => new model
-				'component_autocomplete_hi'	=> 'component_portal',
-				'component_autocomplete'	=> 'component_portal',
-				'section_group_div'			=> 'section_group',
-				'component_calculation' 	=> 'component_info'
-			];
-			public static $ar_temp_exclude_models = [
-				// v5
-				'component_security_areas',
-				'component_autocomplete_ts', // ?
-				// 'button_trigger',
-				// v6
-				// 'component_autocomplete'
-				// 'component_av'
-				// 'component_calculation',
-				// 'component_check_box'
-				// 'component_date'
-				// 'component_email'
-				// 'component_external',
-				// 'component_filter'
-				// 'component_filter_master'
-				// 'component_filter_records'
-				// 'component_geolocation'
-				'component_html_file',
-				// 'component_html_text',
-				// 'component_image'
-				// 'component_info',
-				// 'component_input_text'
-				'component_input_text_large',
-				//'component_inverse',
-				'component_ip',
-				// 'component_iri'
-				// 'component_json'
-				'component_layout',
-				// 'component_number'
-				// 'component_password',
-				// 'component_pdf'
-				// 'component_portal'
-				// 'component_publication'
-				// 'component_radio_button'
-				// 'component_relation_children',
-				// 'component_relation_index',
-				// 'component_relation_model',
-				// 'component_relation_parent',
-				// 'component_relation_related',
-				'component_relation_struct',
-				'component_score',
-				// 'component_section_id'
-				// 'component_security_access'
-				'component_security_tools',
-				// 'component_select'
-				// 'component_select_lang'
-				'component_state',
-				// 'component_svg'
-				// 'component_text_area'
-			];
-			public static $groupers = [
-				'section_group',
-				'section_group_div',
-				'section_tab',
-				'tab'
-				// 'section_group_relation',
-				// 'section_group_portal'
-			];
+		public static $ar_temp_map_models = [
+			// map from old model => new model
+			'component_autocomplete_hi'	=> 'component_portal',
+			'component_autocomplete'	=> 'component_portal',
+			'section_group_div'			=> 'section_group',
+			'component_calculation' 	=> 'component_info'
+		];
+		public static $ar_temp_exclude_models = [
+			// v5
+			'component_security_areas',
+			'component_autocomplete_ts', // ?
+			// 'button_trigger',
+			// v6
+			// 'component_autocomplete'
+			// 'component_av'
+			// 'component_calculation',
+			// 'component_check_box'
+			// 'component_date'
+			// 'component_email'
+			// 'component_external',
+			// 'component_filter'
+			// 'component_filter_master'
+			// 'component_filter_records'
+			// 'component_geolocation'
+			'component_html_file',
+			// 'component_html_text',
+			// 'component_image'
+			// 'component_info',
+			// 'component_input_text'
+			'component_input_text_large',
+			//'component_inverse',
+			'component_ip',
+			// 'component_iri'
+			// 'component_json'
+			'component_layout',
+			// 'component_number'
+			// 'component_password',
+			// 'component_pdf'
+			// 'component_portal'
+			// 'component_publication'
+			// 'component_radio_button'
+			// 'component_relation_children',
+			// 'component_relation_index',
+			// 'component_relation_model',
+			// 'component_relation_parent',
+			// 'component_relation_related',
+			'component_relation_struct',
+			'component_score',
+			// 'component_section_id'
+			// 'component_security_access'
+			'component_security_tools',
+			// 'component_select'
+			// 'component_select_lang'
+			'component_state',
+			// 'component_svg'
+			// 'component_text_area'
+		];
+		public static $groupers = [
+			'section_group',
+			'section_group_div',
+			'section_tab',
+			'tab'
+			// 'section_group_relation',
+			// 'section_group_portal'
+		];
 
 
 
@@ -371,9 +336,9 @@ abstract class common {
 			$this->ontology_node	= ontology_node::get_instance($this->tipo);
 
 			// fix vars
-				$this->model	= $this->ontology_node->get_model();
+				$this->model		= $this->ontology_node->get_model();
 				$this->order_number	= $this->ontology_node->get_order_number();
-				$this->label	= ontology_node::get_term_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
+				$this->label		= ontology_node::get_term_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
 				$this->translatable	= $this->ontology_node->get_is_translatable();
@@ -622,35 +587,17 @@ abstract class common {
 
 
 
-	// /**
-	// * SET_DATO
-	// * @param mixed dato
-	// * @return bool true
-	// */
-	// public function set_dato($dato) : bool {
-
-	// 	// set
-	// 	$this->dato = $dato;
-
-	// 	// loaded. Fix this element as data loaded to prevent overwrite current fixed dato, with database dato
-	// 	$this->set_is_loaded_matrix_data(true);
-
-	// 	return true;
-	// }//end set_dato
-
-
-
 	/**
 	* SET_LANG
-	* When isset lang, valor and dato are cleaned
+	* When isset lang, valor and data are cleaned
 	* @param string $lang
 	* @return bool
 	*/
 	public function set_lang(string $lang) : bool {
 
 		#if($lang!==DEDALO_DATA_LANG) {
-			# FORCE reload dato from database when dato is requested again
-			$this->set_to_force_reload_dato();
+			# FORCE reload data from database when data is requested again
+			$this->set_to_force_reload_data();
 		#}
 
 		$this->lang = $lang;
@@ -661,36 +608,31 @@ abstract class common {
 
 
 	/**
-	* SET_TO_FORCE_RELOAD_DATO
+	* SET_TO_FORCE_RELOAD_DATA
 	* Clean data caches and set the 'loaded_matrix_data' as false
 	* forcing new get data actions to refresh the data.
 	* It usually called when a set lang is made.
 	* @return void
 	*/
-	public function set_to_force_reload_dato() : void {
+	public function set_to_force_reload_data() : void {
 
-		// unset previous calculated valor
-		if (isset($this->valor)) {
-			unset($this->valor);
-		}
-
-		// unset previous calculated dato_resolved
+		// unset previous calculated data_resolved
 		// (!) Do not apply in time machine mode because the data is injected
 			if ($this->mode !== 'tm') {
-				if (isset($this->dato_resolved)) {
-					unset($this->dato_resolved);
+				if (isset($this->data_resolved)) {
+					unset($this->data_resolved);
 				}
 			}
 
-		// unset previous calculated dato_resolved
+		// unset previous calculated data_resolved
 		// (!) Do not apply in time machine mode because the data is injected
 			if ($this->mode !== 'tm') {
-				if (isset($this->dato_resolved)) {
-					unset($this->dato_resolved);
+				if (isset($this->data_resolved)) {
+					unset($this->data_resolved);
 				}
 			}
 
-	}//end set_to_force_reload_dato
+	}//end set_to_force_reload_data
 
 
 
@@ -713,9 +655,9 @@ abstract class common {
 			return $current_main_lang[$uid];
 		}
 
-		# De momento, el main_lang default para todas las jerarquias será lg-spa porque es nuestra base de trabajo
-		# Dado que cada section id puede tener un main_lang diferente, estudiar este caso..
-		# DEDALO_HIERARCHY_SECTION_TIPO = hierarchy1
+		// For now, the main_lang default for all hierarchies will be lg-spa because it is our base of work
+		// TODO: Study the case where each section id can have a different main_lang
+		// DEDALO_HIERARCHY_SECTION_TIPO = hierarchy1
 		if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 
 			$main_lang = 'lg-spa'; # Default for hierarchy
@@ -1946,12 +1888,6 @@ abstract class common {
 
 									$section->add_section_record( $section_record );
 
-								// datos column already resolved case, inject data in current section
-									// $datos = isset($current_locator->datos) ? json_decode($current_locator->datos) : null;
-									// if (!is_null($datos)) {
-									// 	$section->set_dato($datos);
-									// }
-
 								// set element
 									$related_element = $section;
 								break;
@@ -2013,7 +1949,7 @@ abstract class common {
 										$related_element->set_permissions(1);
 									}
 
-								// component_text_area lang case. Change lang before get dato (!)
+								// component_text_area lang case. Change lang before get data (!)
 									if ($model==='component_text_area') {
 										$original_lang = $related_element->get_original_lang();
 										if (!empty($original_lang) && $original_lang!==$current_lang) {
@@ -2021,9 +1957,9 @@ abstract class common {
 										}
 									}
 
-								// component_info get dato case.
+								// component_info get data case.
 								// get the data from database instead the calculation
-								// do not use the default get_dato() because it's calculated by observer and save in DB
+								// do not use the default get_data() because it's calculated by observer and save in DB
 									if ($model==='component_info') {
 										$related_element->use_db_data = true;
 									}
@@ -2156,7 +2092,7 @@ abstract class common {
 
 							// skip_subdatum subdatum_options
 								$bool_get_data = true;
-								// (!) Commented because currently all portals are direct (included set dato external cases). To be considered for future use
+								// (!) Commented because currently all portals are direct (included set data external cases). To be considered for future use
 								// if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
 								// 	$legacy_model = ontology_node::get_legacy_model_by_tipo($current_tipo);
 								// 	if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
@@ -2254,7 +2190,7 @@ abstract class common {
 	* BUILD_COMPONENT_SUBDATA
 	* @return object $element_json
 	*/
-		// public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_dato='no_value') : object {
+		// public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_data='no_value') : object {
 
 		// 	// components
 		// 		$current_component = component_common::get_instance(
@@ -2292,9 +2228,9 @@ abstract class common {
 		// 			$current_component->from_section_tipo 	= $this->section_tipo;
 		// 		}
 
-		// 	// inject dato if is received
-		// 		if ($custom_dato!=='no_value') {
-		// 			$current_component->set_dato($custom_dato);
+		// 	// inject data if is received
+		// 		if ($custom_data!=='no_value') {
+		// 			$current_component->set_data($custom_data);
 		// 		}
 
 		// 	// get component json
@@ -2310,7 +2246,7 @@ abstract class common {
 		// 		// 	$ar_subdata[] = $dd_info;
 		// 		// }
 
-		// 	// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - dato: ") . to_string($dato));
+		// 	// dump($element_json, ' element_json ++ '.to_string("$model, $tipo, $section_id, $section_tipo, $mode, $lang, $source_model - data: ") . to_string($data));
 
 		// 	return $element_json;
 		// }//end build_component_subdata
@@ -2875,7 +2811,7 @@ abstract class common {
 									$section_tipo,
 									$section_id
 								);
-								// cache. Note that this parse could be different based on ar_fixed[]->source->component_dato using $section_id
+								// cache. Note that this parse could be different based on ar_fixed[]->source->component_data using $section_id
 								// to prevent unwanted cache items, remove save value in cache from here
 								$use_cache = false;
 							}

@@ -51,54 +51,52 @@ abstract class counter {
 	* Create/update a counter for the given tipo in the given table
 	* @param string $tipo Like dd561
 	* @param string $matrix_table Like matrix_counter (default)
-	* @param int $current_value (default false)
-	* @return int $counter_dato_updated
+	* @param int $value (default false)
+	* @return int $counter_data_updated
 	*/
-	public static function update_counter(string $tipo, string $matrix_table='matrix_counter', $current_value=false) : int {
+	public static function update_counter(string $tipo, string $matrix_table='matrix_counter', $value=false) : int {
 
 		// Activity_section don't use counters
 		if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 			return (int)0;
 		}
 
-		// counter_dato_updated
-			if ($current_value===false) {
-				$current_value = (int)counter::get_counter_value($tipo, $matrix_table);
+		// counter_data_updated
+			if ($value===false) {
+				$value = (int)counter::get_counter_value($tipo, $matrix_table);
 			}
-			$counter_dato_updated = intval($current_value)+1;
+			$counter_data_updated = intval($value)+1;
 
 		// short vars
-			$parent = 0;
-			$dato 	= $counter_dato_updated;
+			$value 	= $counter_data_updated;
 			$tipo 	= (string)$tipo;
-			$lang 	= DEDALO_DATA_NOLAN;
 
-		if( intval($current_value)===0 ) {
+		if( intval($value)===0 ) {
 
 			// new counter case
 
 			$ref		= ontology_node::get_term_by_tipo($tipo)." [".ontology_node::get_model_by_tipo($tipo,true)."]";
-			$strQuery	= "INSERT INTO \"$matrix_table\" (parent, dato, tipo, lang, ref) VALUES ($1, $2, $3, $4, $5)";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($parent, $dato, $tipo, $lang, $ref));
+			$strQuery	= "INSERT INTO \"$matrix_table\" (tipo, value, ref) VALUES ($1, $2, $3)";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($tipo, $value, $ref));
 			if ($result===false) {
 				throw new Exception("Error Processing Request. DB error on update counter. Insert into '$matrix_table'", 1);
 			}
-			debug_log(__METHOD__." Created new counter with value: counter_number:'$dato' ($strQuery) ", logger::DEBUG);
+			debug_log(__METHOD__." Created new counter with value: counter_number:'$value' ($strQuery) ", logger::DEBUG);
 
 		}else{
 
 			// update already created counter case
 
 			$strQuery	= 'UPDATE "'.$matrix_table.'" SET value = $1 WHERE tipo = $2';
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($dato, $tipo));
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($value, $tipo));
 			if ($result===false) {
 				throw new Exception("Error Processing Request. DB error on update counter. Update '$matrix_table'", 1);
 			}
-			debug_log(__METHOD__." Updated counter with value: dato:'$dato', tipo:$tipo (".str_replace(array('$1','$2'), array($dato,$tipo), $strQuery).") ", logger::DEBUG);
+			debug_log(__METHOD__." Updated counter with value: counter_number:'$value', tipo:$tipo (".str_replace(array('$1','$2'), array($value,$tipo), $strQuery).") ", logger::DEBUG);
 		}
 
 
-		return (int)$counter_dato_updated;
+		return $value;
 	}//end update_counter
 
 
@@ -155,7 +153,7 @@ abstract class counter {
 			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
 			if(!$result)throw new Exception("Error Processing Request. DB error on update counter value", 1);
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Consolidated counter with value: dato:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Consolidated counter with value: counter_number:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
 			}
 		}
 

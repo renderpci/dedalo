@@ -290,9 +290,9 @@ final class dd_ts_api {
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
-					$component->get_dato();
+					$component->get_data();
 					debug_log(__METHOD__
-						." Saved default dato to 'is_descriptor' " . PHP_EOL
+						." Saved default data to 'is_descriptor' " . PHP_EOL
 						.' component_tipo: ' . $component_tipo . PHP_EOL
 						.' model: ' . $model . PHP_EOL
 						.' section_id: ' . to_string($new_section_id)
@@ -322,9 +322,9 @@ final class dd_ts_api {
 						DEDALO_DATA_NOLAN,
 						$section_tipo
 					);
-					$component->get_dato();
+					$component->get_data();
 					debug_log(__METHOD__
-						." Saved default dato to 'is_indexable' " . PHP_EOL
+						." Saved default data to 'is_indexable' " . PHP_EOL
 						.' component_tipo: ' . $component_tipo . PHP_EOL
 						.' model: ' . $model . PHP_EOL
 						.' section_id: ' . to_string($new_section_id)
@@ -348,7 +348,7 @@ final class dd_ts_api {
 					$section_tipo,
 					false
 				);
-				$source_data = $tld_source_component->get_dato();
+				$source_data = $tld_source_component->get_data();
 
 				$tld_target_component = component_common::get_instance(
 					$model_name,
@@ -359,8 +359,8 @@ final class dd_ts_api {
 					$section_tipo,
 					false
 				);
-				$tld_target_component->set_dato( $source_data );
-				$tld_target_component->Save();
+				$tld_target_component->set_data( $source_data );
+				$tld_target_component->save();
 			}
 
 		// component_relation_parent
@@ -488,7 +488,7 @@ final class dd_ts_api {
 				return $response;
 			}
 			debug_log(__METHOD__
-				. " Removed old locator from dato " . PHP_EOL
+				. " Removed old locator from data " . PHP_EOL
 				. ' locator: ' . to_string($locator)
 				, logger::DEBUG
 			);
@@ -506,7 +506,7 @@ final class dd_ts_api {
 				return $response;
 			}
 			debug_log(__METHOD__
-				. " Added new locator to dato " . PHP_EOL
+				. " Added new locator to data " . PHP_EOL
 				. ' locator: ' . to_string($locator)
 				, logger::DEBUG
 			);
