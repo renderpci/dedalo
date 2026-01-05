@@ -85,55 +85,50 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Render component's content value node
+* @param int i Array key of current value from data
+* @param object data_item
+* @param object self Component instance
 * @return HTMLElement content_value
 */
-const get_content_value = (i, value, self) => {
+const get_content_value = (i, data_item, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value'
-		})
-
-	// get files_info from value
-	const files_info		= value && value.files_info
-		? value.files_info
-		: []
-		
-	// media url from files_info based on selected context quality
-		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
-		const url		= file_info
-			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
-			: page_globals.fallback_image
+		})	
 
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: url,
+			value			: data_item.value || '',
 			parent			: content_value
 		})
-		input.addEventListener('change', fn_change)
-		function fn_change() {
-
+		const change_handler = (e) => {
+			const data_item_to_save = clone(data_item)
+						
 			// parsed_value
-				const parsed_value = (input.value.length>0) ? input.value : null
+			data_item_to_save.value = (input.value.length>0)
+				? input.value
+				: null
 
 			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: i,
-					value	: parsed_value
-				})
+			const changed_data_item = Object.freeze({
+				action	: 'update',
+				key		: i,
+				value	: data_item_to_save
+			})
 
 			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		}//end fn_change
+			self.update_data_value(changed_data_item)
+
+			// publish search. Event to update the DOM elements of the instance
+			event_manager.publish('change_search_element', self)
+		}
+		input.addEventListener('change', change_handler)		
 
 
 	return content_value
