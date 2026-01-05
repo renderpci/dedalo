@@ -589,15 +589,15 @@ abstract class common {
 
 	/**
 	* SET_LANG
-	* When isset lang, valor and dato are cleaned
+	* When isset lang, valor and data are cleaned
 	* @param string $lang
 	* @return bool
 	*/
 	public function set_lang(string $lang) : bool {
 
 		#if($lang!==DEDALO_DATA_LANG) {
-			# FORCE reload dato from database when dato is requested again
-			$this->set_to_force_reload_dato();
+			# FORCE reload data from database when data is requested again
+			$this->set_to_force_reload_data();
 		#}
 
 		$this->lang = $lang;
