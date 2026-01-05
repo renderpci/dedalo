@@ -499,7 +499,7 @@ final class dd_core_api {
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
-									null, // do not use section_id here because force unneeded load dato
+									null, // do not use section_id here because force unneeded load data
 									$mode,
 									$component_lang,
 									$section_tipo
@@ -1001,8 +1001,8 @@ final class dd_core_api {
 	* Saves the given value to the component data into the database.
 	* @see $component_common->update_data_value
 	* save actions:
-	* 	insert		// add given value in dato
-	* 	update		// updates given value selected by key in dato
+	* 	insert		// add given value in data
+	* 	update		// updates given value selected by key in data
 	* 	remove		// removes a item value from the component data array
 	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
@@ -1132,7 +1132,7 @@ final class dd_core_api {
 
 				if ($mode==='search') {
 
-					// force same changed_data (whole dato)
+					// force same changed_data (whole data)
 						$changed_data_item	= $changed_data[0] ?? null;
 						$value				= !empty($changed_data_item) && isset($changed_data_item->value)
 							? $changed_data_item->value
@@ -1143,7 +1143,7 @@ final class dd_core_api {
 
 					// changed_data is array always. Update items
 						foreach ($changed_data as $changed_data_item) {
-							// update the dato with the changed data sent by the client
+							// update the data with the changed data sent by the client
 							$update_result = (bool)$component->update_data_value($changed_data_item);
 							if ($update_result===false) {
 								$response->errors[]	 = 'update_data_value failed';
@@ -1177,7 +1177,7 @@ final class dd_core_api {
 							return $response;
 						}
 
-					// force recalculate dato
+					// force recalculate data
 						$data = $component->get_data();
 
 					// changed_data action: sort_data, add_new_element, insert, remove ..
@@ -1236,8 +1236,8 @@ final class dd_core_api {
 						$component->set_datalist($data->datalist);
 					}
 
-				// force recalculate dato
-					$component->set_dato_resolved(null);
+				// force recalculate data
+					$component->set_data_resolved(null);
 
 				// element JSON
 					$get_json_options = new stdClass();
@@ -1866,9 +1866,9 @@ final class dd_core_api {
 							// time machine matrix_id.
 								// if ($mode==='tm') {
 								if (isset($ddo_source->matrix_id)) {
-									// set matrix_id value to component to allow it search dato in
-									// matrix_time_machine component function 'get_dato' will be
-									// overwritten to get time machine dato instead the real dato
+									// set matrix_id value to component to allow it search data in
+									// matrix_time_machine component function 'get_data' will be
+									// overwritten to get time machine data instead the real data
 									$element->matrix_id = $ddo_source->matrix_id;
 								}
 
@@ -1978,7 +1978,7 @@ final class dd_core_api {
 
 								// inject custom value to the component (usually an array of locators)
 									$value = $rqo->source->value ?? [];
-									$element->set_dato($value);
+									$element->set_data($value);
 
 								// pagination. fix pagination vars (defined in class component_common)
 									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
@@ -2777,8 +2777,8 @@ final class dd_core_api {
 				? $mode
 				: 'edit';
 
-		// dato_activity. Create dato_activity array
-			$dato_activity = [
+		// data_activity. Create data_activity array
+			$data_activity = [
 				'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
 			];
 
@@ -2787,7 +2787,7 @@ final class dd_core_api {
 
 				// area
 				case (strpos($model, 'area')!==false):
-					$dato_activity['tipo'] = $tipo;
+					$data_activity['tipo'] = $tipo;
 					break;
 
 				// section
@@ -2795,12 +2795,12 @@ final class dd_core_api {
 
 					switch ($mode) {
 						case 'edit' :
-							$dato_activity['id']	= $section_id;
-							$dato_activity['tipo']	= $tipo;
+							$data_activity['id']	= $section_id;
+							$data_activity['tipo']	= $tipo;
 							break;
 						case 'list' :
 						default:
-							$dato_activity['tipo'] = $tipo;
+							$data_activity['tipo'] = $tipo;
 							break;
 					}
 					break;
@@ -2816,7 +2816,7 @@ final class dd_core_api {
 				logger::INFO, // int log_level
 				$tipo, // string|null tipo_where
 				null, // string|null operations
-				$dato_activity, // array|null datos
+				$data_activity, // array|null data
 				logged_user_id() // int
 			);
 	}//end log_activity
