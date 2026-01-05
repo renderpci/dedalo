@@ -11,13 +11,13 @@ final class dd_component_info {
 
 
 	/**
-	* GET_WIDGET_DATO
+	* get_widget_data
 	* Get given widget data for current component
 	*
 	* @param object $rqo
 	* 	Sample:
 	* {
-	* 	action	: "get_widget_dato",
+	* 	action	: "get_widget_data",
 	*	dd_api	: 'dd_component_info',
 	*	source	: {
 	*		tipo			: 'oh87',
@@ -31,7 +31,7 @@ final class dd_component_info {
 	* }
 	* @return object $response
 	*/
-	public static function get_widget_dato( object $rqo ) : object {
+	public static function get_widget_data( object $rqo ) : object {
 
 		// source
 			$source			= $rqo->source;
@@ -96,15 +96,15 @@ final class dd_component_info {
 				$widget_options->mode				= $mode;
 
 			$widget = widget_common::get_instance($widget_options);
-			$widget_dato = $widget->get_dato();
+			$widget_data = $widget->get_data();
 
 		// response
-			$response->result	= $widget_dato;
+			$response->result	= $widget_data;
 			$response->msg		= 'OK. Request done successfully';
 
 
 		return $response;
-	}//end get_widget_dato
+	}//end get_widget_data
 
 
 
