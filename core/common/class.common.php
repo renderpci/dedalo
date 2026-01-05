@@ -884,15 +884,17 @@ abstract class common {
 
 
 	/**
-	* GET_AR_ALL_LANGS : Return array of all langs of all projects in Dédalo
+	* GET_AR_ALL_LANGS
+	* Return array of langs of all projects in Dédalo
+	* from the configuration constant DEDALO_PROJECTS_DEFAULT_LANGS.
 	* @return array $ar_all_langs
-	*	like (lg-eng=>locator,lg-spa=>locator) or resolved (lg-eng => English, lg-spa => Spanish)
+	* Like ["lg-eng","lg-spa"]
 	*/
 	public static function get_ar_all_langs() : array {
 
 		$ar_all_langs = DEDALO_PROJECTS_DEFAULT_LANGS;
 
-		return $ar_all_langs;
+		return (array)$ar_all_langs;
 	}//end get_ar_all_langs
 
 
@@ -902,7 +904,7 @@ abstract class common {
 	* @param string $lang
 	*	Default DEDALO_DATA_LANG
 	* @return array $ar_all_langs_resolved
-	* [
+	* Like [
 	*	lg-spa : Spanish,
 	*   lg-eng : English,
 	*   ..

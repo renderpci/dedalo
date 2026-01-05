@@ -91,7 +91,16 @@ async function make_element_test(options) {
 					inner_html		: `${model.toUpperCase()} mode: ${mode}, view: ${view}, permissions: ${new_instance.permissions}`,
 					parent			: container
 				})
-				container.appendChild(new_node)
+				if(mode==='search') {
+					const search_group	= ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'search_group',
+						parent			: container
+					})
+					search_group.appendChild(new_node)
+				}else{
+					container.appendChild(new_node)
+				}
 
 			// asserts
 				// try {
