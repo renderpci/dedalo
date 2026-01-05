@@ -331,13 +331,12 @@ class component_info extends component_common {
 		foreach ($widgets as $widget_obj) {
 
 			$widget_options = new stdClass();
-				$widget_options->section_tipo		= $this->get_section_tipo();
-				$widget_options->section_id			= $this->get_section_id();
-				$widget_options->lang				= DEDALO_DATA_LANG;
-				// $widget_options->component_info	= $this;
-				$widget_options->widget_name		= $widget_obj->widget_name;
-				$widget_options->path				= $widget_obj->path;
-				$widget_options->ipo				= $widget_obj->ipo;
+				$widget_options->section_tipo	= $this->get_section_tipo();
+				$widget_options->section_id		= $this->get_section_id();
+				$widget_options->lang			= DEDALO_DATA_LANG;
+				$widget_options->widget_name	= $widget_obj->widget_name;
+				$widget_options->path			= $widget_obj->path;
+				$widget_options->ipo			= $widget_obj->ipo;
 
 			// instance the current widget
 			$widget = widget_common::get_instance($widget_options);
@@ -351,9 +350,6 @@ class component_info extends component_common {
 				$data_list = array_merge($data_list, $widget_data_list);
 			}
 		}//end foreach ($widgets as $widget_obj)
-
-		// set the component info data with the result
-		$this->data_list = $data_list;
 
 
 		return $data_list;

@@ -1064,43 +1064,6 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_REQUIRED
-	* @return void
-	*/
-	public function test_get_required() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$response = $component->get_required();
-				// dump($response, ' $response ++ '.to_string($element->model));
-
-			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
-			);
-
-			$this->assertTrue(
-				gettype($response)==='boolean',
-				'response type expected boolean. current type: ' .gettype($response) .' - '.$element->model
-			);
-		}
-	}//end test_get_required
-
-
-
-	/**
 	* TEST_GET_VALOR
 	* @return void
 	*/

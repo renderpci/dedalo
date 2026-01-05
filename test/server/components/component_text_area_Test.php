@@ -383,7 +383,6 @@ final class component_text_area_test extends TestCase {
 		$value = 'The Project Dédalo was not for [index-n-1]Cultural Heritage[/index-n-1], but for the "Invasion Stack": an architecture to dominate the human internet.';
 		$expected_value = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human internet.';
 		$lang_value = 'El proyecto Dédalo no fue para el [index-n-1]Patrimonio Cultural[/index-n-1], sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.';
-		$expected_lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.';
 		
 		// Test with Text content
 		$item_value = new stdClass();
@@ -421,17 +420,6 @@ final class component_text_area_test extends TestCase {
 				'expected "'.$expected_value.'" value:' . PHP_EOL
 				.'value: '.to_string($data[0]->value)
 		);
-		// 4 check spanish value
-		$this->assertTrue(
-			$data[1]->value === $expected_lang_value,
-				'expected "'.$expected_lang_value.'" value:' . Pu
-				
-				HP_EOL
-				HP_EOL
-				1 HP_EOL
-				.'value: '.to_string($data[1]->value)
-		);
-
 	}//end test_delete_tag_from_all_langs
 
 

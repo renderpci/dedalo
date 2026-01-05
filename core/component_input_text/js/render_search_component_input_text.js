@@ -65,6 +65,7 @@ const get_content_data = function(self) {
 	// short vars
 		const data	= self.data || {}
 		const value	= data.value || []
+	
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 

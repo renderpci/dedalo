@@ -809,7 +809,6 @@ class update {
 
 								case 1:
 									// component data is modified. Set and save
-										$component->updating_dato = true;
 										$component->set_dato($response->new_dato);
 										$component->update_diffusion_info_propagate_changes = false;
 										$component->set_dato_resolved($response->new_dato); // Fix as resolved

@@ -6,8 +6,7 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_svg_test extends TestCase {
-// final class component_svg_test {
+final class component_svg_test extends BaseTestCase {
 
 
 
@@ -18,30 +17,12 @@ final class component_svg_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+		
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -469,6 +450,167 @@ final class component_svg_test extends TestCase {
 					. $result
 			);
 	}//end test_set_quality
+
+
+
+	/**
+	* TEST_get_normalized_ar_quality
+	* @return void
+	*/
+	public function test_get_normalized_ar_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_normalized_ar_quality();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$default_quality = $component->get_default_quality();
+
+		$this->assertTrue(
+			in_array($default_quality, $result),
+			'expected default quality in normalized array : ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_normalized_ar_quality
+
+
+
+	/**
+	* TEST_get_best_extensions
+	* @return void
+	*/
+	public function test_get_best_extensions() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_best_extensions();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			in_array('svg', $result),
+			'expected svg in best extensions : ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_best_extensions
+
+
+
+	/**
+	* TEST_create_thumb
+	* @return void
+	*/
+	public function test_create_thumb() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->create_thumb();
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_create_thumb
+
+
+
+	/**
+	* TEST_process_uploaded_file
+	* @return void
+	*/
+	public function test_process_uploaded_file() {
+
+		$component = $this->build_component_instance();
+
+		// Test with null file_data
+		$result = $component->process_uploaded_file(null);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response : ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		$this->assertTrue(
+			$result->result===false,
+			'expected false result with null file_data : ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		// Test with valid file_data structure (but non-existent file)
+		$file_data = new stdClass();
+			$file_data->original_file_name = 'test.svg';
+			$file_data->full_file_name = 'test177_test3_1.svg';
+			$file_data->full_file_path = '/non/existent/path/test.svg';
+
+		$result = $component->process_uploaded_file($file_data);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result->result===false,
+			'expected false result with non-existent file : ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_process_uploaded_file
+
+
+
+	/**
+	* TEST_update_data_version
+	* @return void
+	*/
+	public function test_update_data_version() {
+
+		$options = new stdClass();
+			$options->update_version = [7, 0, 0];
+			$options->data_unchanged = null;
+			$options->reference_id = 'test3.1.test177';
+			$options->tipo = 'test177';
+			$options->section_id = '1';
+			$options->section_tipo = 'test3';
+			$options->context = 'update_component_data';
+
+		$result = component_svg::update_data_version($options);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response : ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		$this->assertTrue(
+			isset($result->msg),
+			'expected msg property in response : ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_update_data_version
 
 
 
