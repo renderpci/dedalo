@@ -22,6 +22,8 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	private function build_component_instance() {
 
+		$this->user_login();
+
 		$model			= self::$model;
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
@@ -49,8 +51,6 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	public function test_get_data() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		// 1 - Get data in all langs
@@ -70,8 +70,6 @@ final class component_input_text_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_data_lang() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -140,8 +138,6 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	public function test_set_data() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$old_data = $component->get_data();
@@ -183,8 +179,6 @@ final class component_input_text_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_set_data_lang() {
-
-		$this->user_login();
 
 		$lang = 'lg-eng';
 
@@ -260,8 +254,6 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	public function test_is_empty() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		// 1 - Set null
@@ -310,8 +302,6 @@ final class component_input_text_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_grid_value() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -523,8 +513,6 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	public function test_get_grid_value_empty() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		// Set empty data
@@ -581,8 +569,6 @@ final class component_input_text_test extends BaseTestCase {
 	*/
 	public function test_get_model() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$value = $component->get_model();
@@ -609,8 +595,6 @@ final class component_input_text_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_set_permissions() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -1337,8 +1321,6 @@ final class component_input_text_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_data_lang_with_fallback() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 		$component->set_lang('lg-deu'); // Empty lang
