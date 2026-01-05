@@ -1038,7 +1038,7 @@ class component_av extends component_media_common implements component_media_int
 		);
 		if ($result===true) {
 
-			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// logger activity
 				logger::$obj['activity']->log_message(
 					'DELETE FILE',
 					logger::INFO,
@@ -1190,7 +1190,7 @@ class component_av extends component_media_common implements component_media_int
 					// when the new file is available (background process finish)
 			}
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// logger activity
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
 				logger::INFO,
@@ -1258,7 +1258,7 @@ class component_av extends component_media_common implements component_media_int
 			$response->msg				= 'Rebuilding av file headers in background';
 			$response->command_response	= $command_response;
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// logger activity
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
 				logger::INFO,
