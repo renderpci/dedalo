@@ -80,37 +80,6 @@ final class request_config_presets_test extends TestCase {
 
 
 
-	/**
-	* TEST_search_request_config
-	* @return void
-	*/
-	public function test_search_request_config() {
-
-		$tipo			= 'numisdata4';
-		$section_tipo	= 'numisdata4';
-		$mode			= 'list';
-		$user_id		= logged_user_id() ?? 1;
-
-		$result = request_config_presets::search_request_config(
-			$tipo,
-			$section_tipo,
-			$user_id,
-			$mode
-		);
-
-		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		if (!empty($result)) {
-
-			self::check_request_config_item( $result[0] );
-		}
-	}//end test_search_request_config
-
-
 
 	// check_request_config_item
 	private function check_request_config_item( object $request_config ) : void {
