@@ -33,27 +33,27 @@ class processes {
 			$table	= self::PROCESSES_TABLE;
 
 		// load current db elements
-			$strQuery = 'SELECT datos FROM "'.$table.'" WHERE id = $1';
+			$strQuery = 'SELECT data FROM "'.$table.'" WHERE id = $1';
 			$res = matrix_db_manager::exec_search($strQuery, [$id]);
 			$num_rows	= $res===false ? 0 : pg_num_rows($res);
 
 			// create first row if empty record
 			if ($num_rows<1) {
-				$dato		= '[]';
-				$strQuery	= "INSERT INTO \"$table\" (id, datos) VALUES ($1, $2)";
-				$result = matrix_db_manager::exec_search($strQuery, [$id, $dato]);
+				$data		= '[]';
+				$strQuery	= "INSERT INTO \"$table\" (id, data) VALUES ($1, $2)";
+				$result = matrix_db_manager::exec_search($strQuery, [$id, $data]);
 				if ($result===false) {
 					$response->msg		= 'Error creating new record';
 					$response->errors[]	= 'Create new record fails';
 					return $response;
 				}
 			}else{
-				$dato = pg_fetch_result($res, 0, 0);
+				$data = pg_fetch_result($res, 0, 0);
 			}
-			$dato = json_decode($dato) ?? [];
+			$data = json_decode($data) ?? [];
 
 		// check already exists
-			$found_row = array_find($dato, function($el) use($user_id, $pid){
+			$found_row = array_find($data, function($el) use($user_id, $pid){
 				return $el->pid === $pid && $el->user_id === $user_id;
 			});
 			if (!empty($found_row)) {
@@ -68,11 +68,11 @@ class processes {
 				'pfile'		=> $pfile,
 				'date'		=> dd_date::get_timestamp_now_for_db()
 			];
-			$dato[] = $data_item;
+			$data[] = $data_item;
 
-			$dato_string	= json_encode($dato);		// Convert again to text before save to database
-			$strQuery		= "UPDATE \"".$table."\" SET datos = $1 WHERE id = $2";
-			$result			= pg_query_params(DBi::_getConnection(), $strQuery, [$dato_string, $id]);
+			$data_string	= json_encode($data);		// Convert again to text before save to database
+			$strQuery		= "UPDATE \"".$table."\" SET data = $1 WHERE id = $2";
+			$result			= pg_query_params(DBi::_getConnection(), $strQuery, [$data_string, $id]);
 			if ($result===false) {
 				$response->msg		= 'Error updating process record';
 				$response->errors[]	= 'Update process record fails';
@@ -125,7 +125,7 @@ class processes {
 			}
 
 		// search in DDB
-			$strQuery	= 'SELECT datos FROM "'.$table.'" WHERE id = $1';		
+			$strQuery	= 'SELECT data FROM "'.$table.'" WHERE id = $1';		
 			$res = matrix_db_manager::exec_search($strQuery, [$id]);
 			$num_rows	= $res===false ? 0 : pg_num_rows($res);
 
@@ -238,7 +238,7 @@ class processes {
 			$table	= self::PROCESSES_TABLE;
 
 		// select
-			$strQuery = 'SELECT datos FROM "'.$table.'" WHERE id = $1';
+			$strQuery = 'SELECT data FROM "'.$table.'" WHERE id = $1';
 			$res = matrix_db_manager::exec_search($strQuery, [$id]);
 			$num_rows	= $res===false ? 0 : pg_num_rows($res);
 			if ($num_rows<1) {
@@ -260,9 +260,9 @@ class processes {
 			$new_data[] = $value;
 		}
 
-		$dato_string	= json_encode($new_data); // Convert to text before save to database
-		$strQuery		= "UPDATE \"".$table."\" SET datos = $1 WHERE id = $2";
-		$result			= pg_query_params(DBi::_getConnection(), $strQuery, [$dato_string, $id]);
+		$data_string	= json_encode($new_data); // Convert to text before save to database
+		$strQuery		= "UPDATE \"".$table."\" SET data = $1 WHERE id = $2";
+		$result			= pg_query_params(DBi::_getConnection(), $strQuery, [$data_string, $id]);
 		if ($result===false) {
 			return false;
 		}
