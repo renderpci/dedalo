@@ -69,6 +69,7 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy target section tipo
+			// the name stored into a component_input_text
 				$model			= ontology_node::get_model_by_tipo($hierarchy_target_section_tipo,true);
 				$target_section	= component_common::get_instance(
 					$model,
@@ -78,8 +79,8 @@ class area_graph extends area_common {
 					DEDALO_DATA_NOLAN,
 					$row->section_tipo
 				);
-				$target_section_tipo_dato	= $target_section->get_dato();
-				$target_section_tipo		= $target_section_tipo_dato[0] ?? null;
+				$target_section_tipo_data	= $target_section->get_data();
+				$target_section_tipo		= $target_section_tipo_data[0]->value ?? null;
 				if (empty($target_section_tipo)) {
 					debug_log(__METHOD__
 						." Skipped row $row->section_id with empty target_section_tipo ".$row->section_id
@@ -103,7 +104,7 @@ class area_graph extends area_common {
 					DEDALO_DATA_LANG,
 					$row->section_tipo
 				);
-				$target_section_name = $hierarchy_section_name->get_valor();
+				$target_section_name = $hierarchy_section_name->get_data_lang( DEDALO_DATA_LANG )[0]->value ?? null;
 				if (empty($target_section_name)) {
 					$target_section_name = $this->get_hierarchy_name( $row->section_id );
 				}
@@ -118,8 +119,8 @@ class area_graph extends area_common {
 					DEDALO_DATA_NOLAN,
 					$row->section_tipo
 				);
-				$hierarchy_target_order_dato	= $hierarchy_section_order->get_dato();
-				$hierarchy_target_order_value	= $hierarchy_target_order_dato[0] ?? 0;
+				$hierarchy_target_order_data	= $hierarchy_section_order->get_data();
+				$hierarchy_target_order_value	= $hierarchy_target_order_data[0]->value ?? 0;
 
 			// item
 				$item = new stdClass();
@@ -213,8 +214,8 @@ class area_graph extends area_common {
 			$section_tipo
 		);
 
-		$dato		= $component->get_dato();
-		$locator	= $dato[0] ?? null;
+		$data		= $component->get_data();
+		$locator	= $data;
 
 
 		return $locator;
@@ -283,7 +284,7 @@ class area_graph extends area_common {
 				return $typology_order_values[$typology_section_id];
 			}
 
-		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
+		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER; // component_number
 		$model_name		= ontology_node::get_model_by_tipo($tipo,true);
 		$section_id		= $typology_section_id;
 		$mode			= 'list';
@@ -297,8 +298,8 @@ class area_graph extends area_common {
 			$lang,
 			$section_tipo
 		);
-		$dato			= $component->get_dato();
-		$order_value	= $dato[0] ?? 0;
+		$data			= $component->get_data();
+		$order_value	= $data[0]->value ?? 0;
 
 		// cache
 			$typology_order_values[$typology_section_id] = $order_value;
@@ -361,77 +362,6 @@ class area_graph extends area_common {
 
 
 	/////////////// @ others ///////////////////////////////
-
-
-
-	/**
-	* GET_OPTIONS_FOR_SEARCH_HIERARCHIES
-	* @param string $typology_section_tipo
-	* @param int|string $typology_section_id
-	* @return object $options
-	*/
-	public static function get_options_for_search_hierarchies(string $typology_section_tipo, int|null $typology_section_id) : object {
-
-		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-		$matrix_table	= common::get_matrix_table_from_tipo($section_tipo);
-
-		# LAYOUT_MAP
-		# Build a custom layout map with our needs
-		$layout_map=array();
-		$layout_map[DEDALO_HIERARCHY_SECTION_TIPO] = array(
-			DEDALO_HIERARCHY_TYPOLOGY_TIPO,
-			DEDALO_HIERARCHY_TLD2_TIPO,
-			DEDALO_HIERARCHY_TERM_TIPO,
-			DEDALO_HIERARCHY_TARGET_SECTION_TIPO,
-			DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO
-			);
-
-			# DEDALO_HIERARCHY_CHILDREN_TIPO
-			# DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
-			# DEDALO_HIERARCHY_ORDER_TIPO,
-			# DEDALO_HIERARCHY_ACTIVE_TIPO,
-			# DEDALO_HIERARCHY_LANG_TIPO,
-
-		# FILTER_BY_SEARCH . Uses a search similar as sections do
-		$filter_by_search = new stdClass();
-
-			# Locator 'YES'
-			$locator = new locator();
-				$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-				$locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			$locator_json = json_encode($locator);
-			# Add to filter
-			$filter_by_search->{$section_tipo.'_'.DEDALO_HIERARCHY_ACTIVE_TIPO} = (string)$locator_json;
-
-			# Locator 'filter section'
-			$locator = new locator();
-				$locator->set_section_tipo($typology_section_tipo);
-				$locator->set_section_id($typology_section_id);
-			$locator_json = json_encode($locator);
-			# Add to filter
-			$filter_by_search->{$section_tipo.'_'.DEDALO_HIERARCHY_TYPOLOGY_TIPO} = (string)$locator_json;
-
-		# OPTIONS SEARCH . Prepares options to get search
-		$options = new stdClass();
-			$options->section_tipo					= $section_tipo;
-			$options->section_real_tipo				= $section_tipo;
-			$options->matrix_table					= $matrix_table;
-			$options->layout_map					= $layout_map;
-			$options->layout_map_list				= $options->layout_map;
-			$options->offset_list					= 0;
-			$options->limit							= null; // Not limit amount of results (use null)
-			$options->filter_by_search				= $filter_by_search;
-			#$options->filter_custom				= $filter_custom;
-			$options->mode							= 'list_thesaurus';
-			$options->context						= null;
-			$options->tipo_de_dato					= 'dato';
-			#$options->order_by						= "a.datos#>'{components, ".DEDALO_HIERARCHY_ORDER_TIPO.", dato, lg-nolan}' ASC";
-			$options->order_by						= DEDALO_HIERARCHY_ORDER_TIPO." ASC";
-			$options->search_options_session_key	= 'area_graph';
-
-
-		return $options;
-	}//end get_options_for_search_hierarchies
 
 
 
@@ -626,10 +556,10 @@ class area_graph extends area_common {
 			DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$dato = $component_relation_children->get_dato();
+		$data = $component_relation_children->get_data();
 
 		$ar_siblings = array();
-		foreach ((array)$dato as $s_locator) {
+		foreach ((array)$data as $s_locator) {
 			if ($s_locator->section_id==$section_id && $s_locator->section_tipo===$section_tipo) {
 				# exclude
 			}else{
