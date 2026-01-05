@@ -830,13 +830,13 @@ class area_maintenance extends area_common {
 			$table			= 'matrix_test';
 
 		// test data
-			$datos = file_get_contents( dirname(__FILE__) . '/test_data.json' );
+			$test_data = file_get_contents( dirname(__FILE__) . '/test_data.json' );
 
 		// exec SQL
 			$sql = '
 				TRUNCATE "'.$table.'";
 				ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
-				INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$datos.'\');
+				INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$test_data.'\');
 			';
 			debug_log(__METHOD__
 				." Executing DB query "
