@@ -336,9 +336,9 @@ abstract class common {
 			$this->ontology_node	= ontology_node::get_instance($this->tipo);
 
 			// fix vars
-				$this->model	= $this->ontology_node->get_model();
+				$this->model		= $this->ontology_node->get_model();
 				$this->order_number	= $this->ontology_node->get_order_number();
-				$this->label	= ontology_node::get_term_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
+				$this->label		= ontology_node::get_term_by_tipo($this->tipo,DEDALO_APPLICATION_LANG,true);		#echo 'DEDALO_APPLICATION_LANG: '.DEDALO_APPLICATION_LANG ;#var_dump($this->label);	#die();
 
 			// translatable
 				$this->translatable	= $this->ontology_node->get_is_translatable();
