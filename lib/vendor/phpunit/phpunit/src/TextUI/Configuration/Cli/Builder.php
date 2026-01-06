@@ -35,6 +35,7 @@ final class Builder
      * @var non-empty-list<non-empty-string>
      */
     private const array LONG_OPTIONS = [
+        'all',
         'atleast-version=',
         'bootstrap=',
         'cache-result',
@@ -57,6 +58,7 @@ final class Builder
         'only-summary-for-coverage-text',
         'show-uncovered-for-coverage-text',
         'coverage-xml=',
+        'exclude-source-from-xml-coverage',
         'path-coverage',
         'disallow-test-output',
         'display-all-issues',
@@ -190,6 +192,7 @@ final class Builder
             );
         }
 
+        $all                               = null;
         $atLeastVersion                    = null;
         $backupGlobals                     = null;
         $backupStaticProperties            = null;
@@ -214,6 +217,7 @@ final class Builder
         $coverageTextShowUncoveredFiles    = null;
         $coverageTextShowOnlySummary       = null;
         $coverageXml                       = null;
+        $excludeSourceFromXmlCoverage      = null;
         $pathCoverage                      = null;
         $defaultTimeLimit                  = null;
         $disableCodeCoverageIgnore         = null;
@@ -318,6 +322,11 @@ final class Builder
             $optionAllowedMultipleTimes = false;
 
             switch ($option[0]) {
+                case '--all':
+                    $all = true;
+
+                    break;
+
                 case '--colors':
                     $colors = \PHPUnit\TextUI\Configuration\Configuration::COLOR_AUTO;
 
@@ -418,6 +427,11 @@ final class Builder
 
                 case '--coverage-xml':
                     $coverageXml = $option[1];
+
+                    break;
+
+                case '--exclude-source-from-xml-coverage':
+                    $excludeSourceFromXmlCoverage = true;
 
                     break;
 
@@ -1242,6 +1256,7 @@ final class Builder
 
         return new Configuration(
             $options[1],
+            $all,
             $atLeastVersion,
             $backupGlobals,
             $backupStaticProperties,
@@ -1264,6 +1279,7 @@ final class Builder
             $coverageTextShowUncoveredFiles,
             $coverageTextShowOnlySummary,
             $coverageXml,
+            $excludeSourceFromXmlCoverage,
             $pathCoverage,
             $warmCoverageCache,
             $defaultTimeLimit,
