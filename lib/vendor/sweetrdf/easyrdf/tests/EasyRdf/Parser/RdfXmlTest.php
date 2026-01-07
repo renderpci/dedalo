@@ -238,4 +238,24 @@ class RdfXmlTest extends TestCase
             $this->assertEquals('http://www.example.org/base#foo', $iri);
         }
     }
+
+    /**
+     * Error parsing elements that have both xml:lang and datatype
+     *
+     * @see https://github.com/sweetrdf/easyrdf/issues/76
+     */
+    public function testIssue76()
+    {
+        $this->expectNotToPerformAssertions();
+
+        $filename = 'rdfxml/xmllang-with-datatype.rdf';
+
+        $graph = new Graph();
+        $this->parser->parse(
+            $graph,
+            readFixture($filename),
+            'rdfxml',
+            null
+        );
+    }
 }

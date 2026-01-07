@@ -50,6 +50,7 @@ use function set_error_handler;
 use function set_exception_handler;
 use function sprintf;
 use function str_contains;
+use function str_starts_with;
 use function stream_get_contents;
 use function stream_get_meta_data;
 use function tmpfile;
@@ -75,6 +76,7 @@ use PHPUnit\Framework\MockObject\Rule\InvokedCount;
 use PHPUnit\Framework\MockObject\Rule\InvokedCount as InvokedCountMatcher;
 use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\MockObject\Stub\Exception as ExceptionStub;
+use PHPUnit\Framework\MockObject\TestStubBuilder;
 use PHPUnit\Framework\TestSize\TestSize;
 use PHPUnit\Framework\TestStatus\TestStatus;
 use PHPUnit\Metadata\Api\Groups;
@@ -179,7 +181,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     private array $dependencyInput = [];
 
     /**
-     * @var list<MockObjectInternal>
+     * @var list<array{type: non-empty-string, mockObject: MockObjectInternal}>
      */
     private array $mockObjects = [];
     private TestStatus $status;
@@ -810,13 +812,20 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     }
 
     /**
+     * @template RealInstanceType of object
+     *
+     * @param class-string<RealInstanceType> $type
+     *
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
-    final public function registerMockObject(MockObject $mockObject): void
+    final public function registerMockObject(string $type, MockObject $mockObject): void
     {
         assert($mockObject instanceof MockObjectInternal);
 
-        $this->mockObjects[] = $mockObject;
+        $this->mockObjects[] = [
+            'type'       => $type,
+            'mockObject' => $mockObject,
+        ];
     }
 
     /**
@@ -1083,7 +1092,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      * Information for expected exception class, expected exception message, and
      * expected exception code are retrieved from a given Exception object.
      */
-    final protected function expectExceptionObject(\Exception $exception): void
+    final protected function expectExceptionObject(Throwable $exception): void
     {
         $this->expectException($exception::class);
         $this->expectExceptionMessage($exception->getMessage());
@@ -1168,7 +1177,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
         assert($mock instanceof $type);
         assert($mock instanceof MockObject);
 
-        $this->registerMockObject($mock);
+        $this->registerMockObject($type, $mock);
 
         Event\Facade::emitter()->testCreatedMockObject($type);
 
@@ -1190,7 +1199,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
         assert($mock instanceof MockObject);
 
-        $this->registerMockObject($mock);
+        $this->registerMockObject(implode('|', $interfaces), $mock);
 
         Event\Facade::emitter()->testCreatedMockObjectForIntersectionOfInterfaces($interfaces);
 
@@ -1389,13 +1398,30 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      */
     private function verifyMockObjects(): void
     {
+        $allowsMockObjectsWithoutExpectations = $this->allowsMockObjectsWithoutExpectations();
+        $isPhpunitTestSuite                   = str_starts_with($this::class, 'PHPUnit\\');
+
         foreach ($this->mockObjects as $mockObject) {
-            if ($mockObject->__phpunit_hasMatchers()) {
-                $this->numberOfAssertionsPerformed++;
+            if (!$mockObject['mockObject']->__phpunit_hasMatchers()) {
+                if (!$allowsMockObjectsWithoutExpectations && !$isPhpunitTestSuite) {
+                    Event\Facade::emitter()->testTriggeredPhpunitNotice(
+                        $this->testValueObjectForEvents,
+                        sprintf(
+                            'No expectations were configured for the mock object for %s. ' .
+                            'Consider refactoring your test code to use a test stub instead. ' .
+                            'The #[AllowMockObjectsWithoutExpectations] attribute can be used to opt out of this check.',
+                            $mockObject['type'],
+                        ),
+                    );
+                }
+
+                continue;
             }
 
-            $mockObject->__phpunit_verify(
-                $this->shouldInvocationMockerBeReset($mockObject),
+            $this->numberOfAssertionsPerformed++;
+
+            $mockObject['mockObject']->__phpunit_verify(
+                $this->shouldInvocationMockerBeReset($mockObject['mockObject']),
             );
         }
     }
@@ -2426,6 +2452,25 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
         ini_set('error_log', $this->previousErrorLogTarget);
 
         $this->previousErrorLogTarget = false;
+    }
+
+    private function allowsMockObjectsWithoutExpectations(): bool
+    {
+        return MetadataRegistry::parser()->forClassAndMethod(static::class, $this->methodName)->isAllowMockObjectsWithoutExpectations()->isNotEmpty();
+    }
+
+    /**
+     * Returns a builder object to create test stubs using a fluent interface.
+     *
+     * @template RealInstanceType of object
+     *
+     * @param class-string<RealInstanceType> $className
+     *
+     * @return TestStubBuilder<RealInstanceType>
+     */
+    final protected static function getStubBuilder(string $className): TestStubBuilder
+    {
+        return new TestStubBuilder($className);
     }
 
     /**

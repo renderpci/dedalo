@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -55,8 +53,6 @@ final class component_filter_records_test extends BaseTestCase {
 	*/
 	public function test_get_data() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result	= $component->get_data();
@@ -75,8 +71,6 @@ final class component_filter_records_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_set_data() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -115,8 +109,6 @@ final class component_filter_records_test extends BaseTestCase {
 	*/
 	public function test_get_datalist() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result = $component->get_datalist();
@@ -146,8 +138,6 @@ final class component_filter_records_test extends BaseTestCase {
 	*/
 	public function test_get_grid_value() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result = $component->get_grid_value();
@@ -165,8 +155,6 @@ final class component_filter_records_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_list_value() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -205,8 +193,6 @@ final class component_filter_records_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_save() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
