@@ -69,10 +69,10 @@
 class get_coins_by_period extends widget_common {
 
 	/**
-	* get_dato
+	* GET_DATA
 	* @return
 	*/
-	public function get_dato() {
+	public function get_data() {
 
 		// check the time of the current processes
 		// $time = 0;
@@ -130,7 +130,7 @@ class get_coins_by_period extends widget_common {
 					continue;
 				}
 				$component_tipo_duplicated	= $component_duplicated->component_tipo;
-				$duplicated_modelo_name		= ontology_node::get_model_by_tipo($component_tipo_duplicated,true); // Expected portal
+				$duplicated_model_name		= ontology_node::get_model_by_tipo($component_tipo_duplicated,true); // Expected portal
 
 
 			// Resolve thesaurus
@@ -219,9 +219,9 @@ class get_coins_by_period extends widget_common {
 					$source_section_tipo
 				);
 				// all related objects (coins) to this.
-				$component_dato = $component_portal->get_dato();
+				$component_data = $component_portal->get_data();
 
-				if (empty($component_dato)) {
+				if (empty($component_data)) {
 					return [];
 				}
 
@@ -229,7 +229,7 @@ class get_coins_by_period extends widget_common {
 				// it will be used to search all sections with this section_id
 				$ar_target_section_id = array_map( function ($item){
 					return $item->section_id;
-				}, $component_dato);
+				}, $component_data);
 
 
 				$target_component_section_id = array_reduce($input, function ($carry, $item){
@@ -275,7 +275,7 @@ class get_coins_by_period extends widget_common {
 				foreach ($db_result as $row) {
 
 					$duplicated_value = $row->relation->$component_tipo_duplicated ?? [];
-					$duplicated_dato = $duplicated_value[0] ?? null;					
+					$duplicated_data = $duplicated_value[0] ?? null;					
 					// sample of duplicated dato: object|null
 						// {
 						//     "type": "dd151",
@@ -283,15 +283,15 @@ class get_coins_by_period extends widget_common {
 						//     "section_tipo": "numisdata341",
 						//     "from_component_tipo": "numisdata157"
 						// }
-					if ( is_object($duplicated_dato) && $duplicated_dato->section_id=='2' ) {
+					if ( is_object($duplicated_data) && $duplicated_data->section_id=='2' ) {
 						continue;
 					}
 
-					$period_dato = $row->relation->$component_tipo_period ?? null;
-					if(empty($period_dato)){
+					$period_data = $row->relation->$component_tipo_period ?? null;
+					if(empty($period_data)){
 						$empty_period_count++;
 					}else{
-						foreach ($period_dato as $current_period) {
+						foreach ($period_data as $current_period) {
 
 							$ts_term = array_find($ar_hierarchies, function($el) use($current_period){
 								return $el->section_tipo === $current_period->section_tipo
@@ -351,10 +351,10 @@ class get_coins_by_period extends widget_common {
 			foreach ($output as $data_map) {
 				$current_id = $data_map->id;
 				$current_data = new stdClass();
-					$current_data->widget 	= get_class($this);
-					$current_data->key  	= $key;
-					$current_data->id 		= $current_id;
-					$current_data->value 	= $$current_id ?? null;
+					$current_data->widget 		= get_class($this);
+					$current_data->key  		= $key;
+					$current_data->widget_id 	= $current_id;
+					$current_data->value 		= $$current_id ?? null;
 				$data[] = $current_data;
 			}
 		}//foreach ipo
