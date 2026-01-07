@@ -3,7 +3,7 @@
 
     Dédalo : Intangible Cultural Heritage Management Platform
 
-	Copyright (C) 2022  Authors: Juan Francisco Onielfa, Alejandro Peña
+    Authors: Juan Francisco Onielfa, Alejandro Peña
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as
