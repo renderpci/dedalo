@@ -9,10 +9,10 @@
 class get_archive_weights extends widget_common {
 
 	/**
-	* get_dato
+	* GET_DATA
 	* @return
 	*/
-	public function get_dato() {
+	public function get_data() {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
@@ -124,9 +124,9 @@ class get_archive_weights extends widget_common {
 						$section_tipo
 					);
 
-					$used_dato = $used->get_dato();
+					$used_data = $used->get_data();
 
-					if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
+					if (empty($used_data) || $used_data[0]->section_id==='2') continue;
 
 
 					$duplicated_modelo_name	= ontology_node::get_model_by_tipo($component_tipo_duplicated,true); // Expected portal
@@ -139,9 +139,9 @@ class get_archive_weights extends widget_common {
 						$section_tipo
 					);
 
-					$duplicated_dato = $duplicated->get_dato();
+					$duplicated_data = $duplicated->get_data();
 
-					if (!empty($duplicated_dato) && $duplicated_dato[0]->section_id==='2') continue;
+					if (!empty($duplicated_data) && $duplicated_data[0]->section_id==='2') continue;
 
 
 					//weights
@@ -155,10 +155,10 @@ class get_archive_weights extends widget_common {
 						$section_tipo
 					);
 
-					$data_weights_dato 	= $data_weights->get_dato();
+					$data_weights_data 	= $data_weights->get_data();
 
-					if(!empty($data_weights_dato)){
-						$weights[] = array_sum($data_weights_dato) / count($data_weights_dato);
+					if(!empty($data_weights_data)){
+						$weights[] = array_sum($data_weights_data) / count($data_weights_data);
 					}
 
 					//diameter
@@ -172,10 +172,10 @@ class get_archive_weights extends widget_common {
 						$section_tipo
 					);
 
-					$data_diameter_dato = $data_diameter->get_dato();
+					$data_diameter_data = $data_diameter->get_data();
 
-					if(!empty($data_diameter_dato)){
-						$diameter[] = array_sum($data_diameter_dato) / count($data_diameter_dato);
+					if(!empty($data_diameter_data)){
+						$diameter[] = array_sum($data_diameter_data) / count($data_diameter_data);
 					}
 				}
 
@@ -200,11 +200,11 @@ class get_archive_weights extends widget_common {
 				foreach ($output as $data_map) {
 					$current_id = $data_map->id;
 					$current_data = new stdClass();
-						$current_data->widget 	= get_class($this);
-						$current_data->key  	= $key;
-						$current_data->id 		= $current_id;
-						$current_data->value 	= $$current_id ?? null;
-					$dato[] = $current_data;
+						$current_data->widget 		= get_class($this);
+						$current_data->key  		= $key;
+						$current_data->widget_id	= $current_id;
+						$current_data->value 		= $$current_id ?? null;
+					$data[] = $current_data;
 				}
 
 			// $dato = new stdClass();
@@ -218,7 +218,7 @@ class get_archive_weights extends widget_common {
 			// 	$dato->total_elements_diameter 	= $total_elements_diameter 	?? null;
 		}//foreach ipo
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 }//end get_archive_weights
