@@ -124,7 +124,7 @@ class state extends widget_common {
 							$current_result->value		= 0;
 							$current_result->locator	= null;
 							$current_result->lang		= $translatable === true ? null : 'lg-nolan';
-							$current_result->id			= $last_path->var_name;
+							$current_result->widget_id	= $last_path->var_name;
 							$current_result->column		= ($section==='dd501') ? 'state' :'situation';
 							$current_result->type		= 'detail';
 							$current_result->n			= $translatable===true ? count($project_langs) : 1;
@@ -140,7 +140,7 @@ class state extends widget_common {
 							case 'dd174':
 								$situation_value = $this->get_value($locator,'dd92');
 
-								$current_result->id			= $last_path->var_name;
+								$current_result->widget_id	= $last_path->var_name;
 								$current_result->lang		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
 								$current_result->value		= $situation_value;
 								$current_result->locator	= $locator;
@@ -154,7 +154,7 @@ class state extends widget_common {
 							case 'dd501':
 								$state_value = $this->get_value($locator,'dd83');
 
-								$current_result->id			= $last_path->var_name;
+								$current_result->widget_id	= $last_path->var_name;
 								$current_result->lang		= isset($locator->lang) ? $locator->lang : 'lg-nolan';
 								$current_result->value		= $state_value;
 								$current_result->locator	= $locator;
@@ -175,22 +175,22 @@ class state extends widget_common {
 					$ar_sum = [];
 					// get the current row id and the items into the $result
 					$current_id = $data_map->id;
-					$found = array_values( array_filter($result,function($item) use($current_id){
-						return $item->id===$current_id;
+					$found = array_values( array_filter($result, function($item) use($current_id){
+						return $item->widget_id===$current_id;
 					}));
 
 					// create the final item for every column to set the final data.
 					foreach ($found as $item) {
 
 						$current_data = new stdClass();
-							$current_data->widget	= get_class($this);
-							$current_data->key		= $key;
-							$current_data->id		= $item->id;
-							$current_data->lang		= $item->lang;
-							$current_data->value	= $item->value;
-							$current_data->locator	= $item->locator;
-							$current_data->column	= $item->column;
-							$current_data->type		= $item->type;
+							$current_data->widget	 = get_class($this);
+							$current_data->key		 = $key;
+							$current_data->widget_id = $item->id;
+							$current_data->lang		 = $item->lang;
+							$current_data->value	 = $item->value;
+							$current_data->locator	 = $item->locator;
+							$current_data->column	 = $item->column;
+							$current_data->type		 = $item->type;
 
 						// sum for totals of every column and row
 						// n: total languages, used for get the % done
@@ -212,13 +212,13 @@ class state extends widget_common {
 						$total = round(($value->total / $value->n)/$items, 2);
 						// create the total item
 						$total_result = new stdClass();
-							$total_result->widget	= get_class($this);
-							$total_result->key		= $key;
-							$total_result->id		= $value->id;
-							$total_result->lang		= 'lg-nolan';
-							$total_result->value	= $total;
-							$total_result->column	= $column;
-							$total_result->type		= 'total';
+							$total_result->widget		= get_class($this);
+							$total_result->key			= $key;
+							$total_result->widget_id	= $value->id;
+							$total_result->lang			= 'lg-nolan';
+							$total_result->value		= $total;
+							$total_result->column		= $column;
+							$total_result->type			= 'total';
 						$data[] = $total_result;
 					}
 				}
