@@ -841,7 +841,18 @@ class section_record {
 	*/
 	public function update_modified_section_data(object $options) : bool {
 
+		// Skip for activity sections
 		if ($this->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			return false;
+		}
+
+		// Check user logged
+		$user_id = logged_user_id();
+		if( empty($user_id) ) {
+			debug_log(__METHOD__
+				. " ERROR: logged_user_id() is empty. Cannot set created/modified user locator. Aborting update_modified_section_data."
+				, logger::ERROR
+			);
 			return false;
 		}
 
@@ -850,15 +861,14 @@ class section_record {
 
 		// Fixed private tipos
 			$metadata_definition = section::get_metadata_definition();
-				$created_by_user	= $metadata_definition->created_by_user; 	// array('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= $metadata_definition->created_date; 		// array('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= $metadata_definition->modified_by_user; 	// array('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= $metadata_definition->modified_date; 		// array('tipo'=>'dd201', 'model'=>'component_date');
+				$created_by_user	= $metadata_definition->created_by_user; 	// 'tipo'=>'dd200', 'model'=>'component_select'
+				$created_date		= $metadata_definition->created_date; 		// 'tipo'=>'dd199', 'model'=>'component_date'
+				$modified_by_user	= $metadata_definition->modified_by_user; 	// 'tipo'=>'dd197', 'model'=>'component_select'
+				$modified_date		= $metadata_definition->modified_date; 		// 'tipo'=>'dd201', 'model'=>'component_date'
 
-		// Current user locator
-			$user_id		= logged_user_id();
-			$user_locator	= new locator();
-				$user_locator->id = 1; //fixed id
+		// Current user locator			
+			$user_locator = new locator();
+				$user_locator->set_id(1); // fixed id
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
 				$user_locator->set_section_id($user_id); // logged user
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);

@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_select_test extends TestCase {
+final class component_select_test extends BaseTestCase {
 
 
 
@@ -17,30 +15,12 @@ final class component_select_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -183,16 +163,30 @@ final class component_select_test extends TestCase {
 			$data->set_section_id("1");
 			$data->set_id(1);
 
-			// set data
-			$component->set_data([$data]);
-			$result = $component->save();
-			// check result
-			$check_data = $component->get_data();
-			$this->assertTrue(
-				$check_data===[$data],
-				'expected [object] : ' . PHP_EOL
-					. to_string($check_data)
-			);
+		// set data
+		$component->set_data([$data]);
+		$result = $component->save();
+		
+		// check result
+		$check_data = $component->get_data();
+		$this->assertTrue(
+			$check_data[0]->section_tipo === $data->section_tipo,
+			'expected [section_tipo] : ' . PHP_EOL
+				.'check_data: ' . to_string($check_data) . PHP_EOL
+				.'data: ' . to_string([$data])
+		);
+		$this->assertTrue(
+			$check_data[0]->section_id === $data->section_id,
+			'expected [section_id] : ' . PHP_EOL
+				.'check_data: ' . to_string($check_data) . PHP_EOL
+				.'data: ' . to_string([$data])
+		);
+		$this->assertTrue(
+			$check_data[0]->id === $data->id,
+			'expected [id] : ' . PHP_EOL
+				.'check_data: ' . to_string($check_data) . PHP_EOL
+				.'data: ' . to_string([$data])
+		);
 	}//end test_save
 
 

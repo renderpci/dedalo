@@ -1,15 +1,19 @@
 <?php declare(strict_types=1);
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
+
+
 
 final class component_pdf_test extends BaseTestCase {
 
+
+	
 	public static $model		= 'component_pdf';
 	public static $tipo			= 'test85';
 	public static $section_id	= 1;
 	public static $section_tipo	= 'test3';
+
+
 
 	/**
 	* BUILD_COMPONENT_INSTANCE
