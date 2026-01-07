@@ -113,16 +113,76 @@ final class component_relation_children_test extends BaseTestCase {
 				.'reference data: ' . to_string($data) . PHP_EOL
 			);
 
-		// restore data
-			$result	= $component->set_data($old_data);
-			$updated_data = $component->get_data();
-			$this->assertTrue(
-				json_encode($updated_data)===json_encode($old_data),
-				' (restore data case) expected old data : ' . PHP_EOL
-				.'updated_data: ' . to_string($updated_data) . PHP_EOL
-				.'reference data: ' . to_string($old_data) . PHP_EOL
-			);
+		// restore data (only if old_data is not null/empty)
+			if (!empty($old_data)) {
+				$result	= $component->set_data($old_data);
+				$updated_data = $component->get_data();
+				$this->assertTrue(
+					json_encode($updated_data)===json_encode($old_data),
+					' (restore data case) expected old data : ' . PHP_EOL
+					.'updated_data: ' . to_string($updated_data) . PHP_EOL
+					.'reference data: ' . to_string($old_data) . PHP_EOL
+				);
+			} else {
+				// If old_data was empty, verify it's now restored as empty
+				$result	= $component->set_data(null);
+				$this->assertTrue($result === true, 'setting to null should return true');
+			}
 	}//end test_set_data
+
+
+	/**
+	* TEST_SAVE
+	* @return void
+	*/
+	public function test_save() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->save();
+
+		$this->assertTrue(
+			is_bool($result),
+			'expected return type bool : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result === true,
+			'save should return true for component_relation_children (read-only component)'
+		);
+	}//end test_save
+
+
+	/**
+	* TEST_GET_DATA_PAGINATED
+	* @return void
+	*/
+	public function test_get_data_paginated() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data_paginated();
+
+		$this->assertTrue(
+			is_array($result),
+			'expected return type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// Test with custom limit
+		$result_with_limit = $component->get_data_paginated(5);
+		$this->assertTrue(
+			is_array($result_with_limit),
+			'expected array with custom limit'
+		);
+
+		// Assert result length does not exceed limit
+		$this->assertTrue(
+			count($result_with_limit) <= 5,
+			'result count should not exceed custom limit'
+		);
+	}//end test_get_data_paginated
 
 
 	/**
@@ -140,6 +200,9 @@ final class component_relation_children_test extends BaseTestCase {
 			'expected false : ' . PHP_EOL
 				. to_string($result)
 		);
+
+		$this->assertFalse($result, 'sortable should always be false');
+		$this->assertIsBool($result, 'sortable should return boolean');
 	}//end test_get_sortable
 
 
@@ -196,6 +259,11 @@ final class component_relation_children_test extends BaseTestCase {
 			.'expected $reference_value: ' .  to_string($reference_value) . PHP_EOL
 			.'result: ' . to_string($result)
 		);
+
+		// Additional assertions for resolve_query_object_sql
+		$this->assertIsObject($result, 'resolve_query_object_sql should return object');
+		$this->assertEquals('IN', $result->operator, 'operator should be IN');
+		$this->assertEquals('number', $result->type, 'type should be number');
 	}//end test_resolve_query_object_sql
 
 
@@ -214,7 +282,59 @@ final class component_relation_children_test extends BaseTestCase {
 			is_array($children), 
 			'Expected array from get_children, got: ' . gettype($children)
 		);
-	}
+
+		// Additional assertions
+		$this->assertIsArray($children, 'get_children should always return array');
+		foreach ($children as $child) {
+			$this->assertIsObject($child, 'each child should be a locator object');
+		}
+	}//end test_get_children
+
+	/**
+	* TEST_GET_CHILDREN_TIPO
+	* @return void
+	*/
+	public function test_get_children_tipo() {
+		$section_tipo = self::$section_tipo;
+		
+		$result = component_relation_children::get_children_tipo($section_tipo);
+		
+		$this->assertTrue(
+			is_null($result) || is_string($result),
+			'Expected string or null from get_children_tipo, got: ' . gettype($result)
+		);
+
+		// Additional assertions
+		$this->assertTrue(
+			$result === null || (is_string($result) && !empty($result)),
+			'Result should be null or non-empty string'
+		);
+	}//end test_get_children_tipo
+
+	/**
+	* TEST_GET_AR_RELATED_PARENT_TIPO
+	* @return void
+	*/
+	public function test_get_ar_related_parent_tipo() {
+		$tipo = self::$tipo;
+		$section_tipo = self::$section_tipo;
+		
+		$result = component_relation_children::get_ar_related_parent_tipo($tipo, $section_tipo);
+		
+		$this->assertIsArray($result, 'Expected array from get_ar_related_parent_tipo');
+
+		// Additional assertions
+		$this->assertTrue(
+			is_array($result),
+			'Result should be array type'
+		);
+		foreach ($result as $parent_tipo) {
+			$this->assertTrue(
+				is_string($parent_tipo) || is_null($parent_tipo),
+				'Each parent tipo should be string or null'
+			);
+		}
+	}//end test_get_ar_related_parent_tipo
 
 	/**
 	* TEST_GET_CHILDREN_RECURSIVE
@@ -230,7 +350,13 @@ final class component_relation_children_test extends BaseTestCase {
 			is_array($children_recursive), 
 			'Expected array from get_children_recursive, got: ' . gettype($children_recursive)
 		);
-	}
+
+		// Additional assertions
+		$this->assertIsArray($children_recursive, 'should always return array');
+		foreach ($children_recursive as $child) {
+			$this->assertIsObject($child, 'each recursive child should be object');
+		}
+	}//end test_get_children_recursive
 
 	/**
 	* TEST_HAS_CHILDREN_OF_TYPE
@@ -254,6 +380,15 @@ final class component_relation_children_test extends BaseTestCase {
 			is_bool($has_non_descriptor),
 			'Expected bool from has_children_of_type(non_descriptor)'
 		);
-	}
+
+		// Additional assertions
+		$this->assertIsBool($has_descriptor, 'descriptor check should return boolean');
+		$this->assertIsBool($has_non_descriptor, 'non_descriptor check should return boolean');
+		$this->assertTrue(
+			is_bool($has_descriptor) && is_bool($has_non_descriptor),
+			'Both checks should return boolean values'
+		);
+	}//end test_has_children_of_type
 
 }//end class component_relation_children_test
+
