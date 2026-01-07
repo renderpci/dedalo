@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -51,8 +49,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_get_ar_quality() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result = $component->get_ar_quality();
@@ -77,8 +73,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_default_quality() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -105,8 +99,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_get_original_quality() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result = $component->get_original_quality();
@@ -132,8 +124,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_get_modified_quality() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$result = $component->get_modified_quality();
@@ -158,8 +148,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_uploaded_file() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -205,8 +193,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_get_modified_uploaded_file() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();		
 
 		$sample_data = $this->get_sample_data(self::$model);
@@ -234,8 +220,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_extension() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -556,8 +540,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_convert_quality() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 
 		$original_quality	= $component->get_original_quality();
@@ -592,8 +574,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_create_thumb() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -776,8 +756,6 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_create_default_svg_string_node() {
 
-		$this->user_login();
-
 		$component = $this->build_component_instance();
 		$quality = $component->get_default_quality();
 
@@ -799,8 +777,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_image_print_dimensions() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -838,8 +814,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_convert_quality_to_megabytes() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -919,8 +893,6 @@ final class component_image_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_id_extended() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 

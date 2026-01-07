@@ -1,14 +1,7 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
-// bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
-
-
-final class component_radio_button_test extends TestCase {
-
-
+final class component_radio_button_test extends BaseTestCase {
 
 	public static $model		= 'component_radio_button';
 	public static $tipo			= 'test87';
@@ -17,30 +10,12 @@ final class component_radio_button_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
-	* @return
+	* @return component_radio_button|null
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -68,108 +43,6 @@ final class component_radio_button_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
-	* @return void
-	*/
-	public function test_get_dato() {
-
-		$component = $this->build_component_instance();
-
-		$result	= $component->get_dato();
-
-		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type array|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_dato
-
-
-
-	/**
-	* TEST_set_dato
-	* @return void
-	*/
-	public function test_set_dato() {
-
-		$component = $this->build_component_instance();
-
-		$old_dato = $component->get_dato();
-
-		$dato	= null;
-		$result	= $component->set_dato($dato);
-
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		// null case
-			$this->assertTrue(
-				$component->dato===[],
-				'expected [] : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// object case
-			$locator = json_decode('
-				{
-					"type":"dd151",
-					"section_id":"1",
-					"section_tipo":"dd64",
-					"from_component_tipo":"test87"
-				}
-			');
-			$dato	= $locator;
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode([$dato]),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// array case
-			$dato	= [$locator];
-			$result	= $component->set_dato($dato);
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($dato),
-				'expected array : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-
-		// restore dato
-			$result	= $component->set_dato($old_dato);
-
-			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
-			);
-	}//end test_set_dato
-
-
-
-	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
 	* TEST_get_sortable
 	* @return void
 	*/
@@ -185,6 +58,162 @@ final class component_radio_button_test extends TestCase {
 				. to_string($result)
 		);
 	}//end test_get_sortable
+
+
+
+	/**
+	* TEST_get_data
+	* @return void
+	*/
+	public function test_get_data() {
+
+		$component = $this->build_component_instance();
+
+		$result	= $component->get_data();
+
+		$this->assertTrue(
+			is_array($result) || is_null($result),
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_set_data
+	* @return void
+	*/
+	public function test_set_data() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		$data	= null;
+		$result	= $component->set_data($data);
+
+		$this->assertTrue(
+			is_bool($result),
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// null case
+			$this->assertTrue(
+				$component->get_data()===null,
+				'expected null : ' . PHP_EOL
+					. to_string($component->get_data())
+			);
+
+		// object case
+			$locator_data = [
+				"type" => "dd151",
+				"section_id" => "1",
+				"section_tipo" => "dd64",
+				"from_component_tipo" => self::$tipo
+			];
+			$locator = (object)$locator_data;
+			
+			$data	= [$locator];
+			$result	= $component->set_data($data);
+			
+			$this->assertTrue(
+				count($component->get_data()) === 1,
+				'expected 1 element in data array'
+			);
+
+		// restore data
+			$result	= $component->set_data($old_data);
+
+			$this->assertEquals(
+				json_encode($old_data),
+				json_encode($component->get_data()),
+				'expected old data'
+			);
+	}//end test_set_data
+
+
+
+	/**
+	* TEST_get_grid_value
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_grid_value();
+
+		$this->assertInstanceOf(
+			'dd_grid_cell_object',
+			$result,
+			'expected instance of dd_grid_cell_object'
+		);
+	}//end test_get_grid_value
+
+
+	/**
+	* TEST_get_list_of_values
+	* @return void
+	*/
+	public function test_get_list_of_values() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_list_of_values(DEDALO_DATA_LANG);
+
+		$this->assertTrue(
+			is_object($result),
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_list_of_values
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			is_string($result),
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$expected = self::$tipo . '_' . self::$section_tipo . '_1';
+		$this->assertTrue(
+			$result===$expected,
+			'expected identifier ' . $expected . ' : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_test_equal_properties
+	* @return void
+	*/
+	public function test_test_equal_properties() {
+
+		$component = $this->build_component_instance();
+
+		$expected = ['section_tipo','section_id','type','from_component_tipo'];
+		
+		$this->assertEquals(
+			$expected,
+			$component->test_equal_properties,
+			'expected test_equal_properties mismatch'
+		);
+	}//end test_test_equal_properties
 
 
 

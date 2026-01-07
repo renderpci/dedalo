@@ -79,45 +79,40 @@ export const get_content_data_edit = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// permissions switch
-		if (permissions===1) {
+	if (permissions===1) {
 
-			// filtered_datalist. Datalist values that exists into component value
-				for (let i = 0; i < value.length; i++) {
-					const data_value = value[i]
-					const current_datalist_item	= datalist.find(el =>
-						el.value &&
-						el.value.section_id==data_value.section_id &&
-						el.value.section_tipo===data_value.section_tipo
-					)
-					if(current_datalist_item){
-						const current_value = current_datalist_item.label || ''
-						// build options
-						const content_value_node = get_content_value_read(0, current_value, self)
-						content_data.appendChild(content_value_node)
-						// set the pointer
-						content_data[i] = content_value_node
-					}
-				}
+		// Read only case
 
-			// fill empty value cases with one empty content_value node
-				if(!content_data[0]) {
-					const current_value = '';
-					const content_value_node = get_content_value_read(0, current_value, self)
-					content_data.appendChild(content_value_node)
-					// set the pointer
-					content_data[0] = content_value_node
-				}
-
-		}else{
-
-			// build options
-				for (let i = 0; i < datalist_length; i++) {
-					const input_element_node = get_content_value(i, datalist[i], self)
-					content_data.appendChild(input_element_node)
-					// set pointers
-					content_data[i] = input_element_node
-				}
+		// filtered_datalist. Datalist values that exists into component value
+		for (let i = 0; i < value.length; i++) {
+			const data_value = value[i]
+			const current_datalist_item	= datalist.find(el =>
+				el.value &&
+				el.value.section_id==data_value.section_id &&
+				el.value.section_tipo===data_value.section_tipo
+			)
+			if(current_datalist_item){
+				const current_value = current_datalist_item.label || ''
+				// build options
+				const content_value_node = get_content_value_read(0, current_value, self)
+				content_data.appendChild(content_value_node)
+				// set the pointer
+				content_data[i] = content_value_node
+			}
 		}
+
+	}else{
+
+		// Read and write case
+
+		// Rende the values
+		for (let i = 0; i < datalist_length; i++) {
+			const input_element_node = get_content_value(i, datalist[i], self)
+			content_data.appendChild(input_element_node)
+			// set pointers
+			content_data[i] = input_element_node
+		}
+	}
 
 
 	return content_data
@@ -148,34 +143,6 @@ const get_content_value = (i, datalist_item, self) => {
 			element_type	: 'div',
 			class_name		: 'content_value'
 		})
-		// mousedown_handler. On user mousedown, reset value
-		const mousedown_handler = function(e) {
-			if (e.altKey===true) {
-				e.stopPropagation()
-				e.preventDefault()
-
-				if (self.data.value.length===0) {
-					return true
-				}
-				// remove checked state
-				input.checked = false
-
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: false,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					label			: self.get_checked_value_label(),
-					refresh			: false,
-					remove_dialog	: ()=>{
-						return true
-					}
-				})
-			}
-		}
-		content_value.addEventListener('mousedown', mousedown_handler)
 
 	// label
 		const input_label = ui.create_dom_element({
@@ -195,6 +162,8 @@ const get_content_value = (i, datalist_item, self) => {
 		// change handler
 		const change_handler = function() {
 
+			// (!) Note that datalist_value do not includes the current value id, and
+			// therefore, a new id will be generated on save.
 			const changed_data = [Object.freeze({
 				action	: 'update',
 				key		: 0,
@@ -223,7 +192,7 @@ const get_content_value = (i, datalist_item, self) => {
 		}
 
 	// update status checked input set on match
-		function update_status(input) {
+		const update_status = (input) => {
 			for (let j = 0; j < value_length; j++) {
 				if (value[j] && datalist_value &&
 					value[j].section_id===datalist_value.section_id &&

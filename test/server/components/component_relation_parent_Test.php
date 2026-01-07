@@ -1,12 +1,8 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
-
-
-final class component_relation_parent_test extends TestCase {
+final class component_relation_parent_test extends BaseTestCase {
 
 
 
@@ -17,30 +13,12 @@ final class component_relation_parent_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return object $component
 	*/
 	private function build_component_instance() {
+		  
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -50,12 +28,12 @@ final class component_relation_parent_test extends TestCase {
 		$lang			= DEDALO_DATA_NOLAN;
 
 		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
+			  $model, // string model
+			  $tipo, // string tipo
+			  $section_id,
+			  $mode,
+			  $lang,
+			  $section_tipo
 		);
 
 		return $component;
@@ -69,24 +47,32 @@ final class component_relation_parent_test extends TestCase {
 	*/
 	public function test_create_minimum_sections() {
 
+		// $this->user_login();
+
 		$ar_section_id = [
 			2,
 			3
 		];
 		foreach ($ar_section_id as $section_id) {
+
+			// Creates a new section
 			$section = section::get_instance(
 				self::$section_tipo, // string section_tipo
 				'list'
 			);
+
+			// Create new section_record
 			$created_section_id = $section->create_record((object)[
 				'section_id' => $section_id
 			]);
+
 			// check the section was created
 			$this->assertTrue(
 				gettype($section)==='object',
 				'expected type object : ' . PHP_EOL
 					. gettype($section)
 			);
+
 			// check if the section_id returns as integer
 			$this->assertTrue(
 				gettype($created_section_id)==='integer',
@@ -94,6 +80,7 @@ final class component_relation_parent_test extends TestCase {
 					. gettype($created_section_id)
 			);
 
+			// check if the created_section_id is equal to section_id
 			$this->assertTrue(
 				$created_section_id===$section_id,
 				'expected equal : ' . PHP_EOL
@@ -165,11 +152,11 @@ final class component_relation_parent_test extends TestCase {
 		// add dato
 			$data = json_decode('
 				[{
-			        "section_tipo": "test3",
-			        "section_id": "2",
-			        "paginated_key": 1,
-			        "from_component_tipo": "test71"
-			    }]
+					"section_tipo": "test3",
+					"section_id": "2",
+					"paginated_key": 1,
+					"from_component_tipo": "test71"
+				}]
 			');
 
 			$result	= $component->set_data($data);
@@ -187,11 +174,11 @@ final class component_relation_parent_test extends TestCase {
 
 			$reference_data = json_decode('
 				{
-			        "section_tipo": "test3",
-			        "section_id": "2",
-			        "from_component_tipo": "test71",
-			        "type": "dd47"
-			    }
+					"section_tipo": "test3",
+					"section_id": "2",
+					"from_component_tipo": "test71",
+					"type": "dd47"
+				}
 			');
 			$fixed_data = $component->get_data();
 
@@ -318,12 +305,12 @@ final class component_relation_parent_test extends TestCase {
 
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
+			$result	= $component->set_data($old_data);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
-				'expected old dato : ' . PHP_EOL
-					. to_string($component->dato)
+				json_encode($component->get_data())===json_encode($old_data),
+				'expected old data : ' . PHP_EOL
+					. to_string($component->get_data())
 			);
 	}//end test_set_data
 
@@ -579,6 +566,14 @@ final class component_relation_parent_test extends TestCase {
 			'expected component_relation_children : ' . PHP_EOL
 				. to_string($result)
 		);
+
+		$reference_value = 'test201';
+		$this->assertTrue(
+			$result===$reference_value,
+			'expected equal : ' . PHP_EOL
+			.'result: ' . to_string($result) . PHP_EOL
+			.'reference_value: ' . to_string($reference_value)
+		);
 	}//end test_get_component_relation_children_tipo
 
 
@@ -639,29 +634,29 @@ final class component_relation_parent_test extends TestCase {
 
 		$query_object = json_decode('
 			{
-			    "q":
-			        {
-			            "section_tipo": "test3",
-			            "section_id": "1",
-			            "from_component_tipo": "test71"
-			        }
-			    ,
-			    "path": [
-			        {
-			            "name": "relation_parent",
-			            "model": "component_relation_parent",
-			            "section_tipo": "test3",
-			            "component_tipo": "test71"
-			        }
-			    ],
-			    "q_split": false,
-			    "type": "jsonb",
-			    "component_path": [
-			        "components",
-			        "test71",
-			        "dato"
-			    ],
-			    "lang": "all"
+				"q":
+					{
+						"section_tipo": "test3",
+						"section_id": "1",
+						"from_component_tipo": "test71"
+					}
+				,
+				"path": [
+					{
+						"name": "relation_parent",
+						"model": "component_relation_parent",
+						"section_tipo": "test3",
+						"component_tipo": "test71"
+					}
+				],
+				"q_split": false,
+				"type": "jsonb",
+				"component_path": [
+					"components",
+					"test71",
+					"dato"
+				],
+				"lang": "all"
 			}
 		');
 
@@ -684,35 +679,6 @@ final class component_relation_parent_test extends TestCase {
 			.'result: ' . to_string($result)
 		);
 	}//end test_resolve_query_object_sql
-
-
-
-	/**
-	* TEST_gget_component_relation_children_tipo
-	* @return void
-	*/
-	public function test_gget_component_relation_children_tipo() {
-
-		$component_tipo = self::$tipo;
-
-		$result = component_relation_parent::get_component_relation_children_tipo(
-			$component_tipo
-		);
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$reference_value = 'test201';
-		$this->assertTrue(
-			$result===$reference_value,
-			'expected equal : ' . PHP_EOL
-			.'result: ' . to_string($result) . PHP_EOL
-			.'reference_value: ' . to_string($reference_value)
-		);
-	}//end test_gget_component_relation_children_tipo
 
 
 

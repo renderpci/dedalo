@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -46,25 +44,6 @@ final class component_check_box_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_valor
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_valor();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_valor
-
-
-
-	/**
 	* TEST_get_sortable
 	* @return void
 	*/
@@ -99,25 +78,6 @@ final class component_check_box_test extends BaseTestCase {
 				. gettype($result)
 		);
 	}//end test_get_datalist
-
-
-
-	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
 
 
 

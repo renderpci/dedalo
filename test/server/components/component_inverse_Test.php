@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
@@ -21,6 +19,8 @@ final class component_inverse_test extends BaseTestCase {
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -48,8 +48,6 @@ final class component_inverse_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_data() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
@@ -92,8 +90,6 @@ final class component_inverse_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_grid_value() {
-
-		$this->user_login();
 
 		$component = $this->build_component_instance();
 
