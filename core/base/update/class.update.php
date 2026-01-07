@@ -1125,7 +1125,7 @@ class update {
 	* TABLES_ROWS_ITERATOR
 	* Get the row (with all columns) from required tables and apply the action required to every row
 	* @param array $ar_tables
-	* @param function $callback
+	* @param callable $callback
 	* @return bool
 	* 	true
 	*/
