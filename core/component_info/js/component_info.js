@@ -99,8 +99,8 @@ component_info.prototype.get_widgets = async function() {
 
 			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
 
-			const widget_value		= value.filter(item => item && item.value.widget===widget_name)
-			const widget_datalist	= datalist.filter(item => item.value.widget === widget_name)
+			const widget_value		= value.filter(item => item && item.value?.widget===widget_name)
+			const widget_datalist	= datalist.filter(item => item.value?.widget === widget_name)
 
 			// Check for already loaded widgets
 			if(loaded_widget){
