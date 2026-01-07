@@ -57,7 +57,7 @@ class section_record_data {
 		'component_dataframe'			=> 'relation',
 		'component_date'				=> 'date',
 		'component_email'				=> 'string',
-		'component_external'			=> 'misc',
+		'component_external'			=> 'relation',
 		'component_filter'				=> 'relation',
 		'component_filter_master'		=> 'relation',
 		'component_filter_records'		=> 'misc',
