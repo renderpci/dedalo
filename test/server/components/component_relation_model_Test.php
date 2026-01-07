@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_relation_model_test extends TestCase {
+final class component_relation_model_test extends BaseTestCase {
 
 
 
@@ -17,30 +15,12 @@ final class component_relation_model_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;

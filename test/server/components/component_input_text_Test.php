@@ -700,14 +700,14 @@ final class component_input_text_test extends BaseTestCase {
 
 
 	/**
-	* TEST_set_to_force_reload_dato
+	* TEST_set_to_force_reload_data
 	* @return void
 	*/
-	public function test_set_to_force_reload_dato() {
+	public function test_set_to_force_reload_data() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->set_to_force_reload_dato();
+		$result = $component->set_to_force_reload_data();
 
 		$this->assertTrue(
 			gettype($result)==='NULL',
@@ -715,7 +715,7 @@ final class component_input_text_test extends BaseTestCase {
 				.' expected type: NULL' . PHP_EOL
 				.' type: '.gettype($result)
 		);
-	}//end test_set_to_force_reload_dato
+	}//end test_set_to_force_reload_data
 
 
 

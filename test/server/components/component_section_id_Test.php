@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class component_section_id_test extends TestCase {
+final class component_section_id_test extends BaseTestCase {
 
 
 
@@ -17,30 +15,12 @@ final class component_section_id_test extends TestCase {
 
 
 	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
-
-
-
-	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return
 	*/
 	private function build_component_instance() {
+
+		$this->user_login();
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -248,6 +228,42 @@ final class component_section_id_test extends TestCase {
 				. to_string($result)
 		);
 	}//end test_search_operators_info
+
+
+
+	/**
+	* TEST_GET_DIFFUSION_DATA
+	* @return void
+	*/
+	public function test_get_diffusion_data() {
+
+		$component = $this->build_component_instance();
+
+		$ddo = (object)[
+			'id' => '1',
+			'tipo' => 'test102'
+		];
+
+		$result = $component->get_diffusion_data($ddo);
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			!empty($result),
+			'expected non empty result : ' . PHP_EOL
+				. to_string($result)
+		);
+		if (!empty($result)) {
+			$this->assertTrue(
+				gettype($result[0])==='object',
+				'expected first element to be object : ' . PHP_EOL
+					. gettype($result[0])
+			);
+		}
+	}//end test_get_diffusion_data
 
 
 

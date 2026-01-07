@@ -2,8 +2,6 @@
 /**
 * CLASS COMPONENT_PUBLICATION_TEST
 */
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
