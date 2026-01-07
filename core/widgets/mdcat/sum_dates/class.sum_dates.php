@@ -9,10 +9,10 @@
 class sum_dates extends widget_common {
 
 	/**
-	* get_dato
+	* GET_DATA
 	* @return
 	*/
-	public function get_dato() {
+	public function get_data() {
 
 
 		$section_tipo 	= $this->section_tipo;
@@ -143,17 +143,17 @@ class sum_dates extends widget_common {
 					DEDALO_DATA_NOLAN,
 					$current_section_tipo
 				);
-				$component_dato = $component_portal->get_dato();
+				$component_data = $component_portal->get_data();
 
-				if (empty($component_dato)) {
-					return $dato;
+				if (empty($component_data)) {
+					return $data;
 				}
 
 
 			// CALCULATING FIRST AND LAST LOCATOR
 			//
 			// FIRST_LOCATOR
-			$first_locator = reset($component_dato);
+			$first_locator = reset($component_data);
 
 				$locator_section_tipo = $first_locator->section_tipo;
 				$locator_section_id   = $first_locator->section_id;
@@ -168,7 +168,7 @@ class sum_dates extends widget_common {
 					DEDALO_DATA_NOLAN,
 					$locator_section_tipo
 				);
-				$date_in = (array)$component_date_in->get_dato();
+				$date_in = (array)$component_date_in->get_data();
 				$date_in = reset($date_in); // Now date is an array
 				// Compatible new date format 01-10-2018
 				if (isset($date_in->start)) {
@@ -182,7 +182,7 @@ class sum_dates extends widget_common {
 				}
 
 			// LAST_LOCATOR
-			$last_locator  = end($component_dato);
+			$last_locator  = end($component_data);
 
 				$locator_section_tipo = $last_locator->section_tipo;
 				$locator_section_id   = $last_locator->section_id;
@@ -196,7 +196,7 @@ class sum_dates extends widget_common {
 					DEDALO_DATA_NOLAN,
 					$locator_section_tipo
 				);
-				$date_out = (array)$component_date_out->get_dato();
+				$date_out = (array)$component_date_out->get_data();
 				$date_out = reset($date_out); // Now date is an array
 				// Compatible new date format 01-10-2018
 				if (isset($date_out->start)) {
@@ -221,7 +221,7 @@ class sum_dates extends widget_common {
 			$ar_dates_in=array();
 			$ar_dates_out=array();
 			$ar_dates_all=array();
-			foreach ((array)$component_dato as $key_data => $current_locator) {
+			foreach ((array)$component_data as $key_data => $current_locator) {
 
 				$locator_section_tipo = $current_locator->section_tipo;
 				$locator_section_id   = $current_locator->section_id;
@@ -236,7 +236,7 @@ class sum_dates extends widget_common {
 					DEDALO_DATA_NOLAN,
 					$locator_section_tipo
 				);
-				$date_in = (array)$component_date_in->get_dato();
+				$date_in = (array)$component_date_in->get_data();
 				$date_in = reset($date_in);
 				// Compatible new date format 01-10-2018
 				if (isset($date_in->start)) {
@@ -256,7 +256,7 @@ class sum_dates extends widget_common {
 					DEDALO_DATA_NOLAN,
 					$locator_section_tipo
 				);
-				$date_out = (array)$component_date_out->get_dato();
+				$date_out = (array)$component_date_out->get_data();
 				$date_out = reset($date_out);
 				// Compatible new date format 01-10-2018
 				if (isset($date_out->start)) {
@@ -338,17 +338,17 @@ class sum_dates extends widget_common {
 			foreach ($output as $data_map) {
 				$current_id = $data_map->id;
 				$current_data = new stdClass();
-					$current_data->widget 	= get_class($this);
-					$current_data->key  	= $key;
-					$current_data->id 		= $current_id;
-					$current_data->value 	= $$current_id ?? null;
-				$dato[] = $current_data;
+					$current_data->widget 		= get_class($this);
+					$current_data->key  		= $key;
+					$current_data->widget_id 	= $current_id;
+					$current_data->value 		= $$current_id ?? null;
+				$data[] = $current_data;
 			}
 
 		}//foreach ipo
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
@@ -359,21 +359,21 @@ class sum_dates extends widget_common {
 	*/
 	public function get_dato_parsed() : ?array  {
 
-		$data = $this->get_dato() ?? [];
+		$data = $this->get_data() ?? [];
 		$data_parsed = [];
 
 		$found_sum_intervals =  array_find( $data, function($item){
-			return $item->id === 'sum_intervals';
+			return $item->widget_id === 'sum_intervals';
 		}) ?? new stdClass();
 		$sum_intervals = $found_sum_intervals->value ?? new stdClass();
 
 		$found_sum_estitmated_time_add =  array_find( $data, function($item){
-			return $item->id === 'sum_estitmated_time_add';
+			return $item->widget_id === 'sum_estitmated_time_add';
 		}) ?? new stdClass();
 		$sum_estitmated_time_add = $found_sum_estitmated_time_add->value ?? null;
 
 		$found_estitmated_time_undefined =  array_find( $data, function($item){
-			return $item->id === 'estitmated_time_undefined';
+			return $item->widget_id === 'estitmated_time_undefined';
 		}) ?? new stdClass();
 		$estitmated_time_undefined = $found_estitmated_time_undefined->value ?? null;
 
@@ -404,7 +404,7 @@ class sum_dates extends widget_common {
 
 			$sum_intervals = implode(' ', $ar_sum_intervals);
 			$intervals_data = new stdClass();
-				$intervals_data->id = 'sum_intervals';
+				$intervals_data->widget_id = 'sum_intervals';
 				$intervals_data->value = $sum_intervals;
 			$data_parsed[] = $intervals_data;
 
@@ -450,13 +450,13 @@ class sum_dates extends widget_common {
 
 			$sum_estitmated = implode('', $ar_indeterminate);
 			$estitmated_data = new stdClass();
-				$estitmated_data->id = 'sum_estitmated_time_add';
+				$estitmated_data->widget_id = 'sum_estitmated_time_add';
 				$estitmated_data->value = $sum_estitmated;
 			$data_parsed[] = $estitmated_data;
 
 		// add estimated time undefined
 			$time_undefined_data = new stdClass();
-				$time_undefined_data->id = 'estitmated_time_undefined';
+				$time_undefined_data->widget_id = 'estitmated_time_undefined';
 				$time_undefined_data->value = $estitmated_time_undefined;
 			$data_parsed[] = $time_undefined_data;
 
