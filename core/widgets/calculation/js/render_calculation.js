@@ -118,7 +118,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 	for (let j = 0; j < output.length; j++) {
 
 		const data_map = output[j]
-		const current_data = data.find(el => el.id===data_map.id)
+		const current_data = data.find(el => el.widget_id===data_map.id)
 
 		const server_value = (typeof current_data!=='undefined')
 			? current_data.value
@@ -189,7 +189,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 		// event update_widget_value
 			const update_widget_value_handler = (changed_data) => {
 
-				const current_data = changed_data.find(el => el.id===data_map.id)
+				const current_data = changed_data.find(el => el.widget_id===data_map.id)
 
 				if(typeof current_data==='undefined'){
 					element_value.innerHTML = ''

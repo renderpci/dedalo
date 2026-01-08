@@ -107,7 +107,7 @@ const get_content_data_list = async function(self) {
 */
 const get_value_element = async (i, data, values_container, self) => {
 
-	const indexation	= data.find(el => el.id==='indexation')
+	const indexation	= data.find(el => el.widget_id==='indexation')
 	const value			= indexation.value
 
 	// li
@@ -153,7 +153,7 @@ const get_value_element = async (i, data, values_container, self) => {
 		})
 
 	// dd_grid build
-		const dd_grid_data	= [data.find(el => el.id==='terms').value]
+		const dd_grid_data	= [data.find(el => el.widget_id==='terms').value]
 		const dd_grid		= await get_instance({
 			model			: 'dd_grid',
 			section_tipo	: self.section_tipo,

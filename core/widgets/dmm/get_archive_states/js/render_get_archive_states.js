@@ -91,22 +91,22 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	const closed_afirmative			= data.find(item => item.id === 'closed_afirmative').value
-	const closed_label 				= data.find(item => item.id === 'closed_afirmative').closed_label
-	const answer_label 				= data.find(item => item.id === 'closed_afirmative').answer_label
-	const closed_afirmative_percent	= data.find(item => item.id === 'closed_afirmative_percent').value
-	const closed_negative			= data.find(item => item.id === 'closed_negative').value
-	const closed_negative_percent	= data.find(item => item.id === 'closed_negative_percent').value
-	const closed_count				= data.find(item => item.id === 'closed_count').value
-	const closed_count_percent		= data.find(item => item.id === 'closed_count_percent').value
-	const closed_total				= data.find(item => item.id === 'closed_total').value
-	const answer_afirmative			= data.find(item => item.id === 'answer_afirmative').value
-	const answer_afirmative_percent	= data.find(item => item.id === 'answer_afirmative_percent').value
-	const answer_negative			= data.find(item => item.id === 'answer_negative').value
-	const answer_negative_percent	= data.find(item => item.id === 'answer_negative_percent').value
-	const answer_count				= data.find(item => item.id === 'answer_count').value
-	const answer_count_percent		= data.find(item => item.id === 'answer_count_percent').value
-	const answer_total				= data.find(item => item.id === 'answer_total').value
+	const closed_afirmative			= data.find(item => item.widget_id === 'closed_afirmative').value
+	const closed_label 				= data.find(item => item.widget_id === 'closed_afirmative').closed_label
+	const answer_label 				= data.find(item => item.widget_id === 'closed_afirmative').answer_label
+	const closed_afirmative_percent	= data.find(item => item.widget_id === 'closed_afirmative_percent').value
+	const closed_negative			= data.find(item => item.widget_id === 'closed_negative').value
+	const closed_negative_percent	= data.find(item => item.widget_id === 'closed_negative_percent').value
+	const closed_count				= data.find(item => item.widget_id === 'closed_count').value
+	const closed_count_percent		= data.find(item => item.widget_id === 'closed_count_percent').value
+	const closed_total				= data.find(item => item.widget_id === 'closed_total').value
+	const answer_afirmative			= data.find(item => item.widget_id === 'answer_afirmative').value
+	const answer_afirmative_percent	= data.find(item => item.widget_id === 'answer_afirmative_percent').value
+	const answer_negative			= data.find(item => item.widget_id === 'answer_negative').value
+	const answer_negative_percent	= data.find(item => item.widget_id === 'answer_negative_percent').value
+	const answer_count				= data.find(item => item.widget_id === 'answer_count').value
+	const answer_count_percent		= data.find(item => item.widget_id === 'answer_count_percent').value
+	const answer_total				= data.find(item => item.widget_id === 'answer_total').value
 
 	const label_yes	= get_label.yes || 'yes'
 	const label_no	= get_label.no || 'no'

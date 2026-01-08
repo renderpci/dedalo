@@ -98,9 +98,9 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: values_container
 		})
 
-	const sum_intervals				= data.find(item => item.id === 'sum_intervals').value || {}
-	const sum_estitmated_time_add	= data.find(item => item.id === 'sum_estitmated_time_add').value || null
-	const estitmated_time_undefined	= data.find(item => item.id === 'estitmated_time_undefined').value || null
+	const sum_intervals				= data.find(item => item.widget_id === 'sum_intervals').value || {}
+	const sum_estitmated_time_add	= data.find(item => item.widget_id === 'sum_estitmated_time_add').value || null
+	const estitmated_time_undefined	= data.find(item => item.widget_id === 'estitmated_time_undefined').value || null
 
 	// get the text of the sum_interval
 	const ar_sum_intervals =[]
