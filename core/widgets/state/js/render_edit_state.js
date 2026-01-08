@@ -161,7 +161,7 @@ const get_value_element = (i, data, self) => {
 
 			// Situation
 				// check if the component is translatable, with the first item in the data of the current column
-				const situation_item = data.find(item => item.value.id === output_item.id && item.value.column === 'situation')
+				const situation_item = data.find(item => item.value.widget_id === output_item.id && item.value.column === 'situation')
 				if (situation_item) {
 
 					// check if the item is translatable
@@ -169,7 +169,7 @@ const get_value_element = (i, data, self) => {
 					// if the item is translatable select the all projects langs, else the item will be lg-nolan and only will has 1 item
 					const situation_length = situation_translatable ? project_langs.length : 1;
 					// get the total item for situation
-					const situation_total = data.find(item => item.value.id === output_item.id
+					const situation_total = data.find(item => item.value.widget_id === output_item.id
 															&& item.value.column === 'situation'
 															&& item.value.type ==='total')
 
@@ -204,7 +204,7 @@ const get_value_element = (i, data, self) => {
 							type		: 'total',
 							value		: situation_total.value,
 							lang		: nolan,
-							id			: output_item.id,
+							widget_id	: output_item.id,
 							key			: i,
 							column		: 'situation'
 						})
@@ -219,7 +219,7 @@ const get_value_element = (i, data, self) => {
 						for (let j = 0; j < situation_length; j++) {
 							// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 							const lang = situation_translatable ? project_langs[j].value : nolan
-							const situation_items_data = data.find(item => item.value.id === output_item.id
+							const situation_items_data = data.find(item => item.value.widget_id === output_item.id
 																		&& item.value.column === 'situation'
 																		&& item.value.lang === lang
 																		&& item.value.type ==='detail')
@@ -254,7 +254,7 @@ const get_value_element = (i, data, self) => {
 								type			: 'detail',
 								value			: (situation_items_data) ? situation_items_data.value : 0,
 								lang			: lang,
-								id				: output_item.id,
+								widget_id		: output_item.id,
 								key				: i,
 								column			: 'situation'
 							})
@@ -263,7 +263,7 @@ const get_value_element = (i, data, self) => {
 
 			// State
 				// check if the component is translatable, with the first item in the data of the current column
-				const state_item = data.find(item => item.value.id === output_item.id && item.value.column === 'state')
+				const state_item = data.find(item => item.value.widget_id === output_item.id && item.value.column === 'state')
 				if (state_item) {
 					// second, check if the item is translatable
 					const state_translatable = (state_item.value.lang !== nolan)
@@ -305,7 +305,7 @@ const get_value_element = (i, data, self) => {
 							type 		: 'total',
 							value 		: state_total.value.value,
 							lang 		: nolan,
-							id			: output_item.id,
+							widget_id	: output_item.id,
 							key 		: i,
 							column		: 'state'
 						})
@@ -320,7 +320,7 @@ const get_value_element = (i, data, self) => {
 						// select the language of for the item 'lg-spa, lg-eng, lg-cat, etc' else select the 'lg-nolan'
 						const lang = state_translatable ? project_langs[k].value : nolan
 						// find the data of the item with the lang
-						const state_item_data = data.find(item => item.value.id === output_item.id
+						const state_item_data = data.find(item => item.value.widget_id === output_item.id
 																&& item.value.column === 'state'
 																&& item.value.lang === lang
 																&& item.value.type ==='detail')
@@ -358,7 +358,7 @@ const get_value_element = (i, data, self) => {
 							type			: 'detail',
 							value			: (state_item_data) ? state_item_data.value : 0,
 							lang			: lang,
-							id				: output_item.id,
+							widget_id		: output_item.id,
 							key				: i,
 							column			: 'state'
 						})
@@ -379,7 +379,7 @@ const get_value_element = (i, data, self) => {
 				const node = detail_nodes[o]
 				// find if the node has new data
 				const new_data = changed_data.find(
-					item => item.value.id === node.id
+					item => item.value.widget_id === node.widget_id
 					&& item.value.column === node.column
 					&& item.value.lang === node.lang
 					&& item.value.key === i
