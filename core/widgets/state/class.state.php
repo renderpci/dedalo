@@ -185,7 +185,7 @@ class state extends widget_common {
 						$current_data = new stdClass();
 							$current_data->widget	 = get_class($this);
 							$current_data->key		 = $key;
-							$current_data->widget_id = $item->id;
+							$current_data->widget_id = $item->widget_id;
 							$current_data->lang		 = $item->lang;
 							$current_data->value	 = $item->value;
 							$current_data->locator	 = $item->locator;
@@ -196,9 +196,9 @@ class state extends widget_common {
 						// n: total languages, used for get the % done
 							$current_total = $ar_sum[$item->column]->total ?? 0;
 							$ar_sum[$item->column] = (object)[
-								'total'	=> $current_total += (int)$item->value,
-								'n'		=> $item->n,
-								'id'	=> $item->id
+								'total'		=> $current_total += (int)$item->value,
+								'n'			=> $item->n,
+								'widget_id'	=> $item->widget_id
 							];
 						// set the final data to the widget
 						$data[] = $current_data;
@@ -214,7 +214,7 @@ class state extends widget_common {
 						$total_result = new stdClass();
 							$total_result->widget		= get_class($this);
 							$total_result->key			= $key;
-							$total_result->widget_id	= $value->id;
+							$total_result->widget_id	= $value->widget_id;
 							$total_result->lang			= 'lg-nolan';
 							$total_result->value		= $total;
 							$total_result->column		= $column;
