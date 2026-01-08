@@ -124,7 +124,7 @@ const get_value_element = (i, data, values_container, self) => {
 					const media_weight_value = ui.create_dom_element({
 						element_type: 'span',
 						class_name	: 'value',
-						inner_html 	: data.find(item => item.id === 'media_weight').value,
+						inner_html 	: data.find(item => item.widget_id === 'media_weight').value,
 						parent 		: sum_weights
 					})
 
@@ -147,7 +147,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const max_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'max_weight').value,
+					inner_html 	: data.find(item => item.widget_id === 'max_weight').value,
 					parent 		: weights_values
 				})
 
@@ -164,7 +164,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const min_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'min_weight').value,
+					inner_html 	: data.find(item => item.widget_id === 'min_weight').value,
 					parent 		: weights_values
 				})
 
@@ -181,7 +181,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const total_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'total_elements_weights').value,
+					inner_html 	: data.find(item => item.widget_id === 'total_elements_weights').value,
 					parent 		: weights_values
 				})
 
@@ -212,7 +212,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const media_diameter_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'media_diameter').value,
+					inner_html 	: data.find(item => item.widget_id === 'media_diameter').value,
 					parent 		: sum_diameter
 				})
 		// detail
@@ -234,7 +234,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const max_diameter_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: data.find(item => item.id === 'max_diameter').value,
+					inner_html 	: data.find(item => item.widget_id === 'max_diameter').value,
 					parent 		: diameter_values
 				})
 
@@ -251,7 +251,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const min_diameter_value = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: data.find(item => item.id === 'min_diameter').value,
+					inner_html		: data.find(item => item.widget_id === 'min_diameter').value,
 					parent			: diameter_values
 				})
 
@@ -269,7 +269,7 @@ const get_value_element = (i, data, values_container, self) => {
 				const total_diameter_value = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: data.find(item => item.id === 'total_elements_diameter').value,
+					inner_html		: data.find(item => item.widget_id === 'total_elements_diameter').value,
 					parent			: diameter_values
 				})
 
@@ -283,15 +283,15 @@ const get_value_element = (i, data, values_container, self) => {
 		)
 		function fn_update_widget_value(changed_data) {
 
-			media_weight_value.innerHTML	= changed_data.find(item => item.id==='media_weight').value
-			max_weight_value.innerHTML		= changed_data.find(item => item.id==='max_weight').value
-			min_weight_value.innerHTML		= changed_data.find(item => item.id==='min_weight').value
-			total_weight_value.innerHTML	= changed_data.find(item => item.id==='total_elements_weights').value
+			media_weight_value.innerHTML	= changed_data.find(item => item.widget_id==='media_weight').value
+			max_weight_value.innerHTML		= changed_data.find(item => item.widget_id==='max_weight').value
+			min_weight_value.innerHTML		= changed_data.find(item => item.widget_id==='min_weight').value
+			total_weight_value.innerHTML	= changed_data.find(item => item.widget_id==='total_elements_weights').value
 
-			media_diameter_value.innerHTML	= changed_data.find(item => item.id==='media_diameter').value
-			max_diameter_value.innerHTML	= changed_data.find(item => item.id==='max_diameter').value
-			min_diameter_value.innerHTML	= changed_data.find(item => item.id==='min_diameter').value
-			total_diameter_value.innerHTML	= changed_data.find(item => item.id==='total_elements_diameter').value
+			media_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='media_diameter').value
+			max_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='max_diameter').value
+			min_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='min_diameter').value
+			total_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='total_elements_diameter').value
 
 			return true
 		}

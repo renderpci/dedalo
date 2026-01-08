@@ -241,7 +241,7 @@ const item_value_factory = function(id, label, data) {
 
 		// show temporally the debug JSON data. Pending graphics render
 
-		const found			= data.find(item => item.id===id)
+		const found			= data.find(item => item.widget_id===id)
 		const current_value	= found
 			? JSON.stringify(found.value, null, "   ")
 			: ''

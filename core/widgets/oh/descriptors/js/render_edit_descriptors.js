@@ -112,7 +112,7 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = async (i, data, self) => {
 
-	const indexation	= data.find(el => el.value.id==='indexation')
+	const indexation	= data.find(el => el.value.widget_id==='indexation')
 	const value			= indexation?.value.value || 0
 
 	const fragment = new DocumentFragment()
@@ -158,7 +158,7 @@ const render_values = function(self, data) {
 	return new Promise(async function(resolve){
 
 		// Terms find
-		const terms = data.find(el => el.value.id==='terms') || {}
+		const terms = data.find(el => el.value.widget_id==='terms') || {}
 
 		// dd_grid_data
 		const dd_grid_data	= [terms.value.value]

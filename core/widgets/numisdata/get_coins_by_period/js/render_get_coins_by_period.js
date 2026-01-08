@@ -93,7 +93,7 @@ const get_value_element = (i, data, values_container, self) => {
 const fragment = new DocumentFragment()
 
 	// period
-	const value = data.find(item => item.id === 'period').value
+	const value = data.find(item => item.widget_id === 'period').value
 
 	for (const [order, period] of Object.entries(value)) {
 

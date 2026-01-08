@@ -188,8 +188,8 @@ const get_value_element = (i, data, values_container, self) => {
 
 	// update the values when the observable was changed
 		const update_widget_value_handler = (changed_data) => {
-			function get_value_from_data(id) {
-				const found = changed_data.find(el => el.id===id)
+			function get_value_from_data(widget_id) {
+				const found = changed_data.find(el => el.widget_id===widget_id)
 				const value = found
 					? found.value
 					: ''
@@ -198,7 +198,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 			// update reactive items value
 			for (let i = 0; i < reactive_items.length; i++) {
-				reactive_items[i].value.innerHTML = get_value_from_data(reactive_items[i].id)
+				reactive_items[i].value.innerHTML = get_value_from_data(reactive_items[i].widget_id)
 			}
 		}
 		self.events_tokens.push(
@@ -220,11 +220,11 @@ const get_value_element = (i, data, values_container, self) => {
 * @return HTMLElement wrapper
 * 	ready to update using wrapper.value.innerHTML = 'my value'
 */
-const item_value_factory = function(id, label, data) {
+const item_value_factory = function(widget_id, label, data) {
 
 	const wrapper = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: id
+		class_name		: widget_id
 	})
 
 	// label
@@ -236,7 +236,7 @@ const item_value_factory = function(id, label, data) {
 		})
 
 	// value
-		const found			= data.find(item => item.id===id)
+		const found			= data.find(item => item.widget_id===widget_id)
 		const current_value	= found
 			? found.value
 			: ''
@@ -249,8 +249,8 @@ const item_value_factory = function(id, label, data) {
 		})
 
 	// wrapper add values and pointers
-		wrapper.value	= value_node
-		wrapper.id		= id
+		wrapper.value		= value_node
+		wrapper.widget_id	= widget_id
 
 
 	return wrapper
