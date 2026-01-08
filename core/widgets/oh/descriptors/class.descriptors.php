@@ -138,11 +138,11 @@ class descriptors extends widget_common {
 							$current_id = $data_map->id;
 
 						$current_data = new stdClass();
-							$current_data->widget	= get_class($this);
-							$current_data->key		= $key;
-							$current_data->id		= $current_id;
-							$current_data->value	= $value;
-							$current_data->locator	= $locator;
+							$current_data->widget		= get_class($this);
+							$current_data->key			= $key;
+							$current_data->widget_id	= $current_id;
+							$current_data->value		= $value;
+							$current_data->locator		= $locator;
 
 						// set the final data to the widget
 						$data[] = $current_data;

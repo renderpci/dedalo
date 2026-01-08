@@ -207,7 +207,7 @@ class media_icons extends widget_common {
 							$current_data = new stdClass();
 								$current_data->widget		= get_class($this);
 								$current_data->key			= $key; // ipo key
-								$current_data->id			= $current_id;
+								$current_data->widget_id	= $current_id;
 								$current_data->locator		= $locator;
 								if (isset($value)) {
 									$current_data->value	= $value;

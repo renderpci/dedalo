@@ -10,11 +10,11 @@ class tags extends widget_common {
 
 
 	/**
-	* GET_DATO
-	* @return array $dato
+	* GET_DATA
+	* @return array $data
 	* 	Array of objects
 	*/
-	public function get_dato() : array {
+	public function get_data() : array {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
@@ -22,7 +22,7 @@ class tags extends widget_common {
 		$lang			= $this->lang;
 		$mode			= 'list';
 
-		$dato = [];
+		$data = [];
 
 		foreach ($ipo as $ipo_key => $current_ipo) {
 
@@ -58,9 +58,9 @@ class tags extends widget_common {
 					$component->set_lang($original_lang);
 				}
 
-				$dato = $component->get_dato();
-				$raw_text = isset($dato[0])
-					? $dato[0]
+				$data = $component->get_data();
+				$raw_text = isset($data[0])
+					? $data[0]
 					: '';
 
 			// tc's
@@ -180,18 +180,18 @@ class tags extends widget_common {
 					$current_id = $data_map->id;
 
 					$current_data = new stdClass();
-						$current_data->widget	= get_class($this);
-						$current_data->key		= $ipo_key;
-						$current_data->id		= $current_id;
-						$current_data->value	= $$current_id ?? null;
+						$current_data->widget		= get_class($this);
+						$current_data->key			= $ipo_key;
+						$current_data->widget_id	= $current_id;
+						$current_data->value		= $$current_id ?? null;
 
-					$dato[] = $current_data;
+					$data[] = $current_data;
 				}
 			}
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
