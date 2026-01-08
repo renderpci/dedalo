@@ -12,23 +12,6 @@
 // context
 	$context = [];
 
-	// if($options->get_context===true) { //  && $permissions>0
-	// 	switch ($options->context_type) {
-	// 		case 'simple':
-	// 			// Component structure context_simple (tipo, relations, properties, etc.)
-	// 			$context[] = $this->get_structure_context_simple($permissions);
-	// 			break;
-
-	// 		default:
-	// 			// Component structure context (tipo, relations, properties, etc.)
-	// 				$this->context = $this->get_structure_context($permissions, true);
-	// 				$context[] = $this->context;
-	// 			// add buttons
-	// 				$context = array_merge($context, $this->get_structure_buttons($permissions));
-	// 			break;
-	// 	}
-	// }//end if($options->get_context===true)
-
 	// Component structure context (tipo, relations, properties, etc.)
 		$this->context = $this->get_structure_context($permissions, true);
 		$context[] = $this->context;

@@ -590,13 +590,14 @@ abstract class component_common extends common {
 
 
 	/**
-	* set_data_resolved
+	* SET_DATA_RESOLVED
 	* @param array|null $data
 	* @return void
 	*/
 	public function set_data_resolved(?array $data) : void {
 		$this->data_resolved = $data;
 	}//end set_data_resolved
+
 
 
 	/**
@@ -1417,7 +1418,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_RAW_VALUE
-	* Get the raw value of the components. By default will be get_dato().
+	* Get the raw value of the components. By default will be get_data().
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
@@ -2042,7 +2043,7 @@ abstract class component_common extends common {
 
 					if(empty($observable_data)){
 						call_user_func_array($user_fn, $args);
-						$this->Save();
+						$this->save();
 					}
 					break;
 
@@ -2060,14 +2061,12 @@ abstract class component_common extends common {
 
 	/**
 	* EMPTY_DATA
-	* Remove the component data in the current lang
+	* Remove the component data in all langs
 	* @return bool
 	*/
 	public function empty_data() : bool {
 
-		$this->set_data(null);
-
-		return true;
+		return $this->set_data(null);
 	}//end empty_data
 
 

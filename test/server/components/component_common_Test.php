@@ -1,4 +1,7 @@
 <?php declare(strict_types=1);
+
+use PHPUnit\TextUI\Configuration\Php;
+
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 

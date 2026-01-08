@@ -30,6 +30,11 @@ function ar_random_string() {
 }
 
 
+function ar_random_password() {
+	$result = ar_random_string();
+	return $result;
+}
+
 
 function random_number($length = 10000000) {
 	return rand(1, $length-1);
@@ -121,13 +126,17 @@ function random_date() {
 	$day = random_number(28) ?: 1;
 	$month = random_number(12) ?: 1;
 	$year = random_number(2022) ?: 1;
-	$time = convert_date_to_seconds(array(
-		'day' => $day,
-		'month' => $month,
-		'year' => $year
-	), 'date');
+	$time = convert_date_to_seconds(
+		[
+			'day' => $day,
+			'month' => $month,
+			'year' => $year
+		],
+		'date'
+	);
 
 	$value = (object)[
+		'id' => 3,
 		'start' => (object)[
 			'year'	=> $year,
 			'month'	=> $month,
