@@ -82,6 +82,27 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_DIRECT_DATA_COMPONENTS
+	* Return an array containing the model names of components with a direct data format.
+	* This means an array of objects without a 'value' level, as opposed to
+	* other components, such as 'component_input_text', using a structure such as {id: 1, value: string}.
+	* This is mainly useful for testing purposes.
+ 	* @return array
+	*/
+	public static function get_direct_data_components() : array {
+
+		$direct_data = array_merge(
+			component_relation_common::get_components_with_relations(),
+			component_media_common::get_media_components()
+		);
+		$direct_data[] = 'component_date';
+
+		return $direct_data;
+	}//end get_direct_data_components
+
+
+
+	/**
 	* GET_INSTANCE
 	* Singleton pattern
 	* Creates a component instance
