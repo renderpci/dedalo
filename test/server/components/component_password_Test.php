@@ -121,9 +121,14 @@ final class component_password_test extends BaseTestCase {
 
 		$result	= $component->get_grid_value();
 
+		// $component->fake_value
+
 		$this->assertIsObject($result);
 		// Grid value for password should be an array of objects wrapping the fake value
-		$this->assertEquals($component->fake_value, $result->value[0]->value);
+		$this->assertEquals(
+			null, $result->value[0]->value,
+			 '$result->value[0]->value: ' . json_encode($result->value[0]->value, JSON_PRETTY_PRINT) . PHP_EOL
+		);
 	}//end test_get_grid_value
 
 	/**

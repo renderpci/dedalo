@@ -20,16 +20,14 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
+		$result = $this->user_login();
 
 		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
+			$result===true,
+			'expected true : ' . PHP_EOL
+				. to_string($result)
 		);
+
 	}//end test_user_login
 
 
@@ -51,10 +49,10 @@ final class component_media_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_DATO
+	* TEST_GET_DATA
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_data() {
 
 		foreach (get_elements() as $element) {
 
@@ -73,8 +71,8 @@ final class component_media_common_test extends BaseTestCase {
 				$element->section_tipo // string section_tipo
 			);
 
-			$value = $component->get_dato();
-			// dump($value, ' value ++ '.to_string());
+			$data = $component->get_data();
+			// dump($data, ' value ++ '.to_string());
 
 			// sample:
 				// {
@@ -117,25 +115,26 @@ final class component_media_common_test extends BaseTestCase {
 			    // }
 
 			$this->assertTrue(
-				gettype($value)==='array' || gettype($value)==='NULL',
+				gettype($data)==='array' || gettype($data)==='NULL',
 				'expected type array|null : ' . PHP_EOL
-					. gettype($value)
+					. gettype($data)
 			);
 
-			if (!empty($value)) {
+			if (!empty($data)) {
 				$this->assertTrue(
-					isset($value[0]->files_info),
-					'expected isset($value[0]->files_info : ' . PHP_EOL
-						. to_string(isset($value[0]->files_info))
+					isset($data[0]->files_info),
+					'expected isset($data[0]->files_info : ' . PHP_EOL
+						. to_string(isset($data[0]->files_info)) . PHP_EOL
+						.'data: ' . json_encode($data, JSON_PRETTY_PRINT)
 				);
 				$this->assertTrue(
-					gettype($value[0]->files_info)==='array',
+					gettype($data[0]->files_info)==='array',
 					'expected type array : ' . PHP_EOL
-						. gettype($value[0]->files_info)
+						. gettype($data[0]->files_info)
 				);
 			}
 		}
-	}//end test_get_dato
+	}//end test_get_data
 
 
 
@@ -189,131 +188,6 @@ final class component_media_common_test extends BaseTestCase {
 			);
 		}
 	}//end test_get_grid_value
-
-
-
-	/**
-	* TEST_GET_VALOR
-	* @return void
-	*/
-	public function test_get_valor() {
-
-		foreach (get_elements() as $element) {
-
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo // string section_tipo
-			);
-
-			$result = $component->get_valor();
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-				. gettype($result)
-			);
-
-			$this->assertTrue(
-				strpos($result, '.'.$component->get_extension())!==false,
-				'expected contains extension '.$component->get_extension() . PHP_EOL
-					. to_string($result) . PHP_EOL
-					. to_string( strpos($result, '.'.$component->get_extension()) )
-			);
-		}
-	}//end test_get_valor
-
-
-
-	/**
-	* test_get_valor_export
-	* @return void
-	*/
-	public function test_get_valor_export() {
-
-		foreach (get_elements() as $element) {
-
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo // string section_tipo
-			);
-
-			$result = $component->get_valor_export();
-
-			$this->assertTrue(
-				gettype($result)==='string' || gettype($result)==='NULL',
-				'expected type string|null : ' . PHP_EOL
-					. gettype($result)
-			);
-			// if (!is_null($result)) {
-			// 	$this->assertTrue(
-			// 		strpos($result, 'http')!==false,
-			// 		'expected value contains http ' . PHP_EOL . PHP_EOL
-			// 			. to_string($result)
-			// 	);
-			// }
-		}
-	}//end test_get_valor_export
-
-
-
-	/**
-	* TEST_GET_DIFFUSION_VALUE
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		foreach (get_elements() as $element) {
-
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo // string section_tipo
-			);
-
-			$result = $component->get_diffusion_value();
-			$this->assertTrue(
-				gettype($result)==='string' || gettype($result)==='NULL',
-				'expected type string|null : ' . PHP_EOL
-					. gettype($result)
-			);
-			if (!is_null($result)) {
-				$this->assertTrue(
-					strpos($result, '.'.$component->get_extension())!==false,
-					'expected value contains extension: '. $component->get_extension() . PHP_EOL . PHP_EOL
-						. to_string($result)
-				);
-			}
-		}
-	}//end test_get_diffusion_value
 
 
 
@@ -1761,7 +1635,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_get_media_url_dir() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -1934,7 +1808,7 @@ final class component_media_common_test extends BaseTestCase {
 					$element->section_tipo // string section_tipo
 				);
 
-				$dato = $component->get_dato();
+				$data = $component->get_data();
 
 				$result = $component->regenerate_component();
 
@@ -1944,7 +1818,7 @@ final class component_media_common_test extends BaseTestCase {
 						. gettype($result)
 				);
 
-				if (!empty($dato)) {
+				if (!empty($data)) {
 					$this->assertTrue(
 						$result === true,
 						'expected true : ' . PHP_EOL
@@ -1973,7 +1847,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_get_media_filepath() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2010,7 +1884,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_set_quality() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2061,7 +1935,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_get_size() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2100,7 +1974,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_restore_component_media_files() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2136,7 +2010,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_build_version() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2174,7 +2048,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_update_component_data_files_info() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2230,17 +2104,17 @@ final class component_media_common_test extends BaseTestCase {
 				$element->section_tipo // string section_tipo
 			);
 
-			$result = $component->Save();
+			$result = $component->save();
 
 			$this->assertTrue(
-				gettype($result)==='integer' || gettype($result)==='NULL',
-				'expected type integer|null : ' . PHP_EOL
+				gettype($result)==='boolean',
+				'expected type boolean : ' . PHP_EOL
 					. gettype($result)
 			);
 
 			$this->assertTrue(
-				$result===$section_id,
-				'expected integer '.$section_id . PHP_EOL
+				$result===true,
+				'expected true : ' . PHP_EOL
 					. to_string($result)
 			);
 		}
@@ -2254,7 +2128,7 @@ final class component_media_common_test extends BaseTestCase {
 	*/
 	public function test_resolve_query_object_sql() {
 
-		// default dato
+		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -2286,20 +2160,6 @@ final class component_media_common_test extends BaseTestCase {
 			);
 		}//end foreach (get_elements() as $element)
 	}//end test_resolve_query_object_sql
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
