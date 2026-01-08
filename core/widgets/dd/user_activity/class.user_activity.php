@@ -8,11 +8,11 @@ class user_activity extends widget_common {
 
 
 	/**
-	* GET_DATO
-	* @return array $dato
+	* GET_DATA
+	* @return array $data
 	* 	Array of objects
 	*/
-	public function get_dato() : array {
+	public function get_data() : array {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
@@ -20,7 +20,7 @@ class user_activity extends widget_common {
 		$lang			= $this->lang;
 		$mode			= 'list';
 
-		$dato = [];
+		$data = [];
 		foreach ($ipo as $ipo_key => $current_ipo) {
 
 			// continue;
@@ -37,10 +37,10 @@ class user_activity extends widget_common {
 
 			// add data
 			$current_data = new stdClass();
-				$current_data->widget	= get_class($this);
-				$current_data->key		= $ipo_key;
-				$current_data->id		= 'totals';
-				$current_data->value	= $totals;
+				$current_data->widget		= get_class($this);
+				$current_data->key			= $ipo_key;
+				$current_data->widget_id	= 'totals';
+				$current_data->value		= $totals;
 
 			$dato[] = $current_data;
 
