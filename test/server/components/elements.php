@@ -161,7 +161,8 @@ function get_elements() : array {
 			'section_tipo'	=> $section_tipo,
 			'section_id'	=> $section_id,
 			'mode'			=> $mode,
-			'lang'			=> $lang
+			'lang'			=> $lang,
+			// 'new_value'		=> 'ar_random_password'
 		],
 		(object)[
 			'model'			=> 'component_pdf',
@@ -209,14 +210,14 @@ function get_elements() : array {
 			'section_id'		=> $section_id,
 			'mode'				=> $mode,
 			'lang'				=> $lang,
-			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [
-				$section_tipo, // section_tipo
-				'test201', // from_component_tipo
-				0, // max random int (not used)
-				DEDALO_RELATION_TYPE_CHILDREN_TIPO, // 'dd48', // type
-				2 // custom section_id
-			]
+			// 'new_value'			=> 'ar_random_locator',
+			// 'new_value_params'	=> [
+			// 	$section_tipo, // section_tipo
+			// 	'test201', // from_component_tipo
+			// 	0, // max random int (not used)
+			// 	DEDALO_RELATION_TYPE_CHILDREN_TIPO, // 'dd48', // type
+			// 	2 // custom section_id
+			// ]
 		],
 		(object)[
 			'model'				=> 'component_relation_index',
@@ -248,7 +249,7 @@ function get_elements() : array {
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
 			'new_value_params'	=> ['test3','test71',0,'dd47',3],
-			'test_save'			=> false
+			'test_save'			=> true
 		],
 		(object)[
 			'model'				=> 'component_relation_related',
@@ -258,7 +259,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test54',3]
+			'new_value_params'	=> [$section_tipo,'test54',3,'dd151',3]
 		],
 		(object)[
 			'model'			=> 'component_section_id',
