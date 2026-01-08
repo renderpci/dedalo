@@ -603,7 +603,7 @@ class v6_to_v7 {
 													if (!property_exists($column_misc, $literal_tipo)) {
 														$column_misc->{$literal_tipo} = [];
 													}
-													if($model==='component_security_access'){
+													if($model==='component_security_access'  || $model=== 'component_info' || $model=== 'component_filer_records') {
 														if(is_object($value)){
 															$literal_misc 		= $value;
 															$literal_misc->id	= $value_key;
