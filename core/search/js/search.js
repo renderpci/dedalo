@@ -137,8 +137,8 @@ search.prototype.init = async function(options) {
 		self.section_id							= 0
 
 		// ar_components_exclude. Custom list of elements to exclude in the left list (section fields)
-		self.ar_components_exclude = [			
-			'component_3d',			
+		self.ar_components_exclude = [
+			'component_3d',
 			'component_av',
 			'component_image',
 			'component_pdf',

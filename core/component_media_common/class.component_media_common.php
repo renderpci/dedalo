@@ -3113,8 +3113,7 @@ class component_media_common extends component_common {
 	* Parses component SQO query
 	* @param object $query_object
 	* @return object|false $query_object
-	*	Edited/parsed version of received object
-	* @test true
+	* Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
