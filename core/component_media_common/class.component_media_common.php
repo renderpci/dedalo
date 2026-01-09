@@ -3112,11 +3112,11 @@ class component_media_common extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* Parses component SQO query
 	* @param object $query_object
-	* @return object $query_object
+	* @return object|false $query_object
 	*	Edited/parsed version of received object
 	* @test true
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// media components are not searchable at now
 		debug_log(__METHOD__
@@ -3126,7 +3126,7 @@ class component_media_common extends component_common {
 		);
 
 
-		return $query_object;
+		return false;
 	}//end resolve_query_object_sql
 
 
