@@ -185,12 +185,14 @@ class component_section_id extends component_common {
 				$second_val	= !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
 
 				$query_object_one = clone $query_object;
-					$query_object_one->operator = '>=';
-					$query_object_one->q_parsed	= $first_val;
+					$sql = "{$table_alias}.{$column}::integer >= _Q1_";
+					$query_object_one->sentence = $sql;
+					$query_object_one->params = ['_Q1_' => $first_val];
 
 				$query_object_two = clone $query_object;
-					$query_object_two->operator = '<=';
-					$query_object_two->q_parsed	= $second_val;
+					$sql = "{$table_alias}.{$column}::integer <= _Q1_";
+					$query_object_two->sentence = $sql;
+					$query_object_two->params = ['_Q1_' => $second_val];
 
 				// Group in a new "AND"
 				$current_op = '$and';
@@ -201,50 +203,60 @@ class component_section_id extends component_common {
 				break;
 			# SEQUENCE
 			case (strpos($q, $sequence_separator)!==false):
-				// Transform "12,25,36" to "(12 OR 25 OR 36)"
+				// Transform "12,25,36" to "section_id = ANY('{12,25,36}'::integer[])"
 				$ar_parts	= explode($sequence_separator, $q);
-				$operator = 'IN';
 				$q_clean  = array_map(function($el){
 					return (int)$el;
 				}, $ar_parts);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= implode(',', $q_clean);
-				$query_object->format	= 'in_column';
+				$sql = "{$table_alias}.{$column}::integer = ANY(_Q1_::integer[])";
+				$query_object->sentence = $sql;
+				$query_object->params = ['_Q1_' => '{' . implode(',', $q_clean) . '}'];
 				break;
 			# DISTINCT OF
 			case (substr($q, 0, 2)==='!='):
-				$operator = '!=';
-				$q_clean  = (int)str_replace($operator, '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer != _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('!=', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
-				$operator = '>=';
-				$q_clean  = (int)str_replace($operator, '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer >= _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('>=', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 			# SMALLER OR EQUAL THAN
 			case (substr($q, 0, 2)==='<='):
-				$operator = '<=';
-				$q_clean  = (int)str_replace($operator, '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer <= _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('<=', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
-				$operator = '>';
-				$q_clean  = (int)str_replace($operator, '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer > _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('>', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 				break;
 			# SMALLER THAN
-			case (substr($q, 0, 1)==='<'):
-				$operator = '<';
-				$q_clean  = (int)str_replace($operator, '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+			case (substr($q, 0, 1)==='<'):				
+				// sql sentence	
+				$sql = "{$table_alias}.{$column}::integer < _Q1_";
+				$query_object->sentence = $sql;
+				// params
+				$q_clean = str_replace('<', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
 				break;
 			// EQUAL DEFAULT
 			default:
