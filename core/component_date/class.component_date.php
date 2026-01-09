@@ -512,49 +512,6 @@ class component_date extends component_common {
 		$query_object->data_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
 		$query_object->type			= 'jsonb';
 
-		// shared resolution functions
-			$is_empty = function(object $query_object) : object {
-
-				$query1 = clone($query_object);
-					$query1->operator	= ' ';
-					$query1->q_parsed	= 'IS NULL';
-					$query1->format		= 'typeof';
-
-				$query2 = clone($query_object);
-					$query2->operator	= '=';
-					$query2->q_parsed	= '\'[]\'';
-					$query2->type		= 'string';
-
-				$logical_operator = '$or';
-
-				$new_query_json = new stdClass();
-					$new_query_json->$logical_operator = [$query1, $query2];
-
-				return $new_query_json;
-			};
-			$is_not_empty = function(object $query_object) : object {
-
-				$query1 = clone($query_object);
-					$query1->operator	= '=';
-					$query1->q_parsed	= '\'array\''; # (!) remember quotes inside
-					$query1->format		= 'typeof';
-
-				$query2 = clone($query_object);
-					$query2->operator	= '!=';
-					$query2->q_parsed	= '\'[]\'';
-					$query2->type		= 'string';
-
-				$logical_operator = '$and';
-
-				$new_query_json = new stdClass();
-					$new_query_json->{$logical_operator} = [$query1, $query2];
-
-				$new_query_json->operator	= ' ';
-				$new_query_json->q_parsed	= 'IS NOT NULL'; # (!) remember quotes inside
-				$new_query_json->format		= 'typeof';
-
-				return $new_query_json;
-			};
 
 		// date_mode cases
 		switch ($date_mode) {
@@ -572,116 +529,41 @@ class component_date extends component_common {
 				switch ($operator) {
 					case '<':
 					case '>=':
-						$query1 = new stdClass();
-							$query1->data_path	= ['start','time'];
-							$query1->operator	= $operator;
-							$query1->q_parsed	= '\''.$q_clean.'\'';
-							$query1->type		= 'jsonb';
-
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1];
-
-						# query_object config
-						$query_object->q_info			= '';
-						$query_object->q_parsed			= null;
-						$query_object->format			= 'array_elements';
-						$query_object->array_elements	= $group_array_elements;
-
+						// Standard numeric comparison using JSON path existence operator (@?).
+						// Checks if any array item has a 'start.time' matching the operator.
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
+						$query_object->params = ['_Q1_' => $q_clean];
+						
 						// set final_query_object
 						$final_query_object = $query_object;
 						break;
 
 					case '>':
 					case '<=':
+						// Standard numeric comparison using JSON path existence operator (@?).
+						// Uses $final_range to account for the end of the specified precision (day, month, or year).
 						$final_range = self::get_final_search_range_seconds($dd_date);
 
-						$query1 = new stdClass();
-							$query1->data_path	= ['start','time'];
-							$query1->operator	= $operator;
-							$query1->q_parsed	= '\''.$final_range.'\'';
-							$query1->type		= 'jsonb';
-
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1];
-
-						# query_object config
-						$query_object->q_info			= '';
-						$query_object->q_parsed			= null;
-						$query_object->format			= 'array_elements';
-						$query_object->array_elements	= $group_array_elements;
-
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
+						$query_object->params = ['_Q1_' => $final_range];
+						
 						// set final_query_object
 						$final_query_object = $query_object;
 						break;
 
-					case '!*': // empty case
-						// set final_query_object
-						$final_query_object = $is_empty( $query_object );
+					case '!*': // IS NULL (Empty)
+						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 
-					case '*':
-						// set final_query_object
-						$final_query_object = $is_not_empty( $query_object );
-
-						$query_object->sentence = "date @? '$.{$component_tipo}[*]";
+					case '*': // IS NOT NULL (Not Empty)
+						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 
 					case '=':
 					default:
 						$final_range = self::get_final_search_range_seconds($dd_date);
-						// array elements subgroups
-						// array elements sub_group1
-					// 	$query1 = new stdClass();
-					// 		$query1->data_path	= ['start','time'];
-					// 		$query1->operator	= '<=';
-					// 		$query1->q_parsed	= '\''.$q_clean.'\'';
-					// 		$query1->type		= 'jsonb';
-
-					// 	$query2 = new stdClass();
-					// 		$query2->data_path	= ['end','time'];
-					// 		$query2->operator	= '>=';
-					// 		$query2->q_parsed	= '\''.$q_clean.'\'';
-					// 		$query2->type		= 'jsonb';
-
-					// 	# Add to sub_group1
-					// 	$sub_group1 = new stdClass();
-					// 		$sub_name1 = '$and';
-					// 		$sub_group1->$sub_name1 = [$query1,$query2];
-
-					// // array elements sub_group2
-					// 	$query1 = new stdClass();
-					// 		$query1->data_path	= ['start','time'];
-					// 		$query1->operator	= '>=';
-					// 		$query1->q_parsed	= '\''.$q_clean.'\'';
-					// 		$query1->type		= 'jsonb';
-
-					// 	$query2 = new stdClass();
-					// 		$query2->data_path	= ['start','time'];
-					// 		$query2->operator	= '<=';
-					// 		$query2->q_parsed	= '\''.$final_range.'\'';
-					// 		$query2->type		= 'jsonb';
-
-					// 	// Add to sub_group2
-					// 	$sub_group2 = new stdClass();
-					// 		$sub_name2 = '$and';
-					// 		$sub_group2->$sub_name2 = [$query1,$query2];
-
-					// // Group array elements
-					// 	$group_op_name = '$or';
-					// 	$group_array_elements = new stdClass();
-					// 		$group_array_elements->{$group_op_name} = [$sub_group1,$sub_group2];
-
-					// // query_object config
-					// 	$query_object->q_parsed			= null;
-					// 	$query_object->format			= 'array_elements';
-					// 	$query_object->array_elements	= $group_array_elements;
-
-					// // set final_query_object
-					// $final_query_object = $query_object;
-
-
 					
 					// SELECT section_id, section_tipo, date
 					// FROM matrix
@@ -733,52 +615,27 @@ class component_date extends component_common {
 				// operator conditionals
 				switch ($operator) {
 					case '=':
-						$query1 = new stdClass();
-							$query1->data_path		= ['start','time'];
-							$query1->operator		= '>=';
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
-
-						// $dd_date = new dd_date($q_object->start);
+						// Exact time match within the precision range (usually 0s-59s depending on data)
 						$final_range = $q_clean + self::get_final_search_range_seconds($dd_date);
-						$query2 = new stdClass();
-							$query2->data_path		= ['start','time'];
-							$query2->operator		= '<=';
-							$query2->q_parsed		= '\''.$final_range.'\'';
-							$query2->type			= 'jsonb';
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time >= _Q1_ && @.start.time <= _Q2_)'";
+						$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
+						$final_query_object = $query_object;
+						break;
 
-						$group_op_name = '$and';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1,$query2];
+					case '!*': // IS NULL (Empty)
+						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
+						break;
 
-						// query_object config
-						$query_object->q_info			= '';
-						$query_object->q_parsed			= null;
-						$query_object->format			= 'array_elements';
-						$query_object->array_elements	= $group_array_elements;
-
-						// set final_query_object
+					case '*': // IS NOT NULL (Not Empty)
+						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
 						$final_query_object = $query_object;
 						break;
 
 					default:
-						$query1 = new stdClass();
-							$query1->data_path		= ['start','time'];
-							$query1->operator		= $operator;
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
-
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1];
-
-						// query_object config
-						$query_object->q_info			= '';
-						$query_object->q_parsed			= null;
-						$query_object->format			= 'array_elements';
-						$query_object->array_elements	= $group_array_elements;
-
-						// set final_query_object
+						// Variable comparison (<, >, <=, >=) for time values
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
+						$query_object->params = ['_Q1_' => $q_clean];
 						$final_query_object = $query_object;
 						break;
 				}
@@ -802,87 +659,37 @@ class component_date extends component_common {
 
 				// sample 'dd547' (Activity)
 				switch ($operator) {
-					case '!*': // empty case
-						$final_query_object = $is_empty( $query_object );
+					case '!*': // IS NULL (Empty)
+						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 
-					case '*': // not empty case
-						$final_query_object = $is_not_empty( $query_object );
+					case '*': // IS NOT NULL (Not Empty)
+						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 
 					case '<':
 					case '>=':
-						// array elements sub_group2
-						$query1 = new stdClass();
-							$query1->data_path		= ['start','time'];
-							$query1->operator		= $operator;
-							$query1->q_parsed		= '\''.$q_clean.'\'';
-							$query1->type			= 'jsonb';
-
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1];
-
-						// query_object config
-							$query_object->q_info			= '';
-							$query_object->q_parsed			= null;
-							$query_object->format			= 'array_elements';
-							$query_object->array_elements	= $group_array_elements;
-
-						// set final_query_object
+						// Comparison with the start of the date_time range
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
+						$query_object->params = ['_Q1_' => $q_clean];
 						$final_query_object = $query_object;
 						break;
 
 					case '>':
 					case '<=':
-						// array elements sub_group2
-						$query1 = new stdClass();
-							$query1->data_path		= ['start','time'];
-							$query1->operator		= $operator;
-							$query1->q_parsed		= '\''.$final_range.'\'';
-							$query1->type			= 'jsonb';
-
-						$group_op_name = '$or';
-						$group_array_elements = new stdClass();
-							$group_array_elements->{$group_op_name} = [$query1];
-
-						// query_object config
-							$query_object->q_info			= '';
-							$query_object->q_parsed			= null;
-							$query_object->format			= 'array_elements';
-							$query_object->array_elements	= $group_array_elements;
-
-						// set final_query_object
+						// Comparison with the end of the date_time range (precision accounting)
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
+						$query_object->params = ['_Q1_' => $final_range];
 						$final_query_object = $query_object;
 						break;
 
 					case '=':
 					default:
-						// array elements sub_group2
-						$query1 = new stdClass();
-							$query1->data_path	= ['start','time'];
-							$query1->operator	= '>=';
-							$query1->q_parsed	= '\''.$q_clean.'\'';
-							$query1->type		= 'jsonb';
-
-						$query2 = new stdClass();
-							$query2->data_path	= ['start','time'];
-							$query2->operator	= '<=';
-							$query2->q_parsed	= '\''.$final_range.'\'';
-							$query2->type		= 'jsonb';
-
-						// Add to sub_group2
-						$sub_group2 = new stdClass();
-							$sub_name2 = '$and';
-							$sub_group2->$sub_name2 = [$query1,$query2];
-
-						// query_object config
-							$query_object->q_info			= '';
-							$query_object->q_parsed			= null;
-							$query_object->format			= 'array_elements';
-							$query_object->array_elements	= $sub_group2;
-
-						// set final_query_object
+						// Exact date_time match within the calculated precision range
+						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time >= _Q1_ && @.start.time <= _Q2_)'";
+						$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
 						$final_query_object = $query_object;
 						break;
 				}
@@ -890,12 +697,14 @@ class component_date extends component_common {
 
 			default:
 				switch ($operator) {
-					case '!*': // empty case
-						$final_query_object = $is_empty( $query_object );
+					case '!*': // IS NULL (Empty)
+						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 
-					case '*': // not empty case
-						$final_query_object = $is_not_empty( $query_object );
+					case '*': // IS NOT NULL (Not Empty)
+						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
 						break;
 				}
 				break;
