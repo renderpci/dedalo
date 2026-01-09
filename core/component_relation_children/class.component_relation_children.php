@@ -589,9 +589,9 @@ class component_relation_children extends component_relation_common {
 	* specifically optimizing for 'IN' operator queries against section IDs.
 	*
 	* @param object $query_object The initial query object with search parameters.
-	* @return object The modified query object ready for SQL generation.
+	* @return object|false The modified query object ready for SQL generation.
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// q
 			$q = $query_object->q;
