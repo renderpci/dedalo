@@ -564,20 +564,32 @@ class component_date extends component_common {
 					case '=':
 					default:
 						$final_range = self::get_final_search_range_seconds($dd_date);
-					
+
 					// SELECT section_id, section_tipo, date
 					// FROM matrix
 					// WHERE date @? '$.mdcat1968[*] ? (
 					// (@.start.time <= 62322912000 && @.end.time >= 62322912000) ||
 					// (@.start.time >= 62322912000 && @.start.time <= 62322912000 + 3600)
 					// )';
+					
+					// params
+					$Q1  = "$.{$component_tipo}[*] ? (";	
+					$Q1 .= "(@.start.time <= {$q_clean} && @.end.time >= {$q_clean}) ||";
+					$Q1 .= "(@.start.time >= {$q_clean} && @.start.time <= {$final_range})";
+					$Q1 .= ")";
+					$query_object->params = ['_Q1_' => $Q1];
+					
+					// sentence
+					$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+					break;
+				}
+				break;
+					// 	"(@.start.time >= {$q_clean} && @.start.time <= {$final_range})".PHP_EOL.
+					// 	")'"
+					// ];
 
-					$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (". PHP_EOL.
-						'(@.start.time <= _Q1_ && @.end.time >= _Q1_) ||'.PHP_EOL.
-						'(@.start.time >= _Q1_ && @.start.time <= _Q2_)'.PHP_EOL.
-					')\'';
+					// $query_object->sentence = "{$table_alias}.{$column} @? _Q1_";
 
-					$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
 					break;
 				}
 				break;
