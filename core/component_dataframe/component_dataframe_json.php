@@ -48,7 +48,6 @@
 
 		$data_value = $this->get_data_lang();
 
-
 		// value
 			switch ($mode) {
 
@@ -87,7 +86,7 @@
 				$item->parent_section_id	= $section_id;
 				// fix pagination vars
 				$item->pagination = (object)[
-					'total'		=> empty($data_value) ? 0 :count($data_value),
+					'total'		=> empty($data_value) ? 0 : count($data_value),
 					'limit'		=> $limit,
 					'offset'	=> $offset
 				];
@@ -104,7 +103,7 @@
 			$data[] = $item;
 
 			// solved mode
-			if (!empty($data_value) && $mode!='solved') {
+			if (!empty($data_value) && $mode!=='solved') {
 				// subdatum
 				$subdatum = $this->get_subdatum($tipo, $value);
 

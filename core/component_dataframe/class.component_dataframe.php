@@ -1,7 +1,10 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_DATAFRAME
+* This component is used to create a dataframe for a given component.
 * extends component_portal
+*
+* column_name: relation
 */
 class component_dataframe extends component_portal {
 
@@ -107,9 +110,8 @@ class component_dataframe extends component_portal {
 	* Return the properties to be check to compare locators on delete locator
 	* @return array
 	*/
-	public function get_locator_properties_to_check() {
+	public function get_locator_properties_to_check() : array {
 
-		// return ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key'];
 		return $this->test_equal_properties;
 	}//end get_locator_properties_to_check
 
@@ -136,9 +138,10 @@ class component_dataframe extends component_portal {
 	/**
 	* SET_TIME_MACHINE_DATA
 	*
+	* @param ?array $data
 	* @return bool
 	*/
-	public function set_time_machine_data( array $data ) : bool {
+	public function set_time_machine_data( ?array $data ) : bool {
 
 		// remove all previous data
 		$this->empty_full_data_associated_to_main_component();
@@ -167,11 +170,13 @@ class component_dataframe extends component_portal {
 		$main_component_tipo = $this->caller_dataframe->main_component_tipo ?? null;
 
 		if( empty($main_component_tipo) ){
+
 			// default
 			$ontology_node			= new ontology_node( $this->get_tipo() );
 			$main_component_tipo	= $ontology_node->get_parent();
 
 		}else{
+
 			// Check valid main_component_tipo
 			$model = ontology_node::get_model_by_tipo( $main_component_tipo );
 			if ($model!=='component_iri') {
@@ -286,9 +291,7 @@ class component_dataframe extends component_portal {
 			$section_tipo	= $options->section_tipo ?? null;
 			$context		= $options->context ?? 'update_component_data';
 
-
-
-		$update_version = implode(".", $update_version);
+		$update_version = implode('.', $update_version);
 		switch ($update_version) {
 
 			default:
@@ -301,7 +304,6 @@ class component_dataframe extends component_portal {
 
 		return $response;
 	}//end update_data_version
-
 
 
 
