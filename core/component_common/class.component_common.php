@@ -96,6 +96,11 @@ abstract class component_common extends common {
 			component_media_common::get_media_components()
 		);
 		$direct_data[] = 'component_date';
+		$direct_data[] = 'component_security_access';
+		$direct_data[] = 'component_filter_records';
+		$direct_data[] = 'component_inverse';
+		$direct_data[] = 'component_section_id';
+		
 
 		return $direct_data;
 	}//end get_direct_data_components
