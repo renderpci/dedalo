@@ -3907,27 +3907,24 @@ abstract class common {
 			$skip_permissions			= $options->skip_permissions ?? false;
 			$caller_tipo				= $options->caller_tipo ?? null;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
-			$ar_components_exclude		= $options->ar_components_exclude ?? [
-				'component_password',
-				// 'component_filter_records',
-				'component_image',
+			$ar_components_exclude		= $options->ar_components_exclude ?? [							
 				'component_3d',
 				'component_av',
+				'component_image',
 				'component_pdf',
-				'component_security_administrator',
-				//'component_relation_children',
-				//'component_relation_related',
-				//'component_relation_model',
-				//'component_relation_parent',
-				//'component_relation_index',
-				//'component_relation_struct',
+				'component_password',
+				'component_security_access',
 				'component_geolocation',
 				'component_info',
-				'component_state',
-				'component_semantic_node',
-				'section_tab'
+				'component_inverse',
+				'section_tab',
+				//'component_filter_records',	
+				//'component_relation_children',
+				//'component_relation_related',
+				//'component_relation_parent',
+				//'component_relation_index'
 			];
-			$ar_include_elements		= $options->ar_include_elements ?? [
+			$ar_include_elements = $options->ar_include_elements ?? [
 				'component',
 				'section_group',
 				'section_group_div',
