@@ -639,6 +639,18 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 	// let ar_elements = group_dom_obj.querySelectorAll(":scope > .search_component,:scope > .search_group") //
 	const ar_elements = group_dom_obj?.children || []
 
+	// get_search_value. Get the search value from the component or apply the default method
+	const get_search_value = (component) => {
+		if (typeof component.get_search_value === 'function') {
+		  return component.get_search_value();
+		}
+		
+		// value is into the data.value array
+		const first_data_item = component.data.value?.[0];
+
+		return first_data_item?.value ?? first_data_item ?? component.data.value;
+	}
+
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {
 
@@ -675,9 +687,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.
-				const search_value = typeof component_instance.get_search_value === 'function'
-					? component_instance.get_search_value()
-					: component_instance.data.value ?? component_instance.data
+				const search_value = get_search_value(component_instance);				  
+				if(SHOW_DEBUG) {
+					console.log("[recursive_groups] search_value:", search_value);
+				}				
 
 				// overwrite
 				q			= search_value.length > 0 ? search_value : null
