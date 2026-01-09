@@ -137,16 +137,15 @@ search.prototype.init = async function(options) {
 		self.section_id							= 0
 
 		// ar_components_exclude. Custom list of elements to exclude in the left list (section fields)
-		self.ar_components_exclude = [
-			'component_password',
-			'component_image',
+		self.ar_components_exclude = [			
+			'component_3d',			
 			'component_av',
+			'component_image',
 			'component_pdf',
-			'component_security_administrator',
+			'component_password',
+			'component_security_access',
 			'component_geolocation',
 			'component_info',
-			'component_state',
-			'component_semantic_node',
 			'component_inverse',
 			'section_tab'
 		];
