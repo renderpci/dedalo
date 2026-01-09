@@ -531,8 +531,8 @@ class component_date extends component_common {
 					case '>=':
 						// Standard numeric comparison using JSON path existence operator (@?).
 						// Checks if any array item has a 'start.time' matching the operator.
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
-						$query_object->params = ['_Q1_' => $q_clean];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})" ];
 						
 						// set final_query_object
 						$final_query_object = $query_object;
@@ -544,8 +544,8 @@ class component_date extends component_common {
 						// Uses $final_range to account for the end of the specified precision (day, month, or year).
 						$final_range = self::get_final_search_range_seconds($dd_date);
 
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
-						$query_object->params = ['_Q1_' => $final_range];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} $final_range)" ];
 						
 						// set final_query_object
 						$final_query_object = $query_object;
@@ -581,40 +581,39 @@ class component_date extends component_common {
 					
 					// sentence
 					$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
-					break;
-				}
-				break;
-					// 	"(@.start.time >= {$q_clean} && @.start.time <= {$final_range})".PHP_EOL.
-					// 	")'"
-					// ];
 
-					// $query_object->sentence = "{$table_alias}.{$column} @? _Q1_";
-
+					// set final_query_object
+					$final_query_object = $query_object;
 					break;
 				}
 				break;
 
 			case 'period':
-				/* En proceso ...
-				$q_clean  = isset($q_object->time) ? $q_object->time : 0;
-				$operator = isset($q_object->op) ? $q_object->op : '=';
+				// Extract directly from calculated time in JAVASCRIPT
+				$dd_date	= isset($q_object->period) ? new dd_date($q_object->period) : null;
+				$q_clean	= !empty($q_object->period->time)
+					? $q_object->period->time
+					: (isset($dd_date) ? dd_date::convert_date_to_seconds($dd_date) : 0);
 
-				$query1 = new stdClass();
-					$query1->data_path 	= ['period','time'];
-					$query1->operator 			= $operator;
-					$query1->q_parsed 					= '\''.$q_clean.'\'';
-					$query1->type 				= 'jsonb';
+				switch ($operator) {
+					case '!*': // IS NULL (Empty)
+						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
+						break;
 
-				$group_op_name = '$or';
-				$group_array_elements = new stdClass();
-					$group_array_elements->{$group_op_name} = [$query1];
+					case '*': // IS NOT NULL (Not Empty)
+						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
+						$final_query_object = $query_object;
+						break;
 
-				# query_object config
-				$query_object->q_parsed				= null;
-				$query_object->format 			= 'array_elements';
-				$query_object->array_elements 	= $group_array_elements;
-
-				$final_query_object = $query_object;*/
+					case '=':
+					default:
+						// Exact period match by calculated time
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.period.time == {$q_clean})" ];
+						$final_query_object = $query_object;
+						break;
+				}
 				break;
 
 			case 'time':
@@ -629,8 +628,8 @@ class component_date extends component_common {
 					case '=':
 						// Exact time match within the precision range (usually 0s-59s depending on data)
 						$final_range = $q_clean + self::get_final_search_range_seconds($dd_date);
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time >= _Q1_ && @.start.time <= _Q2_)'";
-						$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time >= {$q_clean} && @.start.time <= {$final_range})" ];
 						$final_query_object = $query_object;
 						break;
 
@@ -646,8 +645,8 @@ class component_date extends component_common {
 
 					default:
 						// Variable comparison (<, >, <=, >=) for time values
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
-						$query_object->params = ['_Q1_' => $q_clean];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})"];
 						$final_query_object = $query_object;
 						break;
 				}
@@ -684,24 +683,24 @@ class component_date extends component_common {
 					case '<':
 					case '>=':
 						// Comparison with the start of the date_time range
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
-						$query_object->params = ['_Q1_' => $q_clean];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})"];
 						$final_query_object = $query_object;
 						break;
 
 					case '>':
 					case '<=':
 						// Comparison with the end of the date_time range (precision accounting)
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time {$operator} _Q1_)'";
-						$query_object->params = ['_Q1_' => $final_range];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$final_range})"];
 						$final_query_object = $query_object;
 						break;
 
 					case '=':
 					default:
 						// Exact date_time match within the calculated precision range
-						$query_object->sentence = "{$table_alias}.{$column} @? '$.{$component_tipo}[*] ? (@.start.time >= _Q1_ && @.start.time <= _Q2_)'";
-						$query_object->params = ['_Q1_' => $q_clean, '_Q2_' => $final_range];
+						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time >= {$q_clean} && @.start.time <= {$final_range})"];
 						$final_query_object = $query_object;
 						break;
 				}
