@@ -1038,7 +1038,7 @@ class component_relation_common extends component_common {
 		*		"lang": "all",
 		*		"type": "jsonb"
 		* }
-	* @return object $query_object
+	* @return object|false $query_object
 		*  sample:
 		* {
 		*	"q": {
@@ -1066,7 +1066,7 @@ class component_relation_common extends component_common {
 		*	"q_parsed": "'[{\"type\":\"dd151\",\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"from_component_tipo\":\"hierarchy24\"}]'"
 		* }
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
+	public static function resolve_query_object_sql( object $query_object ) : object|false {
 
 		// Always set fixed values
 		$query_object->type		= 'jsonb';

@@ -357,10 +357,10 @@ class component_json extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	*  Cloned from component_input_text
 	* @param object $query_object
-	* @return object $query_object
+	* @return object|false $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// $q
 			$q = is_array($query_object->q)

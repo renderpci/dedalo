@@ -473,9 +473,9 @@ class component_relation_index extends component_relation_common {
 	* @todo This method do not works if no references are found !
 	*
 	* @param object $query_object
-	* @return object $query_object
+	* @return object|false $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
+	public static function resolve_query_object_sql( object $query_object ) : object|false {
 
 		$with_references = false;
 

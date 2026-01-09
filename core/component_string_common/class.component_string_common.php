@@ -491,15 +491,15 @@ class component_string_common extends component_common {
 	*    "component_path": ["rsc86"],
 	*    "lang": "all"
 	* }
-	* @return object $query_object
+	* @return object|false $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// $q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 		$q = is_array($query_object->q)
-			? (!empty($query_object->q[0]) ? $query_object->q[0] : '')
+			? (!empty($query_object->q[0]) ?? '')
 			: ($query_object->q ?? '');
 
 		// split q case
@@ -513,7 +513,12 @@ class component_string_common extends component_common {
 
 		// Validate path and calculate translatable
 		if (empty($query_object->path) || !is_array($query_object->path)) {
-			throw new Exception("Invalid component path");
+			debug_log(__METHOD__
+			   . " Invalid component path " . PHP_EOL
+			   . ' $query_object->path: ' . to_string($query_object->path)
+			   , logger::ERROR
+			);
+			return false;
 		}
 		$path_end = end($query_object->path);
 		$component_tipo = $path_end->component_tipo;
