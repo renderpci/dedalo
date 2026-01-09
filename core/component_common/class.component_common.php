@@ -96,6 +96,11 @@ abstract class component_common extends common {
 			component_media_common::get_media_components()
 		);
 		$direct_data[] = 'component_date';
+		$direct_data[] = 'component_security_access';
+		$direct_data[] = 'component_filter_records';
+		$direct_data[] = 'component_inverse';
+		$direct_data[] = 'component_section_id';
+		
 
 		return $direct_data;
 	}//end get_direct_data_components
@@ -3368,8 +3373,16 @@ abstract class component_common extends common {
 				? $current_query_object
 				: [$current_query_object];
 
+		// safe ar_query_object. Remove empty values
+			$safe_ar_query_object = [];
+			foreach ($ar_query_object as $current_value) {
+				if(!empty($current_value)) {
+					$safe_ar_query_object[] = $current_value;
+				}
+			}
 
-		return $ar_query_object;
+
+		return $safe_ar_query_object;
 	}//end get_search_query
 
 

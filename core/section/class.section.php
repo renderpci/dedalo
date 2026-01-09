@@ -3826,9 +3826,9 @@ class section extends common {
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
-	* @return object $query_object
+	* @return object|false $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
+	public static function resolve_query_object_sql( object $query_object ) : object|false {
 
 		# Always set fixed values
 		$query_object->type = 'string';

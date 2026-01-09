@@ -437,9 +437,9 @@ class component_date extends component_common {
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $request_query_object
-	* @return object $query_object
+	* @return object|false $query_object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
