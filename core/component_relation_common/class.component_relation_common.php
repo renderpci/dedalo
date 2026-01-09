@@ -454,21 +454,24 @@ class component_relation_common extends component_common {
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
 			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
+				/** @var object $current_column_obj */
+				if (!is_object($current_column_obj)) continue;
 
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
-					return ($el->id===$current_column_obj->id);
+					return (is_object($el) && $el->id===$current_column_obj->id);
 				});
 
 				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
 				if($id_obj===null){
 					// check if the current column_id is a locator column, else add the column_object at the end
-					$current_column_path = explode('|', $current_column_obj->id);
+					$current_column_path = explode('|', (string)$current_column_obj->id);
 					if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0 || sizeof($current_column_path)>1){
 						// get the last position of the column group
 						$position = false;
 						foreach ($ar_columns_obj as $column_key => $column_value) {
-							if($column_value->group === $current_column_obj->group){
+							/** @var object $column_value */
+							if(is_object($column_value) && $column_value->group === $current_column_obj->group){
 								$position = $column_key;
 							}
 						}
