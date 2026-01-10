@@ -492,14 +492,14 @@ class component_string_common extends component_common {
 	*    "lang": "all"
 	* }
 	* @return object|false $query_object
-	*	Edited/parsed version of received object
+	* Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// $q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$q = is_array($query_object->q)
-			? (!empty($query_object->q[0]) ?? '')
+		$q = isset($query_object->q) && is_array($query_object->q)
+			? ($query_object->q[0] ?? '')
 			: ($query_object->q ?? '');
 
 		// split q case
@@ -540,95 +540,36 @@ class component_string_common extends component_common {
 		// type. Always set fixed values
 		$query_object->type = 'string';
 
+		// lang
+		$query_object->lang = $query_object->lang ?? DEDALO_DATA_LANG;
+
 		switch (true) {
 
 			// EMPTY VALUE
 			case ($q==='!*'):
-				$operator	= 'IS NULL';
-				$q_clean	= '';
-
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-				// Search empty only in current lang
-				// Resolve based on if is translatable
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
-
-					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
-						? $query_object->lang
-						: 'all';
-
-					$lang_query_not_null = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> 'IS NULL',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-					$lang_query_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-
-					$lang_query_objects = array_merge($lang_query_not_null, $lang_query_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
+				// params
+				$query_object->params = [
+					'_Q1_' => $query_object->lang==='all'
+						? '$.'.$component_tipo.'[*].value ? (!exists(@) || @ == "" || @ == null)'
+						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && (!exists(@) || @.value == "" || @.value == null))'
+				];				
+				// sentence
+				// $query_object->sentence = "({$table_alias}.{$column}->'{$component_tipo}' IS NULL OR {$table_alias}.{$column} @? (_Q1_)::jsonpath)";
+				$query_object->sentence = $query_object->lang==='all'
+					? "(NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]'))"
+					: "(NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*].lang == \"'{$query_object->lang}\"'))";
 				break;
 
 			// NOT EMPTY
 			case ($q==='*'):
-				$operator = 'IS NOT NULL';
-				$q_clean  = '';
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-					$lang = (isset($query_object->lang) && $query_object->lang!=='all')
-						? $query_object->lang
-						: 'all';
-
-					$path_end		= end($query_object->path);
-					$component_tipo	= $path_end->component_tipo;
-
-					$translatable = RecordObj_dd::get_translatable($component_tipo);
-
-					$lang_query_objects_null = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> 'IS NOT NULL',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-					$lang_query_objects_empty = component_common::resolve_query_object_lang_behavior( (object)[
-						'query_object'	=> $query_object,
-						'operator'		=> '!=',
-						'q_parsed'		=> '\'[]\'',
-						'lang'			=> $lang,
-						'translatable'	=> $translatable
-					]);
-
-					$lang_query_objects = array_merge($lang_query_objects_null, $lang_query_objects_empty);
-
-					$logical_operator = '$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $lang_query_objects;
-
-				// override
-				$logical_operator = '$and';
-				$final_query_json = new stdClass;
-					$final_query_json->$logical_operator = [$langs_query_json];
-				$query_object = $final_query_json;
+				// params
+				$query_object->params = [
+					'_Q1_' => $query_object->lang==='all'
+						? '$.'.$component_tipo.'[*].value ? (@ != "" && @ != null)'
+						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && (@.value != "" || @.value != null))'
+				];
+				// sentence
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				break;
 
 			// IS DIFFERENT
@@ -765,17 +706,17 @@ class component_string_common extends component_common {
 					$query_object->lang	= $lang;
 				break;
 
-			// DEFAULT CONTAINS
-			default:
-				// sql sentence
-				$sql  = "{$table_alias}.{$column} @? (";
-				$sql .= "'$.{$component_tipo}[*].value ? (@ like_regex \"'||_Q1_||'\" flag \"i\")'";
-				$sql .= ")::jsonpath";
-				$query_object->sentence = $sql;
-
-				// params
-				$q_clean  = str_replace('+', '', $q);
-				$query_object->params = ['_Q1_' => $q_clean];
+			// default contains
+			default:				
+				$q_clean = str_replace('+', '', $q);
+				// params '$.rsc195[*] ? (@.value like_regex "' || to_unaccent_regex('ramón') || '" flag "i")'
+				$query_object->params = [
+					'_Q1_' => $query_object->lang==='all'
+						? '$.'.$component_tipo.'[*] ? (@.value like_regex "' || f_unaccent('.$q_clean.') || '" flag "i")'
+						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && @.value like_regex "'.$q_clean.'" flag "i")'
+				];
+				// sentence
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				break;
 		}//end switch (true)
 
