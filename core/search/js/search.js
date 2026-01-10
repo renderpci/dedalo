@@ -646,11 +646,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 		}
 		
 		// value is into the data.value array
-		const data_value = component.data.value;
-
-		return data_value?.value 
-			? data_value.value  
-			: data_value;
+		return component.data.value;
 	}
 
 	const len = ar_elements.length
