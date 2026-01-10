@@ -723,7 +723,7 @@ class component_string_common extends component_common {
 				break;
 
 			// LITERAL ('text')
-			// Case-sensitive but accent-insensitive search for the exact literal string.
+			// Case-sensitive but accent-insensitive search for an exact full-string match.
 			case (search::is_literal($q)===true):
 				$q_clean = str_replace("'", '', $q);
 				$query_object->params = ['_Q1_' => $q_clean];
@@ -735,7 +735,7 @@ class component_string_common extends component_common {
 				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
 				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
 				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
-				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~ f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') = f_unaccent(_Q1_)'.PHP_EOL;
 				$query_object->sentence .= ' )';
 				break;
 
