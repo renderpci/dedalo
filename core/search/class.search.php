@@ -547,6 +547,8 @@ class search {
 
 					$path						= $search_object->path;
 					$search_object->table_alias	= $this->get_table_alias_from_path( $path );
+					$search_object->table		= $this->matrix_table;
+
 					$search_component			= end($path);
 					// model (with fallback if do not exists)
 					if (!isset($search_component->model)) {
