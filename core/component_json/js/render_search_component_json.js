@@ -117,9 +117,7 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input field
-		const text_value = current_value?.value
-			? JSON.stringify(current_value.value)
-			: ''
+		const text_value = current_value?.value || ''
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
