@@ -374,11 +374,15 @@ class component_json extends component_common {
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
+		// component_tipo
+		$path_end       = end($query_object->path);
+		$component_tipo = $path_end->component_tipo;
+
 		// $q
 			$q = $query_object->q;
 
 		// escape q string for DB (fallback for legacy cases or engine analysis like duplicated)
-			$q_escaped = pg_escape_string(stripslashes($q));
+			$q_escaped = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		// split q case
 			$q_split = $query_object->q_split ?? false;
@@ -395,62 +399,78 @@ class component_json extends component_common {
 		// type. Always set fixed values
 			$query_object->type = 'string';
 
+		// escape q string for JSON Path (double quotes)
+			$q_json_path = str_replace('"', '\\"', $q);
+
 		switch (true) {
 			# EMPTY VALUE
+			// Matches records where the component key is missing or has no elements.
 			case ($q==='!*'):
-				$query_object->sentence = "({$table_alias}.{$column} IS NULL OR {$table_alias}.{$column}::text = '[]')";
+				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
 			# NOT EMPTY
+			// Matches records where the component key exists and has at least one element.
 			case ($q==='*'):
-				$query_object->sentence = "({$table_alias}.{$column} IS NOT NULL AND {$table_alias}.{$column}::text != '[]')";
+				$query_object->sentence = "({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
+			# IS DIFFERENT (!=)
+			// Negated case-insensitive regex search. Matches if NO nested value in the component's data matches the pattern.
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$q_clean = str_replace('!=', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) !~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*"' . $q_clean . '".*'];
+				$q_clean = str_replace('!=', '', $q_json_path);
+				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# IS EXACTLY EQUAL ==
+			# IS EXACTLY EQUAL (==)
+			// Matches if any top-level 'value' in the component array is exactly equal to the search string.
 			case (strpos($q, '==')===0 || $q_operator==='=='):
-				$q_clean = str_replace('==', '', $q);
-				$query_object->sentence = "{$table_alias}.{$column} @> _Q1_";
-				$query_object->params   = ['_Q1_' => json_encode([$q_clean])];
+				$q_clean = str_replace('==', '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value ? (@ == \"{$q_clean}\")"];
 				$query_object->type     = 'jsonb';
 				break;
-			# IS SIMILAR
+			# IS SIMILAR (=)
+			// Case-insensitive regex search. Matches if any nested value in the component's data matches the pattern.
 			case (strpos($q, '=')===0 || $q_operator==='='):
-				$q_clean = str_replace('=', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*"' . $q_clean . '".*'];
+				$q_clean = str_replace('=', '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# NOT CONTAIN
+			# NOT CONTAIN (-)
+			// Negated case-insensitive regex search. Alias for '!=' behavior in JSON Path context.
 			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$q_clean = str_replace('-', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) !~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*\[".*' . $q_clean . '.*'];
+				$q_clean = str_replace('-', '', $q_json_path);
+				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# CONTAIN EXPLICIT
+			# CONTAIN EXPLICIT (*text*)
+			// Case-insensitive regex search for characters anywhere in the value.
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*' . $q_clean . '.*'];
+				$q_clean  = str_replace('*', '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# ENDS WITH
+			# ENDS WITH (*text)
+			// Case-insensitive regex search anchored to the end of the value.
 			case (substr($q, 0, 1)==='*'):
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*' . $q_clean . '"'];
+				$q_clean  = str_replace('*', '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}$\" flag \"i\")"];
 				break;
-			# BEGINS WITH
+			# BEGINS WITH (text*)
+			// Case-insensitive regex search anchored to the beginning of the value.
 			case (substr($q, -1)==='*'):
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '"' . $q_clean . '.*'];
+				$q_clean  = str_replace('*', '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"^{$q_clean}\" flag \"i\")"];
 				break;
-			# LITERAL
+			# LITERAL ('text')
+			// Matches if any top-level 'value' in the component array is exactly equal to the literal string.
 			case (search::is_literal($q)===true):
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '"' . $q_clean . '"'];
+				$q_clean  = str_replace("'", '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value ? (@ == \"{$q_clean}\")"];
 				break;
 			# DUPLICATED
 			case (strpos($q, '!!')===0 || $q_operator==='!!'):
@@ -458,17 +478,16 @@ class component_json extends component_common {
 				$query_object->unaccent		= false; // (!) always false
 				$query_object->duplicated	= true;
 				// Resolve lang based on if is translatable
-					$path_end			= end($query_object->path);
-					$component_tipo		= $path_end->component_tipo;
 					$query_object->lang	= ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				// use escaped q for engine analysis
 					$query_object->q = $q_escaped;
 				break;
 			# DEFAULT CONTAIN
+			// Fallback case-insensitive regex search for characters anywhere in the value.
 			default:
-				$q_clean = str_replace(['+', '*'], '', $q);
-				$query_object->sentence = "unaccent({$table_alias}.{$column}::text) ~* unaccent(_Q1_)";
-				$query_object->params   = ['_Q1_' => '.*' . $q_clean . '.*'];
+				$q_clean = str_replace(['+', '*'], '', $q_json_path);
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
 		}//end switch (true)
 
