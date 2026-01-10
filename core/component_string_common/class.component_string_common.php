@@ -554,178 +554,240 @@ class component_string_common extends component_common {
 
 		switch (true) {
 
-			// EMPTY VALUE
+			// EMPTY VALUE (!*)
+			// Matches records where the component key is missing or all its values are empty/null.
+			// Scoped by the requested language if not 'all'.
 			case ($q==='!*'):
-				// params
 				$query_object->params = [
 					'_Q1_' => $query_object->lang==='all'
-						? '$.'.$component_tipo.'[*].value ? (!exists(@) || @ == "" || @ == null)'
-						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && (!exists(@) || @.value == "" || @.value == null))'
-				];				
-				// sentence
-				// $query_object->sentence = "({$table_alias}.{$column}->'{$component_tipo}' IS NULL OR {$table_alias}.{$column} @? (_Q1_)::jsonpath)";
-				$query_object->sentence = $query_object->lang==='all'
-					? "(NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]'))"
-					: "(NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*].lang == \"'{$query_object->lang}\"'))";
+						? "$.{$component_tipo}[*].value ? (@ != \"\" && @ != null)"
+						: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\" && @.value != \"\" && @.value != null)"
+				];
+				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				break;
 
-			// NOT EMPTY
+			// NOT EMPTY (*)
+			// Matches records where the component key exists and has at least one non-empty/non-null value.
+			// Scoped by the requested language if not 'all'.
 			case ($q==='*'):
-				// params
 				$query_object->params = [
 					'_Q1_' => $query_object->lang==='all'
-						? '$.'.$component_tipo.'[*].value ? (@ != "" && @ != null)'
-						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && (@.value != "" || @.value != null))'
+						? "$.{$component_tipo}[*].value ? (@ != \"\" && @ != null)"
+						: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\" && @.value != \"\" && @.value != null)"
 				];
-				// sentence
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				break;
 
-			// IS DIFFERENT
+			// IS DIFFERENT (!=)
+			// Matches records where NO value matches the given term (case and accent insensitive).
+			// Supports wildcards: *text* (contains), text* (begins with), *text (ends with).
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$operator = '!=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator	= '!~';
-				$first_char	= mb_substr($q_clean, 0, 1);
-				$last_char	= mb_substr($q_clean, -1);
+				$q_clean = str_replace('!=', '', $q);
+				$query_object->params = ['_Q1_' => str_replace('*', '', $q_clean)];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$first_char = mb_substr($q_clean, 0, 1);
+				$last_char  = mb_substr($q_clean, -1);
+
+				// Determine matching logic based on wildcards
+				$match_logic = '';
 				switch (true) {
-					// contains
 					case ($first_char==='*' && $last_char==='*'):
-						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+						$match_logic = 'f_unaccent(elem->>\'value\') ~* f_unaccent(_Q1_)';
 						break;
-					// begins with
 					case ($first_char==='*'):
-						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+						$match_logic = 'f_unaccent(elem->>\'value\') ~* (f_unaccent(_Q1_) || \'$\')';
 						break;
-					// ends with
 					case ($last_char==='*'):
-						$q_clean = str_replace('*', '', $q_clean);
-						$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
+						$match_logic = 'f_unaccent(elem->>\'value\') ~* (\'^\' || f_unaccent(_Q1_))';
 						break;
 					default:
-						$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+						$match_logic = 'f_unaccent(elem->>\'value\') = f_unaccent(_Q1_)';
 						break;
 				}
-				$query_object->unaccent	= false;
+
+				// Sentence: Ensure NO element matches the specified criteria
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND NOT EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE {$match_logic}".PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// IS EXACTLY EQUAL ==
+			// IS EXACTLY EQUAL (==)
+			// Matches records where a value is exactly equal to the search term (case and accent insensitive).
+			// Uses a structural pre-filter (@?) to leverage GIN indexes and an EXISTS subquery for f_unaccent comparison.
 			case (strpos($q, '==')===0 || $q_operator==='=='):
-				$operator = '==';
-				$q_clean  = str_replace($operator, '', $q);
-				// $query_object->operator = '@>';
-				// $query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
-				// $query_object->unaccent = false;
-				// $query_object->type = 'object';
-				// if (isset($query_object->lang) && $query_object->lang!=='all') {
-				// 	$query_object->component_path[] = $query_object->lang;
-				// }
-				// if (isset($query_object->lang) && $query_object->lang==='all') {
-				// 	$logical_operator = '$or';
-				// 	$ar_query_object = [];
-				// 	$ar_all_langs 	 = common::get_ar_all_langs();
-				// 	$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-				// 	foreach ($ar_all_langs as $current_lang) {
-				// 		// Empty data is blank array []
-				// 		$clone = clone($query_object);
-				// 			$clone->component_path[] = $current_lang;
+				$q_clean = str_replace('==', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
 
-				// 		$ar_query_object[] = $clone;
-				// 	}
-				// 	$query_object = new stdClass();
-				// 		$query_object->$logical_operator = $ar_query_object;
-				// }
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
 
-				// sample:
-				// $table_alias.string::jsonb -> 'dd132' @> '[{"value": "pepe"}]'
-
-				// sql using GIN index
-				$query_object->sentence = "{$table_alias}.{$column}::jsonb -> '$component_tipo' @> _Q1_";
-
-				// params
-				$query_object->params = (isset($query_object->lang) && $query_object->lang==='all')
-					? ['_Q1_' => '[{"value": "'.$q_clean.'"}]']
-					: ['_Q1_' => '[{"value":"'.$q_clean.'","lang":"'.($query_object->lang ?? DEDALO_DATA_LANG).'"}]'];
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') = f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// IS SIMILAR
+			// IS SIMILAR (=)
+			// Matches records where a value contains the search term (case and accent insensitive).
+			// Uses a structural pre-filter to help the GIN index discard rows without this component/lang.
 			case (strpos($q, '=')===0 || $q_operator==='='):
-				$operator = '=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator	= '~*';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace('=', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// NOT CONTAIN
+			// NOT CONTAIN (-)
+			// Matches records where NO value contains the search term (negated contains).
+			// Scoped by language; uses NOT EXISTS to ensure exclusion.
 			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$operator = '!~*';
-				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace('-', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND NOT EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// CONTAIN EXPLICIT
+			// CONTAIN EXPLICIT (*text*)
+			// Standard contains search explicitly requested with asterisks. Scoped by language.
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace('*', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// ENDS WITH
+			// ENDS WITH (*text)
+			// Searches for values ending with the search term. Uses regex anchoring ($).
 			case (substr($q, 0, 1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*"\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace('*', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* (f_unaccent(_Q1_) || \'$\')'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// BEGINS WITH
+			// BEGINS WITH (text*)
+			// Searches for values beginning with the search term. Uses regex anchoring (^).
 			case (substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace('*', '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* (\'^\' || f_unaccent(_Q1_))'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// LITERAL
+			// LITERAL ('text')
+			// Case-sensitive but accent-insensitive search for the exact literal string.
 			case (search::is_literal($q)===true):
-				$operator = '~'; // case sensitive regular expression matching
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent	= true;
+				$q_clean = str_replace("'", '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~ f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// DUPLICATED
+			// DUPLICATED (!!)
+			// Finds records with duplicate values within the same section type and language.
+			// Uses a structural pre-filter and compares elements explicitly for robustness.
 			case (strpos($q, '!!')===0 || $q_operator==='!!'):
-				$operator = '=';
-				$query_object->operator 	= $operator;
-				$query_object->unaccent		= false; // (!) always false
 				$query_object->duplicated	= true;
+				$query_object->unaccent		= true;
 				// Resolve lang based on if is translatable
-					$lang = $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-					$query_object->lang	= $lang;
+				if ($query_object->lang !== 'all' && $translatable === false) {
+					$query_object->lang = DEDALO_DATA_NOLAN;
+				}
+
+				// jsonpath version
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				// Use EXISTS to find records that have at least one counterpart with the same value (unaccented)
+				// We add a structural pre-filter to help the GIN index discard rows without this component/lang.
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM {$table} AS m2,".PHP_EOL;
+				$query_object->sentence .= "       jsonb_path_query(m2.{$column}, '{$json_path}') AS m2_elem,".PHP_EOL;
+				$query_object->sentence .= "       jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS m1_elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE m2.{$column} @? '{$json_path}'".PHP_EOL;
+				$query_object->sentence .= "    AND m2.section_id != {$table_alias}.section_id".PHP_EOL;
+				$query_object->sentence .= "    AND m2.section_tipo = {$table_alias}.section_tipo".PHP_EOL;
+				$query_object->sentence .= "    AND f_unaccent(m2_elem->>'value') = f_unaccent(m1_elem->>'value')".PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			// default contains
-			default:				
-				$q_clean = str_replace('+', '', $q);
-				// params '$.rsc195[*] ? (@.value like_regex "' || to_unaccent_regex('ramón') || '" flag "i")'
-				$query_object->params = [
-					'_Q1_' => $query_object->lang==='all'
-						? '$.'.$component_tipo.'[*] ? (@.value like_regex "' || f_unaccent('.$q_clean.') || '" flag "i")'
-						: '$.'.$component_tipo.'[*] ? (@.lang == "'.$query_object->lang.'" && @.value like_regex "'.$q_clean.'" flag "i")'
-				];
-				// sentence
-				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
+			// default (Contains)
+			// Standard fallback search: case-insensitive and accent-insensitive contains.
+			default:
+				$q_clean = str_replace(['+', '*'], '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				// Build the JSON Path based on the language requirement
+				// If lang is 'all', we search all array elements without a predicate.
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				// Use jsonb_path_query in an EXISTS subquery to allow calling f_unaccent() on the results.
+				// We add a structural pre-filter (@?) to help the GIN index discard rows without this component/lang.
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'value\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 		}//end switch (true)
 
