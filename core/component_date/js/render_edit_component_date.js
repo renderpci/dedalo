@@ -841,7 +841,6 @@ export const change_handler = function(options) {
 		})
 
 	if (self.mode==='search') {
-
 		// update the instance data (previous to save)
 			self.update_data_value(changed_data_item)
 		// set data.changed_data. The change_data to the instance

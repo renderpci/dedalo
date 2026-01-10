@@ -454,21 +454,24 @@ class component_relation_common extends component_common {
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
 			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
+				/** @var object $current_column_obj */
+				if (!is_object($current_column_obj)) continue;
 
 				// check if the current column exists in the full column array
 				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
-					return ($el->id===$current_column_obj->id);
+					return (is_object($el) && $el->id===$current_column_obj->id);
 				});
 
 				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
 				if($id_obj===null){
 					// check if the current column_id is a locator column, else add the column_object at the end
-					$current_column_path = explode('|', $current_column_obj->id);
+					$current_column_path = explode('|', (string)$current_column_obj->id);
 					if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0 || sizeof($current_column_path)>1){
 						// get the last position of the column group
 						$position = false;
 						foreach ($ar_columns_obj as $column_key => $column_value) {
-							if($column_value->group === $current_column_obj->group){
+							/** @var object $column_value */
+							if(is_object($column_value) && $column_value->group === $current_column_obj->group){
 								$position = $column_key;
 							}
 						}
@@ -1154,40 +1157,59 @@ class component_relation_common extends component_common {
 		$table_alias = $query_object->table_alias;
 
 		switch (true) {
-			// IS DIFFERENT
+
+			// IS DIFFERENT (!=)
+			// Matches records that HAVE the component key but DO NOT contain the specified locator in their data array.
+			// This is a filtered negative search: it excludes records that don't have the component at all.
 			case ($q_operator==='!=' && !empty($q)):
-				$operator = '@>';
-				$q_clean = '\'['.$q.']\'::jsonb=FALSE';
-				$query_object->operator = $operator;
-				$query_object->q_parsed = $q_clean;
+				// Must have the component key AND NOT contain the specific locator
+				$sql = "({$table_alias}.{$column} ? _Q2_) AND NOT ({$table_alias}.{$column} @> _Q1_::jsonb)";
+				$query_object->sentence = $sql;
+
+				// params
+				$q_clean = '{"'.$component_tipo.'":['.$q.']}';
+				$query_object->params = [
+					'_Q1_' => $q_clean,
+					'_Q2_' => $component_tipo
+				];
 				break;
-			// IS NULL
+
+			// IS STRICT DIFFERENT (!==)
+			// Matches ALL records that DOES NOT contain the specified locator.
+			// This includes records that have the component key (but different data) AND records that 
+			// don't have the component key at all.
+			case ($q_operator==='!==' && !empty($q)):
+				// Matches all cases where it DOES NOT contain the specific locator (negotiated containment)
+				$sql = "NOT ({$table_alias}.{$column} @> _Q1_::jsonb)";
+				$query_object->sentence = $sql;
+
+				// params
+				$q_clean = '{"'.$component_tipo.'":['.$q.']}';
+				$query_object->params = ['_Q1_' => $q_clean];
+				break;
+			
+			// IS NULL / EMPTY (!*)
+			// Matches records that DO NOT have the component key in the relations jsonb object.
+			// Equivalent to "Component has no data".
 			case ($q_operator==='!*'):
-				$operator = '@>';
-				if (!empty($query_object->use_function)) {
-					$q_clean = '\'['.$q.']\' = FALSE';
-				}else{
-					$q_obj = new stdClass();
-						$q_obj->from_component_tipo = $component_tipo ;
-					$ar_q = array($q_obj);
-					$q_clean = '\''.json_encode($ar_q).'\'::jsonb IS DISTINCT FROM TRUE';
-				}
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= $q_clean;
+				$sql = "NOT ({$table_alias}.{$column} ? _Q1_)";
+				$query_object->sentence = $sql;
+				$query_object->params   = ['_Q1_' => $component_tipo];
 				break;
-			// IS NOT NULL
+		
+			// IS NOT NULL / NOT EMPTY (*)
+			// Matches records that HAVE the component key in the relations jsonb object.
+			// Equivalent to "Component has at least one locator".
 			case ($q_operator==='*'):
-				$operator = '@>';
-				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = $component_tipo ;
-				$ar_q = array($q_obj);
-				$q_clean = '\''.json_encode($ar_q).'\'';
-				$query_object->operator = $operator;
-				$query_object->q_parsed = $q_clean;
+				$sql = "({$table_alias}.{$column} ? _Q1_)";
+				$query_object->sentence = $sql;
+				$query_object->params   = ['_Q1_' => $component_tipo];
 				break;
-			// CONTAIN
+		
+			// CONTAIN (default)
+			// Standard containment search. Matches records that have the component key AND 
+			// whose data array contains the specified locator.
 			default:
-				// sql sentence
 				$sql = "{$table_alias}.{$column} @> _Q1_::jsonb";
 				$query_object->sentence = $sql;
 
@@ -1249,6 +1271,7 @@ class component_relation_common extends component_common {
 
 		$ar_operators = [
 			'!='	=> 'different_from',
+			'!=='	=> 'strict_different_from',
 			'!*'	=> 'empty',
 			'*'		=> 'no_empty' // not null
 		];

@@ -303,7 +303,7 @@ trait where {
 			return null;
 		}
 
-		foreach ($search_object->params as $key => $value) {
+		foreach ($search_object->params ?? [] as $key => $value) {
 			// Gets current param key (default is 1 and increases by 1 after each use)
 			$current_param_key = $this->params_counter++;
 			// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
