@@ -137,7 +137,9 @@ trait where {
 		$operator	= strtoupper( substr($op, 1) );
 
 		foreach ($ar_value as $key => $search_object) {
-
+			if( $search_object===false ) {
+				continue;
+			}
 			if (!property_exists($search_object, 'path')) {
 
 				// Case operator
