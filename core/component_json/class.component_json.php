@@ -386,6 +386,13 @@ class component_json extends component_common {
 		// split q case
 			$q_split = $query_object->q_split ?? false;
 			if ( $q_split===true && !search::is_literal($q)) {
+
+				// Join operators with next word (remove space)
+				// Operators: !=, ==, =, -, !!, !*
+				$q = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
+				// Join wildcard at the end (remove space before wildcard)
+				$q = preg_replace('/\s+(\*)/', '$1', $q);
+
 				$q_items = preg_split('/\s/', $q);
 				if (count($q_items)>1) {
 					return self::handle_query_splitting($query_object, $q_items, '$and');
@@ -479,7 +486,7 @@ class component_json extends component_common {
 				// Resolve lang based on if is translatable
 					$query_object->lang	= ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				// use escaped q for engine analysis
-					$query_object->q = $q_escaped;
+					$query_object->q = $q;
 				break;
 			# DEFAULT CONTAIN
 			// Fallback case-insensitive regex search for characters anywhere in the value.
