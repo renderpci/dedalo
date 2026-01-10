@@ -524,6 +524,9 @@ class component_string_common extends component_common {
 			}
 		}
 
+		// escape q string for DB
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+
 		// Validate path and calculate translatable
 		if (empty($query_object->path) || !is_array($query_object->path)) {
 			debug_log(__METHOD__
@@ -586,7 +589,7 @@ class component_string_common extends component_common {
 			// Matches records where NO value matches the given term (case and accent insensitive).
 			// Supports wildcards: *text* (contains), text* (begins with), *text (ends with).
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$q_clean = str_replace('!=', '', $q);
+				$q_clean = trim(str_replace('!=', '', $q));
 				$query_object->params = ['_Q1_' => str_replace('*', '', $q_clean)];
 
 				$json_path = ($query_object->lang === 'all')
@@ -625,7 +628,7 @@ class component_string_common extends component_common {
 			// Matches records where a value is exactly equal to the search term (case and accent insensitive).
 			// Uses a structural pre-filter (@?) to leverage GIN indexes and an EXISTS subquery for f_unaccent comparison.
 			case (strpos($q, '==')===0 || $q_operator==='=='):
-				$q_clean = str_replace('==', '', $q);
+				$q_clean = trim(str_replace('==', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -643,7 +646,7 @@ class component_string_common extends component_common {
 			// Matches records where a value contains the search term (case and accent insensitive).
 			// Uses a structural pre-filter to help the GIN index discard rows without this component/lang.
 			case (strpos($q, '=')===0 || $q_operator==='='):
-				$q_clean = str_replace('=', '', $q);
+				$q_clean = trim(str_replace('=', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -661,7 +664,7 @@ class component_string_common extends component_common {
 			// Matches records where NO value contains the search term (negated contains).
 			// Scoped by language; uses NOT EXISTS to ensure exclusion.
 			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$q_clean = str_replace('-', '', $q);
+				$q_clean = trim(str_replace('-', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -678,7 +681,7 @@ class component_string_common extends component_common {
 			// CONTAIN EXPLICIT (*text*)
 			// Standard contains search explicitly requested with asterisks. Scoped by language.
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$q_clean = str_replace('*', '', $q);
+				$q_clean = trim(str_replace('*', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -695,7 +698,7 @@ class component_string_common extends component_common {
 			// ENDS WITH (*text)
 			// Searches for values ending with the search term. Uses regex anchoring ($).
 			case (substr($q, 0, 1)==='*'):
-				$q_clean = str_replace('*', '', $q);
+				$q_clean = trim(str_replace('*', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -712,7 +715,7 @@ class component_string_common extends component_common {
 			// BEGINS WITH (text*)
 			// Searches for values beginning with the search term. Uses regex anchoring (^).
 			case (substr($q, -1)==='*'):
-				$q_clean = str_replace('*', '', $q);
+				$q_clean = trim(str_replace('*', '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
@@ -729,7 +732,7 @@ class component_string_common extends component_common {
 			// LITERAL ('text')
 			// Case-sensitive but accent-insensitive search for an exact full-string match.
 			case (search::is_literal($q)===true):
-				$q_clean = str_replace("'", '', $q);
+				$q_clean = trim(str_replace("'", '', $q));
 				$query_object->params = ['_Q1_' => $q_clean];
 
 				$json_path = ($query_object->lang === 'all')
