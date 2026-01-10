@@ -498,9 +498,18 @@ class component_string_common extends component_common {
 
 		// $q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$q = isset($query_object->q) && is_array($query_object->q)
-			? ($query_object->q[0] ?? '')
-			: ($query_object->q ?? '');
+		$q = isset($query_object->q) && is_array($query_object->q) 
+			? $query_object->q[0] 
+			: $query_object->q;
+		if ( (empty($q) || empty($q->value) ) && empty($query_object->q_operator)) {
+			return false;
+		}
+
+		// fallback to emprty string in case of invalid or null q
+		$q = (is_object($q) ? $q->value : $q) ?? '';
+
+		// escape q string for DB
+		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		// split q case
 		$q_split = $query_object->q_split ?? false;
@@ -530,8 +539,8 @@ class component_string_common extends component_common {
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
-		// escape q string for DB
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		// table
+		$table = $query_object->table;
 
 		// q_operator. Search component do not use a 'q_operator' but for compatibility with
 		// any search call, it is added here and is accepted too.
