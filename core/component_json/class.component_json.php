@@ -363,12 +363,14 @@ class component_json extends component_common {
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		$q = isset($query_object->q) && is_array($query_object->q) 
+			? $query_object->q[0] 
+			: $query_object->q;
 		if ( (empty($q) || empty($q->value) ) && empty($query_object->q_operator)) {
 			return false;
 		}
-
-		// $q
+		
+		// fallback to emprty string in case of invalid or null q
 		$q = (is_object($q) ? $q->value : $q) ?? '';
 
 		// column
