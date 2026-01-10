@@ -60,12 +60,12 @@ class section_record_data {
 		'component_external'			=> 'relation',
 		'component_filter'				=> 'relation',
 		'component_filter_master'		=> 'relation',
-		'component_filter_records'		=> 'misc',
+		'component_filter_records'		=> 'misc', // direct object
 		'component_geolocation'			=> 'geo',
 		'component_image'				=> 'media',
-		'component_info'				=> 'misc',
+		'component_info'				=> 'misc', // direct object
 		'component_input_text'			=> 'string',
-		'component_inverse'				=> 'misc',
+		'component_inverse'				=> 'misc',  // direct object
 		'component_iri'					=> 'iri',
 		'component_json'				=> 'misc',
 		'component_number'				=> 'number',
@@ -80,7 +80,7 @@ class section_record_data {
 		'component_relation_parent'		=> 'relation',
 		'component_relation_related'	=> 'relation',
 		'component_section_id'			=> 'section_id',
-		'component_security_access'		=> 'misc',
+		'component_security_access'		=> 'misc', // direct object
 		'component_select'				=> 'relation',
 		'component_select_lang'			=> 'relation',
 		'component_svg'					=> 'media',
