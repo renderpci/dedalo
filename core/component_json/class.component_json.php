@@ -363,10 +363,13 @@ class component_json extends component_common {
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-		if (empty($query_object->q) && empty($query_object->q_operator)) {
-			return $query_object;
+		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		if ( (empty($q) || empty($q->value) ) && empty($query_object->q_operator)) {
+			return false;
 		}
+
+		// $q
+		$q = (is_object($q) ? $q->value : $q) ?? '';
 
 		// column
 		$column = section_record_data::get_column_name( get_called_class() );
@@ -378,15 +381,9 @@ class component_json extends component_common {
 		$path_end       = end($query_object->path);
 		$component_tipo = $path_end->component_tipo;
 
-		// $q
-			$q = $query_object->q;
-
-		// escape q string for DB (fallback for legacy cases or engine analysis like duplicated)
-			$q_escaped = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-
 		// split q case
 			$q_split = $query_object->q_split ?? false;
-			if ($q_split===true && !search::is_literal($q)) {
+			if ( $q_split===true && !search::is_literal($q)) {
 				$q_items = preg_split('/\s/', $q);
 				if (count($q_items)>1) {
 					return self::handle_query_splitting($query_object, $q_items, '$and');
@@ -405,13 +402,13 @@ class component_json extends component_common {
 		switch (true) {
 			# EMPTY VALUE
 			// Matches records where the component key is missing or has no elements.
-			case ($q==='!*'):
+			case (strpos($q, '!*')===0 || $q_operator==='!*'):
 				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
 			# NOT EMPTY
 			// Matches records where the component key exists and has at least one element.
-			case ($q==='*'):
+			case (strpos($q, '*')===0 || $q_operator==='*'):
 				$query_object->sentence = "({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
