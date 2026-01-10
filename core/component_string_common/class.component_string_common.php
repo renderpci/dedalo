@@ -508,12 +508,16 @@ class component_string_common extends component_common {
 		// fallback to emprty string in case of invalid or null q
 		$q = (is_object($q) ? $q->value : $q) ?? '';
 
-		// escape q string for DB
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-
 		// split q case
 		$q_split = $query_object->q_split ?? false;
 		if ($q_split===true && !search::is_literal($q)) {
+
+			// Join operators with next word (remove space)
+			// Operators: !=, ==, =, -, !!, !*
+			$q = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
+			// Join wildcard at the end (remove space before wildcard)
+			$q = preg_replace('/\s+(\*)/', '$1', $q);
+
 			$q_items = preg_split('/\s/', $q);
 			if (count($q_items)>1) {
 				return self::handle_query_splitting($query_object, $q_items, '$and');
