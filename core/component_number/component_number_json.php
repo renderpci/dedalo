@@ -22,9 +22,6 @@
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
 					$context[] = $this->get_structure_context($permissions);
-
-				// add buttons
-					$context = array_merge($context, $this->get_structure_buttons($permissions));
 				break;
 		}
 	}//end if($options->get_context===true)
