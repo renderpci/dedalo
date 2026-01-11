@@ -409,76 +409,106 @@ class component_json extends component_common {
 			$q_json_path = str_replace('"', '\\"', $q);
 
 		switch (true) {
-			# EMPTY VALUE
-			// Matches records where the component key is missing or has no elements.
+			// EMPTY VALUE (!*)
+			// Matches records where the component has no elements or the key is missing.
+			// JSON Path: Checks for absence of any array elements.
+			// Index optimization: Uses @? for GIN index support.
 			case (strpos($q, '!*')===0 || $q_operator==='!*'):
 				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
-			# NOT EMPTY
-			// Matches records where the component key exists and has at least one element.
+			// NOT EMPTY (*)
+			// Matches records where the component has at least one element.
+			// JSON Path: Checks for presence of any array elements.
+			// Index optimization: Uses @? for GIN index support.
 			case (strpos($q, '*')===0 || $q_operator==='*'):
 				$query_object->sentence = "({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*]"];
 				break;
-			# IS DIFFERENT (!=)
-			// Negated case-insensitive regex search. Matches if NO nested value in the component's data matches the pattern.
+			// IS DIFFERENT (!=)
+			// Matches records where NO nested value matches the search term (case-insensitive).
+			// JSON Path: Uses recursive descent (..**) to search all nested values.
+			// Regex: Case-insensitive pattern matching with like_regex flag "i".
+			// Index optimization: Uses @? for structural pre-filtering.
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$q_clean = str_replace('!=', '', $q_json_path);
 				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# IS EXACTLY EQUAL (==)
-			// Matches if any top-level 'value' in the component array is exactly equal to the search string.
+			// IS EXACTLY EQUAL (==)
+			// Matches records where the top-level 'value' field exactly equals the search term.
+			// Note: This searches ONLY the immediate 'value' property, not nested values.
+			// JSON Path: Direct equality check on value property.
+			// Index optimization: Uses @? for GIN index support.
 			case (strpos($q, '==')===0 || $q_operator==='=='):
 				$q_clean = str_replace('==', '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value ? (@ == \"{$q_clean}\")"];
 				$query_object->type     = 'jsonb';
 				break;
-			# IS SIMILAR (=)
-			// Case-insensitive regex search. Matches if any nested value in the component's data matches the pattern.
+			// IS SIMILAR (=)
+			// Matches records where any nested value contains the search term (case-insensitive).
+			// JSON Path: Uses recursive descent (..**) to search through all nested structures.
+			// Regex: Case-insensitive pattern matching with like_regex flag "i".
+			// Index optimization: Uses @? for structural pre-filtering.
 			case (strpos($q, '=')===0 || $q_operator==='='):
 				$q_clean = str_replace('=', '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# NOT CONTAIN (-)
-			// Negated case-insensitive regex search. Alias for '!=' behavior in JSON Path context.
+			// NOT CONTAIN (-)
+			// Matches records where NO nested value contains the search term (negated contains).
+			// JSON Path: Uses recursive descent (..**) to search all nested values.
+			// Regex: Case-insensitive pattern matching with negation.
+			// Index optimization: Uses @? for structural pre-filtering.
 			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$q_clean = str_replace('-', '', $q_json_path);
 				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# CONTAIN EXPLICIT (*text*)
-			// Case-insensitive regex search for characters anywhere in the value.
+			// CONTAIN EXPLICIT (*text*)
+			// Standard contains search explicitly requested with asterisks.
+			// Matches if any nested value contains the search term anywhere within it.
+			// JSON Path: Recursive descent (..**) searches all nested values.
+			// Regex: Case-insensitive pattern matching.
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$q_clean  = str_replace('*', '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
 				break;
-			# ENDS WITH (*text)
-			// Case-insensitive regex search anchored to the end of the value.
+			// ENDS WITH (*text)
+			// Matches records where any nested value ends with the search term.
+			// JSON Path: Recursive descent (..**) searches all nested values.
+			// Regex: Case-insensitive with end anchor ($) for suffix matching.
 			case (substr($q, 0, 1)==='*'):
 				$q_clean  = str_replace('*', '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}$\" flag \"i\")"];
 				break;
-			# BEGINS WITH (text*)
-			// Case-insensitive regex search anchored to the beginning of the value.
+			// BEGINS WITH (text*)
+			// Matches records where any nested value begins with the search term.
+			// JSON Path: Recursive descent (..**) searches all nested values.
+			// Regex: Case-insensitive with start anchor (^) for prefix matching.
 			case (substr($q, -1)==='*'):
 				$q_clean  = str_replace('*', '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value.** ? (@ like_regex \"^{$q_clean}\" flag \"i\")"];
 				break;
-			# LITERAL ('text')
-			// Matches if any top-level 'value' in the component array is exactly equal to the literal string.
+			// LITERAL ('text')
+			// Case-sensitive exact match for the top-level 'value' field.
+			// When search term is enclosed in single quotes, performs literal exact matching.
+			// Note: Searches only the immediate 'value' property, not nested values.
+			// JSON Path: Direct equality check on value property.
 			case (search::is_literal($q)===true):
 				$q_clean  = str_replace("'", '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				$query_object->params   = ['_Q1_' => "$.{$component_tipo}[*].value ? (@ == \"{$q_clean}\")"];
 				break;
-			# DUPLICATED
+			// DUPLICATED (!!)
+			// Special operator for finding duplicate values within a section type.
+			// Uses legacy operator/q_parsed approach rather than sentence/params.
+			// Language handling: Respects component translatability.
+			// Note: This case is processed differently by the search engine.
 			case (strpos($q, '!!')===0 || $q_operator==='!!'):
 				$query_object->operator 	= '=';
 				$query_object->unaccent		= false; // (!) always false
@@ -488,8 +518,12 @@ class component_json extends component_common {
 				// use escaped q for engine analysis
 					$query_object->q = $q;
 				break;
-			# DEFAULT CONTAIN
-			// Fallback case-insensitive regex search for characters anywhere in the value.
+			// DEFAULT (Contains)
+			// Standard fallback search: case-insensitive contains.
+			// Matches if any nested value contains the search term anywhere within it.
+			// JSON Path: Recursive descent (..**) to search through all nested structures.
+			// Regex: Case-insensitive pattern matching with like_regex flag "i".
+			// Index optimization: Uses @? for GIN index support.
 			default:
 				$q_clean = str_replace(['+', '*'], '', $q_json_path);
 				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
