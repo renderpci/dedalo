@@ -524,8 +524,8 @@ class component_string_common extends component_common {
 			}
 		}
 
-		// escape q string for DB
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		// normalize q (remove slashes if any)
+		$q = stripslashes($q);
 
 		// Validate path and calculate translatable
 		if (empty($query_object->path) || !is_array($query_object->path)) {
