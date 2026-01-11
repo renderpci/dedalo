@@ -33,7 +33,7 @@ abstract class component_common extends common {
 		// ex: 21 (section_id of the bulk process section)
 		public $bulk_process_id;
 		// observable data, used for propagate to other components that are seeing this component changes.
-		public $observable_dato;
+		public $observable_data;
 		// string from_section_tipo
 		public $from_section_tipo;
 		// string from_component_tipo
@@ -1726,25 +1726,25 @@ abstract class component_common extends common {
 				$current_locator->set_section_tipo($this->section_tipo);
 				$current_locator->set_section_id($this->section_id);
 
-		// $observable_dato is defined by the type of the event fired by the user,
-		// if event fired is update we will use the final dato with all changes, the data that will stored in BBDD
+		// $observable_data is defined by the type of the event fired by the user,
+		// if event fired is update we will use the final data with all changes, the data that will stored in BBDD
 		// but if the event is delete, we will use the previous data, before delete the info, because we need know the sections referenced that need delete and update your own data / state
-			$observable_dato = [];
+			$observable_data = [];
 
 		// clone the original data to not touch the original in the observable save process
-			$original_data =  $this->get_observable_dato();
+			$original_data =  $this->get_observable_data();
 			if(!empty($original_data)){
 				if (is_array($original_data)) {
 					foreach ($original_data as $data) {
 						$copy_data = is_object($data)
 							? clone $data
 							: $data;
-						$observable_dato[] = $copy_data;
+						$observable_data[] = $copy_data;
 					}
 				}else{
 					debug_log(__METHOD__
 						. " original data was expected as type array, but another is received " . PHP_EOL
-						. " !! This value will not added to observable_dato " . PHP_EOL
+						. " !! This value will not added to observable_data " . PHP_EOL
 						. ' type: ' . gettype($original_data) . PHP_EOL
 						. ' original_data: ' . to_string($original_data)
 						, logger::ERROR
@@ -1756,10 +1756,10 @@ abstract class component_common extends common {
 			$observers_data = [];
 			foreach ($ar_observers as $current_observer) {
 
-				$current_observer_data = component_common::update_observer_dato(
+				$current_observer_data = component_common::update_observer_data(
 					$current_observer, // object $observer
 					$current_locator, // object $locator
-					$observable_dato, // ?array $observable_dato
+					$observable_data, // ?array $observable_data
 					$this->tipo // string observable_tipo
 				);
 				$observers_data = array_merge($observers_data, $current_observer_data);
@@ -1781,7 +1781,7 @@ abstract class component_common extends common {
 
 
 	/**
-	* UPDATE_OBSERVER_DATO
+	* UPDATE_OBSERVER_DATA
 	* Update the observer data using the config server in the observer component
 	* set in properties the config of the observer
 	* ex:
@@ -1807,7 +1807,7 @@ abstract class component_common extends common {
 	* component_tipo: the component that is observed his changes. the component that fire the event.
 	* config options:
 	* 	use_self_section: use the $locator (the section that made the change) because the component is in the same section that observable
-	* 	use_observable_dato: use the $observable_dato (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
+	* 	use_observable_dato: use the $observable_data (the section has added, deleted, changed in portal) because the component to update is in the target section of the portal
 	* 	use_inverse_relations: use all inverse relations of the section, because the component to update is not in the same or target section of portal
 	* 	filter: define a sqo to get specific locators defined by a search.
 	* perform options:
@@ -1817,12 +1817,12 @@ abstract class component_common extends common {
 	* 		the options that will be passed to the function
 	* @param object $observer 		// component to update
 	* @param object $locator 		// section that made the change
-	* @param mixed $observable_dato // data that has changed
+	* @param mixed $observable_data // data that has changed
 	* @param string $observable_tipo // tipo of the component that made the change
 	*
 	* @return array $ar_data
 	*/
-	public static function update_observer_dato(object $observer, object $locator, ?array $observable_dato, string $observable_tipo) : array {
+	public static function update_observer_data(object $observer, object $locator, ?array $observable_data, string $observable_tipo) : array {
 
 		// ar_observe. Create the observer component
 			$ontology_node	= ontology_node::get_instance($observer->component_tipo);
@@ -1894,24 +1894,24 @@ abstract class component_common extends common {
 					$ar_section = [$locator];
 			}
 
-		// config. Get the dato of the observable component to be used to create the observer component
+		// config. Get the data of the observable component to be used to create the observer component
 		// in case of any relation component will be used to find "the component that I call" or "use my relations"
 			$config = $current_observer->server->config ?? null;
 			if(isset($config)){
 				switch (true) {
 					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
 						 && (isset($config->use_self_section) && $config->use_self_section===true))):
-						if (!empty($observable_dato)) {
-							$ar_section = array_merge($ar_section, $observable_dato);
+						if (!empty($observable_data)) {
+							$ar_section = array_merge($ar_section, $observable_data);
 						}
 						break;
 
 					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
 						 && (isset($config->use_self_section) && $config->use_self_section===false))):
-						$ar_section = $observable_dato;
+						$ar_section = $observable_data;
 						break;
 
-					// when the section is not the observer section ($locator) or the section of the observable dato ($observable_dato)
+					// when the section is not the observer section ($locator) or the section of the observable data ($observable_data)
 					// use the inverse relations to get all sections that call to the observable section
 					case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
 						$section_observable = section::get_instance(
@@ -1951,7 +1951,7 @@ abstract class component_common extends common {
 						$current_section->section_tipo,
 						false // bool cache
 					);
-					// get the specific event function in preferences to be fired (instead the default get_dato)
+					// get the specific event function in preferences to be fired (instead the default get_data)
 					if(isset($current_observer->server->perform)){
 
 						$function			= $current_observer->server->perform->function;
@@ -1987,15 +1987,15 @@ abstract class component_common extends common {
 
 					}else{
 
-						// force to update the dato of the observer component
-						$dato = $component->get_dato();
+						// force to update the data of the observer component
+						$data = $component->get_data();
 
-						$component->observable_dato = ($component_name === 'component_relation_related')
+						$component->observable_data = ($component_name === 'component_relation_related')
 							? $component->get_data_with_references()
-							: $dato;
+							: $data;
 
-						// save the new dato into the database, this will be used for search into components calculations of info's
-						$component->Save();
+						// save the new data into the database, this will be used for search into components calculations of info's
+						$component->save();
 					}
 
 					// only will be send the result of the observer component to the current section_tipo and section_id,
@@ -2011,7 +2011,7 @@ abstract class component_common extends common {
 
 
 		return $ar_data;
-	}//end update_observers_dato
+	}//end update_observers_data
 
 
 
@@ -2044,7 +2044,7 @@ abstract class component_common extends common {
 
 			switch ($condition) {
 				case 'on_empty':
-					$observable_data = $this->get_observable_dato();
+					$observable_data = $this->get_observable_data();
 
 					if(empty($observable_data)){
 						call_user_func_array($user_fn, $args);
@@ -3705,8 +3705,8 @@ abstract class component_common extends common {
 
 				$this->set_data_lang( $data, $lang );
 
-				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
-				$this->observable_dato = (get_called_class() === 'component_relation_related')
+				//set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $data;
 				break;
@@ -3750,8 +3750,8 @@ abstract class component_common extends common {
 				// set the data in current lang
 				$this->set_data_lang( $data, $lang );
 
-				//set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
-				$this->observable_dato = (get_called_class() === 'component_relation_related')
+				//set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $data;
 				break;
@@ -3762,8 +3762,8 @@ abstract class component_common extends common {
 				// get the key to be removed into data
 					$key = $changed_data->key;
 
-				// set the observable data used to send other components that observe you, if remove it will need the old dato, with old references
-				$this->observable_dato = ( get_called_class()==='component_relation_related' )
+				// set the observable data used to send other components that observe you, if remove it will need the old data, with old references
+				$this->observable_data = ( get_called_class()==='component_relation_related' )
 					? $this->get_data_with_references()
 					: $data;
 
@@ -3840,8 +3840,8 @@ abstract class component_common extends common {
 			case 'set_data':
 
 				$this->set_data_lang($changed_data->value, $lang);
-				// set the observable data used to send other components that observe you, if insert it will need the final dato, with new references
-				$this->observable_dato = (get_called_class() === 'component_relation_related')
+				// set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $changed_data->value;
 				break;
