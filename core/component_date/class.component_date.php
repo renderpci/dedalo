@@ -518,6 +518,12 @@ class component_date extends component_common {
 
 			case 'date':
 			case 'range':
+				// DATE and RANGE modes
+				// Handles both single dates and date ranges with start/end times.
+				// Converts dates to Unix timestamps (seconds) for numeric comparison.
+				// Date precision (day/month/year) is handled by calculating final_range.
+				// Index optimization: Uses @? JSON Path operator for GIN index support.
+				
 				// search_object 1
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date	= isset($q_object->start) ? new dd_date($q_object->start) : null;
@@ -529,8 +535,10 @@ class component_date extends component_common {
 				switch ($operator) {
 					case '<':
 					case '>=':
-						// Standard numeric comparison using JSON path existence operator (@?).
-						// Checks if any array item has a 'start.time' matching the operator.
+						// LESS THAN (<) and GREATER OR EQUAL (>=)
+						// Direct numeric comparison using the start.time value.
+						// Checks if any date element's start time matches the condition.
+						// JSON Path: Filters array elements where start.time meets operator condition.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})" ];
 						
@@ -540,8 +548,10 @@ class component_date extends component_common {
 
 					case '>':
 					case '<=':
-						// Standard numeric comparison using JSON path existence operator (@?).
-						// Uses $final_range to account for the end of the specified precision (day, month, or year).
+						// GREATER THAN (>) and LESS OR EQUAL (<=)
+						// Uses final_range to account for date precision (day, month, or year).
+						// Example: "2024-03" searches through end of March (2024-03-31 23:59:59).
+						// JSON Path: Compares start.time against the end of the precision range.
 						$final_range = self::get_final_search_range_seconds($dd_date);
 
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
@@ -552,6 +562,9 @@ class component_date extends component_common {
 						break;
 
 					case '!*': // IS NULL (Empty)
+						// EMPTY VALUE (!*)
+						// Matches records where no date elements exist for this component.
+						// JSON Path: Checks for absence of any array elements.
 						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
 						$final_query_object = $query_object;
 						break;
@@ -563,6 +576,12 @@ class component_date extends component_common {
 
 					case '=':
 					default:
+						// EQUALS (=) - Default operator
+						// Matches dates that overlap with or fall within the search date's precision range.
+						// Logic handles both:
+						//   1. Search date falls within a stored range (start <= search <= end)
+						//   2. Stored date falls within search precision (start >= search && start <= final_range)
+						// Example: Searching "2024-03" matches any date in March 2024.
 						$final_range = self::get_final_search_range_seconds($dd_date);
 
 					// SELECT section_id, section_tipo, date
@@ -589,6 +608,11 @@ class component_date extends component_common {
 				break;
 
 			case 'period':
+				// PERIOD mode
+				// Represents historical periods (e.g., "Bronze Age", "Medieval Period").
+				// Stores as a single calculated time value in period.time.
+				// Index optimization: Uses @? for GIN index support.
+				
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date	= isset($q_object->period) ? new dd_date($q_object->period) : null;
 				$q_clean	= !empty($q_object->period->time)
@@ -608,7 +632,9 @@ class component_date extends component_common {
 
 					case '=':
 					default:
-						// Exact period match by calculated time
+						// EQUALS (=) - Default operator
+						// Exact period match by calculated time value.
+						// JSON Path: Checks if period.time equals the search value.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.period.time == {$q_clean})" ];
 						$final_query_object = $query_object;
@@ -617,6 +643,12 @@ class component_date extends component_common {
 				break;
 
 			case 'time':
+				// TIME mode
+				// Handles time-of-day values (hours:minutes:seconds).
+				// Stored as Unix timestamps representing time since epoch.
+				// Precision range accounts for seconds if not specified.
+				// Index optimization: Uses @? for GIN index support.
+				
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date	= isset($q_object->start) ? new dd_date($q_object->start) : null;
 				$q_clean	= !empty($q_object->start->time)
@@ -626,7 +658,10 @@ class component_date extends component_common {
 				// operator conditionals
 				switch ($operator) {
 					case '=':
-						// Exact time match within the precision range (usually 0s-59s depending on data)
+						// EQUALS (=)
+						// Exact time match within precision range (e.g., 14:30 matches 14:30:00-14:30:59).
+						// Uses final_range to include all seconds within the specified precision.
+						// JSON Path: Range check ensures start.time falls within precision window.
 						$final_range = $q_clean + self::get_final_search_range_seconds($dd_date);
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time >= {$q_clean} && @.start.time <= {$final_range})" ];
@@ -644,7 +679,9 @@ class component_date extends component_common {
 						break;
 
 					default:
-						// Variable comparison (<, >, <=, >=) for time values
+						// COMPARISON OPERATORS (<, >, <=, >=)
+						// Direct numeric comparison of time values.
+						// JSON Path: Filters elements where start.time meets operator condition.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})"];
 						$final_query_object = $query_object;
@@ -653,6 +690,8 @@ class component_date extends component_common {
 				break;
 
 			case 'datetime':
+				// DEPRECATED: 'datetime' mode name
+				// Log error for incorrect mode name and continue as 'date_time'.
 				debug_log(__METHOD__
 					. " Received wrong mode 'datetime'. Fix the date mode to 'date_time' " . PHP_EOL
 					. to_string( debug_backtrace()[0] )
@@ -661,6 +700,12 @@ class component_date extends component_common {
 				// don't break here !
 
 			case 'date_time':
+				// DATE_TIME mode
+				// Combines date and time (e.g., "2024-03-15 14:30:00").
+				// Handles both full datetime and partial specifications (date only, date+hour, etc.).
+				// Precision range calculated based on what fields are specified.
+				// Index optimization: Uses @? for GIN index support.
+				
 				// Extract directly from calculated time in JAVASCRIPT
 				$dd_date		= isset($q_object->start) ? new dd_date($q_object->start) : null;
 				$final_range	= self::get_final_search_range_seconds($dd_date);
@@ -676,13 +721,17 @@ class component_date extends component_common {
 						break;
 
 					case '*': // IS NOT NULL (Not Empty)
+						// NOT EMPTY (*)
+						// Matches records with at least one datetime element.
 						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
 						$final_query_object = $query_object;
 						break;
 
 					case '<':
 					case '>=':
-						// Comparison with the start of the date_time range
+						// LESS THAN (<) and GREATER OR EQUAL (>=)
+						// Compares with the start of the datetime.
+						// JSON Path: Direct start.time comparison.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$q_clean})"];
 						$final_query_object = $query_object;
@@ -690,7 +739,10 @@ class component_date extends component_common {
 
 					case '>':
 					case '<=':
-						// Comparison with the end of the date_time range (precision accounting)
+						// GREATER THAN (>) and LESS OR EQUAL (<=)
+						// Compares with the end of the datetime precision range.
+						// Example: "2024-03-15 14:00" compares through end of that minute.
+						// JSON Path: Compares start.time against final_range.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time {$operator} {$final_range})"];
 						$final_query_object = $query_object;
@@ -698,7 +750,10 @@ class component_date extends component_common {
 
 					case '=':
 					default:
-						// Exact date_time match within the calculated precision range
+						// EQUALS (=) - Default operator
+						// Matches datetimes within the specified precision range.
+						// Example: "2024-03-15 14:00" matches all times in that minute (14:00:00-14:00:59).
+						// JSON Path: Range check ensures start.time falls within precision window.
 						$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 						$query_object->params = ['_Q1_' => "$.{$component_tipo}[*] ? (@.start.time >= {$q_clean} && @.start.time <= {$final_range})"];
 						$final_query_object = $query_object;
@@ -707,13 +762,19 @@ class component_date extends component_common {
 				break;
 
 			default:
+				// UNKNOWN date_mode
+				// Fallback to basic empty/not-empty checks only.
 				switch ($operator) {
 					case '!*': // IS NULL (Empty)
+						// EMPTY VALUE (!*)
+						// Matches records with no date elements (unknown mode fallback).
 						$query_object->sentence = "NOT ({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
 						$final_query_object = $query_object;
 						break;
 
 					case '*': // IS NOT NULL (Not Empty)
+						// NOT EMPTY (*)
+						// Matches records with at least one date element (unknown mode fallback).
 						$query_object->sentence = "({$table_alias}.{$column} @? '$.{$component_tipo}[*]')";
 						$final_query_object = $query_object;
 						break;
