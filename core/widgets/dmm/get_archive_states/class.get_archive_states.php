@@ -81,7 +81,7 @@ class get_archive_states extends widget_common {
 			$ar_closed		= [];
 			$answer_label	= ontology_node::get_term_by_tipo($component_tipo_answer, DEDALO_DATA_LANG);
 			$closed_label	= ontology_node::get_term_by_tipo($component_tipo_closed, DEDALO_DATA_LANG);
-			#get the value of the component using portal dato
+			#get the value of the component using portal data
 				foreach ($component_data as $current_locator) {
 
 					$section_id 	= $current_locator->section_id;
@@ -190,11 +190,11 @@ class get_archive_states extends widget_common {
 					}
 
 
-				// fix dato
-					// $dato = new stdClass();
-					// 	$dato->total_dato 			= $total_dato 			?? null;
-					// 	$dato->total_answer 		= $total_answer 		?? null;
-					// 	$dato->total_closed 		= $total_closed 		?? null;
+				// fix data
+					// $data = new stdClass();
+					// 	$data->total_data 			= $total_data 			?? null;
+					// 	$data->total_answer 		= $total_answer 		?? null;
+					// 	$data->total_closed 		= $total_closed 		?? null;
 
 				foreach ($output as $data_map) {
 					$current_id = $data_map->id;
