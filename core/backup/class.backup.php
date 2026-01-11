@@ -571,8 +571,21 @@ abstract class backup {
 	* 	file_path: string = ''
 	* 	matrix_table: string
 	* 	delete_table: bool = false
-	* 	columns: array = ['section_id','section_tipo','datos']
-	* }
+	* 	columns: array = [
+	* 		'section_id',
+	* 		'section_tipo',
+	* 		'data',
+	* 		'relation',
+	* 		'string',
+	* 		'date',
+	* 		'iri',
+	* 		'geo',
+	* 		'number',
+	* 		'media',
+	* 		'misc',
+	* 		'relation_search',
+	* 		'meta'				
+	* 	]
 	* @return object $response
 	* {
 	* 	result : bool,
@@ -593,7 +606,7 @@ abstract class backup {
 			$file_path		= $options->file_path ?? '';
 			$matrix_table	= $options->matrix_table ?? null;
 			$delete_table	= $options->delete_table ?? false;
-			$columns		= $options->columns ?? ['section_id','section_tipo','datos'];
+			$columns		= $options->columns ?? matrix_db_manager::get_columns_name();
 
 		// validate required parameters
 			if (empty($file_path)) {

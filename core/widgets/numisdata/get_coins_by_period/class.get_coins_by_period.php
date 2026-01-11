@@ -189,9 +189,7 @@ class get_coins_by_period extends widget_common {
 						$hierarchy_object->label		= $period_label;
 						$hierarchy_object->count		= null;
 
-						$model = array_find($section->datos->relations ?? [], function($el){
-							return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_MODEL_TIPO;
-						});
+						$model = $section->relation->{DEDALO_THESAURUS_RELATION_MODEL_TIPO} ?? [];
 
 						$hierarchy_object->model_section_id = (is_object($model))
 							? $model->section_id
@@ -270,13 +268,13 @@ class get_coins_by_period extends widget_common {
 				$search		= search::get_instance($sqo);
 				$db_result	= $search->search();
 
-			// get the value of the component using portal dato
+			// get the value of the component using portal data
 				$empty_period_count = null;
 				foreach ($db_result as $row) {
 
 					$duplicated_value = $row->relation->$component_tipo_duplicated ?? [];
 					$duplicated_data = $duplicated_value[0] ?? null;					
-					// sample of duplicated dato: object|null
+					// sample of duplicated data: object|null
 						// {
 						//     "type": "dd151",
 						//     "section_id": "2",
@@ -329,7 +327,7 @@ class get_coins_by_period extends widget_common {
 									$ts_term->count = $ts_term->count + 1;
 								}
 							}
-						}//end foreach ($period_dato as $current_period)
+						}//end foreach ($period_data as $current_period)
 					}
 				}//end foreach ($db_result as $row)
 
@@ -363,7 +361,7 @@ class get_coins_by_period extends widget_common {
 		 // dump($time/1000000, ' widget_time ++ '.to_string());
 
 		return $data;
-	}//end get_dato
+	}//end get_data
 
 
 
@@ -394,9 +392,7 @@ class get_coins_by_period extends widget_common {
 			$ts_term_section->parent = $parent;
 
 			// filter all children of the current thesaurus section.
-			$root_hierarchy_children = array_filter($ts_term_section->datos->relations, function($el){
-				return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_CHILDREN_TIPO;
-			});
+			$root_hierarchy_children = $ts_term_section->relation->{DEDALO_THESAURUS_RELATION_CHILDREN_TIPO} ?? [];
 			// if this section has children do recursion
 			if(!empty($root_hierarchy_children)){
 

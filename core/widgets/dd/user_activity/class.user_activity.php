@@ -42,7 +42,7 @@ class user_activity extends widget_common {
 				$current_data->widget_id	= 'totals';
 				$current_data->value		= $totals;
 
-			$dato[] = $current_data;
+			$data[] = $current_data;
 
 			/*
 			$input	= $current_ipo->input;
@@ -65,9 +65,9 @@ class user_activity extends widget_common {
 					$original_lang,
 					$section_tipo
 				);
-				$dato = $component->get_dato();
-				$raw_text = isset($dato[0])
-					? $dato[0]
+				$data = $component->get_data();
+				$raw_text = isset($data[0])
+					? $data[0]
 					: '';
 
 			// tc's
@@ -191,7 +191,7 @@ class user_activity extends widget_common {
 						$current_data->id		= $current_id;
 						$current_data->value	= $$current_id ?? null;
 
-					$dato[] = $current_data;
+					$data[] = $current_data;
 				}
 			*/
 
@@ -199,8 +199,8 @@ class user_activity extends widget_common {
 		}//end foreach ($ipo as $ipo_key => $current_ipo)
 
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 

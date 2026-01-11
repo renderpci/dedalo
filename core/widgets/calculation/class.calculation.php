@@ -9,7 +9,7 @@ class calculation extends widget_common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* @param array ipo
 	* can be configured with need of the widget
 	* for standard calculations data_souce need to be configured with two params:
@@ -73,13 +73,13 @@ class calculation extends widget_common {
 	*  }
 	* @return
 	*/
-	public function get_dato() : array {
+	public function get_data() : array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
 		$ipo 			= $this->ipo;
 
-		$dato = [];
+		$data = [];
 		foreach ($ipo as $key => $ipo) {
 
 			// input
@@ -107,13 +107,13 @@ class calculation extends widget_common {
 						$current_data->id		= $current_id;
 						$current_data->value	= $value;
 
-					$dato[] = $current_data;
+					$data[] = $current_data;
 				}
 			}
 		}
 
-		return $dato;
-	}//end get_dato
+		return $data;
+	}//end get_data
 
 
 
@@ -230,17 +230,17 @@ class calculation extends widget_common {
 							$lang,
 							$this->section_tipo
 						);
-						$dato	= $current_component->get_dato();
-						$dato	= is_array($dato) ? $dato : [$dato]; // Array always
+						$data	= $current_component->get_data();
+						$data	= is_array($data) ? $data : [$data]; // Array always
 
-						if (empty($dato) || !isset($dato[0]->data)) {
+						if (empty($data) || !isset($data[0]->data)) {
 							continue; // Skip empty
 						}
 
-						// exec_dato_filter_data
+						// exec_data_filter_data
 							$result = [];
-							foreach ((array)$dato as $dato_item) {
-								$result[] = self::exec_dato_filter_data($dato_item);
+							foreach ((array)$data as $data_item) {
+								$result[] = self::exec_data_filter_data($data_item);
 							}
 
 					// Set result
@@ -301,12 +301,12 @@ class calculation extends widget_common {
 
 
 	/**
-	* EXEC_DATO_FILTER_DATA
+	* EXEC_DATA_FILTER_DATA
 	* @return object $result
 	*/
-	public static function exec_dato_filter_data(object $dato_item) : object {
+	public static function exec_data_filter_data(object $data_item) : object {
 
-		$ar_search_query_object = !is_array($dato_item->data) ? [$dato_item->data] : $dato_item->data; // Always array
+		$ar_search_query_object = !is_array($data_item->data) ? [$data_item->data] : $data_item->data; // Always array
 
 		// Exec search with search_query_object
 			$ar_result = [];
@@ -354,9 +354,9 @@ class calculation extends widget_common {
 			}//end foreach ($ar_search_query_object as $search_query_object
 
 
-		// Add dato object properties
+		// Add data object properties
 			$result = new StdClass();
-			foreach ($dato_item as $key => $value) {
+			foreach ($data_item as $key => $value) {
 				if ($key==='result_map') continue; # Skip some reserved properties
 				// Add property
 				if ($key==='data') {
@@ -367,7 +367,7 @@ class calculation extends widget_common {
 			}
 
 		return $result;
-	}//end exec_dato_filter_data
+	}//end exec_data_filter_data
 
 
 
@@ -433,7 +433,6 @@ class calculation extends widget_common {
 		                    "component_tipo": "'.$current_tipo.'",
 		                    "model": "'.$model_name.'",
 		                    "name": "Sum",
-		                    "selector": "dato",
 		                    "lang": "'.$lang.'"
 		                }
 		            ]
@@ -494,7 +493,7 @@ class calculation extends widget_common {
 		$path   = search::get_query_path($current_tipo, $current_section_tipo, false);
 		$element = new stdClass();
 			$element->path = $path;
-			$element->component_path = ["components",$current_tipo,"dato",$lang];
+			$element->component_path = ["components",$current_tipo,"data",$lang];
 
 		$select[] = $element;
 
@@ -559,9 +558,9 @@ class calculation extends widget_common {
 		$ar_values = [];
 		foreach ($ar_records as $key => $row) {
 
-			$component_dato = $row->{$current_tipo};
+			$component_data = $row->{$current_tipo};
 
-			$ar_values[] = $component_dato;
+			$ar_values[] = $component_data;
 		}
 
 
