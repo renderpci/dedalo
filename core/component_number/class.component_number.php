@@ -87,7 +87,7 @@ class component_number extends component_common {
 	* Format could be 'int' or 'float'.
 	* @return bool
 	*/
-	public function set_data( $data ) : bool {
+	public function set_data( ?array $data ) : bool {
 
 		// Empty data
 		if ($this->is_empty_data($data)) {
@@ -317,14 +317,8 @@ class component_number extends component_common {
 		// Always set fixed values
 		$query_object->type = 'number';
 
-		// Always without unaccent
+		// Always without unaccent (numbers don't need accent handling)
 		$query_object->unaccent = false;
-
-		// path
-		$query_object->component_path[] = 'lg-nolan';
-
-		$between_separator  = '...';
-		//$sequence_separator = ',';
 
 		// column
 		$column = section_record_data::get_column_name( get_called_class() );
@@ -332,168 +326,156 @@ class component_number extends component_common {
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
+		// between_separator
+		$between_separator = '...';
+
 		switch (true) {
 
-			// EMPTY VALUE
+			// EMPTY VALUE (!*)
+			// Matches records where the component has no numeric values (empty array, null, or missing).
+			// Handles: NULL columns, missing component keys, empty arrays, and null values.
+			// Uses OR condition to catch all empty scenarios.
 			case ($q_operator==='!*'):
-
-				$query_object->operator	= 'IS NULL';
-				$query_object->q_parsed	= '';
-
-				$logical_operator = '$or';
-				$new_query_json = new stdClass;
-					$new_query_json->{$logical_operator} = [$query_object];
-
-				$clone = clone($query_object);
-					$clone->operator	= '=';
-					$clone->q_parsed	= '\'[]\'';
-				$new_query_json->$logical_operator[] = $clone;
-
-				// legacy data (set as null instead [])
-				$clone = clone($query_object);
-					$clone->operator = 'IS NULL';
-				$new_query_json->$logical_operator[] = $clone;
-
-				// override
-				$query_object = $new_query_json;
+				$query_object->params = [
+					'_Q1_' => "$.{$component_tipo}[*] ? (@.value != null)"
+				];
+				$query_object->sentence = "({$table_alias}.{$column}->'{$component_tipo}' IS NULL OR NOT {$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				break;
 
-			// NOT EMPTY (in any project lang data)
+			// NOT EMPTY (*)
+			// Matches records where the component has at least one non-null numeric value.
+			// Uses JSON Path existence operator to verify presence of valid numeric data.
 			case ($q_operator==='*'):
-
-				$query_object->operator	= 'IS NOT NULL';
-				$query_object->q_parsed	= '';
-
-				$logical_operator = '$and';
-				$new_query_json = new stdClass;
-					$new_query_json->{$logical_operator} = [$query_object];
-
-				$clone = clone($query_object);
-					$clone->operator	= '!=';
-					$clone->q_parsed	= '\'[]\'';
-				$new_query_json->$logical_operator[] = $clone;
-
-				$clone = clone($query_object);
-					$clone->operator	= '!=';
-					$clone->q_parsed	= '\'[null]\'';
-				$new_query_json->$logical_operator[] = $clone;
-
-				$clone = clone($query_object);
-					$clone->operator	= '!=';
-					$clone->q_parsed	= '\'null\'';
-				$new_query_json->$logical_operator[] = $clone;
-
-				// override
-				$query_object = $new_query_json;
+				$query_object->params = [
+					'_Q1_' => "$.{$component_tipo}[*].value ? (@ != null)"
+				];
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				break;
 
-			// BETWEEN
+			// BETWEEN (value1...value2)
+			// Matches records where the numeric value is between two values (inclusive).
+			// Uses JSON Path with numeric comparisons for efficient range queries.
+			// Index optimization: Structural pre-filter narrows candidates before numeric comparison.
 			case (strpos($q, $between_separator)!==false):
-				// Transform "12...25" to "12 AND 25"
-				$ar_parts 	= explode($between_separator, $q);
-				$first_val  = !empty($ar_parts[0]) ? trim($ar_parts[0]) : 0;
-				$second_val = !empty($ar_parts[1]) ? trim($ar_parts[1]) : $first_val;
+				$ar_parts   = explode($between_separator, $q);
+				$first_val  = !empty($ar_parts[0]) ? trim(str_replace(',', '.', $ar_parts[0])) : '0';
+				$second_val = !empty($ar_parts[1]) ? trim(str_replace(',', '.', $ar_parts[1])) : $first_val;
 
-				// @@ '$[*] >= 1'
-				$query_object_one = clone $query_object;
-					$query_object_one->operator = '@@';
-					$first_val  = str_replace(',', '.', (string)$first_val);
-					$query_object_one->q_parsed	= '\'$[*] >='.(string)$first_val.'\'';
+				$json_path = "$.{$component_tipo}[*]";
 
-				// @@ '$[*] <= 1'
-				$query_object_two = clone $query_object;
-					$query_object_two->operator = '@@';
-					$second_val  = str_replace(',', '.', (string)$second_val);
-					$query_object_two->q_parsed	= '\'$[*] <='.(string)$second_val.'\'';
+				$query_object->params = [
+					'_Q1_' => $first_val,
+					'_Q2_' => $second_val
+				];
 
-				// Group in a new "AND"
-				$current_op = '$and';
-				$new_query_object = new stdClass();
-					$new_query_object->{$current_op} = [$query_object_one, $query_object_two];
-
-				$query_object = $new_query_object;
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric >= (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= "    AND (elem->>'value')::numeric <= (_Q2_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 
-			# SEQUENCE
-			/*case (strpos($q, $sequence_separator)!==false):
-				// Transform "12,25,36" to "(12 OR 25 OR 36)"
-				$ar_parts 	= explode($sequence_separator, $q);
-				$ar_result  = [];
-				foreach ($ar_parts as $key => $value) {
-					$value = (int)$value;
-					if ($value<1) continue;
-					$query_object_current = clone $query_object;
-						$query_object_current->operator = '=';
-						$query_object_current->q_parsed	= '\''.$value.'\'';
-					$ar_result[] = $query_object_current;
-				}
-				// Return an subquery instead object
-				$cop = '$or';
-				$new_object = new stdClass();
-					$new_object->{$cop} = $ar_result;
-				$query_object = $new_object;
-				break;
-				*/
-
-			// BIGGER OR EQUAL THAN
+			// BIGGER OR EQUAL THAN (>=)
+			// Matches records where the numeric value is greater than or equal to the search term.
+			// Index optimization: Structural pre-filter (@?) for efficient querying.
+			// Numeric handling: CAST to numeric type for proper comparison.
 			case ($q_operator==='>=' || substr($q, 0, 2)==='>='):
-				$operator = '>=';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
+				$q_clean = str_replace(['>=', ','], ['', '.'], $q);
 				if ($q_clean==='' || $q_clean===$q_only_operator) {
-					$q_clean = 0;
+					$q_clean = '0';
 				}
-				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
-				break;
 
-			// SMALLER OR EQUAL THAN
-			case ($q_operator==='<=' || substr($q, 0, 2)==='<='):
-				$operator = '<=';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				if ($q_clean==='' || $q_clean===$q_only_operator) {
-					$q_clean = 0;
-				}
-				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
-				break;
+				$json_path = "$.{$component_tipo}[*]";
 
-			// BIGGER THAN
-			case ($q_operator==='>' || substr($q, 0, 1)==='>'):
-				$operator = '>';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				if ($q_clean==='' || $q_clean===$q_only_operator) {
-					$q_clean = 0;
-				}
-				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
-				break;
-
-			// SMALLER THAN
-			case ($q_operator==='<' || substr($q, 0, 1)==='<'):
-				$operator = '<';
-				$q_clean  = str_replace($operator, '', $q);
-				$q_clean  = str_replace(',', '.', $q_clean);
-				if ($q_clean==='' || $q_clean===$q_only_operator) {
-					$q_clean = 0;
-				}
-				$query_object->operator = '@@';
-				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
-				break;
-
-			// EQUAL DEFAULT
-			default:
-				// sql sentence
-				$sql  = "{$table_alias}.{$column} @? (";
-				$sql .= "'$.{$component_tipo}[*].value ? (@ == \"'||_Q1_||'\")'";
-				$sql .= ")::jsonpath";
-				$query_object->sentence = $sql;
-
-				// params
-				$q_clean = str_replace(['+', ','], ['', '.'], $q);
 				$query_object->params = ['_Q1_' => $q_clean];
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric >= (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
+				break;
+
+			// SMALLER OR EQUAL THAN (<=)
+			// Matches records where the numeric value is less than or equal to the search term.
+			// Index optimization: Structural pre-filter (@?) for efficient querying.
+			// Numeric handling: CAST to numeric type for proper comparison.
+			case ($q_operator==='<=' || substr($q, 0, 2)==='<='):
+				$q_clean = str_replace(['<=', ','], ['', '.'], $q);
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = '0';
+				}
+
+				$json_path = "$.{$component_tipo}[*]";
+
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric <= (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
+				break;
+
+			// BIGGER THAN (>)
+			// Matches records where the numeric value is strictly greater than the search term.
+			// Index optimization: Structural pre-filter (@?) for efficient querying.
+			// Numeric handling: CAST to numeric type for proper comparison.
+			case ($q_operator==='>' || substr($q, 0, 1)==='>'):
+				$q_clean = str_replace(['>', ','], ['', '.'], $q);
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = '0';
+				}
+
+				$json_path = "$.{$component_tipo}[*]";
+
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric > (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
+				break;
+
+			// SMALLER THAN (<)
+			// Matches records where the numeric value is strictly less than the search term.
+			// Index optimization: Structural pre-filter (@?) for efficient querying.
+			// Numeric handling: CAST to numeric type for proper comparison.
+			case ($q_operator==='<' || substr($q, 0, 1)==='<'):
+				$q_clean = str_replace(['<', ','], ['', '.'], $q);
+				if ($q_clean==='' || $q_clean===$q_only_operator) {
+					$q_clean = '0';
+				}
+
+				$json_path = "$.{$component_tipo}[*]";
+
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric < (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
+				break;
+
+			// EQUAL (default)
+			// Matches records where the numeric value exactly equals the search term.
+			// Index optimization: Structural pre-filter (@?) leverages GIN indexes.
+			// Numeric handling: Uses string equality within JSON Path for exact matching.
+			default:
+				$q_clean = str_replace(['+', ','], ['', '.'], $q);
+
+				$json_path = "$.{$component_tipo}[*]";
+
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE (elem->>'value')::numeric = (_Q1_)::numeric".PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 		}//end switch (true)
 
