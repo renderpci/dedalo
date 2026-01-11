@@ -262,6 +262,28 @@ try {
 			'rqo' => $rqo
 		];
 	}
+
+	// reset session. When a section read fails, the session is removed to unlock next request.
+	$action = $rqo->action ?? null;
+	if ($action === 'read') {
+		// reset bad section session to allow next request
+		$session_key = $rqo->source->session_key ?? (($rqo->source->model==='section')
+			? section::build_sqo_id($tipo)
+			: 'undefined'
+		);// cache key sqo_id
+
+		if(isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
+			// remove session
+			unset($_SESSION['dedalo']['config']['sqo'][$session_key]);
+			// debug
+			debug_log(
+				__METHOD__
+					. ' API end point removed section session ' . PHP_EOL
+					. ' session_key: ' . $session_key . PHP_EOL,
+				logger::WARNING
+			);
+		}
+	}
 }
 
 
