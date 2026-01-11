@@ -10,15 +10,20 @@ trait search_component_date {
 
     /**
 	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $request_query_object
-	* @return object|false $query_object
+	* Parses the given $query_object to construct SQL sentences and parameters for database querying.
+	* Handles various date modes: 'date', 'range', 'period', 'time', and 'date_time'.
+	*
+	* @param object $query_object The search query object containing parameters.
+	* @return object|false The modified query_object with 'sentence' and 'params', or false if unresolvable.
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
-		// q array safe. Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
+		// Ensure $query_object->q is a single value (handles cases where it might be wrapped in an array)
 		$query_object->q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		
+		// If both query value and operator are empty, return false (no filter applied)
 		if (empty($query_object->q) && empty($query_object->q_operator)) {
-			return $query_object;
+			return false;
 		}
 		
 		// column
