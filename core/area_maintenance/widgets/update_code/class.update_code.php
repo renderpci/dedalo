@@ -357,7 +357,7 @@ class update_code {
 				gc_collect_cycles();
 				sleep(1);
 
-			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			// logger activity : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), Data(array of related info)
 				logger::$obj['activity']->log_message(
 					'SAVE',
 					logger::INFO,
