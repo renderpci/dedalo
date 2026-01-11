@@ -458,19 +458,20 @@ class component_date extends component_common {
 		# Time
 		if (isset($dd_date->second)) {
 
-			$final_search_range_seconds = $dd_date->second;
+			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date);
 
 		}
 		elseif (isset($dd_date->minute)) {
 
-			$dd_date_clone = clone($dd_date);
-			$dd_date_clone->seconds = 59;
+			$dd_date_clone = clone $dd_date;
+			$dd_date_clone->second = 59;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
 		elseif (isset($dd_date->hour)) {
 
-			$dd_date_clone = clone($dd_date);
+			$dd_date_clone = clone $dd_date;
 			$dd_date_clone->minute = 59;
+			$dd_date_clone->second = 59;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
 
