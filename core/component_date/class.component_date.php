@@ -481,19 +481,19 @@ class component_date extends component_common {
 		# because 64313740800 = 2001
 		if (isset($dd_date->day)) {
 
-			$dd_date_clone = clone($dd_date);
+			$dd_date_clone = clone $dd_date;
 			$dd_date_clone->day = $dd_date_clone->day+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
 		}elseif (isset($dd_date->month)) {
 
-			$dd_date_clone = clone($dd_date);
+			$dd_date_clone = clone $dd_date;
 			$dd_date_clone->month = $dd_date_clone->month+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
 		}elseif (isset($dd_date->year)) {
 
-			$dd_date_clone = clone($dd_date);
+			$dd_date_clone = clone $dd_date;
 			$dd_date_clone->year = $dd_date_clone->year+1;
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
