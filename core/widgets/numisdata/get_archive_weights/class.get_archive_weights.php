@@ -12,13 +12,13 @@ class get_archive_weights extends widget_common {
 	* GET_DATA
 	* @return
 	*/
-	public function get_data() {
+	public function get_data() : ?array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
 		$ipo 			= $this->ipo;
 
-		$dato = [];
+		$data = [];
 		foreach ($ipo as $key => $current_ipo) {
 
 			$input 		= $current_ipo->input;
@@ -46,9 +46,9 @@ class get_archive_weights extends widget_common {
 					$current_section_tipo
 				);
 
-				$component_dato = $component_portal->get_dato();
+				$component_data = $component_portal->get_data();
 
-				if (empty($component_dato)) {
+				if (empty($component_data)) {
 					return [];
 				}
 
@@ -108,8 +108,8 @@ class get_archive_weights extends widget_common {
 
 			$weights = [];
 			$diameter = [];
-			#get the value of the component using portal dato
-				foreach ($component_dato as $current_locator) {
+			#get the value of the component using portal data
+				foreach ($component_data as $current_locator) {
 
 					$section_id 	= $current_locator->section_id;
 					$section_tipo 	= $current_locator->section_tipo;
@@ -207,15 +207,15 @@ class get_archive_weights extends widget_common {
 					$data[] = $current_data;
 				}
 
-			// $dato = new stdClass();
-			// 	$dato->media_weight 			= $media_weight 			?? null;
-			// 	$dato->max_weight 				= $max_weight 				?? null;
-			// 	$dato->min_weight 				= $min_weight 				?? null;
-			// 	$dato->total_elements_weights 	= $total_elements_weights 	?? null;
-			// 	$dato->media_diameter 			= $media_diameter 			?? null;
-			// 	$dato->max_diameter 			= $max_diameter 			?? null;
-			// 	$dato->min_diameter 			= $min_diameter 			?? null;
-			// 	$dato->total_elements_diameter 	= $total_elements_diameter 	?? null;
+			// $data = new stdClass();
+			// 	$data->media_weight 			= $media_weight 			?? null;
+			// 	$data->max_weight 				= $max_weight 				?? null;
+			// 	$data->min_weight 				= $min_weight 				?? null;
+			// 	$data->total_elements_weights 	= $total_elements_weights 	?? null;
+			// 	$data->media_diameter 			= $media_diameter 			?? null;
+			// 	$data->max_diameter 			= $max_diameter 			?? null;
+			// 	$data->min_diameter 			= $min_diameter 			?? null;
+			// 	$data->total_elements_diameter 	= $total_elements_diameter 	?? null;
 		}//foreach ipo
 
 		return $data;
