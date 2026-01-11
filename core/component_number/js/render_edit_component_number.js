@@ -307,16 +307,19 @@ export const change_handler = function(e, key, self) {
 		: null;
 
 	// update value item
-	const item = self.data.value[key]
-	if (!item) {
-		console.error('Failed to change value. Item not found for key', key)
-		return
-	}	
+	const item = self.data.value
+		? self.data.value[key]
+		: {}
+
+	const action = self.data.value
+		? 'update'
+		: 'insert'
+
 	item.value = safe_value
 
 	// change data
 	const changed_data_item = Object.freeze({
-		action	: 'update',
+		action	: action,
 		key		: key,
 		value	: item
 	})
