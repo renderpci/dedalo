@@ -639,178 +639,271 @@ class component_iri extends component_common {
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
 		// $q
-			$q = is_array($query_object->q)
-				? reset($query_object->q)
-				: ($query_object->q ?? '');
+		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
+		$q = isset($query_object->q) && is_array($query_object->q)
+			? $query_object->q[0]
+			: $query_object->q;
+
+		if ( (empty($q) || empty($q->value) ) && empty($query_object->q_operator)) {
+			return false;
+		}
+
+		// fallback to emprty string in case of invalid or null q
+		$q = (is_object($q) ? $q->value : $q) ?? '';
 
 		// split q case
-			$q_split = $query_object->q_split ?? false;
-			if ($q_split===true && !search::is_literal($q)) {
+		$q_split = $query_object->q_split ?? false;
+		if ($q_split===true && !search::is_literal($q)) {
 
-				// Join operators with next word (remove space)
-				// Operators: !=, ==, =, -, !!, !*
-				$q = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
-				// Join wildcard at the end (remove space before wildcard)
-				$q = preg_replace('/\s+(\*)/', '$1', $q);
+			// Join operators with next word (remove space)
+			// Operators: !=, ==, =, -, !!, !*
+			$q = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
+			// Join wildcard at the end (remove space before wildcard)
+			$q = preg_replace('/\s+(\*)/', '$1', $q);
 
-				$q_items = preg_split('/\s/', $q);
-				if (count($q_items)>1) {
-					return self::handle_query_splitting($query_object, $q_items, '$and');
-				}
+			$q_items = preg_split('/\s/', $q);
+			if (count($q_items)>1) {
+				return self::handle_query_splitting($query_object, $q_items, '$and');
 			}
+		}
 
+		// normalize q (remove slashes if any)
+		$q = stripslashes($q);
 
-		// escape q string for DB
-			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+		// Validate path and calculate translatable
+		if (empty($query_object->path) || !is_array($query_object->path)) {
+			debug_log(__METHOD__ . " Invalid component path ", logger::ERROR);
+			return false;
+		}
+		$path_end = end($query_object->path);
+		$component_tipo = $path_end->component_tipo;
+		$translatable = ontology_node::get_translatable($component_tipo);
+
+		// column
+		$column = section_record_data::get_column_name( get_called_class() );
+
+		// table_alias
+		$table_alias = $query_object->table_alias;
 
 		// q_operator
-			$q_operator = $query_object->q_operator ?? null;
+		$q_operator = $query_object->q_operator ?? null;
 
 		// type. Always set fixed values
-			$query_object->type = 'string';
+		$query_object->type = 'string';
 
-		// Prepend if exists
-			// if (isset($query_object->q_operator)) {
-			// 	$q = $query_object->q_operator . $q;
-			// }
+		// lang
+		$query_object->lang = $query_object->lang ?? DEDALO_DATA_LANG;
+
 
 		switch (true) {
-			# EMPTY VALUE (in current lang data)
+			// EMPTY VALUE (!*)
+			// Matches records where the IRI component has no valid URIs (empty or null).
+			// Language scoping: Searches within the specified language or across all languages if lang='all'.
+			// Uses JSON Path existence operator to check for non-empty, non-null IRI values.
 			case ($q==='!*' || $q_operator==='!*'):
-				$operator = 'IS NULL';
-				$q_clean  = '';
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-				$query_object->lang		= 'all';
-
-				$logical_operator = '$or';
-				$new_query_json = new stdClass;
-					$new_query_json->$logical_operator = [$query_object];
-
-				// Search empty only in current lang
-					$lang = DEDALO_DATA_LANG;
-
-					$clone = clone($query_object);
-						$clone->operator = '=';
-						$clone->q_parsed = '\'[]\'';
-						$clone->lang 	 = $lang;
-					$new_query_json->$logical_operator[] = $clone;
-
-					// $clone = clone($query_object);
-					// 	$clone->operator	= '=';
-					// 	$clone->q_parsed	= '\'\'';
-					// 	$clone->lang		= $lang;
-					// $new_query_json->$logical_operator[] = $clone;
-
-					// legacy data (set as null instead '')
-					$clone = clone($query_object);
-						$clone->operator	= 'IS NULL';
-						$clone->lang		= $lang;
-					$new_query_json->$logical_operator[] = $clone;
-
-				# override
-				$query_object = $new_query_json ;
+				$query_object->params = [
+					'_Q1_' => $query_object->lang==='all'
+						? "$.{$component_tipo}[*].iri ? (@ != \"\" && @ != null)"
+						: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\" && @.iri != \"\" && @.iri != null)"
+				];
+				$query_object->sentence = "NOT ({$table_alias}.{$column} @? (_Q1_)::jsonpath)";
 				break;
-			# NOT EMPTY (in any project lang data)
+
+			// NOT EMPTY (*)
+			// Matches records where the IRI component has at least one valid URI (non-empty and non-null).
+			// Language scoping: Searches within the specified language or across all languages if lang='all'.
+			// Uses JSON Path existence operator to verify the presence of valid IRI values.
 			case ($q==='*' || $q_operator==='*'):
-				$operator = 'IS NOT NULL';
-				$q_clean  = '';
-				$query_object->operator	= $operator;
-				$query_object->q_parsed	= $q_clean;
-				$query_object->unaccent	= false;
-
-				$logical_operator = '$and';
-				$new_query_json = new stdClass;
-					$new_query_json->$logical_operator = [$query_object];
-
-				// langs check
-					$ar_query_object = [];
-					$ar_all_langs 	 = common::get_ar_all_langs();
-					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					foreach ($ar_all_langs as $current_lang) {
-						$clone = clone($query_object);
-							$clone->operator	= '!=';
-							$clone->q_parsed	= '\'[]\'';
-							$clone->lang		= $current_lang;
-
-						$ar_query_object[] = $clone;
-					}
-
-					$logical_operator ='$or';
-					$langs_query_json = new stdClass;
-						$langs_query_json->$logical_operator = $ar_query_object;
-
-				$sub_group1 = new stdClass();
-					$sub_name1 = '$and';
-					$sub_group1->$sub_name1 = [$new_query_json, $langs_query_json];
-
-				// override
-				$query_object = $sub_group1;
+				$query_object->params = [
+					'_Q1_' => $query_object->lang==='all'
+						? "$.{$component_tipo}[*].iri ? (@ != \"\" && @ != null)"
+						: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\" && @.iri != \"\" && @.iri != null)"
+				];
+				$query_object->sentence = "{$table_alias}.{$column} @? (_Q1_)::jsonpath";
 				break;
-			# IS DIFFERENT
+
+			// IS DIFFERENT (!=)
+			// Matches records where NO IRI value matches the given term (case and accent insensitive).
+			// Supports wildcards: *text* (contains), text* (begins with), *text (ends with).
+			// Language scoping: Filters by specified language or searches all languages if lang='all'.
+			// Index optimization: Uses structural pre-filter (@?) to leverage GIN indexes before EXISTS check.
+			// Accent handling: Applies f_unaccent() for accent-insensitive comparison.
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
-				$operator = '!=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '!~';
-				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$q_clean = trim(str_replace('!=', '', $q));
+				$query_object->params = ['_Q1_' => str_replace('*', '', $q_clean)];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$first_char = mb_substr($q_clean, 0, 1);
+				$last_char  = mb_substr($q_clean, -1);
+
+				$match_logic = '';
+				switch (true) {
+					case ($first_char==='*' && $last_char==='*'):
+						$match_logic = 'f_unaccent(elem->>\'iri\') ~* f_unaccent(_Q1_)';
+						break;
+					case ($first_char==='*'):
+						$match_logic = 'f_unaccent(elem->>\'iri\') ~* (f_unaccent(_Q1_) || \'$\')';
+						break;
+					case ($last_char==='*'):
+						$match_logic = 'f_unaccent(elem->>\'iri\') ~* (\'^\' || f_unaccent(_Q1_))';
+						break;
+					default:
+						$match_logic = 'f_unaccent(elem->>\'iri\') = f_unaccent(_Q1_)';
+						break;
+				}
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND NOT EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= "  WHERE {$match_logic}".PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# IS SIMILAR
+
+			// IS SIMILAR (=)
+			// Matches records where an IRI contains the search term (case and accent insensitive).
+			// Language scoping: Filters by specified language or searches all languages if lang='all'.
+			// Index optimization: Structural pre-filter (@?) helps GIN index narrow results before f_unaccent.
+			// Accent handling: Uses f_unaccent() for both the IRI value and search term.
 			case (strpos($q, '=')===0 || $q_operator==='='):
-				$operator = '=';
-				$q_clean  = str_replace($operator, '', $q);
-				$query_object->operator = '~*';
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$q_clean = trim(str_replace('=', '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# NOT CONTAIN
+
+			// NOT CONTAIN (-)
+			// Matches records where NO IRI value contains the search term (negated contains).
+			// Language scoping: Filters by specified language or searches all languages if lang='all'.
+			// Index optimization: Structural pre-filter (@?) optimizes performance.
+			// Accent handling: Uses f_unaccent() for accent-insensitive comparison.
 			case (strpos($q, '-')===0 || $q_operator==='-'):
-				$operator = '!~*';
-				$q_clean  = str_replace('-', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$q_clean = trim(str_replace('-', '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND NOT EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# CONTAIN EXPLICIT
+
+			// CONTAIN EXPLICIT (*text*)
+			// Standard contains search explicitly requested with asterisks.
+			// Language scoping: Searches within specified language or all languages if lang='all'.
+			// Index optimization: Structural pre-filter (@?) for efficient querying.
+			// Accent handling: f_unaccent() ensures accent-insensitive matching.
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$q_clean = trim(str_replace('*', '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# ENDS WITH
+
+			// ENDS WITH (*text)
+			// Searches for IRI values ending with the search term.
+			// Uses regex anchoring ($) for end-of-string matching.
+			// Language scoping: Filters by language or searches all if lang='all'.
+			// Index optimization: Structural pre-filter (@?) improves query performance.
+			// Accent handling: f_unaccent() for accent-insensitive suffix matching.
 			case (substr($q, 0, 1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
-				$query_object->unaccent = true;
+				$q_clean = trim(str_replace('*', '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* (f_unaccent(_Q1_) || \'$\')'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# BEGINS WITH
+
+			// BEGINS WITH (text*)
+			// Searches for IRI values beginning with the search term.
+			// Uses regex anchoring (^) for start-of-string matching.
+			// Language scoping: Filters by language or searches all if lang='all'.
+			// Index optimization: Structural pre-filter (@?) for efficient queries.
+			// Accent handling: f_unaccent() for accent-insensitive prefix matching.
 			case (substr($q, -1)==='*'):
-				$operator = '~*';
-				$q_clean  = str_replace('*', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$q_clean = trim(str_replace('*', '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* (\'^\' || f_unaccent(_Q1_))'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# LITERAL
+
+			// LITERAL ('text')
+			// Case-sensitive but accent-insensitive search for an exact full-string match.
+			// When search term is enclosed in single quotes, performs literal exact matching.
+			// Language scoping: Filters by specified language or searches all if lang='all'.
+			// Index optimization: Structural pre-filter (@?) narrows candidates before comparison.
+			// Accent handling: f_unaccent() removes accents while preserving case sensitivity.
 			case (search::is_literal($q)===true):
-				$operator = '~';
-				$q_clean  = str_replace("'", '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
-				$query_object->unaccent = false;
+				$q_clean = trim(str_replace("'", '', $q));
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') = f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
-			# DEFAULT CONTAIN
+
+			// DEFAULT (Contains)
+			// Standard fallback search: case-insensitive and accent-insensitive contains.
+			// Matches any IRI value that contains the search term anywhere within it.
+			// Language scoping: Filters by specified language or searches all if lang='all'.
+			// Index optimization: Structural pre-filter (@?) leverages GIN indexes.
+			// Accent handling: f_unaccent() ensures accent-insensitive substring matching.
 			default:
-				$operator = '~*';
-				$q_clean  = str_replace('+', '', $q);
-				$query_object->operator = $operator;
-				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
-				$query_object->unaccent = true;
+				$q_clean = str_replace(['+', '*'], '', $q);
+				$query_object->params = ['_Q1_' => $q_clean];
+
+				$json_path = ($query_object->lang === 'all')
+					? "$.{$component_tipo}[*]"
+					: "$.{$component_tipo}[*] ? (@.lang == \"{$query_object->lang}\")";
+
+				$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+				$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+				$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+				$query_object->sentence .= '  WHERE f_unaccent(elem->>\'iri\') ~* f_unaccent(_Q1_)'.PHP_EOL;
+				$query_object->sentence .= ' )';
 				break;
 		}//end switch (true)
 
@@ -1078,8 +1171,8 @@ class component_iri extends component_common {
 						}
 						// set the label_id given, used to create the label dataframe
 						// this property will not saved
-						if(!empty($iri_object->label_id)){
-							$iri_object->label_id = $iri_object->label_id;
+						if(!empty($data_from_json->label_id)){
+							$iri_object->label_id = $data_from_json->label_id;
 						}
 						// set the title given - Deprecated
 						if(isset($data_from_json->title)){
@@ -1120,21 +1213,21 @@ class component_iri extends component_common {
 								// error
 								debug_log(__METHOD__
 									." invalid http uri value, looks like a syntax error: ". PHP_EOL
-									. to_string($import_value)
+									. to_string($current_value)
 									, logger::ERROR
 								);
 
 								$failed = new stdClass();
 									$failed->section_id		= $this->section_id;
-									$failed->data			= to_string($import_value);
+									$failed->data			= to_string($current_value);
 									$failed->component_tipo	= $this->get_tipo();
-									$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+									$failed->msg			= 'IGNORED: malformed data '. to_string($current_value);
 								$response->errors[] = $failed;
 
 								return $response;
 							}
 							// set the string value
-							$iri_object = $this->conform_string_import_data( $import_value );
+							$iri_object = $this->conform_string_import_data( $current_value );
 
 							$value[] = $iri_object;
 
@@ -1154,15 +1247,15 @@ class component_iri extends component_common {
 									// log JSON conversion error
 									debug_log(__METHOD__
 										." invalid http uri value, looks like a syntax error: ". PHP_EOL
-										. to_string($import_value)
+										. to_string($current_value)
 										, logger::ERROR
 									);
 
 									$failed = new stdClass();
 										$failed->section_id		= $this->section_id;
-										$failed->data			= to_string($import_value);
+										$failed->data			= to_string($current_value);
 										$failed->component_tipo	= $this->get_tipo();
-										$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+										$failed->msg			= 'IGNORED: malformed data '. to_string($current_value);
 									$response->errors[] = $failed;
 
 									return $response;
@@ -1176,8 +1269,8 @@ class component_iri extends component_common {
 							}
 							// set the label_id given, used to create the label dataframe
 							// this property will not saved
-							if(!empty($iri_object->label_id)){
-								$iri_object->label_id = $iri_object->label_id;
+							if(!empty($current_value->label_id)){
+								$iri_object->label_id = $current_value->label_id;
 							}
 							// set the title given - Deprecated
 							if(isset($current_value->title)){
@@ -1434,7 +1527,7 @@ class component_iri extends component_common {
 	* then assign the locator to dataframe.
 	* in both cases create the dataframe component and set the locator of the label.
 	* @param string $label "dedalo"
-	* @return nul|int $target_section_id
+	* @return null|int $target_section_id
 	*/
 	private static function save_label_dataframe_from_string( string $label ) : ?int {
 
