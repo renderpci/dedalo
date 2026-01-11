@@ -200,20 +200,28 @@ class component_password extends component_common {
 		// table_alias
 		$table_alias = $query_object->table_alias;
 
-		// path
-		$query_object->component_path[] = 'lg-nolan';
-
+		// Validate path and get component_tipo
 		$path_end = end($query_object->path);
 		$component_tipo = is_object($path_end) ? $path_end->component_tipo : ($query_object->tipo ?? null);
 
-		// sql sentence
-		$sql  = "{$table_alias}.{$column} @? (";
-		$sql .= "'$.{$component_tipo}[*].value ? (@ == \"'||_Q1_||'\")'";
-		$sql .= ")::jsonpath";
-		$query_object->sentence = $sql;
+		// json_path
+		// Password data is non-translatable, so no language filtering is needed
+		$json_path = "$.{$component_tipo}[*]";
 
-		// params
+		// EQUALS (default and only supported operator)
+		// Matches records where the encrypted password exactly equals the search term.
+		// Password values are encrypted before comparison for security.
+		// Non-translatable: Password data has no language property.
+		// Index optimization: Structural pre-filter (@?) leverages GIN indexes.
+		// Security: Uses exists subquery to compare encrypted password values.
+
 		$query_object->params = ['_Q1_' => component_password::encrypt_password($q)];
+
+		$query_object->sentence = "({$table_alias}.{$column} @? '{$json_path}') AND EXISTS (".PHP_EOL;
+		$query_object->sentence .= '  SELECT 1'.PHP_EOL;
+		$query_object->sentence .= "  FROM jsonb_path_query({$table_alias}.{$column}, '{$json_path}') AS elem".PHP_EOL;
+		$query_object->sentence .= "  WHERE elem->>'value' = _Q1_".PHP_EOL;
+		$query_object->sentence .= ' )';
 
 		return $query_object;
 	}//end resolve_query_object_sql
