@@ -98,7 +98,7 @@ class sum_dates extends widget_common {
 		}//end if (!function_exists('sum_intervals'))
 
 
-		$dato = [];
+		$data = [];
 		foreach ($ipo as $key => $current_ipo) {
 
 			$input 		= $current_ipo->input;
@@ -216,7 +216,7 @@ class sum_dates extends widget_common {
 			// $date2 = new DateTime($timestamp_out);
 			// $interval = $date1->diff($date2);
 
-			// MODO CALCULANDO TODOS LOS LOCATORS
+			// Calculating all locators
 			$total_seconds = 0;
 			$ar_dates_in=array();
 			$ar_dates_out=array();
@@ -266,9 +266,6 @@ class sum_dates extends widget_common {
 				$ar_dates_out[] = $date_out;
 				$ar_dates_all[] = $date_out;
 			}
-			//dump($ar_dates_in, ' ar_dates_in ++ '.to_string());
-			//dump($ar_dates_out, ' ar_dates_out ++ '.to_string());
-			//dump($ar_dates_all, ' ar_dates_all ++ '.to_string());
 
 			// INTERVALS . iterate loCators and calculate intervals of time
 			$ar_interval=array();
@@ -353,11 +350,11 @@ class sum_dates extends widget_common {
 
 
 	/**
-	* GET_DATO_PARSED
+	* GET_DATA_PARSED
 	* format the data as text to be exported
 	* @return array $data_parsed
 	*/
-	public function get_dato_parsed() : ?array  {
+	public function get_data_parsed() : ?array  {
 
 		$data = $this->get_data() ?? [];
 		$data_parsed = [];
@@ -461,7 +458,7 @@ class sum_dates extends widget_common {
 			$data_parsed[] = $time_undefined_data;
 
 		return $data_parsed;
-	}//end get_dato_parsed
+	}//end get_data_parsed
 
 
 

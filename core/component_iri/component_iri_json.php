@@ -15,9 +15,6 @@
 	// Component structure context (tipo, relations, properties, etc.)
 		$this->context = $this->get_structure_context($permissions, true);
 		$context[] = $this->context;
-	// add buttons
-		$context = array_merge($context, $this->get_structure_buttons($permissions));
-
 
 
 // data

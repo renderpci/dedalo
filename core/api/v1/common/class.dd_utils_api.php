@@ -1186,7 +1186,7 @@ final class dd_utils_api {
 	* 	{
 	*	    "result": true,
 	*	    "msg": "Updated db lock elements",
-	*	    "dato": [
+	*	    "data": [
 	*	        {
 	*	            "date": "2024-03-08 09:30:10",
 	*	            "action": "focus",

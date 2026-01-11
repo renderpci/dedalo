@@ -1162,4 +1162,15 @@ class matrix_db_manager {
 
 
 
+	/**
+	* GET_COLUMNS_NAME
+	* Returns the list of allowed columns names
+	* @return array
+	*/
+	public static function get_columns_name() : array {
+		return array_keys(self::$columns);
+	}//end get_columns_name
+
+
+
 }//end class matrix_db_manager
