@@ -509,7 +509,7 @@ class component_date extends component_common {
 		$ontology_node				= ontology_node::get_instance($component_tipo);
 		$properties					= $ontology_node->get_properties();
 		$date_mode					= isset($properties->date_mode) ? $properties->date_mode : 'date';
-		$query_object->data_path	= ['components',$component_tipo,'dato',DEDALO_DATA_NOLAN];
+		$query_object->data_path	= [$component_tipo];
 		$query_object->type			= 'jsonb';
 
 
@@ -1020,120 +1020,6 @@ class component_date extends component_common {
 
 		return $response;
 	}//end update_data_version
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* * @see class.diffusion_mysql.php
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	// public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-	// 	$diffusion_value = null;
-
-	// 	// ar_dato
-	// 		$ar_dato = $this->get_dato();
-	// 		if(empty($ar_dato)){
-	// 			return $diffusion_value;
-	// 		}
-
-	// 	// date mode
-	// 		$date_mode = $this->get_date_mode();
-
-	// 	$ar_diffusion_values = array();
-	// 	foreach($ar_dato as $dato) {
-
-	// 		// $ar_diffusion_values[] = self::data_item_to_value($dato, $date_mode);
-
-	// 		// DES
-	// 		switch ($date_mode) {
-	// 			case 'range':
-	// 			case 'time_range':
-	// 				$ar_date=array();
-	// 				// start
-	// 				if (isset($dato->start) && isset($dato->start->year)) {
-	// 					$dd_date 		= new dd_date($dato->start);
-	// 					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-	// 					$ar_date[] 		= $timestamp;
-	// 				}
-	// 				// end
-	// 				if (isset($dato->end) && isset($dato->end->year)) {
-	// 					$dd_date 		= new dd_date($dato->end);
-	// 					$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-	// 					$ar_date[] 		= $timestamp;
-	// 				}
-	// 				$ar_diffusion_values[] = implode(',',$ar_date);
-	// 				break;
-
-	// 			case 'period':
-	// 				// Compute days
-	// 				if (isset($dato->period)) {
-	// 					# $seconds = $dato->period->time;
-	// 					# $days = ceil($seconds/3600/24);
-	// 					$ar_string_period = [];
-	// 					if (isset($dato->period->year)) {
-	// 						$ar_string_period[] = $dato->period->year .' '. label::get_label('years', $lang);
-	// 					}
-	// 					if (isset($dato->period->month)) {
-	// 						$ar_string_period[] = $dato->period->month .' '. label::get_label('months', $lang);
-	// 					}
-	// 					if (isset($dato->period->day)) {
-	// 						$ar_string_period[] = $dato->period->day .' '. label::get_label('days', $lang);
-	// 					}
-	// 					$ar_diffusion_values[] = implode(' ',$ar_string_period);
-	// 				}
-	// 				break;
-
-	// 			case 'date':
-	// 				/*
-	// 					$dd_date 	= new dd_date($dato);
-	// 					if(isset($dato->day)) {
-
-	// 							$timestamp = $dd_date->get_dd_timestamp("Y-m-d");
-	// 					}else{
-	// 							$timestamp = $dd_date->get_dd_timestamp("Y-m");
-	// 						if(isset($dato->month)) {
-	// 							}else{
-	// 									$timestamp = $dd_date->get_dd_timestamp("Y");
-	// 								}
-	// 						}
-
-	// 					$ar_diffusion_values[] = $timestamp;
-	// 					break;*/
-
-	// 			default:
-	// 				if (isset($dato->start) && isset($dato->start->year)) {
-	// 					$dd_date 		 		= new dd_date($dato->start);
-	// 					$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
-	// 					$ar_diffusion_values[] 	= $timestamp;
-	// 				}
-	// 				break;
-	// 		}
-	// 	}//end foreach($ar_dato as $dato)
-
-	// 	if (empty($ar_diffusion_values)) {
-	// 		return null;
-	// 	}
-
-	// 	# NOTA
-	// 	# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
-	// 	$diffusion_value = $ar_diffusion_values[0] ?? null; // Temporal !!
-
-	// 	// Force null on empty value to avoid errors on MYSQL save value invalid format
-	// 	// Only valid dates or null area accepted
-	// 	if (empty($diffusion_value)) {
-	// 		$diffusion_value = null;
-	// 	}
-
-
-	// 	return $diffusion_value;
-	// }//end get_diffusion_value
 
 
 
