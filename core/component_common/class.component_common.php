@@ -466,7 +466,7 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA_DEFAULT
-	* Set dato default when properties->dato_default exists and current component dato is empty
+	* Set data default when properties->dato_default exists and current component data is empty
 	* properties are loaded always (structure data) at beginning of build component. Because this
 	* is more fast verify if is set 'dato_default' and not load component data always as before
 	* @return bool
@@ -534,7 +534,7 @@ abstract class component_common extends common {
 				}
 			}
 
-		// set default dato (only when own dato is empty)
+		// set default data (only when own data is empty)
 			if (!empty($data_default)) {
 
 				// Data default only can be saved by users than have permissions to save.
@@ -546,7 +546,7 @@ abstract class component_common extends common {
 				// matrix data : force load matrix data
 					$this->load_component_data();
 
-				// current dato check
+				// current data check
 					$data = $this->get_data();
 					if (empty($data)) {
 
@@ -563,7 +563,7 @@ abstract class component_common extends common {
 							$data_default = [$data_default];
 						}
 
-						// set dato only when own dato is empty
+						// set data only when own data is empty
 							$this->set_data( $data_default );
 
 						// temp section cases do not save anything
@@ -580,9 +580,9 @@ abstract class component_common extends common {
 							);
 
 						// matrix data : load matrix data again
-							$this->load_component_dato();
+							$this->load_component_data();
 
-						// dato default is fixed
+						// data default is fixed
 							return true;
 					}
 			}//end if (!empty($data_default))
@@ -649,7 +649,7 @@ abstract class component_common extends common {
 		}
 
 		// resolved set
-			// $this->dato_resolved = $data;
+			// $this->data_resolved = $data;
 
 		// db_data
 		// Store data before change it with new one.
@@ -825,9 +825,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATA
-	* Get component dato from database.
+	* Get component data from database.
 	* To get data from other sources, set var $data_source like 'tm'
-	* @return array|null $dato
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 
@@ -861,10 +861,10 @@ abstract class component_common extends common {
 						? $this->get_main_component_tipo()
 						: $component_tipo;
 
-				// tm dato. Note that no lang or section_id is needed, only matrix_id
-				// dato_tm is a full data stored into tm row
+				// tm data. Note that no lang or section_id is needed, only matrix_id
+				// data_tm is a full data stored into tm row
 				// it will need to be filter to remove possible dataframe data
-					$dato_tm = component_common::get_component_tm_dato(
+					$data_tm = component_common::get_component_tm_data(
 						$search_component_tipo,
 						$this->section_tipo,
 						$this->matrix_id
@@ -873,18 +873,18 @@ abstract class component_common extends common {
 				// Main components with dataframe and other relation components.
 					$relation_components = component_relation_common::get_components_with_relations();
 					$relation_components[] = 'component_iri';// add the component_iri
-					if ( is_array($dato_tm) && in_array( $this->get_model(), $relation_components) ){
+					if ( is_array($data_tm) && in_array( $this->get_model(), $relation_components) ){
 
 						// Get only the component data. Remove possible dataframe data
 						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
 						if($this->get_model()==='component_iri'){
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) {
+							$data_tm = array_values( array_filter( $data_tm, function($el) {
 								// return only the objects with iri property
 								return property_exists($el, 'iri');;
 							}));
 						}else{
 							// any other relation component
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($component_tipo) {
+							$data_tm = array_values( array_filter( $data_tm, function($el) use($component_tipo) {
 								return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
 							}));
 						}
@@ -896,7 +896,7 @@ abstract class component_common extends common {
 							$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
 							$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
 
-							$dato_tm = array_values( array_filter( $dato_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
+							$data_tm = array_values( array_filter( $data_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
 								return ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
 									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
 									&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
@@ -904,11 +904,11 @@ abstract class component_common extends common {
 						}
 					}
 
-					// fix dato
-					$this->dato = $dato_tm;
+					// fix data
+					$this->data = $data_tm;
 
-					// inject dato to component
-					$this->data_resolved = $dato_tm;
+					// inject data to component
+					$this->data_resolved = $data_tm;
 
 				return $this->data_resolved;
 			}
@@ -930,9 +930,9 @@ abstract class component_common extends common {
 						? '************'
 						: $data;
 					debug_log(__METHOD__ . ' '
-						. '[GET] RECEIVED DATO IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
+						. '[GET] RECEIVED DATA IS NOT AS EXPECTED TYPE array|null ' .PHP_EOL
 						. 'type: '				. gettype($data) . PHP_EOL
-						. 'dato: '				. json_encode($data_to_show, JSON_PRETTY_PRINT) . PHP_EOL
+						. 'data: '				. json_encode($data_to_show, JSON_PRETTY_PRINT) . PHP_EOL
 						. 'model: '				. get_called_class() . PHP_EOL
 						. 'table: '				. $matrix_table . PHP_EOL
 						. 'component_tipo: '	. $this->tipo . PHP_EOL
@@ -1003,7 +1003,7 @@ abstract class component_common extends common {
 
 	/**
 	* LOAD_COMPONENT_DATA
-	* Get data once from matrix about section_id, dato
+	* Get data once from matrix about section_id, data
 	* @see component_relation_common->load_component_data()
 	* @return bool
 	*/
@@ -1225,7 +1225,7 @@ abstract class component_common extends common {
 
 	# GET_DATA_UNCHANGED
 	# Recover component var 'data' without change type or other custom component changes
-	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_dato)
+	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_data)
 	public function get_data_unchanged() {
 
 		return $this->data;
@@ -1278,53 +1278,6 @@ abstract class component_common extends common {
 
 
 
-	// /**
-	// * LOAD_COMPONENT_DATO
-	// * Get data once from matrix about section_id, dato
-	// * @see component_relation_common->load_component_dato()
-	// * @return bool
-	// */
-	// protected function load_component_dato() : bool {
-
-	// 	// check vars
-	// 		if(empty($this->section_id) || $this->mode==='dummy' || $this->mode==='search') {
-	// 			return false;
-	// 		}
-	// 		if (empty($this->section_tipo)) {
-	// 			debug_log(__METHOD__
-	// 				." Error Processing Request. section tipo not found for component tipo: $this->tipo "
-	// 				, logger::ERROR
-	// 			);
-	// 			return false;
-	// 		}
-
-	// 	if($this->is_loaded_matrix_data!==true) {
-
-	// 		// section create
-	// 			$section = $this->get_my_section();
-
-	// 		// fix dato
-	// 			$this->dato = $section->get_component_dato(
-	// 				$this->tipo, // component_tipo
-	// 				$this->lang, // lang
-	// 				false // lang_fallback
-	// 			);
-
-	// 		// @v7 way, from component full_data
-	// 			// $this->dato = $section->get_component_full_data(
-	// 			// 	$this->tipo,
-	// 			// 	$this->data_column_name
-	// 			// );
-
-	// 		// Set as loaded
-	// 			$this->is_loaded_matrix_data = true;
-	// 	}
-
-	// 	return true;
-	// }//end load_component_dato
-
-
-
 	/**
 	* GET_VALUE
 	* Get the string value of the components.
@@ -1346,9 +1299,9 @@ abstract class component_common extends common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* Some the text components can set the value with the dato directly
+	* Some the text components can set the value with the data directly
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $dd_grid_cell_object
@@ -1425,7 +1378,7 @@ abstract class component_common extends common {
 	* GET_RAW_VALUE
 	* Get the raw value of the components. By default will be get_data().
 	* overwrite in every different specific component
-	* The direct components can set the value with the dato directly
+	* The direct components can set the value with the data directly
 	* The relation components will separate the locator in rows
 	* @return dd_grid_cell_object $raw_value
 	* 	dd_grid_cell_object
@@ -1440,7 +1393,7 @@ abstract class component_common extends common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		// dato_full
+		// data
 			$data = $this->get_data();
 
 		// get the total of locators of the data, it will be use to render the rows separated.
@@ -1642,7 +1595,7 @@ abstract class component_common extends common {
 		// activity
 			$this->save_activity();
 
-		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
+		// Observers. The observers will be need to be notified for re-calculate your own data with the new component data
 			$this->propagate_to_observers();
 
 
@@ -1661,7 +1614,7 @@ abstract class component_common extends common {
 		# Prevent infinite loop saving self
 		if (!in_array($this->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 			try {
-				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				# LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)
 				$matrix_table = common::get_matrix_table_from_tipo($this->section_tipo);
 				logger::$obj['activity']->log_message(
 					'SAVE',
@@ -2076,53 +2029,6 @@ abstract class component_common extends common {
 
 
 
-	// /**
-	// * GET VALOR
-	// * 	(!) Important. This method is still used by diffusion (v5)
-	// * 	DO NOT CHANGE THE RETURN VALUES
-	// */
-	// public function get_valor() {
-
-	// 	$valor = self::get_dato();
-
-	// 	// debug
-	// 		// if(SHOW_DEBUG===true) {
-	// 		// 	if (!is_null($valor) && !is_string($valor) && !is_numeric($valor)) {
-	// 		// 		$msg = "WARNING: CURRENT 'valor' in $this->tipo is NOT valid string. Type is:\"".gettype($valor).'" - valor:'.to_string($valor);
-	// 		// 		debug_log(__METHOD__
-	// 		// 			." ".$msg
-	// 		// 			, logger::ERROR
-	// 		// 		);
-	// 		// 		dump(debug_backtrace(), 'get_valor debug_backtrace() ++ '.to_string());
-	// 		// 	}
-	// 		// }
-
-	// 	if(!is_array($valor)) {
-	// 		return $valor;
-	// 	}
-
-	// 	return "<em>No string value</em>";
-	// }//end get_valor
-
-
-
-	// /**
-	// * GET_VALOR_EXPORT
-	// * Return component value sent to export data
-	// * @return string $valor
-	// */
-	// public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
-
-	// 	if (empty($valor)) {
-	// 		$valor = $this->get_valor();
-	// 	}
-
-
-	// 	return to_string($valor);
-	// }//end get_valor_export
-
-
-
 	/**
 	* PARSE_SEARCH_DYNAMIC
 	* Check existence of $source in properties and resolve filter if yes
@@ -2176,11 +2082,11 @@ abstract class component_common extends common {
 					$section_tipo
 				);
 
-				$dato = $component->get_dato();
-				if(!empty($dato)){
+				$data = $component->get_data();
+				if(!empty($data)){
 
 					// resolve base_value object
-						$base_value = reset($dato);
+						$base_value = reset($data);
 					// replaces locator from_component_tipo with path info
 						$base_value->from_component_tipo = reset($current_element->path)->component_tipo;
 
@@ -2582,8 +2488,8 @@ abstract class component_common extends common {
 			$result = [];
 			foreach ( $db_result as $row ) {
 
-				// // create the section instance and set current row as his own data
-				// // it prevent to call multiple times to DDBB
+				// create the section instance and set current row as his own data
+				// it prevent to call multiple times to DDBB
 				$section_record = section_record::get_instance(
 					$row->section_tipo,
 					$row->section_id
@@ -2713,45 +2619,6 @@ abstract class component_common extends common {
 
 		return '<mark>'.to_string($string).'</mark>';
 	}//end decorate_untranslated
-
-
-
-	/**
-	* ADD_OBJECT_TO_DATO
-	* Add received object to the objects array (dato)
-	* @param object $object
-	* @param array $dato
-	* @return array $dato
-	*/
-	public static function add_object_to_dato(object $object, array $dato) : array {
-
-		// safe std class
-			$std_object = get_class($object)==='locator'
-				? locator::get_std_class( $object )
-				: $object;
-
-
-		// check if already exists
-			foreach ($dato as $current_object_obj) {
-
-				if ((object)$std_object==(object)$current_object_obj) {
-
-					debug_log(__METHOD__
-						." Ignored add element ".to_string($std_object) .PHP_EOL
-						.' the object already exists.'
-						, logger::WARNING
-					);
-
-					return $dato;
-				}
-			}
-
-		// add if not
-			$dato[] = $std_object;
-
-
-		return $dato;
-	}//end add_object_to_dato
 
 
 
@@ -2911,8 +2778,8 @@ abstract class component_common extends common {
 				tm_record::$save_tm = false;
 
 				// remove the data from dataframe.
-				$dataframe_component->set_dato( null );
-				$dataframe_component->Save();
+				$dataframe_component->set_data( null );
+				$dataframe_component->save();
 
 				// back to set time machine to true for the next savings.
 				tm_record::$save_tm = true;
@@ -2940,98 +2807,6 @@ abstract class component_common extends common {
 
 		return $ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-		// Default behavior is get value
-			$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
-			$diffusion_value = $this->get_valor(
-				$diffusion_lang
-			);
-
-		// strip_tags all values (remove untranslated mark elements)
-			$diffusion_value = !empty($diffusion_value)
-				? preg_replace("/<\/?mark>/", "", to_string($diffusion_value))
-				: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_DIFFUSION_RESOLVE_VALUE
-	* Note that component_relation_common implements a DIFFERENT version of current method.
-	* This method is only usable for component_text_area and similar non relation components
-	* @see mdcat4091 for a use example (!)
-	* Added 10-10-2021 (Paco) to enable process build_geolocation_data_geojson on text area publication
-	* @param object|null $option_obj (from 'propiedades')
-	* @return mixed
-	*/
-	public function get_diffusion_resolve_value( ?object $option_obj=null ) : mixed {
-
-		// example $option_obj
-			// {
-			//		"process_dato": "diffusion_sql::build_geolocation_data_geojson"
-			//		"process_dato_arguments": {
-			//			"target_component_tipo": "numisdata698",
-			//			"component_method": "get_diffusion_value"
-			//		},
-			//		"lang" : "lg-spa"
-			// }
-
-		// process_dato
-			if (isset($option_obj->process_dato)) {
-
-				// method to call
-					$class_name		= explode('::', $option_obj->process_dato)[0];
-					$method_name	= explode('::', $option_obj->process_dato)[01];
-
-				// custom_arguments
-					$dato	= $this->get_dato();
-					$lang	= $option_obj->lang; // $this->lang
-
-					// component. add options component info for fallbacks etc.
-						$option_obj->component = $this;
-
-					$custom_arguments = [
-						'options'	=> $option_obj,
-						'dato'		=> $dato
-					];
-
-				// check function exits
-					if (!method_exists($class_name, $method_name)) {
-						debug_log(__METHOD__
-							. " An error occurred calling function - Method do not exists !  " . PHP_EOL
-							. ' method_name: ' . to_string($method_name) . PHP_EOL
-							. ' class_name: '  . $class_name
-							, logger::ERROR
-						);
-					}
-
-				$value = call_user_func_array([$class_name, $method_name], $custom_arguments);
-
-			}else{
-
-				$value = '';
-			}
-
-
-		return $value;
-	}//end get_diffusion_resolve_value
 
 
 
@@ -3108,15 +2883,15 @@ abstract class component_common extends common {
 
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
-			$dato_full = $this->get_data();
-			if(!empty($dato_full)) {
-				foreach ($dato_full as $current_lang => $value) {
-					if(!empty($value)) {
+			$data = $this->get_data();
+			if(!empty($data)) {
+				foreach ($data as $current_data) {
+					if(!empty($current_data)) {
 
 						$diffusion_data_object = new diffusion_data_object( (object)[
 							'tipo'	=> $this->tipo,
-							'lang'	=> $current_lang,
-							'value'	=> $value,
+							'lang'	=> $current_data->lang,
+							'value'	=> $current_data->value,
 							'id'	=> $ddo->id ?? null
 						]);
 
@@ -3137,7 +2912,7 @@ abstract class component_common extends common {
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*	$response->result = 2; // the component try the update but the data don't need change"
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -3169,13 +2944,13 @@ abstract class component_common extends common {
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
-	* Note that the first action is always load dato to avoid save empty content
+	* Note that the first action is always load data to avoid save empty content
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
 
-		// Force loads dato always !IMPORTANT
+		// Force load data always !IMPORTANT
 		$data = $this->get_data();
 
 		// force format correctly empty data like [null] -> null
@@ -3296,7 +3071,7 @@ abstract class component_common extends common {
 
 
 
-	################################## SEARCH 2 ########################################################
+	################################## SEARCH ########################################################
 
 
 
@@ -3321,7 +3096,7 @@ abstract class component_common extends common {
 		*     }
 		*   ],
 		*   "component_path": [
-		*     "dato"
+		*     "data"
 		*   ]
 		* }
 	* @return array $ar_query_object
@@ -3338,7 +3113,7 @@ abstract class component_common extends common {
 			if(isset(end($query_object->path)->component_tipo)) {
 				$component_tipo = end($query_object->path)->component_tipo;
 				// default component path
-				$query_object->component_path = ['components',$component_tipo,'dato'];
+				$query_object->component_path = [$component_tipo];
 			}
 
 		// component lang
@@ -3394,7 +3169,7 @@ abstract class component_common extends common {
 	* @param object $query_object
 	* 	The original query object.
 	* @param array $q_items
-	* 	An array of query items (e.g., ['Perez', 'Lopez']).
+	* 	An array of query items (e.g., ['Pérez', 'López']).
 	* @param string $operator_between = '$and'
 	* 	The logical operator used to combine the split queries. Default is '$and'.
 	* @return object $group
@@ -3496,59 +3271,7 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* RESOLVE_QUERY_OBJECT_LANG_BEHAVIOR
-	* Check the query_object language configuration
-	* if the lang is set as 'all', get all project lang and create new query_object with every lang
-	* if the lang is set as specific lang as 'lg-eng' use this lang to create new query_object
-	* in any case adds 'lg-nolan' query_object
-	* @param object $options
-	* {
-	* 	operator		: string $operator; 		// as '!='
-	*	q_parsed		: string | null $q_parsed	// as '\'[]\''
-	*	query_object	: object $query_object;		// as {"q":["*"],"q_operator":null,"path":[{"name":"Notas sobre la composición","model":"component_text_area","section_tipo":"numisdata5","component_tipo":"numisdata1475"}],"q_split":true,"type":"jsonb"}
-	*	lang			: string $lang;				// as 'all' for all languages or 'lg-spa' for specific lang
-	* }
-	* @return array $ar_query_object
-	*/
-	public static function resolve_query_object_lang_behavior( object $options ) :array {
-
-		// short vars
-		$operator		= $options->operator; // as '!='
-		$q_parsed		= $options->q_parsed ?? null; // as '\'[]\''
-		$query_object	= $options->query_object;
-		$lang			= $options->lang ?? 'all'; // as 'all' or 'lg-spa'
-		$translatable	= $options->translatable ?? true; // true | false.
-
-		$ar_query_object = [];
-		// get the ar langs when the $lang is set with 'all'
-		$ar_all_langs	 = $lang==='all'
-			? common::get_ar_all_langs()
-			: [$lang];
-		if(!$translatable){
-			$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-		}
-
-		// create the specific language query object
-			foreach ($ar_all_langs as $current_lang) {
-				$clone = clone($query_object);
-					$clone->operator	= $operator;
-					// Optional, some operators doesn't needs q_parser as 'IS NOT NULL'
-					if($q_parsed){
-						$clone->q_parsed = $q_parsed;
-					}
-					$clone->lang		= $current_lang;
-				$ar_query_object[] = $clone;
-			}
-
-
-		return $ar_query_object;
-	}//end resolve_query_object_lang_behavior
-
-
-
-
-	################################## //end SEARCH 2 ########################################################
+	################################## //end SEARCH ########################################################
 
 
 
@@ -3674,7 +3397,7 @@ abstract class component_common extends common {
 
 		switch ($changed_data->action) {
 
-			// insert given value in dato
+			// insert given value in data
 			case 'insert':
 
 				// set the id of the comonent_iri
@@ -3772,7 +3495,7 @@ abstract class component_common extends common {
 				// When the component is a relation, pick the correct locator
 				$locator = $data[$key] ?? null;
 
-				// Delete dato
+				// Delete data
 				switch (true) {
 					case ($changed_data->value===null && $changed_data->key===false):
 						$value = [];
@@ -3782,7 +3505,7 @@ abstract class component_common extends common {
 					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
 
 						$data = $this->get_data_lang($lang);
-						// remove null key and set dato updated
+						// remove null key and set data updated
 						array_splice($data, $changed_data->key, 1);
 						$this->set_data_lang($data, $lang);
 						//save
@@ -3863,8 +3586,8 @@ abstract class component_common extends common {
 					// 	.' +++++++++++++++++++++++++++++++++  sort_data:'
 					// 	.PHP_EOL.'key value:'. to_string($source_key)
 					// 	.PHP_EOL.'given value:'. to_string($value)
-					// 	.PHP_EOL.'DB value (dato[source_key]):'. to_string($data[$source_key])
-					// 	.PHP_EOL.'dato value:'. to_string($data)
+					// 	.PHP_EOL.'DB value (data[source_key]):'. to_string($data[$source_key])
+					// 	.PHP_EOL.'data value:'. to_string($data)
 					// 	, logger::ERROR
 					// );
 
@@ -3884,35 +3607,35 @@ abstract class component_common extends common {
 							.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
 							.' key value: '. to_string($source_key) .PHP_EOL
 							.' given value: '. to_string($value) .PHP_EOL
-							.' DB value (dato[source_key]): '. to_string($data[$source_key]) .PHP_EOL
-							.' dato value: '. to_string($data)
+							.' DB value (data[source_key]): '. to_string($data[$source_key]) .PHP_EOL
+							.' data value: '. to_string($data)
 							, logger::ERROR
 						);
 						return false;
 					}
 
 				// remove old key value and add value at $target_key position
-					$new_dato = [];
+					$new_data = [];
 
 					foreach ($data as $key => $current_value) {
 						if ($key===$source_key) {
 							continue;
 						}
 						if($key===$target_key && $target_key < $source_key){
-							$new_dato[] = $value;
-							$new_dato[] = $current_value;
+							$new_data[] = $value;
+							$new_data[] = $current_value;
 							continue;
 						}else if($key===$target_key && $target_key > $source_key){
-							$new_dato[] = $current_value;
-							$new_dato[] = $value;
+							$new_data[] = $current_value;
+							$new_data[] = $value;
 							continue;
 						}
 
-						$new_dato[] = $current_value;
+						$new_data[] = $current_value;
 					}
 
-				// new dato set
-					$this->set_data_lang($new_dato, $lang);
+				// new data set
+					$this->set_data_lang($new_data, $lang);
 				break;
 
 			// used by component_portal to add created target section to current component with project values inheritance
@@ -3944,7 +3667,7 @@ abstract class component_common extends common {
 					}
 				break;
 
-			// used to force component to save. Example: component_av updates the dato with files_info in each save call
+			// used to force component to save. Example: component_av updates the data with files_info in each save call
 			case 'force_save':
 
 				// nothing to do here, only return true to allow save call continue
@@ -3974,7 +3697,7 @@ abstract class component_common extends common {
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : ?array {
 
-		// dato full
+		// data
 			$data = $this->get_data();
 
 		// empty case
@@ -4009,23 +3732,10 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_STRUCTURE_BUTTONS
-	* @param int|null $permissions = null
-	* @return array
+	* GET_COMPONENT_TM_DATA
+	* @return array|null $tm_data
 	*/
-	public function get_structure_buttons( ?int $permissions=null ) : array {
-
-
-		return [];
-	}//end get_structure_buttons
-
-
-
-	/**
-	* GET_COMPONENT_TM_DATO
-	* @return array|null $tm_dato
-	*/
-	public static function get_component_tm_dato( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
+	public static function get_component_tm_data( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
 
 		// search query object
 			$sqo = json_decode('{
@@ -4057,36 +3767,36 @@ abstract class component_common extends common {
 
 		$record = $db_result->fetch_one();
 
-		$tm_dato = !empty($record)
+		$tm_data = !empty($record)
 			? $record->data
 			: [];
 
 		// check bad data (old formats not array)
-			if (!empty($tm_dato) && !is_array($tm_dato)) {
+			if (!empty($tm_data) && !is_array($tm_data)) {
 				debug_log(__METHOD__
-					." Bad dato found in time machine data. Making array cast to dato found: ".gettype($tm_dato) .PHP_EOL
-					.' tm_dato: ' .  to_string($tm_dato),
+					." Bad data found in time machine data. Making array cast to data found: ".gettype($tm_data) .PHP_EOL
+					.' tm_data: ' .  to_string($tm_data),
 					logger::ERROR
 				);
-				$tm_dato = [$tm_dato];
+				$tm_data = [$tm_data];
 			}
 
 		// check type
-			if (!is_null($tm_dato) && !is_array($tm_dato)) {
+			if (!is_null($tm_data) && !is_array($tm_data)) {
 				debug_log(__METHOD__
-					. " TM dato type is not as expected (array/null) . NULL will be return as temp value. review time_machine record  " . PHP_EOL
-					. ' type: ' . gettype($tm_dato) . PHP_EOL
-					. ' tm_dato: ' . json_encode($tm_dato, JSON_PRETTY_PRINT) . PHP_EOL
+					. " TM data type is not as expected (array/null) . NULL will be return as temp value. review time_machine record  " . PHP_EOL
+					. ' type: ' . gettype($tm_data) . PHP_EOL
+					. ' tm_data: ' . json_encode($tm_data, JSON_PRETTY_PRINT) . PHP_EOL
 					. ' matrix_id: ' . to_string($matrix_id) . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
 					. ' tipo: ' . to_string($tipo)
 					, logger::WARNING
 				);
-				$tm_dato = null;
+				$tm_data = null;
 			}
 
-		return $tm_dato;
-	}//end get_component_tm_dato
+		return $tm_data;
+	}//end get_component_tm_data
 
 
 
@@ -4176,14 +3886,14 @@ abstract class component_common extends common {
 		if(json_handler::is_json($import_value)){
 
 			// try to JSON decode (null on not decode)
-			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
 			// array convert all except null
-			// if (!is_array($dato_from_json) && !is_null($dato_from_json)) {
-			// 	$dato_from_json = [$dato_from_json];
+			// if (!is_array($data_from_json) && !is_null($data_from_json)) {
+			// 	$data_from_json = [$data_from_json];
 			// }
 
-			$import_value	= $dato_from_json;
+			$import_value	= $data_from_json;
 
 		}else{
 
@@ -4313,11 +4023,6 @@ abstract class component_common extends common {
 		return null;
 	}//end get_regenerate_options
 
-
-
-	public function detect_data_version() {
-
-	}
 
 
 
