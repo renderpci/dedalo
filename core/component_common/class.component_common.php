@@ -4259,6 +4259,9 @@ abstract class component_common extends common {
 		// object|array case
 		if ( is_object($data_item) || is_array($data_item)) {
 			foreach ($data_item as $key => $value) {
+				if($key!=='value'){
+					continue;
+				}
 				if( !empty($value) || $value==='0' || $value===0 || $value===0.0 ) {
 					return false;
 				}
@@ -4293,7 +4296,7 @@ abstract class component_common extends common {
 				break;
 			}
 		}
-		
+
 
 		return $is_empty_data ;
 	}//end is_empty_data
