@@ -294,6 +294,38 @@ class component_iri extends component_common {
 
 
 	/**
+	* IS_EMPTY
+	* Generic check if given value is or not empty considering
+	* @param object|null $data_item
+	* @return bool
+	*/
+	public function is_empty( ?object $data_item ) : bool {
+
+		// null case explicit
+		if( $data_item===null ) {
+			return true;
+		}
+
+		// object|array case
+		if ( is_object($data_item) || is_array($data_item)) {
+			foreach ($data_item as $key => $value) {
+				// Only properties 'iri' and 'title' are checked for empty value.
+				if( !in_array($key, ['iri', 'title']) ){
+					continue;
+				}
+				if( !empty($value) ) {
+					return false;
+				}
+			}
+		}
+
+
+		return true;
+	}//end is_empty
+
+
+
+	/**
 	* IMPORT_SAVE
 	* Overwrites component_common method.
 	* @return bool
