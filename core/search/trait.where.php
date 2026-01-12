@@ -19,9 +19,23 @@ trait where {
 		$ar_section_tipo = $this->ar_section_tipo;
 
 		// main section tipo filter
-		$this->sql_obj->main_where[] = count($ar_section_tipo) > 1
-			? '(' . $this->main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))'
-			: '(' . $this->main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
+		if(count($ar_section_tipo) > 1) {
+			$ar_placeholders = [];
+			foreach ($ar_section_tipo as $current_tipo) {
+				// Gets current param key (default is 1 and increases by 1 after each use)
+				$current_param_key = $this->params_counter++;
+				$ar_placeholders[] = '$' . $current_param_key;
+				$this->params[] = $current_tipo;
+			}
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $ar_placeholders) . '))';
+		}else{
+			// Gets current param key (default is 1 and increases by 1 after each use)
+			$current_param_key = $this->params_counter++;
+			$placeholder = '$' . $current_param_key;
+			// Add param value to main params array
+			$this->params[] = $ar_section_tipo[0];
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . ')';
+		}
 
 		// Time machine section case (dd15)
 		if($ar_section_tipo[0]==='dd15'){
