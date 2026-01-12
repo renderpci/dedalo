@@ -52,8 +52,10 @@ trait count {
 			$totals_group = [];
 			if ($count_result!==false) {
 				while($row = pg_fetch_assoc($count_result)) {
+					
 					// get the total as the sum of all rows
-					$total = $total + (int)$row['full_count'];
+					$full_count = $row['full_count'] ?? 0;
+					$total = $total + (int)$full_count;
 
 					// group by
 					// get the specific total of the group_by concept (as section_tipo)
@@ -64,7 +66,7 @@ trait count {
 							$ar_keys[] = $row[$current_group];
 						}
 						$current_totals_object->key		= $ar_keys;
-						$current_totals_object->value	= (int)$row['full_count'];
+						$current_totals_object->value	= (int)$full_count;
 
 						$totals_group[] = $current_totals_object;
 					}
