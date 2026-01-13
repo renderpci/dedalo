@@ -1223,12 +1223,12 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_si_gin_idx;
 			',
 			'sample' => '
 				SELECT *
@@ -1236,7 +1236,7 @@
 				WHERE data_relations_flat_ty_st_si(data) @> \'["dd151_dd64"]\'::jsonb;
 				LIMIT 10;
 			',
-			'name' => 'all_matrix_relation_flat_ty_st_gin_idx',
+			'name' => 'all_matrix_relation_flat_ty_st_si_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64'
 		];
 
