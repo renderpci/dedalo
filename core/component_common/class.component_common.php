@@ -1553,6 +1553,10 @@ abstract class component_common extends common {
 				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
 				return true;
 			}
+			// mode search case
+			if ($this->mode==='search') {
+				return true;
+			}
 
 		// Save the component data into DB
 			$result = $section_record->save_component_data( $save_path );
