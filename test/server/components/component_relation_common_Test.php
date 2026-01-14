@@ -387,63 +387,6 @@ final class component_relation_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() : void {
-
-		$query_object = json_decode('{
-		    "q": [
-		        {
-		            "section_tipo": "test3",
-		            "section_id": "6422",
-		            "from_component_tipo": "test80"
-		        }
-		    ],
-		    "path": [
-		        {
-		            "section_tipo": "test3",
-		            "component_tipo": "test80",
-		            "model": "component_portal",
-		            "name": "portal"
-		        }
-		    ],
-		    "type": "jsonb",
-		    "component_path": [
-		        "components",
-		        "test80",
-		        "dato"
-		    ],
-		    "lang": "all"
-		}');
-
-		$value = component_relation_common::resolve_query_object_sql(
-			$query_object
-		);
-
-		$this->assertTrue(
-			gettype($value)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($value)
-		);
-		$this->assertTrue(
-			$value->component_path===['relations'],
-			'expected component_path relations : ' . PHP_EOL
-				. ($value->component_path===['relations'])
-		);
-		$this->assertTrue(
-			(isset($value->operator) && $value->operator==='@>') || (isset($value->sentence) && strpos($value->sentence, '@>')!==false),
-			'expected operator @> or sentence containing @>'
-		);
-		$this->assertTrue(
-			!empty($value->sentence) || !empty($value->q_parsed)===true,
-			'expected sentence or q_parsed is not empty'
-		);
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_search_operators_info
 	* @return void
 	*/
@@ -825,12 +768,12 @@ final class component_relation_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_add_relations_search
+	* TEST_add_relation_search
 	* @return void
 	*/
-	public function test_add_relations_search() : void {
+	public function test_add_relation_search() : void {
 
-		$method = new ReflectionMethod('component_relation_common', 'add_relations_search');
+		$method = new ReflectionMethod('component_relation_common', 'add_relation_search');
 		$method->setAccessible(true);
 		
 		$query_object = (object)[
@@ -847,7 +790,7 @@ final class component_relation_common_test extends BaseTestCase {
 			is_object($value),
 			'expected type object : ' . gettype($value)
 		);
-	}//end test_add_relations_search
+	}//end test_add_relation_search
 
 
 
