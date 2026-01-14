@@ -472,10 +472,6 @@ class component_relation_index extends component_relation_common {
 
 
 
-
-
-
-
 	/**
 	* GET_REFERENCES_TO_SECTION
 	* Get all references to current section tipo and relation type (indexation)
