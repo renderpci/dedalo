@@ -1,6 +1,4 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_password.php';
-
 /**
 * CLASS COMPONENT PASSWORD
 *
@@ -9,9 +7,6 @@ include 'trait.search_component_password.php';
 class component_password extends component_common {
 
 
-
-	// traits. Files added to current class file to split the large code.
-	use search_component_password;
 
 	// string . Fake value to show in grid
 

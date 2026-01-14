@@ -167,39 +167,6 @@ final class component_password_test extends BaseTestCase {
 	}//end test_encrypt_password
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = (object)[
-			'q' => ['mypass'],
-			'path' => [(object)['component_tipo' => 'test152']],
-			'table_alias' => 't1'
-		];
-
-		$result = component_password::resolve_query_object_sql($query_object);
-
-		$this->assertIsObject($result);
-		$this->assertObjectHasProperty('sentence', $result);
-		$this->assertStringContainsString('jsonpath', $result->sentence);
-	}//end test_resolve_query_object_sql
-
-	/**
-	* TEST_search_operators_info
-	* @return void
-	*/
-	public function test_search_operators_info() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->search_operators_info();
-
-		$this->assertIsArray($result);
-		$this->assertArrayHasKey('=', $result);
-	}//end test_search_operators_info
-
-	/**
 	* TEST_update_data_version
 	* @return void
 	*/

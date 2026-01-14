@@ -2122,45 +2122,4 @@ final class component_media_common_test extends BaseTestCase {
 
 
 
-	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		// default data
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$query_object = (object)[
-				'fake_query_object' => true
-			];
-
-			$result = $component->resolve_query_object_sql( $query_object );
-
-			$this->assertTrue(
-				gettype($result)==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_resolve_query_object_sql
-
-
-
 }//end class component_media_common_test

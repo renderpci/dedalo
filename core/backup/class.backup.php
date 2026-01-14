@@ -205,8 +205,8 @@ abstract class backup {
 			return [];
 		}
 		$tableList = array();
-		while($rows = pg_fetch_assoc($result)) {
-			$tableList[] = $rows['table_name'];
+		while($row = pg_fetch_assoc($result)) {
+			$tableList[] = $row['table_name'];
 		}
 
 		return $tableList;
