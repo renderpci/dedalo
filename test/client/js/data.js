@@ -27,17 +27,37 @@
 		return result;
 	}
 
-	export const random_number = function(length=10000000) {
+	export const random_string_value = function() {
+		const data_element = {
+			id		: 1,
+			value	: random_string(),
+			lang	: page_globals.dedalo_data_lang
+		}
+		return data_element;
+	}		
 
+	export const random_number = function(length=10000000) {
 		return Math.floor(Math.random() * Math.floor(length));
 	}
 
-	export const random_json = function() {
+	export const random_number_value = function(length=10000000) {
+		const data_element = {
+			id		: 1,
+			value	: Math.floor(Math.random() * Math.floor(length))
+		}
+		return data_element;
+	}
+
+	export const random_json_value = function() {
 		const value = {
 			text	: random_string(64),
 			number	: random_number()
 		}
-		return value
+		const data_element = {
+			id		: 1,
+			value	: value
+		}
+		return data_element
 	}
 
 	export const random_locator = function() {
@@ -82,7 +102,7 @@
 		return value
 	}
 
-	export const random_date = function() {
+	export const random_date_value = function() {
 		let second	= random_number(59) || 0
 		let minute	= random_number(59) || 0
 		let hour	= random_number(23) || 0
@@ -98,7 +118,7 @@
 			second	: second
 		}, 'date')
 
-		const value =  {
+		const data_element =  {
 			start : {
 				year	: year,
 				month	: month,
@@ -107,9 +127,10 @@
 				minute	: minute,
 				second	: second,
 				time	: time
-			}
+			},
+			id : 1
 		}
-		return value
+		return data_element
 	}
 
 	const convert_date_to_seconds = function(dd_date, mode) {
@@ -184,7 +205,7 @@
 		return time
 	}
 
-	export const random_email = function() {
+	export const random_email_value = function() {
 		let result				= ''
 		const length			= 40
 		const characters		= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -193,10 +214,16 @@
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
 		}
 		result += '@mydomain.net'
-		return result;
+		
+		const data_element = {
+			id : 1,
+			value : result,
+			lang: 'lg-nolan'
+		}
+		return data_element;
 	}
 
-	export const random_filter_records = function() {
+	export const random_filter_records_value = function() {
 
 		// randomly generated N = 40 length array 0 <= A[N] <= 39
 		const value = Array.from({length: 40}, () => Math.floor(Math.random() * 40));
@@ -208,7 +235,12 @@
 
 		const result = [item]
 
-		return result;
+		const data_element = {
+			id : 1,
+			value : result
+		}
+
+		return data_element;
 	}
 
 	export const random_geolocation = function() {
@@ -217,40 +249,41 @@
 		const lon = Math.random()
 		const zoom = random_number(15) // expected int from 1 to 15
 
-		const result = {
+		const data_element = {
 			alt		: alt,
 			lat		: lat,
 			lon		: lon,
-			zoom	: zoom
+			zoom	: zoom,
+			id 		: 1
 		}
 
-		return result;
+		return data_element;
 	}
 
-	export const random_iri_data = function() {
-		const result = {
+	export const random_iri_value = function() {
+		const data_element = {
 			id		: 1,
 			iri		: "https://www.raspa.org/" + random_string(50) +  '/' + random_string(3),
 			title	: random_string(128),
-			lang : 'lg-nolan'
+			lang	: 'lg-nolan'
 		}
-		return result;
+		return data_element;
 	}
 
 	export const random_security_access = function() {
 		const result = {
 			tipo			: "oh25",
 			value			: random_number(10000) || 1,
-			section_tipo	: "oh1"
+			section_tipo	: "oh1",
+			id 				: 1
 		}
 
 		return result
 	}
 
-	export const random_3d_data = function() {
+	export const random_3d_value = function() {
 
-		const value =
-		{
+		const value = {
 			"files_info": [
 			  {
 				"quality": "original",
@@ -323,7 +356,7 @@
 		return [value]
 	}
 
-	export const random_av_data = function() {
+	export const random_av_value = function() {
 
 		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
@@ -401,7 +434,7 @@
 		return [value]
 	}
 
-	export const random_image_data = function() {
+	export const random_image_value = function() {
 
 		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
@@ -533,7 +566,7 @@
 		return [value]
 	}
 
-	export const random_pdf_data = function() {
+	export const random_pdf_value = function() {
 
 		const value =
 		{
@@ -645,7 +678,7 @@
 		return [value]
 	}
 
-	export const random_svg_data = function() {
+	export const random_svg_value = function() {
 
 		const value =
 		{
