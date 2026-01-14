@@ -59,8 +59,8 @@ class tags extends widget_common {
 				}
 
 				$data = $component->get_data();
-				$raw_text = isset($data[0])
-					? $data[0]
+				$raw_text = isset($data[0]->value)
+					? $data[0]->value
 					: '';
 
 			// tc's
