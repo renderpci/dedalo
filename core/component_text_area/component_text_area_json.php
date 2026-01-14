@@ -116,7 +116,7 @@
 				case 'list':
 				case 'tm':
 					$value			= $this->get_list_value();
-					$fallback_value	= $this->is_empty_data( $value )
+					$fallback_value	= empty($value)
 						? $this->get_fallback_list_value((object)['max_chars'=>200])
 						: null;
 					break;
