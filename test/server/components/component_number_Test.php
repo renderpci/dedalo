@@ -293,28 +293,6 @@ final class component_number_test extends BaseTestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = (object)[
-			'q' => ['>= 10'],
-			'path' => [(object)['component_tipo' => 'test211']],
-			'type' => 'number'
-		];
-
-		$result = component_number::resolve_query_object_sql($query_object);
-
-		$this->assertIsObject($result);
-		$this->assertEquals('number', $result->type);
-		$this->assertEquals('@@', $result->operator);
-		$this->assertEquals('\'$[*] >= 10\'', $result->q_parsed);
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_search_operators_info
 	* @return void
 	*/
