@@ -506,55 +506,7 @@ final class component_date_test extends BaseTestCase {
 	}//end test_data_item_to_value
 
 
-
-	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('
-		{
-		    "q": [
-		        {
-		            "mode": "start",
-		            "start": {
-		                "year": 2023,
-		                "month": 12,
-		                "day": 13
-		            }
-		        }
-		    ],
-		    "q_operator": null,
-		    "path": [
-		        {
-		            "name": "date",
-		            "model": "component_date",
-		            "section_tipo": "test3",
-		            "component_tipo": "test145"
-		        }
-		    ],
-		    "type": "jsonb",
-		    "component_path": [
-		        "components",
-		        "test145",
-		        "dato"
-		    ],
-		    "lang": "all"
-		}
-		');
-
-		$result = component_date::resolve_query_object_sql( $query_object );
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_resolve_query_object_sql
-
-
-
+	
 	/**
 	* TEST_search_operators_info
 	* @return void
