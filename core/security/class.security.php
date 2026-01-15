@@ -27,7 +27,7 @@ class security {
 
 		private $filename_user_ar_permissions_table;
 
-		static $permissions_table_cache;
+		public static $permissions_table_cache;
 
 
 
@@ -198,9 +198,8 @@ class security {
 				// static cache
 				// (!) Its important to use static cache here to handle properly the login sequence,
 				// where some permission resolutions are called before the file cache is created.
-				static $permissions_table_cache;
-				if (isset($permissions_table_cache)) {
-					return $permissions_table_cache;
+				if (isset(self::$permissions_table_cache)) {
+					return self::$permissions_table_cache;
 				}
 
 				$cache_file_name = 'cache_permissions_table.php';
@@ -221,7 +220,7 @@ class security {
 					$permissions_table = $cache_data;
 
 					// static cache
-					$permissions_table_cache = $permissions_table;
+					self::$permissions_table_cache = $permissions_table;
 
 					// debug
 					if(SHOW_DEBUG===true) {
@@ -252,7 +251,7 @@ class security {
 		// cache file write
 			if ($use_cache===true) {
 				// static cache
-				$permissions_table_cache = $permissions_table;
+				self::$permissions_table_cache = $permissions_table;
 
 				// write cache data to file
 				dd_cache::cache_to_file((object)[

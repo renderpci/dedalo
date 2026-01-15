@@ -26,6 +26,9 @@ class component_relation_related extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
+	// cache
+	public static $references_recursive_resolved_cache = [];
+
 
 
 	/**
@@ -143,14 +146,14 @@ class component_relation_related extends component_relation_common {
 		string $lang=DEDALO_DATA_LANG
 		) : array {
 
-		static $ar_resolved = array();
+		
 		// reset ar_resolved on first call
 			if ($recursion===false) {
-				$ar_resolved = [];
+				self::$references_recursive_resolved_cache = [];
 			}
 
 		$pseudo_locator	= $locator->section_tipo .'_'. $locator->section_id . '_'. $lang;
-		$ar_resolved[]	= $pseudo_locator; // set self as resolved
+		self::$references_recursive_resolved_cache[]	= $pseudo_locator; // set self as resolved
 		$ar_references	= [];
 
 		// References to me
@@ -168,11 +171,11 @@ class component_relation_related extends component_relation_common {
 
 			foreach ($ar_result as $result_locator) {
 				$pseudo_locator = $result_locator->section_tipo .'_'. $result_locator->section_id . '_'. $lang;
-				if (in_array($pseudo_locator, $ar_resolved)) {
+				if (in_array($pseudo_locator, self::$references_recursive_resolved_cache)) {
 					continue;
 				}
 				$ar_references[]	= $result_locator;
-				$ar_resolved[]		= $pseudo_locator; // set as resolved
+				self::$references_recursive_resolved_cache[]		= $pseudo_locator; // set as resolved
 			}
 		}
 
@@ -185,7 +188,7 @@ class component_relation_related extends component_relation_common {
 				foreach ($data as $data_locator) {
 
 					$pseudo_locator = $data_locator->section_tipo .'_'. $data_locator->section_id . '_'. $lang;
-					if (in_array($pseudo_locator, $ar_resolved)) {
+					if (in_array($pseudo_locator, self::$references_recursive_resolved_cache)) {
 						continue;
 					}
 
@@ -199,7 +202,7 @@ class component_relation_related extends component_relation_common {
 						$ar_references[] = $element;
 					}
 
-					$ar_resolved[] = $pseudo_locator; // set as resolved
+					self::$references_recursive_resolved_cache[] = $pseudo_locator; // set as resolved
 
 					// References to data
 					// Recursion (data)

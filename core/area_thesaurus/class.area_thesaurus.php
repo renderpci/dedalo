@@ -11,8 +11,8 @@ class area_thesaurus extends area_common {
 	* CLASS VARS
 	* @var
 	*/
-	static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
-	static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
+	public static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	public static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
 	protected $model_view = false;
@@ -20,6 +20,10 @@ class area_thesaurus extends area_common {
 	// thesaurus_mode
 	public $thesaurus_mode = null;
 
+	// cache
+	public static $typology_names_cache;
+	public static $typology_order_values_cache;
+	public static $hierarchy_names_cache;
 
 
 	/**
@@ -177,9 +181,9 @@ class area_thesaurus extends area_common {
 	public function get_typology_name( int|string $typology_section_id ) : string {
 
 		// cache Store for speed
-			static $typology_names;
-			if (isset($typology_names[$typology_section_id])) {
-				return $typology_names[$typology_section_id];
+			
+			if (isset(self::$typology_names_cache[$typology_section_id])) {
+				return self::$typology_names_cache[$typology_section_id];
 			}
 
 		// component
@@ -209,7 +213,7 @@ class area_thesaurus extends area_common {
 		}
 
 		// cache. Store for speed
-		$typology_names[$typology_section_id] = $typology_name;
+		self::$typology_names_cache[$typology_section_id] = $typology_name;
 
 
 		return $typology_name;
@@ -226,9 +230,8 @@ class area_thesaurus extends area_common {
 	public function get_typology_order( int|string $typology_section_id ) : int {
 
 		// cache. Store for speed
-			static $typology_order_values;
-			if (isset($typology_order_values[$typology_section_id])) {
-				return $typology_order_values[$typology_section_id];
+			if (isset(self::$typology_order_values_cache[$typology_section_id])) {
+				return self::$typology_order_values_cache[$typology_section_id];
 			}
 
 		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
@@ -249,7 +252,7 @@ class area_thesaurus extends area_common {
 		$order_value	= $data[0]->value ?? 0;
 
 		// cache
-			$typology_order_values[$typology_section_id] = $order_value;
+		self::$typology_order_values_cache[$typology_section_id] = $order_value;
 
 
 		return (int)$order_value;
@@ -266,9 +269,9 @@ class area_thesaurus extends area_common {
 	public function get_hierarchy_name( int|string $hierarchy_section_id ) : string {
 
 		# Store for speed
-		static $hierarchy_names;
-		if (isset($hierarchy_names[$hierarchy_section_id])) {
-			return $hierarchy_names[$hierarchy_section_id];
+		
+		if (isset(self::$hierarchy_names_cache[$hierarchy_section_id])) {
+			return self::$hierarchy_names_cache[$hierarchy_section_id];
 		}
 
 
@@ -298,7 +301,7 @@ class area_thesaurus extends area_common {
 		}
 
 		// Store for speed
-		$hierarchy_names[$hierarchy_section_id] = $hierarchy_name;
+		self::$hierarchy_names_cache[$hierarchy_section_id] = $hierarchy_name;
 
 
 		return (string)$hierarchy_name;

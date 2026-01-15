@@ -20,7 +20,7 @@ class logger {
 	const CRITICAL	= 5;
 
 	// global logger obj array to store instances of logger
-	static $obj;
+	public static $obj;
 
 
 

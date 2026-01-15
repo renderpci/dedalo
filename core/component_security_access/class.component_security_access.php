@@ -15,6 +15,8 @@ class component_security_access extends component_common {
 	// datalist array
 	public $datalist;
 
+	public static $ar_tipo_admin_cache;
+
 
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
@@ -449,14 +451,14 @@ class component_security_access extends component_common {
 	/**
 	* GET ARRAY TIPO ADMIN
 	* Returns the 'Admin' area as well as its children (used to exclude the admin options in the tree)
-	* @return array $ar_tipo_admin
+	* @return array $ar_tipo_admin_cache
 	*/
 	public static function get_ar_tipo_admin() : array {
 
 		// static cache
-			static $ar_tipo_admin;
-			if(isset($ar_tipo_admin)) {
-				return $ar_tipo_admin;
+			
+			if(isset(self::$ar_tipo_admin_cache)) {
+				return self::$ar_tipo_admin_cache;
 			}
 
 		$ar_result 	= ontology_utils::get_ar_tipo_by_model($modelo_name='area_admin', $prefijo='dd');
@@ -473,7 +475,7 @@ class component_security_access extends component_common {
 		array_unshift($ar_tesauro, $tipo);
 
 		// store cache data
-			$ar_tipo_admin = $ar_tesauro ;
+			self::$ar_tipo_admin_cache = $ar_tesauro ;
 
 
 		return $ar_tesauro ;

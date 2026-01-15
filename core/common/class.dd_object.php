@@ -77,7 +77,7 @@ class dd_object extends stdClass {
 
 
 	// ar_type_allowed
-		static $ar_type_allowed = [
+		public static $ar_type_allowed = [
 			'area',
 			'section',
 			'relation_list',
