@@ -20,6 +20,9 @@ class tool_export extends tool_common {
 		public $model;
 		// array|null ar_records.  Array of records to export (section_id) or null
 		public $ar_records;
+		// static caches for performance
+		protected static $locator;
+		protected static $ontology_cache = [];
 
 
 
@@ -43,6 +46,7 @@ class tool_export extends tool_common {
 
 		// fix ar_ddo_map
 			$this->ar_ddo_map = $ar_ddo_map;
+		
 		// fix sqo
 			// add filter from saved session if exists
 			$sqo_id = section::build_sqo_id($section_tipo);
@@ -148,7 +152,7 @@ class tool_export extends tool_common {
 	protected function build_export_grid() : array {
 
 		$ar_ddo_map	= $this->ar_ddo_map;
-		$records	= $this->get_records();
+		$db_result	= $this->get_records();
 
 		// get the section values
 		$section_grid_values = [];
@@ -163,10 +167,13 @@ class tool_export extends tool_common {
 			$ar_row_values 	= [];
 		// full unique columns for create the head
 			$ar_columns_obj	= [];
+		// columns index to avoid array_find inside the loop (performance)
+			$ar_columns_index = [];
 
-		foreach ($records as $row) {
+		foreach ($db_result as $row) {
 
 			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
+
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
 			$row_count = !empty($ar_row_value->ar_row_count)
 				? max($ar_row_value->ar_row_count)
@@ -185,8 +192,6 @@ class tool_export extends tool_common {
 				$row_grid->set_row_count($row_count);
 				$row_grid->set_column_count($columns_count);
 				$row_grid->set_ar_columns_obj($current_ar_columns_obj);
-				// $row_grid->set_class_list($row_class_list);
-				// $row_grid->set_render_label($row_render_label);
 				$row_grid->set_value($ar_row_value->ar_cells);
 
 			$ar_row_values[] = $row_grid;
@@ -197,25 +202,27 @@ class tool_export extends tool_common {
 			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
 			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
 			foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
+
 				// check if the current column exists in the full column array
-				$id_obj = array_find($ar_columns_obj, function($el) use($current_column_obj){
-					return ($el->id===$current_column_obj->id);
-				});
-				// if not exist we need add it, the columns are joined from the deep of the portals to the parents
-				if($id_obj===null){
+				if( !isset($ar_columns_index[$current_column_obj->id]) ){
+
+					// if not exist we need add it, the columns are joined from the deep of the portals to the parents
+
 					// check if the current column_id is a locator column, else add the column_object at the end
 					$current_column_path = explode('|', $current_column_obj->id);
+
 					if(sizeof($current_column_path)>1){
 						// get the last position of the column group
 						$position = false;
 						foreach ($ar_columns_obj as $column_key => $column_value) {
 							if(isset($column_value->group) &&  $column_value->group === $current_column_obj->group){
 								$position = $column_key;
+								break;
 							}
 						}
 						// if the position is set, insert the columns after the last column_object found
 						// if not add the current column_object at the end
-						if($position){
+						if($position !== false){
 							array_splice($ar_columns_obj, $position+1, 0, [$current_column_obj]);
 						}else{
 							$ar_columns_obj[] = $current_column_obj;
@@ -223,9 +230,13 @@ class tool_export extends tool_common {
 					}else{
 						$ar_columns_obj[] = $current_column_obj;
 					}
+
+					// Update index
+					$ar_columns_index[$current_column_obj->id] = true;
 				}
 			}//end foreach ($locator_column_obj as $column_pos => $current_column_obj)
-		}
+		}//foreach (db_result as $row)
+
 		// sum the total rows for this locator
 		$ar_section_rows_count[] = array_sum($rows_max_count);
 		// take the maximum number of columns (the columns can has 1, 2, 55 columns and we need the highest value, 55)
@@ -346,47 +357,50 @@ class tool_export extends tool_common {
 		$ar_row_count	= [];
 		$ar_columns_obj	= [];
 
-		$locator = new locator();
-			$locator->set_section_tipo($row->section_tipo);
-			$locator->set_section_id($row->section_id);
-
-		$relations = $row->datos->relations ?? [];
+		if (!isset(self::$locator)) {
+			self::$locator = new locator();
+		}
+		self::$locator->set_section_tipo($row->section_tipo);
+		self::$locator->set_section_id($row->section_id);
 
 		foreach ($ar_ddo as $current_ddo) {
 			// children_ddo. get only the ddo that are children of the section top_tipo
 			// the other ddo are sub components that will be injected to the portal as request_config->show
 			$first_path	= $current_ddo->path[0];
-			$ddo		= ($first_path->section_tipo===$locator->section_tipo) ? $first_path : null;
-
-			// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-				// $fields_separator	= $ddo->fields_separator ?? null;
-				// $records_separator	= $ddo->records_separator ?? null;
-				// $format_columns		= $ddo->format_columns ?? null;
-				// $class_list			= $ddo->class_list ?? null;
+			$ddo		= ($first_path->section_tipo===self::$locator->section_tipo) ? $first_path : null;
 
 			// component. Create the component to get the value of the column
-				$current_lang		= ontology_node::get_translatable($ddo->component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-				$component_model	= ontology_node::get_model_by_tipo($ddo->component_tipo, true);
+				$component_tipo = $ddo->component_tipo;
+				if (!isset(self::$ontology_cache[$component_tipo])) {
+					$is_translatable = ontology_node::get_translatable($component_tipo);
+					self::$ontology_cache[$component_tipo] = (object)[
+						'lang'  => $is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+						'model' => ontology_node::get_model_by_tipo($component_tipo, true)
+					];
+				}
+				$current_lang    = self::$ontology_cache[$component_tipo]->lang;
+				$component_model = self::$ontology_cache[$component_tipo]->model;
 
 				$current_component	= component_common::get_instance(
 					$component_model, // string model
 					$ddo->component_tipo, // string tipo
-					$locator->section_id, // string|int|null section_id
+					self::$locator->section_id, // string|int|null section_id
 					'edit', // string mode
 					$current_lang, // string lang
-					$locator->section_tipo, // string section_tipo
+					self::$locator->section_tipo, // string section_tipo
 					false // bool cache
 				);
 				// set the locator to the new component it will be used to know; who create me.
-				$current_component->set_locator($locator);
+				$current_component->set_locator(self::$locator);
 				// set the caller
 				$current_component->set_caller('tool_export');
 				// set the first id of the column_obj, if the component is a related component it will used to create a path of the deeper components
 				$column_obj = new stdClass();
 					$column_obj->id = $ddo->section_tipo.'_'.$ddo->component_tipo;
 				$current_component->column_obj = $column_obj;
-			// check if the component has ddo children in the path,
-			// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
+			
+				// check if the component has ddo children in the path,
+				// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
 				$sub_ddo_map = [];
 				foreach ($current_ddo->path as $key => $child_ddo) {
 					if($key === 0) continue;
@@ -415,26 +429,9 @@ class tool_export extends tool_common {
 
 					$current_component->request_config = [$request_config];
 
-					// inject the locator as dato for the component
-						$component_dato = array_filter($relations, function($el) use($ddo, $current_component){
-							if (!isset($el->from_component_tipo)) {
-								debug_log(__METHOD__
-									.' Error. Ignored WRONG locator without from_component_tipo '. PHP_EOL
-									.' model: ' . to_string($current_component->get_model()) . PHP_EOL
-									.' tipo: ' . to_string($current_component->get_tipo()) . PHP_EOL
-									.' section_tipo: ' . to_string($current_component->get_section_tipo()) . PHP_EOL
-									.' section_id: ' . to_string($current_component->get_section_id()) . PHP_EOL
-									.' locator: ' . to_string($el) . PHP_EOL
-									// .' current_component: ' . to_string($current_component)
-									, logger::ERROR
-								);
-								return false;
-							}
-							return $el->from_component_tipo===$ddo->component_tipo;
-						});
-
-						// $ar_dato = [$locator];
-						$current_component->set_dato($component_dato);
+					// inject the locator as data for the component
+					$component_data = $row->relation->{$ddo->component_tipo} ?? null;
+					$current_component->set_data($component_data);
 				}
 
 			// get component_value add
@@ -453,23 +450,17 @@ class tool_export extends tool_common {
 						break;
 				}
 
-				// $component_value = ($this->data_format==='dedalo')
-				// 	? $current_component->get_raw_value()
-				// 	: $current_component->get_grid_value($ddo);
-
 			// get columns objects that the component had stored
-				$sub_ar_columns_obj	= $component_value->ar_columns_obj ?? [];
-				$len_items			= sizeof($sub_ar_columns_obj);
-
+				$sub_ar_columns_obj = $component_value->ar_columns_obj ?? [];
+				$len_items = sizeof($sub_ar_columns_obj);
 				for ($i=0; $i < $len_items; $i++) {
 					$ar_columns_obj[] = $sub_ar_columns_obj[$i];
 				}
 
-			$ar_row_count[]	= $component_value->row_count ?? 1;
-			$ar_cells[]		= $component_value;
+			$ar_row_count[] = $component_value->row_count ?? 1;
+			$ar_cells[] = $component_value;
 
 		}// end foreach ($ar_children_ddo as $ddo)
-
 
 		// value final object
 			$value = new stdClass();
