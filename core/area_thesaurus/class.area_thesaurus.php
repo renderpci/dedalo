@@ -290,7 +290,7 @@ class area_thesaurus extends area_common {
 			$lang,
 			$section_tipo
 		);
-		$value = $component->get_valor($lang);
+		$value = $component->get_value($lang);
 
 		$hierarchy_name = empty($value)
 			? $component->extract_component_value_fallback()
