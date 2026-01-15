@@ -104,7 +104,7 @@ abstract class component_common extends common {
 		$direct_data[] = 'component_filter_records';
 		$direct_data[] = 'component_inverse';
 		$direct_data[] = 'component_section_id';
-		
+
 
 		return $direct_data;
 	}//end get_direct_data_components
@@ -700,7 +700,7 @@ abstract class component_common extends common {
 				}
 
 				$init = false;
-			}				
+			}
 
 			// Set the counter with the max id when the counter is bellow it.
 			if (!empty($ar_id)) {
@@ -787,7 +787,7 @@ abstract class component_common extends common {
 
 					$safe_data_lang[] = $modified_item;
 				}
-			}			
+			}
 
 		// get all component data
 			$data = $this->get_data() ?? [];
@@ -1254,7 +1254,7 @@ abstract class component_common extends common {
 				// create dataframe component instance
 				// BUT without caller_dataframe
 				// to get all data, not the specific row data of the dataframe
-				// time machine saves all data of the main comonent and all data of the dataframe 
+				// time machine saves all data of the main comonent and all data of the dataframe
 				$dataframe_component = component_common::get_instance(
 					'component_dataframe', // string model
 					$dataframe_ddo->tipo, // string tipo
@@ -1566,7 +1566,7 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $save_path );
 
 		// time machine data.
-		
+
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
@@ -2211,7 +2211,7 @@ abstract class component_common extends common {
 				return $response;
 			}
 
-		// cache			
+		// cache
 			$cache_key = isset($target_section_tipo)
 				? $target_section_tipo .'_'. $lang . $hash_id
 				: $this->tipo .'_'. $lang . $hash_id;
@@ -3428,7 +3428,7 @@ abstract class component_common extends common {
 				}
 				*/
 
-				$data[] = $changed_data->value;				
+				$data[] = $changed_data->value;
 
 				$this->set_data_lang( $data, $lang );
 
