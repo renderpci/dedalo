@@ -32,10 +32,15 @@
 
 		if (!empty($data_value)) {
 
-			$value		= $this->get_data_paginated();
+			// value
+			$value = $this->mode==='search' 
+				? $data_value // Search case: use data_resolved
+				: $this->get_data_paginated();
+
 			$section_id	= $this->get_parent();
-			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset;
+
+			$limit	= $this->pagination->limit;
+			$offset	= $this->pagination->offset;
 
 			// data item
 				$item = $this->get_data_item($value);

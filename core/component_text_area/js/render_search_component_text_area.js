@@ -76,7 +76,7 @@ const add_events = function(self, wrapper) {
 					const changed_data_item = Object.freeze({
 						action	: 'update',
 						key		: JSON.parse(input.dataset.key),
-						value	: parsed_value
+						value	: { value : parsed_value }
 					})
 
 				// update the instance data (previous to save)
@@ -118,13 +118,15 @@ const get_content_data = function(self) {
 
 			const current_value = inputs_value[i]
 
+			const string_value = current_value?.value || ''
+
 			// input field
 				ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'text',
 					class_name		: 'input_value',
 					dataset			: { key : i },
-					value			: current_value,
+					value			: string_value,
 					parent			: content_data
 				})
 		}

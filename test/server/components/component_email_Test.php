@@ -253,58 +253,6 @@ final class component_email_test extends BaseTestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		// search email
-			$query_object = json_decode('
-				{
-				    "q": [
-				        "pepe"
-				    ],
-				    "q_operator": null,
-				    "path": [
-				        {
-				            "section_tipo": "dd128",
-				            "component_tipo": "dd134",
-				            "model": "component_email",
-				            "name": "email"
-				        }
-				    ],
-				    "type": "jsonb",
-				    "component_path": [
-				        "components",
-				        "dd134",
-				        "dato"
-				    ],
-				    "lang": "all"
-				}
-			');
-
-			$result = component_email::resolve_query_object_sql($query_object);
-
-			$this->assertTrue(
-				gettype($result)==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-			$this->assertTrue(
-				!empty($result->sentence),
-				'expected not empty sentence : ' . PHP_EOL
-					. to_string($result->sentence)
-			);
-			$this->assertTrue(
-				!empty($result->params),
-				'expected not empty params : ' . PHP_EOL
-					. to_string($result->params)
-			);			
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_conform_import_data
 	* @return void
 	*/

@@ -19,16 +19,28 @@ trait where {
 		$ar_section_tipo = $this->ar_section_tipo;
 
 		// main section tipo filter
-		$this->sql_obj->main_where[] = count($ar_section_tipo) > 1
-			? '(' . $this->main_section_tipo_alias.'.section_tipo IN (\'' . implode('\',\'', $ar_section_tipo) . '\'))'
-			: '(' . $this->main_section_tipo_alias.'.section_tipo = \'' . $ar_section_tipo[0] . '\')';
+		if(count($ar_section_tipo) > 1) {
+			$sections_placeholders = [];
+			foreach ($ar_section_tipo as $current_tipo) {
+				// Gets current param key (default is 1 and increases by 1 after each use)
+				$placeholder = $this->get_placeholder($current_tipo);
+
+				// Add param value to main params array
+				$sections_placeholders[] = $placeholder;
+			}
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $sections_placeholders) . '))';
+		}else{
+			// Gets current param key (default is 1 and increases by 1 after each use)
+			$placeholder = $this->get_placeholder($ar_section_tipo[0]);
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . ')';
+		}
 
 		// Time machine section case (dd15)
 		if($ar_section_tipo[0]==='dd15'){
 			$this->sql_obj->main_where= [];
 		}
 
-		// avoid root user to be include in the results
+		// avoid root user to be include in the results for section users.
 		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO) {
 			$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id > 0';
 		}
@@ -59,13 +71,13 @@ trait where {
 
 		// FILTER_USER_RECORDS_BY_ID
 		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
-			
+
 			$section_tipo		= $this->main_section_tipo;
 			$section_alias		= $this->main_section_tipo_alias;
 
 			$filter_user_records_by_id = filter::get_filter_user_records_by_id( $user_id );
-			if ( isset($filter_user_records_by_id[$section_tipo]) ) {			
-				
+			if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+
 				$filter_by_user_records = '';
 
 				if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
@@ -74,7 +86,7 @@ trait where {
 
 				$filter = implode( ',', $filter_user_records_by_id[$section_tipo] );
 				$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
-				
+
 				$this->sql_obj->where[] = $filter_by_user_records;
 			}
 		}
@@ -93,9 +105,9 @@ trait where {
 			return;
 		}
 
-		$operator	= array_key_first(get_object_vars($this->sqo->filter));		
+		$operator	= array_key_first(get_object_vars($this->sqo->filter));
 		$ar_value	= $this->sqo->filter->{$operator};
-		
+
 		if(!empty($ar_value)) {
 
 			// Duplicated caller
@@ -116,7 +128,7 @@ trait where {
 				$this->skip_duplicated = false;
 			}
 
-			$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);			
+			$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);
 		}
 	}//end build_sql_filter
 
@@ -137,9 +149,11 @@ trait where {
 		$operator	= strtoupper( substr($op, 1) );
 
 		foreach ($ar_value as $key => $search_object) {
+
 			if( $search_object===false ) {
 				continue;
 			}
+
 			if (!property_exists($search_object, 'path')) {
 
 				// Case operator
@@ -151,7 +165,7 @@ trait where {
 				// recursion filter_parser
 				$parsed_string = $this->filter_parser($op2, $ar_value2);
 				if (!empty($parsed_string)) {
-					$string_query .= ' (' . $parsed_string . ' )';
+					$string_query .= '( ' . $parsed_string . ' )';
 
 					if ($key+1 < $total) {
 						$string_query .= ' '.$operator.' ';
@@ -171,18 +185,18 @@ trait where {
 				if (empty($search_object_sql)) {
 					continue;
 				}
-				
+
 				$string_query .= $search_object_sql;
 
 				// if the where get empty value don' add operator
 				if ($key+1 !== $total && !empty($string_query)) {
-					$string_query .= ' '.$operator.' ';
+					$string_query .= PHP_EOL . ' ' . $operator . ' ';
 				}
-			
+
 			}
 
 		}//end foreach ($ar_value as $key => $search_object)
-		
+
 
 		return $string_query;
 	}//end filter_parser
@@ -256,8 +270,8 @@ trait where {
 
 				$component_tipo = $path[$key-1]->component_tipo;
 				$sql_lateral = "JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
-				
-				$sql_join = "JOIN {$matrix_table} AS {$t_name} ON 
+
+				$sql_join = "JOIN {$matrix_table} AS {$t_name} ON
 					{$t_name}.section_id = ({$t_relation}->>'section_id')::bigint
 					AND {$t_name}.section_tipo =({$t_relation}->>'section_tipo')";
 
@@ -298,7 +312,7 @@ trait where {
 			//   "params": associative array				// mandatory params for the sentence as ['_Q1_' => value1, '_Q2_' => value2, ...]
 			// }
 
-		// set initial sql with search_object sentence
+		// set initial SQL with search_object sentence
 		$sql = $search_object->sentence ?? null;
 
 		if (empty($sql)) {
@@ -306,14 +320,11 @@ trait where {
 		}
 
 		foreach ($search_object->params ?? [] as $key => $value) {
-			// Gets current param key (default is 1 and increases by 1 after each use)
-			$current_param_key = $this->params_counter++;
-			// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
-			$placeholder = '$' . $current_param_key;
-			// Update sql string with new placeholder
+
+			$placeholder = $this->get_placeholder($value);
+
+			// Update SQL string with new placeholder. Replace _Q1_ by $1 in 'SELECT * FROM table WHERE column.rsc187.[*].value = _Q1_'
 			$sql = str_replace( $key, $placeholder, $sql );
-			// Add param value to main params array
-			$this->params[] = $value;
 		}
 
 
@@ -421,7 +432,7 @@ trait where {
 			$user_id			= logged_user_id(); // Logged user id
 			if (empty($user_id)) {
 				debug_log(__METHOD__
-					. " Error: user id unavailable (logged_user_id)"				
+					. " Error: user id unavailable (logged_user_id)"
 					, logger::ERROR
 				);
 				return;
@@ -516,8 +527,8 @@ trait where {
 							);
 							return;
 						}
-						
-						$component_filter_tipo = $ar_component_filter[0];						
+
+						$component_filter_tipo = $ar_component_filter[0];
 
 						$ar_projects = filter::get_user_projects($user_id); // return array of locators
 						if (empty($ar_projects)) {
@@ -530,17 +541,17 @@ trait where {
 							// Default case. Filter by any of user projects
 							$ar_section_id = [];
 							foreach ($ar_projects as $current_project_locator) {
-								$ar_section_id[] = $current_project_locator->section_id;								
+								$ar_section_id[] = $current_project_locator->section_id;
 							}
 							$search_ids = implode("','", $ar_section_id);
 
 							$this->sql_obj->where[] = "EXISTS ( SELECT 1
-								FROM jsonb_array_elements({$section_alias}.relation::jsonb->'{$component_filter_tipo}') AS item 
+								FROM jsonb_array_elements({$section_alias}.relation::jsonb->'{$component_filter_tipo}') AS item
 								WHERE item->>'section_id' IN ('{$search_ids}')
 							)";
 						}
 						break;
-				}	//end switch (true)	
+				}	//end switch (true)
 			}//end if ($is_global_admin!==true) {
 
 		// cache

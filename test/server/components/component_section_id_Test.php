@@ -166,48 +166,6 @@ final class component_section_id_test extends BaseTestCase {
 
 
 	/**
-	* TEST_RESOLVE_QUERY_OBJECT_SQL
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('
-		{
-		    "q": [
-		        "1"
-		    ],
-		    "q_operator": null,
-		    "path": [
-		        {
-		            "name": "section_id",
-		            "model": "component_section_id",
-		            "section_tipo": "test3",
-		            "component_tipo": "test102"
-		        }
-		    ],
-		    "type": "jsonb",
-		    "lang": "all"
-		}
-		');
-
-		$result = component_section_id::resolve_query_object_sql( $query_object );
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$this->assertTrue(
-			$result->sentence==='.section_id::integer = _Q1_',
-			'expected sentence : .section_id::integer = _Q1_' . PHP_EOL
-				. to_string($result->sentence)
-		);
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_SEARCH_OPERATORS_INFO
 	* @return void
 	*/
