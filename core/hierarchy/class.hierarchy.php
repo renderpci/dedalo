@@ -759,6 +759,12 @@ class hierarchy extends ontology {
 	*/
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
+		// cache
+		static $hierarchy_section_cache;
+		if (isset($hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
+			return $hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
+		}
+
 		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
 
 		// search query object
@@ -789,6 +795,8 @@ class hierarchy extends ontology {
 		// section id
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
 
+		// cache
+			$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo] = $section_id;
 
 		return $section_id;
 	}//end get_hierarchy_section
