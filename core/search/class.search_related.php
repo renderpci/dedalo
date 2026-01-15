@@ -15,7 +15,7 @@ class search_related extends search {
 
 
 	/**
-	* PARSE_SQL_QUERY 
+	* PARSE_SQL_QUERY
 	* Build full final SQL query to send to DDBB
 	* Please note that special indexes and functions such as 'matrix_relations_flat_st_si'
 	* must exists to enable this search
@@ -59,14 +59,10 @@ class search_related extends search {
 						continue;
 					}
 
-					// Gets current param key (default is 1 and increases by 1 after each use)
-					$current_param_key = $this->params_counter++;
-					// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
-					$placeholder = '$' . $current_param_key;
+					// placeholder like $1, $2, ...
+					$placeholder = $this->get_placeholder($current_section_tipo);
 
 					$current_placeholders[] = $placeholder;
-
-					$this->params[] = $current_section_tipo;
 				}
 				if (!empty($current_placeholders)) {
 					$section_filter = 'section_tipo IN(' . implode(',', $current_placeholders) .')';
@@ -78,14 +74,15 @@ class search_related extends search {
 			foreach ($ar_tables_to_search as $table) {
 
 				$query	 = '';
+
 				// SELECT
-				$query	 = PHP_EOL . 'SELECT ';
+				$query	 .= PHP_EOL . 'SELECT ';
 				// add group_by
 				// every concept need to be separated by commas
 				$query	.= ( isset($group_by) )
 					? implode(', ', $group_by).', '
 					: '';
-				
+
 				// add full count when is set
 				// else get the row
 				$query	.= (isset($this->sqo->full_count) && $this->sqo->full_count===true)
@@ -118,66 +115,96 @@ class search_related extends search {
 				$locators_query = [];
 				foreach ($ar_locators as $locator) {
 
-					// Gets current param key (default is 1 and increases by 1 after each use)
-					$current_param_key = $this->params_counter++;
-					// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
-					$placeholder = '$' . $current_param_key;					
-
 					switch (true) {
 
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
-							$locator_index	= $locator->type.'_'.$locator->section_tipo;
-							// $sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
-							$sql			= PHP_EOL.'data_relations_flat_ty_st(relation) @> '.$placeholder.'::jsonb';
-							// Add placeholder to params array
-							$this->params[] = '['. json_encode($locator_index) . ']';
+							$locator_index = $locator->type.'_'.$locator->section_tipo;
+							$param_value = '['. json_encode($locator_index) . ']';
+							$placeholder = $this->get_placeholder($param_value);
+							$sql = PHP_EOL.'data_relations_flat_ty_st(relation) @> '.$placeholder.'::jsonb';
+							// breakdown
 							if( $breakdown===true ){
-								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
-								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
+								// type
+								$param_value = $locator->type;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder";
+
+								// section_tipo
+								$param_value = $locator->section_tipo;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
 							}
 							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->from_component_tipo):
-							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							// $sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
-							$sql				= PHP_EOL.'data_relations_flat_fct_st_si(relation) @> '.$placeholder.'::jsonb';
-							// Add placeholder to params array
-							$this->params[] = '['. json_encode($locator_index) . ']';
+							$base_flat_locator = locator::get_term_id_from_locator($locator);
+							$locator_index = $locator->from_component_tipo.'_'.$base_flat_locator;
+							$param_value = '['. json_encode($locator_index) . ']';
+							$placeholder = $this->get_placeholder($param_value);
+							$sql = PHP_EOL.'data_relations_flat_fct_st_si(relation) @> '.$placeholder.'::jsonb';
+							// breakdown
 							if( $breakdown===true ){
-								$sql .= PHP_EOL." AND locator_data->'from_component_tipo' ? '$locator->from_component_tipo'";
-								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
-								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+								// from_component_tipo
+								$param_value = $locator->from_component_tipo;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'from_component_tipo' = $placeholder";
+
+								// section_tipo
+								$param_value = $locator->section_tipo;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+
+								// section_id
+								$param_value = $locator->section_id;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
 							}
 							$locators_query[] = $sql;
 							break;
 
 						case isset($locator->type):
-							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							// $sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> \'['. json_encode($locator_index) . ']\'::jsonb';
-							$sql				= PHP_EOL.'data_relations_flat_ty_st_si(relation) @> '.$placeholder.'::jsonb';
-							// Add placeholder to params array
-							$this->params[] = '['. json_encode($locator_index) . ']';
+							$base_flat_locator = locator::get_term_id_from_locator($locator);
+							$locator_index = $locator->type.'_'.$base_flat_locator;
+							$param_value = '['. json_encode($locator_index) . ']';
+							$placeholder = $this->get_placeholder($param_value);
+							$sql = PHP_EOL.'data_relations_flat_ty_st_si(relation) @> '.$placeholder.'::jsonb';
 							if( $breakdown===true ){
-								$sql .= PHP_EOL." AND locator_data->'type' ? '$locator->type'";
-								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
-								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+								// type
+								$param_value = $locator->type;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder";
+
+								// section_tipo
+								$param_value = $locator->section_tipo;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+
+								// section_id
+								$param_value = $locator->section_id;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
 							}
 							$locators_query[] = $sql;
 							break;
 
 						default:
-							$base_flat_locator	= locator::get_term_id_from_locator($locator);
-							// $sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
-							$sql				= PHP_EOL.'data_relations_flat_st_si(relation) @> '.$placeholder.'::jsonb';
-							// Add placeholder to params array
-							$this->params[] = '['. json_encode($base_flat_locator) . ']';
+							$base_flat_locator = locator::get_term_id_from_locator($locator);
+							$param_value = '['. json_encode($base_flat_locator) . ']';
+							$placeholder = $this->get_placeholder($param_value);
+							$sql = PHP_EOL.'data_relations_flat_st_si(relation) @> '.$placeholder.'::jsonb';
+							// breakdown
 							if( $breakdown===true ){
-								$sql .= PHP_EOL." AND locator_data->'section_tipo' ? '$locator->section_tipo'";
-								$sql .= PHP_EOL." AND locator_data->'section_id' ? '$locator->section_id'";
+								// section_tipo
+								$param_value = $locator->section_tipo;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+
+								// section_id
+								$param_value = $locator->section_id;
+								$placeholder = $this->get_placeholder($param_value);
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
 							}
 							$locators_query[] = $sql;
 							break;
@@ -234,7 +261,7 @@ class search_related extends search {
 	}//end parse_sql_query
 
 
-	
+
 	/**
 	* GET_REFERENCED_LOCATORS
 	* Get the sections pointed by any type of locator to the caller (reference_locator)

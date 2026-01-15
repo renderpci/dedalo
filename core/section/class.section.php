@@ -3823,30 +3823,30 @@ class section extends common {
 
 
 
-	/**
-	* RESOLVE_QUERY_OBJECT_SQL
-	* @param object $query_object
-	* @return object|false $query_object
-	*/
-	public static function resolve_query_object_sql( object $query_object ) : object|false {
+	// /**
+	// * RESOLVE_QUERY_OBJECT_SQL
+	// * @param object $query_object
+	// * @return object|false $query_object
+	// */
+	// public static function resolve_query_object_sql( object $query_object ) : object|false {
 
-		# Always set fixed values
-		$query_object->type = 'string';
+	// 	# Always set fixed values
+	// 	$query_object->type = 'string';
 
-		# Always set format to column
-		$query_object->format = 'column';
+	// 	# Always set format to column
+	// 	$query_object->format = 'column';
 
-		$q = $query_object->q;
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+	// 	$q = $query_object->q;
+	// 	$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
-		$operator = '=';
-		$q_clean  = str_replace('\"', '', $q);
-		$query_object->operator = $operator;
-		$query_object->q_parsed	= '\''.$q_clean.'\'';
+	// 	$operator = '=';
+	// 	$q_clean  = str_replace('\"', '', $q);
+	// 	$query_object->operator = $operator;
+	// 	$query_object->q_parsed	= '\''.$q_clean.'\'';
 
 
-		return $query_object;
-	}//end resolve_query_object_sql
+	// 	return $query_object;
+	// }//end resolve_query_object_sql
 
 
 

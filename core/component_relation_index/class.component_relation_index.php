@@ -472,10 +472,6 @@ class component_relation_index extends component_relation_common {
 
 
 
-
-
-
-
 	/**
 	* GET_REFERENCES_TO_SECTION
 	* Get all references to current section tipo and relation type (indexation)
@@ -540,6 +536,12 @@ class component_relation_index extends component_relation_common {
 
 		// cache
 			static $referended_locators_cache;
+
+			// Safe control: prevent big array memory and performance problems
+			if (isset($referended_locators_cache) && count($referended_locators_cache) > 1000) {
+				$referended_locators_cache = [];
+			}
+
 			if (isset($referended_locators_cache[$cache_key])) {
 				return $referended_locators_cache[$cache_key];
 			}

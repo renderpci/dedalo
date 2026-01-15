@@ -59,6 +59,7 @@ trait order {
 							$line	= $alias . ' ' . $direction;
 
 						// column
+						if (!empty($order_obj->component_path)) {
 							$selector		= implode(',', $order_obj->component_path);
 							$table_alias	= $this->get_table_alias_from_path($path);
 							$base			= $table_alias . '.datos#>>\'{'.$selector.'}\'';
@@ -66,6 +67,7 @@ trait order {
 							// Add to global order columns (necessary for order...)
 							// This array is added when query select is calculated
 							$this->order_columns[] = $column;
+						}
 					}
 
 					// line add

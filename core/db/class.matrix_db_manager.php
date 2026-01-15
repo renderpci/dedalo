@@ -136,7 +136,7 @@ class matrix_db_manager {
 			foreach ($values as $col => $value) {
 
 				// Columns. Only accepts normalized columns
-				if (!isset(self::$columns[$col])) {					
+				if (!isset(self::$columns[$col])) {
 					debug_log(
 						__METHOD__ . " Ignored invalid column name: $col" . PHP_EOL
 						. ' allowed_columns: ' . json_encode(self::$columns)
@@ -163,7 +163,7 @@ class matrix_db_manager {
 
 		// Optimized single-query approach with advisory lock
 		// The lock is automatically released when the transaction ends (COMMIT or ROLLBACK)
-		
+
 		// $sql = "
 		// 	WITH locked AS (
 		// 		SELECT pg_advisory_xact_lock(hashtext($1))
@@ -200,7 +200,7 @@ class matrix_db_manager {
 			 INSERT INTO $counter_table (tipo, value)
 			 -- Step 2: Initialize with the calculated max value (safe fallback)
 			 SELECT $1, next_start FROM calc_start
-			 ON CONFLICT (tipo) 
+			 ON CONFLICT (tipo)
 			 DO UPDATE
 			  -- Step 3: If the counter exists, ignore the calculation and just increment
 			  SET value = matrix_counter.value + 1
@@ -209,7 +209,7 @@ class matrix_db_manager {
 			INSERT INTO $table (" . implode(', ', $columns) . ")
 			SELECT " . implode(', ', $placeholders) . " FROM updated_counter
 			RETURNING section_id;
-		";		
+		";
 
 		// With prepared statement
 		$stmt_name = 'create_' . $table . '_' . md5(implode('_', $columns));
@@ -228,7 +228,7 @@ class matrix_db_manager {
 		$result = pg_execute($conn, $stmt_name, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__ 
+			debug_log(__METHOD__
 				. " Query failed: " . pg_last_error($conn) . PHP_EOL
 				. " sql: " . to_string($sql) . PHP_EOL
 				. " params: " . json_encode($params, JSON_PRETTY_PRINT) . PHP_EOL
@@ -413,7 +413,7 @@ class matrix_db_manager {
 
 			// Column add
 			$columns[] = $column;
-		}		
+		}
 
 		// SQL Execution
 		// Construct the final query string
@@ -427,17 +427,17 @@ class matrix_db_manager {
 		// No record existing case.
 		// When the record doesn't exist in DB, perform a INSERT
 		if ($result && pg_affected_rows($result) == 0) {
-			
+
 			$placeholders = [];
 			foreach($columns as $key => $column){
 				$placeholders[] = '$'. ($key+1);
 			}
 
-			$sql_insert = 'INSERT INTO ' . $table . ' (' 
+			$sql_insert = 'INSERT INTO ' . $table . ' ('
 				. implode(', ', $columns) . ')
-				VALUES (' 
+				VALUES ('
 				. implode(', ', $placeholders) . ')';
-			
+
 			$result = pg_query_params($conn, $sql_insert, $params);
 		}
 
@@ -1079,6 +1079,14 @@ class matrix_db_manager {
 
 		// exec With prepared statement
 		$stmt_name = md5($sql_query);
+
+		// Cache control: prevent big array memory and performance problems
+		if (count(DBi::$prepared_statements) > 1000) {
+			pg_query($conn, 'DEALLOCATE ALL');
+			DBi::$prepared_statements = [];
+			// debug_log(__METHOD__ . " DEALLOCATE ALL prepared statements (limit 1000 reached)", logger::INFO);
+		}
+
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			$statement = pg_prepare($conn, $stmt_name, $sql_query);
 			if ($statement===false) {
@@ -1091,10 +1099,10 @@ class matrix_db_manager {
 				return false;
 			}
 			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;			
+			DBi::$prepared_statements[$stmt_name] = true;
 		}else{
 			// debug
-			$prepend_sql = '-- RECYCLING PREPARED statement: ' . $stmt_name . '  - ' . count(DBi::$prepared_statements) . PHP_EOL;
+			$prepend_sql = '-- RECYCLING PREPARED statement: ' . $stmt_name . '  - params: ' . count($params) . ' - total prepared: ' . count(DBi::$prepared_statements) . PHP_EOL;
 		}
 
 		// default sync case
@@ -1126,11 +1134,11 @@ class matrix_db_manager {
 
 			// metrics
 			metrics::$exec_search_total_time += $total_time_ms;
-			
+
 			// query additional info
 			$bt = debug_backtrace();
 			if (isset($bt[1]['function'])) {
-				
+
 				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
 
 				foreach ([1,2,3,4,5,6,7,8] as $key) {
@@ -1141,8 +1149,8 @@ class matrix_db_manager {
 				$sql_query = $sql_prepend . trim($sql_query);
 			}
 
-			// debug log sql query. See PHP log file			
-			$sql_query = '-- exec_search ' . count($params) . ' params [' .$stmt_name. '] : ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;			
+			// debug log sql query. See PHP log file
+			$sql_query = '-- exec_search ' . count($params) . ' params [' .$stmt_name. '] : ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
 			$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
 			if(isset($prepend_sql)) {
 				$sql_query_debug = $prepend_sql . $sql_query_debug;
@@ -1152,6 +1160,7 @@ class matrix_db_manager {
 				. ' sql_query_debug: ' . PHP_EOL
 				. PHP_EOL . $sql_query_debug . PHP_EOL
 				// . PHP_EOL . $sql_query . PHP_EOL
+				// .' params: ' . json_encode($params) . PHP_EOL
 				, $level
 			);
 		}

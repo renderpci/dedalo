@@ -42,7 +42,7 @@ class component_relation_children extends component_relation_common {
 	public function save() : bool {
 		// Noting to do. This component don`t save
 		return true;
-	}//end Save
+	}//end save
 
 
 
@@ -184,7 +184,7 @@ class component_relation_children extends component_relation_common {
 							. ' section_id: ' . to_string($this->section_id) . PHP_EOL
 							. ' result: ' . to_string($result) . PHP_EOL
 							. ' locator: ' . to_string($locator) . PHP_EOL
-							. ' locator type: ' .  get_relation_name($locator->type) . PHP_EOL
+							. ' locator type: ' .  get_relation_name($locator->type ?? '') . PHP_EOL
 							. ' from_component_tipo model: ' . $model . PHP_EOL
 							, logger::ERROR
 						);
@@ -195,10 +195,10 @@ class component_relation_children extends component_relation_common {
 				}
 			}
 
-		// $this->update_parents($data);
-
+		// $this->update_parents($data);		
+		
 		// force read the new value on get_data (prevent cache inconsistency)
-			unset($this->data_resolved); //  = null;
+		unset($this->data_resolved); //  = null;
 
 
 		return true;
@@ -255,7 +255,7 @@ class component_relation_children extends component_relation_common {
 	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation. If null, it is resolved automatically.
 	* @return bool True on success, false on failure.
 	*/
-	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
+	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {	
 
 		// default bool result
 			$result = false;
@@ -298,7 +298,7 @@ class component_relation_children extends component_relation_common {
 				return false;
 			}
 
-		// component instance
+		// component_relation_parent instance
 			$component_relation_parent = component_common::get_instance(
 				$model,
 				$parent_tipo,
@@ -337,13 +337,18 @@ class component_relation_children extends component_relation_common {
 		// save if changed
 			if ($changed===true) {
 
-				$saved = $component_relation_parent->save();
-				if ($saved && $saved>0) {
-					$result = true;
-				}
+				// search cases do not update parent data
+				// if ($this->mode === 'search') {
+				// 	$result = true;
+				// }else{
+					$saved = $component_relation_parent->save();
+					if ($saved) {
+						$result = true;
+					}
+				// }
 
 				// force read the new value on get_data (prevent cache inconsistency)
-				$this->data_resolved = null;
+				// $this->data_resolved = null;
 				$this->get_data();
 			}
 

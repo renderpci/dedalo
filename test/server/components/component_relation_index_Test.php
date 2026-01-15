@@ -186,45 +186,6 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('
-		{
-		    "q": "only_operator",
-		    "q_operator": "*",
-		    "path": [
-		        {
-		            "name": "relation_index",
-		            "model": "component_relation_index",
-		            "section_tipo": "test3",
-		            "component_tipo": "test25"
-		        }
-		    ],
-		    "type": "jsonb",
-		    "component_path": [
-		        "components",
-		        "test25",
-		        "dato"
-		    ],
-		    "lang": "all"
-		}
-		');
-
-		$result = component_date::resolve_query_object_sql( $query_object );
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_get_references_to_section
 	* @return void
 	*/

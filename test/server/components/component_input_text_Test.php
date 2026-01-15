@@ -400,65 +400,6 @@ final class component_input_text_test extends BaseTestCase {
 
 
 	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('{
-			    "q": [
-			        "as"
-			    ],
-			    "q_operator": null,
-			    "path": [
-			        {
-			            "section_tipo": "test3",
-			            "component_tipo": "test52",
-			            "model": "component_input_text",
-			            "name": "Title"
-			        }
-			    ],
-			    "type": "jsonb",
-			    "component_path": [
-			        "components",
-			        "test3",
-			        "dato"
-			    ],
-			    "lang": "all",
-				"table_alias": "matrix_test"
-			}
-		');
-
-		$result = component_input_text::resolve_query_object_sql(
-			$query_object
-		);
-
-		$this->assertTrue(
-			!empty($result->sentence),
-				'expected value do not match:' . PHP_EOL
-				.' expected: !empty(sentence) ' . PHP_EOL
-				.' value: '.to_string($result->sentence)
-		);
-
-		$expected = "matrix_test.string @? ('$.test52[*].value ? (@ like_regex \"'||_Q1_||'\" flag \"i\")')::jsonpath";
-		$this->assertTrue(
-			$result->sentence === $expected,
-				'expected value do not match:' . PHP_EOL
-				.' expected: '. $expected . PHP_EOL
-				.' value: '.to_string($result->sentence)
-		);
-
-		$this->assertTrue(
-			!empty($result->params),
-				'expected value do not match:' . PHP_EOL
-				.' expected: !empty(params) ' . PHP_EOL
-				.' value: '.to_string($result->params)
-		);		
-	}//end test_resolve_query_object_sql
-	
-	
-	
-	/**
 	* TEST_conform_import_data
 	* @return void
 	*/

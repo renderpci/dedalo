@@ -257,10 +257,10 @@ class hierarchy extends ontology {
 				$tld2.'0', // string section_tipo
 				1 // string|null section_id
 			);
-			
+
 			// Publication
 				$tipo 	= DEDALO_ONTOLOGY_PUBLICATION_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -273,7 +273,7 @@ class hierarchy extends ontology {
 
 			// Is descriptor
 				$tipo 	= DEDALO_ONTOLOGY_IS_DESCRIPTOR_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -286,7 +286,7 @@ class hierarchy extends ontology {
 
 			// Is Model
 				$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -297,7 +297,7 @@ class hierarchy extends ontology {
 
 			// Model (section = 6)
 				$tipo 	= DEDALO_ONTOLOGY_MODEL_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -310,7 +310,7 @@ class hierarchy extends ontology {
 
 			// Is translatable
 				$tipo 	= DEDALO_ONTOLOGY_TRANSLATABLE_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -323,7 +323,7 @@ class hierarchy extends ontology {
 
 			// relations
 				$tipo 	= DEDALO_ONTOLOGY_CONNECTED_TO_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$relation_section_tipo	= get_tld_from_tipo( $real_section_tipo ).'0';
 				$relation_section_id	= get_section_id_from_tipo( $real_section_tipo );
@@ -339,7 +339,7 @@ class hierarchy extends ontology {
 
 			// TLD
 				$tipo 	= DEDALO_ONTOLOGY_TLD_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new stdClass();
 					$component_data->id 	= 1;
@@ -350,7 +350,7 @@ class hierarchy extends ontology {
 
 			// Name
 				$tipo 			= DEDALO_ONTOLOGY_TERM_TIPO;
-				$model 			= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 			= ontology_node::get_model_by_tipo( $tipo );
 				$column 		= section_record_data::get_column_name( $model );
 
 				$section_record->set_component_data($tipo, $column, $name_data);
@@ -404,11 +404,11 @@ class hierarchy extends ontology {
 				$model_data = $section_record->get_data();
 				// insert the previous data in the model section_record
 				$model_section_record->set_data( $model_data );
-				
+
 				// is model
 				// change the is model component to yes
 				$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
-				$model 	= ontology_node::get_model_by_tipo( $tipo ); 
+				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
 				$component_data = new locator();
 					$component_data->set_id( 1 );
@@ -759,27 +759,33 @@ class hierarchy extends ontology {
 	*/
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
+		// cache
+		static $hierarchy_section_cache;
+		if (isset($hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
+			return $hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
+		}
+
 		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
 
 		// search query object
-			$search_query_object = json_decode('{
-			  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-			  "filter": {
-				"$and": [
-				  {
-					"q": "'.$section_tipo.'",
-					"path": [
-					  {
-						"section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-						"component_tipo": "'.$hierarchy_component_tipo.'",
-						"model": "'.$model.'",
-						"name": "'.$model.' '.$hierarchy_component_tipo.'"
-					  }
+			$search_query_object = new search_query_object();
+				$search_query_object->set_section_tipo([DEDALO_HIERARCHY_SECTION_TIPO]);
+				$search_query_object->set_filter((object)[
+					'$and' => [
+						(object)[
+							'q'				=> $section_tipo,
+							'q_operator'	=> '==',
+							'path'			=> [
+								(object)[
+									'section_tipo'		=> DEDALO_HIERARCHY_SECTION_TIPO,
+									'component_tipo'	=> $hierarchy_component_tipo,
+									'model'				=> $model,
+									'name'				=> "$model $hierarchy_component_tipo"
+								]
+							]
+						]
 					]
-				  }
-				]
-			  }
-			}');
+				]);
 
 		// search
 			$search		= search::get_instance($search_query_object);
@@ -789,6 +795,8 @@ class hierarchy extends ontology {
 		// section id
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
 
+		// cache
+			$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo] = $section_id;
 
 		return $section_id;
 	}//end get_hierarchy_section
@@ -808,13 +816,13 @@ class hierarchy extends ontology {
 		// short vars
 			$table			= self::$main_table; // expected 'matrix_hierarchy_main'
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-		
-			// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)	
+
+			// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
 			$tld 			= trim(strtolower($tld));
 			$safe_tld 		= safe_tld( $tld );
 			$q				= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
 
-		// SQL query	
+		// SQL query
 			$sql = 'SELECT section_id, section_tipo' . PHP_EOL;
 			$sql .= 'FROM '.$table . PHP_EOL;
 			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
@@ -824,7 +832,7 @@ class hierarchy extends ontology {
 		// search
 			$result = matrix_db_manager::exec_search($sql, [$section_tipo, $q]);
 			$row 	= pg_fetch_object($result) ?? null;
-	
+
 
 		return $row;
 	}//end get_hierarchy_by_tld
@@ -1285,29 +1293,26 @@ class hierarchy extends ontology {
 		}
 
 		// main filter
-		$filter = json_decode('
-			{
-				"$and": [
-					{
-						"q": {
-							"section_id": "1",
-							"section_tipo": "dd64",
-							"from_component_tipo": "hierarchy4"
-						},
-						"q_operator": null,
-						"path": [
-							{
-								"name": "Active",
-								"model": "component_radio_button",
-								"section_tipo": "hierarchy1",
-								"component_tipo": "hierarchy4"
-							}
-						],
-						"type": "jsonb"
-					}
+		$filter = (object)[
+			'$and' => [
+				(object)[
+					'q' => (object)[
+						'section_id'			=> '1',
+						'section_tipo'			=> 'dd64',
+						'from_component_tipo'	=> 'hierarchy4'
+					],
+					'q_operator' => null,
+					'path' => [
+						(object)[
+							'name'				=> 'Active',
+							'model'				=> 'component_radio_button',
+							'section_tipo'		=> 'hierarchy1',
+							'component_tipo'	=> 'hierarchy4'
+						]
+					]
 				]
-			}
-		');
+			]
+		];
 
 		// section tipo depends on the current class (hierarchy, ontology)
 		$section_tipo = hierarchy::$main_section_tipo;

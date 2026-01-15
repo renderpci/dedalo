@@ -204,68 +204,7 @@ final class component_relation_children_test extends BaseTestCase {
 		$this->assertFalse($result, 'sortable should always be false');
 		$this->assertIsBool($result, 'sortable should return boolean');
 	}//end test_get_sortable
-
-
-
-	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('
-			{
-			    "q": [
-			        {
-			            "section_tipo": "test3",
-			            "section_id": "2",
-			            "from_component_tipo": "test201"
-			        }
-			    ],
-			    "path": [
-			        {
-			            "name": "relation_children",
-			            "model": "component_relation_children",
-			            "section_tipo": "test3",
-			            "component_tipo": "test201"
-			        }
-			    ],
-			    "q_split": false,
-			    "type": "jsonb",
-			    "component_path": [
-			        "components",
-			        "test201",
-			        "dato"
-			    ],
-			    "lang": "all"
-			}
-		');
-
-		$result = component_relation_children::resolve_query_object_sql(
-			$query_object
-		);
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$reference_value = 'in_column';
-		$this->assertTrue(
-			$result->format===$reference_value,
-			'expected \'in_column\' : ' . PHP_EOL
-			.'$result->format: ' .  to_string($result->format) . PHP_EOL
-			.'expected $reference_value: ' .  to_string($reference_value) . PHP_EOL
-			.'result: ' . to_string($result)
-		);
-
-		// Additional assertions for resolve_query_object_sql
-		$this->assertIsObject($result, 'resolve_query_object_sql should return object');
-		$this->assertEquals('IN', $result->operator, 'operator should be IN');
-		$this->assertEquals('number', $result->type, 'type should be number');
-	}//end test_resolve_query_object_sql
-
+	
 
 
 	/**

@@ -2731,15 +2731,12 @@ abstract class common {
 
 							// safe_ar_section_tipo (check invalid tipos before continue)
 							$safe_ar_section_tipo = [];
-							foreach ((array)$ar_section_tipo as $current_section_tipo) {
+							foreach ($ar_section_tipo as $current_section_tipo) {
 								// check_tipo_is_valid
 								$tipo_is_valid = ontology_utils::check_tipo_is_valid($current_section_tipo);
 								if ($tipo_is_valid===false) {
-									debug_log(__METHOD__
-										. " WARNING. Ignored non valid section_tipo. Maybe the TLD is not installed. " . PHP_EOL
-										. ' current_section_tipo: ' . to_string($current_section_tipo)
-										, logger::WARNING
-									);
+									// Emit a warning message only once per tipo.
+									self::warning_invalid_tipo($current_section_tipo);
 									continue;
 								}
 								$safe_ar_section_tipo[] = $current_section_tipo;
@@ -4726,6 +4723,31 @@ abstract class common {
 
 		return null;
 	}//end resolve_limit
+
+
+
+	/**
+	 * WARNING INVALID TIPO
+	 * Its used to prevent to show the same warning multiple times.
+	 * @param string $tipo
+	 * @param string|null $expected_model
+	 */
+	private function warning_invalid_tipo(string $tipo, ?string $expected_model=null) : void {
+
+		static $warning_invalid_tipo_cache;
+		if(isset($warning_invalid_tipo_cache[$tipo])){
+			return;
+		}
+
+		debug_log(__METHOD__
+			. " WARNING. Ignored non valid $expected_model. Maybe the TLD is not installed. " . PHP_EOL
+			. ' tipo: ' . to_string($tipo)
+			. ' expected_model: ' . to_string($expected_model)
+			, logger::WARNING
+		);
+
+		$warning_invalid_tipo_cache[$tipo] = true;
+	}//end warning_invalid_tipo
 
 
 

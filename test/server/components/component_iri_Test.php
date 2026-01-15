@@ -231,66 +231,6 @@ final class component_iri_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_diffusion_value
-	* @return void
-	*/
-	public function test_get_diffusion_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_diffusion_value();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_resolve_query_object_sql
-	* @return void
-	*/
-	public function test_resolve_query_object_sql() {
-
-		$query_object = json_decode('
-			{
-			    "q": [
-			        "raspa"
-			    ],
-			    "q_operator": null,
-			    "path": [
-			        {
-			            "name": "iri",
-			            "model": "component_iri",
-			            "section_tipo": "test3",
-			            "component_tipo": "test140"
-			        }
-			    ],
-			    "type": "jsonb",
-			    "component_path": [
-			        "components",
-			        "test140",
-			        "iri"
-			    ],
-			    "lang": "all"
-			}
-		');
-
-		$result = component_iri::resolve_query_object_sql( $query_object );
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_resolve_query_object_sql
-
-
-
-	/**
 	* TEST_url_to_iri
 	* @return void
 	*/
@@ -356,24 +296,6 @@ final class component_iri_test extends BaseTestCase {
 		$this->assertEquals('https://dedalo.dev', $response->result[0]->iri);
 		$this->assertEquals('https://wikidata.org', $response->result[1]->iri);
 	}//end test_conform_import_data
-
-
-
-
-	/**
-	* TEST_search_operators_info
-	* @return void
-	*/
-	public function test_search_operators_info() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->search_operators_info();
-
-		$this->assertIsArray($result);
-		$this->assertArrayHasKey('*', $result);
-		$this->assertEquals('contains', $result['*text*']);
-	}//end test_search_operators_info
 
 
 
