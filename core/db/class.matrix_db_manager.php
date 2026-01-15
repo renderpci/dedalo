@@ -1079,6 +1079,14 @@ class matrix_db_manager {
 
 		// exec With prepared statement
 		$stmt_name = md5($sql_query);
+
+		// Cache control: prevent big array memory and performance problems
+		if (count(DBi::$prepared_statements) > 1000) {
+			pg_query($conn, 'DEALLOCATE ALL');
+			DBi::$prepared_statements = [];
+			// debug_log(__METHOD__ . " DEALLOCATE ALL prepared statements (limit 1000 reached)", logger::INFO);
+		}
+
 		if (!isset(DBi::$prepared_statements[$stmt_name])) {
 			$statement = pg_prepare($conn, $stmt_name, $sql_query);
 			if ($statement===false) {
