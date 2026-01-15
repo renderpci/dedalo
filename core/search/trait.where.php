@@ -20,20 +20,18 @@ trait where {
 
 		// main section tipo filter
 		if(count($ar_section_tipo) > 1) {
-			$ar_placeholders = [];
+			$sections_placeholders = [];
 			foreach ($ar_section_tipo as $current_tipo) {
 				// Gets current param key (default is 1 and increases by 1 after each use)
-				$current_param_key = $this->params_counter++;
-				$ar_placeholders[] = '$' . $current_param_key;
-				$this->params[] = $current_tipo;
+				$placeholder = $this->get_placeholder($current_tipo);
+
+				// Add param value to main params array
+				$sections_placeholders[] = $placeholder;
 			}
-			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $ar_placeholders) . '))';
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $sections_placeholders) . '))';
 		}else{
 			// Gets current param key (default is 1 and increases by 1 after each use)
-			$current_param_key = $this->params_counter++;
-			$placeholder = '$' . $current_param_key;
-			// Add param value to main params array
-			$this->params[] = $ar_section_tipo[0];
+			$placeholder = $this->get_placeholder($ar_section_tipo[0]);
 			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . ')';
 		}
 
@@ -314,7 +312,7 @@ trait where {
 			//   "params": associative array				// mandatory params for the sentence as ['_Q1_' => value1, '_Q2_' => value2, ...]
 			// }
 
-		// set initial sql with search_object sentence
+		// set initial SQL with search_object sentence
 		$sql = $search_object->sentence ?? null;
 
 		if (empty($sql)) {
@@ -322,14 +320,11 @@ trait where {
 		}
 
 		foreach ($search_object->params ?? [] as $key => $value) {
-			// Gets current param key (default is 1 and increases by 1 after each use)
-			$current_param_key = $this->params_counter++;
-			// Replace param placeholder by current param key. E.g.: $1, $2, $3, ...
-			$placeholder = '$' . $current_param_key;
-			// Update sql string with new placeholder
+
+			$placeholder = $this->get_placeholder($value);
+
+			// Update SQL string with new placeholder. Replace _Q1_ by $1 in 'SELECT * FROM table WHERE column.rsc187.[*].value = _Q1_'
 			$sql = str_replace( $key, $placeholder, $sql );
-			// Add param value to main params array
-			$this->params[] = $value;
 		}
 
 

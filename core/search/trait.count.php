@@ -40,7 +40,10 @@ trait count {
 		// Exec a count query
 		// Converts JSON search_query_object to SQL query string
 			$count_sql_query = $this->parse_sql_query();
-			$count_result = matrix_db_manager::exec_search($count_sql_query, $this->params);
+			$count_result = matrix_db_manager::exec_search(
+				$count_sql_query,
+				array_keys($this->params), // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+			);
 
 			if ($count_result===false) {
 				return $records_data;
