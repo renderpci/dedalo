@@ -26,7 +26,9 @@ class ts_object {
 	public $ts_id;
 	// ts_parent as dd1_1
 	public $ts_parent;
-
+	// cache
+	public static $term_by_locator_data_cache;
+	public static $resolved_child_cache;
 
 
 	/**
@@ -970,9 +972,9 @@ class ts_object {
 
 		// Cache control (session)
 			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-			static $term_by_locator_data;
-			if ($from_cache===true && isset($term_by_locator_data[$cache_uid])) {
-				return $term_by_locator_data[$cache_uid];
+			
+			if ($from_cache===true && isset(self::$term_by_locator_data_cache[$cache_uid])) {
+				return self::$term_by_locator_data_cache[$cache_uid];
 			}
 
 		// thesaurus_map conditional value
@@ -1043,7 +1045,7 @@ class ts_object {
 			*/
 
 		// cache control
-			$term_by_locator_data[$cache_uid] = $valor;
+			self::$term_by_locator_data_cache[$cache_uid] = $valor;
 
 
 		return $valor;
@@ -1163,7 +1165,7 @@ class ts_object {
 	public function get_count_data_group_by( object $component, object $section_list_thesaurus_item ) : object {
 
 		// cache
-			static $resolved_child;
+			
 
 		// filter_locators
 		// get all children of the current term to be used to count the indexations of the term
@@ -1189,9 +1191,9 @@ class ts_object {
 					// This search is for resolve children recursively
 					// Store same sqo search to prevent duplicate queries
 					$hash = md5(json_encode($sqo));
-					if (isset($resolved_child[$hash])) {
+					if (isset(self::$resolved_child_cache[$hash])) {
 						// return from cache
-						$ar_records = $resolved_child[$hash];
+						$ar_records = self::$resolved_child_cache[$hash];
 					}else{
 						$search = search::get_instance(
 							$sqo // object sqo
@@ -1199,7 +1201,7 @@ class ts_object {
 						$db_result	= $search->search();
 						$ar_records	= $db_result->fetch_all();
 						// cache
-						$resolved_child[$hash] = $ar_records;
+						self::$resolved_child_cache[$hash] = $ar_records;
 					}
 
 				// relation_type is used to filter in relations

@@ -29,6 +29,8 @@ class component_relation_children extends component_relation_common {
 	// ar_target_section_tipo
 	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
 
+	// Cache for ar_related_parent_tipo
+	public static $ar_parent_tipo_cache = [];
 
 
 
@@ -490,11 +492,10 @@ class component_relation_children extends component_relation_common {
 	*/
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
-		// cache
-		static $ar_parent_tipo_cache;
+		// cache		
 		$cache_key = $tipo . '_' . $section_tipo;
-		if( isset($ar_parent_tipo_cache[$cache_key]) ){
-			return $ar_parent_tipo_cache[$cache_key];
+		if( isset(self::$ar_parent_tipo_cache[$cache_key]) ){
+			return self::$ar_parent_tipo_cache[$cache_key];
 		}
 
 		// debug
@@ -545,7 +546,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		// cache
-		$ar_parent_tipo_cache[$cache_key] = $ar_parent_tipo;
+		self::$ar_parent_tipo_cache[$cache_key] = $ar_parent_tipo;
 
 
 		return $ar_parent_tipo;

@@ -16,7 +16,8 @@ class relation_list extends common {
 		// diffusion_properties
 		public $diffusion_properties;
 		// diffusion_dato_cache
-		public $diffusion_dato_cache;
+		public static $diffusion_dato_cache;
+		public static $diffusion_value_cache;
 
 
 
@@ -266,11 +267,10 @@ class relation_list extends common {
 			? (array)$process_dato_arguments->filter_component
 			: null;
 
-		// cache
-			static $diffusion_dato_cache;
+		// cache			
 			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$process_dato_arguments_key.'_'.to_string($filter_section).'_'.to_string($filter_component);
-			if (isset($diffusion_dato_cache[$cache_key])) {
-				return $diffusion_dato_cache[$cache_key];
+			if (isset(self::$diffusion_dato_cache[$cache_key])) {
+				return self::$diffusion_dato_cache[$cache_key];
 			}
 
 		// sqo . COmmon used to get inverse locators
@@ -377,7 +377,7 @@ class relation_list extends common {
 		}//end foreach ($ar_locators as $current_locator)
 
 		// cache
-			$diffusion_dato_cache[$cache_key] = $ar_values;
+			self::$diffusion_dato_cache[$cache_key] = $ar_values;
 
 
 		return $ar_values;
@@ -417,10 +417,10 @@ class relation_list extends common {
 			: '';
 
 		// cache
-			static $diffusion_value_cache;
+			
 			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$data_to_be_used.'_'.$diffusion_properties_key;
-			if (isset($diffusion_value_cache[$cache_key])) {
-				return $diffusion_value_cache[$cache_key];
+			if (isset(self::$diffusion_value_cache[$cache_key])) {
+				return self::$diffusion_value_cache[$cache_key];
 			}
 
 		// sqo
@@ -895,7 +895,7 @@ class relation_list extends common {
 			}
 
 		// cache
-			$diffusion_value_cache[$cache_key] = $diffusion_value;
+			self::$diffusion_value_cache[$cache_key] = $diffusion_value;
 
 
 		return $diffusion_value;

@@ -8,8 +8,8 @@ class tool_update_cache extends tool_common {
 
 
 
-	static $n_records = 0;
-	static $total; // count records search
+	public static $n_records = 0;
+	public static $total; // count records search
 
 
 

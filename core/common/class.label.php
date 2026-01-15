@@ -8,7 +8,7 @@ abstract class label {
 
 
 
-	static $ar_label;
+	public static $ar_label;
 
 
 

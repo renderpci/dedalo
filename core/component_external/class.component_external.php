@@ -14,6 +14,8 @@ class component_external extends component_common {
 	// Property to enable or disable the get and set data in different languages
 	protected $supports_translation = false;
 
+	// Cache for data from remote
+	public static $data_from_remote_cache = [];
 
 
 	/**
@@ -44,11 +46,10 @@ class component_external extends component_common {
 			$section_tipo	= $this->section_tipo;
 			$lang			= DEDALO_DATA_LANG;
 
-		// cache
-			static $data_from_remote_cache = [];
+		// cache			
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
-			if (array_key_exists($uid, $data_from_remote_cache)) {
-				return $data_from_remote_cache[$uid];
+			if (array_key_exists($uid, self::$data_from_remote_cache)) {
+				return self::$data_from_remote_cache[$uid];
 			}		
 
 		// section_properties
@@ -190,7 +191,7 @@ class component_external extends component_common {
 			});
 
 		// cache
-			$data_from_remote_cache[$uid] = $row_data;
+			self::$data_from_remote_cache[$uid] = $row_data;
 
 
 		return $row_data;

@@ -31,7 +31,7 @@ class diffusion_section_stats extends diffusion {
 		protected $date;
 		protected $diffusion_map_object;	// Current stored diffusion_map data
 		protected $js_ar_obj;	// Final object for send to JAVASCRIPT diffusion_section_stats.build_charts
-		static $geoip_mm;
+		public static $geoip_mm;
 
 
 

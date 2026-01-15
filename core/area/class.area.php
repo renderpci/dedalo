@@ -7,11 +7,11 @@ class area extends area_common  {
 
 
 
-	static $ar_ts_children_all_areas_hierarchized;
+	public static $ar_ts_children_all_areas_hierarchized;
 
 	// CHILDREN AREAS CRITERION
-	static $ar_children_include_model_name	= array('area','section','section_tool');
-	static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
+	public static $ar_children_include_model_name	= array('area','section','section_tool');
+	public static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
 
 
 

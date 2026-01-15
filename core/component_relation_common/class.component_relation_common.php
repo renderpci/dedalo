@@ -60,6 +60,9 @@ class component_relation_common extends component_common {
 		// locator_lookup_map. Auxiliar map to check if a locator already exists in the component data
 		protected $locator_lookup_map;
 
+		// cache
+		static $hierarchy_sections_from_types_cache;
+
 
 
 	/**
@@ -1612,13 +1615,12 @@ class component_relation_common extends component_common {
 	*/
 	public static function get_hierarchy_sections_from_types( array $hierarchy_types, string $component_tipo=DEDALO_HIERARCHY_TARGET_SECTION_TIPO ) : array {
 
-		// cache
-			static $cache_hierarchy_sections_from_types;
+		// cache			
 			$use_cache = true;
 			if ($use_cache===true) {
 				$cache_key = implode('_', $hierarchy_types);
-				if (isset($cache_hierarchy_sections_from_types[$cache_key])) {
-					return $cache_hierarchy_sections_from_types[$cache_key];
+				if (isset(self::$hierarchy_sections_from_types_cache[$cache_key])) {
+					return self::$hierarchy_sections_from_types_cache[$cache_key];
 				}
 			}
 
@@ -1728,7 +1730,7 @@ class component_relation_common extends component_common {
 
 		// cache
 			if ($use_cache===true) {
-				$cache_hierarchy_sections_from_types[$cache_key] = $hierarchy_sections_from_types;
+				self::$hierarchy_sections_from_types_cache[$cache_key] = $hierarchy_sections_from_types;
 			}
 
 
