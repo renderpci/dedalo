@@ -45,7 +45,7 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql = 'SELECT datos FROM "'.$table.'" WHERE id = $1 LIMIT 1';
+			$sql = 'SELECT data FROM "'.$table.'" WHERE id = $1 LIMIT 1';
 			$res = matrix_db_manager::exec_search($sql, [$id]);
 
 			$num_rows	= $res===false
@@ -54,20 +54,20 @@ class lock_components {
 
 			// create first row if empty table
 			if ($num_rows<1) {
-				$dato		= '[]';
-				$strQuery	= "INSERT INTO \"$table\" (id, datos) VALUES ($1, $2)";
-				pg_query_params(DBi::_getConnection(), $strQuery, [$id, $dato]);
+				$data		= '[]';
+				$strQuery	= "INSERT INTO \"$table\" (id, data) VALUES ($1, $2)";
+				pg_query_params(DBi::_getConnection(), $strQuery, [$id, $data]);
 			}else{
-				$dato = pg_fetch_result($res, 0, 0);
+				$data = pg_fetch_result($res, 0, 0);
 			}
-			$dato = json_decode($dato) ?? [];
+			$data = json_decode($data) ?? [];
 
 		// switch action
-			$new_dato = [];
+			$new_data = [];
 			switch ($event_element->action) {
 
 				case 'focus':
-					foreach ($dato as $key => $current_event_element) {
+					foreach ($data as $key => $current_event_element) {
 
 						if ($current_event_element->user_id==$event_element->user_id) {
 
@@ -76,7 +76,7 @@ class lock_components {
 								&& $current_event_element->section_tipo===$event_element->section_tipo
 								) {
 
-								unset($dato[$key]);
+								unset($data[$key]);
 							}
 
 						}else{
@@ -93,19 +93,19 @@ class lock_components {
 								// response
 									$response->result = false;
 									$response->msg 	  = sprintf(label::get_label('component_in_use'),''.$current_event_element->full_username.'');
-									$response->dato   = $dato;
+									$response->dato   = $data;
 									$response->in_use = true;
 								break; // stop loop here
 							}
 						}
 					}
-					// fix dato - reindex array after unset operations, then add new event
-					$dato = array_values($dato); // Reindex array after unset operations
-					$new_dato = array_merge($dato, [$event_element]);
+					// fix data - reindex array after unset operations, then add new event
+					$data = array_values($data); // Reindex array after unset operations
+					$new_data = array_merge($data, [$event_element]);
 					break;
 
 				case 'blur':
-					foreach ($dato as $key => $current_event_element) {
+					foreach ($data as $key => $current_event_element) {
 
 						if (   $current_event_element->section_id==$event_element->section_id
 							&& $current_event_element->section_tipo===$event_element->section_tipo
@@ -113,28 +113,28 @@ class lock_components {
 							&& $current_event_element->user_id==$event_element->user_id
 							) {
 
-							unset($dato[$key]);
+							unset($data[$key]);
 						}
 					}
-					// fix dato
-					$new_dato = $dato;
+					// fix data
+					$new_data = $data;
 					break;
 
 				case 'delete_user_section_locks':
-					foreach ($dato as $key => $current_event_element) {
+					foreach ($data as $key => $current_event_element) {
 
 						if (
 							// $current_event_element->section_id==$event_element->section_id &&
 							$current_event_element->section_tipo===$event_element->section_tipo &&
 							$current_event_element->user_id==$event_element->user_id
 							) {
-							// debug_log(__METHOD__." Deleting (unset) dato key $key ".to_string($dato[$key]), logger::DEBUG);
+							// debug_log(__METHOD__." Deleting (unset) data key $key ".to_string($data[$key]), logger::DEBUG);
 
-							unset($dato[$key]);
+							unset($data[$key]);
 						}
 					}
-					// fix dato
-					$new_dato = $dato;
+					// fix data
+					$new_data = $data;
 					break;
 
 				default:
@@ -151,7 +151,7 @@ class lock_components {
 
 		// delete old elements of current user
 			// $ara_properties = array('user_id','section_id','section_tipo');
-			// foreach ($dato as $key => $current_event_element) {
+			// foreach ($data as $key => $current_event_element) {
 
 			// 	# BLUR ACTION
 			// 	if ($event_element->action=='blur') {
@@ -161,7 +161,7 @@ class lock_components {
 			// 			&& $current_event_element->component_tipo==$event_element->component_tipo
 			// 			//&& $current_event_element->user_id==$event_element->user_id
 			// 			) {
-			// 			unset($dato[$key]);
+			// 			unset($data[$key]);
 			// 			//$add_element=false;
 			// 		}
 			// 	}
@@ -172,7 +172,7 @@ class lock_components {
 			// 		if (   $current_event_element->section_id==$event_element->section_id
 			// 			&& $current_event_element->section_tipo==$event_element->section_tipo
 			// 			) {
-			// 			unset($dato[$key]);
+			// 			unset($data[$key]);
 			// 		}
 
 			// 	}else{
@@ -187,23 +187,23 @@ class lock_components {
 			// 			return $response;
 			// 		}
 			// 	}
-			// }//end foreach ($dato as $key => $current_event_element) {
+			// }//end foreach ($data as $key => $current_event_element) {
 
 		// update_lock_elements
 			if ($update_lock_elements===true) {
 
-				// recreate dato array keys
-					$new_dato	= array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
-					$new_dato	= json_encode($new_dato);		// Convert again to text before save to database
-					$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
+				// recreate data array keys
+					$new_data	= array_values($new_data);	// Recreate array keys to avoid produce json objects instead array
+					$new_data	= json_encode($new_data);		// Convert again to text before save to database
+					$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
 					// sync mode
-					pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
+					pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
 					pg_get_result(DBi::_getConnection());
 
 				// response
 					$response->result = true;
 					$response->msg 	  = 'Updated db lock elements';
-					$response->dato   = $dato;
+					$response->dato   = $data;
 			}//end if ($update_lock_elements===true)
 
 
@@ -248,7 +248,7 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql		= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$sql		= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
 			$res		= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
@@ -268,18 +268,18 @@ class lock_components {
 
 		}else{
 
-			$dato	= pg_fetch_result($res, 0, 0);
-			$dato	= (array)json_decode($dato);
+			$data	= pg_fetch_result($res, 0, 0);
+			$data	= (array)json_decode($data);
 
 			$removed_elements=0;
-			foreach ($dato as $key => $current_event_element) {
+			foreach ($data as $key => $current_event_element) {
 
 				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
 
 					if ( empty($user_id) ) {
 						// All elements
 						// debug_log(__METHOD__." Deleting element from all users ".to_string($current_event_element), logger::DEBUG);
-						unset($dato[$key]);
+						unset($data[$key]);
 						$removed_elements++;
 
 					}else{
@@ -290,18 +290,18 @@ class lock_components {
 								." Deleting element from user $user_id ".to_string($current_event_element)
 								, logger::DEBUG
 							);
-							unset($dato[$key]);
+							unset($data[$key]);
 							$removed_elements++;
 						}
 					}//end if (empty($user_id)) {
 				}
-			}//end foreach ($dato as $key => $current_event_element)
+			}//end foreach ($data as $key => $current_event_element)
 
-			// Recreate dato array keys
-				$new_dato	= array_values($dato); // Recreate array keys to avoid produce JSON objects instead array
-				$new_dato	= json_encode($new_dato); // Convert again to text before save to database
-				$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
-				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
+			// Recreate data array keys
+				$new_data	= array_values($data); // Recreate array keys to avoid produce JSON objects instead array
+				$new_data	= json_encode($new_data); // Convert again to text before save to database
+				$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
+				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
 				$res = pg_get_result(DBi::_getConnection());
 
 			// response OK
@@ -329,7 +329,7 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql	= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$sql	= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
 			$res	= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
@@ -350,11 +350,11 @@ class lock_components {
 
 		}else{
 
-			$dato	= pg_fetch_result($res, 0, 0);
-			$dato	= (array)json_decode($dato);
+			$data	= pg_fetch_result($res, 0, 0);
+			$data	= (array)json_decode($data);
 
 			$ar_user_actions = array();
-			foreach ($dato as $current_event_element) {
+			foreach ($data as $current_event_element) {
 
 				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
 
@@ -362,14 +362,6 @@ class lock_components {
 				}
 			}
 			$response->ar_user_actions = $ar_user_actions;
-
-			// Recreate dato array keys
-				// $new_dato = array_values($dato);		// Recreate array keys to avoid produce JSON objects instead array
-				// $new_dato = json_encode($new_dato);		// Convert again to text before save to database
-				// $strQuery = "UPDATE \"".$table."\" SET datos = $1 WHERE id = $2";
-				// #$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				// pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				// $res = pg_get_result(DBi::_getConnection());
 
 			// response OK
 				$response->result	= true;
@@ -438,7 +430,7 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql	= "SELECT datos FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$sql	= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
 			$res	= matrix_db_manager::exec_search($sql, [$id]);
 			$num_rows	= $res===false
 				? 0
@@ -459,18 +451,18 @@ class lock_components {
 
 		}else{
 
-			// dato
-				$dato	= pg_fetch_result($res, 0, 0);
-				$dato	= (array)json_decode($dato);
+			// data
+				$data	= pg_fetch_result($res, 0, 0);
+				$data	= (array)json_decode($data);
 
 			// interval
 				$hours		= lock_components::MAXIMUM_LOCK_EVENT_TIME;
 				$interval	= date_interval_create_from_date_string($hours." hours");
 				$now		= new DateTime();
 
-			$new_dato = array();
+			$new_data = array();
 			$deleted_elements = false;
-			foreach ($dato as $event_element) {
+			foreach ($data as $event_element) {
 
 				$event_date	= new DateTime($event_element->date);
 				$expires	= $event_date->add($interval);
@@ -481,17 +473,17 @@ class lock_components {
 						, logger::WARNING
 					);
 				}else{
-					$new_dato[] = $event_element;
+					$new_data[] = $event_element;
 				}
 			}//end foreach
 
 			if ($deleted_elements===true) {
-				// Recreate dato array keys
-				$new_dato	= array_values($new_dato);	// Recreate array keys to avoid produce JSON objects instead array
-				$new_dato	= json_encode($new_dato);	// Convert again to text before save to database
-				$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
-				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
+				// Recreate data array keys
+				$new_data	= array_values($new_data);	// Recreate array keys to avoid produce JSON objects instead array
+				$new_data	= json_encode($new_data);	// Convert again to text before save to database
+				$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
+				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_data, $id ));
+				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_data, $id]);
 				$res = pg_get_result(DBi::_getConnection());
 
 				// response OK Updated
