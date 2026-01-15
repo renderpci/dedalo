@@ -293,14 +293,14 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_RECORDS
-	* @return array $this->ar_records
+	* @return db_result $this->ar_records
 	*/
-	protected function get_records() : array {
+	protected function get_records() : db_result {
 
 		// empty records case
-			if (!empty($this->ar_records)) {
-				return $this->ar_records;
-			}
+		if (!empty($this->ar_records)) {
+			return $this->ar_records;
+		}
 
 		// search_options
 		$section_tipo	= $this->section_tipo;
@@ -323,7 +323,7 @@ class tool_export extends tool_common {
 
 	 			// sections
 				$sections			= sections::get_instance(null, $sqo, $section_tipo);
-				$this->ar_records	= $sections->get_data();
+				$this->ar_records	= $sections->get_data(); // returns db_result format (Iterator)
 				break;
 		}
 
