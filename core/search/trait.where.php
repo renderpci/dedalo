@@ -167,7 +167,7 @@ trait where {
 				// recursion filter_parser
 				$parsed_string = $this->filter_parser($op2, $ar_value2);
 				if (!empty($parsed_string)) {
-					$string_query .= ' (' . $parsed_string . ' )';
+					$string_query .= '( ' . $parsed_string . ' )';
 
 					if ($key+1 < $total) {
 						$string_query .= ' '.$operator.' ';
