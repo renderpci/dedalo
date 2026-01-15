@@ -302,4 +302,27 @@ trait utils {
 
 
 
+	/**
+	* GET_PLACEHOLDER
+	* Gets the placeholder for a given value.
+	* If it exists, returns it, otherwise returns the next available placeholder.
+	* @param string $value Like 'oh1'
+	* @return string $placeholder Like $1, $2, $3, ...
+	*/
+	public function get_placeholder(string $value) : string {
+
+		if(isset($this->params[$value])){
+			// Recycle placeholder and param
+			$placeholder = $this->params[$value];
+		}else{
+			$current_param_key = $this->params_counter++; // Uses value before increment
+			$placeholder = '$' . $current_param_key;
+			$this->params[$value] = $placeholder;
+		}
+
+		return $placeholder;
+	}//end get_placeholders
+
+
+
 }//end utils

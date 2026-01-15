@@ -243,7 +243,10 @@ class search {
 		$sql_query = $this->parse_sql_query();
 		
 		// execute search. Perform a SQL query in DB using pg_execute and parameters.
-		$result	= matrix_db_manager::exec_search( $sql_query, $this->params );
+		$result	= matrix_db_manager::exec_search( 
+			$sql_query, 
+			array_keys($this->params) // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+		);
 		if ($result===false) {
 			return false;
 		}
