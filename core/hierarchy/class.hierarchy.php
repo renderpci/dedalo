@@ -762,24 +762,24 @@ class hierarchy extends ontology {
 		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
 
 		// search query object
-			$search_query_object = json_decode('{
-			  "section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-			  "filter": {
-				"$and": [
-				  {
-					"q": "'.$section_tipo.'",
-					"path": [
-					  {
-						"section_tipo": "'.DEDALO_HIERARCHY_SECTION_TIPO.'",
-						"component_tipo": "'.$hierarchy_component_tipo.'",
-						"model": "'.$model.'",
-						"name": "'.$model.' '.$hierarchy_component_tipo.'"
-					  }
+			$search_query_object = new search_query_object();
+				$search_query_object->set_section_tipo([DEDALO_HIERARCHY_SECTION_TIPO]);
+				$search_query_object->set_filter((object)[
+					'$and' => [
+						(object)[
+							'q'				=> $section_tipo,
+							'q_operator'	=> '==',
+							'path'			=> [
+								(object)[
+									'section_tipo'		=> DEDALO_HIERARCHY_SECTION_TIPO,
+									'component_tipo'	=> $hierarchy_component_tipo,
+									'model'				=> $model,
+									'name'				=> "$model $hierarchy_component_tipo"
+								]
+							]
+						]
 					]
-				  }
-				]
-			  }
-			}');
+				]);
 
 		// search
 			$search		= search::get_instance($search_query_object);
@@ -1285,29 +1285,26 @@ class hierarchy extends ontology {
 		}
 
 		// main filter
-		$filter = json_decode('
-			{
-				"$and": [
-					{
-						"q": {
-							"section_id": "1",
-							"section_tipo": "dd64",
-							"from_component_tipo": "hierarchy4"
-						},
-						"q_operator": null,
-						"path": [
-							{
-								"name": "Active",
-								"model": "component_radio_button",
-								"section_tipo": "hierarchy1",
-								"component_tipo": "hierarchy4"
-							}
-						],
-						"type": "jsonb"
-					}
+		$filter = (object)[
+			'$and' => [
+				(object)[
+					'q' => (object)[
+						'section_id'			=> '1',
+						'section_tipo'			=> 'dd64',
+						'from_component_tipo'	=> 'hierarchy4'
+					],
+					'q_operator' => null,
+					'path' => [
+						(object)[
+							'name'				=> 'Active',
+							'model'				=> 'component_radio_button',
+							'section_tipo'		=> 'hierarchy1',
+							'component_tipo'	=> 'hierarchy4'
+						]
+					]
 				]
-			}
-		');
+			]
+		];
 
 		// section tipo depends on the current class (hierarchy, ontology)
 		$section_tipo = hierarchy::$main_section_tipo;
