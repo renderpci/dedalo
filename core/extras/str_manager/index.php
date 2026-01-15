@@ -134,7 +134,7 @@ function get_ontology_file_list( ?array $ar_tld=null ) : array {
 			$folder_path	= DEDALO_EXTRAS_PATH .'/'. $current_tld;
 			$dir_ready		= create_directory($folder_path);
 			if( !$dir_ready ) {
-				return false;
+				return [];
 			}
 		}
 
