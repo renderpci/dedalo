@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(__FILE__, 2) . '/bootstrap.php';
 
 
 
-final class section_record_test extends TestCase {
+final class section_record_test extends BaseTestCase {
 
 
 	static $last_section_id;

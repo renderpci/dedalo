@@ -1,12 +1,10 @@
 <?php declare(strict_types=1);
-// PHPUnit classes
-use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
-final class dd_utils_api_Test extends TestCase {
+final class dd_utils_api_Test extends BaseTestCase {
 
 
 
