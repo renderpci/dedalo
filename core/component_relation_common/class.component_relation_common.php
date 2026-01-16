@@ -1615,7 +1615,7 @@ class component_relation_common extends component_common {
 	*/
 	public static function get_hierarchy_sections_from_types( array $hierarchy_types, string $component_tipo=DEDALO_HIERARCHY_TARGET_SECTION_TIPO ) : array {
 
-		// cache			
+		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
 				$cache_key = implode('_', $hierarchy_types);

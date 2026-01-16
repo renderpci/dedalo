@@ -21,7 +21,7 @@ class request_config_presets {
 	*/
 	public static function get_active_request_config() : array {
 
-		// static cache		
+		// static cache
 		if (!empty(self::$active_request_config_cache)) {
 			return self::$active_request_config_cache;
 		}

@@ -90,7 +90,7 @@ class component_security_access extends component_common {
 
 					// set instance datalist
 					$this->datalist = $datalist;
-					
+
 					debug_log(__METHOD__
 						. ' Return already calculated and cached in file datalist. Time: ' . exec_time_unit($start_time,'ms').' ms' .PHP_EOL
 						. ' datalist total items: ' . (!empty($datalist) ? count($datalist) : 0) . PHP_EOL
@@ -204,7 +204,7 @@ class component_security_access extends component_common {
 
 		// set instance datalist
 			$this->datalist = $datalist;
-		
+
 		// cache file write
 			if ($use_cache===true) {
 				// cache to file.
@@ -456,7 +456,7 @@ class component_security_access extends component_common {
 	public static function get_ar_tipo_admin() : array {
 
 		// static cache
-			
+
 			if(isset(self::$ar_tipo_admin_cache)) {
 				return self::$ar_tipo_admin_cache;
 			}
