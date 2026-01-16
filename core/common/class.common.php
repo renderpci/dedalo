@@ -2399,12 +2399,6 @@ abstract class common {
 						// fix request_config
 							$this->request_config = [$request_config_object];
 
-						// merge and set ddo elements
-							// dd_core_api::$ddo_map = array_merge(
-							// 	dd_core_api::$ddo_map,
-							// 	$request_config_object->show->ddo_map
-							// );
-
 					return $this->request_config; // we have finished ! Note we stop here (!)
 				}//end if (!empty($requested_show))
 			}//end if( isset($requested_source) &&...
@@ -2511,24 +2505,6 @@ abstract class common {
 					}
 				}
 			}//end if ($model==='section')
-
-		// update dd_core_api::$ddo_map
-			// $request_config_len = sizeof($request_config);
-			// for ($i=0; $i < $request_config_len; $i++) {
-
-			// 	$current_request_config = $request_config[$i];
-
-			// 	// skip empty ddo_map
-			// 	if (empty($current_request_config->show->ddo_map)) {
-			// 		continue;
-			// 	}
-
-			// 	// add ddo_map
-			// 	dd_core_api::$ddo_map = array_merge(
-			// 		dd_core_api::$ddo_map,
-			// 		$current_request_config->show->ddo_map
-			// 	);
-			// }
 
 		// cache
 			if ($use_cache===true) {
