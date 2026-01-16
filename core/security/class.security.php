@@ -427,21 +427,21 @@ class security {
 		$area_permissions = [];
 
 		// cached permissions_table from file xxx_cache_permissions_table.json
-		$full_permissions_table = security::get_permissions_table();	
+		$full_permissions_table = security::get_permissions_table();
 
 		// Identify and filter items with same tipo and section_tipo such as {"tchi1_tchi1": 2}
 		foreach ($full_permissions_table as $key => $value) {
 			$pos = strpos($key, '_');
-		
+
 			// If underscore exists and is followed by the same string
 			if ($pos !== false && substr_compare($key, $key, $pos + 1, $pos) === 0) {
 				// Ensure the match is a full segment (followed by end of string or another _)
 				$nextChar = $key[$pos + $pos + 1] ?? '';
-				if ($nextChar === '' || $nextChar === '_') {	
+				if ($nextChar === '' || $nextChar === '_') {
 					$item = new stdClass();
 					$item->tipo = substr($key, 0, $pos);
 					$item->value = $value;
-					
+
 					$area_permissions[] = $item;
 				}
 			}

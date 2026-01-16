@@ -228,14 +228,14 @@ abstract class common {
 	 * @return void
 	 */
 	public function __get(string $name) {
-		if($name === 'data') {			
+		if($name === 'data') {
 			throw new Exception("Attempt to access undeclared property: $name");
 		}
         // Or log it:
         // error_log("Access to undeclared property: $name");
         // return null;
     }
-    
+
     /**
      * __SET
      * Avoid to set undeclared properties
@@ -412,11 +412,11 @@ abstract class common {
 			if (count(self::$matrix_table_from_tipo) > 1000) {
 				self::$matrix_table_from_tipo = [];
 			}
-			
+
 			// check cache
 			if(isset(self::$matrix_table_from_tipo[$tipo])) {
 				return self::$matrix_table_from_tipo[$tipo];
-			}			
+			}
 
 		// all case
 			if ($tipo==='all') {
@@ -965,7 +965,7 @@ abstract class common {
 	*/
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
-		// cache		
+		// cache
 		$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
 		if (isset(self::$ar_related_by_model_data[$uid])) {
 			return self::$ar_related_by_model_data[$uid];
@@ -2577,7 +2577,7 @@ abstract class common {
 				}
 			}
 
-		// cache			
+		// cache
 			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
 			// Safe control: prevent big array memory and performance problems
@@ -3891,7 +3891,7 @@ abstract class common {
 			$skip_permissions			= $options->skip_permissions ?? false;
 			$caller_tipo				= $options->caller_tipo ?? null;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
-			$ar_components_exclude		= $options->ar_components_exclude ?? [							
+			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_3d',
 				'component_av',
 				'component_image',
@@ -3902,7 +3902,7 @@ abstract class common {
 				'component_info',
 				'component_inverse',
 				'section_tab',
-				//'component_filter_records',	
+				//'component_filter_records',
 				//'component_relation_children',
 				//'component_relation_related',
 				//'component_relation_parent',

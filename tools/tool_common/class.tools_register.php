@@ -563,7 +563,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$value	= $component->get_data();			
+			$value	= $component->get_data();
 			$tool_object->label = $value;
 
 		// version
@@ -607,7 +607,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$value	= $component->get_data();			
+			$value	= $component->get_data();
 			$tool_object->description = $value;
 
 		// developer
@@ -645,7 +645,7 @@ class tools_register {
 					strip_tags( $current_value[0] );
 					$affected_models = array_merge( $affected_models, $current_value );
 				}
-			}		
+			}
 			$tool_object->affected_models = $affected_models;
 
 		// affected tipos (components)
@@ -660,7 +660,7 @@ class tools_register {
 				$section_tipo
 			);
 			$data	= $component->get_data();
-			$value	= $data[0]->value ?? null;			
+			$value	= $data[0]->value ?? null;
 			$tool_object->affected_tipos = $value; // array
 
 		// show in inspector
@@ -983,7 +983,7 @@ class tools_register {
 		// search
 			$config_search	= search::get_instance( $sqo_config_tool_active );
 			$db_result		= $config_search->search();
-			$row_count 		= $db_result->row_count();	
+			$row_count 		= $db_result->row_count();
 
 		// map result as ar_config
 			$ar_config = [];
@@ -1065,8 +1065,8 @@ class tools_register {
 		// search
 			$config_search = search::get_instance($sqo_config_tool_active);
 			$db_result = $config_search->search();
-		
-		// map result as ar_config			
+
+		// map result as ar_config
 			foreach ($db_result as $record) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
@@ -1120,7 +1120,7 @@ class tools_register {
 				$value = new stdclass();
 				$value->name = $name;
 				$value->config = $config;
-				
+
 				// add to ar_config
 				$ar_config[] = $value;
 			}

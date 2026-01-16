@@ -19,6 +19,7 @@ include 'trait.search_component_number.php';
 class component_number extends component_common {
 
 
+
 	// traits. Files added to current class file to split the large code.
 	use search_component_number;
 

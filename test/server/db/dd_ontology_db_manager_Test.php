@@ -44,7 +44,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 	public static function tearDownAfterClass(): void
 	{
 		$conn = DBi::_getConnection();
-		
+
 		// Drop test table and sequence
 		$sql = "
 			DROP TABLE IF EXISTS dd_ontology_test CASCADE;
@@ -397,7 +397,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		];
 		dd_ontology_db_manager::create($tipo_json, $json_values);
 		$result_json = dd_ontology_db_manager::read($tipo_json);
-		
+
 		$this->assertIsObject($result_json['term'], 'Expected term to be decoded as object');
 		$this->assertIsObject($result_json['properties'], 'Expected properties to be decoded as object');
 		$this->assertEquals('Test Term', $result_json['term']->{'lg-eng'}, 'Expected correct term value');
@@ -406,7 +406,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo_int = 'test_int_67';
 		dd_ontology_db_manager::create($tipo_int, (object)['order_number' => 42]);
 		$result_int = dd_ontology_db_manager::read($tipo_int);
-		
+
 		$this->assertIsInt($result_int['order_number'], 'Expected order_number to be integer');
 		$this->assertEquals(42, $result_int['order_number'], 'Expected correct order_number value');
 
@@ -801,13 +801,13 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$result_invalid = dd_ontology_db_manager::search([]);
 		$this->assertFalse($result_invalid, 'Expected false when searching with empty values');
 
-		// Test search with invalid column (should fail)		
+		// Test search with invalid column (should fail)
 		$result = dd_ontology_db_manager::search([
 			'invalid_column_name' => 'value'
 		]);
 		$this->assertFalse($result, 'Expected false when searching with invalid column name');
 
-		
+
 		// massive seaech
 		$this->execution_timing(
 			'search',
@@ -843,10 +843,10 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo_upsert = 'test_upsert_99';
 		$id1 = dd_ontology_db_manager::create($tipo_upsert, (object)['parent' => 'dd1']);
 		$id2 = dd_ontology_db_manager::create($tipo_upsert, (object)['parent' => 'dd2']);
-		
+
 		// Should return same ID (upsert)
 		$this->assertEquals($id1, $id2, 'Expected same ID for upsert');
-		
+
 		// Verify parent was updated
 		$result = dd_ontology_db_manager::read($tipo_upsert);
 		$this->assertEquals('dd2', $result['parent'], 'Expected parent to be updated');
@@ -876,15 +876,15 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Test 2: Cache behavior - verify cache is used
 		$tipo_cache = 'test_cache_101';
 		dd_ontology_db_manager::create($tipo_cache, (object)['parent' => 'dd1']);
-		
+
 		// First read (not cached)
 		$result1 = dd_ontology_db_manager::read($tipo_cache);
-		
+
 		// Second read (should be cached)
 		$start_time = start_time();
 		$result2 = dd_ontology_db_manager::read($tipo_cache);
 		$total_time = exec_time_unit($start_time);
-		
+
 		$this->assertEquals($result1, $result2, 'Expected same result from cache');
 		$this->assertLessThan(0.01, $total_time, 'Expected cached read to be very fast');
 
@@ -896,7 +896,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 			'lg-fra' => 'Terme Français'
 		];
 		dd_ontology_db_manager::create($tipo_json, (object)['term' => $complex_term]);
-		
+
 		$result_json = dd_ontology_db_manager::read($tipo_json);
 		$this->assertIsObject($result_json['term'], 'Expected term to be object');
 		$this->assertEquals('English Term', $result_json['term']->{'lg-eng'});
@@ -917,7 +917,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$result_empty = dd_ontology_db_manager::update($tipo, (object)[]);
 		$this->assertFalse($result_empty, 'Expected false for empty values');
 
-		// Test 2: Update with invalid column (should fail)		
+		// Test 2: Update with invalid column (should fail)
 		$result = dd_ontology_db_manager::update($tipo, (object)[
 			'invalid_column' => 'value'
 		]);
@@ -928,7 +928,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 			'parent' => null,
 			'properties' => null
 		]);
-		
+
 		$result = dd_ontology_db_manager::read($tipo);
 		$this->assertNull($result['parent'], 'Expected parent to be NULL');
 		$this->assertNull($result['properties'], 'Expected properties to be NULL');
@@ -938,7 +938,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 			'is_model' => true,
 			'is_translatable' => false
 		]);
-		
+
 		$result_bool = dd_ontology_db_manager::read($tipo);
 		$this->assertTrue($result_bool['is_model'], 'Expected is_model to be true');
 		$this->assertFalse($result_bool['is_translatable'], 'Expected is_translatable to be false');
@@ -960,19 +960,19 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo_cache = 'test_delete_cache_104';
 		dd_ontology_db_manager::create($tipo_cache);
 		dd_ontology_db_manager::read($tipo_cache); // Cache it
-		
+
 		dd_ontology_db_manager::delete($tipo_cache);
-		
+
 		$result_after_delete = dd_ontology_db_manager::read($tipo_cache);
 		$this->assertEquals([], $result_after_delete, 'Expected empty array after delete');
 
 		// Test 3: Double delete (delete already deleted record)
 		$tipo_double = 'test_double_delete_105';
 		dd_ontology_db_manager::create($tipo_double);
-		
+
 		$result1 = dd_ontology_db_manager::delete($tipo_double);
 		$this->assertTrue($result1, 'First delete should succeed');
-		
+
 		$result2 = dd_ontology_db_manager::delete($tipo_double);
 		$this->assertTrue($result2, 'Second delete should also return true');
 	}//end test_delete_edge_cases
@@ -1006,19 +1006,19 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$tipo1 = 'test_search_edge_106';
 		$tipo2 = 'test_search_edge_107';
 		$tipo3 = 'test_search_edge_108';
-		
+
 		dd_ontology_db_manager::create($tipo1, (object)['order_number' => 10]);
 		dd_ontology_db_manager::create($tipo2, (object)['order_number' => 20]);
 		dd_ontology_db_manager::create($tipo3, (object)['order_number' => 30]);
-		
+
 		$result_operator = dd_ontology_db_manager::search([
 			'order_number' => (object)['operator' => '>', 'value' => 15]
 		], true, 1);
-		
+
 		$this->assertIsArray($result_operator, 'Expected array result');
 		$this->assertEquals(1, count($result_operator), 'Expected exactly 1 result with limit');
 		$this->assertEquals($tipo2, $result_operator[0], 'Expected tipo2 (order_number=20) to be first');
-		
+
 		// Cleanup
 		dd_ontology_db_manager::delete($tipo1);
 		dd_ontology_db_manager::delete($tipo2);

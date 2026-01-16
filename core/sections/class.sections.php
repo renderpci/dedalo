@@ -83,7 +83,7 @@ class sections extends common {
 	 * @return void
 	 */
 	private function set_up() : void {
-		
+
 		// sqo. Use sqo.mode to define the search class manager to run your search
 		if(!isset($this->search_query_object)){
 			return;
@@ -141,7 +141,7 @@ class sections extends common {
 		// already calculated case
 		if (isset($this->data)) {
 			return $this->data;
-		}		
+		}
 
 		// search
 		$search		= search::get_instance($this->search_query_object);
@@ -219,7 +219,7 @@ class sections extends common {
 				$sqo->full_count	= false;
 				$sqo->select		= [];
 				$sqo->parsed		= true;
-				
+
 				// search
 				$search		= search::get_instance($sqo);
 				$db_result	= $search->search();
@@ -471,7 +471,7 @@ class sections extends common {
 							);
 						}
 					}
-				
+
 				// ar_delete section_id
 				$ar_delete_section_id[] = $current_section_id;
 			}
@@ -480,15 +480,15 @@ class sections extends common {
 			if ($delete_mode==='delete_record') {
 
 				$check_search	= search::get_instance($sqo);
-				$db_result		= $check_search->search();	
-			
+				$db_result		= $check_search->search();
+
 				// check empty records
 				if( $db_result->row_count() > 0 ) {
 
 					$check_ar_section_id = [];
 					foreach($db_result as $row){
 						$check_ar_section_id[] = $row->section_id;
-					}	
+					}
 
 					$response->errors[] = 'record not deleted: '.to_string($check_ar_section_id);
 					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);

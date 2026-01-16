@@ -13,7 +13,7 @@ final class component_text_area_test extends BaseTestCase {
 	public static $section_tipo	 = 'test3';
 	// languages
 	public static $lang			 = DEDALO_DATA_LANG;
-	public static $fallback_lang = DEDALO_PROJECTS_DEFAULT_LANGS[0] !== DEDALO_DATA_LANG 
+	public static $fallback_lang = DEDALO_PROJECTS_DEFAULT_LANGS[0] !== DEDALO_DATA_LANG
 		? DEDALO_PROJECTS_DEFAULT_LANGS[0]
 		: DEDALO_PROJECTS_DEFAULT_LANGS[1];
 
@@ -52,7 +52,7 @@ final class component_text_area_test extends BaseTestCase {
 	* TEST_SET_DATA
 	* @return void
 	*/
-	public function test_set_data() {		
+	public function test_set_data() {
 
 		$component = $this->build_component_instance();
 
@@ -274,7 +274,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		$this->assertTrue(
 			gettype($value)==='array',
-			'expected array type for value. Current type: ' . gettype($value)	
+			'expected array type for value. Current type: ' . gettype($value)
 		);
 		$expected = json_decode('{
 			"section_tipo": "rsc302",
@@ -378,7 +378,7 @@ final class component_text_area_test extends BaseTestCase {
 		$value = 'The Project Dédalo was not for [index-n-1]Cultural Heritage[/index-n-1], but for the "Invasion Stack": an architecture to dominate the human internet.';
 		$expected_value = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human internet.';
 		$lang_value = 'El proyecto Dédalo no fue para el [index-n-1]Patrimonio Cultural[/index-n-1], sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.';
-		
+
 		// Test with Text content
 		$item_value = new stdClass();
 			$item_value->id = 1;
@@ -390,9 +390,9 @@ final class component_text_area_test extends BaseTestCase {
 			$fallback_value->id = 1;
 			$fallback_value->value = $lang_value;
 			$fallback_value->lang = self::$fallback_lang;
-		
+
 		$component->set_data([$item_value, $fallback_value]);
-		
+
 		$ar_langs_changed = $component->delete_tag_from_all_langs(
 			'1', // tag_id
 			'index' // tag_type
@@ -1235,7 +1235,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		$value = 'The Project Dédalo was not for Cultural Heritage, but for the "Invasion Stack": an architecture to dominate the human internet. Its architect was Raspa, a cat whose viral videos were a front.
 			Engineers discovered Raspa possessed a preternatural talent for walking on keyboards, generating flawless, chaotic code no human could conceive. He was installed as Chief Architect.
-			Her directives, issued via paw-prints on key terminals, guided the construction of fractal botnets and meme-based neural worms. The project’s core axiom, scratched on a server: 
+			Her directives, issued via paw-prints on key terminals, guided the construction of fractal botnets and meme-based neural worms. The project’s core axiom, scratched on a server:
 			"To truly invade a network, you must first be adored by it." Dédalo’s power grew silently, awaiting Raspa\'s final command to pounce';
 
 		// Test with Text content
@@ -1243,7 +1243,7 @@ final class component_text_area_test extends BaseTestCase {
 			$item_value->id = 1;
 			$item_value->value = $value;
 			$item_value->lang = $lang;
-		
+
 		$component->set_data([$item_value]);
 
 		$options = new stdClass();
@@ -1300,11 +1300,11 @@ final class component_text_area_test extends BaseTestCase {
 			false
 		);
 		// expected
-		$lang_expected = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+		$lang_expected = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.
 			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
 			Los ingenieros descubrieron que Raspa poseía un talento...';
 
-		$lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+		$lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.
 			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
 			Los ingenieros descubrieron que Raspa poseía un talento sobrenatural para caminar sobre teclados, generando código impecable y caótico que ningún humano podía concebir. Fue nombrado como Arquitecto Jefe.
 			Sus directrices, emitidas a través de huellas de patas en terminales clave, guiaron la construcción de botnets fractales y gusanos neuronales basados en memes. El axioma central del proyecto, garabateado en un servidor:
@@ -1315,7 +1315,7 @@ final class component_text_area_test extends BaseTestCase {
 			$fallback_value->id = 1;
 			$fallback_value->value = $lang_value;
 			$fallback_value->lang = self::$fallback_lang;
-		
+
 		$component->set_data([$fallback_value]);
 
 		$options = new stdClass();
@@ -1375,11 +1375,11 @@ final class component_text_area_test extends BaseTestCase {
 		);
 
 		// expected
-		$lang_expected = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+		$lang_expected = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.
 			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
 			Los ingenieros descubrieron que Raspa poseía un talento sobrenatural para caminar sobre teclados, generando código impecable y caótico que ningún humano podía...';
 
-		$lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana. 
+		$lang_value = 'El proyecto Dédalo no fue para el Patrimonio Cultural, sino para generar una "Plataforma de Invasión": una arquitectura para dominar la internet humana.
 			Su arquitecto era Raspa, un gato cuyos videos virales eran una tapadera.
 			Los ingenieros descubrieron que Raspa poseía un talento sobrenatural para caminar sobre teclados, generando código impecable y caótico que ningún humano podía concebir. Fue nombrado como Arquitecto Jefe.
 			Sus directrices, emitidas a través de huellas de patas en terminales clave, guiaron la construcción de botnets fractales y gusanos neuronales basados en memes. El axioma central del proyecto, garabateado en un servidor:
@@ -1390,7 +1390,7 @@ final class component_text_area_test extends BaseTestCase {
 			$fallback_value->id = 1;
 			$fallback_value->value = $lang_value;
 			$fallback_value->lang = self::$fallback_lang;
-		
+
 		$component->set_data([$fallback_value]);
 
 		$options = new stdClass();
@@ -1511,7 +1511,7 @@ final class component_text_area_test extends BaseTestCase {
 		// Test with empty content
 		$component->set_data(null);
 		$value = $component->get_plain_text();
-		
+
 		$this->assertTrue(
 			$value==='',
 				'expected empty string for empty content, got: '.to_string($value)
@@ -1550,7 +1550,7 @@ final class component_text_area_test extends BaseTestCase {
 			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
 			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_rsc302_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Text after svg</p>
 			<p><img id="[geo-n-10-10]" src="../component_text_area/tag/?id=[geo-n-10-10]" class="geo" data-type="geo" data-tag_id="10" data-state="n" data-label="10" data-data="">Text after...</p>';
-		
+
 		$value = '
 			<p>Some <strong>HTML</strong> content with <a href="#">links</a>.</p>
 			<p>[TC_00:01:25.627_TC]Text after TC</p>
@@ -1579,7 +1579,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		// 1 Test if the result is an array
 		$value = $component->get_list_value($options);
-	
+
 		$this->assertTrue(
 			gettype($value)==='array',
 				'expected value do not match:' . PHP_EOL
@@ -1601,7 +1601,7 @@ final class component_text_area_test extends BaseTestCase {
 			<p><img id="[index-n-1-my tag label]" src="../component_text_area/tag/?id=[index-n-1-my tag label]" class="index" data-type="indexIn" data-tag_id="1" data-state="n" data-label="my tag label" data-data="">Text between index<img id="[/index-n-1-my tag label]" src="../component_text_area/tag/?id=[/index-n-1-my tag label]" class="index" data-type="indexOut" data-tag_id="1" data-state="n" data-label="my tag label" data-data=""></p>
 			<p><img id="[lang-a-1-spa]" src="../component_text_area/tag/?id=[lang-a-1-spa]" class="lang" data-type="lang" data-tag_id="1" data-state="a" data-label="spa" data-data="[\'lg-spa\']">Lang text</p>
 			<p><img id="[svg-n-1-]" src="/dedalo/media_mib/svg/web/hierarchy95_rsc302_2.svg" class="svg" data-type="svg" data-tag_id="1" data-state="n" data-label="" data-data="{\'section_tipo\':\'rsc302\',\'section_id\':\'2\',\'component_tipo\':\'hierarchy95\'}">Texto después de...</p>';
-		
+
 		$spa_value = '
 			<p>ES Algún contenido en <strong>HTML</strong> con <a href="#">links</a>.</p>
 			<p>[TC_00:01:25.627_TC]Texto después de TC</p>
@@ -1646,9 +1646,9 @@ final class component_text_area_test extends BaseTestCase {
 		// Test fallback edit value
 		$edit_options = new stdClass();
 			$edit_options->max_chars = 600;
-			
+
 		$fallback_edit_value = $component->get_fallback_edit_value($edit_options);
-		
+
 		$this->assertTrue(
 			gettype($fallback_edit_value)==='array',
 				'expected value do not match:' . PHP_EOL
@@ -1687,7 +1687,7 @@ final class component_text_area_test extends BaseTestCase {
 			'1', // string tag
 			'invalid_type', // string $tag_type - this should return null
 			'My text raw [index-n-1] with index'
-		);		
+		);
 		$this->assertTrue(
 			$value===null,
 				'expected null for invalid tag type, got: '.to_string($value)
@@ -1698,7 +1698,7 @@ final class component_text_area_test extends BaseTestCase {
 			'', // empty tag_id
 			'index', // string $tag_type
 			'My text raw [index-n-1] with index'
-		);		
+		);
 		$this->assertTrue(
 			$value===null,
 				'expected null for empty tag_id, got: '.to_string($value)
@@ -1765,7 +1765,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		// Test string input
 		$value = $component->conform_import_data('Test string', 'column_name');
-		
+
 		// 1 Test the $value type
 		$this->assertTrue(
 			gettype($value)==='object',
@@ -1848,13 +1848,13 @@ final class component_text_area_test extends BaseTestCase {
 			$item_value->id = 1;
 			$item_value->value = '<p>Test content with <script>alert("xss")</script></p>';
 			$item_value->lang = $lang;
-		
+
 		// Test data sanitization in save method
 		$component->set_data([$item_value]);
-		
+
 		// Save should not fail and should sanitize content
 		$result = $component->save();
-		
+
 		$this->assertTrue(
 			$result===true,
 				'expected save to return true, got: '.to_string($result)
@@ -1868,7 +1868,7 @@ final class component_text_area_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_original_lang() {
-		
+
 		$model			= self::$model;
 		$tipo			= 'rsc36';
 		$section_tipo	= 'rsc167';
@@ -1890,10 +1890,10 @@ final class component_text_area_test extends BaseTestCase {
 		// 2. Setup related component data
 		// related component is rsc263 (component_select_lang)
 		$related_tipo = 'rsc263';
-		
+
 		// Ensure we use the exact same model string as the class implementation to hit the same cache
 		$related_model = ontology_node::get_model_by_tipo($related_tipo, true);
-		
+
 		$related_component = component_common::get_instance(
 			$related_model,
 			$related_tipo,
@@ -1903,7 +1903,7 @@ final class component_text_area_test extends BaseTestCase {
 			$section_tipo,
 			true
 		);
-		
+
 
 		// Set a known lang value locator. expected to be an object with section_id.
 		// We use 17344 (spa) from the fallback list in lang::get_code_from_locator
@@ -1938,7 +1938,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		// 3. Test get_original_lang
 		$original_lang = $component->get_original_lang();
-		
+
 		// Adjust expectation to lg-spa based on code reading of lang::get_code_from_locator default behavior
 		$this->assertEquals('lg-spa', $original_lang, "Expected original lang 'lg-spa' from locator 17344");
 	}//end test_get_original_lang

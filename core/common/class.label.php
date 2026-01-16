@@ -35,7 +35,7 @@ abstract class label {
 				if(isset(label::$ar_label[$lang])) {
 					return label::$ar_label[$lang];
 				}
-				
+
 				// cache file read
 				$ar_label = dd_cache::cache_from_file((object)[
 					'file_name'	=> label::build_cache_file_name($lang)

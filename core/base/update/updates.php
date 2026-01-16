@@ -183,9 +183,9 @@ $updates->$v = new stdClass();
 				DO $$
 				BEGIN
 					IF EXISTS (
-						SELECT 1 
-						FROM information_schema.columns 
-						WHERE table_name = \'matrix_notifications\' 
+						SELECT 1
+						FROM information_schema.columns
+						WHERE table_name = \'matrix_notifications\'
 						AND column_name = \'datos\'
 					) THEN
 						EXECUTE \'ALTER TABLE "matrix_notifications" RENAME COLUMN "datos" TO "data"\';
@@ -265,7 +265,7 @@ $updates->$v = new stdClass();
 		foreach ($other_tables as $current_table) {
 			$columns [] = '
 				ALTER TABLE "'.$current_table.'"
-					RENAME COLUMN datos TO data;					
+					RENAME COLUMN datos TO data;
 			';
 			$comments[] = "
 				COMMENT ON COLUMN ".$current_table.".data IS 'Table data as a general JSON data';
@@ -373,7 +373,7 @@ $updates->$v = new stdClass();
 		$other_tables = [
 			'matrix_notifications',
 			'matrix_updates'
-		]; 
+		];
 
-		
+
 

@@ -1104,7 +1104,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		$section_id = matrix_db_manager::create($table, $section_tipo);
 		$result1 = matrix_db_manager::delete($table, $section_tipo, $section_id);
 		$this->assertTrue($result1, 'first delete should succeed');
-		
+
 		$result2 = matrix_db_manager::delete($table, $section_tipo, $section_id);
 		$this->assertTrue($result2, 'second delete should also return true');
 	}//end test_delete_edge_cases
@@ -1226,7 +1226,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 	// 	// Test 4: Multiple filter conditions
 	// 	$section_id_1 = matrix_db_manager::create($table, $section_tipo);
 	// 	$section_id_2 = matrix_db_manager::create($table, $section_tipo);
-		
+
 	// 	$filter = [
 	// 		['column' => 'section_tipo', 'value' => $section_tipo],
 	// 		['column' => 'section_id', 'operator' => '>=', 'value' => $section_id_1]

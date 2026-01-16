@@ -183,7 +183,7 @@ class ts_object {
 		// To prevent calculate the component order for each locator,
 		// we assume that all locators are from the same section or compatible sections
 		$component_order_tipo = ts_object::get_component_order_tipo($first_locator->section_tipo);
-		
+
 		// Validate component_order_tipo before using it
 		if (empty($component_order_tipo)) {
 			debug_log(__METHOD__
@@ -452,10 +452,10 @@ class ts_object {
 					// value
 						switch (true) {
 
-							case ($element_obj->type==='term'):								
+							case ($element_obj->type==='term'):
 
 								// term Is translatable and uses lang fallback here
-								if(empty($component_data)) {	
+								if(empty($component_data)) {
 									$data_item_fallback = $component->get_component_data_fallback();
 									$element_value = $data_item_fallback[0]->value ?? $data_item_fallback[0] ?? '';
 									$element_value = component_common::decorate_untranslated($element_value);
@@ -609,7 +609,7 @@ class ts_object {
 
 	/**
 	* GET_CHILDREN_DATA
-	* 
+	*
 	* @param object $options
 	* @return object $response
 	*/
@@ -972,7 +972,7 @@ class ts_object {
 
 		// Cache control (session)
 			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-			
+
 			if ($from_cache===true && isset(self::$term_by_locator_data_cache[$cache_uid])) {
 				return self::$term_by_locator_data_cache[$cache_uid];
 			}
@@ -1165,7 +1165,7 @@ class ts_object {
 	public function get_count_data_group_by( object $component, object $section_list_thesaurus_item ) : object {
 
 		// cache
-			
+
 
 		// filter_locators
 		// get all children of the current term to be used to count the indexations of the term
