@@ -109,23 +109,24 @@ class tool_export extends tool_common {
 	* @return dd_grid object $result
 	*/
 	public static function get_export_grid(object $options) : object {
-
+	
 		set_time_limit ( 36000 );  // 10 hours (36000 secs)
-
+		
+		$is_stream = $options->ndjson_stream ?? false;
+	
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
+	
 		// options
 			$section_tipo		= $options->section_tipo ?? $options->tipo;
 			$model				= $options->model ?? 'section';
 			$data_format		= $options->data_format;
 			$ar_ddo_to_export	= $options->ar_ddo_to_export;
 			$sqo				= $options->sqo;
-
+	
 		// export options
-			// $tool_export	= new tool_export($section_tipo, $model, $data_format, $ar_ddo_to_export, $sqo);
 			$tool_export = new tool_export(null, $section_tipo);
 			$tool_export->setup((object)[
 				'data_format'	=> $data_format,
@@ -134,14 +135,202 @@ class tool_export extends tool_common {
 				'model'			=> $model,
 				'section_tipo'	=> $section_tipo
 			]);
-			$export_grid = $tool_export->build_export_grid();
-
+	
+		if ($is_stream) {
+			if (SHOW_DEBUG) debug_log(__METHOD__ . " Stream started for section_tipo: " . $section_tipo, logger::DEBUG);
+			$tool_export->stream_export_grid();
+			if (SHOW_DEBUG) debug_log(__METHOD__ . " Stream finished", logger::DEBUG);
+			exit();
+		}
+	
+		$export_grid = $tool_export->build_export_grid();
+	
 		// response OK
 			$response->msg		= 'OK. Request done';
 			$response->result	= $export_grid;
-
+	
 		return $response;
 	}//end get_export_grid
+
+
+
+	/**
+	 * STREAM_EXPORT_GRID
+	 * High-performance, memory-efficient streaming of the export grid.
+	 * 
+	 * Logic:
+	 * 1. Pass 1 (Discovery): Iterates through records to identify all unique columns.
+	 * 2. Seek(0): Resets the DB cursor without re-executing the query.
+	 * 3. Pass 2 (Streaming): Streams rows line-by-line in NDJSON format.
+	 * 
+	 * Optimizations:
+	 * - Uses unbuffered output and explicit flushing.
+	 * - Implements aggressive memory management: cache clearing and periodic GC.
+	 * - Sets streaming-optimized headers (X-Accel-Buffering, Cache-Control, etc.).
+	 * - Initial 4KB padding to bypass certain proxy/server buffer limits.
+	 * 
+	 * @return void
+	 */
+	protected function stream_export_grid() : void {
+
+		// Disable output buffering
+		while (ob_get_level()) ob_end_flush();
+		ob_implicit_flush(true);
+
+		// Always set header as text/plain or application/x-ndjson to avoid browser buffering
+		header('Content-Type: application/x-ndjson; charset=utf-8', true);
+		header('X-Content-Type-Options: nosniff');
+		header('X-Accel-Buffering: no'); // Nginx bypass buffering
+		header('Cache-Control: no-cache, no-store, must-revalidate'); // Disable caching
+		header('Pragma: no-cache'); // HTTP 1.0
+		header('Expires: 0'); // Proxies
+		header('Content-Encoding: identity'); // Disable compression / mod_deflate
+		
+		// 4KB Padding to bypass some Apache/Proxy buffer limits (like mod_proxy_fcgi or mod_deflate)
+		// Small chunks might be held otherwise.
+		echo str_repeat(" ", 4096) . "\n";
+		if (ob_get_level() > 0) @ob_flush();
+		flush();
+
+		$ar_ddo_map	= $this->ar_ddo_map;
+		$db_result	= $this->get_records();
+
+		$start_pass1 = microtime(true);
+		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 started", logger::DEBUG);
+
+		// First pass: Process records JUST to collect unique columns.
+		// OPTIMIZATION: We only need to call get_grid_value when we suspect total columns might change (e.g. portals)
+		$ar_columns_obj	= [];
+		$ar_columns_index = [];
+		$max_portal_counts = [];
+
+		$total_count = $db_result->row_count();
+		foreach ($db_result as $row_index => $row) {
+			$needs_full_process = empty($ar_columns_obj); // Always process first row
+			
+			// Quick check for portal count increases without full instantiation
+			if (!$needs_full_process) {
+				foreach ($ar_ddo_map as $current_ddo) {
+					$tipo = $current_ddo->path[0]->component_tipo;
+					$data = $row->relation->{$tipo} ?? null;
+					if (is_array($data)) {
+						$count = count($data);
+						if ($count > ($max_portal_counts[$tipo] ?? 0)) {
+							$max_portal_counts[$tipo] = $count;
+							$needs_full_process = true;
+						}
+					}
+				}
+			}
+
+			if ($needs_full_process) {
+				$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
+				foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
+					if (!isset($ar_columns_index[$current_column_obj->id])) {
+						$ar_columns_obj[] = $current_column_obj;
+						$ar_columns_index[$current_column_obj->id] = true;
+					}
+				}
+				unset($ar_row_value);
+			}
+
+			if ($row_index % 100 === 0) {
+				// Clear internal caches to prevent memory growth during discovery
+				if (class_exists('section_record_instances_cache')) section_record_instances_cache::clear();
+				if (class_exists('component_instances_cache')) component_instances_cache::clear();
+				gc_collect_cycles();
+
+				if (SHOW_DEBUG) {
+					$mem = round(memory_get_usage() / 1024 / 1024, 2);
+					debug_log(__METHOD__ . " Pass 1 progress: $row_index / $total_count | Mem: $mem MB", logger::DEBUG);
+				}
+			}
+			unset($row);
+		}
+
+		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 finished in " . round(microtime(true) - $start_pass1, 3) . "s", logger::DEBUG);
+
+		// Reset database cursor to the beginning
+		$db_result->seek(0);
+
+		// Calculate header labels
+		$ar_section_columns_count = sizeof($ar_columns_obj);
+		$ar_head_columns = [];
+		for ($i=0; $i < $ar_section_columns_count; $i++) {
+			$column_obj			= $ar_columns_obj[$i];
+			$column_path		= explode('|', $column_obj->id);
+			$column_tipos		= explode('_', $column_path[0]);
+			$column_labels		= [];
+			$column_tipos_len	= sizeof($column_tipos)-1;
+			foreach ($column_tipos as $column_key => $column_tipo) {
+				if($this->data_format==='dedalo_raw'){
+					$model_name = ontology_node::get_model_by_tipo($column_tipo);
+					$column_labels[] = ($model_name === 'component_section_id') ? 'section_id' : $column_tipo;
+				}else{
+					$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+					if (empty($column_label)) $column_label = $column_tipo;
+					$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
+						? $column_label.' '.$column_path[1]+1
+						: $column_label;
+				}
+			}
+			$column_obj->ar_labels	= $column_labels;
+			$column_obj->label_tipo	= end($column_tipos);
+			$column_obj->ar_tipos 	= $column_tipos;
+
+			$section_grid = new dd_grid_cell_object();
+			$section_grid->set_type('column');
+			$section_grid->set_ar_columns_obj($column_obj);
+			$section_grid->set_render_label(true);
+			$section_grid->set_class_list('caption section');
+			$section_grid->set_cell_type('header');
+			$ar_head_columns[] = $section_grid;
+		}
+
+		// Stream Header
+		$header_row = new dd_grid_cell_object();
+		$header_row->set_type('row');
+		$header_row->set_value($ar_head_columns);
+		$header_row->set_row_count(1);
+		$header_row->set_column_count($ar_section_columns_count);
+
+		echo json_encode($header_row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+		if (ob_get_level() > 0) @ob_flush();
+		flush();
+
+		// Second pass: Stream Rows
+		foreach ($db_result as $row_index => $row) {
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
+
+			$row_grid = new dd_grid_cell_object();
+			$row_grid->set_type('row');
+			$row_grid->set_row_count(!empty($ar_row_value->ar_row_count) ? max($ar_row_value->ar_row_count) : 0);
+			$row_grid->set_column_count($ar_row_value->ar_column_count);
+			$row_grid->set_ar_columns_obj($ar_row_value->ar_columns_obj);
+			$row_grid->set_value($ar_row_value->ar_cells);
+
+			echo json_encode($row_grid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+			
+			if ($row_index % 100 === 0) {
+				// Clear internal caches and collect garbage to prevent growth
+				if (class_exists('section_record_instances_cache')) section_record_instances_cache::clear();
+				if (class_exists('component_instances_cache')) component_instances_cache::clear();
+				gc_collect_cycles();
+
+				if (SHOW_DEBUG) {
+					$mem = round(memory_get_usage() / 1024 / 1024, 2);
+					debug_log(__METHOD__ . " Pass 2 progress: $row_index / $total_count | Mem: $mem MB", logger::DEBUG);
+				}
+			}
+
+			if (ob_get_level() > 0) @ob_flush();
+			flush();
+
+			unset($ar_row_value);
+			unset($row_grid);
+			unset($row);
+		}
+	}//end stream_export_grid
 
 
 
