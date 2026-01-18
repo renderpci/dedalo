@@ -844,6 +844,39 @@ data_manager.request_stream = async function(options) {
 
 
 /**
+ * REQUEST_FETCH_STREAM
+ * Generic fetch stream request using ReadableStreams.
+ * Unlike request_stream (SSE), this target is agnostic and suitable for NDJSON or other binary streams.
+ * It's primarilly used to bypass the overhead of EventSource for long-running row-by-row exports.
+ * 
+ * @param {object} options - Request options (url, method, headers, body)
+ * @returns {Promise<ReadableStream>} The response body stream
+ */
+data_manager.request_fetch_stream = async function(options) {
+	const url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
+	const method		= options.method || 'POST'
+	const headers		= options.headers || {
+		'Content-Type'	: 'application/json',
+		'Accept'		: 'application/x-ndjson, application/json'
+	}
+	const body			= options.body
+
+	const response = await fetch(url, {
+		method	: method,
+		headers	: headers,
+		body	: JSON.stringify(body)
+	});
+
+	if (!response.ok) {
+		throw new Error(`HTTP error! status: ${response.status}`);
+	}
+
+	return response.body;
+}//end request_fetch_stream
+
+
+
+/**
 * READ_STREAM
 * Read a SSE ReadableStream from server API response
 * @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
