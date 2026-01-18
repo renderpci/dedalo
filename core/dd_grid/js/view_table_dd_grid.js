@@ -49,6 +49,20 @@ view_table_dd_grid.render = function(self, options) {
 
 
 /**
+* RENDER_ROW
+* Render a single row (or sub-rows from portals)
+* @param object self
+* @param object row_data
+* @param array ar_columns_obj
+* @return DocumentFragment
+*/
+view_table_dd_grid.render_row = function(self, row_data, ar_columns_obj) {
+	return get_portal_rows(self, row_data, ar_columns_obj)
+}
+
+
+
+/**
 * GET_TABLE_NODES
 * @param object self
 * @param array data

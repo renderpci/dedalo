@@ -177,12 +177,19 @@ tool_export.prototype.get_section_id = function() {
 
 
 /**
-* GET_EXPORT_GRID
-* Load the export grid data and build a dd_grid instance
-* @param object options
-* @return object dd_grid
-* 	Instance ready to render
-*/
+ * GET_EXPORT_GRID
+ * High-performance data fetcher using Fetch ReadableStreams and NDJSON.
+ * 
+ * Replaces the traditional monolithic JSON buffer with an incremental row-by-row 
+ * delivery system. 
+ * 
+ * Protocol: NDJSON (Newline Delimited JSON)
+ * - First line: Header metadata (dd_grid configuration)
+ * - Subsequent lines: Individual row data objects
+ * 
+ * @param {Object} options - Request options including data_format and filters
+ * @returns {Promise<Object>} The dd_grid instance, resolved once the header arrives
+ */
 tool_export.prototype.get_export_grid = async function(options) {
 
 	const self = this
@@ -203,7 +210,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_export_grid')
 
-	// API request
+	// API request options
 		const rqo = {
 			dd_api			: 'dd_tools_api',
 			action			: 'tool_request',
@@ -214,68 +221,234 @@ tool_export.prototype.get_export_grid = async function(options) {
 				model				: self.caller.model,
 				data_format			: data_format, // format selected by the user to get data
 				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
-				sqo					: sqo
+				sqo					: sqo,
+				ndjson_stream       : true
 			}
 		}
-		const api_response = await data_manager.request({
-			use_worker	: true,
-			body		: rqo,
-			retries		: 1, // one try only
-			timeout		: 36000 * 1000 // 10 hours waiting response
-		})
-		if (!api_response.result) {
-			console.error('Error:', api_response.msg || 'Unknown error on API tool_request');
+
+	// STREAMING REQUEST (Fetch Stream / NDJSON)
+	const stream = await data_manager.request_fetch_stream({ body: rqo });
+
+	if (!stream) {
+		console.error("Failed to start stream");
+		return null;
+	}
+
+	const reader	= stream.getReader();
+	const decoder	= new TextDecoder();
+	let buffer		= '';
+	let first_chunk = true;
+	let rows_processed = 0;
+	if (self.progress_ui) {
+		self.progress_ui.container.classList.remove('hide');
+		self.progress_ui.bar.style.width = '0%';
+		const initial_text = `0 / ${self.total_records || '?'}`;
+		self.progress_ui.text_bg.innerText = initial_text;
+		self.progress_ui.text_fg.innerText = initial_text;
+		self.progress_ui.text_fg.style.clipPath = 'inset(0 100% 0 0)';
+	}
+
+	// Use a promise to resolve with the grid instance as soon as the first chunk (header) arrives
+	return new Promise(async (resolve, reject) => {
+		try {
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) {
+					if (SHOW_DEBUG) console.log("Stream: Finished reading");
+					if (self.progress_ui) {
+						// Small delay before hiding to show 100%
+						setTimeout(() => self.progress_ui.container.classList.add('hide'), 500);
+					}
+					// Activates the download buttons
+					if (self.export_buttons_options) {
+						self.export_buttons_options.classList.remove('loading');
+					}
+					break;
+				}
+
+				if (SHOW_DEBUG) console.log("Stream: Received chunk", { length: value.length, time: performance.now() });
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split('\n');
+				buffer = lines.pop(); // Keep partial line for next chunk
+
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					const chunk_data = JSON.parse(line);
+
+					if (first_chunk) {
+						// The first chunk is the header row
+						const dd_grid = await self._init_grid_with_data(chunk_data, view, show_tipo_in_label, fill_the_gaps, data_format);
+						self.dd_grid = dd_grid;
+						first_chunk = false;
+						resolve(dd_grid);
+					} else {
+						// Subsequent chunks are rows
+						if (self.dd_grid) {
+							// Append row to data
+							self.dd_grid.data.push(chunk_data);
+							
+							rows_processed++;
+							if (self.progress_ui && self.total_records) {
+								const percent = Math.min(100, Math.round((rows_processed / self.total_records) * 100));
+								self.progress_ui.bar.style.width = percent + '%';
+								const current_text = `${rows_processed} / ${self.total_records}`;
+								self.progress_ui.text_bg.innerText = current_text;
+								self.progress_ui.text_fg.innerText = current_text;
+								self.progress_ui.text_fg.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+							}
+
+							// Trigger incremental render update if grid is already built
+							// Note: This logic might need refinement depending on dd_grid/view_table_dd_grid capabilities
+							self._append_row_to_grid_ui(chunk_data);
+						}
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Error reading stream:", error);
+			// Activates the download buttons even on error to allow retry
+			if (self.export_buttons_options) {
+				self.export_buttons_options.classList.remove('loading');
+			}
+			reject(error);
 		}
-
-	// already exists dd_grid case. Returns it
-		if (self.dd_grid) {
-			// inject data
-			self.dd_grid.data = api_response.result
-			// reset view
-			self.dd_grid.view = view
-			// reset show_tipo_in_label
-			self.dd_grid.config.show_tipo_in_label = show_tipo_in_label
-			// reset fill_the_gaps
-			self.dd_grid.config.fill_the_gaps = fill_the_gaps
-			// reset data_format
-			self.dd_grid.config.data_format = data_format
-			// build
-			await self.dd_grid.build(false)
-			// reset node
-			self.dd_grid.node = null
-
-			// return instance ready to render
-			return self.dd_grid
-		}
-
-	// dd_grid. Init the dd_grid instance if it isn't already
-		const dd_grid = self.dd_grid || await get_instance({
-			model				: 'dd_grid',
-			section_tipo		: self.caller.section_tipo,
-			tipo				: self.caller.section_tipo,
-			mode				: 'list',
-			view				: view, // 'table',
-			config				: {
-				show_tipo_in_label	: show_tipo_in_label, // true of false
-				fill_the_gaps		: fill_the_gaps, // true of false
-				data_format			: data_format // like 'dedalo_raw'
-			},
-			lang				: page_globals.dedalo_data_lang,
-			data				: api_response.result
-		})
-
-		// build. Do not autoload
-			await dd_grid.build(false)
-
-		// fix dd_grid
-			self.dd_grid = dd_grid
-
-		// ar_instances. Add current dd_grid instance. (Will be removed on destroy)
-			self.ar_instances.push(dd_grid)
-
-
-	return dd_grid
+	});
 }//end get_export_grid
+
+
+
+/**
+* _INIT_GRID_WITH_DATA
+* Helper to initialize dd_grid with initial data (header)
+* @private
+*/
+tool_export.prototype._init_grid_with_data = async function(data, view, show_tipo_in_label, fill_the_gaps, data_format) {
+	const self = this;
+	
+	const dd_grid = self.dd_grid || await get_instance({
+		model				: 'dd_grid',
+		section_tipo		: self.caller.section_tipo,
+		tipo				: self.caller.section_tipo,
+		mode				: 'list',
+		view				: view,
+		config				: {
+			show_tipo_in_label	: show_tipo_in_label,
+			fill_the_gaps		: fill_the_gaps,
+			data_format			: data_format
+		},
+		lang				: page_globals.dedalo_data_lang,
+		data				: [data] // Initial data is only the header
+	});
+
+	if (self.dd_grid) {
+		self.dd_grid.data = [data];
+		self.dd_grid.view = view;
+		self.dd_grid.config = { ...self.dd_grid.config, show_tipo_in_label, fill_the_gaps, data_format };
+	}
+
+	await dd_grid.build(false);
+	self.dd_grid = dd_grid;
+	if (!self.ar_instances.includes(dd_grid)) {
+		self.ar_instances.push(dd_grid);
+	}
+	
+	return dd_grid;
+}
+
+
+
+/**
+ * _APPEND_ROW_TO_GRID_UI
+ * Progressive rendering engine for streamed data.
+ * 
+ * Implements a queuing and batching mechanism to ensure smooth UI performance:
+ * - Row Queue: Ensures rows are rendered in strict arrival order.
+ * - Batch Processing: Renders rows in chunks (e.g. 20) via requestAnimationFrame
+ *   to maintain 60fps even during high-throughput transmission.
+ * - DOM Sync: Automatically schedules retries if the parent table isn't fully 
+ *   mounted in the DOM yet.
+ * 
+ * @private
+ * @param {Object} row_data - Data for a single grid row
+ */
+tool_export.prototype._append_row_to_grid_ui = function(row_data) {
+	const self = this;
+
+	// Always add to queue to maintain order
+	self._row_queue = self._row_queue || [];
+	self._row_queue.push(row_data);
+
+	// Start processing loop if not already running
+	if (self._is_processing_queue) return;
+	self._is_processing_queue = true;
+
+	if (SHOW_DEBUG) console.log("Stream: Started processing row queue", { queue_length: self._row_queue.length });
+
+	const try_process = async () => {
+		// Check if the grid node is actually in the document body
+		// Note: dd_grid.node is set after dd_grid.render() completes
+		if (self.dd_grid && self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
+			
+			// Load the module once before processing the queue
+			if (!self._view_table_dd_grid) {
+				const module = await import('../../../core/dd_grid/js/view_table_dd_grid.js');
+				self._view_table_dd_grid = module.view_table_dd_grid;
+			}
+
+			// Process rows in batches to avoid blocking the main thread while maintaining high throughput
+			const BATCH_SIZE = 20;
+
+			while (self._row_queue.length > 0) {
+				// Take a batch of rows
+				const batch = self._row_queue.splice(0, BATCH_SIZE);
+				
+				// Apply batch to DOM in a single animation frame
+				await new Promise(resolve => {
+					requestAnimationFrame(async () => {
+						for (const row of batch) {
+							await self._do_append_row(row);
+						}
+						resolve();
+					});
+				});
+				
+				// Brief yield to allow other async tasks (like stream reading) to run
+				await new Promise(resolve => setTimeout(resolve, 0));
+			}
+			
+			self._is_processing_queue = false;
+			if (SHOW_DEBUG) console.log("Stream: Finished processing row queue");
+		} else {
+			// If not yet in DOM, wait and try again
+			// In theory, render_tool_export.js should append it soon after header arrives
+			setTimeout(try_process, 50);
+		}
+	};
+
+	try_process();
+}
+
+
+
+/**
+* _DO_APPEND_ROW
+* Actual DOM insertion of a row
+* @private
+*/
+tool_export.prototype._do_append_row = async function(row_data) {
+	const self = this;
+	if (!self.dd_grid || !self.dd_grid.node || !self._view_table_dd_grid) return;
+
+	const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
+	if (!table || table.tagName !== 'TABLE') return;
+
+	const header_row = self.dd_grid.data[0];
+	const ar_columns_obj = header_row.value.map(item => item.ar_columns_obj);
+
+	const row_fragment = self._view_table_dd_grid.render_row(self.dd_grid, row_data, ar_columns_obj);
+	table.appendChild(row_fragment);
+}
 
 
 
