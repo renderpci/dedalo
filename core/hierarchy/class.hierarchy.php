@@ -8,15 +8,20 @@ class hierarchy extends ontology {
 
 
 	// Table where hierarchy data is stored
-	static $main_table			= 'matrix_hierarchy_main';
-	static $main_section_tipo	= 'hierarchy1';
+	public static $main_table			= 'matrix_hierarchy_main';
+	public static $main_section_tipo	= 'hierarchy1';
 
 	// array hierarchy_portals_tipo
 	// store hierarchy portals data (former component_relation_children, now component_portal)
-	static $hierarchy_portals_tipo = [
+	public static $hierarchy_portals_tipo = [
 		DEDALO_HIERARCHY_CHILDREN_TIPO, // hierarchy45 hierarchy main: General term
 		DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // hierarchy59 hierarchy main: General term model
 	];
+
+	public static $cache_main_lang_cache;
+	public static $section_map_elemets_cache;
+	public static $hierarchy_section_cache;
+	public static $active_hierarchy_elements_cache;
 
 
 	/**
@@ -531,9 +536,9 @@ class hierarchy extends ontology {
 			}
 
 		// cache
-			static $cache_main_lang;
-			if(isset($cache_main_lang[$section_tipo])) {
-				return $cache_main_lang[$section_tipo];
+			
+			if(isset(self::$cache_main_lang_cache[$section_tipo])) {
+				return self::$cache_main_lang_cache[$section_tipo];
 			}
 
 		// default value
@@ -607,7 +612,7 @@ class hierarchy extends ontology {
 			}
 
 		// store cache
-			$cache_main_lang[$section_tipo] = $main_lang;
+			self::$cache_main_lang_cache[$section_tipo] = $main_lang;
 
 
 		return $main_lang;
@@ -693,9 +698,9 @@ class hierarchy extends ontology {
 			return $ar_elements;
 		}
 
-		static $section_map_elemets_cache;
-		if (isset($section_map_elemets_cache[$section_tipo])) {
-			return $section_map_elemets_cache[$section_tipo];
+		// cache
+		if (isset(self::$section_map_elemets_cache[$section_tipo])) {
+			return self::$section_map_elemets_cache[$section_tipo];
 		}
 
 		// Elements are stored in current section > section_map
@@ -739,7 +744,7 @@ class hierarchy extends ontology {
 		}
 
 		// Set static var for re-use
-		$section_map_elemets_cache[$section_tipo] = $ar_elements;
+		self::$section_map_elemets_cache[$section_tipo] = $ar_elements;
 
 
 		return (array)$ar_elements;
@@ -760,9 +765,9 @@ class hierarchy extends ontology {
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
 		// cache
-		static $hierarchy_section_cache;
-		if (isset($hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
-			return $hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
+		
+		if (isset(self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
+			return self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
 		}
 
 		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
@@ -796,7 +801,7 @@ class hierarchy extends ontology {
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
 
 		// cache
-			$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo] = $section_id;
+			self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo] = $section_id;
 
 		return $section_id;
 	}//end get_hierarchy_section
@@ -1287,9 +1292,9 @@ class hierarchy extends ontology {
 	*/
 	public static function get_active_elements() : array {
 
-		static $active_hierarchy_elements_cache;
-		if (isset($active_hierarchy_elements_cache)) {
-			return $active_hierarchy_elements_cache;
+		
+		if (isset(self::$active_hierarchy_elements_cache)) {
+			return self::$active_hierarchy_elements_cache;
 		}
 
 		// main filter
@@ -1335,7 +1340,7 @@ class hierarchy extends ontology {
 		}
 
 		// cache
-		$active_hierarchy_elements_cache = $active_elements;
+		self::$active_hierarchy_elements_cache = $active_elements;
 
 
 		return $active_elements;

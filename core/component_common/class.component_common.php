@@ -79,6 +79,10 @@ abstract class component_common extends common {
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation;
 
+		// Cache for list of values
+		public static $ar_list_of_values_data_cache = [];
+		public static $list_of_values_data_cache = [];
+
 
 
 	/**
@@ -100,7 +104,7 @@ abstract class component_common extends common {
 		$direct_data[] = 'component_filter_records';
 		$direct_data[] = 'component_inverse';
 		$direct_data[] = 'component_section_id';
-		
+
 
 		return $direct_data;
 	}//end get_direct_data_components
@@ -696,7 +700,7 @@ abstract class component_common extends common {
 				}
 
 				$init = false;
-			}				
+			}
 
 			// Set the counter with the max id when the counter is bellow it.
 			if (!empty($ar_id)) {
@@ -783,7 +787,7 @@ abstract class component_common extends common {
 
 					$safe_data_lang[] = $modified_item;
 				}
-			}			
+			}
 
 		// get all component data
 			$data = $this->get_data() ?? [];
@@ -1250,7 +1254,7 @@ abstract class component_common extends common {
 				// create dataframe component instance
 				// BUT without caller_dataframe
 				// to get all data, not the specific row data of the dataframe
-				// time machine saves all data of the main comonent and all data of the dataframe 
+				// time machine saves all data of the main comonent and all data of the dataframe
 				$dataframe_component = component_common::get_instance(
 					'component_dataframe', // string model
 					$dataframe_ddo->tipo, // string tipo
@@ -1562,7 +1566,7 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $save_path );
 
 		// time machine data.
-		
+
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
@@ -2208,14 +2212,13 @@ abstract class component_common extends common {
 			}
 
 		// cache
-			static $ar_list_of_values_data_cache = [];
 			$cache_key = isset($target_section_tipo)
 				? $target_section_tipo .'_'. $lang . $hash_id
 				: $this->tipo .'_'. $lang . $hash_id;
-			if (isset($ar_list_of_values_data_cache[$cache_key])) {
+			if (isset(self::$ar_list_of_values_data_cache[$cache_key])) {
 
 				// response OK from cache
-				$response = $ar_list_of_values_data_cache[$cache_key];
+				$response = self::$ar_list_of_values_data_cache[$cache_key];
 
 				return $response;
 			}
@@ -2354,7 +2357,7 @@ abstract class component_common extends common {
 			}
 
 		// cache
-			$ar_list_of_values_data_cache[$cache_key] = $response;
+			self::$ar_list_of_values_data_cache[$cache_key] = $response;
 
 
 		return $response;
@@ -2381,9 +2384,6 @@ abstract class component_common extends common {
 				$response->result	= [];
 				$response->msg		= __METHOD__ . ' Error. Request failed ';
 				$response->errors	= [];
-
-		// cache of the list_of_values, if the list was already calculated, return it
-			static $list_of_values_data_cache = [];
 
 		// request config (mandatory)
 			$request_config = $this->request_config ?? [];
@@ -2453,15 +2453,15 @@ abstract class component_common extends common {
 					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
 					: $this->tipo .'_'. $lang . '_'. $hash_id;
 
-				if (isset($list_of_values_data_cache[$uid])) {
+				if (isset(self::$list_of_values_data_cache[$uid])) {
 
 					if(SHOW_DEBUG===true) {
 						// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-						$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+						self::$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 					}
 
 					// response OK from cache
-					return $list_of_values_data_cache[$uid];
+					return self::$list_of_values_data_cache[$uid];
 				}
 
 			// sqo create and search
@@ -2602,7 +2602,7 @@ abstract class component_common extends common {
 			}
 
 		// cache adds the response to cache to be reused
-			$list_of_values_data_cache[$uid] = $response;
+			self::$list_of_values_data_cache[$uid] = $response;
 
 
 		return $response;
@@ -3428,7 +3428,7 @@ abstract class component_common extends common {
 				}
 				*/
 
-				$data[] = $changed_data->value;				
+				$data[] = $changed_data->value;
 
 				$this->set_data_lang( $data, $lang );
 

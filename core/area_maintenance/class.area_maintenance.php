@@ -10,7 +10,7 @@ class area_maintenance extends area_common {
 
 
 	// tables_with_relations
-	static $ar_tables_with_relations = [
+	public static $ar_tables_with_relations = [
 		'matrix_users',
 		'matrix_projects',
 		'matrix',

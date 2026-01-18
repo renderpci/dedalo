@@ -13,7 +13,7 @@ final class component_av_test extends BaseTestCase {
 	public static $section_tipo	= 'test3';
 
 
-	
+
 	/**
 	* BUILD_COMPONENT_INSTANCE
 	* @return

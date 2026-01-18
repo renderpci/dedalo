@@ -5,7 +5,11 @@
 */
 class request_config_presets {
 
-	static $active_request_config_cache_file_name = 'cache_active_request_config.php';
+	public static $active_request_config_cache_file_name = 'cache_active_request_config.php';
+	// Cache for active request config
+	public static $active_request_config_cache;
+
+
 
 	/**
 	* GET_ACTIVE_REQUEST_CONFIG
@@ -18,9 +22,8 @@ class request_config_presets {
 	public static function get_active_request_config() : array {
 
 		// static cache
-		static $active_request_config_cache;
-		if (!empty($active_request_config_cache)) {
-			return $active_request_config_cache;
+		if (!empty(self::$active_request_config_cache)) {
+			return self::$active_request_config_cache;
 		}
 
 		// cache file read
@@ -30,7 +33,7 @@ class request_config_presets {
 		if (!empty($cache_data)) {
 
 			// static cache
-			$active_request_config_cache = $cache_data;
+			self::$active_request_config_cache = $cache_data;
 
 			return $cache_data;
 		}
@@ -152,7 +155,7 @@ class request_config_presets {
 		}
 
 		// static cache
-		$active_request_config_cache = $active_request_config;
+		self::$active_request_config_cache = $active_request_config;
 
 		// cache file write
 		dd_cache::cache_to_file((object)[

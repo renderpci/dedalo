@@ -128,12 +128,12 @@ class search_related extends search {
 								// type
 								$param_value = $locator->type;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder::text";
 
 								// section_tipo
 								$param_value = $locator->section_tipo;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder::text";
 							}
 							$locators_query[] = $sql;
 							break;
@@ -149,17 +149,17 @@ class search_related extends search {
 								// from_component_tipo
 								$param_value = $locator->from_component_tipo;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'from_component_tipo' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'from_component_tipo' = $placeholder::text";
 
 								// section_tipo
 								$param_value = $locator->section_tipo;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder::text";
 
 								// section_id
 								$param_value = $locator->section_id;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder::text";
 							}
 							$locators_query[] = $sql;
 							break;
@@ -174,17 +174,17 @@ class search_related extends search {
 								// type
 								$param_value = $locator->type;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'type' = $placeholder::text";
 
 								// section_tipo
 								$param_value = $locator->section_tipo;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder::text";
 
 								// section_id
 								$param_value = $locator->section_id;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder::text";
 							}
 							$locators_query[] = $sql;
 							break;
@@ -199,12 +199,12 @@ class search_related extends search {
 								// section_tipo
 								$param_value = $locator->section_tipo;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_tipo' = $placeholder::text";
 
 								// section_id
 								$param_value = $locator->section_id;
 								$placeholder = $this->get_placeholder($param_value);
-								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder";
+								$sql .= PHP_EOL." AND locator_data->>'section_id' = $placeholder::text";
 							}
 							$locators_query[] = $sql;
 							break;

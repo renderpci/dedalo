@@ -8,12 +8,15 @@ class ontology {
 
 
 	// Table where ontology data is stored
-	static $main_table			= 'matrix_ontology_main';
-	static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
+	public static $main_table			= 'matrix_ontology_main';
+	public static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
 	// children_tipo
-	static $children_tipo = 'ontology14';
+	public static $children_tipo = 'ontology14';
 
+	// cache
+	public static $cache_ontology_sections;
+	public static $active_ontology_elements_cache;
 
 
 	/**
@@ -1124,10 +1127,10 @@ class ontology {
 	public static function get_all_ontology_sections() : array {
 
 		// cache
-			static $cache_ontology_sections;
+			
 			$use_cache = true;
-			if ($use_cache===true && isset($cache_ontology_sections)) {
-				return $cache_ontology_sections;
+			if ($use_cache===true && isset(self::$cache_ontology_sections)) {
+				return self::$cache_ontology_sections;
 			}
 
 		// records. Get all records from main ontology executing a search
@@ -1157,7 +1160,7 @@ class ontology {
 
 		// cache
 			if ($use_cache===true && !empty($ontology_sections)) {
-				$cache_ontology_sections = $ontology_sections;
+				self::$cache_ontology_sections = $ontology_sections;
 			}
 
 
@@ -1211,9 +1214,9 @@ class ontology {
 	*/
 	public static function get_active_elements() : array {
 
-		static $active_ontology_elements_cache;
-		if (isset($active_ontology_elements_cache)) {
-			return $active_ontology_elements_cache;
+		
+		if (isset(self::$active_ontology_elements_cache)) {
+			return self::$active_ontology_elements_cache;
 		}
 
 		// main filter
@@ -1266,7 +1269,7 @@ class ontology {
 		}
 
 		// cache
-		$active_ontology_elements_cache = $active_elements;
+		self::$active_ontology_elements_cache = $active_elements;
 
 
 		return $active_elements;

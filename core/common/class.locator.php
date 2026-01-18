@@ -765,26 +765,26 @@ class locator extends stdClass {
 			// Use array_flip for O(1) lookup instead of in_array O(n)
 			$exclude_map = array_flip($ar_exclude_properties);
 			$ar_properties = [];
-			
+
 			foreach ($locator1 as $property => $value) {
 				if (!isset($exclude_map[$property])) {
 					$ar_properties[$property] = true;
 				}
 			}
-			
+
 			foreach ($locator2 as $property => $value) {
 				if (!isset($exclude_map[$property])) {
 					$ar_properties[$property] = true;
 				}
 			}
-			
+
 			// Get keys as the final property list
 			$ar_properties = array_keys($ar_properties);
 		}
 
 		// Iterate properties and compare
 		foreach ($ar_properties as $current_property) {
-			
+
 			$exists_in_l1 = property_exists($locator1, $current_property);
 			$exists_in_l2 = property_exists($locator2, $current_property);
 
@@ -829,7 +829,7 @@ class locator extends stdClass {
 
 		// Build lookup key once for the locator we're searching for
 		$lookup_key_to_check = locator::build_locator_lookup_key($locator, $ar_properties);
-		
+
 		// Iterate through array and compare keys directly
 		foreach ($ar_locator as $current_locator) {
 			// Build lookup key for current locator

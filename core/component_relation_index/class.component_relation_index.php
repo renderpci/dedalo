@@ -33,6 +33,9 @@ class component_relation_index extends component_relation_common {
 	// traits. Files added to current class file to split the large code.
 	use search_component_relation_index;
 
+	// cache
+	public static $referended_locators_cache;
+
 
 	/**
 	* @var
@@ -535,22 +538,22 @@ class component_relation_index extends component_relation_common {
 	public static function get_referended_locators_with_cache( object $locator, string $cache_key ) : array {
 
 		// cache
-			static $referended_locators_cache;
+
 
 			// Safe control: prevent big array memory and performance problems
-			if (isset($referended_locators_cache) && count($referended_locators_cache) > 1000) {
-				$referended_locators_cache = [];
+			if (isset(self::$referended_locators_cache) && count(self::$referended_locators_cache) > 1000) {
+				self::$referended_locators_cache = [];
 			}
 
-			if (isset($referended_locators_cache[$cache_key])) {
-				return $referended_locators_cache[$cache_key];
+			if (isset(self::$referended_locators_cache[$cache_key])) {
+				return self::$referended_locators_cache[$cache_key];
 			}
 
 		// referenced_locators from search_related
 			$referenced_locators = search_related::get_referenced_locators([$locator]);
 
 		// cache
-			$referended_locators_cache[$cache_key] = $referenced_locators;
+			self::$referended_locators_cache[$cache_key] = $referenced_locators;
 
 
 		return $referenced_locators;

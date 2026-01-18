@@ -8,7 +8,7 @@ final class dd_manager {
 
 
 
-	static $version = '1.0.0'; // 05-06-2019
+	public static $version = '1.0.0'; // 05-06-2019
 
 
 

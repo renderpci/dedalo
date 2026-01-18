@@ -17,10 +17,10 @@ class component_relation_parent extends component_relation_common {
 	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 	// SQL query stored for debug only
-	static $get_parents_query;
+	public static $get_parents_query;
 
 	// errors. Store statically the class errors
-	static $errors;
+	public static $errors;
 
 
 

@@ -14,6 +14,13 @@
 class ontology_utils {
 
 
+
+	// cache
+	public static $ar_tipo_by_model_name_cache;
+	public static $active_tlds_cache;
+
+
+
 	/**
 	* get_ar_tipo_by_model
 	* Resolves all terms matching the given model
@@ -23,10 +30,9 @@ class ontology_utils {
 	public static function get_ar_tipo_by_model( string $model_name ) : array {
 
 		// static cache
-		static $ar_tipo_by_model_name;
 		$cache_uid = $model_name;
-		if(isset($ar_tipo_by_model_name[$cache_uid])) {
-			return $ar_tipo_by_model_name[$cache_uid];
+		if(isset(self::$ar_tipo_by_model_name_cache[$cache_uid])) {
+			return self::$ar_tipo_by_model_name_cache[$cache_uid];
 		}
 
 		// search terms with given model
@@ -37,7 +43,7 @@ class ontology_utils {
 		$ar_result = ( $result===false ) ? [] : $result;
 
 		// static cache
-		$ar_tipo_by_model_name[$cache_uid] = $ar_result;
+		self::$ar_tipo_by_model_name_cache[$cache_uid] = $ar_result;
 
 		return $ar_result;
 	}//end get_ar_tipo_by_model
@@ -124,10 +130,9 @@ class ontology_utils {
 	*/
 	public static function get_active_tlds() : array {
 
-		// Cache
-		static $active_tlds_cache;
-		if(isset($active_tlds_cache)){
-			return $active_tlds_cache;
+		// Cache		
+		if(isset(self::$active_tlds_cache)){
+			return self::$active_tlds_cache;
 		}
 
 		$table	= ontology_node::$table; // dd_ontology | dd_ontology_backup
@@ -139,7 +144,7 @@ class ontology_utils {
 			$active_tlds[] = $row['tld'];
 		}
 
-		$active_tlds_cache = $active_tlds;
+		self::$active_tlds_cache = $active_tlds;
 
 
 		return $active_tlds;

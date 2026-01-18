@@ -11,8 +11,8 @@ class area_graph extends area_common {
 	* CLASS VARS
 	* @var
 	*/
-	static $typologies_section_tipo	= 'nexus57'; // 'hierarchy13'
-	static $typologies_name_tipo	= 'nexus61'; // 'hierarchy16'
+	public static $typologies_section_tipo	= 'nexus57'; // 'hierarchy13'
+	public static $typologies_name_tipo	= 'nexus61'; // 'hierarchy16'
 
 	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
 	protected $model_view = false;

@@ -150,7 +150,7 @@ class search {
 			? 'mix'
 			: search::trim_tipo($this->main_section_tipo);
 
-		// matrix_table 
+		// matrix_table
 		// Note that for time machine (class 'search_tm') is always fixed as 'matrix_time_machine'
 		if (get_class($this)==='search') {
 			// get first reliable table from ar_section_tipo (skip non existing sections)
@@ -241,10 +241,10 @@ class search {
 
 		// parse SQO. Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_sql_query();
-		
+
 		// execute search. Perform a SQL query in DB using pg_execute and parameters.
-		$result	= matrix_db_manager::exec_search( 
-			$sql_query, 
+		$result	= matrix_db_manager::exec_search(
+			$sql_query,
 			array_keys($this->params) // Form array as ['oh1' => $1, 'oh2' => $2, ...]
 		);
 		if ($result===false) {
@@ -465,7 +465,7 @@ class search {
 
 		// Set object as parsed
 		$this->sqo->parsed = true;
-	}//end parse_sqo	
+	}//end parse_sqo
 
 
 
@@ -788,7 +788,7 @@ class search {
 		$this->build_main_where();
 		$this->build_sql_filter();
 		$this->build_sql_projects_filter();
-		$this->build_filter_by_user_records();		
+		$this->build_filter_by_user_records();
 
 		// sql_query
 		$sql_query = '';
@@ -808,7 +808,7 @@ class search {
 			}
 
 			// where
-			// merge main_where and where and remove empty sentences	
+			// merge main_where and where and remove empty sentences
 			$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
 			if( !empty( $all_where_sentences )){
 				$query_inside .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
@@ -820,7 +820,7 @@ class search {
 			}
 
 			// order (default for maintain result consistency)
-			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );		
+			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );
 			// order union case for various tables
 			if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
 				$order_query = str_replace('mix.', '', $order_query);
@@ -885,18 +885,18 @@ class search {
 		$sql_query .= ($this->main_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO || $this->matrix_table==='matrix_time_machine')
 			? 'SELECT '.$this->main_section_tipo_alias.'.section_id'
 			: 'SELECT DISTINCT '.$this->main_section_tipo_alias.'.section_id';
-		
+
 		// from
 		$sql_query .= PHP_EOL . 'FROM ' . implode(PHP_EOL, $this->sql_obj->from);
-		
+
 		// join virtual tables/filter projects
 		$join = implode( PHP_EOL, $this->sql_obj->join);
 		if (!empty($join)) {
 			$sql_query .= PHP_EOL . $join;
 		}
-		
+
 		// where
-		// merge main_where and where and remove empty sentences	
+		// merge main_where and where and remove empty sentences
 		$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
 		if( !empty( $all_where_sentences )){
 			$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
@@ -945,17 +945,17 @@ class search {
 		}
 		$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL, $this->sql_obj->where);
 		$sql_query .= PHP_EOL . ') main_select';
-	
+
 		// order
 		if( !empty($this->sqo->order) ){
 			$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
 		}
-	
+
 		// limit
 		if (!empty($sql_limit)) {
 			$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 		}
-	
+
 		// offset
 		$sql_query .= !empty($this->sqo->offset)
 			? ' OFFSET ' . $sql_offset

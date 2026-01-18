@@ -75,7 +75,13 @@ abstract class common {
 		public $request_config;
 
 		// cache of calculated context, used to get the context that was calculated and reuse it.
-		static $structure_context_cache = [];
+		public static $structure_context_cache = [];
+		public static $matrix_table_from_tipo = [];
+		public static $ar_tables_with_relations_cache;
+		public static $current_main_lang = [];
+		public static $ar_related_by_model_data = [];
+		public static $resolved_request_properties_parsed = [];
+		public static $get_tools_cache = [];
 
 		// view. Specific element view combined with mode is used to render elements
 		public $view;
@@ -222,14 +228,14 @@ abstract class common {
 	 * @return void
 	 */
 	public function __get(string $name) {
-		if($name === 'data') {			
+		if($name === 'data') {
 			throw new Exception("Attempt to access undeclared property: $name");
 		}
         // Or log it:
         // error_log("Access to undeclared property: $name");
         // return null;
     }
-    
+
     /**
      * __SET
      * Avoid to set undeclared properties
@@ -402,9 +408,14 @@ abstract class common {
 			}
 
 		// cache
-			static $matrix_table_from_tipo;
-			if(isset($matrix_table_from_tipo[$tipo])) {
-				return $matrix_table_from_tipo[$tipo];
+			// Safe control: prevent big array memory and performance problems
+			if (count(self::$matrix_table_from_tipo) > 1000) {
+				self::$matrix_table_from_tipo = [];
+			}
+
+			// check cache
+			if(isset(self::$matrix_table_from_tipo[$tipo])) {
+				return self::$matrix_table_from_tipo[$tipo];
 			}
 
 		// all case
@@ -501,7 +512,7 @@ abstract class common {
 			}//end switch
 
 		// cache
-			$matrix_table_from_tipo[$tipo] = $matrix_table;
+			self::$matrix_table_from_tipo[$tipo] = $matrix_table;
 
 
 		return $matrix_table;
@@ -517,9 +528,8 @@ abstract class common {
 	public static function get_matrix_tables_with_relations() : array {
 
 		// cache
-			static $ar_tables_with_relations_cache;
-			if (isset($ar_tables_with_relations_cache)) {
-				return $ar_tables_with_relations_cache;
+			if (isset(self::$ar_tables_with_relations_cache)) {
+				return self::$ar_tables_with_relations_cache;
 			}
 
 		// tables
@@ -579,7 +589,7 @@ abstract class common {
 			}
 
 		// cache
-			$ar_tables_with_relations_cache = $ar_tables_with_relations;
+			self::$ar_tables_with_relations_cache = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -649,10 +659,9 @@ abstract class common {
 			return 'lg-eng';
 		}
 
-		static $current_main_lang = [];
 		$uid = $section_tipo.'_'.$section_id;
-		if (isset($current_main_lang[$uid])) {
-			return $current_main_lang[$uid];
+		if (isset(self::$current_main_lang[$uid])) {
+			return self::$current_main_lang[$uid];
 		}
 
 		// For now, the main_lang default for all hierarchies will be lg-spa because it is our base of work
@@ -710,7 +719,7 @@ abstract class common {
 		}
 		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);
 
-		$current_main_lang[$uid] = $main_lang;
+		self::$current_main_lang[$uid] = $main_lang;
 
 
 		return (string)$main_lang;
@@ -957,10 +966,9 @@ abstract class common {
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		// cache
-		static $ar_related_by_model_data = [];
 		$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
-		if (isset($ar_related_by_model_data[$uid])) {
-			return $ar_related_by_model_data[$uid];
+		if (isset(self::$ar_related_by_model_data[$uid])) {
+			return self::$ar_related_by_model_data[$uid];
 		}
 
 		$ar_related_by_model = [];
@@ -971,7 +979,7 @@ abstract class common {
 
 		// Expected array or null from $relations
 		if ($relations===null) {
-		    return $ar_related_by_model_data[$uid] = [];
+		    return self::$ar_related_by_model_data[$uid] = [];
 		}
 
 		foreach ($relations as $relation) {
@@ -1001,7 +1009,7 @@ abstract class common {
 		}
 
 		// cache
-		$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		self::$ar_related_by_model_data[$uid] = $ar_related_by_model;
 
 
 		return $ar_related_by_model;
@@ -2391,12 +2399,6 @@ abstract class common {
 						// fix request_config
 							$this->request_config = [$request_config_object];
 
-						// merge and set ddo elements
-							dd_core_api::$ddo_map = array_merge(
-								dd_core_api::$ddo_map,
-								$request_config_object->show->ddo_map
-							);
-
 					return $this->request_config; // we have finished ! Note we stop here (!)
 				}//end if (!empty($requested_show))
 			}//end if( isset($requested_source) &&...
@@ -2504,24 +2506,6 @@ abstract class common {
 				}
 			}//end if ($model==='section')
 
-		// update dd_core_api::$ddo_map
-			$request_config_len = sizeof($request_config);
-			for ($i=0; $i < $request_config_len; $i++) {
-
-				$current_request_config = $request_config[$i];
-
-				// skip empty ddo_map
-				if (empty($current_request_config->show->ddo_map)) {
-					continue;
-				}
-
-				// add ddo_map
-				dd_core_api::$ddo_map = array_merge(
-					dd_core_api::$ddo_map,
-					$current_request_config->show->ddo_map
-				);
-			}
-
 		// cache
 			if ($use_cache===true) {
 				$resolved_request_config_parsed[$resolved_key] = $this->request_config;
@@ -2594,9 +2578,12 @@ abstract class common {
 			}
 
 		// cache
-			static $resolved_request_properties_parsed = [];
 			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+			// Safe control: prevent big array memory and performance problems
+			if (count(self::$resolved_request_properties_parsed) > 1000) {
+				self::$resolved_request_properties_parsed = [];
+			}
 
 			// @todo : Remove section_id from cache $resolved_key (resolve numisdata4 list problem before)
 				// @note : To verify this cache behavior, see numisdata4 list
@@ -2608,8 +2595,8 @@ abstract class common {
 				// define use_cache as true. Change before set value if needed
 
 			$use_cache = true;
-			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
-				return $resolved_request_properties_parsed[$resolved_key];
+			if ($use_cache===true && isset(self::$resolved_request_properties_parsed[$resolved_key])) {
+				return self::$resolved_request_properties_parsed[$resolved_key];
 			}
 
 		// properties.
@@ -3624,7 +3611,7 @@ abstract class common {
 
 		// cache
 			if ($use_cache===true) {
-				$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+				self::$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
 			}
 
 
@@ -3904,7 +3891,7 @@ abstract class common {
 			$skip_permissions			= $options->skip_permissions ?? false;
 			$caller_tipo				= $options->caller_tipo ?? null;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
-			$ar_components_exclude		= $options->ar_components_exclude ?? [							
+			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_3d',
 				'component_av',
 				'component_image',
@@ -3915,7 +3902,7 @@ abstract class common {
 				'component_info',
 				'component_inverse',
 				'section_tab',
-				//'component_filter_records',	
+				//'component_filter_records',
 				//'component_relation_children',
 				//'component_relation_related',
 				//'component_relation_parent',
@@ -4192,15 +4179,13 @@ abstract class common {
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
-				// static $get_tools_cache;
-				static $get_tools_cache;
 				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-				if (isset($get_tools_cache[$cache_key])) {
+				if (isset(self::$get_tools_cache[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
 						metrics::$get_tools_total_calls_cached++;
 					}
-					return $get_tools_cache[$cache_key];
+					return self::$get_tools_cache[$cache_key];
 				}
 			}
 
@@ -4277,7 +4262,7 @@ abstract class common {
 		// cache
 			if ($use_cache===true) {
 				// static
-				$get_tools_cache[$cache_key] = $tools;
+				self::$get_tools_cache[$cache_key] = $tools;
 			}
 
 		// debug
