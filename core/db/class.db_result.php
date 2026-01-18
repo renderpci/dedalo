@@ -96,6 +96,22 @@ class db_result implements IteratorAggregate
 		}
 	}
 	
+	/**
+	 * SEEK
+	 * Resets the internal PostgreSQL result cursor to a specific row.
+	 * Primarily used in tool_export to allow a two-pass approach:
+	 * 1. Pass 1: Discover columns.
+	 * 2. Seek(0): Reset to start.
+	 * 3. Pass 2: Stream rows.
+	 * 
+	 * @param int $row_number - The row number to seek to
+	 * @return bool - Success status
+	 */
+	public function seek(int $row_number): bool
+	{
+		return pg_result_seek($this->result, $row_number);
+	}
+
 	public function free(): void
 	{
 		pg_free_result($this->result);
