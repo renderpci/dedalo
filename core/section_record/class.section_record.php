@@ -866,7 +866,7 @@ class section_record {
 				$modified_by_user	= $metadata_definition->modified_by_user; 	// 'tipo'=>'dd197', 'model'=>'component_select'
 				$modified_date		= $metadata_definition->modified_date; 		// 'tipo'=>'dd201', 'model'=>'component_date'
 
-		// Current user locator			
+		// Current user locator
 			$user_locator = new locator();
 				$user_locator->set_id(1); // fixed id
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
@@ -1204,7 +1204,7 @@ class section_record {
 				// if values are provided, update the section record
 				if( $values !== null ) {
 					foreach ($values as $column => $column_data) {
-						foreach ($column_data as $tipo => $data) {					
+						foreach ($column_data as $tipo => $data) {
 							$section_record->set_component_data($tipo, $column, $data);
 						}
 					}
@@ -1212,7 +1212,7 @@ class section_record {
 				// save the section record
 				// it performs the update in the database
 				$section_record->save();
-		
+
 				return $section_record;
 		}
 
@@ -1229,7 +1229,7 @@ class section_record {
 
 		$section_record = section_record::get_instance( $section_tipo, $section_id );
 		$section_record->record_in_the_database = true;
-				
+
 		// update values
 		// $section_record->set_data($values);
 		$section_record->get_data(); // force to update values

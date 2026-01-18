@@ -24,11 +24,13 @@ class component_relation_children extends component_relation_common {
 	protected $default_relation_type_rel	= null;
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 	// ar_target_section_tipo
 	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
 
+	// Cache for ar_related_parent_tipo
+	public static $ar_parent_tipo_cache = [];
 
 
 
@@ -195,8 +197,8 @@ class component_relation_children extends component_relation_common {
 				}
 			}
 
-		// $this->update_parents($data);		
-		
+		// $this->update_parents($data);
+
 		// force read the new value on get_data (prevent cache inconsistency)
 		unset($this->data_resolved); //  = null;
 
@@ -255,7 +257,7 @@ class component_relation_children extends component_relation_common {
 	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation. If null, it is resolved automatically.
 	* @return bool True on success, false on failure.
 	*/
-	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {	
+	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
 
 		// default bool result
 			$result = false;
@@ -491,10 +493,9 @@ class component_relation_children extends component_relation_common {
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
 		// cache
-		static $ar_parent_tipo_cache;
 		$cache_key = $tipo . '_' . $section_tipo;
-		if( isset($ar_parent_tipo_cache[$cache_key]) ){
-			return $ar_parent_tipo_cache[$cache_key];
+		if( isset(self::$ar_parent_tipo_cache[$cache_key]) ){
+			return self::$ar_parent_tipo_cache[$cache_key];
 		}
 
 		// debug
@@ -545,7 +546,7 @@ class component_relation_children extends component_relation_common {
 		}
 
 		// cache
-		$ar_parent_tipo_cache[$cache_key] = $ar_parent_tipo;
+		self::$ar_parent_tipo_cache[$cache_key] = $ar_parent_tipo;
 
 
 		return $ar_parent_tipo;

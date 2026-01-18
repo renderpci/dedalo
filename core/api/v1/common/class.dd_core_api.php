@@ -9,7 +9,7 @@ final class dd_core_api {
 
 
 	// Version. Important!
-		static $version = "1.0.0";  // 05-06-2019
+		public static $version = "1.0.0";  // 05-06-2019
 
 	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
 		// static $ar_dd_objects;
@@ -18,17 +18,16 @@ final class dd_core_api {
 		// static $request_ddo_value = [];
 
 	// rqo . store current rqo received in context to allow external access (portals, etc.)
-		static $rqo;
+		public static $rqo;
 
 	// context_dd_objects . store calculated context dd_objects
-		static $context_dd_objects;
+		public static $context_dd_objects;
 
 	// context . Whole calculated context
-		// static $context;
-		static $ddo_map = []; // fixed in get_structure_context()
+		public static $context;
 
 	// static debug sql_query search
-		static $sql_query_search = [];
+		public static $sql_query_search = [];
 
 
 

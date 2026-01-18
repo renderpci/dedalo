@@ -178,6 +178,21 @@ $updates->$v = new stdClass();
 				DROP TABLE temp_matrix_counter_dd;
 			');
 
+		// Rename matrix_notifications column datos to data
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DO $$
+				BEGIN
+					IF EXISTS (
+						SELECT 1
+						FROM information_schema.columns
+						WHERE table_name = \'matrix_notifications\'
+						AND column_name = \'datos\'
+					) THEN
+						EXECUTE \'ALTER TABLE "matrix_notifications" RENAME COLUMN "datos" TO "data"\';
+					END IF;
+				END $$;
+			');
+
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			$ar_tables = [
@@ -250,7 +265,7 @@ $updates->$v = new stdClass();
 		foreach ($other_tables as $current_table) {
 			$columns [] = '
 				ALTER TABLE "'.$current_table.'"
-					RENAME COLUMN datos TO data;					
+					RENAME COLUMN datos TO data;
 			';
 			$comments[] = "
 				COMMENT ON COLUMN ".$current_table.".data IS 'Table data as a general JSON data';
@@ -358,7 +373,7 @@ $updates->$v = new stdClass();
 		$other_tables = [
 			'matrix_notifications',
 			'matrix_updates'
-		]; 
+		];
 
-		
+
 

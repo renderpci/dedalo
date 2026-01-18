@@ -11,6 +11,8 @@ class lang {
 	// fixed matrix table where are stored all langs
 	public static $langs_matrix_table = 'matrix_langs';
 
+	public static $resolve_response_cache = [];
+	public static $resolve_multiple_lang_cache = [];
 
 
 	/**
@@ -41,10 +43,9 @@ class lang {
 				$lang_tld = substr($lang_tld, 3);
 			}
 
-		// cache
-			static $resolve_response;
-			if (isset($resolve_response[$lang_tld])) {
-				return $resolve_response[$lang_tld];
+		// cache			
+			if (isset(self::$resolve_response_cache[$lang_tld])) {
+				return self::$resolve_response_cache[$lang_tld];
 			}
 
 		// resolve using unified method resolve_multiple
@@ -54,7 +55,7 @@ class lang {
 			$response = $items[0] ?? null;
 
 		// cache
-			$resolve_response[$lang_tld] = $response;
+			self::$resolve_response_cache[$lang_tld] = $response;
 
 
 		return $response;
@@ -73,10 +74,10 @@ class lang {
 	public static function resolve_multiple(array $ar_lang_tld) : ?array {
 
 		// cache
-		static $resolve_multiple_lang_cache = [];
+		
 		$cache_key = implode(',', $ar_lang_tld);
-		if (isset($resolve_multiple_lang_cache[$cache_key])) {
-			return $resolve_multiple_lang_cache[$cache_key];
+		if (isset(self::$resolve_multiple_lang_cache[$cache_key])) {
+			return self::$resolve_multiple_lang_cache[$cache_key];
 		}
 
 		// short vars
@@ -143,7 +144,7 @@ class lang {
 		}
 
 		// cache
-		$resolve_multiple_lang_cache[$cache_key] = $items;
+		self::$resolve_multiple_lang_cache[$cache_key] = $items;
 
 
 		return $items;

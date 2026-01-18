@@ -80,6 +80,10 @@ class section extends common {
 		// Section record instances, array
 		protected array $section_records;
 
+		// cache
+		public static $cache_ar_children_tipo = [];
+		public static $section_map_cache = [];
+
 
 
 	# DIFFUSION INFO
@@ -2285,7 +2289,7 @@ class section extends common {
 			?array $ar_exclude_models=null
 		) : array {
 
-		static $cache_ar_children_tipo = [];
+		
 		$cache_uid = implode('_', [
 			$section_tipo,
 			implode('|', $ar_model_name_required),
@@ -2295,8 +2299,8 @@ class section extends common {
 			md5(serialize($ar_tipo_exclude_elements)),
 			md5(serialize($ar_exclude_models))
 		]);
-		if ($from_cache && isset($cache_ar_children_tipo[$cache_uid])) {
-			return $cache_ar_children_tipo[$cache_uid];
+		if ($from_cache && isset(self::$cache_ar_children_tipo[$cache_uid])) {
+			return self::$cache_ar_children_tipo[$cache_uid];
 		}
 
 		$ar_elements_to_be_exclude = [];
@@ -2393,7 +2397,7 @@ class section extends common {
 		);
 
 		// Cache session store
-		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
+		self::$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
 
 
 		return $section_ar_children_tipo;
@@ -3728,9 +3732,9 @@ class section extends common {
 	public static function get_section_map( string $section_tipo ) : ?object {
 
 		// cache
-			static $section_map_cache = [];
-			if (array_key_exists($section_tipo, $section_map_cache)) {
-				return $section_map_cache[$section_tipo];
+			
+			if (array_key_exists($section_tipo, self::$section_map_cache)) {
+				return self::$section_map_cache[$section_tipo];
 			}
 
 		$ar_model_name_required	= ['section_map'];
@@ -3767,7 +3771,7 @@ class section extends common {
 			}
 
 		// cache. Store in cache for speed
-			$section_map_cache[$section_tipo] = $section_map;
+			self::$section_map_cache[$section_tipo] = $section_map;
 
 
 		return $section_map;

@@ -34,7 +34,7 @@ trait search_component_relation_children {
 		// 3. Dispatch to Specific Operator Handler
         $query_object = self::dispatch_relation_operator_sql($query_object, $q, $ctx);
 
-		return $query_object;			
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -44,7 +44,7 @@ trait search_component_relation_children {
     * Extracts and normalizes the search query value (q) from the input object.
     */
     protected static function extract_normalized_relation_q(object $query_object) : string|false {
-        
+
         $q_raw  = $query_object->q ?? null;
 
         // For unification, all non string are JSON encoded
@@ -70,7 +70,7 @@ trait search_component_relation_children {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_relation_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -78,7 +78,7 @@ trait search_component_relation_children {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo ?? null;
-        
+
         if (empty($component_tipo)) {
             debug_log(__METHOD__ . " Invalid component tipo from path", logger::ERROR);
             return false;
@@ -90,7 +90,7 @@ trait search_component_relation_children {
         $ctx->table_alias    = $query_object->table_alias;
 		$ctx->table          = $query_object->table;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
         // Set defaults on query_object
         $query_object->type = 'jsonb';
 
@@ -148,7 +148,7 @@ trait search_component_relation_children {
 		$query_object->params = [
 			'_Q1_' => $ctx->target_parent_tipo
 		];
-	
+
 		/**
 		 * Use NOT EXISTS for efficiency.
 		 * Use ::text comparison for section_id to ensure matching works regardless of
@@ -158,15 +158,15 @@ trait search_component_relation_children {
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_
 			  AND elem->>'section_id' = {$ctx->table_alias}.section_id::text
 		)";
-	
+
 		return $query_object;
 	}
 
@@ -179,14 +179,14 @@ trait search_component_relation_children {
         $query_object->params = [
 			'_Q1_' => $ctx->target_parent_tipo
 		];
-        
+
 		$query_object->sentence = "EXISTS (
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_
@@ -214,7 +214,7 @@ trait search_component_relation_children {
 			'_Q1_' => $ctx->target_parent_tipo,
 			'_Q2_' => $q
 		];
-        
+
 		/**
 		 * Different (!=): Record has data (children) AND the target child is not present.
 		 * Logic: (EXISTS any child) AND (NOT EXISTS specific child X)
@@ -223,9 +223,9 @@ trait search_component_relation_children {
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_
@@ -234,9 +234,9 @@ trait search_component_relation_children {
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_
@@ -266,14 +266,14 @@ trait search_component_relation_children {
 			'_Q1_' => $ctx->target_parent_tipo,
 			'_Q2_' => $q
 		];
-        
+
 		$query_object->sentence = "NOT EXISTS (
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_
@@ -295,14 +295,14 @@ trait search_component_relation_children {
 			'_Q1_' => $ctx->target_parent_tipo,
 			'_Q2_' => $q
 		];
-        
+
 		$query_object->sentence = "EXISTS (
 			SELECT 1
 			FROM \"{$ctx->table}\" AS sub
 			CROSS JOIN LATERAL jsonb_array_elements(
-				CASE 
+				CASE
 					WHEN jsonb_typeof(sub.relation->_Q1_) = 'array' THEN sub.relation->_Q1_
-					ELSE jsonb_build_array(sub.relation->_Q1_) 
+					ELSE jsonb_build_array(sub.relation->_Q1_)
 				END
 			) AS elem
 			WHERE sub.relation ? _Q1_

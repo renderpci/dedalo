@@ -56,7 +56,13 @@ class ontology_node {
 	public static $table = 'dd_ontology';
 
 	// array of ontology_node instances
-	private static $instances = [];
+	public static $instances = [];
+	public static $label_by_tipo_cache = [];
+	public static $model_by_tipo_cache = [];
+	public static $ar_children_of_this_stat_data = [];
+	public static $ar_parents_of_this_data = [];
+	public static $ar_siblings_of_this_data = [];
+	public static $ar_tipo_by_model_name_and_relation_data = [];
 
 
 
@@ -703,10 +709,14 @@ class ontology_node {
 	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
 		// cache
-		static $label_by_tipo_cache = [];
 		$cache_uid = $tipo . '_' . $lang . '_' . (int)$fallback;
-		if ($from_cache===true && isset($label_by_tipo_cache[$cache_uid])) {
-			return $label_by_tipo_cache[$cache_uid];
+		if ($from_cache===true && isset(self::$label_by_tipo_cache[$cache_uid])) {
+			return self::$label_by_tipo_cache[$cache_uid];
+		}
+
+		// Safe control: prevent big array memory and performance problems
+		if (count(self::$label_by_tipo_cache) > 2000) {
+			self::$label_by_tipo_cache = [];
 		}
 
 		// Verify : In cases such as, for example, when solving the model of a related term that has no model assigned to it, the tipo will be empty.
@@ -723,7 +733,7 @@ class ontology_node {
 		$label			= $ontology_node->get_term($lang, $fallback);
 
 		// cache
-		$label_by_tipo_cache[$cache_uid] = $label;
+		self::$label_by_tipo_cache[$cache_uid] = $label;
 
 
 		return $label;
@@ -740,19 +750,17 @@ class ontology_node {
 	*/
 	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : ?string {
 
-		static $model_by_tipo_cache;
-
 		// cache
 		$cache_uid = $tipo;
-		if ($from_cache===true && isset($model_by_tipo_cache[$cache_uid])) {
-			return $model_by_tipo_cache[$cache_uid];
+		if ($from_cache===true && isset(self::$model_by_tipo_cache[$cache_uid])) {
+			return self::$model_by_tipo_cache[$cache_uid];
 		}
 
 		$ontology_node	= ontology_node::get_instance($tipo);
 		$model	= $ontology_node->get_model();
 
 		// cache
-		$model_by_tipo_cache[$cache_uid] = $model;
+		self::$model_by_tipo_cache[$cache_uid] = $model;
 
 
 		return $model;
@@ -845,10 +853,9 @@ class ontology_node {
 		}
 
 		// static cache
-		static $ar_children_of_this_stat_data;
 		$key = $this->tipo;
-		if( isset($ar_children_of_this_stat_data[$key]) ) {
-			return $ar_children_of_this_stat_data[$key];
+		if( isset(self::$ar_children_of_this_stat_data[$key]) ) {
+			return self::$ar_children_of_this_stat_data[$key];
 		}
 
 		// search
@@ -860,7 +867,7 @@ class ontology_node {
 		$ar_children = ( $result===false ) ? [] : $result;
 
 		// store cache data
-		$ar_children_of_this_stat_data[$key] = $ar_children;
+		self::$ar_children_of_this_stat_data[$key] = $ar_children;
 
 
 		return $ar_children;
@@ -986,9 +993,8 @@ class ontology_node {
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
 		// static cache
-		static $ar_parents_of_this_data;
-		if(isset($this->tipo) && isset($ar_parents_of_this_data[$this->tipo])) {
-			return $ar_parents_of_this_data[$this->tipo];
+		if(isset($this->tipo) && isset(self::$ar_parents_of_this_data[$this->tipo])) {
+			return self::$ar_parents_of_this_data[$this->tipo];
 		}
 
 		$ar_parents_of_this = [];
@@ -1016,7 +1022,7 @@ class ontology_node {
 		}
 
 		// store cache data
-		$ar_parents_of_this_data[$this->tipo] = $ar_parents_of_this;
+		self::$ar_parents_of_this_data[$this->tipo] = $ar_parents_of_this;
 
 
 		return $ar_parents_of_this;
@@ -1033,9 +1039,8 @@ class ontology_node {
 	public function get_ar_siblings_of_this() : array {
 
 		// static cache
-		static $ar_siblings_of_this_data;
-		if( isset($this->tipo) && isset($ar_siblings_of_this_data[$this->tipo]) ) {
-			return $ar_siblings_of_this_data[$this->tipo];
+		if( isset($this->tipo) && isset(self::$ar_siblings_of_this_data[$this->tipo]) ) {
+			return self::$ar_siblings_of_this_data[$this->tipo];
 		}
 
 		// search
@@ -1046,7 +1051,7 @@ class ontology_node {
 		$siblings = ( $result===false ) ? [] : $result;
 
 		// store cache data
-		$ar_siblings_of_this_data[$this->tipo] = $siblings;
+		self::$ar_siblings_of_this_data[$this->tipo] = $siblings;
 
 
 		return $siblings;
@@ -1123,10 +1128,9 @@ class ontology_node {
 			}
 
 		// static cache
-			static $ar_tipo_by_model_name_and_relation_data;
 			$uid = $tipo.'_'.$model_name.'_'.$relation_type.'_'.(int)$search_exact;
-			if(isset($ar_tipo_by_model_name_and_relation_data[$uid])) {
-				return $ar_tipo_by_model_name_and_relation_data[$uid];
+			if(isset(self::$ar_tipo_by_model_name_and_relation_data[$uid])) {
+				return self::$ar_tipo_by_model_name_and_relation_data[$uid];
 			}
 
 		switch($relation_type) {
@@ -1296,7 +1300,7 @@ class ontology_node {
 		}
 
 		// store cache data
-			$ar_tipo_by_modelo_name_and_relation_data[$uid] = $result;
+			self::$ar_tipo_by_model_name_and_relation_data[$uid] = $result;
 
 
 		return $result;
