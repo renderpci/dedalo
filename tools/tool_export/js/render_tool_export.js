@@ -78,6 +78,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'components_list_container',
 			parent			: grid_top
 		})
+		self.components_list_container = components_list_container;
 		// components_list. render section component list [left]
 		const ar_components_exclude = ['component_password']
 		const section_elements = await self.get_section_elements_context({
@@ -100,6 +101,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'selection_list_contaniner',
 			parent			: grid_top
 		})
+		self.selection_list_contaniner = selection_list_contaniner;
 		// title
 		ui.create_dom_element({
 			element_type	: 'h1',
@@ -184,10 +186,39 @@ const get_content_data_edit = async function(self) {
 			// section get total
 			self.caller.get_total()
 			.then(function(total){
+				self.total_records = total;
 				const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
 				const total_label	= new Intl.NumberFormat(locale, {}).format(total);
 				total_records.insertAdjacentHTML('afterbegin', total_label)
 			})
+
+		// Progress Bar Container
+		// Uses a dual-layer strategy for the "inverted color" text effect.
+		// text_bg is dark and sits at the bottom.
+		// text_fg is white and sits at the top, clipped dynamically to match the bar's progress.
+			const progress_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'export_progress_container hide',
+				parent			: export_buttons_config
+			})
+			// Background text (dark)
+			const progress_text_bg = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'export_progress_text bg',
+				parent			: progress_container
+			})
+			const progress_bar = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'export_progress_bar',
+				parent			: progress_container
+			})
+			// Foreground text (white, will be clipped)
+			const progress_text_fg = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'export_progress_text fg',
+				parent			: progress_container
+			})
+			self.progress_ui = { container: progress_container, bar: progress_bar, text_bg: progress_text_bg, text_fg: progress_text_fg };
 
 		// data_format selectors
 			const data_format = ui.create_dom_element({
@@ -319,10 +350,9 @@ const get_content_data_edit = async function(self) {
 					const dd_grid				= await self.get_export_grid(export_grid_options)
 					const dd_grid_export_node	= await dd_grid.render()
 
-					const clone_node = dd_grid_export_node.cloneNode(true)
 					if (dd_grid_export_node) {
 						data_spinner.remove()
-						export_data_container.appendChild(clone_node)
+						export_data_container.appendChild(dd_grid_export_node)
 						// export_data_container.scrollIntoView(true)
 						export_buttons_options.scrollIntoView(true)
 					}
@@ -350,9 +380,10 @@ const get_content_data_edit = async function(self) {
 					spinner.remove();
 
 				// loading class elements
-					[components_list_container, selection_list_contaniner, export_buttons_options].map(
+					[components_list_container, selection_list_contaniner].map(
 						el => el.classList.remove('loading')
 					)
+					// Note: export_buttons_options remains in loading state until stream finishes
 			})
 
 		// activate_all_columns
@@ -432,9 +463,10 @@ const get_content_data_edit = async function(self) {
 	// download_buttons_options
 		const export_buttons_options = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'export_buttons_options no_print',
+			class_name		: 'export_buttons_options no_print loading',
 			parent			: fragment
 		})
+		self.export_buttons_options = export_buttons_options;
 
 		// filename base name
 		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
