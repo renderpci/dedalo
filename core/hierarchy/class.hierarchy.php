@@ -24,6 +24,7 @@ class hierarchy extends ontology {
 	public static $active_hierarchy_elements_cache;
 
 
+
 	/**
 	* GET_DEFAULT_SECTION_TIPO_TERM
 	* @param string $tld
@@ -123,7 +124,7 @@ class hierarchy extends ontology {
 				$section_tipo
 			);
 			$data		= $component->get_data();
-			$first_data	= $dato[0]->value ?? null;
+			$first_data	= $data[0]->value ?? null;
 			$tld2		= !empty($first_data)
 				? strtolower( $first_data )
 				: $first_data;
@@ -449,8 +450,8 @@ class hierarchy extends ontology {
 						$parent_model_locator->set_section_tipo( $parent_node_tipo );
 						$parent_model_locator->set_section_id( $parent_section_id );
 
-					$component_model_parent->set_dato( $parent_model_locator );
-					$component_model_parent->Save();
+					$component_model_parent->set_data( [$parent_model_locator] );
+					$component_model_parent->save();
 
 				// insert the model node in dd_ontology
 					ontology::insert_dd_ontology_record($tld2.'0', 2);
@@ -535,8 +536,7 @@ class hierarchy extends ontology {
 				return 'lg-eng';
 			}
 
-		// cache
-			
+		// cache			
 			if(isset(self::$cache_main_lang_cache[$section_tipo])) {
 				return self::$cache_main_lang_cache[$section_tipo];
 			}
@@ -547,48 +547,51 @@ class hierarchy extends ontology {
 
 		// short vars
 			$matrix_table			= 'matrix_hierarchy_main';
+			$hierarchy_lang_tipo	= DEDALO_HIERARCHY_LANG_TIPO;
 			$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 			$hierarchy_tld_tipo		= DEDALO_HIERARCHY_TLD2_TIPO;
-			$lang					= DEDALO_DATA_NOLAN;
 			$prefix					= get_tld_from_tipo($section_tipo);
-			$prefix_lower			= strtolower($prefix); // data is stored always in uppercase
-			$prefix_upper			= strtoupper($prefix); // data is stored always in uppercase
+			$prefix_lower			= strtolower($prefix); // data is stored sometimes in uppercase
+
+		// params
+			$params = [
+				$hierarchy_section_tipo,
+				"\$.{$hierarchy_tld_tipo}[*].value ? (@ like_regex \"^$prefix_lower$\" flag \"i\")" // Case insensitive search
+			];
 
 		// SQL query
-			$sql  = '-- '.__METHOD__;
-			$sql .= "\nSELECT section_id, datos#>'{relations}' AS relations \nFROM $matrix_table WHERE";
-			$sql .= "\n section_tipo = $1 AND";
-			$sql .= "\n (datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? $2 "; // Now hierarchy tld is an array
-			$sql .= " OR datos#>'{components,$hierarchy_tld_tipo,dato,$lang}' ? $3) ";
-			$sql .= "\n LIMIT 1 ;";
+			$sql  = "SELECT section_id, relation#>'{".$hierarchy_lang_tipo."}' AS main_lang" . PHP_EOL;
+			$sql .= "FROM $matrix_table WHERE" . PHP_EOL;
+			$sql .= "section_tipo = $1 AND" . PHP_EOL;
+			$sql .= "string @? ($2)::jsonpath" . PHP_EOL;
+			$sql .= "LIMIT 1;";
 
 		// search
-			$result	= matrix_db_manager::exec_search($sql, [$hierarchy_section_tipo, $prefix_lower, $prefix_upper]);
-			while ($row = pg_fetch_assoc($result)) {
+			$result	= matrix_db_manager::exec_search($sql, $params);
+			while ($row = pg_fetch_assoc($result)) {			
 
-				$relations = json_handler::decode($row['relations']);
+				$main_lang_column = $row['main_lang'];
+				// JSON decode DB column
+				$main_lang_value = is_string($main_lang_column) ? json_decode($main_lang_column) : $main_lang_column;
 
 				// resolve locator
-					$main_lang_locator = array_find( (array)$relations, function($el){
-						return (isset($el->from_component_tipo) && $el->from_component_tipo===DEDALO_HIERARCHY_LANG_TIPO);
-					});
-					if (!is_object($main_lang_locator)) {
-						debug_log(__METHOD__
-							. " Empty main_lang_locator. not found into section relations. Fallback will be applied ($fallback_value)" . PHP_EOL
-							.' section_tipo: ' . $section_tipo . PHP_EOL
-							.' relations: ' . to_string($relations)
-							, logger::ERROR
-						);
-					}else{
-						$main_lang = lang::get_code_from_locator(
-							$main_lang_locator,
-							true // bool add_prefix
-						);
-					}
-
-				// only first record is used (limit = 1)
-				break;
-			}//end while
+				$main_lang_locator = $main_lang_value[0] ?? null;
+				if (!is_object($main_lang_locator)) {
+					debug_log(__METHOD__
+						. " Empty main_lang_locator. not found into section. Fallback will be applied ($fallback_value)" . PHP_EOL
+						.' section_tipo: ' . $section_tipo . PHP_EOL
+						.' main_lang_value: ' . to_string($main_lang_value)
+						, logger::ERROR
+					);
+				}else{
+					$main_lang = lang::get_code_from_locator(
+						$main_lang_locator,
+						true // bool add_prefix
+					);
+				}
+				
+				break; // only one result is expected
+			}
 
 		// fallback empty value
 			if (empty($main_lang)) {
@@ -811,35 +814,49 @@ class hierarchy extends ontology {
 	/**
 	* GET_HIERARCHY_BY_TLD
 	* Search hierarchy sections by tld and
-	* get result section_id
+	* gets result as locator object
 	* @param $tld
 	*	tld like 'es'
 	* @return object|null $row
+	* Sample:
+	* {
+	* 	"section_id": "66",
+	* 	"section_tipo": "hierarchy1"
+	* }
 	*/
 	public static function get_hierarchy_by_tld( string $tld ) : ?object {
 
 		// short vars
-			$table			= self::$main_table; // expected 'matrix_hierarchy_main'
-			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+		$matrix_table	= self::$main_table; // expected 'matrix_hierarchy_main'
+		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 
-			// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
-			$tld 			= trim(strtolower($tld));
-			$safe_tld 		= safe_tld( $tld );
-			$q				= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
+		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
+		$tld 				= trim(strtolower($tld));
+		$safe_tld 			= safe_tld( $tld );
+		$hierarchy_tld_tipo = DEDALO_HIERARCHY_TLD2_TIPO;
+
+		// params
+		$params = [
+			$section_tipo,
+			"\$.{$hierarchy_tld_tipo}[*].value ? (@ like_regex \"^$safe_tld$\" flag \"i\")" // Case insensitive search
+		];
 
 		// SQL query
-			$sql = 'SELECT section_id, section_tipo' . PHP_EOL;
-			$sql .= 'FROM '.$table . PHP_EOL;
-			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
-			$sql .= 'string @> $2';
-			$sql .= 'LIMIT 1 ;';
+		$sql  = "SELECT section_id, section_tipo" . PHP_EOL;
+		$sql .= "FROM $matrix_table WHERE" . PHP_EOL;
+		$sql .= "section_tipo = $1 AND" . PHP_EOL;
+		$sql .= "string @? ($2)::jsonpath" . PHP_EOL;
+		$sql .= "LIMIT 1;";
 
 		// search
-			$result = matrix_db_manager::exec_search($sql, [$section_tipo, $q]);
-			$row 	= pg_fetch_object($result) ?? null;
+		$result = matrix_db_manager::exec_search($sql, $params);
+		if ($result === false) {
+			return null;
+		}
+		$row = pg_fetch_object($result);
 
 
-		return $row;
+		return $row !== false ? $row : null;
 	}//end get_hierarchy_by_tld
 
 
@@ -904,10 +921,12 @@ class hierarchy extends ontology {
 				? 'matrix_langs'
 				: 'matrix_hierarchy';
 
+			$columns = implode(',', matrix_db_manager::$columns);
+
 			$command  = '';
 			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
 			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
-			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM '.$matrix_table.' WHERE ';
+			$command .= ' -c "\copy (SELECT '. $columns .'  FROM '.$matrix_table.' WHERE ';
 			if ($current_section_tipo==='all') {
 
 				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
@@ -942,7 +961,7 @@ class hierarchy extends ontology {
 			$response->msg	.= "<br>".implode('<br>', $msg);
 			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
 			$response->msg	.= '<br>' . 'To import, use a command like this: ';
-			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from ${SECTION_TIPO}.copy"';
+			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy('. $columns .') from ${SECTION_TIPO}.copy"';
 
 		// files links
 			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
@@ -1291,8 +1310,8 @@ class hierarchy extends ontology {
 	* @test true
 	*/
 	public static function get_active_elements() : array {
-
 		
+		// cache
 		if (isset(self::$active_hierarchy_elements_cache)) {
 			return self::$active_hierarchy_elements_cache;
 		}
@@ -1382,8 +1401,8 @@ class hierarchy extends ontology {
 			$section_tipo // string section_tipo
 		);
 
-		$dato = $component->get_dato();
-		if (!empty($dato)) {
+		$data = $component->get_data();
+		if (!empty($data)) {
 			// Already contains data. Skip creation
 			return false;
 		}
@@ -1426,7 +1445,7 @@ class hierarchy extends ontology {
 			return false;
 		}
 		// save the component
-		$component->Save();
+		$component->save();
 		$new_section_id = $response->section_id;
 
 		// get current hierarchy name as 'Exhibition'
@@ -1504,9 +1523,9 @@ class hierarchy extends ontology {
 			$section_tipo // string section_tipo
 		);
 
-		$component->set_dato( [$name] );
+		$component->set_data( [$name] );
 
-		$save_result = $component->Save();
+		$save_result = $component->save();
 
 		$result = empty($save_result) ? false : true;
 
@@ -1567,9 +1586,9 @@ class hierarchy extends ontology {
 				$locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
 				$locator->set_section_id(NUMERICAL_MATRIX_VALUE_NO);
 
-			$component->set_dato( [$locator] );
+			$component->set_data( [$locator] );
 
-			$save_result = $component->Save();
+			$save_result = $component->save();
 			if (!$save_result) {
 				// Log error or handle save failure
 				debug_log(__METHOD__
