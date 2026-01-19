@@ -303,7 +303,7 @@ class component_relation_index extends component_relation_common {
 			$row = $db_result->fetch_one();
 
 			if (empty($row)) {
-				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . $current_section_tipo);
+				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . to_string($current_section_tipo));
 				continue;
 			}
 
@@ -316,7 +316,9 @@ class component_relation_index extends component_relation_common {
 			$datum = $this->get_section_datum_from_locator($locator);
 
 			// context become calculated and merged with previous
-			$context = array_merge($context, $datum->context);
+			if (isset($datum->context) && is_array($datum->context)) {
+				$context = array_merge($context, $datum->context);
+			}
 		}
 
 		return $context;
