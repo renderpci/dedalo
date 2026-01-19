@@ -342,3 +342,12 @@ if ($perf_active) {
 	$perf_monitor->checkpoint('after_output');
 	$perf_monitor->finish();
 }
+// static profiler
+if (defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER===true) {
+	$total_time = exec_time_unit($global_start_time, 'ms');
+	if($total_time > 2000) {
+		$report = static_profiler::get_report();
+		error_log( json_encode($report, JSON_PRETTY_PRINT));
+	}
+}
+}
