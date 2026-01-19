@@ -359,20 +359,29 @@ class ontology {
 		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)	
 		$tld 		= trim(strtolower($tld));
 		$safe_tld 	= safe_tld( $tld );
-		$q 			= '{"hierarchy6": [{"value": "'.$safe_tld.'"}]}';
+
+		// params
+		$params = [
+			self::$main_section_tipo,
+			'{"'.DEDALO_HIERARCHY_TLD2_TIPO.'": [{"value": "'.$safe_tld.'"}]}'
+		];
 
 		// SQL query			
-			$sql = 'SELECT section_id, section_tipo ' . PHP_EOL;
-			$sql .= 'FROM '. self::$main_table . PHP_EOL;
-			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;		
-			$sql .= 'string @> $2' . PHP_EOL;
-			$sql .= 'LIMIT 1 ;';
+		$sql  = 'SELECT section_id, section_tipo ' . PHP_EOL;
+		$sql .= 'FROM '. self::$main_table . PHP_EOL;
+		$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;		
+		$sql .= 'string @> $2' . PHP_EOL;
+		$sql .= 'LIMIT 1;';
 
 		// search
-			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $q]);
-			$row 	= pg_fetch_object($result) ?? null;
+		$result = matrix_db_manager::exec_search($sql, $params);
+		if ($result === false) {
+			return null;
+		}
+		$row = pg_fetch_object($result);
 
-		return $row;
+
+		return $row !== false ? $row : null;
 	}//end get_ontology_main_from_tld
 
 
@@ -387,21 +396,32 @@ class ontology {
 	*/
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
 
+		// set a safe tipo to avoid SQL injection attacks (only alphanumeric and hyphen)	
+		$target_section_tipo = trim(strtolower($target_section_tipo));
 		$safe_tipo = safe_tipo( $target_section_tipo );
-		$q = '{"hierarchy53": [{"value": "'.$safe_tipo.'"}]}';
+
+		// params
+		$params = [
+			self::$main_section_tipo,
+			'{"'.DEDALO_HIERARCHY_TARGET_SECTION_TIPO.'": [{"value": "'.$safe_tipo.'"}]}'
+		];
 
 		// SQL query
-			$sql = 'SELECT section_id, section_tipo ' . PHP_EOL;
-			$sql .= 'FROM '. self::$main_table . PHP_EOL;
-			$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
-			$sql .= 'string @> $2' . PHP_EOL;
-			$sql .= 'LIMIT 1 ;';
+		$sql  = 'SELECT section_id, section_tipo ' . PHP_EOL;
+		$sql .= 'FROM '. self::$main_table . PHP_EOL;
+		$sql .= 'WHERE section_tipo = $1 AND' . PHP_EOL;
+		$sql .= 'string @> $2' . PHP_EOL;
+		$sql .= 'LIMIT 1;';
 
 		// search
-			$result = matrix_db_manager::exec_search($sql, [self::$main_section_tipo, $q]);
-			$row 	= pg_fetch_object($result) ?? null;
+		$result = matrix_db_manager::exec_search($sql, $params);
+		if ($result === false) {
+			return null;
+		}
+		$row = pg_fetch_object($result);
 
-		return $row;
+
+		return $row !== false ? $row : null;
 	}//end get_ontology_main_form_target_section_tipo
 
 
