@@ -175,7 +175,7 @@ const get_content_data = async function(self) {
 
 				// is valid
 					const is_invalid = (instance, condition_fn) => {
-						if (!instance.data?.value || !condition_fn(instance.data?.value[0])) {
+						if (!instance.data?.value || !condition_fn(instance.data?.value)) {
 							set_error(instance)
 							return true
 						}
@@ -184,12 +184,12 @@ const get_content_data = async function(self) {
 
 				// check value
 					if (
-						is_invalid(tld_component_instance, val => val?.length) ||
-						is_invalid(name_component_instance, val => val?.length) ||
-						is_invalid(active_component_instance, val => val?.section_id == 1) ||
-						is_invalid(typology_component_instance, val => val?.section_id) ||
-						is_invalid(lang_component_instance, val => val?.section_id) ||
-						is_invalid(real_st_component_instance, val => val?.length)
+						is_invalid(tld_component_instance, val => val?.[0].value?.length) ||
+						is_invalid(name_component_instance, val => val?.[0].value?.length) ||
+						is_invalid(active_component_instance, val => val?.[0].section_id == 1) ||
+						is_invalid(typology_component_instance, val => val?.[0].section_id) ||
+						is_invalid(lang_component_instance, val => val?.[0].section_id) ||
+						is_invalid(real_st_component_instance, val => val?.[0].value?.length)
 					) return false
 
 				// confirm twice
