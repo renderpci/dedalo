@@ -290,6 +290,17 @@ class component_relation_index extends component_relation_common {
 
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
+			// check if section_tipo is available (or the tld is not installed/activated)
+			// extract the first element if it's an array, otherwise use as-is
+			$section_tipo_value = is_array($current_section_tipo) ? ($current_section_tipo[0] ?? null) : $current_section_tipo;
+			if(empty($section_tipo_value)){
+				continue;
+			}
+			$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo_value);
+			if(empty($current_matrix_table)){				
+				continue;
+			}
+
 			// set/update section tipo
 			$sqo->set_section_tipo( $current_section_tipo );
 			// search to get any row of the database
