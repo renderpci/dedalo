@@ -241,6 +241,22 @@ class section_record {
 
 
 	/**
+	* SET_COLUMN_DATA
+	* Set the column data into the section record shared data.
+	* @param string $column
+	* @param object|null $data
+	* @return bool $result Array of matching elements or null if none found
+	*/
+	public function set_column_data( string $column, ?object $data ) : bool {
+
+		$result = $this->data_instance->set_column_data( $column, $data );
+
+		return $result;
+	}//end set_column_data
+
+
+
+	/**
 	 * SAVE
 	 * Update all section_record data into DB
 	 * Will save every column with current data
