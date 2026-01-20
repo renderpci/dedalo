@@ -315,15 +315,15 @@ service_time_machine.prototype.build_request_config = function() {
 					// section case. Usually from Tool Time machine listing deleted sections
 
 					// sqo. filter
-						sqo.parsed = true,
+						sqo.parsed = false,
 						sqo.filter = {
-							and : [
+							$and : [
 								{
-									q_parsed	: "\'deleted\'",
+									q			: section_tipo_caller,
 									operator	: "=",
 									format		: "column",
-									column_name	: "state",
-									path		: [{ section_tipo : section_tipo }]
+									column_name	: "tipo",
+									path		: [{ section_tipo : section_tipo_caller }]
 								}
 							]
 						}
@@ -369,18 +369,18 @@ service_time_machine.prototype.build_request_config = function() {
 			// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
 			const default_ddo_map = [
 				//  matrix_id . tm info -> Id
-				{
-					id				: 'matrix_id',
-					tipo			: 'dd1573',
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_section_id',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					label			: 'Matrix id',
-					mode			: 'list',
-					view			: 'mini'
-				},
+				// {
+				// 	id				: 'matrix_id',
+				// 	tipo			: 'dd1573',
+				// 	type			: 'component',
+				// 	typo			: 'ddo',
+				// 	model			: 'component_section_id',
+				// 	section_tipo	: section_tipo,
+				// 	parent			: section_tipo,
+				// 	label			: 'Matrix id',
+				// 	mode			: 'list',
+				// 	view			: 'mini'
+				// },
 				//  bulk_process_id . tm info -> Process
 				{
 					id				: 'bulk_process_id',
