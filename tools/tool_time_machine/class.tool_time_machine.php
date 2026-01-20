@@ -234,7 +234,6 @@ class tool_time_machine extends tool_common {
 					$response->errors[]	= 'invalid model';
 
 					return $response;
-					break;
 			}
 
 		// response
