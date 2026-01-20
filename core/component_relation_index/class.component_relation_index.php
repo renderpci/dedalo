@@ -290,6 +290,17 @@ class component_relation_index extends component_relation_common {
 
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
+			// check if section_tipo is available (or the tld is not installed/activated)
+			// extract the first element if it's an array, otherwise use as-is
+			$section_tipo_value = is_array($current_section_tipo) ? ($current_section_tipo[0] ?? null) : $current_section_tipo;
+			if(empty($section_tipo_value)){
+				continue;
+			}
+			$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo_value);
+			if(empty($current_matrix_table)){				
+				continue;
+			}
+
 			// set/update section tipo
 			$sqo->set_section_tipo( $current_section_tipo );
 			// search to get any row of the database
@@ -303,7 +314,7 @@ class component_relation_index extends component_relation_common {
 			$row = $db_result->fetch_one();
 
 			if (empty($row)) {
-				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . $current_section_tipo);
+				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . to_string($current_section_tipo));
 				continue;
 			}
 
@@ -316,7 +327,9 @@ class component_relation_index extends component_relation_common {
 			$datum = $this->get_section_datum_from_locator($locator);
 
 			// context become calculated and merged with previous
-			$context = array_merge($context, $datum->context);
+			if (isset($datum->context) && is_array($datum->context)) {
+				$context = array_merge($context, $datum->context);
+			}
 		}
 
 		return $context;
