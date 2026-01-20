@@ -280,8 +280,15 @@ class search {
 			metrics::$search_total_time += $exec_time;
 		}
 
+		// json_columns to process based on mode
+		$mode = $this->sqo->mode ?? null;	
+		$json_columns = ($mode==='tm') ? tm_db_manager::$json_columns : matrix_db_manager::$json_columns;
+		
 		// wrap result in db_result iterator
-		$db_result = new db_result($result);
+		$db_result = new db_result(
+			$result,
+			$json_columns
+		);
 
 
 		return $db_result;
@@ -541,16 +548,18 @@ class search {
 
 			}else{
 
-				// Case object is a end search object
-				if (isset($search_object->format) && $search_object->format==='column' && isset($search_object->q_parsed)) {
+				$path						= $search_object->path;
+				$search_object->table_alias	= $this->get_table_alias_from_path( $path );
+				$search_object->table		= $this->matrix_table;
 
+				// Case object is a end search object
+				if (isset($search_object->format) && $search_object->format==='column' && isset($search_object->q)) {
+
+					// column format parser
+					$search_object	= $this->column_format_parser($search_object);										
 					$ar_query_object = [$search_object];
 
-				}else{
-
-					$path						= $search_object->path;
-					$search_object->table_alias	= $this->get_table_alias_from_path( $path );
-					$search_object->table		= $this->matrix_table;
+				}else{					
 
 					$search_component			= end($path);
 					// model (with fallback if do not exists)
@@ -925,7 +934,7 @@ class search {
 	public function parse_sql_filter_by_locators() : string {
 
 		$this->build_main_from_sql();
-		$sql_offset = $this->sqo->offset;
+		$sql_offset = $this->sqo->offset ?? null;
 
 		$this->build_sql_filter_by_locators();
 		if ( empty($this->sqo->order) ) {
