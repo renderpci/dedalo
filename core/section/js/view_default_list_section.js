@@ -272,7 +272,7 @@ const rebuild_columns_map = async function(self) {
 			name			: 'ID',
 			section_tipo	: self.section_tipo
 		}],
-		callback	: render_column_id
+		callback	: view_default_list_section.render_column_id || render_column_id
     }
 	columns_map.push(section_id_column)
 
