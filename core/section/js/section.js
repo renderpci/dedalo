@@ -971,18 +971,6 @@ export const get_section_records = async function(options) {
 						: tag_id_add
 				}
 
-		// matrix_id. time machine matrix_id
-			// time machine options
-				if (self.model==='service_time_machine' || self.matrix_id) {
-					instance_options.matrix_id = locator.matrix_id || self.matrix_id
-					// // instance_options.matrix_id = (self.model==='section')
-					// instance_options.matrix_id = (self.model==='service_time_machine')
-					// 	? locator.matrix_id
-					// 	: self.matrix_id
-					instance_options.modification_date	= locator.timestamp || null
-					instance_options.id_variant			= instance_options.id_variant + '_' + instance_options.matrix_id
-				}
-
 			// promise add and continue init and build
 				ar_promises.push(new Promise(function(resolve){
 					get_instance(instance_options)

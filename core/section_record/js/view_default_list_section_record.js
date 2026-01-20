@@ -281,8 +281,6 @@ const render_callback = async function (self, column) {
 			row_key				: self.row_key,
 			paginated_key		: self.paginated_key,
 			caller				: self.caller,
-			matrix_id			: self.matrix_id, // tm var
-			modification_date	: self.modification_date || null, // tm var
 			locator				: self.locator,
 			ar_instances		: self.ar_instances
 		})
