@@ -434,7 +434,7 @@ class sections extends common {
 					// perform the delete in correct function
 					$deleted = false;
 					if ($delete_mode==='delete_record') {
-						$deleted = $section_record->delete_record( $delete_diffusion_records );
+						$deleted = $section_record->delete( $delete_diffusion_records );
 					}else if ($delete_mode==='delete_data') {
 						$deleted = $section_record->delete_data();
 					}
