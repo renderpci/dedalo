@@ -87,6 +87,9 @@ const get_content_data_edit = function(self) {
 			// force use new separate task
 			dd_request_idle_callback(
 				() => {
+					// status check. If instance is destroyed, return
+					if (self.status==='destroyed') return
+
 					const content_value = (self.permissions===1)
 						? get_content_value(i, inputs_value[i], self)
 						: get_content_value(i, inputs_value[i], self)
@@ -113,7 +116,7 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// media url from files_info based on selected context quality
-		const quality			= self.quality || self.context.features.quality
+		const quality			= self.quality || self.context?.features?.quality
 		const data				= self.data || {}
 		const files_info		= current_value && current_value.files_info
 			? current_value.files_info
@@ -313,8 +316,8 @@ const get_quality_selector = (content_value, self) => {
 		const files_info	= value[0] && value[0].files_info
 			? value[0].files_info
 			: []
-		const quality		= self.quality || self.context.features.quality
-		const extension		= self.context.features.extension
+		const quality		= self.quality || self.context?.features?.quality
+		const extension		= self.context?.features?.extension
 		const video			= content_value.video
 
 	const fragment = new DocumentFragment()
