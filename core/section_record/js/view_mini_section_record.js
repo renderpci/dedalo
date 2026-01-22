@@ -73,7 +73,6 @@ view_mini_section_record.render = async function(self, options) {
 							paginated_key		: self.paginated_key,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
-							modification_date	: self.modification_date || null, // tm var
 							locator				: self.locator
 						})
 						if (content_node) {

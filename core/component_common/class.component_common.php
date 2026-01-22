@@ -908,9 +908,6 @@ abstract class component_common extends common {
 						}
 					}
 
-					// fix data
-					$this->data = $data_tm;
-
 					// inject data to component
 					$this->data_resolved = $data_tm;
 
@@ -1475,7 +1472,7 @@ abstract class component_common extends common {
 			$section_tipo		= $this->section_tipo;
 			$section_id 		= $this->section_id;
 			$tipo 				= $this->tipo;
-			$lang				= $lang ?? DEDALO_DATA_LANG;
+			$lang				= $this->lang;
 			$model				= $this->get_model();
 			$mode				= $this->mode;
 			$data_column_name	= $this->data_column_name;

@@ -75,8 +75,10 @@ tool_time_machine.prototype.init = async function(options) {
 	// events subscribe. Published when user clicks on list record eye icon (preview)
 		const fn_tm_edit_record = async function(data) {
 
-			const matrix_id			= data.matrix_id
-			const date				= data.date
+			const matrix_id = data.matrix_id
+			const modification_component_date = data.modification_component_date
+			modification_component_date.view = 'text'
+			const label = (await modification_component_date.render()).textContent;
 
 			// render. Create and add new component to preview container
 			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
@@ -84,7 +86,7 @@ tool_time_machine.prototype.init = async function(options) {
 				self,
 				self.preview_component_container,
 				self.lang,
-				date,
+				label,
 				load_mode,
 				matrix_id
 			)
@@ -142,7 +144,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 	// ddo_map. Update ddo_map elements lang before common build
 		// Note that when user switch lang from tool lang selector, we need refresh whole tool
-		// re-building ddo_map from tool_common. To prevent re-create the first ddo_imap items
+		// re-building ddo_map from tool_common. To prevent re-create the first ddo_map items
 		// it its necessary to update the items lang before (only for translatable elements)
 		self.tool_config.ddo_map = self.tool_config.ddo_map || []
 		const ddo_map_length = self.tool_config.ddo_map.length
@@ -205,40 +207,40 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					? self.main_element.request_config_object.show.ddo_map
 					: [ddo]
 
-			// ignore_columns
-				const ignore_columns = self.main_element.model==='section'
-					? [
-						'dd1573', // matrix_id
-						'dd1371', // bulk_process_id
-						'dd559', // when
-						'dd578', // who
-						'dd577' // where
-						]
-					: []
+			// // ignore_columns
+			// 	const ignore_columns = self.main_element.model==='section'
+			// 		? [
+			// 			'dd1573', // matrix_id
+			// 			'dd1371', // bulk_process_id
+			// 			'dd559', // when
+			// 			'dd578', // who
+			// 			'dd577' // where
+			// 			]
+			// 		: []
 
-			 // template_columns
-				const template_columns = self.main_element.model==='section'
-					? null
-					: [
-						'8rem', // id
-						'8rem', // tm matrix_id
-						'8rem', // tm bulk_process_id
-						'11.2rem', // date (when)
-						'16rem', // user (who)
-						'1fr', // component (where)
-						'1fr', // annotation
-						'5fr' // tm value
-					  ].join(' ')
+			//  // template_columns
+			// 	const template_columns = self.main_element.model==='section'
+			// 		? null
+			// 		: [
+			// 			// '8rem', // id
+			// 			'8rem', // tm matrix_id
+			// 			'8rem', // tm bulk_process_id
+			// 			'11.2rem', // date (when)
+			// 			'16rem', // user (who)
+			// 			'1fr', // component (where)
+			// 			'1fr', // annotation
+			// 			'5fr' // tm value
+			// 		  ].join(' ')
 
-			// time_machine. Create, build and assign the time machine service to the instance
+			// service_time_machine. Create, build and assign the time machine service to the instance
 			// config is used in service_time_machine to get the ddo_map and send it to API
 				const config = {
 					id					: 'tool_tm',
 					model				: self.main_element.model,
 					tipo				: self.main_element.tipo,
 					lang				: self.main_element.lang,
-					template_columns	: template_columns,
-					ignore_columns		: ignore_columns,
+					// template_columns	: template_columns,
+					// ignore_columns		: ignore_columns,
 					ddo_map				: ddo_map
 				}
 				const instance_options = {

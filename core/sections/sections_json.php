@@ -77,9 +77,10 @@
 			foreach ($sections_data as $current_record) {
 				// when the caller is a Time Machine section
 				// $current_record is a Time Machine Record then we need to convert it into a Section Record
-				if( $mode ==='tm' || $this->caller_tipo ==='dd15' ){
+				if( $mode === 'tm' || $this->caller_tipo ==='dd15' ){
 					$tm_record = tm_record::get_instance( $current_record->id );
 					$tm_record->set_data( $current_record );
+					// OVERWRITE! section_id and section_tipo to convert it into a regular section record				
 					$current_record = $tm_record->get_section_record();
 				}
 
@@ -126,11 +127,6 @@
 						$section->set_view($this->view);
 					}
 
-					// set dato
-					if ($mode==='tm') {
-						$section->set_record($current_record); // inject whole db record as var
-					}
-
 					// item sections value. Update in each iteration
 					$current_value = new stdClass();
 						$current_value->section_tipo	= $section_tipo;
@@ -149,12 +145,14 @@
 						$key++;
 
 					// tm case: inject time machine record metadata
-						if ($mode === 'tm') {
-							$current_value->matrix_id		= $current_record->id ?? null;
-							$current_value->timestamp		= $current_record->timestamp ?? null;
-							$current_value->state			= $current_record->state ?? null;
-							$current_value->bulk_process_id	= (int)($current_record->bulk_process_id ?? 0);
-							$current_value->user_id			= $current_record->userID ?? null;
+						if ($mode === 'tm' || $this->caller_tipo ==='dd15' ) {
+							$tm_data = $tm_record->get_data();
+							$current_value->matrix_id			= $tm_data->id ?? null;
+							$current_value->timestamp			= $tm_data->timestamp ?? null;
+							$current_value->caller_section_tipo = $tm_data->section_tipo ?? null;
+							$current_value->caller_section_id 	= $tm_data->section_id ?? null;
+							$current_value->bulk_process_id		= (int)($tm_data->bulk_process_id ?? 0);
+							$current_value->user_id				= $tm_data->user_id ?? null;
 						}
 
 					// add value to item

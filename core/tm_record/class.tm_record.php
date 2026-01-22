@@ -114,9 +114,9 @@ class tm_record {
 	* GET_ELEMENT_DATA
 	* Retrieves the element (component, section) data of the record
 	* Used to recovery the specific data point of a component or section
-	* @return object $element_data
+	* @return array|object $element_data
 	*/
-	public function get_element_data() : object {
+	public function get_element_data() : array|object {
 
 		$tm_data = $this->get_data();
 
@@ -457,6 +457,8 @@ class tm_record {
 				$note_section_id = $db_result->fetch_one()->section_id ?? null;
 			// 2. Create the component and get its data
 			// the data will used as (injected into) the component data of the time_machine annotation component.
+
+			if($note_section_id) {
 				$note_model			= ontology_node::get_model_by_tipo( 'rsc329', true );
 				$current_component	= component_common::get_instance(
 					$note_model,
@@ -474,6 +476,7 @@ class tm_record {
 					$note_value, 
 					$section_record 
 				);
+			}
 
 		// Bulk process id
 			// Process id for the bulk process. This is used to track and manage multiple changes together. It is used to identify the changes in a bulk operation.
@@ -491,7 +494,16 @@ class tm_record {
 		
 		// Data
 			$source_model = ontology_node::get_model_by_tipo($tipo,true);
-			if($source_model==='section'){				
+			if($source_model==='section'){		
+				
+				foreach ($data as $column => $components) {
+					if($column === 'data' || empty($components)){
+						continue;
+					}
+					foreach ($components as $compnonent_tipo => $component_data) {
+						$section_record->set_component_data( $compnonent_tipo, $column, $component_data );
+					}
+				}
 				
 			}else{
 				
