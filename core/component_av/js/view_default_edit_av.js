@@ -155,7 +155,7 @@ const get_content_value = (i, current_value, self) => {
 			// }
 
 	// view_print case. No video is generated
-		if (self.view==='print') {
+		if (self.view === 'print') {
 			return content_value
 		}
 
