@@ -1633,7 +1633,7 @@ export const get_dataframe = async function(options) {
 
 	// data. Get his data from datum
 	// it get data from datum as section_record does (see section_record get_component_data() for portals)
-	const data = self.datum.data.find( function(el) {
+	const data = self.datum?.data?.find( function(el) {
 		if( el.tipo						=== component_dataframe.tipo
 			&& el.section_tipo			=== component_dataframe.section_tipo
 			&& parseInt(el.section_id)	=== parseInt(component_dataframe.section_id)
@@ -1669,7 +1669,7 @@ export const get_dataframe = async function(options) {
 		}
 
 	// context
-	const context = self.datum.context.find( el =>
+	const context = self.datum?.context?.find( el =>
 		el.tipo				=== component_dataframe.tipo
 		&& el.section_tipo	=== component_dataframe.section_tipo
 	)
