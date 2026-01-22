@@ -47,9 +47,11 @@ class db_result implements IteratorAggregate
 	public function fetch_one() : object|array|false
 	{
 		if ($this->as_array) {
-			return pg_fetch_assoc($this->result);
+			$row = pg_fetch_assoc($this->result);
+			return $row ? $this->process_row_array($row) : false;
 		}
-		return pg_fetch_object($this->result);
+		$row = pg_fetch_object($this->result);
+		return $row ? $this->process_row_object($row) : false;
 	}
 	
 	public function row_count() : int
