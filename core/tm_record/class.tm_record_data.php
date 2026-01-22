@@ -167,10 +167,10 @@ class tm_record_data {
 	* SET_COLUMN_DATA
 	* Assign the given data to the indicated column.
 	* @param string $column
-	* @param object|null $data
+	* @param array|int|string|object|null $value
 	* @return bool
 	*/
-	public function set_column_data( string $column, array|int|string|null $value ) : bool {
+	public function set_column_data( string $column, array|int|string|object|null $value ) : bool {
 
 		if ( !property_exists($this->data, $column) ) {
 			debug_log(__METHOD__

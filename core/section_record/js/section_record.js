@@ -118,8 +118,6 @@ section_record.prototype.init = async function(options) {
 		self.matrix_id					= options.matrix_id || null
 		self.column_id					= options.column_id
 
-		self.modification_date			= options.modification_date || null
-
 		self.offset						= options.offset
 
 		self.locator					= options.locator

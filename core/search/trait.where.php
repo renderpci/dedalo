@@ -298,6 +298,8 @@ trait where {
 			//   "operator":"~*",							// the operator for query
 			//   "type": "string",							// string or jsonb
 			//   "lang": "lg-nolan",						// if not defined lang = all langs, if defined lang = the lang sent
+			//   "format": "column",						// if not defined format = string, if defined format = the format sent
+			//   "column_name": "string",					// if not defined column_name = string, if defined column_name = the column_name sent
 			//   "path": [									// path for locate the component into the joins
 			//     {
 			//       "section_tipo": "oh1",
@@ -557,6 +559,53 @@ trait where {
 		// cache
 			// $sql_projects_filter_data[$uid] = $sql_projects_filter;
 	}//end build_sql_projects_filter
+
+
+
+	/**
+	* column_format_parser
+	* @param object $query_object
+	* @return object|false $query_object
+	*/
+	protected function column_format_parser( object $query_object ) : object|false {
+
+		 // 1. Extract and Normalize search value (q)
+        $q = empty($query_object->q) ? false : $query_object->q;
+        if ($q === false) {
+            return false;
+        }
+
+		if( is_string($q) ) {
+			$q = trim($q);
+		}
+
+		$column_name = isset($query_object->column_name) ? $query_object->column_name : false;
+		if($column_name===false) {
+			debug_log(__METHOD__
+				." Invalid column_name: " . $column_name
+				, logger::ERROR
+			);
+			return false;
+		}
+		$valid_operators = ['=','!=','<','>','<=','>='];
+		$operator = isset($query_object->operator) ? trim($query_object->operator) : '=';
+		if (!in_array($operator, $valid_operators)) {
+			debug_log(__METHOD__
+				." Invalid operator: " . $operator
+				, logger::ERROR
+			);
+			return false;
+		}
+		$table_alias    = $query_object->table_alias;
+
+		$query_object->params = [
+			'_Q1_' => $q
+		];
+
+		$query_object->sentence = "{$table_alias}.{$column_name} $operator _Q1_";
+	
+		return $query_object;
+	}//end column_format_parser
 
 
 

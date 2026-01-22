@@ -68,7 +68,6 @@ view_text_section_record.render = async function(self, options) {
 							offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
-							modification_date	: self.modification_date || null, // tm var
 							locator				: self.locator
 						})
 
