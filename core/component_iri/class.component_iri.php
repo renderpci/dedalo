@@ -206,6 +206,11 @@ class component_iri extends component_common {
 						$dd_iri->set_iri( $iri_value );
 						$dd_iri->set_id( $id );
 
+					// Add title if it exists
+					if($is_object && property_exists($value, 'title')) {
+						$dd_iri->set_title( $value->title );
+					}
+
 					// Check if the data has a label_id
 					// used by import to set a temporary target section_id for the label dataframe
 					// it will create a new locator of the dataframe when the component_iri will save
