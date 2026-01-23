@@ -45,11 +45,11 @@ abstract class DBi {
 		) : PgSql\Connection|false {
 
 		$now = time();
-	
+
 		// If caching is enabled and a connection is cached and recently validated
 		if ($cache && self::$pg_conn_cache instanceof PgSql\Connection) {
 			// Only check status if the cached validity has expired
-			if ($now < self::$pg_conn_valid_until || 
+			if ($now < self::$pg_conn_valid_until ||
 				pg_connection_status(self::$pg_conn_cache) === PGSQL_CONNECTION_OK) {
 				self::$pg_conn_valid_until = $now + self::$connection_check_interval;
 				return self::$pg_conn_cache;
@@ -104,7 +104,7 @@ abstract class DBi {
 
 		// cache is true case. Cache the successful connection
 		self::$pg_conn_cache = $pg_conn_real;
-		self::$pg_conn_valid_until = $now + self::$connection_check_interval;	
+		self::$pg_conn_valid_until = $now + self::$connection_check_interval;
 
 
 		return self::$pg_conn_cache;
@@ -247,17 +247,6 @@ abstract class DBi {
 				return($mysqli);
 			}
 
-		/*
-			$mysqli = new mysqli($host, $user, $password, $database, $port);
-			if ($mysqli->connect_errno) {
-				echo "Failed to connect to MySQL: (" . $mysqli->connect_errno . ") " . $mysqli->connect_error;
-				die();
-			}
-			#echo $mysqli->host_info . "\n";
-
-			return $mysqli;
-			*/
-
 		// You should enable error reporting for mysqli before attempting to make a connection
 		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
 			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -287,7 +276,6 @@ abstract class DBi {
 
 		// auto-commit : set autocommit (needed for INNODB save)
 			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-				// die('Dedalo '.'Setting MYSQLI_INIT_COMMAND failed');
 				// throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
 				debug_log(__METHOD__
 					. " Error on connect to MYSQL database [3].  Setting MYSQLI_INIT_COMMAND failed". PHP_EOL
@@ -298,7 +286,6 @@ abstract class DBi {
 
 		// timeout : set connect_timeout
 			if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-				// die('Dedalo '.'Setting MYSQLI_OPT_CONNECT_TIMEOUT failed');
 				// throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
 				debug_log(__METHOD__
 					. " Error on connect to MYSQL database [4].  Setting MYSQLI_OPT_CONNECT_TIMEOUT failed". PHP_EOL

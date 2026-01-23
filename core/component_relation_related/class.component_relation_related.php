@@ -146,7 +146,7 @@ class component_relation_related extends component_relation_common {
 		string $lang=DEDALO_DATA_LANG
 		) : array {
 
-		
+
 		// reset ar_resolved on first call
 			if ($recursion===false) {
 				self::$references_recursive_resolved_cache = [];
@@ -184,7 +184,7 @@ class component_relation_related extends component_relation_common {
 
 			// ref_component data
 			if (isset($ref_component)) {
-				$data = $ref_component->get_data();
+				$data = $ref_component->get_data() ?? [];
 				foreach ($data as $data_locator) {
 
 					$pseudo_locator = $data_locator->section_tipo .'_'. $data_locator->section_id . '_'. $lang;

@@ -848,7 +848,7 @@ data_manager.request_stream = async function(options) {
  * Generic fetch stream request using ReadableStreams.
  * Unlike request_stream (SSE), this target is agnostic and suitable for NDJSON or other binary streams.
  * It's primarilly used to bypass the overhead of EventSource for long-running row-by-row exports.
- * 
+ *
  * @param {object} options - Request options (url, method, headers, body)
  * @returns {Promise<ReadableStream>} The response body stream
  */

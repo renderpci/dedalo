@@ -407,7 +407,7 @@ class area_graph extends area_common {
 		// ar_data_combined
 			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
 
-		$result = self::walk_hierarchy_data($ar_data_combined);		
+		$result = self::walk_hierarchy_data($ar_data_combined);
 
 		// response
 			$response->msg 	  	= "Records found: $total_records";
@@ -670,16 +670,12 @@ class area_graph extends area_common {
 
 				}
 			}
-			#dump($filter_custom, ' filter_custom ++ '.to_string()); die();
 
 			# SEARCH_QUERY_OBJECT . Add search_query_object to options
 			$search_query_object = new search_query_object();
 				$search_query_object->id			= 'thesaurus';
 				$search_query_object->section_tipo	= $ar_section_tipos;
 				$search_query_object->limit			= 100;
-				#$search_query_object->order		= $options->order;
-				#$search_query_object->offset		= $options->offset;
-				#$search_query_object->full_count	= true;
 				$search_query_object->filter		= isset($filter_custom) ? $filter_custom : null;
 				$search_query_object->select		= [];
 

@@ -151,7 +151,6 @@ class full_node extends stdClass {
 			}');
 
 		$row_interview_data	= (object)web_data::get_rows_data( $options );
-			#dump(reset($row_interview_data->result), ' row_interview_data ++ '.to_string($options)); #die();
 
 
 		return $row_interview_data;
