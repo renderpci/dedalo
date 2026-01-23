@@ -31,12 +31,14 @@ header('Content-Type: application/json; charset=utf-8');
 
 
 
-// PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
+// PUBLIC API HEADERS (!) TEMPORAL 23-01-2026
 // Allow CORS
-header('Access-Control-Allow-Origin: *');
-// header("Access-Control-Allow-Credentials: true");
-// header("Access-Control-Allow-Methods: GET,POST"); // GET,HEAD,OPTIONS,POST,PUT
-header('Access-Control-Allow-Headers: Content-Type, Content-Range');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+header('Access-Control-Allow-Origin: ' . $origin);
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+header('Access-Control-Allow-Headers: Content-Type, Content-Range, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400'); // 24 hours
 
 
 
