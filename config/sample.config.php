@@ -783,6 +783,18 @@
 
 
 
+// DEDALO_CORS. Optional settings for Cross-Origin Resource Sharing (CORS) on API entry point.
+	// define('DEDALO_CORS', [
+	// 	'allowed_origins' => [
+	// 		'http://allowed-domain.org'
+	// 	],
+	// 	'allowed_methods' => ['GET', 'POST', 'PUT', 'OPTIONS'],
+	// 	'allowed_headers' => ['Content-Type', 'Content-Range', 'Authorization', 'X-Requested-With'],
+	// 	'max_age' => 86400,  // 24 hours
+	// ]);
+
+
+
 // maintenance
 	// maintenance mode active (true) / inactive (false)
 	define('DEDALO_MAINTENANCE_MODE', false);

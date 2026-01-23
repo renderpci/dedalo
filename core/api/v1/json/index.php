@@ -31,14 +31,14 @@ header('Content-Type: application/json; charset=utf-8');
 
 
 
-// PUBLIC API HEADERS (!) TEMPORAL 23-01-2026
-// Allow CORS
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-header('Access-Control-Allow-Origin: ' . $origin);
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-header('Access-Control-Allow-Headers: Content-Type, Content-Range, Authorization, X-Requested-With');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Max-Age: 86400'); // 24 hours
+// Allow CORS setting from config.php
+if ( defined('DEDALO_CORS') ) {
+	header('Access-Control-Allow-Origin: '  . implode(',', DEDALO_CORS['allowed_origins']) );
+	header('Access-Control-Allow-Methods: ' . implode(',', DEDALO_CORS['allowed_methods']) );
+	header('Access-Control-Allow-Headers: ' . implode(',', DEDALO_CORS['allowed_headers']) );
+	header('Access-Control-Max-Age: ' 		. DEDALO_CORS['max_age'] );
+	header('Access-Control-Allow-Credentials: true');
+}
 
 
 
