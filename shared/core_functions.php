@@ -135,7 +135,7 @@ function print_cli(object $process_info) : void {
 */
 function running_in_cli() : bool {
 
-	return php_sapi_name()==='cli';
+	return php_sapi_name()==='cli' && !defined('DEDALO_RR_WORKER');
 }//end running_in_cli
 
 
@@ -1624,7 +1624,7 @@ function session_start_manager(array $options) : bool {
 	if (!is_null($gc_divisor)) ini_set('session.gc_divisor', $gc_divisor);
 
 	// 7. Set and validate save handler
-	if (!in_array($save_handler, ['files', 'redis', 'memcached', 'postgresql'], true)) {
+	if (!in_array($save_handler, ['files', 'redis', 'memcached', 'postgresql', 'roadrunner'], true)) {
 		debug_log(__METHOD__
 			. " Invalid session save_handler '$save_handler'. Session cannot start." . PHP_EOL
 			. ' save_handler: ' . to_string($save_handler)
@@ -1632,7 +1632,10 @@ function session_start_manager(array $options) : bool {
 		);
 		return false;
 	}
-	ini_set('session.save_handler', $save_handler);
+	// Note that roadrunner worker sessions are handled differently
+	if ($save_handler !== 'roadrunner') {
+		ini_set('session.save_handler', $save_handler);
+	}
 
 	// 8. Save path handling
 	$final_save_path = false;
