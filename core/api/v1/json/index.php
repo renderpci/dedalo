@@ -6,12 +6,15 @@ $global_start_time = hrtime(true);
 
 
 
+// main header. Print all as JSON data
+header('Content-Type: application/json; charset=utf-8');
+
+
+
 // Performance monitoring initialization
 // Load configuration and monitor class before any heavy processing
 if (file_exists(__DIR__ . '/performance/performance_config.php')) {
 	include_once __DIR__ . '/performance/performance_config.php';
-}
-if (file_exists(__DIR__ . '/performance/performance_monitor.php')) {
 	include_once __DIR__ . '/performance/performance_monitor.php';
 	$perf_monitor = performance_monitor::get_instance();
 	$perf_monitor->start($global_start_time);
@@ -21,18 +24,33 @@ $perf_active = isset($perf_monitor) && $perf_monitor->is_active();
 
 
 
-// Turn off PHP output compression
-// ini_set('zlib.output_compression', false);
+// php version check
+$minimum_version = '8.4.0';
+if (version_compare(phpversion(), $minimum_version, '<')) { // Check for PHP x.x.x or higher
+	$response = new stdClass();
+	$response->result	= false;
+	$response->msg		= 'Error. Request failed. This PHP version is not supported (' . phpversion() . '). You need: >=' . $minimum_version;
+	error_log('Error: ' . $response->msg);
+	echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	return;
+}
 
 
 
-// header print as JSON data
-header('Content-Type: application/json; charset=utf-8');
+// file includes config dedalo
+if (!defined('APP_ROOT')) {
+	define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
+}
+if (!defined('DEDALO_ROOT_PATH')) {
+	if (!include APP_ROOT . '/config/config.php') {
+		throw new Exception('Config file not found');
+	}
+}
 
 
 
 // Allow CORS setting from config.php
-if ( defined('DEDALO_CORS') ) {
+if (defined('DEDALO_CORS')) {
 	header('Access-Control-Allow-Origin: '  . implode(',', DEDALO_CORS['allowed_origins']) );
 	header('Access-Control-Allow-Methods: ' . implode(',', DEDALO_CORS['allowed_methods']) );
 	header('Access-Control-Allow-Headers: ' . implode(',', DEDALO_CORS['allowed_headers']) );
@@ -48,36 +66,15 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 	$response->result	= false;
 	$response->msg		= 'Ignored preflight call ' . $_SERVER['REQUEST_METHOD'];
 	error_log('Error: ' . $response->msg);
-	echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-	exit(0);
-}
-
-
-
-// php version check
-$minimum_version = '8.5.0';
-if (version_compare(phpversion(), $minimum_version, '<')) { // Check for PHP 8.3.0 or higher
-	$response = new stdClass();
-	$response->result	= false;
-	$response->msg		= 'Error. Request failed. This PHP version is not supported (' . phpversion() . '). You need: >=' . $minimum_version;
-	error_log('Error: ' . $response->msg);
-	echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-	exit(0);
-}
-
-
-
-// file includes
-// config dedalo
-define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
-if (!include APP_ROOT . '/config/config.php') {
-	throw new Exception('Config file not found');
+	echo json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	return;
 }
 
 
 
 // php://input get post vars. file_get_contents returns a JSON encoded string
-$str_json = file_get_contents('php://input');
+// When worker is active, the file_get_contents() is passed in $GLOBALS['DEDALO_RAW_BODY']
+$str_json = $GLOBALS['DEDALO_RAW_BODY'] ?? file_get_contents('php://input');
 if (!empty($str_json)) {
 	$rqo = json_decode($str_json);
 	// Error handling
@@ -86,8 +83,8 @@ if (!empty($str_json)) {
 		$response->result	= false;
 		$response->msg		= 'Invalid JSON in request: ' . json_last_error_msg();
 		error_log('Error: ' . $response->msg);
-		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-		exit(0);
+		echo json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		return;
 	}
 }
 
@@ -125,7 +122,8 @@ if (!empty($_FILES)) {
 		];
 		foreach ($_REQUEST as $key => $value) {
 			if (in_array($key, request_query_object::$direct_keys)) {
-				$rqo->{$key} = safe_xss($value);
+				$clean_value = safe_xss($value);
+				$rqo->{$key} = is_array($clean_value) ? (object)$clean_value : $clean_value;
 			} else {
 				$rqo->source->{$key} = safe_xss($value);
 			}
@@ -139,16 +137,13 @@ if (!empty($_FILES)) {
 if (empty($rqo)) {
 	error_log('API JSON index. ! Ignored empty rqo');
 	debug_log(
-		__METHOD__
-			. " Warning on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
-			. ' $_REQUEST: ' . to_string($_REQUEST),
+		" Warning on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
+		. ' $_REQUEST: ' . to_string($_REQUEST),
 		logger::WARNING
 	);
-	exit(0);
+	echo "{}";
+	return;
 }
-
-
-
 // Default dd_api apply
 $rqo->dd_api = $rqo->dd_api ?? 'dd_core_api';
 
@@ -245,10 +240,9 @@ try {
 	// Final fallback error handling
 
 	debug_log(
-		__METHOD__
-			. ' API end point caught exception ' . PHP_EOL
-			. ' msg: ' . $e->getMessage()  . PHP_EOL
-			. ' trace: ' . json_encode($e->getTrace(), JSON_PRETTY_PRINT),
+		' API end point caught exception ' . PHP_EOL
+		. ' msg: ' . $e->getMessage()  . PHP_EOL
+		. ' trace: ' . json_encode($e->getTrace(), JSON_PRETTY_PRINT),
 		logger::ERROR
 	);
 
@@ -269,47 +263,31 @@ try {
 	$action = $rqo->action ?? null;
 	if ($action === 'read') {
 		// reset bad section session to allow next request
-		$session_key = $rqo->source->session_key ?? (($rqo->source->model==='section')
-			? section::build_sqo_id($tipo)
-			: 'undefined'
-		);// cache key sqo_id
+		$source			= $rqo->source ?? (object)[];
+		$session_key	= $source->session_key ?? null;
+
+		if (empty($session_key)) {
+			$model	= $source->model ?? null;
+			$tipo	= $source->tipo ?? null;
+			if ($model === 'section' && is_string($tipo)) {
+				$session_key = section::build_sqo_id($tipo);
+			} else {
+				$session_key = 'undefined';
+			}
+		}
 
 		if(isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
 			// remove session
 			unset($_SESSION['dedalo']['config']['sqo'][$session_key]);
 			// debug
 			debug_log(
-				__METHOD__
-					. ' API end point removed section session ' . PHP_EOL
-					. ' session_key: ' . $session_key . PHP_EOL,
+				' API end point removed section session ' . PHP_EOL
+				. ' session_key: ' . $session_key . PHP_EOL,
 				logger::WARNING
 			);
 		}
 	}
 }
-
-
-
-// output_string_and_close_connection
-// function output_string_and_close_connection($string_to_output) {
-// 	// set_time_limit(0);
-// 	ignore_user_abort(true);
-// 	// buffer all upcoming output - make sure we care about compression:
-// 	if(!ob_start("ob_gzhandler"))
-// 	    ob_start();
-// 	echo $string_to_output;
-// 	// get the size of the output
-// 	$size = ob_get_length();
-// 	// send headers to tell the browser to close the connection
-// 	header("Content-Length: $size");
-// 	header('Connection: close');
-// 	// flush all output
-// 	ob_end_flush();
-// 	// ob_flush();
-// 	flush();
-// 	// close current session
-// 	// if (session_id()) session_write_close();
-// }
 
 
 
@@ -344,12 +322,14 @@ if ($perf_active) {
 	$perf_monitor->checkpoint('after_output');
 	$perf_monitor->finish();
 }
-// static profiler
-if (defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER===true) {
+
+
+
+// static profiler. On active, report on error log the static vars size (if total time is greater than 2 seconds)
+if (defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 	$total_time = exec_time_unit($global_start_time, 'ms');
 	if($total_time > 2000) {
 		$report = static_profiler::get_report();
 		error_log( json_encode($report, JSON_PRETTY_PRINT));
 	}
-}
 }
