@@ -53,7 +53,6 @@ class video_view_data extends stdClass {
 		#
 		# INTERVIEW DATA
 			$row_interview = $this->get_row_interview( $av_section_id, $interview_id );
-				#dump($row_interview, ' $row_interview ++ '."av_section_id:$av_section_id, interview_id:$interview_id".to_string()); die();
 
 			# If interview is empy, stop get data
 			if (empty($row_interview->result)) {
@@ -77,12 +76,10 @@ class video_view_data extends stdClass {
 								$video_view_data->result = false;
 								return $video_view_data;
 							}
-							#dump($row_audiovisual, ' row_audiovisual ++ '.to_string( $av_section_id)); die();
 
 			# vars
 			$raw_text  = reset($row_audiovisual->result)[FIELD_TRANSCRIPTION];
 			$video_url = reset($row_audiovisual->result)[FIELD_VIDEO];
-				#dump($raw_text, ' raw_text ++ '.to_string($video_id)); die()
 
 			#
 			# raw_text_unrestricted
@@ -91,7 +88,6 @@ class video_view_data extends stdClass {
 			#
 			# Remove restricted fragments
 			$raw_text = web_data::remove_restricted_text( $raw_text, $av_section_id );
-				#dump($raw_text, ' $raw_text ++ '.to_string()); die();
 
 		#
 		# INFORMANT DATA
@@ -109,7 +105,6 @@ class video_view_data extends stdClass {
 
 				if($current_informant!=end($row_informant->result)) $informant .= ", ";
 			}
-			#dump($informant, ' current_informant ++ '.to_string()); die();
 			*/
 			#$informant = isset($row_informant->result) ? $row_informant->result : null;
 			$informant = reset($row_interview->result)[FIELD_INFORMANT];
@@ -119,7 +114,6 @@ class video_view_data extends stdClass {
 			#$ar_image  = (array)json_decode( reset($row_interview->result)[FIELD_IMAGE] );
 			#$row_image = !empty($ar_image) ? $this->get_row_image( reset($row_interview->result)['section_id'], $ar_image ) : false;
 			#$this->image = $row_interview->result
-			#dump($row_image, ' row_image ++ '.to_string()); die();
 
 			# vars
 			$image_data = reset($row_interview->result)[FIELD_IMAGE];
@@ -140,7 +134,6 @@ class video_view_data extends stdClass {
 				$options->fragment_terms_inside = false; # If true, calculate terms indexed inide this fragment
 				$options->indexation_terms 		= true; # If true, calculate all terms used in this indexation
 			$fragments_obj = web_data::build_fragment( $options );
-				#dump($fragments_obj, ' fragments_obj ++ '.to_string( )); #die();
 
 			# Remove TC tags
 			if (isset($fragments_obj->fragm)) {
@@ -152,9 +145,7 @@ class video_view_data extends stdClass {
 		# TS_TERM DATA
 			$ts_term = ts_term::get_ts_term_instance($term_id);
 			$ts_term->load_data(); // Force load db data
-				#dump($ts_term, ' ts_term ++ '.to_string());
 			$term = $ts_term->term;
-				#dump($term, ' term ++ '.to_string()); die();
 
 		#
 		# SUBTITLES

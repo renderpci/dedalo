@@ -220,8 +220,8 @@ class free_node extends stdClass {
 
 			$word_position  = $ar_value[1];
 
-			$text_before	= mb_substr($raw_text, 0, $word_position);	#dump($text_before, ' text_before ++ '.to_string()); #die();
-			$text_after		= mb_substr($raw_text, $word_position);		#dump($text_after, ' text_after ++ '.to_string());
+			$text_before	= mb_substr($raw_text, 0, $word_position);
+			$text_after		= mb_substr($raw_text, $word_position);
 
 			$fragment_obj = new stdClass();
 				$fragment_obj->word  = $word;

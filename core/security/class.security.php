@@ -47,7 +47,6 @@ class security {
 				if(SHOW_DEBUG===true) {
 					throw new Exception( __METHOD__ . $msg);
 				}
-				die();
 			}else{
 				$this->user_id = $current_logged_user_id;
 			}
