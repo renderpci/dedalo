@@ -68,13 +68,6 @@ class tool_time_machine extends tool_common {
 					// section->Save returns int $section_id on success or null on failure
 						if ($result==$section_id) {
 
-							// Set state 'recovered' at matrix_time_machine record (to avoid be showed for recover later)
-								$RecordObj_time_machine->set_state('recovered');
-								$tm_result = $RecordObj_time_machine->Save();
-								if ($tm_result===false) {
-									$response->errors[] = 'failed time machine save';
-								}
-
 							// reset section session sqo
 								$sqo_id	= section::build_sqo_id($section_tipo);
 								if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
@@ -108,6 +101,9 @@ class tool_time_machine extends tool_common {
 									],
 									logged_user_id() // int
 								);
+
+							// Delete time machine record
+							$tm_record->delete();
 						}
 					break;
 
