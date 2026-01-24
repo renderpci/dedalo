@@ -252,6 +252,22 @@ class tm_record {
 	}//end create
 
 
+	/**
+	* DELETE
+	* Delete the record from the database and destroy the instance
+	* @return bool $result
+	*/
+	public function delete() : bool {
+
+		$result = $this->data_instance->delete();
+		unset($this->data_instance);
+	
+		$this->__destruct();
+		
+		return $result;
+	}//end delete
+	
+
 
 	/**
 	 * SEARCH
