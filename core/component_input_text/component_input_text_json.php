@@ -82,25 +82,13 @@
 		// activity exceptions
 			if ($this->get_section_tipo()===DEDALO_ACTIVITY_SECTION_TIPO) {
 				// activity 'Where' case
-					if ($this->tipo==='dd546') {
-						$first_value = $value[0]->value ?? null;
-						if(is_array($first_value)){
-							$first_value = $first_value[0];
-						}
-						if( !empty($first_value) ){
-							$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
-							$term = strip_tags($term);
-							$value = [$term . ' ['. $first_value."]"];
-						}else{
-							$value = [];
-						}
+				if ($this->tipo==='dd546') {
+					$first_value = $value[0]->value ?? null;
+					if( !empty($first_value) ){
+						$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
+						$value[0]->value = $term . ' ['. $first_value."]";
 					}
-				// activity 'Data' case
-					if ($this->tipo==='dd551') {
-						$value = [json_encode($value, JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)];
-					}elseif (!is_array($value)) {
-						$value = [$value];
-					}
+				}
 			}
 
 		// dataframe. If it exists, calculate the subdatum

@@ -363,86 +363,82 @@ service_time_machine.prototype.build_request_config = function() {
 		}//end if (!config_sqo)
 
 	// ddo_map
-		const ddo_map = []
-
 		// default_ddo_map. Note that this ddo_map overwrite the default section request_config show ddo_map (!)
-			// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
-			const default_ddo_map = [
-				//  matrix_id . tm info -> Id
-				// {
-				// 	id				: 'matrix_id',
-				// 	tipo			: 'dd1573',
-				// 	type			: 'component',
-				// 	typo			: 'ddo',
-				// 	model			: 'component_section_id',
-				// 	section_tipo	: section_tipo,
-				// 	parent			: section_tipo,
-				// 	label			: 'Matrix id',
-				// 	mode			: 'list',
-				// 	view			: 'mini'
-				// },
-				//  bulk_process_id . tm info -> Process
-				{
-					id				: 'bulk_process_id',
-					tipo			: 'dd1371',
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_number',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					debug_label		: 'Bulk process id',
-					mode			: 'list',
-					view			: 'mini'
-				},
-				// when dd559 (from activity section)
-				{
-					id				: 'when',
-					tipo			: 'dd559',
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_date',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					debug_label		: 'When',
-					mode			: 'list',
-					view			: 'mini',
-					properties		: {
-						date_mode : 'date_time'
-					}
-				},
-				// who dd578 (from activity section)
-				{
-					id				: 'who',
-					tipo			: 'dd578',
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_autocomplete',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					debug_label		: 'Who',
-					mode			: 'list',
-					view			: 'mini'
-				},
-				// where dd577 (from activity section)
-				{
-					id				: 'where',
-					tipo			: 'dd577',
-					type			: 'component',
-					typo			: 'ddo',
-					model			: 'component_input_text',
-					section_tipo	: section_tipo,
-					parent			: section_tipo,
-					debug_label		: 'Where',
-					mode			: 'list',
-					view			: 'mini'
+		// It will be coherent with server generated subcontext (section->get_tm_context) to avoid lost columns on render the list
+		const default_ddo_map = [
+			//  matrix_id . tm info -> Id
+			// {
+			// 	id				: 'matrix_id',
+			// 	tipo			: 'dd1573',
+			// 	type			: 'component',
+			// 	typo			: 'ddo',
+			// 	model			: 'component_section_id',
+			// 	section_tipo	: section_tipo,
+			// 	parent			: section_tipo,
+			// 	label			: 'Matrix id',
+			// 	mode			: 'list',
+			// 	view			: 'mini'
+			// },
+			//  bulk_process_id . tm info -> Process
+			{
+				id				: 'bulk_process_id',
+				tipo			: 'dd1371',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_number',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				debug_label		: 'Bulk process id',
+				mode			: 'list',
+				view			: 'mini'
+			},
+			// when dd559 (from activity section)
+			{
+				id				: 'when',
+				tipo			: 'dd559',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_date',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				debug_label		: 'When',
+				mode			: 'list',
+				view			: 'mini',
+				properties		: {
+					date_mode : 'date_time'
 				}
-			]
-			// add defaults
-			ddo_map.push(...default_ddo_map)
-
+			},
+			// who dd578 (from activity section)
+			{
+				id				: 'who',
+				tipo			: 'dd578',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_autocomplete',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				debug_label		: 'Who',
+				mode			: 'list',
+				view			: 'mini'
+			},
+			// where dd577 (from activity section)
+			{
+				id				: 'where',
+				tipo			: 'dd577',
+				type			: 'component',
+				typo			: 'ddo',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				parent			: section_tipo,
+				debug_label		: 'Where',
+				mode			: 'list',
+				view			: 'mini'
+			}
+		]
+		
 		// tool view case
 			if (self.view==='tool' && model.includes('component')) {
-				ddo_map.push(
+				default_ddo_map.push(
 					// annotations rsc329 (section_tipo "rsc832")
 					{
 						id				: 'annotations',
@@ -458,6 +454,9 @@ service_time_machine.prototype.build_request_config = function() {
 					}
 				)
 			}
+			
+		// Remove ignore_columns by id defined in callers (tool, inspector, etc)
+		const ddo_map = default_ddo_map.filter( el => !self.config.ignore_columns.includes(el.id) )
 
 		// config_ddo_map. Additional ddo array
 			if (config_ddo_map) {
