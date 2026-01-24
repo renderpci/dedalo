@@ -350,4 +350,3 @@ if (defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER===true) {
 		error_log( json_encode($report, JSON_PRETTY_PRINT));
 	}
 }
-}

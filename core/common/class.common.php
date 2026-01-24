@@ -2066,6 +2066,41 @@ abstract class common {
 								$related_element = new $model($current_tipo, $current_section_tipo, $mode);
 								break;
 
+							case ($model==='dd_grid' && $section_tipo==='dd15'):
+
+								// tm case
+								$tm_record = tm_record::get_instance($section_id);
+
+								$tm_data = $tm_record->get_data();
+								$component_tipo = $tm_data->tipo;								
+								$component_data = $tm_data->data;
+								$model = ontology_node::get_model_by_tipo($component_tipo);
+
+								$current_component = component_common::get_instance(
+									$model,
+									$component_tipo,
+									$section_id,
+									$mode,
+									$current_lang,
+									$current_section_tipo,
+								);
+
+								$current_component->set_data($component_data);
+
+								// component value
+									$value = $current_component->get_grid_value();
+								// data item
+									$data_item = $current_component->get_data_item($value);
+									// add matrix_id always
+									$data_item->matrix_id = $section_id;
+									// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
+									$data_item->tipo = $current_tipo;
+								// data add
+									$ar_subdata[]		= $data_item;
+									$ar_subcontext[]	= $dd_object;	
+								
+							break;
+
 							// others case
 							default:
 								debug_log(__METHOD__
