@@ -81,7 +81,7 @@ class logger_backend_activity extends logger_backend {
 	*/
 	public function __construct( ?array $url_data ) {
 
-		// FIX ARRAY ar_elements_activity_tipo
+		// Set ar_elements_activity_tipo
 		logger_backend_activity::$ar_elements_activity_tipo = [
 			self::$_SECTION_TIPO['tipo'],
 			self::$_COMPONENT_IP['tipo'],
@@ -89,7 +89,6 @@ class logger_backend_activity extends logger_backend {
 			self::$_COMPONENT_WHAT['tipo'],
 			self::$_COMPONENT_WHERE['tipo'],
 			self::$_COMPONENT_WHEN['tipo'],
-			// self::$_COMPONENT_PROJECTS['tipo'],
 			self::$_COMPONENT_DATA['tipo']
 		];
 	}//end __construct
@@ -98,17 +97,19 @@ class logger_backend_activity extends logger_backend {
 
 	/**
 	* LOG_MESSAGE_DEFER
-	* Write record in database activity section
+	* Creates a new record in database.
+	* Table: matrix_activity
+	* Section tipo: DEDALO_ACTIVITY_SECTION_TIPO
 	* @param object $options
 	* @return void
 	*/
 	public function log_message_defer( object $options ) : void {
 
-		// options
-			$message	= $options->message;
-			$tipo_where	= $options->tipo_where;
-			$log_data	= $options->log_data;
-			$user_id	= $options->user_id;
+		// options - validate required properties
+			$message	= $options->message ?? null;
+			$tipo_where	= $options->tipo_where ?? null;
+			$log_data	= $options->log_data ?? null;
+			$user_id	= $options->user_id ?? null;
 
 		// check values
 
@@ -116,6 +117,16 @@ class logger_backend_activity extends logger_backend {
 				if (empty($tipo_where)) {
 					debug_log(__METHOD__
 						. " Error on log_message (var 'tipo_where' is empty) " . PHP_EOL
+						. ' options: ' . to_string($options)
+						, logger::ERROR
+					);
+					return;
+				}
+
+			// validate message
+				if (empty($message)) {
+					debug_log(__METHOD__
+						. " Error on log_message (var 'message' is empty) " . PHP_EOL
 						. ' options: ' . to_string($options)
 						, logger::ERROR
 					);
@@ -131,12 +142,7 @@ class logger_backend_activity extends logger_backend {
 					return;
 				}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				// $start_time = start_time();
-			}
-
-		// section record data. Create the components directly into the current format without create real components.
+		// section record data. Create the data columns directly.
 			$data = new stdClass();
 				$data->relation	= new stdClass();
 				$data->string	= new stdClass();
@@ -144,7 +150,7 @@ class logger_backend_activity extends logger_backend {
 				$data->misc		= new stdClass();
 
 		// IP ADDRESS (user source IP) ##############################################################
-			$component_tipo	= self::$_COMPONENT_IP['tipo']; // dd544 component_input_text (for now)
+			$component_tipo	= self::$_COMPONENT_IP['tipo']; // dd544 component_input_text
 			$model			= self::$_COMPONENT_IP['model_name'];
 			$column_name	= section_record_data::get_column_name( $model );
 
@@ -154,9 +160,9 @@ class logger_backend_activity extends logger_backend {
 				if($ip_address==='::1') {
 					$ip_address = 'localhost';
 				}
-			// add value
+			// add data
 				$value = (object)[
-					'value' => [$ip_address],
+					'value' => $ip_address,
 					'lang' => DEDALO_DATA_NOLAN
 				];
 				$data->$column_name->$component_tipo = [ $value ];
@@ -173,23 +179,27 @@ class logger_backend_activity extends logger_backend {
 					$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator_user_id->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator_user_id->set_from_component_tipo($component_tipo);
-			// add value
-				$data->$column_name->$component_tipo = [$locator_user_id ];
+			// add data
+				$data->$column_name->$component_tipo = [ $locator_user_id ];
 
 		// WHAT (msg) # Message #####################################################################
 			$component_tipo = self::$_COMPONENT_WHAT['tipo']; // dd545 component_select
 			$model			= self::$_COMPONENT_WHAT['model_name'];
 			$column_name	= section_record_data::get_column_name( $model );
 
-			// value
-				$message 	= str_replace("\t", ' ', $message);
-				$message 	= str_replace("\n", ' ', $message);
-				$message 	= trim($message);
+			// value. Expected as 'LOG IN' => 1, 'LOG OUT' => 2, etc. The message is like 'LOG IN' and is mapped to 1
+				$message = trim( str_replace(["\t", "\n"], ' ', $message) );
 				if (isset(self::$what[$message])) {
 					$what_section_id = self::$what[$message];
-				}
-				if (empty($what_section_id)) {
-					// throw new Exception("locator_what (from log message) is empty", 1);
+					$locator_what = new locator();
+						$locator_what->set_section_id($what_section_id);
+						$locator_what->set_section_tipo('dd42');
+						$locator_what->set_type(DEDALO_RELATION_TYPE_LINK);
+						$locator_what->set_from_component_tipo($component_tipo);
+					// add data
+					$data->$column_name->$component_tipo = [ $locator_what ];
+				}else{
+					// Trigger log error
 					debug_log(__METHOD__.
 						PHP_EOL.'ACTIVITY LOG ERROR'.
 						" Unable to resolve locator_what from log message. what_section_id is empty. What info will NOT be saved!".
@@ -200,15 +210,6 @@ class logger_backend_activity extends logger_backend {
 						$bt = debug_backtrace();
 						dump($bt, ' bt ++ '.to_string());
 					}
-
-				}else{
-					$locator_what = new locator();
-						$locator_what->set_section_id($what_section_id);
-						$locator_what->set_section_tipo('dd42');
-						$locator_what->set_type(DEDALO_RELATION_TYPE_LINK);
-						$locator_what->set_from_component_tipo($component_tipo);
-					// add value
-				$data->$column_name->$component_tipo = [ $locator_what ];
 				}
 
 		// WHERE (tipo) #############################################################################
@@ -216,13 +217,9 @@ class logger_backend_activity extends logger_backend {
 			$model			= self::$_COMPONENT_WHERE['model_name'];
 			$column_name	= section_record_data::get_column_name( $model );
 
-			// value
-				if(!strlen($tipo_where)) {
-					$tipo_where = 'unknown';
-				}
-			// add value
+			// add data
 				$value = (object)[
-					'value' => [$tipo_where],
+					'value' => $tipo_where,
 					'lang' => DEDALO_DATA_NOLAN
 				];
 				$data->$column_name->$component_tipo = [ $value ];
@@ -235,67 +232,33 @@ class logger_backend_activity extends logger_backend {
 			// value
 				$time_value = new stdClass();
 					$time_value->start = component_date::get_date_now();
-			// add value
+			// add data
 				$data->$column_name->$component_tipo = [ $time_value ];
-
-		// PROJECTS #################################################################################
-			// $component_tipo = self::$_COMPONENT_PROJECTS['tipo']; // dd550 component_filter
-			// $model			= self::$_COMPONENT_PROJECTS['model_name'];
-			// $column_name	= section_record_data::get_column_name( $model );
-
-
-			// if ( !empty($user_id) && $user_id!=='unknown' ) {
-			// 	// value
-			// 	$projects_dato = filter::get_user_projects( (int)$user_id );
-			// 	if (!empty($projects_dato)) {
-			// 		foreach ($projects_dato as $project_locator) {
-			// 			if (isset($project_locator->from_component_tipo)) {
-			// 				// Override from_component_tipo
-			// 				$project_locator_safe = clone $project_locator;
-			// 				$project_locator_safe->from_component_tipo = $component_tipo;
-
-			// 				// add to section->relations array
-			// 				$data[$column_name][$component_tipo][] = $project_locator_safe;
-			// 			}
-			// 		}
-			// 	}
-			// }
 
 		// DATA (param 'log_data' + URL's ...)	#########################################################
 			$component_tipo = self::$_COMPONENT_DATA['tipo']; // dd551 component_input_text
 			$model			= self::$_COMPONENT_DATA['model_name'];
-
 			$column_name	= section_record_data::get_column_name( $model );
+
 			// value. Expected assoc array as ['msg'=> 'Upload file complete','data'=>'{string data...}']
-				$dato_array = !is_array($log_data)
+				$data_array = !is_array($log_data)
 					? [$log_data]
 					: $log_data;
 
-			// add value
+			// add data
 				$value = (object)[
-
-					'value' => [$dato_array],
+					'value' => $data_array,
 					'lang' => DEDALO_DATA_NOLAN
 
 				];
 				$data->$column_name->$component_tipo = [ $value ];
 
-		// SECTION ##################################################################################
+		// SECTION RECORD ##############################################################################
 			matrix_activity_db_manager::create(
 				'matrix_activity',
 				DEDALO_ACTIVITY_SECTION_TIPO,
 				$data
 			);
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				// $total_time = exec_time_unit($start_time,'ms');
-				// debug_log(__METHOD__.
-				// 	' Activity log total time:  '.
-				// 	$total_time.' ms',
-				// 	logger::DEBUG
-				// );
-			}
 	}//end log_message
 
 
