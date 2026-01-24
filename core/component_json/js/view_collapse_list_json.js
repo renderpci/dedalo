@@ -68,19 +68,16 @@ export const get_value_string = function(self) {
 
 	// short vars
 		const data	= self.data
-		const value	= data.value || []
+		const value	= data.value?.[0].value || {}
 
 	// value_string
 		// dd542 Activity section case
 		if(self.section_tipo==='dd542') {
 			// activity section case
 			const ar_values	= []
-			const value_len	= value.length
-			for (let i = 0; i < value_len; i++) {
-				const value_map = new Map(Object.entries(value[i]))
-				for (let [key, value] of value_map) {
-					ar_values.push( key + ': ' + value )
-				}
+
+			for (let [key, current_value] of Object.entries(value)) {
+				ar_values.push( key + ': ' + current_value )
 			}
 			const value_string = ar_values.join('<br>')
 
@@ -92,9 +89,9 @@ export const get_value_string = function(self) {
 			? self.context.properties.list_show_key
 			: 'msg'
 
-		const value_string = value[0] && (typeof value[0][list_show_key]!=='undefined')
-			? value[0][list_show_key]
-			: value[0]
+		const value_string = value && (typeof value[list_show_key]!=='undefined')
+			? value[list_show_key]
+			: value
 				? JSON.stringify(value).substring(0,100)+' ...'
 				: ''
 
