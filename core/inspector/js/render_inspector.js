@@ -1407,7 +1407,8 @@ export const load_time_machine_list = async function(self) {
 				tipo				: self.caller.section_tipo, // used to create the filter
 				template_columns	: '1fr 1fr 1fr 2fr',
 				ignore_columns		: [
-					'matrix_id' // matrix_id dd1573
+					'matrix_id', // matrix_id dd1573,
+					'bulk_process_id' // bulk_process_id dd1573
 				],
 				ddo_map				: [{
 					tipo			: 'dd1574', // 'dd1574' generic tm info ontology item 'Value'

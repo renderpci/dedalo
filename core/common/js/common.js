@@ -652,6 +652,10 @@ common.prototype.refresh = async function(options={}) {
 * @param bool remove_dom = false
 * 	On true, removes the instance DOM node
 * @return object result
+* {
+* 	delete_dependencies : bool,
+* 	delete_self : bool
+* }
 */
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -775,6 +779,7 @@ const do_delete_self = async function (self) {
 
 	// Delete instance from global instances register.
 	// self.id is equivalent to the intances_map key
+	// delete_instance returns false if the instance was not found because is already removed.
 	const result = delete_instance( self.id )
 
 	// delete caller instance reference (ar_instances)
@@ -799,7 +804,7 @@ const do_delete_self = async function (self) {
 		self.request_config	= null
 
 
-	return result
+	return true
 }//end do_delete_self
 
 
@@ -844,6 +849,7 @@ const do_delete_dependencies = async function (self) {
 					if (SHOW_DEBUG === true) {
 						console.log('instance_to_destroy:', current_instance_id)
 					}
+
 				} catch (err) {
 					console.error("Error destroying instance:", err, current_instance)
 				}

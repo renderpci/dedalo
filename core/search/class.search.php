@@ -945,7 +945,6 @@ class search {
 	public function parse_sql_filter_by_locators() : string {
 
 		$this->build_main_from_sql();
-		$sql_offset = $this->sqo->offset ?? null;
 
 		$this->build_sql_filter_by_locators();
 		if ( empty($this->sqo->order) ) {
@@ -972,14 +971,14 @@ class search {
 		}
 
 		// limit
-		if (!empty($sql_limit)) {
-			$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+		if (isset($this->sqo->limit) && $this->sqo->limit>0) {
+			$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
 		}
 
 		// offset
-		$sql_query .= !empty($this->sqo->offset)
-			? ' OFFSET ' . $sql_offset
-			: '';
+		if (isset($this->sqo->offset) && $this->sqo->offset>0) {
+			$sql_query .= ' OFFSET ' . $this->sqo->offset;
+		}
 
 
 		return $sql_query;
