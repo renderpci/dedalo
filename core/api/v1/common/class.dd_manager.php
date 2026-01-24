@@ -31,12 +31,13 @@ final class dd_manager {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$text			= 'API REQUEST ' . $rqo->action;
+				$action			= $rqo->action ?? 'undefined';
+				$text			= 'API REQUEST ' . $action;
 				$text_length	= strlen($text) +1;
 				$nchars			= 200;
 				$line			= $text .' '. str_repeat(">", $nchars - $text_length).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
-				
+
 				// enable cache analytics
 				section_record_instances_cache::setAnalytics(false);
 			}
@@ -54,16 +55,17 @@ final class dd_manager {
 				'get_code_update_info',
 				'get_server_ready_status'
 			];
-			if (true===in_array($rqo->action, $no_login_needed_actions)) {
+			$action = $rqo->action ?? null;
+			if (true===in_array($action, $no_login_needed_actions)) {
 				// do not check login here
 			}else{
 				if (login::is_logged()!==true) {
 
-					debug_log(__METHOD__." Error. user is not logged !! [action:$rqo->action]", logger::ERROR);
+					debug_log(__METHOD__." Error. user is not logged !! [action:$action]", logger::ERROR);
 
 					$response = new stdClass();
 						$response->result	= false;
-						$response->msg		= 'Error. user is not logged !! [action:'.$rqo->action.']';
+						$response->msg		= 'Error. user is not logged !! [action:'.$action.']';
 						$response->errors[]	= 'not_logged';
 					return $response;
 				}
@@ -192,7 +194,7 @@ final class dd_manager {
 						'Cache',
 						'--> section_record_total: ' . section_record::$section_record_total,
 						'--> section_record_total_calls: ' . section_record::$section_record_total_calls,
-						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,												
+						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,
 						'--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
 						'--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
 						// Subdatum
@@ -216,7 +218,7 @@ final class dd_manager {
 						. implode(PHP_EOL, $metrics)
 						, logger::WARNING
 					);
-					if(section_record_instances_cache::getAnalyticsStatus()===true) {					
+					if(section_record_instances_cache::getAnalyticsStatus()===true) {
 						error_log(section_record_instances_cache::exportAnalytics('json'));
 					}
 

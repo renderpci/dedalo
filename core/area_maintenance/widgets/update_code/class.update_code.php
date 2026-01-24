@@ -145,7 +145,6 @@ class update_code {
 			// Provisional position, @TODO: move at the end of the update process
 			$update_response = update::pre_update_version();
 			return $update_response;
-			die();
 
 			$file_uri = $file->url ?? null;
 			if( empty($file_uri) ){

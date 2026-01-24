@@ -157,7 +157,6 @@ class login extends common {
 				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
 				}
-				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
 				$response->errors[] = 'More than one user with the same name already exists';
 				// error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");

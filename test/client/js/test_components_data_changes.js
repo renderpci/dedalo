@@ -156,10 +156,10 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 							// console.log('+++ new_value:', new_value);
 							// console.log('+++ read_value:', read_value);
-							console.log('--- new_instance:', new_instance);
+							// console.log('--- new_instance:', new_instance);
 
 						// destroy instances
-							await new_instance.destroy()
+							// await new_instance.destroy()
 
 					// datum check
 					assert.isOk(

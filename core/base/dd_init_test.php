@@ -15,7 +15,7 @@
 
 // user_id fix if not already defined
 	if (!isset($user_id)) {
-		$user_id = logged_user_id() ?? null;
+		$user_id = logged_user_id();
 	}
 
 
@@ -30,13 +30,13 @@
 
 
 // PHP VERSION
-	$minimum = '8.1.0';
+	$minimum = '8.4.0';
 	if (system::test_php_version_supported( $minimum )===false) {
 
-		$init_response->msg[]	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
+		$init_response->msg	= 'Error. This php version '.PHP_VERSION.' is not supported by Dédalo. Update PHP to '.$minimum.' or higher ASAP';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			.' '.implode(PHP_EOL, $init_response->msg). PHP_EOL
+		debug_log(
+			$init_response->msg . PHP_EOL
 			.' test_php_version_supported: ' . to_string( system::test_php_version_supported() ) . PHP_EOL
 			.' PHP_VERSION: ' . PHP_VERSION . PHP_EOL
 			.' minimum: ' . $minimum
@@ -61,10 +61,10 @@
 	];
 	foreach ($new_constants as $name) {
 		if (!defined($name)) {
-			$init_response->msg[]	= 'Error Processing Request: constant: '.$name.' is not defined in config file';
+			$init_response->msg[]	= 'Error Processing Request: mandatory constant: '.$name.' is not defined in config file';
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg)
+			debug_log(
+				implode(PHP_EOL, $init_response->msg)
 				, logger::ERROR
 			);
 
@@ -79,8 +79,8 @@
 
 		$init_response->msg[]	= 'Error. mb_internal_encoding is required by Dédalo. Please install php mbstring to continue';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+		debug_log(
+			implode(PHP_EOL, $init_response->msg)
 			, logger::ERROR
 		);
 
@@ -94,7 +94,13 @@
 		// verify directory already exists
 		$dir_exists = system::check_sessions_path();
 		if( !$dir_exists ){
-			die("Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)");
+			$init_response->msg[]	= 'Error. Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)';
+			$init_response->errors	= true;
+			debug_log(
+				implode(PHP_EOL, $init_response->msg)
+				, logger::ERROR
+			);
+			return $init_response;
 		}
 		// clean old files (sessions and caches)
 		system::delete_old_sessions_files();
@@ -109,8 +115,8 @@
 	if (!system::check_backup_path()) {
 		$init_response->msg[]	= "Error on read or create backups directory. (php user: $php_user)";
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' folder_path: ' . DEDALO_BACKUP_PATH
 			, logger::ERROR
 		);
@@ -127,8 +133,8 @@
 	if (!system::check_directory($folder_path)) {
 		$init_response->msg[]	= "Error on read or create backup_path_ontology directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' folder_path: ' . $folder_path
 			, logger::ERROR
 		);
@@ -146,8 +152,8 @@
 		if (!system::check_directory($folder_path)) {
 			$init_response->msg[]	= "Error on read or create ONTOLOGY_DATA_IO_DIR directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' . $folder_path
 				, logger::ERROR
 			);
@@ -164,8 +170,8 @@
 	if (!system::check_directory($folder_path)) {
 		$init_response->msg[]	= "Error on read or create backup temp directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' folder_path: ' .$folder_path
 			, logger::ERROR
 		);
@@ -181,8 +187,8 @@
 	if (!system::check_directory($folder_path)) {
 		$init_response->msg[]	= "Error on read or create 'media' directory. Permission denied (php user: $php_user)";
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' folder_path: ' .$folder_path
 			, logger::ERROR
 		);
@@ -201,8 +207,8 @@
 		if (!system::check_directory($folder_path)) {
 			$init_response->msg[]	= "Error on read or create media quality: '$quality' directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path . PHP_EOL
 				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 				, logger::ERROR
@@ -223,8 +229,8 @@
 		if (!system::check_directory($folder_path)) {
 			$init_response->msg[]	= "Error on read or create image quality '$quality' directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path
 				, logger::ERROR
 			);
@@ -253,8 +259,8 @@
 
 					$init_response->msg[]	= "Error on read or create pdf quality '$quality' directory. Permission denied (php user: $php_user)";
 					$init_response->errors	= true;
-					debug_log(__METHOD__
-						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					debug_log(
+						implode(PHP_EOL, $init_response->msg) . PHP_EOL
 						.' folder_path: ' .$folder_path
 						, logger::ERROR
 					);
@@ -276,8 +282,8 @@
 
 			$init_response->msg[]	= "Error on read or create 3d quality '$quality' directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path
 				, logger::ERROR
 			);
@@ -304,8 +310,8 @@
 
 				$init_response->msg[]	= "Error on read or create SVG directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
-				debug_log(__METHOD__
-					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+				debug_log(
+					implode(PHP_EOL, $init_response->msg) . PHP_EOL
 					.' folder_path: ' .$folder_path . PHP_EOL
 					, logger::ERROR
 				);
@@ -321,8 +327,8 @@
 
 					$init_response->msg[]	= "Error on read or create svg quality '$quality' directory. Permission denied (php user: $php_user)";
 					$init_response->errors	= true;
-					debug_log(__METHOD__
-						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					debug_log(
+						implode(PHP_EOL, $init_response->msg) . PHP_EOL
 						.' folder_path: ' .$folder_path
 						, logger::ERROR
 					);
@@ -342,8 +348,8 @@
 
 			$init_response->msg[]	= "Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path
 				, logger::ERROR
 			);
@@ -362,8 +368,8 @@
 
 			$init_response->msg[]	= "Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path . PHP_EOL
 				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 				, logger::ERROR
@@ -383,8 +389,8 @@
 
 			$init_response->msg[]	= "Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' folder_path: ' .$folder_path . PHP_EOL
 				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
 				, logger::ERROR
@@ -499,8 +505,8 @@
 
 			$init_response->msg[]	= 'Warning: Invalid .pgpass file' . PHP_EOL . ' Check your .pgpass file into php user home dir';
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' php_user_home: ' . to_string($php_user_home) . PHP_EOL
 				.' path: ' . to_string($path) . PHP_EOL
 				, logger::ERROR
@@ -517,9 +523,9 @@
 
 		$init_response->msg[]	= 'Error on system test. ImageMagick lib not found. Review your config path';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			. "  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
-			. 'path: ' . ImageMagick::get_imagemagick_installed_path()
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) .PHP_EOL
+			.'path: ' . ImageMagick::get_imagemagick_installed_path()
 			, logger::ERROR
 		);
 
@@ -534,8 +540,8 @@
 
 		$init_response->msg[]	= 'Error on system test. ffmpeg lib not found';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) .PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) .PHP_EOL
 			.' ffmpeg_path: ' . $ffmpeg_path
 			, logger::ERROR
 		);
@@ -551,8 +557,8 @@
 
 		$init_response->msg[]	= 'Error on system test. ffprobe lib not found';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' ffprove_path: ' . Ffmpeg::get_ffprove_installed_path()
 			, logger::ERROR
 		);
@@ -568,8 +574,8 @@
 
 		$init_response->msg[]	= 'Error on system test. qt-faststart lib not found';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+		debug_log(
+			implode(PHP_EOL, $init_response->msg) . PHP_EOL
 			.' DEDALO_AV_FASTSTART_PATH: ' . DEDALO_AV_FASTSTART_PATH
 			, logger::ERROR
 		);
@@ -579,38 +585,13 @@
 
 
 
-// NODE
-	// if (defined('DEDALO_NOTIFICATIONS') && DEDALO_NOTIFICATIONS===true) {
-	// 	$node = trim(shell_exec('command -v '.DEDALO_NODEJS));
-	// 	if (empty($node)) {
-
-	// 		$init_response->msg[]	= 'Error on system test. node lib not found';
-	// 		$init_response->errors	= true;
-	// 		debug_log(__METHOD__."  ".implode(PHP_EOL, $init_response->msg), logger::ERROR);
-
-	// 		return $init_response; // continue here, don't stop the flow, only notify error
-	// 	}
-	// 	/*
-	// 	$pm2 = trim(shell_exec('command -v '.DEDALO_NODEJS_PM2));
-	// 	if (empty($pm2)) {
-	// 		$init_response->msg .= trim("Error on system test. npm pm2 lib not found");
-	// 	}
-	// 	# pm2 start server.js --name "dd_node_"DEDALO_ENTITY --watch
-	// 	#$pm2_test = trim(shell_exec(DEDALO_NODEJS_PM2.' describe dd_node_'.DEDALO_ENTITY));
-	// 	#error_log($pm2_test);
-	// 	#error_log( DEDALO_NODEJS_PM2.' describe dd_node_'.DEDALO_ENTITY );
-	// 	*/
-	// }
-
-
-
 // DEFAULT PROJECT
 	if (!defined('DEDALO_DEFAULT_PROJECT') || !defined('DEDALO_FILTER_SECTION_TIPO_DEFAULT')) {
 
 		$init_response->msg[]	= 'Error Processing Request. Please define config DEDALO_DEFAULT_PROJECT and DEDALO_FILTER_SECTION_TIPO_DEFAULT';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+		debug_log(
+			implode(PHP_EOL, $init_response->msg)
 			, logger::ERROR
 		);
 
@@ -624,8 +605,8 @@
 
 		$init_response->msg[]	= 'Error Processing Request. Curl: function "curl_init" not found. Please review your PHP configuration';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+		debug_log(
+			implode(PHP_EOL, $init_response->msg)
 			, logger::ERROR
 		);
 
@@ -648,8 +629,8 @@
 
 		$init_response->msg[]	= 'Error Processing Request: OPEN_SSL lib is not available';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+		debug_log(
+			implode(PHP_EOL, $init_response->msg)
 			, logger::ERROR
 		);
 
@@ -729,8 +710,8 @@
 			Error Processing Request: DEDALO_CACHE_MANAGER is mandatory.
 			Please check your config file and set a valid value. You can see some examples in sample.config file';
 		$init_response->errors	= true;
-		debug_log(__METHOD__
-			."  ".implode(PHP_EOL, $init_response->msg)
+		debug_log(
+			implode(PHP_EOL, $init_response->msg)
 			, logger::ERROR
 		);
 
@@ -745,8 +726,8 @@
 
 					$init_response->msg[]	= 'Warning: Unable to create cache dir: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
 					$init_response->errors	= true;
-					debug_log(__METHOD__
-						."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					debug_log(
+						implode(PHP_EOL, $init_response->msg) . PHP_EOL
 						.' files_path: ' . $files_path
 						, logger::ERROR
 					);
@@ -759,8 +740,8 @@
 
 			$init_response->msg[]	= 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
 			$init_response->errors	= true;
-			debug_log(__METHOD__
-				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+			debug_log(
+				implode(PHP_EOL, $init_response->msg) . PHP_EOL
 				.' files_path: ' . $files_path
 				, logger::ERROR
 			);
@@ -788,9 +769,9 @@
 			if (empty($cache_data)) {
 				$init_response->msg[]	= 'Warning: cache data stream fails. Check your DEDALO_CACHE_MANAGER config or your PHP bin path (config_db.php PHP_BIN_PATH) to fix it';
 				$init_response->errors	= true;
-				debug_log(__METHOD__."  "
-					. implode(PHP_EOL, $init_response->msg) . PHP_EOL
-					. 'file_name: ' . $file_name
+				debug_log(
+					implode(PHP_EOL, $init_response->msg) . PHP_EOL
+					.' file_name: ' . $file_name
 					, logger::ERROR
 				);
 
@@ -803,8 +784,8 @@
 				if ($delete_cache!==true) {
 					$init_response->msg[]	= 'Warning: delete cache test file fails. Check your DEDALO_CACHE_MANAGER files_path permissions to fix it';
 					$init_response->errors	= true;
-					debug_log(__METHOD__
-						."  ".implode(PHP_EOL, $init_response->msg)
+					debug_log(
+						implode(PHP_EOL, $init_response->msg)
 						, logger::ERROR
 					);
 
@@ -821,8 +802,8 @@
 		try {
 			system::remove_old_chunk_files();
 		} catch (Exception $e) {
-			debug_log(__METHOD__
-				. " Error on clean CHUNK_FILES " . PHP_EOL
+			debug_log(
+				" Error on clean CHUNK_FILES " . PHP_EOL
 				. $e->getMessage()
 				, logger::ERROR
 			);

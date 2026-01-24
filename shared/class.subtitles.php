@@ -280,7 +280,6 @@ abstract class subtitles {
 
 		$ar_fragments = preg_split($tcPattern, $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE );
 		#preg_match_all("/(\[TC_[0-9][0-9]:[0-9][0-9]:[0-9][0-9]_TC\])/", $text, $ar_fragments, PREG_SET_ORDER);
-		#dump($ar_fragments,'$ar_fragments - '); die();
 
 		$ar_fragments_formated = array();
 		if (is_array($ar_fragments)) foreach ($ar_fragments as $key => $value) {

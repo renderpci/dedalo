@@ -374,7 +374,7 @@ class section extends common {
 
 
 
-	
+
 
 	// /**
 	// * GET DATO
@@ -1453,7 +1453,7 @@ class section extends common {
 
 	/**
 	* CREATE_RECORD
-	* Create new record a section record in matrix
+	* Create new section record in matrix
 	* @param object|null $options = null
 	* {
 	*   component_filter_data : array|null
@@ -2289,7 +2289,7 @@ class section extends common {
 			?array $ar_exclude_models=null
 		) : array {
 
-		
+
 		$cache_uid = implode('_', [
 			$section_tipo,
 			implode('|', $ar_model_name_required),
@@ -2430,7 +2430,7 @@ class section extends common {
 			$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
 
 			foreach($ar_model_name_required as $model_name_required) {
-				$matches = $search_exact 
+				$matches = $search_exact
 					? ($model_name === $model_name_required)
 					: str_contains($model_name, $model_name_required);
 
@@ -3012,7 +3012,7 @@ class section extends common {
 			);
 			return false;
 		}
-		$sql   = "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = $1 ORDER BY section_id ASC ";	
+		$sql   = "-- ".__METHOD__." \nSELECT $select FROM \"$matrix_table\" WHERE section_tipo = $1 ORDER BY section_id ASC ";
 		$result	= matrix_db_manager::exec_search($sql, [$section_tipo]);
 
 		return $result;
@@ -3667,7 +3667,7 @@ class section extends common {
 	public static function get_section_map( string $section_tipo ) : ?object {
 
 		// cache
-			
+
 			if (array_key_exists($section_tipo, self::$section_map_cache)) {
 				return self::$section_map_cache[$section_tipo];
 			}

@@ -97,6 +97,45 @@ final class metrics {
 		return true;
 	}//end add_metric
 
+	/**
+	* RESET
+	* Reset all static metrics to zero.
+	* Useful for persistent environments like RoadRunner.
+	* @return void
+	*/
+	public static function reset() : void {
+		self::$security_permissions_table_time = 0;
+		self::$security_permissions_table_count = 0;
+		self::$security_permissions_total_time = 0;
+		self::$security_permissions_total_calls = 0;
+		self::$search_total_time = 0;
+		self::$search_total_calls = 0;
+		self::$ontology_total_time = 0;
+		self::$ontology_total_calls = 0;
+		self::$ontology_total_calls_cached = 0;
+		self::$matrix_total_time = 0;
+		self::$matrix_total_calls = 0;
+		self::$exec_search_total_time = 0;
+		self::$exec_search_total_calls = 0;
+		self::$exec_dd_ontology_search_total_time = 0;
+		self::$exec_dd_ontology_search_total_calls = 0;
+		self::$search_free_total_time = 0;
+		self::$search_free_total_calls = 0;
+		self::$get_tools_total_time = 0;
+		self::$get_tools_total_calls = 0;
+		self::$get_tools_total_calls_cached = 0;
+		self::$get_tool_config_total_time = 0;
+		self::$get_tool_config_total_calls = 0;
+		self::$section_save_total_time = 0;
+		self::$section_save_total_calls = 0;
+		self::$structure_context_total_time = 0;
+		self::$structure_context_total_calls = 0;
+		self::$data_total_time = 0;
+		self::$data_total_calls = 0;
+		self::$presets_total_time = 0;
+		self::$presets_total_calls = 0;
+	}//end reset
+
 
 
 }//end class metrics

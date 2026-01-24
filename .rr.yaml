@@ -1,0 +1,29 @@
+version: '3'
+
+rpc:
+  listen: tcp://127.0.0.1:6001
+
+http:
+  address: :8080
+  middleware: [ "forwarded", "headers" ]
+  pool:
+    num_workers: 1 # Start with 1 for stability during development
+    max_jobs: 0
+    allocate_timeout: 60s
+    destroy_timeout: 60s
+
+server:
+  command: "php worker.php"
+  user: ""
+  group: ""
+
+logs:
+  mode: development
+  level: debug
+  encoding_format: terminal
+
+kv:
+  dedalo_sessions:
+    driver: boltdb
+    config:
+      file: "../sessions/sessions.db"
