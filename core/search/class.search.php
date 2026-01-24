@@ -65,6 +65,9 @@ class search {
 	// params array for prepared statements
 	protected array $params = [];
 
+	// sql_query : string (final query to execute stored for debug purposes)
+	protected string $sql_query = '';
+
 
 
 	/**
@@ -759,6 +762,9 @@ class search {
 				, logger::ERROR
 			);
 		}
+
+		// set sql_query
+		$this->sql_query = $sql_query;
 
 		// debug
 		if(SHOW_DEBUG===true) {
