@@ -286,8 +286,8 @@ class component_3d extends component_media_common implements component_media_int
 	public function create_posterframe( $current_time, ?string $target_quality=null, array|string|null $ar_target=null ) : bool {
 
 		debug_log(__METHOD__
-			. " Sorry. This method is not implemented yet " . PHP_EOL
-			, logger::ERROR
+			. " Sorry. This method is not implemented yet"
+			, logger::WARNING
 		);
 
 		return false;

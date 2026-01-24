@@ -6,6 +6,12 @@
 */
 trait where {
 
+	/**
+	* Cache for filter_user_records_by_id
+	* @var array
+	*/
+	protected static $filter_user_records_cache = [];
+
 
 
 	/**
@@ -58,39 +64,49 @@ trait where {
 	*/
 	public function build_filter_by_user_records() : void {
 
+		// FILTER_USER_RECORDS_BY_ID
+		// Performance: Check constant first to avoid unnecessary processing
+		if (!defined('DEDALO_FILTER_USER_RECORDS_BY_ID') || DEDALO_FILTER_USER_RECORDS_BY_ID!==true) {
+			return;
+		}
+
 		$user_id = logged_user_id(); // Logged user id
+
 		// stop the process if user_id is not logged
 		if (empty($user_id)) {
 			debug_log(__METHOD__
 				. " Error: user id unavailable (logged_user_id). Unabe to build filter_by_user_records " . PHP_EOL
-				. to_string(logged_user_id())
+				. ' logged_user_id: ' . to_string($user_id)
 				, logger::ERROR
 			);
 			return;
 		}
 
-		// FILTER_USER_RECORDS_BY_ID
-		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
-
-			$section_tipo		= $this->main_section_tipo;
-			$section_alias		= $this->main_section_tipo_alias;
-
+		// Cache optimization to avoid repeated calls to filter::get_filter_user_records_by_id
+		if (isset(self::$filter_user_records_cache[$user_id])) {
+			$filter_user_records_by_id = self::$filter_user_records_cache[$user_id];
+		} else {
 			$filter_user_records_by_id = filter::get_filter_user_records_by_id( $user_id );
-			if ( isset($filter_user_records_by_id[$section_tipo]) ) {
-
-				$filter_by_user_records = '';
-
-				if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-					$filter_by_user_records .= "\n-- filter_user_records_by_id --".PHP_EOL;
-				}
-
-				$filter = implode( ',', $filter_user_records_by_id[$section_tipo] );
-				$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
-
-				$this->sql_obj->where[] = $filter_by_user_records;
-			}
+			self::$filter_user_records_cache[$user_id] = $filter_user_records_by_id;
 		}
-	}//end build_main_where
+
+		$section_tipo = $this->main_section_tipo;
+
+		if ( isset($filter_user_records_by_id[$section_tipo]) ) {
+
+			$section_alias = $this->main_section_tipo_alias;
+			$filter_by_user_records = '';
+
+			if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+				$filter_by_user_records .= "\n-- filter_user_records_by_id --".PHP_EOL;
+			}
+
+			$filter = implode( ',', $filter_user_records_by_id[$section_tipo] );
+			$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
+
+			$this->sql_obj->where[] = $filter_by_user_records;
+		}
+	}//end build_filter_by_user_records
 
 
 
@@ -603,7 +619,7 @@ trait where {
 		];
 
 		$query_object->sentence = "{$table_alias}.{$column_name} $operator _Q1_";
-	
+
 		return $query_object;
 	}//end column_format_parser
 

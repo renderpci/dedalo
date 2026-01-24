@@ -1379,7 +1379,7 @@ class section_record {
 		}
 
 		// Save added columns ('counters','relation_search') once
-		$new_section_record->data_instance->save_data();
+		$new_section_record->save();
 
 		return $new_section_id;
 	}//end duplicate

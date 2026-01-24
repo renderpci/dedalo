@@ -65,6 +65,9 @@ class search {
 	// params array for prepared statements
 	protected array $params = [];
 
+	// sql_query : string (final query to execute stored for debug purposes)
+	protected string $sql_query = '';
+
 
 
 	/**
@@ -281,9 +284,9 @@ class search {
 		}
 
 		// json_columns to process based on mode
-		$mode = $this->sqo->mode ?? null;	
+		$mode = $this->sqo->mode ?? null;
 		$json_columns = ($mode==='tm') ? tm_db_manager::$json_columns : matrix_db_manager::$json_columns;
-		
+
 		// wrap result in db_result iterator
 		$db_result = new db_result(
 			$result,
@@ -556,10 +559,10 @@ class search {
 				if (isset($search_object->format) && $search_object->format==='column' && isset($search_object->q)) {
 
 					// column format parser
-					$search_object	= $this->column_format_parser($search_object);										
+					$search_object	= $this->column_format_parser($search_object);
 					$ar_query_object = [$search_object];
 
-				}else{					
+				}else{
 
 					$search_component			= end($path);
 					// model (with fallback if do not exists)
@@ -760,6 +763,9 @@ class search {
 			);
 		}
 
+		// set sql_query
+		$this->sql_query = $sql_query;
+
 		// debug
 		if(SHOW_DEBUG===true) {
 			$sql_query = '-- ' . $search_type . PHP_EOL . $sql_query ; // . ': ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
@@ -848,17 +854,22 @@ class search {
 			// end query_inside
 
 		// main select
-			$sql_query .= 'SELECT * FROM (';
-			$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-			$sql_query .= ') main_select';
-			// order
+			$use_window = false;
+			if ($use_window) {
+				$sql_query .= 'SELECT * FROM (';
+				$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+				$sql_query .= ') main_select';
+				// order
 				if(!empty($this->sql_obj->order)){
 					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
 				}
-			// limit
+				// limit
 				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
 					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
 				}
+			}else{
+				$sql_query = $query_inside;
+			}
 
 
 		return $sql_query;

@@ -242,8 +242,7 @@ export const get_content_value = (i, current_value, self) => {
 	};
 
 	// observe in viewport
-	when_in_viewport(content_value, dd_request_idle_callback(load_viewer));
-
+	when_in_viewport(content_value, load_viewer);
 
 	return content_value
 }//end get_content_value

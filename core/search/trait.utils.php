@@ -325,4 +325,18 @@ trait utils {
 
 
 
+	/**
+	* GET_SQL_QUERY
+	* Returns the final sql query stored in the search object.
+	* The value is set by the metho 'get_sql_queryparse_sql_query'
+	* @see search->get_sql_queryparse_sql_query()
+	* @return string $sql_query
+	*/
+	public function get_sql_query() : string {
+
+		return $this->sql_query;
+	}//end get_sql_query
+
+
+
 }//end utils
