@@ -208,15 +208,15 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					: [ddo]
 
 			// // ignore_columns
-			// 	const ignore_columns = self.main_element.model==='section'
-			// 		? [
+				const ignore_columns = self.main_element.model==='section'
+					? [
 			// 			'dd1573', // matrix_id
 			// 			'dd1371', // bulk_process_id
 			// 			'dd559', // when
-			// 			'dd578', // who
-			// 			'dd577' // where
-			// 			]
-			// 		: []
+						// 'who', // 'dd578'
+						'where' // 'dd577'
+						]
+					: []
 
 			//  // template_columns
 			// 	const template_columns = self.main_element.model==='section'
@@ -240,7 +240,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					tipo				: self.main_element.tipo,
 					lang				: self.main_element.lang,
 					// template_columns	: template_columns,
-					// ignore_columns		: ignore_columns,
+					ignore_columns		: ignore_columns,
 					ddo_map				: ddo_map
 				}
 				const instance_options = {
