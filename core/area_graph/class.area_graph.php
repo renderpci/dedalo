@@ -215,7 +215,7 @@ class area_graph extends area_common {
 		);
 
 		$data		= $component->get_data();
-		$locator	= $data;
+		$locator	= $data[0] ?? null;
 
 
 		return $locator;

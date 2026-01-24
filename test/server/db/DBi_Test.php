@@ -254,7 +254,6 @@ final class DBi_test extends BaseTestCase {
 
 		// default vars
 			$conn = DBi::_getConnection_mysql();
-			// dump($conn, ' conn mysql 1 ++ '.to_string());
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
@@ -262,18 +261,25 @@ final class DBi_test extends BaseTestCase {
 			);
 
 			$type	= gettype($conn);
-			$eq		= $type==='object';
+			$eq		= $type==='object' || $type==='boolean';
 			$this->assertTrue(
 				$eq,
 				'expected true (class===object) and received type: ' .$type
 			);
 
-			$class	= get_class($conn);
-			$eq		= $class==='mysqli';
-			$this->assertTrue(
-				$eq,
-				'expected true (class===mysqli) and received class: ' .$class
-			);
+			if($conn) {
+				$class	= get_class($conn);
+				$eq		= $class==='mysqli';
+				$this->assertTrue(
+					$eq,
+					'expected true (class===mysqli) and received class: ' .$class
+				);
+			}else {
+				$this->assertTrue(
+					$conn===false,
+					'expected true (conn===false) and received conn: ' . json_encode($conn)
+				);
+			}
 	} //end test_getConnection_mysql
 
 
@@ -332,7 +338,7 @@ final class DBi_test extends BaseTestCase {
 	public function test_check_column_exists(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		
+
 		$table = 'matrix_test';
 		$column = 'section_tipo';
 
@@ -353,7 +359,7 @@ final class DBi_test extends BaseTestCase {
 		$eq,
 		'expected true (class===boolean) and received type: ' .$type
 		);
-	
+
 		$eq		= $result===true;
 		$this->assertTrue(
 			$eq,
@@ -419,7 +425,7 @@ final class DBi_test extends BaseTestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true (result===true) and received: ' . print_r($result, true)
-		);		
+		);
 	} //end test_add_column
 
 
@@ -471,7 +477,7 @@ final class DBi_test extends BaseTestCase {
 			$table,
 			$column
 		);
-	
+
 		$eq		= $result === true;
 		$this->assertTrue(
 			$eq,

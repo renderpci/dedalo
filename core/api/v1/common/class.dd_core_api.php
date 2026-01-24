@@ -753,11 +753,11 @@ final class dd_core_api {
 						$response->errors[] = 'cannot resolve data column from model '.$model;
 						return $response;
 					}
-					
+
 					foreach ($db_result as $section_record) {
 						$raw_data[] = $section_record->$column->$tipo ?? null;
 					}
-					
+
 					break;
 
 				case 'section':
@@ -1398,7 +1398,7 @@ final class dd_core_api {
 		// build element
 			switch (true) {
 				case $model==='section':
-					$element = section::get_instance(null, $section_tipo, $mode);
+					$element = section::get_instance($section_tipo, $mode);
 					break;
 
 				// case $model==='section_tm':
@@ -2453,7 +2453,7 @@ final class dd_core_api {
 		$cache_file_name = 'cache_page_globals.php';
 		$cache_data	= dd_cache::cache_from_file((object)[
 			'file_name' => $cache_file_name
-		]);		
+		]);
 		if (empty($cache_data)) {
 			$cache_data = [];
 		}
@@ -2490,7 +2490,7 @@ final class dd_core_api {
 					'value'	=> $value
 				];
 			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
-			
+
 			// projects default langs
 			if(isset($cache_data['dedalo_projects_default_langs'])) {
 				$obj->dedalo_projects_default_langs = $cache_data['dedalo_projects_default_langs'];
@@ -2506,7 +2506,7 @@ final class dd_core_api {
 				// Set cache
 				$cache_data['dedalo_projects_default_langs'] = $obj->dedalo_projects_default_langs;
 				$cache_modified = true;
-			}			
+			}
 
 			// quality defaults
 			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;

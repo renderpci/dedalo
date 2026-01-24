@@ -205,6 +205,8 @@ final class dd_utils_api_Test extends BaseTestCase {
 	*/
 	public function test_convert_search_object_to_sql_query(): void {
 
+		$this->user_login();
+
 		$rqo = json_handler::decode('
 			{
 				"dd_api": "dd_utils_api",
@@ -213,33 +215,13 @@ final class dd_utils_api_Test extends BaseTestCase {
 				  "section_tipo": [
 				    "test3"
 				  ],
-				  "filter": {
-				    "$and": [
-				      {
-				        "q": [
-				          "2"
-				        ],
-				        "q_operator": null,
-				        "path": [
-				          {
-				            "name": "Id",
-				            "model": "component_section_id",
-				            "section_tipo": "test3",
-				            "component_tipo": "test102"
-				          }
-				        ],
-				        "type": "jsonb"
-				      }
-				    ]
-				  },
-				  "filter_by_locators": null,
-				  "children_recursive": false
+				  "limit": 1,
+				  "offset": 0
 			    }
 			}
 		');
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
@@ -253,16 +235,10 @@ final class dd_utils_api_Test extends BaseTestCase {
 		);
 
 		$this->assertTrue(
-			gettype($response->rows)==='object',
-			'expected rows type is object ' .gettype($response->rows)
-		);
-
-		$this->assertTrue(
-			gettype($response->rows->ar_records)==='array',
-			'expected rows->ar_records type is array ' .gettype($response->rows->ar_records)
+			gettype($response->db_data)==='object',
+			'expected db_data type is object ' .gettype($response->db_data)
 		);
 	}//end test_convert_search_object_to_sql_query
-
 
 
 
@@ -271,6 +247,8 @@ final class dd_utils_api_Test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_change_lang(): void {
+
+		$this->user_login();
 
 		$rqo = json_handler::decode('
 			{

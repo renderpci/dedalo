@@ -91,9 +91,6 @@ abstract class DBi {
 				__METHOD__ . ' Error. Could not connect to database (52) for ' . to_string($database) . '. Details: ' . $errorMessage,
 				logger::ERROR
 			);
-			if (SHOW_DEBUG) {
-				// throw new Exception("Error. Could not connect to database (52): " . $errorMessage, 1);
-			}
 			return false;
 		}
 
@@ -229,7 +226,7 @@ abstract class DBi {
 	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
 	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
 	* @param bool $cache = true
-	* @return mysqli|bool $mysqli
+	* @return mysqli|false $mysqli
 	*/
 	public static function _getConnection_mysql(
 		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
@@ -239,7 +236,7 @@ abstract class DBi {
 		int|null		$port		= MYSQL_DEDALO_DB_PORT_CONN,
 		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
 		bool			$cache		= true
-		) : mysqli|bool {
+		) : mysqli|false {
 
 		// cache
 			static $mysqli;
@@ -250,56 +247,46 @@ abstract class DBi {
 		// You should enable error reporting for mysqli before attempting to make a connection
 		// @see https://www.php.net/manual/en/mysqli-driver.report-mode.php
 			mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-			// mysqli_report(MYSQLI_REPORT_ALL ^ MYSQLI_REPORT_STRICT);
-			// mysqli_report(MYSQLI_REPORT_ERROR);
 
 		// init
-			$mysqli = new mysqli($host, $user, $password, $database, $port);
-			if ($mysqli===false) {
-				// throw new Exception(' Dedalo '.__METHOD__ . ' Failed mysqli_init ', 1);
-				debug_log(__METHOD__
-					. " Error on connect to MYSQL database. Failed mysqli_init ". PHP_EOL
-					, logger::DEBUG
-				);
-				return false;
-			}
-			if ($mysqli->connect_errno) {
-				debug_log(__METHOD__
-					. " Error on connect to MYSQL database [2]. ". PHP_EOL
-					. ' connect_error: ' . $mysqli->connect_error
-					, logger::DEBUG
-				);
+			$mysqli = mysqli_init();
+			if (!$mysqli) {
+				debug_log(__METHOD__ . " Error: mysqli_init failed", logger::DEBUG);
 				return false;
 			}
 
-		// $mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
-
-		// auto-commit : set autocommit (needed for INNODB save)
-			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
-				// throw new Exception(' Connect Error. Setting MYSQLI_INIT_COMMAND failed ', 1);
-				debug_log(__METHOD__
-					. " Error on connect to MYSQL database [3].  Setting MYSQLI_INIT_COMMAND failed". PHP_EOL
-					. 'connect_error: ' . $mysqli->connect_error
-					, logger::DEBUG
-				);
-			}
-
-		// timeout : set connect_timeout
+		// options : set connect_timeout
 			if (!$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10)) {
-				// throw new Exception(' Connect Error. Setting MYSQLI_OPT_CONNECT_TIMEOUT failed ', 1);
 				debug_log(__METHOD__
-					. " Error on connect to MYSQL database [4].  Setting MYSQLI_OPT_CONNECT_TIMEOUT failed". PHP_EOL
-					. 'connect_error: ' . $mysqli->connect_error
+					. " Error setting MYSQLI_OPT_CONNECT_TIMEOUT". PHP_EOL
+					, logger::DEBUG
+				);
+			}
+
+		// options : set autocommit (needed for INNODB save)
+			if (!$mysqli->options(MYSQLI_INIT_COMMAND, 'SET AUTOCOMMIT = 1')) {
+				debug_log(__METHOD__
+					. " Error setting MYSQLI_INIT_COMMAND". PHP_EOL
 					, logger::DEBUG
 				);
 			}
 
 		// connect
-			if (!$mysqli->real_connect($host, $user, $password, $database,  $port, $socket)) {
+			try {
+				if (!$mysqli->real_connect($host, $user, $password, $database, $port, $socket)) {
+					debug_log(__METHOD__
+						. " Error on connect to MYSQL database ". PHP_EOL
+						. ' mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
+						. ' mysqli_connect_error: ' .mysqli_connect_error()
+						, logger::DEBUG
+					);
+					return false;
+				}
+			} catch (mysqli_sql_exception $e) {
 				debug_log(__METHOD__
-					. " Error on connect to MYSQL database ". PHP_EOL
-					. ' mysqli_connect_errno: ' .mysqli_connect_errno() . PHP_EOL
-					. ' mysqli_connect_error: ' .mysqli_connect_error()
+					. " Error on connect to MYSQL database (Exception). ". PHP_EOL
+					. ' Message: ' . $e->getMessage() . PHP_EOL
+					. ' Code: ' . $e->getCode()
 					, logger::DEBUG
 				);
 				return false;
