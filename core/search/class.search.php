@@ -854,17 +854,22 @@ class search {
 			// end query_inside
 
 		// main select
-			$sql_query .= 'SELECT * FROM (';
-			$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-			$sql_query .= ') main_select';
-			// order
+			$use_window = false;
+			if ($use_window) {
+				$sql_query .= 'SELECT * FROM (';
+				$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+				$sql_query .= ') main_select';
+				// order
 				if(!empty($this->sql_obj->order)){
 					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
 				}
-			// limit
+				// limit
 				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
 					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
 				}
+			}else{
+				$sql_query = $query_inside;
+			}
 
 
 		return $sql_query;
