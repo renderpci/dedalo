@@ -155,10 +155,10 @@ class tool_time_machine extends tool_common {
 										$caller_dataframe
 									);
 
-								// get the dataframe data from dato, filtering by dataframe_tipo
-								if ( is_array($dato_time_machine) ){
+								// get the dataframe data from data_time_machine, filtering by dataframe_tipo
+								if ( is_array($data_time_machine) ){
 
-									$dataframe_data = array_values( array_filter( $dato_time_machine, function($el) use($dataframe_tipo) {
+									$dataframe_data = array_values( array_filter( $data_time_machine, function($el) use($dataframe_tipo) {
 										return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
 									}));
 
@@ -183,7 +183,7 @@ class tool_time_machine extends tool_common {
 							}));
 						}else{
 							// Main component and other components without dataframe
-							$dato_time_machine = array_values( array_filter( $dato_time_machine, function($el) use($tipo) {
+							$data_time_machine = array_values( array_filter( $data_time_machine, function($el) use($tipo) {
 								return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
 							}));
 						}
