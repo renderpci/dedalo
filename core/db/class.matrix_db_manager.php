@@ -45,7 +45,6 @@ class matrix_db_manager {
 	public static array $columns = [
 		'section_id'		=> true,
 		'section_tipo'		=> true,
-		// 'datos'			=> true,
 		'data'				=> true,
 		'relation'			=> true,
 		'string'			=> true,
@@ -61,7 +60,6 @@ class matrix_db_manager {
 
 	// JSON columns to decode
 	public static array $json_columns = [
-		// 'datos'				=> true,
 		'data'				=> true,
 		'relation'			=> true,
 		'string'			=> true,

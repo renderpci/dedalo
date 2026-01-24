@@ -183,11 +183,7 @@ const get_content_data_edit = async function(self) {
 					}
 
 					// observe in viewport
-					dd_request_idle_callback(
-						() => {
-							when_in_viewport(json_editor_api_container, load_editor)
-						}
-					)
+					when_in_viewport(json_editor_api_container, load_editor)
 
 				// add at end body_response
 					const body_response = ui.create_dom_element({

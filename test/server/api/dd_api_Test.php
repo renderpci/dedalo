@@ -333,8 +333,8 @@ final class dd_api_Test extends BaseTestCase {
 						"type": "section",
 						"action": "search",
 						"model": "section",
-						"tipo": "rsc167",
-						"section_tipo": "rsc167",
+						"tipo": "test3",
+						"section_tipo": "test3",
 						"section_id": null,
 						"mode": "edit",
 						"view": null,
@@ -342,7 +342,7 @@ final class dd_api_Test extends BaseTestCase {
 					},
 					"sqo": {
 						"section_tipo": [
-							"rsc167"
+							"test3"
 						],
 						"limit": 10,
 						"offset": 0,
@@ -377,30 +377,30 @@ final class dd_api_Test extends BaseTestCase {
 		// related_search
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				    "source": {
-				        "action": "related_search",
-				        "model": "component_text_area",
-				        "tipo": "test3",
-				        "section_tipo": "test3",
-				        "section_id": "1",
-				        "lang": "lg-eng",
-				        "mode": "related_list"
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "all"
-				        ],
-				        "mode": "related",
-				        "offset": 0,
-				        "full_count": false,
-				        "filter_by_locators": [
-				            {
-				                "section_tipo": "test3",
-				                "section_id": "1"
-				            }
-				        ]
-				    }
+					"action": "read",
+					"source": {
+						"action": "related_search",
+						"model": "component_text_area",
+						"tipo": "test3",
+						"section_tipo": "test3",
+						"section_id": "1",
+						"lang": "lg-eng",
+						"mode": "related_list"
+					},
+					"sqo": {
+						"section_tipo": [
+							"all"
+						],
+						"mode": "related",
+						"offset": 0,
+						"full_count": false,
+						"filter_by_locators": [
+							{
+								"section_tipo": "test3",
+								"section_id": "1"
+							}
+						]
+					}
 				}
 			');
 			// direct exec
@@ -437,26 +437,26 @@ final class dd_api_Test extends BaseTestCase {
 		// get_data component
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				     "source": {
-				        "typo": "source",
-				        "type": "component",
-				        "action": "get_data",
-				        "model": "component_input_text",
-				        "tipo": "test52",
-				        "section_tipo": "test3",
-				        "section_id": "1",
-				        "mode": "edit",
-				        "view": null,
-				        "lang": "lg-eng",
-				        "caller_dataframe": {
-				            "section_tipo": "test3",
-				            "section_id": "1",
-				            "section_id_key": 1,
-				            "section_tipo_key": "rsc1242"
-				        },
-				        "properties": {}
-				    }
+					"action": "read",
+					 "source": {
+						"typo": "source",
+						"type": "component",
+						"action": "get_data",
+						"model": "component_input_text",
+						"tipo": "test52",
+						"section_tipo": "test3",
+						"section_id": "1",
+						"mode": "edit",
+						"view": null,
+						"lang": "lg-eng",
+						"caller_dataframe": {
+							"section_tipo": "test3",
+							"section_id": "1",
+							"section_id_key": 1,
+							"section_tipo_key": "rsc1242"
+						},
+						"properties": {}
+					}
 				}
 			');
 			// direct exec
@@ -492,26 +492,26 @@ final class dd_api_Test extends BaseTestCase {
 		// get_data area_maintenance
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				     "source": {
-				        "typo": "source",
-				        "type": "area",
-				        "action": "get_data",
-				        "model": "area_maintenance",
-				        "tipo": "dd88",
-				        "section_tipo": "dd88",
-				        "mode": "list",
-				        "view": null,
-				        "lang": "lg-eng"
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "dd88"
-				        ],
-				        "limit": null,
-				        "offset": 0
-				    },
-				    "prevent_lock": true
+					"action": "read",
+					 "source": {
+						"typo": "source",
+						"type": "area",
+						"action": "get_data",
+						"model": "area_maintenance",
+						"tipo": "dd88",
+						"section_tipo": "dd88",
+						"mode": "list",
+						"view": null,
+						"lang": "lg-eng"
+					},
+					"sqo": {
+						"section_tipo": [
+							"dd88"
+						],
+						"limit": null,
+						"offset": 0
+					},
+					"prevent_lock": true
 				}
 			');
 			// direct exec
@@ -547,16 +547,16 @@ final class dd_api_Test extends BaseTestCase {
 		// get_data menu
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				     "source": {
-				        "typo": "source",
-				        "action": "get_data",
-				        "model": "menu",
-				        "tipo": "dd85",
-				        "section_tipo": "dd85",
-				        "mode": "edit",
-				        "view": null
-				    }
+					"action": "read",
+					 "source": {
+						"typo": "source",
+						"action": "get_data",
+						"model": "menu",
+						"tipo": "dd85",
+						"section_tipo": "dd85",
+						"mode": "edit",
+						"view": null
+					}
 				}
 			');
 			// direct exec
@@ -592,32 +592,32 @@ final class dd_api_Test extends BaseTestCase {
 		// resolve_data
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				     "source": {
-				        "typo": "source",
-				        "action": "resolve_data",
-				        "model": "component_portal",
-				        "tipo": "test80",
-				        "section_tipo": "test3",
-				        "section_id": "search_12",
-				        "mode": "search",
-				        "view": null,
-				        "lang": "lg-eng",
-				        "value": []
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "test3"
-				        ],
-				        "limit": null,
-				        "offset": 0,
-				        "filter_by_locators": [
-				            {
-				                "section_tipo": "test3",
-				                "section_id": "search_12"
-				            }
-				        ]
-				    }
+					"action": "read",
+					 "source": {
+						"typo": "source",
+						"action": "resolve_data",
+						"model": "component_portal",
+						"tipo": "test80",
+						"section_tipo": "test3",
+						"section_id": "search_12",
+						"mode": "search",
+						"view": null,
+						"lang": "lg-eng",
+						"value": []
+					},
+					"sqo": {
+						"section_tipo": [
+							"test3"
+						],
+						"limit": null,
+						"offset": 0,
+						"filter_by_locators": [
+							{
+								"section_tipo": "test3",
+								"section_id": "search_12"
+							}
+						]
+					}
 				}
 			');
 			// direct exec
@@ -653,29 +653,29 @@ final class dd_api_Test extends BaseTestCase {
 		// get_relation_list
 			$rqo = json_handler::decode('
 				{
-				    "action": "read",
-				    "source": {
-				    	"action" : "get_relation_list",
-				        "section_tipo": "test3",
-				        "section_id": "1",
-				        "tipo": "test138",
-				        "mode": "edit",
-				        "model": "relation_list"
-				    },
-				    "sqo": {
-				        "section_tipo": [
-				            "all"
-				        ],
-				        "mode": "related",
-				        "limit": 10,
-				        "offset": 0,
-				        "filter_by_locators": [
-				            {
-				                "section_tipo": "test3",
-				                "section_id": "1"
-				            }
-				        ]
-				    }
+					"action": "read",
+					"source": {
+						"action" : "get_relation_list",
+						"section_tipo": "test3",
+						"section_id": "1",
+						"tipo": "test138",
+						"mode": "edit",
+						"model": "relation_list"
+					},
+					"sqo": {
+						"section_tipo": [
+							"all"
+						],
+						"mode": "related",
+						"limit": 10,
+						"offset": 0,
+						"filter_by_locators": [
+							{
+								"section_tipo": "test3",
+								"section_id": "1"
+							}
+						]
+					}
 				}
 			');
 
@@ -941,7 +941,7 @@ final class dd_api_Test extends BaseTestCase {
 				$section_record = section_record::create(
 					$section_tipo, // string section_tipo
 					$section_id ? (int)$section_id : null // string|null section_id
-				);				
+				);
 			}
 
 		$rqo = json_decode('
@@ -1034,7 +1034,7 @@ final class dd_api_Test extends BaseTestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+					'expected running without errors: ' . PHP_EOL . to_string($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(
@@ -1583,29 +1583,29 @@ final class dd_api_Test extends BaseTestCase {
 		// get_relation_list
 		$rqo = json_handler::decode('
 			{
-			    "action": "read",
-			    "source": {
-			    	"action" : "get_relation_list",
-			        "section_tipo": "test3",
-			        "section_id": "1",
-			        "tipo": "test138",
-			        "mode": "edit",
-			        "model": "relation_list"
-			    },
-			    "sqo": {
-			        "section_tipo": [
-			            "all"
-			        ],
-			        "mode": "related",
-			        "limit": 10,
-			        "offset": 0,
-			        "filter_by_locators": [
-			            {
-			                "section_tipo": "test3",
-			                "section_id": "1"
-			            }
-			        ]
-			    }
+				"action": "read",
+				"source": {
+					"action" : "get_relation_list",
+					"section_tipo": "test3",
+					"section_id": "1",
+					"tipo": "test138",
+					"mode": "edit",
+					"model": "relation_list"
+				},
+				"sqo": {
+					"section_tipo": [
+						"all"
+					],
+					"mode": "related",
+					"limit": 10,
+					"offset": 0,
+					"filter_by_locators": [
+						{
+							"section_tipo": "test3",
+							"section_id": "1"
+						}
+					]
+				}
 			}
 		');
 

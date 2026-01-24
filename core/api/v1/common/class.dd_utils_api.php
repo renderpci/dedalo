@@ -214,7 +214,6 @@ final class dd_utils_api {
 	*/
 	public static function convert_search_object_to_sql_query(object $rqo) : object {
 
-		set_time_limit ( 259200 );  // 3 days
 		// session_write_close();
 
 		// response
@@ -224,6 +223,7 @@ final class dd_utils_api {
 
 		// only super admin users can do it
 			if( security::is_global_admin(logged_user_id()) !== true ){
+				$response->msg .= PHP_EOL . 'Invalid user. Only global admin users can do it. Current user id: ' . logged_user_id();
 				return $response;
 			}
 
@@ -233,16 +233,15 @@ final class dd_utils_api {
 				? json_handler::decode($options)
 				: $options;
 
-
 		// search if not empty
 			if (!empty($sqo)) {
 
 				// search exec
 					$search	= search::get_instance($sqo);
-					$rows	= $search->search();
+					$db_data = $search->search();
 
 				// SQL string query decorator
-					$sql_query = $rows->strQuery ?? '';
+					$sql_query = $search->get_sql_query();
 
 					$ar_lines = explode(PHP_EOL, $sql_query);
 					$ar_final = array_map(function($line){
@@ -257,7 +256,7 @@ final class dd_utils_api {
 
 				$response->result	= true;
 				$response->msg		= $sql_query;
-				$response->rows		= $rows;
+				$response->db_data	= $db_data;
 			}
 
 

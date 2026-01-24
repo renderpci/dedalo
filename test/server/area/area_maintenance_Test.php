@@ -172,10 +172,10 @@ final class area_maintenance_test extends BaseTestCase {
 			'add_hierarchy',
 			'build_database_version',
 			'check_config',
-			'counters_status',
+			// 'counters_status', // Not ready
 			'database_info',
 			'dedalo_api_test_environment',
-			'dedalo_version',
+			// 'dedalo_version', // Removed
 			'environment',
 			'export_hierarchy',
 			'lock_components',
@@ -187,6 +187,7 @@ final class area_maintenance_test extends BaseTestCase {
 			'php_info',
 			'php_user',
 			'publication_api',
+			'regenerate_relations',
 			'register_tools',
 			'sequences_status',
 			'sqo_test_environment',

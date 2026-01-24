@@ -91,9 +91,6 @@ abstract class DBi {
 				__METHOD__ . ' Error. Could not connect to database (52) for ' . to_string($database) . '. Details: ' . $errorMessage,
 				logger::ERROR
 			);
-			if (SHOW_DEBUG) {
-				// throw new Exception("Error. Could not connect to database (52): " . $errorMessage, 1);
-			}
 			return false;
 		}
 
