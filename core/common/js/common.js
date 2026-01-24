@@ -659,6 +659,10 @@ common.prototype.refresh = async function(options={}) {
 * @param bool remove_dom = false
 * 	On true, removes the instance DOM node
 * @return object result
+* {
+* 	delete_dependencies : bool,
+* 	delete_self : bool
+* }
 */
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -771,6 +775,7 @@ const do_delete_self = async function (self) {
 
 	// Delete instance from global instances register.
 	// self.id is equivalent to the intances_map key
+	// delete_instance returns false if the instance was not found because is already removed.
 	const result = delete_instance( self.id )
 
 	// delete caller instance reference (ar_instances)
@@ -789,7 +794,7 @@ const do_delete_self = async function (self) {
 		}
 
 
-	return result
+	return true
 }//end do_delete_self
 
 
@@ -824,17 +829,26 @@ const do_delete_dependencies = async function (self) {
 			if (typeof current_instance.destroy==='function') {
 				try {
 
+					const instance_id = current_instance.id
+
 					const current_result = await current_instance.destroy(
 						true, // delete_self
 						true, // delete_dependencies
 						false // remove_dom
 					);
 
-					self.ar_instances.splice(i, 1); // remove after successful destroy
-
-					if(SHOW_DEBUG===true) {
-						console.log('instance to destroy:', current_instance);
+					if(current_result.delete_self === true){
+						self.ar_instances.splice(i, 1); // remove after successful destroy
+						if(SHOW_DEBUG===true) {
+							console.log('Destroyed instance:', instance_id);
+						}
+					}else{
+						if(SHOW_DEBUG===true) {
+							console.error('Error destroying instance:', current_instance);
+							console.log('current_result:', current_result);
+						}
 					}
+
 				} catch (err) {
 					console.error("Error destroying instance:", err, current_instance);
 				}
