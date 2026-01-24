@@ -42,7 +42,7 @@ if (!file_exists(APP_ROOT . '/config/config.php')) {
 require APP_ROOT . '/config/config.php';
 
 // Suppress deprecation warnings (e.g. from protobuf) and ensure clean output
-// error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 // ini_set('display_errors', '0');
 
 // Prepare Dédalo environment

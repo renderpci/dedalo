@@ -603,7 +603,7 @@ trait where {
 		];
 
 		$query_object->sentence = "{$table_alias}.{$column_name} $operator _Q1_";
-	
+
 		return $query_object;
 	}//end column_format_parser
 

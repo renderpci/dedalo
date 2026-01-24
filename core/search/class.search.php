@@ -281,9 +281,9 @@ class search {
 		}
 
 		// json_columns to process based on mode
-		$mode = $this->sqo->mode ?? null;	
+		$mode = $this->sqo->mode ?? null;
 		$json_columns = ($mode==='tm') ? tm_db_manager::$json_columns : matrix_db_manager::$json_columns;
-		
+
 		// wrap result in db_result iterator
 		$db_result = new db_result(
 			$result,
@@ -556,10 +556,10 @@ class search {
 				if (isset($search_object->format) && $search_object->format==='column' && isset($search_object->q)) {
 
 					// column format parser
-					$search_object	= $this->column_format_parser($search_object);										
+					$search_object	= $this->column_format_parser($search_object);
 					$ar_query_object = [$search_object];
 
-				}else{					
+				}else{
 
 					$search_component			= end($path);
 					// model (with fallback if do not exists)

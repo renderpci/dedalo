@@ -227,8 +227,10 @@ try {
 		$response->dedalo_last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
 
 		// real_execution_time add
+		$total_time_api_exec					= exec_time_unit($global_start_time, 'ms');
 		$response->debug						= $response->debug ?? new stdClass();
-		$response->debug->real_execution_time	= exec_time_unit($global_start_time, 'ms') . ' ms';
+		$response->debug->real_execution_time	= $total_time_api_exec . ' ms';
+
 	} else {
 
 		$response->dedalo_last_error = isset($_ENV['DEDALO_LAST_ERROR'])
@@ -326,10 +328,16 @@ if ($perf_active) {
 
 
 // static profiler. On active, report on error log the static vars size (if total time is greater than 2 seconds)
-if (defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
+if (SHOW_DEBUG && defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 	$total_time = exec_time_unit($global_start_time, 'ms');
 	if($total_time > 2000) {
 		$report = static_profiler::get_report();
 		error_log( json_encode($report, JSON_PRETTY_PRINT));
 	}
+
+	// log real execution time
+	$id	= $rqo->id ?? $rqo->source->tipo ?? '';
+	$text = 'API REQUEST ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' . dd_memory_usage();
+	$line = 'API END POINT FINISHED: ' . PHP_EOL . $text . PHP_EOL;
+	debug_log($line, logger::DEBUG);
 }

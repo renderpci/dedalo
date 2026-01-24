@@ -77,13 +77,9 @@ const get_content_data_edit = async function(self) {
 
 	// load event
 		// observe in viewport
-		dd_request_idle_callback(
-			() => {
-				when_in_viewport(content_data, () => {
-					content_data.src = src
-				})
-			}
-		)
+		when_in_viewport(content_data, () => {
+			content_data.src = src
+		})
 
 
 	return content_data

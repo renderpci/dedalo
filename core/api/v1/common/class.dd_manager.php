@@ -226,8 +226,8 @@ final class dd_manager {
 					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
 					$text			= 'API REQUEST ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' . dd_memory_usage();
 					$text_length	= strlen($text) +1;
-					$nchars			= 200;
-					$repeat 		= ($nchars - $text_length) ?? 0;
+					// $nchars		= 200;
+					// $repeat 		= ($nchars - $text_length) ?? 0;
 					$line			= $text .' '. PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
