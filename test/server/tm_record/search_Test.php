@@ -1,12 +1,16 @@
-<?php
+<?php declare(strict_types=1);
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
+
+
 /**
  * Test class for tm_record::search() method.
  *
  * @coversDefaultClass 	m_record
  */
-require_once '/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/tm_record/class.tm_record.php';
-
-class tm_record_search_test extends PHPUnit\Framework\TestCase {
+class tm_record_search_test extends BaseTestCase {
+    
+    
     /**
      * @test
      * @covers ::search
@@ -24,5 +28,7 @@ class tm_record_search_test extends PHPUnit\Framework\TestCase {
         $this->assertIsArray($result['records']);
         $this->assertGreaterThanOrEqual(0, count($result['records']));
     }
+
+
 }
 

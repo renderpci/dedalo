@@ -93,7 +93,7 @@ data_manager.request_legacy = async function(options) {
 		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
 		mode		: 'cors', // no-cors, cors, *same-origin
 		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-		credentials	: 'same-origin', // include, *same-origin, omit
+		credentials	: 'include', // include, *same-origin, omit
 		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
 		redirect	: 'follow', // manual, *follow, error
 		referrer	: 'no-referrer', // no-referrer, *client
@@ -258,7 +258,7 @@ data_manager.request = async function(options) {
 		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
 		mode		: 'cors', // no-cors, cors, *same-origin
 		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-		credentials	: 'same-origin', // include, *same-origin, omit
+		credentials	: 'include', // include, *same-origin, omit
 		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
 		redirect	: 'follow', // manual, *follow, error
 		referrer	: 'no-referrer', // no-referrer, *client
@@ -800,7 +800,7 @@ data_manager.request_stream = async function(options) {
 	const method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
 	const mode			= options.mode || 'cors' // no-cors, cors, *same-origin
 	const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
+	const credentials	= options.credentials || 'include' // include, *same-origin, omit
 	const headers		= options.headers || {
 		'Content-Type'		: 'application/json',
 		'Accept'			: 'text/event-stream',
@@ -848,7 +848,7 @@ data_manager.request_stream = async function(options) {
  * Generic fetch stream request using ReadableStreams.
  * Unlike request_stream (SSE), this target is agnostic and suitable for NDJSON or other binary streams.
  * It's primarilly used to bypass the overhead of EventSource for long-running row-by-row exports.
- * 
+ *
  * @param {object} options - Request options (url, method, headers, body)
  * @returns {Promise<ReadableStream>} The response body stream
  */

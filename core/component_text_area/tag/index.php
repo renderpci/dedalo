@@ -9,7 +9,8 @@
 // text check
 	$text = $_GET['id'] ?? false;
 	if (empty($text)) {
-		die("text var is mandatory!");
+		echo "text var is mandatory!";
+		return;
 	}
 
 

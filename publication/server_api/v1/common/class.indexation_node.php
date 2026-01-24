@@ -125,7 +125,6 @@ class indexation_node extends stdClass {
 			}
 			break; // Only first is used
 		}
-		#dump($identify_image_url, ' identify_image_url ++ '.to_string()); die();
 
 		return (string)$identify_image_url;
 	}//end get_identify_image_url

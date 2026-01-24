@@ -163,7 +163,7 @@ const get_content_value = (i, current_value, self) => {
 				}
 
 			// title
-				const use_title = typeof(self.context.properties.use_title) !== 'undefined'
+				const use_title = typeof(self.context?.properties?.use_title) !== 'undefined'
 					? self.context.properties.use_title
 					: true
 				if(use_title){
@@ -300,7 +300,7 @@ const get_content_value = (i, current_value, self) => {
 					input_iri.addEventListener('keyup', input_iri_keyup_handler)
 
 			// active checkbox
-				const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
+				const use_active_check = typeof(self.context?.properties?.use_active_check) !== 'undefined'
 					? self.context.properties.use_active_check
 					: false
 				if(use_active_check){

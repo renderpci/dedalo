@@ -87,7 +87,7 @@ common.prototype.init = async function(options) {
 		self.render_level	= null
 
 	// caller pointer
-		self.caller			= options.caller
+		self.caller			= options.caller || null
 
 	// standalone
 		self.standalone		= options.standalone ?? true
@@ -145,9 +145,7 @@ export const set_context_vars = function(self) {
 			self.view = self.context.view || self.view
 			Object.defineProperty(self, 'view', {
 				get : function() {
-					return self.context.view
-						? self.context.view
-						: null
+					return self.context?.view || null
 				},
 				set : function(value) {
 					self.context.view = value;
@@ -159,9 +157,7 @@ export const set_context_vars = function(self) {
 			self.properties = self.context.properties || self.properties
 			Object.defineProperty(self, 'properties', {
 				get : function() {
-					return self.context.properties
-						? self.context.properties
-						: null
+					return self.context?.properties || null
 				},
 				set : function(value) {
 					self.context.properties = value;
@@ -171,10 +167,7 @@ export const set_context_vars = function(self) {
 			self.permissions = self.context.permissions || self.permissions
 			Object.defineProperty(self, 'permissions', {
 				get : function() {
-					return self.context.permissions
-						? self.context.permissions
-						: 0
-					// return self.context.view || self.view;
+					return self.context?.permissions || 0
 				},
 				set : function(value) {
 					self.context.permissions = value
@@ -669,6 +662,11 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 	const self		= this
 	const result	= {}
 
+	// double destroy protection
+		if (self.status === 'destroyed') {
+			return result
+		}
+
 	// delete_dependencies. Destroy all associated instances
 		if(delete_dependencies===true) {
 			result.delete_dependencies = await do_delete_dependencies(self)
@@ -689,15 +687,20 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 					console.error('Error removing node of type: ' + self.node.nodeType, error)
 				}
 			}
-			// reset instance node property value
+			// reset instance node property value (always reset to release memory reference)
 			self.node = null
 		}
 
+	if (delete_self===true) {
+		// status update
+		self.status = 'destroyed'
+
+		// reset instance node property value (always reset to release memory reference)
+		self.node = null
+	}
+
 	// event publish
 		event_manager.publish('destroy_'+self.id)
-
-	// status update
-		self.status = 'destroyed'
 
 
 	return result
@@ -736,21 +739,22 @@ const do_delete_self = async function (self) {
 		}
 
 	// destroy services
-		if (self.services) {
-			const services_length = self.services.length
-			for (let i = services_length - 1; i >= 0; i--) {
-				if(SHOW_DEBUG===true) {
-					console.log('removing services:', i, services_length);
+		if (self.services && self.services.length > 0) {
+			const services_to_destroy = [...self.services]
+			self.services.length = 0 // Clear immediately
+
+			await Promise.all(services_to_destroy.map(async (current_service, i) => {
+				if (SHOW_DEBUG === true) {
+					console.log('removing services:', i, services_to_destroy.length, current_service)
 				}
-				if (typeof self.services[i].destroy==='function') {
-					await self.services[i].destroy(
+				if (typeof current_service?.destroy === 'function') {
+					await current_service.destroy(
 						true, // delete_self
 						true, // delete_dependencies
 						false // remove_dom
 					)
 				}
-				delete self.services[i]
-			}
+			}))
 		}
 
 	// destroy inspector
@@ -785,13 +789,19 @@ const do_delete_self = async function (self) {
 				const item = self.caller.ar_instances[i]
 				if (item.id===self.id) {
 					self.caller.ar_instances.splice(i, 1)
-					// if(SHOW_DEBUG===true) {
-					// 	console.log('))))) deleted caller instance reference:', self.caller.model, self.id);
-					// }
 					break;
 				}
 			}
 		}
+
+	// memory optimization. Nullify large property references
+		self.context		= null
+		self.data			= null
+		self.datum			= null
+		self.ar_instances	= []
+		self.events_tokens	= []
+		self.caller			= null
+		self.request_config	= null
 
 
 	return true
@@ -815,51 +825,42 @@ const do_delete_dependencies = async function (self) {
 	}
 
 	// remove instances from self ar_instances
-		const ar_instances_length = self.ar_instances.length
-		for (let i = ar_instances_length - 1; i >= 0; i--) {
+	// Performance optimization: Snapshot and clear array immediately
+	const instances_to_destroy = [...self.ar_instances]
+	self.ar_instances.length	= 0 // Clear immediately to prevent race conditions
 
-			const current_instance = self.ar_instances[i]
+	if (instances_to_destroy.length > 0) {
+		await Promise.all(instances_to_destroy.map(async (current_instance) => {
 
 			// Skip non‑existing or non‑destroyable instances
 			if (!current_instance || current_instance.destroyable === false) {
-				continue;
+				return
 			}
 
-			// destroy instance
-			if (typeof current_instance.destroy==='function') {
+			if (typeof current_instance.destroy === 'function') {
 				try {
-
-					const instance_id = current_instance.id
-
-					const current_result = await current_instance.destroy(
+					const current_instance_id = current_instance.id
+					await current_instance.destroy(
 						true, // delete_self
 						true, // delete_dependencies
 						false // remove_dom
-					);
+					)
 
-					if(current_result.delete_self === true){
-						self.ar_instances.splice(i, 1); // remove after successful destroy
-						if(SHOW_DEBUG===true) {
-							console.log('Destroyed instance:', instance_id);
-						}
-					}else{
-						if(SHOW_DEBUG===true) {
-							console.error('Error destroying instance:', current_instance);
-							console.log('current_result:', current_result);
-						}
+					if (SHOW_DEBUG === true) {
+						console.log('instance_to_destroy:', current_instance_id)
 					}
 
 				} catch (err) {
-					console.error("Error destroying instance:", err, current_instance);
+					console.error("Error destroying instance:", err, current_instance)
 				}
-			}else{
-				console.error("Ignored instance without 'destroy' method:", self, current_instance);
-				console.warn("self.ar_instances:",self.ar_instances);
+			} else {
+				console.error("Ignored instance without 'destroy' method:", self, current_instance)
 			}
-		}
+		}))
+	}
 
-	// All instances removed? Returns true if self.ar_instances.length is 0.
-	const result = self.ar_instances.length === 0;
+	// All instances removed? Returns true since we cleared the array at the start
+	const result = true
 
 
 	return result
