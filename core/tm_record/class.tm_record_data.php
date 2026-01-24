@@ -291,6 +291,7 @@ class tm_record_data {
 		}
 
 		$json_columns = tm_db_manager::$json_columns;
+		$int_columns = tm_db_manager::$int_columns;
 
 		// assign data_columns from database results
 		foreach ($this->columns_name as $column) {
@@ -300,11 +301,16 @@ class tm_record_data {
 				continue;
 			}
 
-			if ( $row->$column!==null ) {
-				// JSON case
-				$this->data->$column = isset($json_columns[$column]) 
-					? json_decode($row->$column)
-					: $row->$column;
+			if ( $row->$column!==null ) {				
+				if( isset($json_columns[$column]) ) {
+					// JSON case
+					$this->data->$column = json_decode($row->$column);
+				} else if( isset($int_columns[$column]) ) {
+					// int case
+					$this->data->$column = (int)$row->$column;
+				} else {
+					$this->data->$column = $row->$column;
+				}
 			}
 		}
 
