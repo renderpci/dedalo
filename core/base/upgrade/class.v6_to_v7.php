@@ -361,418 +361,26 @@ class v6_to_v7 {
 				// datos. Common matrix tables
 				if( isset($datos) ){
 
-					$column_data				= new stdClass();
-					$column_relation_search		= new stdClass();
-					$column_relation			= new stdClass();
-					$column_string				= new stdClass();
-					$column_date				= new stdClass();
-					$column_number				= new stdClass();
-					$column_geo					= new stdClass();
-					$column_media				= new stdClass();
-					$column_iri					= new stdClass();
-					$column_misc				= new stdClass();
-					$column_meta				= new stdClass();
-
-					$value_type_map = v6_to_v7::get_value_type_map();
-
-					// datos properties
-					foreach ($datos as $datos_key => $datos_value) {
-
-						if( empty($datos_value) ){
-							continue;
-						}
-
-						switch ($datos_key) {
-
-							case 'relations_search':
-							case 'relations':
-
-								// update relations array
-								$relations = $datos_value ?? [];
-								foreach ($relations as $locator) {
-
-									// check locator from_component_tipo
-									if( !isset($locator->from_component_tipo) ){
-										$locator_string = json_encode($locator);
-										debug_log(__METHOD__
-											. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
-											. " section tipo: ". $section_tipo . PHP_EOL
-											. " section id: ". $section_id . PHP_EOL
-											. " table: ". $table . PHP_EOL
-											. " locator: ". $locator_string
-											, logger::ERROR
-										);
-										$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
-										continue;
-									}
-									// remove the project in activity, not used anymore.
-									if( $locator->from_component_tipo==='dd550' ){
-										continue;
-									}
-
-									$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
-									if (!isset($target->{$locator->from_component_tipo})) {
-										$target->{$locator->from_component_tipo} = [];
-									}
-
-									$target->{$locator->from_component_tipo}[] = $locator;
-								}
-
-								//add id to all locators
-								// only in the relation (relation_seach doesn't use it)
-								foreach ($column_relation as $component => $relation_data) {
-									$value_key = 0;
-									foreach ($relation_data as $locator) {
-										$value_key++;
-										$locator->id = $value_key;
-										// save the counter
-										$column_meta->{$locator->from_component_tipo} = [
-											(object)['count' => $value_key]
-										];
-									}
-								}
-
-
-								break;
-
-							case 'components':
-
-								// update components object
-								$literal_components = $datos_value ?? [];
-								foreach ($literal_components as $literal_tipo => $literal_value) {
-
-									$model = ontology_node::get_model_by_tipo($literal_tipo);
-
-									// skip v5 data
-									if( in_array($model, ['component_filter','component_section_id']) ){
-										continue;
-									}
-
-									// literal without v6 'dato' property case
-									if( !isset($literal_value->dato) ){
-										debug_log(__METHOD__
-											. " **-------- ERROR Literal without v6 'dato' property --------** " . PHP_EOL
-											. " model: " . $model. PHP_EOL
-											. " component tipo: ". $literal_tipo . PHP_EOL
-											. " section tipo: ". $section_tipo . PHP_EOL
-											. " section id: ". $section_id . PHP_EOL
-											. " table: ". $table . PHP_EOL
-											. " literal_value: ". json_encode( $literal_value ). PHP_EOL
-											. " literal_value type: " . gettype( $literal_value )
-											, logger::ERROR
-										);
-										$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
-										continue;
-									}
-
-									$old_data = $literal_value->dato;
-									foreach ($old_data as $lang => $ar_value) {
-
-										// Ignore empty component values
-										if( !isset($ar_value) || empty($ar_value) ){
-											debug_log(__METHOD__
-												. " **-------- IGNORED Data without information --------** " . PHP_EOL
-												. " model: " . $model. PHP_EOL
-												. " component tipo: ". $literal_tipo . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value: ". json_encode( $ar_value ). PHP_EOL
-												. " value type: " . gettype( $ar_value )
-												, logger::WARNING
-											);
-											continue;
-										}
-
-										// Not array cases
-										if( !is_array($ar_value) ){
-											// ignore old recycled component order data (hierarchy42)
-											if($literal_tipo === 'hierarchy42' && $lang==='lg-nolan'){
-												continue;
-											}
-											// ignore TinyMCE empty data values
-											if($ar_value==='<br data-mce-bogus="1">' || $ar_value==='[<br data-mce-bogus="1">]'){
-												continue;
-											}
-											// ignore not used anymore component_layout dd23
-											if($literal_tipo === 'dd23'){
-												continue;
-											}
-											debug_log(__METHOD__
-												. " <<-------- CHANGED Data with wrong format: is not array -------->> " . PHP_EOL
-												. " model: " . $model. PHP_EOL
-												. " component tipo: ". $literal_tipo . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value: ". json_encode( $ar_value ). PHP_EOL
-												. " value type: " . gettype( $ar_value )
-												, logger::WARNING
-											);
-											$ar_value = [$ar_value];
-										}
-
-										// safe array keys
-										$ar_value = array_values($ar_value);
-
-										$value_key = 0;
-										foreach ($ar_value as $key => $value) {
-
-											// Ignore null component values
-											if( !isset($value) ){
-												debug_log(__METHOD__
-													. " <<-------- IGNORED empty value. -------->> " . PHP_EOL
-													. " model: " . $model. PHP_EOL
-													. " component tipo: ". $literal_tipo . PHP_EOL
-													. " section tipo: ". $section_tipo . PHP_EOL
-													. " section id: ". $section_id . PHP_EOL
-													. " table: ". $table . PHP_EOL
-													. " value: ". json_encode( $value ) . PHP_EOL
-													. " value type: " . gettype( $value ) . PHP_EOL
-													. " ar_value: ". json_encode( $ar_value ) . PHP_EOL
-													. " key: ". $key
-													, logger::WARNING
-												);
-												continue;
-											}
-
-											// empty case. Ignore empty values
-											if (empty($value) && $value!='0') {
-												continue;
-											}
-
-											// empty media. Skip save empty media values
-											if (json_encode($value)==='{"files_info":[]}') {
-												continue;
-											}
-
-											// old media v5 value
-											if (is_object($value) &&
-												isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
-												isset($value->section_tipo) && $value->section_tipo === $section_tipo &&
-												isset($value->section_id) && $value->section_id == $section_id
-												) {
-												continue;
-											}
-
-											$value_key++;
-
-											$column_meta->{$literal_tipo} = [
-												(object)['count' => $value_key]
-											];
-
-											$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
-
-											// new literal object with value
-											$new_literal_obj = new stdClass();
-												$new_literal_obj->id		= $value_key; // starts from 1
-												// $new_literal_obj->lang		= $lang; // UNUSED
-												$new_literal_obj->value		= $value;
-
-											switch ($typology) {
-												case DEDALO_VALUE_TYPE_STRING:
-
-													// set component path if not already set
-													if (!property_exists($column_string, $literal_tipo)) {
-														$column_string->{$literal_tipo} = [];
-													}
-													// set lang
-													$new_literal_obj->lang = $lang;
-
-													$column_string->{$literal_tipo}[] = $new_literal_obj;
-													break;
-
-												case DEDALO_VALUE_TYPE_NUMBER:
-
-													// set component path if not already set
-													if (!property_exists($column_number, $literal_tipo)) {
-														$column_number->{$literal_tipo} = [];
-													}
-
-													$column_number->{$literal_tipo}[] = $new_literal_obj;
-													break;
-
-												case DEDALO_VALUE_TYPE_MISC:
-
-													// set component path if not already set
-													if (!property_exists($column_misc, $literal_tipo)) {
-														$column_misc->{$literal_tipo} = [];
-													}
-													if($model==='component_security_access'  || $model=== 'component_info' || $model=== 'component_filer_records') {
-														if(is_object($value)){
-															$literal_misc 		= $value;
-															$literal_misc->id	= $value_key;
-															$column_misc->{$literal_tipo}[] = $literal_misc;
-														}
-													}else{
-														$column_misc->{$literal_tipo}[] = $new_literal_obj;
-													}
-													break;
-
-												case DEDALO_VALUE_TYPE_DATE:
-
-													if(is_object($value)){
-														$date_literal_obj = $value;
-															$date_literal_obj->id	= $value_key;
-															// $date_literal_obj->lang	= $lang; // UNUSED
-
-														// set component path if not already set
-														if (!property_exists($column_date, $literal_tipo)) {
-															$column_date->{$literal_tipo} = [];
-														}
-
-														$column_date->{$literal_tipo}[] = $date_literal_obj;
-													}else{
-														$value_string = json_encode( $value );
-														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is an not object --------** " . PHP_EOL
-															. " section tipo: ". $section_tipo . PHP_EOL
-															. " section id: ". $section_id . PHP_EOL
-															. " table: ". $table . PHP_EOL
-															. " value type: " . gettype( $value ) . PHP_EOL
-															. " value: ". $value_string
-															, logger::ERROR
-														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-														continue 2;
-													}
-													break;
-
-												case DEDALO_VALUE_TYPE_MEDIA:
-
-													if(is_object($value)){
-														$media_literal_obj = $value;
-															$media_literal_obj->id		= $value_key;
-															// $media_literal_obj->lang	= $lang; // UNUSED
-
-														// set component path if not already set
-														if (!property_exists($column_media, $literal_tipo)) {
-															$column_media->{$literal_tipo} = [];
-														}
-
-														$column_media->{$literal_tipo}[] = $media_literal_obj;
-													}else{
-														$value_string = json_encode( $value );
-														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-															. " section tipo: ". $section_tipo . PHP_EOL
-															. " section id: ". $section_id . PHP_EOL
-															. " table: ". $table . PHP_EOL
-															. " value type: " . gettype( $value ) . PHP_EOL
-															. " value: ". $value_string
-															, logger::ERROR
-														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-														continue 2;
-													}
-													break;
-
-												case DEDALO_VALUE_TYPE_IRI:
-
-													if(is_object($value)){
-														$iri_literal_obj = $value;
-															//check if the data has id (introduced in v6.8.0)
-															if( empty($value->id) ){
-																$iri_literal_obj->id = $value_key;
-															}
-															$iri_literal_obj->lang = $lang;
-
-														// set component path if not already set
-														if (!property_exists($column_iri, $literal_tipo)) {
-															$column_iri->{$literal_tipo} = [];
-														}
-
-														$column_iri->{$literal_tipo}[] = $iri_literal_obj;
-													}else{
-														$value_string = json_encode( $value );
-														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-															. " section tipo: ". $section_tipo . PHP_EOL
-															. " section id: ". $section_id . PHP_EOL
-															. " table: ". $table . PHP_EOL
-															. " value type: " . gettype( $value ) . PHP_EOL
-															. " value: ". $value_string
-															, logger::ERROR
-														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-														continue 2;
-													}
-													break;
-
-												case DEDALO_VALUE_TYPE_GEO:
-
-													if(is_object($value)){
-														$geo_literal_obj = $value;
-															$geo_literal_obj->id	= $value_key;
-															// $geo_literal_obj->lang	= $lang; // UNUSED
-
-														// set component path if not already set
-														if (!property_exists($column_geo, $literal_tipo)) {
-															$column_geo->{$literal_tipo} = [];
-														}
-
-														$column_geo->{$literal_tipo}[] = $geo_literal_obj;
-
-
-													}else{
-														$value_string = json_encode( $value );
-														debug_log(__METHOD__
-															. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-															. " section tipo: ". $section_tipo . PHP_EOL
-															. " section id: ". $section_id . PHP_EOL
-															. " table: ". $table . PHP_EOL
-															. " value type: " . gettype( $value ) . PHP_EOL
-															. " value: ". $value_string
-															, logger::ERROR
-														);
-														$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-														continue 2;
-													}
-													break;
-											}
-
-											// temporal add info for easy debug in beta 7
-												// if (isset($new_literal_obj->literal_value->info)) {
-												// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
-												// }else{
-												// 	$label = ontology_node::get_term_by_tipo($literal_tipo);
-												// 	$new_literal_obj->info = "$label [$model]";
-												// }
-										}
-									}
-								}//end reach ($literal_components as $literal_tipo => $literal_value)
-								break;
-
-							case 'section_real_tipo':
-
-								// ignore this property. To extinct.
-								break;
-
-							case 'created_by_userID':
-
-								// Rename the property
-								$column_data->created_by_user_id = $datos_value;
-								break;
-
-							default:
-
-								// update other properties like section_tipo, created_date, etc.
-								$column_data->{$datos_key} = $datos_value;
-								break;
-						}
-					}//end foreach ($datos as $datos_key => $datos_value)
-
-					$section_data_encoded				= ( empty(get_object_vars($column_data)) ) ? null : json_encode($column_data);
-					$section_relation_encoded			= ( empty(get_object_vars($column_relation)) ) ? null : json_encode($column_relation);
-					$section_string_encoded				= ( empty(get_object_vars($column_string)) ) ? null : json_encode($column_string);
-					$section_date_encoded				= ( empty(get_object_vars($column_date)) ) ? null : json_encode($column_date);
-					$section_iri_encoded				= ( empty(get_object_vars($column_iri)) ) ? null : json_encode($column_iri);
-					$section_geo_encoded				= ( empty(get_object_vars($column_geo)) ) ? null : json_encode($column_geo);
-					$section_number_encoded				= ( empty(get_object_vars($column_number)) ) ? null : json_encode($column_number);
-					$section_media_encoded				= ( empty(get_object_vars($column_media)) ) ? null : json_encode($column_media);
-					$section_misc_encoded				= ( empty(get_object_vars($column_misc)) ) ? null : json_encode($column_misc);
-					$section_relation_search_encoded	= ( empty(get_object_vars($column_relation_search)) ) ? null : json_encode($column_relation_search);
-					$section_meta_encoded				= ( empty(get_object_vars($column_meta)) ) ? null : json_encode($column_meta);
+					$processed_data = self::process_matrix_row_data(
+						$datos,
+						$table,
+						$section_tipo,
+						$section_id,
+						v6_to_v7::get_value_type_map(),
+						$response
+					);
+
+					$section_data_encoded				= ( empty(get_object_vars($processed_data->data)) ) ? null : json_encode($processed_data->data);
+					$section_relation_encoded			= ( empty(get_object_vars($processed_data->relation)) ) ? null : json_encode($processed_data->relation);
+					$section_string_encoded				= ( empty(get_object_vars($processed_data->string)) ) ? null : json_encode($processed_data->string);
+					$section_date_encoded				= ( empty(get_object_vars($processed_data->date)) ) ? null : json_encode($processed_data->date);
+					$section_iri_encoded				= ( empty(get_object_vars($processed_data->iri)) ) ? null : json_encode($processed_data->iri);
+					$section_geo_encoded				= ( empty(get_object_vars($processed_data->geo)) ) ? null : json_encode($processed_data->geo);
+					$section_number_encoded				= ( empty(get_object_vars($processed_data->number)) ) ? null : json_encode($processed_data->number);
+					$section_media_encoded				= ( empty(get_object_vars($processed_data->media)) ) ? null : json_encode($processed_data->media);
+					$section_misc_encoded				= ( empty(get_object_vars($processed_data->misc)) ) ? null : json_encode($processed_data->misc);
+					$section_relation_search_encoded	= ( empty(get_object_vars($processed_data->relation_search)) ) ? null : json_encode($processed_data->relation_search);
+					$section_meta_encoded				= ( empty(get_object_vars($processed_data->meta)) ) ? null : json_encode($processed_data->meta);
 
 					$escaped_table = pg_escape_identifier($conn, $table);
 
@@ -1153,7 +761,7 @@ class v6_to_v7 {
 	 * @return bool
 	 */
 	public static function remove_tm_created_sections() : bool {
-		
+
 		$sql_query = sanitize_query ('
 			DELETE FROM "matrix_time_machine"
 			WHERE "section_tipo" = "tipo"
@@ -1182,13 +790,13 @@ class v6_to_v7 {
 	 * @return bool
 	 */
 	public static function recreate_tm_table() : bool {
-		
+
 		$sql_query = sanitize_query ('
 			ALTER TABLE "matrix_time_machine"
 				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
 				ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
-				
+
 			COMMENT ON TABLE "matrix_time_machine" IS  \'Time Machine\';
 
 			COMMENT ON COLUMN matrix_time_machine.section_id IS \'section_id when the change was made\';
@@ -1224,7 +832,7 @@ class v6_to_v7 {
 	* New columns data is compatible with previous column data.
 	*/
 	public static function fill_new_columns_in_tm() :bool {
-		
+
 		$sql_query = sanitize_query('
 			UPDATE "matrix_time_machine"
 				SET user_id 		= "userID",
@@ -1256,7 +864,7 @@ class v6_to_v7 {
 	 * @return bool
 	 */
 	public static function delete_tm_columns() : bool {
-		
+
 		$sql_query = sanitize_query ('
 			ALTER TABLE "matrix_time_machine"
 				DROP COLUMN IF EXISTS "section_id_key",
@@ -1279,11 +887,435 @@ class v6_to_v7 {
 			return false;
 		}
 
-		
+
 		return true;
 	}//end delete_tm_columns
 
 
 
+
+	/**
+	* PROCESS_MATRIX_ROW_DATA
+	* Process the row data and return the encoded columns
+	* @param array|object $datos
+	* @param string $table
+	* @param string $section_tipo
+	* @param mixed $section_id
+	* @param object $value_type_map
+	* @param object $response (by reference)
+	* @return object
+	*/
+	public static function process_matrix_row_data($datos, string $table, string $section_tipo, $section_id, object $value_type_map, &$response) : object {
+
+		$column_data				= new stdClass();
+		$column_relation_search		= new stdClass();
+		$column_relation			= new stdClass();
+		$column_string				= new stdClass();
+		$column_date				= new stdClass();
+		$column_number				= new stdClass();
+		$column_geo					= new stdClass();
+		$column_media				= new stdClass();
+		$column_iri					= new stdClass();
+		$column_misc				= new stdClass();
+		$column_meta				= new stdClass();
+
+		// datos properties. 'datos' is an object with all the columns data as properties (v6 format).
+		foreach ($datos as $datos_key => $datos_value) {
+
+			if( empty($datos_value) ){
+				continue;
+			}
+
+			switch ($datos_key) {
+
+				case 'relations_search':
+				case 'relations':
+
+					// update relations array
+					$relations = $datos_value ?? [];
+					foreach ($relations as $locator) {
+
+						// check locator from_component_tipo
+						if( !isset($locator->from_component_tipo) ){
+							$locator_string = json_encode($locator);
+							debug_log(__METHOD__
+								. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
+								. " section tipo: ". $section_tipo . PHP_EOL
+								. " section id: ". $section_id . PHP_EOL
+								. " table: ". $table . PHP_EOL
+								. " locator: ". $locator_string
+								, logger::ERROR
+							);
+							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
+							continue;
+						}
+						// remove the project in activity, not used anymore.
+						if( $locator->from_component_tipo==='dd550' ){
+							continue;
+						}
+
+						$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
+						if (!isset($target->{$locator->from_component_tipo})) {
+							$target->{$locator->from_component_tipo} = [];
+						}
+
+						$target->{$locator->from_component_tipo}[] = $locator;
+					}
+
+					//add id to all locators
+					// only in the relation (relation_seach doesn't use it)
+					foreach ($column_relation as $component => $relation_data) {
+						$value_key = 0;
+						foreach ($relation_data as $locator) {
+							$value_key++;
+							$locator->id = $value_key;
+							// save the counter
+							$column_meta->{$locator->from_component_tipo} = [
+								(object)['count' => $value_key]
+							];
+						}
+					}
+					break;
+
+				case 'components':
+
+					// update components object
+					$literal_components = $datos_value ?? [];
+					foreach ($literal_components as $literal_tipo => $literal_value) {
+
+						$model = ontology_node::get_model_by_tipo($literal_tipo);
+
+						// skip v5 data
+						if( in_array($model, ['component_filter','component_section_id']) ){
+							continue;
+						}
+
+						// literal without v6 'dato' property case
+						if( !isset($literal_value->dato) ){
+							debug_log(__METHOD__
+								. " **-------- ERROR Literal without v6 'dato' property --------** " . PHP_EOL
+								. " model: " . $model. PHP_EOL
+								. " component tipo: ". $literal_tipo . PHP_EOL
+								. " section tipo: ". $section_tipo . PHP_EOL
+								. " section id: ". $section_id . PHP_EOL
+								. " table: ". $table . PHP_EOL
+								. " literal_value: ". json_encode( $literal_value ). PHP_EOL
+								. " literal_value type: " . gettype( $literal_value )
+								, logger::ERROR
+							);
+							$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
+							continue;
+						}
+
+						$old_data = $literal_value->dato;
+						foreach ($old_data as $lang => $ar_value) {
+
+							// Ignore empty component values
+							if( !isset($ar_value) || empty($ar_value) ){
+								debug_log(__METHOD__
+									. " **-------- IGNORED Data without information --------** " . PHP_EOL
+									. " model: " . $model. PHP_EOL
+									. " component tipo: ". $literal_tipo . PHP_EOL
+									. " section tipo: ". $section_tipo . PHP_EOL
+									. " section id: ". $section_id . PHP_EOL
+									. " table: ". $table . PHP_EOL
+									. " value: ". json_encode( $ar_value ). PHP_EOL
+									. " value type: " . gettype( $ar_value )
+									, logger::WARNING
+								);
+								continue;
+							}
+
+							// Not array cases
+							if( !is_array($ar_value) ){
+								// ignore old recycled component order data (hierarchy42)
+								if($literal_tipo === 'hierarchy42' && $lang==='lg-nolan'){
+									continue;
+								}
+								// ignore TinyMCE empty data values
+								if($ar_value==='<br data-mce-bogus="1">' || $ar_value==='[<br data-mce-bogus="1">]'){
+									continue;
+								}
+								// ignore not used anymore component_layout dd23
+								if($literal_tipo === 'dd23'){
+									continue;
+								}
+								debug_log(__METHOD__
+									. " <<-------- CHANGED Data with wrong format: is not array -------->> " . PHP_EOL
+									. " model: " . $model. PHP_EOL
+									. " component tipo: ". $literal_tipo . PHP_EOL
+									. " section tipo: ". $section_tipo . PHP_EOL
+									. " section id: ". $section_id . PHP_EOL
+									. " table: ". $table . PHP_EOL
+									. " value: ". json_encode( $ar_value ). PHP_EOL
+									. " value type: " . gettype( $ar_value )
+									, logger::WARNING
+								);
+								$ar_value = [$ar_value];
+							}
+
+							// safe array keys
+							$ar_value = array_values($ar_value);
+
+							$value_key = 0;
+							foreach ($ar_value as $key => $value) {
+
+								// Ignore null component values
+								if( !isset($value) ){
+									debug_log(__METHOD__
+										. " <<-------- IGNORED empty value. -------->> " . PHP_EOL
+										. " model: " . $model. PHP_EOL
+										. " component tipo: ". $literal_tipo . PHP_EOL
+										. " section tipo: ". $section_tipo . PHP_EOL
+										. " section id: ". $section_id . PHP_EOL
+										. " table: ". $table . PHP_EOL
+										. " value: ". json_encode( $value ) . PHP_EOL
+										. " value type: " . gettype( $value ) . PHP_EOL
+										. " ar_value: ". json_encode( $ar_value ) . PHP_EOL
+										. " key: ". $key
+										, logger::WARNING
+									);
+									continue;
+								}
+
+								// empty case. Ignore empty values
+								if (empty($value) && $value!='0') {
+									continue;
+								}
+
+								// empty media. Skip save empty media values
+								if (json_encode($value)==='{"files_info":[]}') {
+									continue;
+								}
+
+								// old media v5 value
+								if (is_object($value) &&
+									isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
+									isset($value->section_tipo) && $value->section_tipo === $section_tipo &&
+									isset($value->section_id) && $value->section_id == $section_id
+									) {
+									continue;
+								}
+
+								$value_key++;
+
+								$column_meta->{$literal_tipo} = [
+									(object)['count' => $value_key]
+								];
+
+								$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+
+								// new literal object with value
+								$new_literal_obj = new stdClass();
+									$new_literal_obj->id		= $value_key; // starts from 1
+									// $new_literal_obj->lang		= $lang; // UNUSED
+									$new_literal_obj->value		= $value;
+
+								switch ($typology) {
+									case DEDALO_VALUE_TYPE_STRING:
+
+										// set component path if not already set
+										if (!property_exists($column_string, $literal_tipo)) {
+											$column_string->{$literal_tipo} = [];
+										}
+										// set lang
+										$new_literal_obj->lang = $lang;
+
+										$column_string->{$literal_tipo}[] = $new_literal_obj;
+										break;
+
+									case DEDALO_VALUE_TYPE_NUMBER:
+
+										// set component path if not already set
+										if (!property_exists($column_number, $literal_tipo)) {
+											$column_number->{$literal_tipo} = [];
+										}
+
+										$column_number->{$literal_tipo}[] = $new_literal_obj;
+										break;
+
+									case DEDALO_VALUE_TYPE_MISC:
+
+										// set component path if not already set
+										if (!property_exists($column_misc, $literal_tipo)) {
+											$column_misc->{$literal_tipo} = [];
+										}
+										if($model==='component_security_access'  || $model=== 'component_info' || $model=== 'component_filer_records') {
+											if(is_object($value)){
+												$literal_misc 		= $value;
+												$literal_misc->id	= $value_key;
+												$column_misc->{$literal_tipo}[] = $literal_misc;
+											}
+										}else{
+											$column_misc->{$literal_tipo}[] = $new_literal_obj;
+										}
+										break;
+
+									case DEDALO_VALUE_TYPE_DATE:
+
+										if(is_object($value)){
+											$date_literal_obj = $value;
+												$date_literal_obj->id	= $value_key;
+												// $date_literal_obj->lang	= $lang; // UNUSED
+
+											// set component path if not already set
+											if (!property_exists($column_date, $literal_tipo)) {
+												$column_date->{$literal_tipo} = [];
+											}
+
+											$column_date->{$literal_tipo}[] = $date_literal_obj;
+										}else{
+											$value_string = json_encode( $value );
+											debug_log(__METHOD__
+												. " **-------- ERROR component value out of format, is an not object --------** " . PHP_EOL
+												. " section tipo: ". $section_tipo . PHP_EOL
+												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
+												. " value type: " . gettype( $value ) . PHP_EOL
+												. " value: ". $value_string
+												, logger::ERROR
+											);
+											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
+											continue 2;
+										}
+										break;
+
+									case DEDALO_VALUE_TYPE_MEDIA:
+
+										if(is_object($value)){
+											$media_literal_obj = $value;
+												$media_literal_obj->id		= $value_key;
+												// $media_literal_obj->lang	= $lang; // UNUSED
+
+											// set component path if not already set
+											if (!property_exists($column_media, $literal_tipo)) {
+												$column_media->{$literal_tipo} = [];
+											}
+
+											$column_media->{$literal_tipo}[] = $media_literal_obj;
+										}else{
+											$value_string = json_encode( $value );
+											debug_log(__METHOD__
+												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
+												. " section tipo: ". $section_tipo . PHP_EOL
+												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
+												. " value type: " . gettype( $value ) . PHP_EOL
+												. " value: ". $value_string
+												, logger::ERROR
+											);
+											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
+											continue 2;
+										}
+										break;
+
+									case DEDALO_VALUE_TYPE_IRI:
+
+										if(is_object($value)){
+											$iri_literal_obj = $value;
+												//check if the data has id (introduced in v6.8.0)
+												if( empty($value->id) ){
+													$iri_literal_obj->id = $value_key;
+												}
+												$iri_literal_obj->lang = $lang;
+
+											// set component path if not already set
+											if (!property_exists($column_iri, $literal_tipo)) {
+												$column_iri->{$literal_tipo} = [];
+											}
+
+											$column_iri->{$literal_tipo}[] = $iri_literal_obj;
+										}else{
+											$value_string = json_encode( $value );
+											debug_log(__METHOD__
+												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
+												. " section tipo: ". $section_tipo . PHP_EOL
+												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
+												. " value type: " . gettype( $value ) . PHP_EOL
+												. " value: ". $value_string
+												, logger::ERROR
+											);
+											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
+											continue 2;
+										}
+										break;
+
+									case DEDALO_VALUE_TYPE_GEO:
+
+										if(is_object($value)){
+											$geo_literal_obj = $value;
+												$geo_literal_obj->id	= $value_key;
+												// $geo_literal_obj->lang	= $lang; // UNUSED
+
+											// set component path if not already set
+											if (!property_exists($column_geo, $literal_tipo)) {
+												$column_geo->{$literal_tipo} = [];
+											}
+
+											$column_geo->{$literal_tipo}[] = $geo_literal_obj;
+
+										}else{
+											$value_string = json_encode( $value );
+											debug_log(__METHOD__
+												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
+												. " section tipo: ". $section_tipo . PHP_EOL
+												. " section id: ". $section_id . PHP_EOL
+												. " table: ". $table . PHP_EOL
+												. " value type: " . gettype( $value ) . PHP_EOL
+												. " value: ". $value_string
+												, logger::ERROR
+											);
+											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
+											continue 2;
+										}
+										break;
+								}
+
+								// temporal add info for easy debug in beta 7
+									// if (isset($new_literal_obj->literal_value->info)) {
+									// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
+									// }else{
+									// 	$label = ontology_node::get_term_by_tipo($literal_tipo);
+									// 	$new_literal_obj->info = "$label [$model]";
+									// }
+							}
+						}
+					}//end reach ($literal_components as $literal_tipo => $literal_value)
+					break;
+
+				case 'section_real_tipo':
+
+					// ignore this property. To extinct.
+					break;
+
+				case 'created_by_userID':
+
+					// Rename the property
+					$column_data->created_by_user_id = $datos_value;
+					break;
+
+				default:
+
+					// update other properties like section_tipo, created_date, etc.
+					$column_data->{$datos_key} = $datos_value;
+					break;
+			}
+		}//end foreach ($datos as $datos_key => $datos_value)
+
+		return (object)[
+			'data'				=> $column_data,
+			'relation_search'	=> $column_relation_search,
+			'relation'			=> $column_relation,
+			'string'			=> $column_string,
+			'date'				=> $column_date,
+			'number'			=> $column_number,
+			'geo'				=> $column_geo,
+			'media'				=> $column_media,
+			'iri'				=> $column_iri,
+			'misc'				=> $column_misc,
+			'meta'				=> $column_meta
+		];
+	}
 
 }//end class v6_to_v7
