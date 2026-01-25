@@ -361,8 +361,6 @@ class v6_to_v7 {
 				// datos. Common matrix tables
 				if( isset($datos) ){
 
-					$new_matrix_data = new stdClass();
-
 					$column_data				= new stdClass();
 					$column_relation_search		= new stdClass();
 					$column_relation			= new stdClass();
@@ -438,9 +436,6 @@ class v6_to_v7 {
 								break;
 
 							case 'components':
-
-								// add literals property
-								$new_matrix_data->literals = new stdClass();
 
 								// update components object
 								$literal_components = $datos_value ?? [];
