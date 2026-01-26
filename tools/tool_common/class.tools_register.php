@@ -705,7 +705,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$value = $component->get_value();
+			$value = $component->get_data(); // Use the whole data object !
 			$tool_object->description = $value;
 
 		// developer
