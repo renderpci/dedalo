@@ -154,7 +154,7 @@ class component_string_common extends component_common {
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return array|null $data_fb
 	*/
-	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT ) : ?array {
+	public function get_component_data_fallback(string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?array {
 
 		$data = $this->get_data();
 		if (empty($data)) {

@@ -97,7 +97,7 @@ const get_content_data = function(self) {
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
-console.log("current_value", current_value);
+
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',

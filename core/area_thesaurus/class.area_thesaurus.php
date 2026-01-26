@@ -145,7 +145,7 @@ class area_thesaurus extends area_common {
 
 	/**
 	* GET_TYPOLOGY_DATA
-	* This function retrieves the typology data for a given section ID. 
+	* This function retrieves the typology data for a given section ID.
 	* It uses DEDALO's hierarchy9 model and returns an object with all relevant information about that specific section if it exists
 	* @param int|string int|string $section_id
 	* @return object|null $locator
@@ -181,7 +181,7 @@ class area_thesaurus extends area_common {
 	public function get_typology_name( int|string $typology_section_id ) : string {
 
 		// cache Store for speed
-			
+
 			if (isset(self::$typology_names_cache[$typology_section_id])) {
 				return self::$typology_names_cache[$typology_section_id];
 			}
@@ -269,11 +269,10 @@ class area_thesaurus extends area_common {
 	public function get_hierarchy_name( int|string $hierarchy_section_id ) : string {
 
 		# Store for speed
-		
+
 		if (isset(self::$hierarchy_names_cache[$hierarchy_section_id])) {
 			return self::$hierarchy_names_cache[$hierarchy_section_id];
 		}
-
 
 		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
 		$model_name 	 = ontology_node::get_model_by_tipo($tipo,true);
