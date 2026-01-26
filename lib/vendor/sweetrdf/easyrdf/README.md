@@ -53,6 +53,13 @@ echo "My name is: ".$me->get('foaf:name')."\n";
 * Support for visualisation of graphs using [GraphViz](https://www.graphviz.org/)
 * Comes with a number of examples
 
+## Documentation
+
+EasyRdf documentation is scarce at the moment, but here is what we have already.
+Additions/changes are welcome.
+
+[Documentation](./docs)
+
 ## List of Examples
 
 * [`basic.php`](/examples/basic.php#slider) - Basic "Hello World" type example
