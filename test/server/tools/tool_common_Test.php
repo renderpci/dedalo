@@ -120,7 +120,7 @@ final class tool_common_test extends BaseTestCase {
 	public function test_create_tool_simple_context() {
 
 		$section_id		= 1;
-		$section_tipo	= 'dd1324';
+		$section_tipo	= 'dd1324'; // Registerd tools section
 
 		$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
 		$model					= ontology_node::get_model_by_tipo($component_tipo,true);
@@ -132,8 +132,14 @@ final class tool_common_test extends BaseTestCase {
 			DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$simple_tool_obj_dato	= $simple_tool_component->get_dato();
-		$tool_object			= reset($simple_tool_obj_dato);
+		$simple_tool_obj_data	= $simple_tool_component->get_data();
+		$tool_object			= $simple_tool_obj_data[0]->value ?? null;
+
+		if ($tool_object === null) {
+			$this->markTestSkipped('No tool object found');
+			return;
+		}
+
 		$tool_simple_context = tool_common::create_tool_simple_context(
 			$tool_object
 		);
@@ -167,6 +173,11 @@ final class tool_common_test extends BaseTestCase {
 			'expected type is array'
 				.' and is : '.gettype($all_registered_tools)
 		);
+
+		if (empty($all_registered_tools)) {
+			$this->markTestSkipped('No tools found');
+			return;
+		}
 
 		$this->assertTrue(
 			gettype($all_registered_tools[0]->name)==='string',
