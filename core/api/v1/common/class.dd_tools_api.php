@@ -39,15 +39,16 @@ final class dd_tools_api {
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		$result = [];
-		foreach ($user_tools as $tool) {
+		foreach ($user_tools as $tool_object) {
 
-			if(!empty($ar_requested_tools) && !in_array($tool->name, $ar_requested_tools)) {
+			if(!empty($ar_requested_tools) && !in_array($tool_object->name, $ar_requested_tools)) {
 				continue;
 			}
 
-			$simple_tool_object = tool_common::create_tool_simple_context($tool);
+			// Creates a DDO as tool context
+			$tool_simple_context = tool_common::create_tool_simple_context($tool_object);
 
-			$result[] = $simple_tool_object;
+			$result[] = $tool_simple_context;
 		}
 
 		// response

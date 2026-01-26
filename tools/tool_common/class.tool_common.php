@@ -102,7 +102,7 @@ class tool_common {
 			// $simple_tool_obj_data	= $simple_tool_component->get_data();
 			// $tool_object			= $simple_tool_obj_data[0] ?? null;
 
-			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id);
+			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
 
 			// sample tool object
 				// {

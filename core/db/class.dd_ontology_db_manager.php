@@ -390,17 +390,17 @@ abstract class dd_ontology_db_manager {
 		// No record existing case.
 		// When the record doesn't exist in DB, perform a INSERT
 		if ($result && pg_affected_rows($result) == 0) {
-			
+
 			$placeholders = [];
 			foreach($columns as $key => $column){
 				$placeholders[] = '$'. ($key+1);
 			}
 
-			$sql_insert = 'INSERT INTO ' . $table . ' (' 
+			$sql_insert = 'INSERT INTO ' . $table . ' ('
 				. implode(', ', $columns) . ')
-				VALUES (' 
+				VALUES ('
 				. implode(', ', $placeholders) . ')';
-			
+
 			$result = pg_query_params($conn, $sql_insert, $params);
 		}
 
@@ -583,21 +583,21 @@ abstract class dd_ontology_db_manager {
 			return false;
 		}
 
-		// Build and array of tipos		
+		// Build and array of tipos
 		$tipos = pg_fetch_all_columns($result, 0);
 
 		// debug
 		if(SHOW_DEBUG===true) {
 			// time
-			$total_time_ms = exec_time_unit($start_time, 'ms');			
+			$total_time_ms = exec_time_unit($start_time, 'ms');
 
 			// metrics
 			metrics::$exec_dd_ontology_search_total_time += $total_time_ms;
-			
+
 			// query additional info
 			$bt = debug_backtrace();
 			if (isset($bt[1]['function'])) {
-				
+
 				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
 
 				foreach ([1,2,3,4,5,6,7,8] as $key) {
