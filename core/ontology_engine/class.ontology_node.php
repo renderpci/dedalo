@@ -129,6 +129,16 @@ class ontology_node {
 		}
 		// load ontology node from DDBB
 		$tipo = $this->tipo;
+
+		// Check tipo
+		if( empty($tipo) ) {
+			debug_log(__METHOD__
+				." Error loading ontology node data, tipo empty."
+				, logger::ERROR
+			);
+			return false;
+		}
+
 		$data = dd_ontology_db_manager::read($tipo);
 
 		// Set as loaded
@@ -151,7 +161,7 @@ class ontology_node {
 		$this->load_data();
 
 		return $this->data;
-	}//end get_tipo
+	}//end get_data
 
 
 

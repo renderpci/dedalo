@@ -181,6 +181,8 @@ class tool_common {
 					. " Fixed invalid tool label " . PHP_EOL
 					. ' tool_label: ' . to_string($tool_label) . PHP_EOL
 					. ' tool_object: ' . to_string($tool_object) . PHP_EOL
+					. ' name: ' . to_string($name) . PHP_EOL
+					.' ar_labels: ' . to_string($ar_labels)
 					, logger::ERROR
 				);
 				$tool_label = $name;
@@ -422,7 +424,6 @@ class tool_common {
 				// set parsed tool_config
 					$tool_simple_context->tool_config = $tool_config;
 			}//end if (!empty($tool_config))
-
 
 
 		return $tool_simple_context;
@@ -721,7 +722,7 @@ class tool_common {
 	*/
 	public static function read_files(string $dir, array $valid_extensions=['csv']) : array {
 
-		$ar_data = array();
+		$ar_data = [];
 
 		// scan directory
 			try {
@@ -1074,23 +1075,23 @@ class tool_common {
 
 		// get the config, get_config check is the specific configuration isset
 		// else get the configuration in register record
-			$tool_configuration = $tool_config ?? tool_common::get_config($tool_name);
+		$tool_configuration = $tool_config ?? tool_common::get_config($tool_name);
 
-			// check if has a properties and tool_config definition
-			if( isset($tool_configuration->config)
-				&& isset($tool_configuration->config->properties)
-				&& isset($tool_configuration->config->properties->tool_config) ){
-				// tool config is an array with specific object for tipo and section_tipo
-				// (that need to match with the button_import definition and his section)
-				// find the definition that match with current section
-				$ar_tool_config = $tool_configuration->config->properties->tool_config ?? [];
+		// check if has a properties and tool_config definition
+		if( isset($tool_configuration->config)
+			&& isset($tool_configuration->config->properties)
+			&& isset($tool_configuration->config->properties->tool_config) ){
+			// tool config is an array with specific object for tipo and section_tipo
+			// (that need to match with the button_import definition and his section)
+			// find the definition that match with current section
+			$ar_tool_config = $tool_configuration->config->properties->tool_config ?? [];
 
-				$tool_config = array_find($ar_tool_config, function($item) use($section_tipo, $tipo) {
-					return $item->section_tipo === $section_tipo && $item->tipo === $tipo;
-				});
+			$tool_config = array_find($ar_tool_config, function($item) use($section_tipo, $tipo) {
+				return $item->section_tipo === $section_tipo && $item->tipo === $tipo;
+			});
 
-				return $tool_config;
-			}
+			return $tool_config;
+		}
 
 
 		return null;

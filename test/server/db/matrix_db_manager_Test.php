@@ -76,7 +76,6 @@ final class matrix_db_manager_test extends BaseTestCase {
 		$eq = $columns === [
 			'section_id'		=> true,
 			'section_tipo'		=> true,
-			'datos'				=> true,
 			'data'				=> true,
 			'relation'			=> true,
 			'string'			=> true,
@@ -98,7 +97,6 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// matrix_json_columns
 		$json_columns = matrix_db_manager::$json_columns;
 		$eq = $json_columns === [
-			'datos'				=> true,
 			'data'				=> true,
 			'relation'			=> true,
 			'string'			=> true,

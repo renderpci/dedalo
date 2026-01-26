@@ -262,6 +262,11 @@ $updates->$v = new stdClass();
 		// Rename the "datos" column to "data" in other tables
 		$columns = [];
 		$comments = [];
+		// other kind of tables
+		$other_tables = [
+			'matrix_notifications',
+			'matrix_updates'
+		];
 		foreach ($other_tables as $current_table) {
 			$columns [] = '
 				ALTER TABLE "'.$current_table.'"
@@ -368,12 +373,3 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
-
-		// other kind of tables
-		$other_tables = [
-			'matrix_notifications',
-			'matrix_updates'
-		];
-
-
-

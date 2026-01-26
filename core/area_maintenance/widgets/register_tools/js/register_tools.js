@@ -44,6 +44,7 @@ export const register_tools = function() {
 	register_tools.prototype.init		= widget_common.prototype.init
 	register_tools.prototype.build		= widget_common.prototype.build
 	register_tools.prototype.render		= widget_common.prototype.render
+	register_tools.prototype.refresh	= widget_common.prototype.refresh
 	register_tools.prototype.destroy	= widget_common.prototype.destroy
 	register_tools.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
