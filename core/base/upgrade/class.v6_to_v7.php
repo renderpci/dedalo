@@ -1140,10 +1140,12 @@ class v6_to_v7 {
 										if (!property_exists($column_misc, $literal_tipo)) {
 											$column_misc->{$literal_tipo} = [];
 										}
-										if($model==='component_security_access'  || $model=== 'component_info' || $model=== 'component_filer_records') {
+										if($model==='component_security_access' || $model=== 'component_info' || $model=== 'component_filer_records') {
+											// Because v6 value is already object, use it directly, but add id
 											if(is_object($value)){
-												$literal_misc 		= $value;
-												$literal_misc->id	= $value_key;
+												$literal_misc = $value;
+												// Add id to object
+												$literal_misc->id = $value_key;
 												$column_misc->{$literal_tipo}[] = $literal_misc;
 											}
 										}else{
