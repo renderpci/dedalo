@@ -17,6 +17,11 @@ class tool_common {
 		// string section_id
 		public $section_id;
 
+		protected static $all_registered_tools_cache;
+		protected static $active_tools_cache;
+		protected static $cache_config_tool = [];
+		protected static $user_tools_cache = [];
+
 
 
 	/**
@@ -320,7 +325,7 @@ class tool_common {
 		// old way. (!) Unification with context in progress..
 			// label. (JSON list) Try match current lang else use the first lang value
 				$ar_labels = $tool_object->label ?? [];
-				$tool_label_object = array_find($ar_labels, function($el){
+				$tool_label_object = array_find((array)$ar_labels, function($el){
 					return $el->lang===DEDALO_APPLICATION_LANG;
 				});
 				$tool_label = is_object($tool_label_object) && isset($tool_label_object->value)
@@ -464,30 +469,28 @@ class tool_common {
 		// Deactivated for memory efficiency.
 		$use_cache = false;
 		if ($use_cache===true) {
-
 			// static cache
-			static $all_registered_tools_cache;
-			if (isset($all_registered_tools_cache)) {
-				return $all_registered_tools_cache;
+			if (isset(self::$all_registered_tools_cache)) {
+				return self::$all_registered_tools_cache;
 			}
 		}
 
 		// active tools records (db_result)
-		$all_registered_tools_records = tool_common::get_active_tools();
+		$db_result = tool_common::get_active_tools();
 
 		// get the simple_tool_object
-		if($all_registered_tools_records) {
+		if($db_result) {
 
 			// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
-			foreach ($all_registered_tools_records as $record) {
+			foreach ($db_result as $record) {
 
-				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
+				$section_record = section_record::get_instance($record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
 
 				// simple tool object 'dd1353'
-				$component_tipo	= 'dd1353';
+				$component_tipo	= 'dd1353'; // component_json
 				$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 				$component		= component_common::get_instance(
 					$model,
@@ -534,13 +537,13 @@ class tool_common {
 
 				// append tool object
 				$registered_tools[] = $current_value;
-			}//end foreach ($all_registered_tools_records as $record)
+			}//end foreach ($db_result as $record)
 		}
 
 		// cache
 		if ($use_cache===true) {
 			// static
-			$all_registered_tools_cache = $registered_tools;
+			self::$all_registered_tools_cache = $registered_tools;
 		}
 
 
@@ -552,19 +555,14 @@ class tool_common {
 	/**
 	* GET_ACTIVE_TOOLS
 	* Search all active tools in registered tools section
+	* @param bool $use_cache = true
 	* @return db_result $db_result
 	*/
-	public static function get_active_tools() : db_result|false {
+	public static function get_active_tools( bool $use_cache=true ) : db_result|false {
 
 		// cache
-			$use_cache = true;
-			if ($use_cache===true) {
-
-				// static
-				static $active_tools_cache;
-				if (isset($active_tools_cache)) {
-					return $active_tools_cache;
-				}
+			if ($use_cache===true && isset(self::$active_tools_cache)) {
+				return self::$active_tools_cache;
 			}
 
 		// get all active and registered tools
@@ -600,7 +598,7 @@ class tool_common {
 		// cache
 			if ($use_cache===true) {
 				// static
-				$active_tools_cache = $db_result;
+				self::$active_tools_cache = $db_result;
 			}
 
 
@@ -625,8 +623,8 @@ class tool_common {
 			$section_tipo	= $current_tool_row->section_tipo;
 			$section_id		= $current_tool_row->section_id;
 
-		// name
-		// create the component to get his value
+			// name
+			// create the component to get his value
 			$component_tipo	= tools_register::$tipo_tool_name; // 'dd1326';
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
@@ -637,6 +635,7 @@ class tool_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
+
 			// get value as 'tool_lang'
 			$name = $component->get_value();
 
@@ -670,9 +669,8 @@ class tool_common {
 			}
 
 		// cache
-			static $cache_config_tool = [];
-			if( array_key_exists($tool_name, $cache_config_tool) ){
-				return $cache_config_tool[$tool_name];
+			if( isset(self::$cache_config_tool[$tool_name]) ){
+				return self::$cache_config_tool[$tool_name];
 			}
 
 		// get all tools config sections
@@ -693,14 +691,14 @@ class tool_common {
 				// no config is found at all
 				if(!is_object($config)){
 					//cache
-					$cache_config_tool[$tool_name] = null;
+					self::$cache_config_tool[$tool_name] = null;
 
 					return null;
 				}
 			}
 
 		// cache. save the result into the cache
-			$cache_config_tool[$tool_name] = $config;
+			self::$cache_config_tool[$tool_name] = $config;
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -950,10 +948,9 @@ class tool_common {
 			if ($use_cache===true) {
 
 				// static cache
-				static $user_tools_cache;
 				$cache_key = $user_id;
-				if (isset($user_tools_cache[$cache_key])) {
-					return $user_tools_cache[$cache_key];
+				if (isset(self::$user_tools_cache[$cache_key])) {
+					return self::$user_tools_cache[$cache_key];
 				}
 
 				// cache file
@@ -966,7 +963,7 @@ class tool_common {
 					$user_tools = $file_cache;
 
 					// static cache
-					$user_tools_cache[$cache_key] = $user_tools;
+					self::$user_tools_cache[$cache_key] = $user_tools;
 
 					return $user_tools;
 				}
@@ -1031,7 +1028,7 @@ class tool_common {
 			if ($use_cache===true) {
 
 				// static cache
-				$user_tools_cache[$cache_key] = $user_tools;
+				self::$user_tools_cache[$cache_key] = $user_tools;
 
 				// cache file write
 				dd_cache::cache_to_file((object)[
