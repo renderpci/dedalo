@@ -132,6 +132,8 @@ const render_widget = async (item, self) => {
 		return fragment; // Return an empty fragment or handle as appropriate
 	}
 
+	let widget_instance = null
+
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
@@ -146,6 +148,13 @@ const render_widget = async (item, self) => {
 			class_name		: 'widget_body hide',
 			parent			: fragment
 		})
+		const click_handler = (e) => {
+			e.stopPropagation()
+			if(e.altKey) {
+				widget_instance.refresh()
+			}
+		}
+		body.addEventListener('click', click_handler)
 
 	// collapse_toggle_track
 		const collapse = () => {
@@ -212,6 +221,8 @@ const render_widget = async (item, self) => {
 			} else {
 				console.warn(`Widget '${item.id}' render() did not return an HTML element. Cannot add 'body_info' class.`);
 			}
+
+			widget_instance = widget
 
 		} catch (error) {
 			if (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Cannot find module')) {
