@@ -38,328 +38,437 @@ class tools_register {
 	*/
 	public static function import_tools() : array {
 
-		$info_file_processed = [];
+		$info_file_processed 	= [];
+		$ar_ontologies 			= [];
+		$info_objects_parsed 	= [];
+		$counter 				= 0;
 
-		// tipos
-			$tipo_name		= self::$tipo_tool_name; // 'dd1326';
-			$tipo_ontology	= self::$tipo_ontology; // 'dd1334';
-			$tipo_version	= self::$tipo_version; // 'dd1327';
+		// 1. Get valid tool directories
+		$tool_directories = self::get_valid_tool_directories();
 
-		// get the all tools folders
-			$ar_tools = (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		// 2. Process each directory
+		foreach ($tool_directories as $current_dir_tool) {
 
-		// Ontologies. Get the all tools ontologies
-			$counter				= 0;
-			$ar_ontologies			= [];
-			$info_objects_parsed	= [];
-			foreach ($ar_tools as $current_dir_tool) {
+			// Get basename as 'tool_lang' from '/tools/tool_lang'
+			$basename = pathinfo($current_dir_tool, PATHINFO_BASENAME);
 
-				// basename
-					$basename = pathinfo($current_dir_tool)['basename'];
+			// Process tool directory
+			$result = self::process_tool_directory($current_dir_tool, $basename, $counter);
 
-				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $basename==='acc') {
-						continue;
-					}
-					// tool_dev_template case only for development
-					if ($basename==='tool_dev_template' && SHOW_DEVELOPER!==true) {
-						continue;
-					}
-					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
-						debug_log(__METHOD__
-							. " Ignored non tool valid directory:" .PHP_EOL
-							. ' dirname: ' . $basename
-							, logger::ERROR
-						);
-						continue;
-					}
-
-				// info_file register.json file check
-					$info_file = $current_dir_tool . '/register.json';
-					if(!file_exists($info_file)){
-						debug_log(__METHOD__
-							. " ERROR. File register.json does not exist into directory: ".PHP_EOL
-							. " $current_dir_tool "
-							, logger::ERROR
-						);
-						continue;
-					}
-
-				// info object (JSON encoded)
-					if( !$info_object = json_decode( file_get_contents($info_file) ) ){
-						debug_log(__METHOD__
-							." ERROR. Wrong file register.json . Is not a JSON valid file "
-							, logger::ERROR
-						);
-						continue;
-					}
-
-					$new_info_object = clone $info_object;
-
-				// ontology from info object
-					$current_ontology = (isset($new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}))
-						? $new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN}
-						: null;
-
-					if(!empty($current_ontology)) {
-
-						if (isset($current_ontology[0]) && empty((array)$current_ontology[0])) {
-							debug_log(__METHOD__
-								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (empty item value)" .PHP_EOL
-								. ' dir_tool: ' . $current_dir_tool
-								, logger::ERROR
-							);
-							continue;
-						}
-						if (isset($current_ontology[1])) {
-							debug_log(__METHOD__
-								." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (more than one value)" .PHP_EOL
-								. ' dir_tool: ' . $current_dir_tool
-								, logger::ERROR
-							);
-							continue;
-						}
-
-						$new_ontology = tools_register::renumerate_term_id($current_ontology, $counter);
-
-						$ar_ontologies[] = $new_ontology;
-
-						// update ontology
-						$new_info_object->components->{$tipo_ontology}->dato->{DEDALO_DATA_NOLAN} = $new_ontology;
-
-					}else{
-
-						// debug_log(__METHOD__." The current register.json don't have ontology data ".to_string($current_dir_tool), logger::ERROR);
-					}
-
-				// add info_objects_parsed
-					$info_objects_parsed[$basename] = $new_info_object;
-
-				// info_file_processed
-					$name = isset($info_object->components->{$tipo_name})
-						? reset($info_object->components->{$tipo_name}->dato->{'lg-nolan'})
-						: null;
-					$version = isset($info_object->components->{$tipo_version})
-						? reset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
-						: null;
-					$info_file_processed[] = (object)[
-						'dir'		=> str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
-						'name'		=> $name,
-						'version'	=> $version
-					];
-			}//end foreach ($ar_tools)
-
-		// DB Updates
-			// structure
-			if (!empty($ar_ontologies)) {
-
-				// Clean. remove structure records in the database
-					ontology_utils::delete_tld_nodes( 'tool' );
-
-				// import ontology (structure) in dd_ontology
-					foreach ($ar_ontologies as $current_ontology) {
-						// @TODO generate the ontology node or modify exiting one!! 10-01-2024
-					}
-
-				// update counter at end to consolidate
-					ontology_node::update_counter('tool', $counter-1);
+			if ($result->skipped) {
+				continue;
 			}
 
-			// section
-			if (!empty($info_objects_parsed)) {
-
-				// Clean. remove tools section records in the database. (!) Removed to allow recycle records
-					// tools_register::clean_section_tools_data();
-
-				// import record (section tool) in db matrix_tools
-					// $section_id_counter = 1; // first section_id to use
-					foreach ($info_objects_parsed as $basename => $current_tool_section_data) {
-
-						// check file placeholder
-							if (isset($current_tool_section_data->type) && $current_tool_section_data->type==='placeholder') {
-								$msg = isset($current_tool_section_data->info)
-									? $current_tool_section_data->info
-									: 'This file (register.json) must be downloaded from current tool Dédalo Tools Development record
-									   using the button \'Download register file\' ';
-								debug_log(__METHOD__
-									. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
-									. ' ' . $msg
-									, logger::ERROR);
-								continue;
-							}
-
-						// check register file is well formed
-							if (!isset($current_tool_section_data->relations) || !isset($current_tool_section_data->components)) {
-								$msg = 'Error. '.$basename.' Bad formed register file (register.json)!
-										This file must be downloaded from current tool Dédalo Tools Development record using the button
-										\'Download register file\'
-										';
-								debug_log(__METHOD__
-									. " Error. tool register file" . PHP_EOL
-									. ' ' . $msg
-									, logger::ERROR);
-
-								// info_file_processed. Added info
-								$info_file_processed_item = array_find($info_file_processed, function($el) use($basename){
-									return ($el->name===$basename || substr($el->dir, 1)===$basename);
-								});
-								if (is_object($info_file_processed_item)) {
-									$info_file_processed_item->errors	= [$msg];
-									$info_file_processed_item->imported	= false;
-								}
-								continue;
-							}
-
-						// section save raw data
-							try {
-								$tool_name = $current_tool_section_data->components->{self::$tipo_tool_name}->dato->{DEDALO_DATA_NOLAN}[0];
-							} catch (Exception $e) {
-								debug_log(__METHOD__
-									. " ERROR on get tool name " .PHP_EOL
-									. ' Exception: '. $e->getMessage() . PHP_EOL
-									. ' The tool will be ignored. section_id: '. $current_tool_section_data->section_id
-									, logger::ERROR
-								);
-								continue;
-							}
-							if (empty($tool_name)) {
-								debug_log(__METHOD__
-									. " Error. tool name is empty ! Ignored tool" . PHP_EOL
-									. ' section_id: '.to_string($current_tool_section_data->section_id)
-									, logger::ERROR
-								);
-								continue;
-							}
-
-						// look for already existing tools
-							$tool_found			= self::get_tool_data_by_name($tool_name, self::$section_registered_tools_tipo); // return section record raw data or null
-							$current_section_id	= !empty($tool_found->section_id)
-								? (int)$tool_found->section_id
-								: null;
-
-							// section
-								$section = section::get_instance(
-									$current_section_id, // null if not found existing by name
-									self::$section_registered_tools_tipo, // dd1324
-									'edit',
-									true // cache (!) it's important set true to prevent re-create later when a component saves)
-								);
-
-							// change section data. Set dd1324 (register) instead 'dd1340' (development)
-								$current_tool_section_data->section_tipo	= self::$section_registered_tools_tipo;
-								$current_tool_section_data->section_id		= $current_section_id;
-
-							// section save
-								$section->set_dato( $current_tool_section_data );
-								$created_section_id = $section->Save();
-
-						// info_file_processed. Added info
-							$info_file_processed_item = array_find($info_file_processed, function($el) use($tool_name){
-								return $el->name===$tool_name;
-							});
-							if (is_object($info_file_processed_item)) {
-								$info_file_processed_item->existing_tool	= $current_section_id==$created_section_id;
-								$info_file_processed_item->section_id		= $created_section_id;
-								$info_file_processed_item->imported			= true;
-							}
-
-						// save new record with serialized section_id
-							// $created_section_id = tools_register::import_info_object($current_tool_section_data, $section_id_counter);
-
-						// build tool_object (simple). Collect data from created section to create a imple_tool_object
-							$tool_object = tools_register::create_simple_tool_object(
-								$section->get_tipo(), // section_tools_tipo
-								$section->get_section_id()
-							);
-
-						// tool_obj . Set and save updated section
-							$component_tipo	= self::$simple_tool_obj_component_tipo; // 'dd1353'; // component_json (Simple tool object)
-							$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-							$component		= component_common::get_instance(
-								$model,
-								$component_tipo,
-								$created_section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								self::$section_registered_tools_tipo,
-								true // cache
-							);
-							$component->set_dato([$tool_object]);
-							$component->Save();
-							if (!empty($tool_object->name)) {
-								tools_register::create_tool_config($tool_object->name);
-							}else{
-								debug_log(__METHOD__
-									. " Ignored empty tool_object->name " . PHP_EOL
-									. ' tool_object: ' . to_string($tool_object)
-									, logger::ERROR
-								);
-							}
-					}//end foreach ($info_objects_parsed as $basename => $current_tool_section_data)
-
-				// remove non existing tools (in directory /tools)
-					$resource_all_section_records = section::get_resource_all_section_records_unfiltered(
-						self::$section_registered_tools_tipo,
-						'section_id'
-					);
-					while ($current_row = pg_fetch_assoc($resource_all_section_records)) {
-
-						$current_section_id = $current_row['section_id'];
-
-						// tool name
-							$component_tipo	= self::$tipo_tool_name;
-							$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-							$component		= component_common::get_instance(
-								$model,
-								$component_tipo,
-								$current_section_id,
-								'list',
-								DEDALO_DATA_NOLAN,
-								self::$section_registered_tools_tipo,
-								true // cache
-							);
-							$value = $component->get_value(); // as  'tool_lang'
-
-						// files exists check
-							$found = array_find($info_file_processed, function($el) use($value) {
-								return $el->name === $value;
-							});
-							if ($found===null) {
-								// delete unused section
-								$section = section::get_instance(
-									$current_section_id, // string|null section_id
-									self::$section_registered_tools_tipo // string section_tipo
-								);
-								$section->Delete(
-									'delete_record' // string delete_mode
-								);
-							}
-					}
-
-			}//end if (!empty($info_objects_parsed))
-
-		// clean_cache. Remove previous stored data in session or files
-			$deleted = tools_register::clean_cache();
-			if (!$deleted) {
-				debug_log(__METHOD__
-					. " Error deleting tools cache " . PHP_EOL
-					. ' deleted: ' . to_string($deleted)
-					, logger::ERROR
-				);
+			if ($result->ontology_data) {
+				$ar_ontologies[] = $result->ontology_data;
 			}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__
-					. " Imported ".($counter+1)." ontology items from dirs: ". PHP_EOL
-					. json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-					, logger::DEBUG
-				);
+			if ($result->info_object) {
+				$info_objects_parsed[$basename] = $result->info_object;
 			}
 
+			if ($result->file_info) {
+				$info_file_processed[] = $result->file_info;
+			}
+		}
+
+		// 3. Database Updates
+		// Structure (Ontology)
+		if (!empty($ar_ontologies)) {
+			self::update_ontology_structure($ar_ontologies);
+		}
+
+		// Sections (Tools Registry)
+		if (!empty($info_objects_parsed)) {
+			self::update_tool_registry_sections($info_objects_parsed, $info_file_processed);
+		}
+
+		// 4. Remove non-existing tools
+		self::cleanup_removed_tools($info_file_processed);
+
+		// 5. Clean cache
+		$deleted = self::clean_cache();
+		if (!$deleted) {
+			debug_log(__METHOD__ . " Error deleting tools cache ", logger::ERROR);
+		}
+
+		// Debug
+		if (SHOW_DEBUG === true) {
+			debug_log(__METHOD__
+				. " Imported " . count($info_file_processed) . " ontology items from dirs: " . PHP_EOL
+				. json_encode($info_file_processed, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+				, logger::DEBUG
+			);
+		}
 
 		return $info_file_processed;
 	}//end import_tools
+
+
+
+	/**
+	* GET_VALID_TOOL_DIRECTORIES
+	* Scans the tools directory and filters for valid tool folders
+	* @return array
+	*/
+	private static function get_valid_tool_directories() : array {
+		$ar_tools 	= (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		$valid_dirs = [];
+
+		foreach ($ar_tools as $current_dir_tool) {
+			$basename = pathinfo($current_dir_tool, PATHINFO_BASENAME);
+
+			// ignore folders with name different from pattern 'tool_*'
+			if ($basename === 'tool_common' || $basename === 'acc') {
+				continue;
+			}
+			// tool_dev_template case only for development
+			if ($basename === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
+				continue;
+			}
+			if (preg_match('/^tool_\w+$/', $basename) !== 1) {
+				debug_log(__METHOD__
+					. " Ignored non tool valid directory:" . PHP_EOL
+					. ' dirname: ' . $basename
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$valid_dirs[] = $current_dir_tool;
+		}
+
+		return $valid_dirs;
+	}//end get_valid_tool_directories
+
+
+
+	/**
+	* PROCESS_TOOL_DIRECTORY
+	* Parses a single tool directory, extracting ontology and info
+	* @param string $current_dir_tool
+	* @param string $basename
+	* @param int $counter
+	* @return object
+	*/
+	private static function process_tool_directory(string $current_dir_tool, string $basename, int &$counter) : object {
+
+		$result = (object)[
+			'skipped' 		=> false,
+			'ontology_data' => null,
+			'info_object' 	=> null,
+			'file_info' 	=> null
+		];
+
+		// info_file register.json file check
+		$info_file = $current_dir_tool . '/register.json';
+		if (!file_exists($info_file)) {
+			debug_log(__METHOD__ . " ERROR. File register.json does not exist in: $current_dir_tool", logger::ERROR);
+			$result->skipped = true;
+			return $result;
+		}
+
+		// info object (JSON encoded)
+		$info_object = json_handler::decode(file_get_contents($info_file));
+		if (!$info_object) {
+			debug_log(__METHOD__ . " ERROR. Invalid register.json in: $current_dir_tool", logger::ERROR);
+			$result->skipped = true;
+			return $result;
+		}
+
+		// v6 to v7 migration (if needed)
+		$new_info_object = self::convert_register_v6_to_v7(clone $info_object);
+
+		/**
+		 * Local helper to extract a value from the registry info object
+		 */
+		$get_component_value = function(object $obj, string $tipo) {
+			$model  = ontology_node::get_model_by_tipo($tipo, true);
+			$column = section_record_data::get_column_name($model);
+			return $obj->{$column}->{$tipo}[0]->value ?? null;
+		};
+
+		// Ontology Extraction (dd1334)
+		$tipo_ontology = self::$tipo_ontology; // 'dd1334' component_json
+		$ontology_value = $get_component_value($new_info_object, $tipo_ontology);
+
+		if (!empty($ontology_value)) {
+			if(!is_array($ontology_value)) {
+				$ontology_value = [$ontology_value];
+			}
+			$new_ontology_value 	= self::renumerate_term_id($ontology_value, $counter);
+			$result->ontology_data 	= $new_ontology_value;
+
+			// Update ontology in new object
+			$model_ontology  = ontology_node::get_model_by_tipo($tipo_ontology, true);
+			$column_ontology = section_record_data::get_column_name($model_ontology);
+			$new_info_object->{$column_ontology}->{$tipo_ontology} = [(object)['value' => $new_ontology_value]];
+		}
+
+		$result->info_object = $new_info_object;
+
+		// File Info (extract from original or new info object)
+		$name    = $get_component_value($new_info_object, self::$tipo_tool_name);
+		$version = $get_component_value($new_info_object, self::$tipo_version);
+
+		$result->file_info = (object)[
+			'dir'     => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+			'name'    => $name,
+			'version' => $version
+		];
+
+		return $result;
+	}//end process_tool_directory
+
+
+
+	/**
+	* UPDATE_ONTOLOGY_STRUCTURE
+	* Updates the ontology structure in the database
+	* @param array $ar_ontologies
+	*/
+	private static function update_ontology_structure(array $ar_ontologies) : void {
+		// Clean. remove structure records in the database
+		ontology_utils::delete_tld_nodes('tool');
+
+		// import ontology (structure) in dd_ontology
+		foreach ($ar_ontologies as $current_ontology_data) {
+			// @TODO generate the ontology node or modify exiting one!! 10-01-2024
+		}
+
+		// update counter at end to consolidate
+		// ontology_node::update_counter('tool', $counter-1);
+	}//end update_ontology_structure
+
+
+
+	/**
+	* UPDATE_TOOL_REGISTRY_SECTIONS
+	* Imports and updates tool sections in the database
+	* @param array $info_objects_parsed
+	* @param array $info_file_processed
+	*/
+	private static function update_tool_registry_sections(array $info_objects_parsed, array &$info_file_processed) : void {
+
+		foreach ($info_objects_parsed as $basename => $current_tool_section_data) {
+
+			// check file placeholder
+			if (isset($current_tool_section_data->type) && $current_tool_section_data->type === 'placeholder') {
+				$msg = isset($current_tool_section_data->info)
+					? $current_tool_section_data->info
+					: 'This file (register.json) must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+				debug_log(__METHOD__
+					. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
+					. ' ' . $msg
+					, logger::ERROR);
+				continue;
+			}
+
+			// check register file is well formed
+			if (!isset($current_tool_section_data->relation) || !isset($current_tool_section_data->data)) {
+				$msg = 'Error. ' . $basename . ' Bad formed register file (register.json)! This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\'';
+				debug_log(__METHOD__ . " Error. tool register file" . PHP_EOL . ' ' . $msg, logger::ERROR);
+
+				// info_file_processed. Added info
+				$info_file_processed_item = array_find($info_file_processed, function($el) use($basename) {
+					return ($el->name === $basename || substr($el->dir, 1) === $basename);
+				});
+				if (is_object($info_file_processed_item)) {
+					$info_file_processed_item->errors   = [$msg];
+					$info_file_processed_item->imported = false;
+				}
+				continue;
+			}
+
+			// section save raw data
+
+			// tool name
+			$model = ontology_node::get_model_by_tipo(self::$tipo_tool_name, true);
+			$column = section_record_data::get_column_name($model);
+			$tool_name = $current_tool_section_data->{$column}->{self::$tipo_tool_name}[0]->value ?? null;
+			if (empty($tool_name)) {
+				debug_log(__METHOD__
+					. " Error. tool name is empty ! Ignored tool" . PHP_EOL
+					. ' section_id: ' . to_string($current_tool_section_data->section_id)
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Save section record
+			$current_section_id = self::save_tool_section_record($tool_name, $current_tool_section_data);
+			if (!$current_section_id) {
+				continue; // Error logged in helper
+			}
+
+			// info_file_processed. Added info
+			$info_file_processed_item = array_find($info_file_processed, function($el) use($tool_name) {
+				return $el->name === $tool_name;
+			});
+			if (is_object($info_file_processed_item)) {
+				// Update info_file_processed
+				$info_file_processed_item->section_id = $current_section_id;
+				$info_file_processed_item->imported   = true;
+			}
+
+			// Update simple tool object
+			self::update_simple_tool_object($current_section_id);
+
+		}// end foreach
+	}//end update_tool_registry_sections
+
+
+
+	/**
+	* SAVE_TOOL_SECTION_RECORD
+	* Handles the logic for checking existing tools and saving/creating the section record
+	* @param string $tool_name
+	* @param object $current_tool_section_data
+	* @return int|null $current_section_id
+	*/
+	private static function save_tool_section_record(string $tool_name, object $current_tool_section_data) : ?int {
+
+		// look for already existing tools
+		$tool_found = self::get_tool_data_by_name($tool_name, self::$section_registered_tools_tipo);
+		$current_section_id = !empty($tool_found->section_id)
+			? (int)$tool_found->section_id
+			: null;
+
+		// change section data. Set dd1324 (register) instead 'dd1340' (development)
+		$current_tool_section_data->section_tipo = self::$section_registered_tools_tipo;
+		$current_tool_section_data->section_id   = $current_section_id;
+
+		// section record
+		if (empty($current_section_id)) {
+			$section = section::get_instance(self::$section_registered_tools_tipo);
+			$current_section_id = $section->create_record();
+			if (empty($current_section_id)) {
+				debug_log(__METHOD__
+					. " Error. section record not created ! Ignored tool" . PHP_EOL
+					.' section_tupo: ' . self::$section_registered_tools_tipo . PHP_EOL
+					.' section_id: ' . json_encode($current_section_id)
+					, logger::ERROR
+				);
+				return null;
+			}
+		}
+
+		$created_section_id = $current_section_id;
+
+		$section_record = section_record::get_instance(
+			self::$section_registered_tools_tipo, // dd1324
+			$created_section_id
+		);
+		$section_record->set_data($current_tool_section_data);
+		$section_record->save();
+
+		return (int)$created_section_id;
+	}//end save_tool_section_record
+
+
+
+	/**
+	* UPDATE_SIMPLE_TOOL_OBJECT
+	* Creates and saves the simple tool object (dd1353)
+	* @param int $section_id
+	* @return bool $result
+	*/
+	private static function update_simple_tool_object(int $section_id) : bool {
+
+		// build tool_object (simple). Collect data from created section
+		$tool_object = self::create_simple_tool_object(
+			self::$section_registered_tools_tipo,
+			$section_id
+		);
+
+		// tool_obj . Set and save updated section
+		$component_tipo = self::$simple_tool_obj_component_tipo; // 'dd1353' component_json
+		$model          = ontology_node::get_model_by_tipo($component_tipo, true);
+		$component      = component_common::get_instance(
+			$model,
+			$component_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			self::$section_registered_tools_tipo,
+			true // cache
+		);
+		$data_element = (object)[
+			'value' => $tool_object
+		];
+		$component->set_data([$data_element]);
+		$result = $component->save();
+		if(!$result) {
+			debug_log(__METHOD__
+				. " Error. Saving dd1353 failed!" . PHP_EOL
+				.' component_tipo: ' . $component_tipo . PHP_EOL
+				.' section_id: ' . $section_id . PHP_EOL
+				.' tool_object: ' . to_string($tool_object)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		if (!empty($tool_object->name)) {
+			self::create_tool_config($tool_object->name);
+		} else {
+			debug_log(__METHOD__
+				. " Ignored empty tool_object->name " . PHP_EOL
+				. ' tool_object: ' . to_string($tool_object)
+				, logger::ERROR
+			);
+		}
+
+		return $result;
+	}//end update_simple_tool_object
+
+
+
+	/**
+	* CLEANUP_REMOVED_TOOLS
+	* Checks for registered tools that no longer exist in the file system (files list) and deletes them
+	* @param array $info_file_processed
+	*/
+	private static function cleanup_removed_tools(array $info_file_processed) : void {
+
+		$resource_all_section_records = section::get_resource_all_section_records_unfiltered(
+			self::$section_registered_tools_tipo,
+			'section_id'
+		);
+
+		while ($current_row = pg_fetch_assoc($resource_all_section_records)) {
+
+			$current_section_id = $current_row['section_id'];
+
+			// tool name
+			$component_tipo = self::$tipo_tool_name;
+			$model          = ontology_node::get_model_by_tipo($component_tipo, true);
+			$component      = component_common::get_instance(
+				$model,
+				$component_tipo,
+				$current_section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				self::$section_registered_tools_tipo,
+				true // cache
+			);
+			$value = $component->get_value(); // as 'tool_lang'
+
+			// files exists check
+			$found = array_find($info_file_processed, function($el) use($value) {
+				return $el->name === $value;
+			});
+
+			if ($found === null) {
+				// delete unused section
+				$section_record = section_record::get_instance(
+					self::$section_registered_tools_tipo,
+					$current_section_id
+				);
+				$section_record->delete();
+			}
+		}
+	}//end cleanup_removed_tools
 
 
 
@@ -373,98 +482,89 @@ class tools_register {
 
 		$files_list = [];
 
+		// Move lookups outside the loop for efficiency
+		$all_registered_tools = tool_common::get_all_registered_tools();
+
+		$model_version    = ontology_node::get_model_by_tipo(self::$tipo_version, true);
+		$column_version   = section_record_data::get_column_name($model_version);
+
+		$model_developer  = ontology_node::get_model_by_tipo(self::$tipo_developer, true);
+		$column_developer = section_record_data::get_column_name($model_developer);
+
 		$files = glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
 		foreach ($files as $path) {
 
-			// ignore folders with name different from pattern 'tool_*'
-				if (	1!==preg_match('/tools\/tool_*/', $path, $output_array)
-					 || 1===preg_match('/tools\/tool_common/', $path, $output_array)
-					) {
-					continue;
-				}
-				// tool_dev_template case only for development
-				if (1===preg_match('/tools\/tool_dev_template/', $path, $output_array) && SHOW_DEVELOPER!==true) {
-					continue;
-				}
+			$tool_name = basename($path);
 
-			// tool name
-				$tool_name = str_replace(DEDALO_TOOLS_PATH.'/', '', $path);
+			// ignore folders with name different from pattern 'tool_*'
+			if (!str_starts_with($tool_name, 'tool_') || $tool_name === 'tool_common') {
+				continue;
+			}
+			// tool_dev_template case only for development
+			if ($tool_name === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
+				continue;
+			}
 
 			// item
-				$item = (object)[
-					'name'				=> $tool_name,
-					'warning'			=> null,
-					'version'			=> null,
-					'developer'			=> null,
-					'installed_version'	=> null
-				];
+			$item = (object)[
+				'name'              => $tool_name,
+				'warning'           => null,
+				'version'           => null,
+				'developer'         => null,
+				'installed_version' => null
+			];
 
 			// check file register is ready
-				$register_contents = file_get_contents($path.'/register.json');
-				if($register_contents===false) {
+			$register_file = $path . '/register.json';
+			if (!file_exists($register_file)) {
+				$item->warning = '(!) Missing register.json file';
+				$files_list[] = $item;
+				continue;
+			}
 
-					debug_log(__METHOD__
-						." Invalid register.json file from tool ".to_string($tool_name)
-						, logger::ERROR
-					);
-					$item->warning = '(!) Invalid register.json file';
+			$register_contents = file_get_contents($register_file);
+			if ($register_contents === false) {
+				debug_log(__METHOD__ . " Error reading register.json file from tool " . to_string($tool_name), logger::ERROR);
+				$item->warning = '(!) Error reading register.json';
+				$files_list[] = $item;
+				continue;
+			}
 
-				}else{
+			// find registered tool info
+			$tool_info = array_find($all_registered_tools, function($el) use($tool_name) {
+				return $el->name === $tool_name;
+			});
 
-					// compare register.json file.
-					$all_registered_tools = tool_common::get_all_registered_tools();
-					$tool_info = array_find($all_registered_tools, function($el) use($tool_name) {
-						return $el->name===$tool_name;
-					});
+			// Warning if tool not found in all_registered_tools
+			if (empty($tool_info)) {
+				$item->warning = '(!) Not registered tool';
+			}else{
+				// installed_version
+				$item->installed_version = $tool_info->version ?? null;
+			}
 
-					if(empty($tool_info)) {
-						debug_log(__METHOD__
-							." Tool '$tool_name' not found in all_registered_tools."
-							, logger::WARNING
-						);
-						$item->warning = '(!) Not registered tool';
-					}
+			// info object (JSON encoded file)
+			$info_object = json_handler::decode($register_contents);
 
-					// info object (JSON encoded file)
-						$info_object = json_handler::decode( $register_contents );
-						if( !$info_object ) {
-							debug_log(__METHOD__
-								." ERROR. Wrong file register.json . Is not a JSON valid file "
-								, logger::ERROR
-							);
-						}else{
+			if (!$info_object) {
+				debug_log(__METHOD__ . " ERROR. Invalid register.json for $tool_name. Is not a valid JSON file", logger::ERROR);
+				$item->warning = '(!) Invalid register.json format';
+			} else {
+				// v6 to v7 migration
+				if (isset($info_object->components)) {
+					$info_object = self::convert_register_v6_to_v7($info_object);
+				}
 
-							// version
-							$tipo_version	= self::$tipo_version;
-							if (	isset($info_object->components->{$tipo_version})
-								 && isset($info_object->components->{$tipo_version}->dato)
-								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'})
-								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0])
-								) {
-								$item->version = $info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0];
-							}
+				// version
+				$item->version = $info_object->{$column_version}->{self::$tipo_version}[0]->value ?? null;
 
-							// developer
-							$tipo_developer	= self::$tipo_developer;
-							if (	isset($info_object->components->{$tipo_developer})
-								 && isset($info_object->components->{$tipo_developer}->dato)
-								 && isset($info_object->components->{$tipo_developer}->dato->{'lg-nolan'})
-								 && isset($info_object->components->{$tipo_developer}->dato->{'lg-nolan'}[0])
-								) {
-								$item->developer = $info_object->components->{$tipo_developer}->dato->{'lg-nolan'}[0];
-							}
-						}
-
-					// installed_version
-						if (!empty($tool_info)) {
-							$item->installed_version = $tool_info->version  ?? null;
-						}
-				}//end if($register_contents===false)
+				// developer
+				$item->developer = $info_object->{$column_developer}->{self::$tipo_developer}[0]->value ?? null;
+			}
 
 			// add
-				$files_list[] = $item;
-		}//end foreach ($files as $path)
-
+			$files_list[] = $item;
+		}
 
 		return $files_list;
 	}//end get_tools_files_list
@@ -481,41 +581,42 @@ class tools_register {
 	public static function get_tool_data_by_name(string $tool_name, string $section_tipo) : ?object {
 
 		// search by tool name
-			$sqo = json_decode('{
-				"typo": "sqo",
-				"id": "temp",
-				"section_tipo": [
-					"'.$section_tipo.'"
-				],
-				"filter": {
-					"$and": [
-						{
-							"q": [
-								"'.$tool_name.'"
-							],
-							"q_operator": "=",
-							"path": [
-								{
-									"section_tipo"		: "'.$section_tipo.'",
-									"component_tipo"	: "'.self::$tipo_tool_name.'",
-									"model"				: "component_input_text",
-									"name"				: "Tool name"
-								}
-							],
-							"type": "jsonb"
-						}
-					]
-				},
-				"select": [],
-				"limit": 1,
-				"offset": null,
-				"full_count": false
-			}');
-			$search	= search::get_instance($sqo);
-			$db_result = $search->search();
+		$sqo = json_decode('{
+			"typo": "sqo",
+			"id": "temp",
+			"section_tipo": [
+				"'.$section_tipo.'"
+			],
+			"filter": {
+				"$and": [
+					{
+						"q": [
+							"'.$tool_name.'"
+						],
+						"q_operator": "=",
+						"path": [
+							{
+								"section_tipo"		: "'.$section_tipo.'",
+								"component_tipo"	: "'.self::$tipo_tool_name.'",
+								"model"				: "component_input_text",
+								"name"				: "Tool name"
+							}
+						],
+						"type": "jsonb"
+					}
+				]
+			},
+			"select": [],
+			"limit": 1,
+			"offset": null,
+			"full_count": false
+		}');
+		$search	= search::get_instance($sqo);
+		$db_result = $search->search();
 
 		// whole section record raw data
-		$tool_full_data = $db_result->fetch_one() ?? null;
+		$tool_full_data = $db_result->fetch_one() ?: null;
+
 
 		return $tool_full_data;
 	}//end get_tool_data_by_name
@@ -548,8 +649,7 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data	= $component->get_data();
-			$value	= $data[0]->value ?? null;
+			$value = $component->get_value();
 			$tool_object->name = $value;
 
 		// label
@@ -563,8 +663,8 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$value	= $component->get_data();
-			$tool_object->label = $value;
+			$value = $component->get_data(); // Use the whole data object !
+ 			$tool_object->label = $value;
 
 		// version
 			$component_tipo	= self::$tipo_version; //  'dd1327';
@@ -577,8 +677,7 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data	= $component->get_data();
-			$value	= $data[0]->value ?? null;
+			$value = $component->get_value();
 			$tool_object->version = $value;
 
 		// dedalo version (minimal requirement)
@@ -592,8 +691,7 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data 	= $component->get_data();
-			$value	= $data[0]->value ?? null;
+			$value = $component->get_value();
 			$tool_object->dd_version = $value;
 
 		// description
@@ -607,7 +705,7 @@ class tools_register {
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
-			$value	= $component->get_data();
+			$value = $component->get_value();
 			$tool_object->description = $value;
 
 		// developer
@@ -621,8 +719,7 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data	= $component->get_data();
-			$value	= $data[0]->value ?? null;
+			$value = $component->get_value();
 			$tool_object->developer = $value;
 
 		// affected components (models)
@@ -637,7 +734,7 @@ class tools_register {
 				$component_lang,
 				$section_tipo
 			);
-			$data = $component->get_data();
+			$data = $component->get_data() ?? [];
 			$affected_models = [];
 			foreach ( $data as $locator ) {
 				$current_value = component_relation_common::get_locator_value( $locator, DEDALO_DATA_NOLAN, false, ['dd1345'] );
@@ -649,7 +746,7 @@ class tools_register {
 			$tool_object->affected_models = $affected_models;
 
 		// affected tipos (components)
-			$component_tipo	= 'dd1350';
+			$component_tipo	= 'dd1350'; // component_json
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
@@ -659,7 +756,7 @@ class tools_register {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$data	= $component->get_data();
+			$data	= $component->get_data() ?? [];
 			$value	= $data[0]->value ?? null;
 			$tool_object->affected_tipos = $value; // array
 
@@ -736,7 +833,7 @@ class tools_register {
 			$tool_object->requirement_translatable = $value;
 
 		// ontology -component_json-
-			$component_tipo	= self::$tipo_ontology; // 'dd1334';
+			$component_tipo	= self::$tipo_ontology; // 'dd1334' component_json
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
@@ -774,7 +871,7 @@ class tools_register {
 			$tool_object->properties = $value;
 
 		// labels
-			$component_tipo	= 'dd1372';
+			$component_tipo	= 'dd1372'; // component_json
 			$model			= ontology_node::get_model_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
 				$model,
@@ -800,6 +897,8 @@ class tools_register {
 
 	/**
 	* RENUMERATE_TERM_ID
+	* Receives an ontology array and renumbers the term_id field
+	* based on the given counter.
 	* @param array $ontology
 	* @param int $counter
 	* @return array $ontology
@@ -807,32 +906,38 @@ class tools_register {
 	public static function renumerate_term_id(array $ontology, &$counter) : array {
 
 		// empty case
-			if (empty($ontology)) {
-				return $ontology;
-			}
+		if (empty($ontology)) {
+			return $ontology;
+		}
 
 		foreach ($ontology as $item) {
 
-			// bad ontology error skip
-				if (!isset($item->tipo)) {
-					debug_log(__METHOD__
-						. " Skipped wrong ontology element. Item ontology tipo is not set" .PHP_EOL
-						. 'item: '.to_string($item) . PHP_EOL
-						. 'ontology: '.to_string($ontology)
-						, logger::ERROR
-					);
-					continue;
-				}
+			// bad ontology (without tipo) error skip
+			if (!isset($item->tipo)) {
+				debug_log(__METHOD__
+					. " Skipped wrong ontology element. Item ontology tipo is not set" .PHP_EOL
+					. 'item: '.to_string($item) . PHP_EOL
+					. 'ontology: '.to_string($ontology)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$tipo = $item->tipo;
+
+			// get children
 			$ar_items_children = array_filter($ontology, function($current_element) use($tipo){
 				return isset($current_element->parent) && $current_element->parent===$tipo;
 			});
+
+			// new tld
 			$new_tld = 'tool'.++$counter;
 
+			// set new tipo and tld
 			$item->tipo = $new_tld;
 			$item->tld 	= 'tool';
 
+			// set new parent for children
 			foreach ($ar_items_children as $key => $current_element) {
 				$ontology[$key]->parent = $new_tld;
 			}
@@ -900,8 +1005,8 @@ class tools_register {
 				if (!empty($reg_record)) {
 
 					// set section data from DDBB record
-					$reg_section = section::get_instance($reg_record->section_id, $reg_record->section_tipo);
-					$reg_section->set_dato($reg_record->datos);
+					$reg_section_record = section_record::get_instance($reg_record->section_tipo, $reg_record->section_id);
+					$reg_section_record->set_data( $reg_record );
 
 					// reg_component. get the default config of the register
 						$component_tipo		= $tools_configuration; // 'dd999';
@@ -914,8 +1019,8 @@ class tools_register {
 							DEDALO_DATA_NOLAN,
 							$section_tools_reg_tipo
 						);
-						$reg_dato = $reg_component->get_dato();
-						if(empty($reg_dato)) return false;
+						$reg_data = $reg_component->get_data();
+						if(empty($reg_data)) return false;
 
 					// config_component. create the config component in the config section
 						$config_section = section::get_instance( $section_tools_config_tipo );
@@ -929,8 +1034,8 @@ class tools_register {
 							DEDALO_DATA_NOLAN,
 							$section_tools_config_tipo
 						);
-						$config_component->set_dato($reg_dato);
-						$config_component->Save();
+						$config_component->set_data($reg_data);
+						$config_component->save();
 
 					// config_name_component. create the name component in the config section
 						$config_name_component_model	= ontology_node::get_model_by_tipo($component_tipo_tool_name,true);
@@ -942,8 +1047,12 @@ class tools_register {
 							DEDALO_DATA_NOLAN,
 							$section_tools_config_tipo
 						);
-						$config_name_component->set_dato([$tool_name]);
-						$config_name_component->Save();
+						$data = [(object)[
+							'value' => $tool_name,
+							'lang' => DEDALO_DATA_NOLAN
+						]];
+						$config_name_component->set_data($data);
+						$config_name_component->save();
 				}else{
 					return false;
 				}
@@ -1067,7 +1176,8 @@ class tools_register {
 			$db_result = $config_search->search();
 
 		// map result as ar_config
-			foreach ($db_result as $record) {
+		$ar_config = [];
+		foreach ($db_result as $record) {
 
 				$section_record = section_record::get_instance( $record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
@@ -1337,6 +1447,99 @@ class tools_register {
 
 		return true;
 	}//end remove_tool_configuration
+
+
+
+	/**
+	 * Convert register v6 to v7
+	 * It checks if the register is from v6 and if so, it converts it to v7
+	 * @param object $info_object
+	 * @return object $info_object
+	 * Modified info_object with v7 data
+	 */
+	public static function convert_register_v6_to_v7(object $info_object) : object {
+
+		// v6 to v7 migration
+		if( isset($info_object->components) ) {
+			// File is from v6. Need to migrate to v7
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.v6_to_v7.php';
+			$response = (object)[
+				'result' => false,
+				'msg' => 'Pre update has failed',
+				'errors' => []
+			];
+			$migrated = v6_to_v7::process_matrix_row_data(
+				$info_object,
+				common::get_matrix_table_from_tipo($info_object->section_tipo ?? ''),
+				$info_object->section_tipo ?? '',
+				$info_object->section_id ?? '',
+				v6_to_v7::get_value_type_map(),
+				$response
+			);
+
+			// Merge migrated columns back into info_object
+			foreach ($migrated as $key => $val) {
+				$info_object->{$key} = $val;
+			}
+
+			// Remove v6 properties
+			unset($info_object->components);
+			unset($info_object->relations);
+			unset($info_object->relations_search);
+		}
+
+		return $info_object;
+	}//end convert_register_v6_to_v7
+
+
+
+	// public static function parse_ontology_data( object $info_object ) : object|false {
+
+	// 	$tipo_ontology 		= 'dd1334';
+	// 	$model_ontology 	= ontology_node::get_model_by_tipo($tipo_ontology, true);
+	// 	$column_ontology 	= section_record_data::get_column_name($model_ontology);
+	// 	$ontology_data 		= (isset($info_object->{$column_ontology}->{$tipo_ontology}))
+	// 		? $info_object->{$column_ontology}->{$tipo_ontology}
+	// 		: null;
+
+	// 	// check invalid cases
+	// 	// if (isset($ontology_data[0]) && empty((array)$ontology_data[0])) {
+	// 	// 	debug_log(__METHOD__
+	// 	// 		." ERROR. Ignored Wrong file register.json ONTOLOGY DATA (empty item value)" .PHP_EOL
+	// 	// 		. ' dir_tool: ' . $current_dir_tool
+	// 	// 		, logger::ERROR
+	// 	// 	);
+	// 	// 	return false;
+	// 	// }
+
+	// 	$current_ontology_value = $ontology_data[0]->value ?? null;
+
+	// 	// empty value case
+	// 	if(empty($current_ontology_value)) {
+	// 		return false;
+	// 	}
+
+	// 	// array always
+	// 	if( !is_array($ontology_data) ){
+	// 		$ontology_data = [$ontology_data];
+	// 		debug_log(__METHOD__
+	// 			." WARNING. Fixed not array ontology data"
+	// 			, logger::WARNING
+	// 		);
+	// 	}
+
+	// 	// renumerate term id
+	// 	$new_ontology_data = tools_register::renumerate_term_id($ontology_data, $counter);
+
+	// 	$ar_ontology = [];
+
+	// 	foreach ($ontology_data as $current_ontology_data) {
+
+	// 		$ar_ontology[] = $current_ontology_data;
+	// 	}
+
+	// 	return $new_ontology_data;
+	// }//end parse_ontology_data
 
 
 
