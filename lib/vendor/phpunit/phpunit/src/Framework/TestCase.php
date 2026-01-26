@@ -187,7 +187,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     private TestStatus $status;
 
     /**
-     * @var 0|positive-int
+     * @var non-negative-int
      */
     private int $numberOfAssertionsPerformed = 0;
     private mixed $testResult                = null;
@@ -829,17 +829,21 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     }
 
     /**
+     * @param non-negative-int $count
+     *
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
     final public function addToAssertionCount(int $count): void
     {
+        assert($count >= 0);
+
         $this->numberOfAssertionsPerformed += $count;
     }
 
     /**
-     * @internal This method is not covered by the backward compatibility promise for PHPUnit
+     * @return non-negative-int
      *
-     * @return 0|positive-int
+     * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
     final public function numberOfAssertionsPerformed(): int
     {
@@ -978,6 +982,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     /**
      * Returns a matcher that matches when the method is executed
      * zero or more times.
+     *
+     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6461
      */
     final protected function any(): AnyInvokedCountMatcher
     {
@@ -1865,20 +1871,22 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      */
     private function compareGlobalStateSnapshotPart(array $before, array $after, string $header): void
     {
-        if ($before !== $after) {
-            $differ = new Differ(new UnifiedDiffOutputBuilder($header));
-
-            Event\Facade::emitter()->testConsideredRisky(
-                $this->valueObjectForEvents(),
-                'This test modified global state but was not expected to do so' . PHP_EOL .
-                trim(
-                    $differ->diff(
-                        Exporter::export($before),
-                        Exporter::export($after),
-                    ),
-                ),
-            );
+        if ($before === $after) {
+            return;
         }
+
+        $differ = new Differ(new UnifiedDiffOutputBuilder($header));
+
+        Event\Facade::emitter()->testConsideredRisky(
+            $this->valueObjectForEvents(),
+            'This test modified global state but was not expected to do so' . PHP_EOL .
+            trim(
+                $differ->diff(
+                    Exporter::export($before),
+                    Exporter::export($after),
+                ),
+            ),
+        );
     }
 
     private function handleEnvironmentVariables(): void

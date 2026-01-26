@@ -27,6 +27,11 @@ jobs:
                     php-version: ${{ matrix.php-versions }}
                     ini-values: memory_limit=1G
 
+            -   name: If PHP 8.0 is used, adapt composer.json
+                run: |
+                    chmod +x test/adjust_composer_for_php80.sh
+                    ./test/adjust_composer_for_php80.sh
+
             -   name: Install Composer dependencies
                 run: composer update --no-progress --no-suggest --prefer-dist --optimize-autoloader
 
@@ -62,6 +67,10 @@ jobs:
                 with:
                     php-version: ${{ matrix.php-versions }}
                     ini-values: memory_limit=1G
+
+            -   name: Run batch script
+                run: test\adjust_composer_for_php80.bat
+                shell: cmd
 
             -   name: Install Composer dependencies
                 run: composer update --no-progress --no-suggest --prefer-dist --optimize-autoloader
