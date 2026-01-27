@@ -1030,7 +1030,7 @@ class ontology {
 			$section_record->set_component_data($tipo, $column, [$component_data]);
 
 		// tld
-			$tipo 	= DEDALO_HIERARCHY_TLD2_TIPO;
+			$tipo 	= DEDALO_ONTOLOGY_TLD_TIPO;
 			$model 	= ontology_node::get_model_by_tipo( $tipo );
 			$column = section_record_data::get_column_name( $model );
 			$tld_data = [(object)[
