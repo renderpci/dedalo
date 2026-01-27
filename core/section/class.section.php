@@ -4906,32 +4906,12 @@ class section extends common {
 
 		// common cases permissions calculation
 			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
-
-		// special cases
-			switch (true) {
-
-				// maintains dedalo_activity_section_tipo < 2 to prevent edition
-				case ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1):
-					return 1;
-
-				// user section . Allow user edit self data (used by tool_user_admin)
-				case ($this->tipo===DEDALO_SECTION_USERS_TIPO && $this->permissions<1 && $this->section_id==logged_user_id()):
-					$this->permissions = 1; // set to 1 to allow tool_user_admin access
-					break;
-
-				// time machine notes case (rsc832)
-				case ($this->tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
-					// his own section
-					$this->permissions = (logged_user_id()===$this->get_created_by_userID())
-						? 2
-						: 1;
-					// open access for super admins to the section list of Time Machine notes
-					if ($this->permissions<2 && $this->mode==='list' && security::is_global_admin(logged_user_id())) {
-						$this->permissions = 2;
-					}
-					break;
-			}
-
+		
+		// maintains dedalo_activity_section_tipo < 2 to prevent edition
+		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1){
+			$this->permissions = 1;
+		}
+		
 
 		return $this->permissions;
 	}//end get_permissions
