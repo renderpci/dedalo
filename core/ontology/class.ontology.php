@@ -2861,4 +2861,38 @@ class ontology {
 
 
 
+	/**
+	 * Experimental
+	 * Do no use in production.
+	 * Get and save all Ontology records into 'cache_ontology.php' file
+	 * to use as Opcode cache vars.
+	 */
+	public static function build_cache_file() : void {
+
+		$conn = DBi::_getConnection();
+
+		$data = [];
+
+		// search for dd_ontology nodes
+		$sql = 'SELECT * FROM "dd_ontology" ORDER BY tipo ASC, id ASC';
+		$result = pg_query($conn, $sql);
+		while( $row = pg_fetch_assoc($result) ){
+
+			$tipo = $row['tipo'];
+
+			// ! Do not parse values here becuse is more expensive than parse in cache recovering.
+
+			$data[$tipo] = $row;
+		}
+
+		dd_cache::cache_to_file((object)[
+			'data' => $data,
+			'file_name' => 'cache_ontology.php',
+			'prefix' => '' // Set empty string as prefix to avoid prefixing the file name
+		]);
+
+	}//end build_cache_file
+
+
+
 }//end ontology
