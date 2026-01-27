@@ -22,7 +22,9 @@ export const view_tool_time_machine_list = function() {
 }//end view_tool_time_machine_list
 
 
-view_tool_time_machine_list.render	= view_default_list_section.render
+view_tool_time_machine_list.render = view_default_list_section.render
+view_tool_time_machine_list.get_content_data = view_default_list_section.get_content_data
+view_tool_time_machine_list.rebuild_columns_map = view_default_list_section.rebuild_columns_map
 
 
 /**
@@ -31,7 +33,7 @@ view_tool_time_machine_list.render	= view_default_list_section.render
 * @param object options
 * @return DocumentFragment
 */
-view_default_list_section.render_column_id = function(options) {
+view_tool_time_machine_list.render_column_id = function(options) {
 
 	// options
 		const service_time_machine	= options.caller
