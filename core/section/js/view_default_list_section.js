@@ -47,7 +47,7 @@ view_default_list_section.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map	= await rebuild_columns_map(self)
+		const columns_map	= await this.rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
 	// ar_section_record. section_record instances (initialized and built)
@@ -56,7 +56,7 @@ view_default_list_section.render = async function(self, options) {
 			: await get_section_records({caller: self})
 
 	// content_data
-		const content_data = await get_content_data(self, self.ar_instances)
+		const content_data = await this.get_content_data(self, self.ar_instances)
 		if (render_level==='content') {
 
 			// list_header_node. Remove possible style 'hide' if not empty
@@ -193,7 +193,7 @@ view_default_list_section.render = async function(self, options) {
 * @para object self
 * @return HTMLElement content_data
 */
-const get_content_data = async function(self, ar_section_record) {
+view_default_list_section.get_content_data = async function(self, ar_section_record) {
 
 	const fragment = new DocumentFragment()
 
@@ -246,7 +246,7 @@ const get_content_data = async function(self, ar_section_record) {
 * 	section instance
 * @return array columns_map
 */
-const rebuild_columns_map = async function(self) {
+view_default_list_section.rebuild_columns_map = async function(self) {
 
 	// Early return if columns_map already rebuilt
 	if (self.fixed_columns_map===true) {
@@ -272,7 +272,7 @@ const rebuild_columns_map = async function(self) {
 			name			: 'ID',
 			section_tipo	: self.section_tipo
 		}],
-		callback	: view_default_list_section.render_column_id || render_column_id
+		callback	: this.render_column_id || render_column_id
     }
 	columns_map.push(section_id_column)
 
