@@ -202,11 +202,17 @@ class area_thesaurus extends area_common {
 				$lang,
 				$section_tipo
 			);
-			$value = $component->get_valor($lang);
+			$value = $component->get_value();
 
-		$typology_name = empty($value)
-			? $component->extract_component_value_fallback()
-			: $value;
+			if(empty($value)) {
+				$value = $model_name::get_value_with_fallback_from_data(
+					$component->get_data(),
+					false,
+					$lang
+				);
+			}
+
+			$typology_name = $value;
 
 		if (empty($typology_name)) {
 			$typology_name = 'Typology untranslated ' . $tipo .' '. $parent;
@@ -289,11 +295,17 @@ class area_thesaurus extends area_common {
 			$lang,
 			$section_tipo
 		);
-		$value = $component->get_value($lang);
+		$value = $component->get_value();
 
-		$hierarchy_name = empty($value)
-			? $component->extract_component_value_fallback()
-			: $value;
+		if(empty($value)) {
+			$value = $model_name::get_value_with_fallback_from_data(
+				$component->get_data(),
+				false,
+				$lang
+			);
+		}
+
+		$hierarchy_name = $value;
 
 		if (empty($hierarchy_name)) {
 			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $parent;
