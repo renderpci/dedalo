@@ -2839,6 +2839,6 @@
 	"section_real_tipo": "test3",
 	"modified_date": "2023-05-15 09:36:32",
 	"diffusion_info": null,
-	"created_by_userID": -1,
-	"modified_by_userID": -1
+	"created_by_user_id": -1,
+	"modified_by_user_id": -1
 }
