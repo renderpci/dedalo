@@ -1552,4 +1552,234 @@ class section_record {
 
 
 
+	/**
+	* SET_CREATED_DATE
+	* @param string $timestamp
+	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
+	* This method is used mainly in importations
+	* @return void
+	*/
+	public function set_created_date(string $timestamp) : void {
+
+		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_with_format	= $dd_date->get_dd_timestamp(
+			'Y-m-d H:i:s',
+			true
+		);
+
+		$dato = $this->get_dato(); // Force load
+		$dato->created_date = $date_with_format;
+		$this->set_dato($dato); // Force update
+	}//end set_created_date
+
+
+
+	/**
+	* SET_MODIFIED_DATE
+	* @param string $timestamp
+	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
+	* This method is used mainly in importations
+	* @return void
+	*/
+	public function set_modified_date(string $timestamp) : void {
+
+		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_with_format	= $dd_date->get_dd_timestamp(
+			'Y-m-d H:i:s',
+			true
+		);
+
+		$dato = $this->get_dato(); // Force load
+		$dato->modified_date = $date_with_format;
+		$this->set_dato($dato); // Force update
+	}//end set_modified_date
+
+
+
+	/**
+	* GET_CREATED_DATE
+	* @return string|null $local_value
+	*/
+	public function get_created_date() : ?string {
+
+		$dato			= $this->get_dato();
+		$local_value	= isset($dato->created_date)
+			? dd_date::timestamp_to_date(
+				$dato->created_date,
+				true // bool full
+			  )
+			: null;
+
+		return $local_value;
+	}//end get_created_date
+
+
+
+	/**
+	* GET_MODIFIED_DATE
+	* @return string|null $local_value
+	*/
+	public function get_modified_date() : ?string {
+
+		$dato			= $this->get_dato();
+		$local_value	= isset($dato->modified_date)
+			? dd_date::timestamp_to_date(
+				$dato->modified_date,
+				true // bool full
+			  )
+			: null;
+
+		return $local_value;
+	}//end get_modified_date
+
+
+
+	/**
+	* GET_CREATED_BY_USER_ID
+	* Get created user id from section record data
+	* @return int|null $created_by_userID
+	*/
+	public function get_created_by_user_id() : ?int {
+
+		$data = $this->get_data();
+		if( isset($data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}) )  {
+
+			return (int)$data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}[0]->section_id;
+		}
+
+	
+
+		return null;
+	}//end get_created_by_user_id
+
+
+
+	/**
+	* SET_CREATED_BY_USER_ID
+	* Set section dato property 'created_by_userID'
+	* @return bool
+	*/
+	public function set_created_by_user_id(int $value) : bool {
+
+		// force get dato
+		$this->get_dato();
+
+		$this->dato->created_by_userID = $value;
+
+		return true;
+	}//end set_created_by_userID
+
+
+
+	/**
+	* GET_MODIFIED_BY_USER_ID
+	* Get modified user id from section record data
+	* @return int|null $modified_by_userID
+	*/
+	public function get_modified_by_user_id() : ?int {
+
+		$dato = $this->get_dato();
+		if( isset($dato->modified_by_userID) )  {
+			return (int)$dato->modified_by_userID;
+		}
+
+		return null;
+	}//end get_modified_by_user_id
+
+
+
+	/**
+	* SET_MODIFIED_BY_USER_ID
+	* Set section dato property 'modified_by_userID'
+	* @return bool
+	*/
+	public function set_modified_by_user_id(int $value) : bool {
+
+		// force get dato
+		$this->get_dato();
+
+		$this->dato->modified_by_userID = $value;
+
+		return true;
+	}//end set_modified_by_userID
+
+
+
+	/**
+	* GET_CREATED_BY_USER_NAME
+	* @param bool $full_name = false
+	* @return string|null $user_name
+	*/
+	public function get_created_by_user_name(bool $full_name=false) : ?string {
+
+		$user_id = $this->get_created_by_user_id();
+		if( empty($user_id) ) {
+			return null;
+		}
+
+		$user_name = section_record::get_user_name_by_user_id(
+			$user_id,
+			$full_name // bool full_name
+		);
+
+		return $user_name;
+	}//end get_created_by_user_name
+
+
+
+	/**
+	* GET_MODIFIED_BY_USER_NAME
+	* @param bool $full_name = false
+	* @return string|null $user_name
+	*/
+	public function get_modified_by_user_name(bool $full_name=false) : ?string {
+
+		$user_id = $this->get_modified_by_user_id();
+		if( empty($user_id) ) {
+			return null;
+		}
+
+		$user_name = section::get_user_name_by_user_id(
+			$user_id,
+			$full_name // bool full_name
+		);
+
+		return $user_name;
+	}//end get_modified_by_user_name
+
+
+
+	/**
+	* get_user_name_by_user_id
+	* @param int $userID
+	* @param bool $full_name = true
+	* @return string $user_name
+	*/
+	public static function get_user_name_by_user_id(int $userID, bool $full_name=true) : ?string {
+
+		if($userID==DEDALO_SUPERUSER){
+			$user_name = $full_name===false
+				? 'root'
+				: 'Admin debugger';
+		}else{
+			$tipo = $full_name===false
+				? DEDALO_USER_NAME_TIPO
+				: DEDALO_FULL_USER_NAME_TIPO;
+
+			$full_username_model	= ontology_node::get_model_by_tipo($tipo,true);
+			$component				= component_common::get_instance(
+				$full_username_model, // 'component_input_text',
+				$tipo,
+				$userID,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
+			$dato		= $component->get_dato();
+			$user_name	= $dato[0] ?? null;
+		}
+
+		return $user_name;
+	}//end get_user_name_by_user_id
+
 }//end section_record

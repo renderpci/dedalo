@@ -2575,258 +2575,258 @@ class section extends common {
 
 
 
-	/**
-	* SET_CREATED_DATE
-	* @param string $timestamp
-	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
-	* This method is used mainly in importations
-	* @return void
-	*/
-	public function set_created_date(string $timestamp) : void {
+	// /**
+	// * SET_CREATED_DATE
+	// * @param string $timestamp
+	// *	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
+	// * This method is used mainly in importations
+	// * @return void
+	// */
+	// public function set_created_date(string $timestamp) : void {
 
-		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
-		$date_with_format	= $dd_date->get_dd_timestamp(
-			'Y-m-d H:i:s',
-			true
-		);
+	// 	$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+	// 	$date_with_format	= $dd_date->get_dd_timestamp(
+	// 		'Y-m-d H:i:s',
+	// 		true
+	// 	);
 
-		$dato = $this->get_dato(); // Force load
-		$dato->created_date = $date_with_format;
-		$this->set_dato($dato); // Force update
-	}//end set_created_date
-
-
-
-	/**
-	* SET_MODIFIED_DATE
-	* @param string $timestamp
-	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
-	* This method is used mainly in importations
-	* @return void
-	*/
-	public function set_modified_date(string $timestamp) : void {
-
-		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
-		$date_with_format	= $dd_date->get_dd_timestamp(
-			'Y-m-d H:i:s',
-			true
-		);
-
-		$dato = $this->get_dato(); // Force load
-		$dato->modified_date = $date_with_format;
-		$this->set_dato($dato); // Force update
-	}//end set_modified_date
+	// 	$dato = $this->get_dato(); // Force load
+	// 	$dato->created_date = $date_with_format;
+	// 	$this->set_dato($dato); // Force update
+	// }//end set_created_date
 
 
 
-	/**
-	* GET_CREATED_DATE
-	* @return string|null $local_value
-	*/
-	public function get_created_date() : ?string {
+	// /**
+	// * SET_MODIFIED_DATE
+	// * @param string $timestamp
+	// *	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
+	// * This method is used mainly in importations
+	// * @return void
+	// */
+	// public function set_modified_date(string $timestamp) : void {
 
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->created_date)
-			? dd_date::timestamp_to_date(
-				$dato->created_date,
-				true // bool full
-			  )
-			: null;
+	// 	$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
+	// 	$date_with_format	= $dd_date->get_dd_timestamp(
+	// 		'Y-m-d H:i:s',
+	// 		true
+	// 	);
 
-		return $local_value;
-	}//end get_created_date
-
-
-
-	/**
-	* GET_MODIFIED_DATE
-	* @return string|null $local_value
-	*/
-	public function get_modified_date() : ?string {
-
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->modified_date)
-			? dd_date::timestamp_to_date(
-				$dato->modified_date,
-				true // bool full
-			  )
-			: null;
-
-		return $local_value;
-	}//end get_modified_date
+	// 	$dato = $this->get_dato(); // Force load
+	// 	$dato->modified_date = $date_with_format;
+	// 	$this->set_dato($dato); // Force update
+	// }//end set_modified_date
 
 
 
-	/**
-	* GET_CREATED_BY_USERID
-	* Get section dato property 'created_by_userID'
-	* @return int|null $created_by_userID
-	*/
-	public function get_created_by_userID() : ?int {
+	// /**
+	// * GET_CREATED_DATE
+	// * @return string|null $local_value
+	// */
+	// public function get_created_date() : ?string {
 
-		$dato = $this->get_dato();
-		if( isset($dato->created_by_userID) )  {
-			return (int)$dato->created_by_userID;
-		}
+	// 	$dato			= $this->get_dato();
+	// 	$local_value	= isset($dato->created_date)
+	// 		? dd_date::timestamp_to_date(
+	// 			$dato->created_date,
+	// 			true // bool full
+	// 		  )
+	// 		: null;
 
-		return null;
-	}//end get_created_by_userID
-
-
-
-	/**
-	* SET_CREATED_BY_USERID
-	* Set section dato property 'created_by_userID'
-	* @return bool
-	*/
-	public function set_created_by_userID(int $value) : bool {
-
-		// force get dato
-		$this->get_dato();
-
-		$this->dato->created_by_userID = $value;
-
-		return true;
-	}//end set_created_by_userID
+	// 	return $local_value;
+	// }//end get_created_date
 
 
 
-	/**
-	* GET_MODIFIED_BY_USERID
-	* Get section dato property 'modified_by_userID'
-	* @return int|null $modified_by_userID
-	*/
-	public function get_modified_by_userID() : ?int {
+	// /**
+	// * GET_MODIFIED_DATE
+	// * @return string|null $local_value
+	// */
+	// public function get_modified_date() : ?string {
 
-		$dato = $this->get_dato();
-		if( isset($dato->modified_by_userID) )  {
-			return (int)$dato->modified_by_userID;
-		}
+	// 	$dato			= $this->get_dato();
+	// 	$local_value	= isset($dato->modified_date)
+	// 		? dd_date::timestamp_to_date(
+	// 			$dato->modified_date,
+	// 			true // bool full
+	// 		  )
+	// 		: null;
 
-		return null;
-	}//end get_modified_by_userID
-
-
-
-	/**
-	* SET_MODIFIED_BY_USERID
-	* Set section dato property 'modified_by_userID'
-	* @return bool
-	*/
-	public function set_modified_by_userID(int $value) : bool {
-
-		// force get dato
-		$this->get_dato();
-
-		$this->dato->modified_by_userID = $value;
-
-		return true;
-	}//end set_modified_by_userID
+	// 	return $local_value;
+	// }//end get_modified_date
 
 
 
-	/**
-	* GET_CREATED_BY_USER_NAME
-	* @param bool $full_name = false
-	* @return string|null $user_name
-	*/
-	public function get_created_by_user_name(bool $full_name=false) : ?string {
+	// /**
+	// * GET_CREATED_BY_USERID
+	// * Get section dato property 'created_by_userID'
+	// * @return int|null $created_by_userID
+	// */
+	// public function get_created_by_userID() : ?int {
 
-		$user_id = $this->get_created_by_userID();
-		if( empty($user_id) ) {
-			return null;
-		}
+	// 	$dato = $this->get_dato();
+	// 	if( isset($dato->created_by_userID) )  {
+	// 		return (int)$dato->created_by_userID;
+	// 	}
 
-		$user_name = section::get_user_name_by_userID(
-			$user_id,
-			$full_name // bool full_name
-		);
-
-		return $user_name;
-	}//end get_created_by_user_name
+	// 	return null;
+	// }//end get_created_by_userID
 
 
 
-	/**
-	* GET_MODIFIED_BY_USER_NAME
-	* @param bool $full_name = false
-	* @return string|null $user_name
-	*/
-	public function get_modified_by_user_name(bool $full_name=false) : ?string {
+	// /**
+	// * SET_CREATED_BY_USERID
+	// * Set section dato property 'created_by_userID'
+	// * @return bool
+	// */
+	// public function set_created_by_userID(int $value) : bool {
 
-		$user_id = $this->get_modified_by_userID();
-		if( empty($user_id) ) {
-			return null;
-		}
+	// 	// force get dato
+	// 	$this->get_dato();
 
-		$user_name = section::get_user_name_by_userID(
-			$user_id,
-			$full_name // bool full_name
-		);
+	// 	$this->dato->created_by_userID = $value;
 
-		return $user_name;
-	}//end get_modified_by_user_name
+	// 	return true;
+	// }//end set_created_by_userID
 
 
 
-	/**
-	* GET_USER_NAME_BY_USERID
-	* @param int $userID
-	* @param bool $full_name = true
-	* @return string $user_name
-	*/
-	public static function get_user_name_by_userID(int $userID, bool $full_name=true) : ?string {
+	// /**
+	// * get_modified_by_user_id
+	// * Get section dato property 'modified_by_userID'
+	// * @return int|null $modified_by_userID
+	// */
+	// public function get_modified_by_user_id() : ?int {
 
-		if($userID==DEDALO_SUPERUSER){
-			$user_name = $full_name===false
-				? 'root'
-				: 'Admin debugger';
-		}else{
-			$tipo = $full_name===false
-				? DEDALO_USER_NAME_TIPO
-				: DEDALO_FULL_USER_NAME_TIPO;
+	// 	$dato = $this->get_dato();
+	// 	if( isset($dato->modified_by_userID) )  {
+	// 		return (int)$dato->modified_by_userID;
+	// 	}
 
-			$full_username_model	= ontology_node::get_model_by_tipo($tipo,true);
-			$component				= component_common::get_instance(
-				$full_username_model, // 'component_input_text',
-				$tipo,
-				$userID,
-				'list',
-				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_USERS_TIPO
-			);
-			$dato		= $component->get_dato();
-			$user_name	= $dato[0] ?? null;
-		}
-
-		return $user_name;
-	}//end get_user_name_by_userID
+	// 	return null;
+	// }//end get_modified_by_user_id
 
 
 
-	/**
-	* GET_SECTION_INFO
-	* Return information about creation, modification and publication of current section
-	* @return object
-	*/
-	public function get_section_info() : object {
+	// /**
+	// * SET_MODIFIED_BY_USERID
+	// * Set section dato property 'modified_by_userID'
+	// * @return bool
+	// */
+	// public function set_modified_by_userID(int $value) : bool {
 
-		$section_info = (object)[
-			'created_date'				=> $this->get_created_date(),
-			'modified_date'				=> $this->get_modified_date(),
-			'created_by_user_name'		=> $this->get_created_by_user_name(false),
-			'modified_by_user_name'		=> $this->get_modified_by_user_name(false),
-			'created_by_userID'			=> $this->get_created_by_userID(),
-			// publication
-			'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
-			'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
-			'publication_first_user'	=> $this->get_publication_user(diffusion::$publication_first_user_tipo),
-			'publication_last_user'		=> $this->get_publication_user(diffusion::$publication_last_user_tipo)
-		];
+	// 	// force get dato
+	// 	$this->get_dato();
+
+	// 	$this->dato->modified_by_userID = $value;
+
+	// 	return true;
+	// }//end set_modified_by_userID
 
 
-		return $section_info;
-	}//end get_section_info
+
+	// /**
+	// * GET_CREATED_BY_USER_NAME
+	// * @param bool $full_name = false
+	// * @return string|null $user_name
+	// */
+	// public function get_created_by_user_name(bool $full_name=false) : ?string {
+
+	// 	$user_id = $this->get_created_by_userID();
+	// 	if( empty($user_id) ) {
+	// 		return null;
+	// 	}
+
+	// 	$user_name = section::get_user_name_by_user_id(
+	// 		$user_id,
+	// 		$full_name // bool full_name
+	// 	);
+
+	// 	return $user_name;
+	// }//end get_created_by_user_name
+
+
+
+	// /**
+	// * GET_MODIFIED_BY_USER_NAME
+	// * @param bool $full_name = false
+	// * @return string|null $user_name
+	// */
+	// public function get_modified_by_user_name(bool $full_name=false) : ?string {
+
+	// 	$user_id = $this->get_modified_by_user_id();
+	// 	if( empty($user_id) ) {
+	// 		return null;
+	// 	}
+
+	// 	$user_name = section::get_user_name_by_user_id(
+	// 		$user_id,
+	// 		$full_name // bool full_name
+	// 	);
+
+	// 	return $user_name;
+	// }//end get_modified_by_user_name
+
+
+
+	// /**
+	// * get_user_name_by_user_id
+	// * @param int $userID
+	// * @param bool $full_name = true
+	// * @return string $user_name
+	// */
+	// public static function get_user_name_by_user_id(int $userID, bool $full_name=true) : ?string {
+
+	// 	if($userID==DEDALO_SUPERUSER){
+	// 		$user_name = $full_name===false
+	// 			? 'root'
+	// 			: 'Admin debugger';
+	// 	}else{
+	// 		$tipo = $full_name===false
+	// 			? DEDALO_USER_NAME_TIPO
+	// 			: DEDALO_FULL_USER_NAME_TIPO;
+
+	// 		$full_username_model	= ontology_node::get_model_by_tipo($tipo,true);
+	// 		$component				= component_common::get_instance(
+	// 			$full_username_model, // 'component_input_text',
+	// 			$tipo,
+	// 			$userID,
+	// 			'list',
+	// 			DEDALO_DATA_NOLAN,
+	// 			DEDALO_SECTION_USERS_TIPO
+	// 		);
+	// 		$dato		= $component->get_dato();
+	// 		$user_name	= $dato[0] ?? null;
+	// 	}
+
+	// 	return $user_name;
+	// }//end get_user_name_by_user_id
+
+
+
+	// /**
+	// * GET_SECTION_INFO
+	// * Return information about creation, modification and publication of current section
+	// * @return object
+	// */
+	// public function get_section_info() : object {
+
+	// 	$section_info = (object)[
+	// 		'created_date'				=> $this->get_created_date(),
+	// 		'modified_date'				=> $this->get_modified_date(),
+	// 		'created_by_user_name'		=> $this->get_created_by_user_name(false),
+	// 		'modified_by_user_name'		=> $this->get_modified_by_user_name(false),
+	// 		'created_by_userID'			=> $this->get_created_by_userID(),
+	// 		// publication
+	// 		'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
+	// 		'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
+	// 		'publication_first_user'	=> $this->get_publication_user(diffusion::$publication_first_user_tipo),
+	// 		'publication_last_user'		=> $this->get_publication_user(diffusion::$publication_last_user_tipo)
+	// 	];
+
+
+	// 	return $section_info;
+	// }//end get_section_info
 
 
 
@@ -2903,7 +2903,7 @@ class section extends common {
 					? (int)$dato[0]->section_id
 					: null;
 				$user_name	= isset($user_id)
-					? section::get_user_name_by_userID($user_id, false)
+					? section::get_user_name_by_user_id($user_id, false)
 					: null;
 			}
 
