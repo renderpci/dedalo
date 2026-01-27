@@ -22,6 +22,9 @@ class section_record {
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
 	protected bool $is_loaded_data = false;
 
+	// int permissions
+	protected int $permissions;
+
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -1511,5 +1514,42 @@ class section_record {
 
 		return $ar_restored;
 	}//end restore_deleted_section_media_files
+
+
+
+	/**
+	* GET_PERMISSIONS
+	* @return int $this->permissions
+	*/
+	public function get_permissions() : int {
+
+		// check if the permissions are set previously, then return it.
+			if(isset($this->permissions)){
+				return $this->permissions;
+			}
+
+		// common cases permissions calculation
+			$this->permissions = common::get_permissions($this->section_tipo, $this->section_tipo);
+
+		// special cases
+			if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO && $this->section_id==logged_user_id()){
+				$this->permissions = 1; // set to 1 to allow tool_user_admin access
+			} else if ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				// time machine notes case (rsc832)
+				// his own section
+				$this->permissions = (logged_user_id()===$this->get_created_by_user_id())
+					? 2
+					: 1;
+				// open access for super admins to the section list of Time Machine notes
+				if ( security::is_global_admin(logged_user_id()) ) {
+					$this->permissions = 2;
+				}
+			}
+
+
+		return $this->permissions;
+	}//end get_permissions
+
+
 
 }//end section_record
