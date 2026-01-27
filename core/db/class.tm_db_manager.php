@@ -246,6 +246,12 @@ class tm_db_manager {
 
 		// Single-pass loop: Validate columns, prepare values, and build SQL parts simultaneously.
 		foreach ($values as $column => $value) {
+
+			// Skip id column as it is used in the WHERE clause
+			if ($column === 'id') {
+				continue;
+			}
+
 			// Validate column name (Security/Guardrail)
 			if (!isset(self::$columns[$column])) {
 				debug_log(
