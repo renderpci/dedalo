@@ -490,12 +490,12 @@ class ontology_node {
 	/**
 	* GET_PROPIEDADES
 	* Return the value of property 'properties', stored as plain text in table column 'properties'
-	* Values expected in 'propiedades' are always JSON. Yo can obtain raw value (default) or JSON decoded (called with argument 'true')
+	* Values expected in 'propiedades' are always JSON. You can obtain raw value (default) or JSON decoded (called with argument 'true')
 	* @param bool $json_decode = false
-	* @return mixed|null $propiedades
+	* @return mixed $propiedades
 	* 	object / string parent::$properties
 	*/
-	public function get_propiedades( bool $json_decode = false ) : array|object|null {
+	public function get_propiedades( bool $json_decode = false ) : mixed {
 		$this->load_data();
 
 		if (!isset($this->data->propiedades)) {
