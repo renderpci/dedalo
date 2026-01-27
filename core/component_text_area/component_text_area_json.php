@@ -171,13 +171,27 @@
 
 			// another data to add
 				$item->parent_tipo			= $this->get_tipo();
-				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
+				// When the component is used in time machine mode
+				// it will use the parent_section_id and parent_section_tipo from the value
+				// to build the target section in client side
+				// @see: class.tm_record.php
+				// @see: view_note_text_area.js
+				if ($mode === 'tm') {
+					// set the parent_section_id and parent_section_tipo to the item
+					$item->parent_section_id	= $value[0]->parent_section_id ?? null;
+					$item->parent_section_tipo	= $value[0]->parent_section_tipo ?? null;
+					// remove the parent_section_id and parent_section_tipo from the value
+					unset($item->value[0]->parent_section_id);
+					unset($item->value[0]->parent_section_tipo);			
 
-				// created_by_userID. Used for time machine notes user verification
-				$item->created_by_userID = abs(intval($this->section_id))>0
-					? $this->get_my_section()->get_created_by_userID()
-					: null;
+					// created_by_user_id. Used for time machine notes user verification
+					$item->created_by_user_id = abs(intval($this->section_id))>0
+						? $this->get_my_section_record()->get_created_by_user_id()
+						: null;
+					// set the matrix_id as section_id
+					$item->matrix_id = $this->section_id;
+				}
 
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
