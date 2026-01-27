@@ -91,6 +91,12 @@
 					$section_record = section_record::get_instance( $section_tipo, $section_id );
 					$section_record->set_data( $current_record );
 
+					// Section Record Permissions
+					$section_record_permissions = $section_record->get_permissions();
+					if ($section_record_permissions < 1) {
+						continue; // skip this section and its records
+					}
+
 				// create or reuse cached section instance
 					if ( !isset($section_instances[$section_tipo]) && !isset($rejected_sections[$section_tipo]) ) {
 
@@ -104,10 +110,22 @@
 
 						// permissions check: skip section and its all section_records without at least read access
 						// Only sections with at least read access are included in the result
-						$permissions = $section->get_section_permissions();
+
+						// If the section record has permissions, use them, otherwise use the section permissions
+						$permissions = $section_record_permissions > 0
+							? $section_record_permissions
+							: $section->get_section_permissions();
 						if ($permissions < 1) {
 							$rejected_sections[$section_tipo] = true;
 							continue; // skip this section and its records
+						}
+
+						// Set permissions when the section record has permissions > 0
+						// allow to override section permissions
+						// in cases as Time Machine notes or User panel 
+						// in those cases the user could get access to its own notes or user panel
+						if($section_record_permissions > 0){
+							$section->set_permissions($section_record_permissions);
 						}
 
 						// set section instance in cache

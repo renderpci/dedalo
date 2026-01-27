@@ -1567,6 +1567,7 @@ export const load_component_history = async function(self, component) {
 				lang				: component.lang, // used to create the filter
 				// template_columns	: '1fr 1fr 2fr 2fr',
 				ignore_columns		: [
+					'bulk_process_id', // bulk_process_id 88
 					'matrix_id', // matrix_id dd1573
 					'where' // where dd546
 				],
@@ -1579,7 +1580,7 @@ export const load_component_history = async function(self, component) {
 						section_tipo	: self.section_tipo,
 						parent			: self.section_tipo,
 						label			: component.label,
-						mode			: 'list',
+						mode			: 'tm',
 						fixed_mode		: true, // preserves mode across section_record
 						view			: 'text'
 					},
@@ -1591,7 +1592,7 @@ export const load_component_history = async function(self, component) {
 						section_tipo	: 'rsc832',
 						parent			: self.section_tipo,
 						label			: 'Annotation',
-						mode			: 'list',
+						mode			: 'tm',
 						fixed_mode		: true, // preserves mode across section_record
 						view			: 'note'
 					}

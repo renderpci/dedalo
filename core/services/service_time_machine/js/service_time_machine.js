@@ -164,7 +164,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// (!) IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
 				self.rqo.show.ddo_map.map(ddo => {
 					// change ddo properties to safe mode and permissions
-					ddo.mode		= 'list'
+					ddo.mode		= 'tm'
 					ddo.permissions	= 1
 
 					return ddo
@@ -186,6 +186,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					body		: self.rqo,
 					use_worker	: true
 				})
+
 				// server: wrong response
 				if (!api_response || !api_response.result) {
 					console.error('Error: Invalid API response', api_response);
@@ -389,7 +390,7 @@ service_time_machine.prototype.build_request_config = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'Bulk process id',
-				mode			: 'list',
+				mode			: 'tm',
 				view			: 'mini'
 			},
 			// when dd559 (from activity section)
@@ -402,7 +403,7 @@ service_time_machine.prototype.build_request_config = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'When',
-				mode			: 'list',
+				mode			: 'tm',
 				view			: 'mini',
 				properties		: {
 					date_mode : 'date_time'
@@ -418,7 +419,7 @@ service_time_machine.prototype.build_request_config = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'Who',
-				mode			: 'list',
+				mode			: 'tm',
 				view			: 'mini'
 			},
 			// where dd577 (from activity section)
@@ -431,7 +432,7 @@ service_time_machine.prototype.build_request_config = function() {
 				section_tipo	: section_tipo,
 				parent			: section_tipo,
 				debug_label		: 'Where',
-				mode			: 'list',
+				mode			: 'tm',
 				view			: 'mini'
 			}
 		]
@@ -442,14 +443,14 @@ service_time_machine.prototype.build_request_config = function() {
 					// annotations rsc329 (section_tipo "rsc832")
 					{
 						id				: 'annotations',
-						tipo			: 'dd732',
+						tipo			: 'rsc329',
 						type			: 'component',
 						typo			: 'ddo',
 						model			: 'component_text_area',
 						section_tipo	: section_tipo,
 						parent			: section_tipo,
 						debug_label		: 'annotations',
-						mode			: 'list',
+						mode			: 'tm',
 						view			: 'mini'
 					}
 				)
