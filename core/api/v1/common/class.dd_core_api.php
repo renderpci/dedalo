@@ -2497,8 +2497,12 @@ final class dd_core_api {
 			}else{
 				$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
 				$obj->dedalo_projects_default_langs = array_map(function ($item) {
+
+					/// try to get the name in the requested language, else fallback to main lang or any.
+					$name = lang::fallback_lang_value($item->names, DEDALO_DATA_LANG);
+
 					return [
-						'label' => $item->names[0] ?? $item->code,
+						'label' => $name ?? $item->code,
 						'value' => 'lg-'.$item->code,
 						'tld2' => lang::get_alpha2_from_code('lg-'.$item->code)
 					];

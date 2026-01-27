@@ -10,9 +10,9 @@ class lang {
 
 	// fixed matrix table where are stored all langs
 	public static $langs_matrix_table = 'matrix_langs';
-
-	public static $resolve_response_cache = [];
+	// cache static vars
 	public static $resolve_multiple_lang_cache = [];
+
 
 
 	/**
@@ -24,39 +24,26 @@ class lang {
 	*	like 'lg-spa'
 	* @return object|null $response
 	* {
-	*	"section_id": "17344",
-	*	"names": {
-	*		"lg-eng": [
-	*			"Spanish"
-	*		],
-	*		"lg-spa": [
-	*			"Castellano"
-	*		]
-	*	}
-	* }
-	*
+    *    "code": "spa",
+    *    "section_id": 17344,
+    *    "names": {
+    *        "lg-eng": "Spanish",
+    *        "lg-spa": "Castellano"
+    *    }
+    * }
 	*/
 	private static function resolve(string $lang_tld) : ?object {
 
 		// lang tld formatting
-			if (strpos($lang_tld, 'lg-')===0) {
-				$lang_tld = substr($lang_tld, 3);
-			}
-
-		// cache			
-			if (isset(self::$resolve_response_cache[$lang_tld])) {
-				return self::$resolve_response_cache[$lang_tld];
-			}
+		if (strpos($lang_tld, 'lg-')===0) {
+			$lang_tld = substr($lang_tld, 3);
+		}
 
 		// resolve using unified method resolve_multiple
-			$items = lang::resolve_multiple([$lang_tld]);
+		$items = lang::resolve_multiple([$lang_tld]);
 
 		// select first array item (one is expected)
-			$response = $items[0] ?? null;
-
-		// cache
-			self::$resolve_response_cache[$lang_tld] = $response;
-
+		$response = $items[0] ?? null;
 
 		return $response;
 	}//end resolve
@@ -74,7 +61,6 @@ class lang {
 	public static function resolve_multiple(array $ar_lang_tld) : ?array {
 
 		// cache
-		
 		$cache_key = implode(',', $ar_lang_tld);
 		if (isset(self::$resolve_multiple_lang_cache[$cache_key])) {
 			return self::$resolve_multiple_lang_cache[$cache_key];
@@ -90,33 +76,21 @@ class lang {
 		$sql = '';
 		$sql .= PHP_EOL . 'SELECT';
 		$sql .= PHP_EOL . 'section_id, section_tipo,';
-		$sql .= PHP_EOL . 'string->\''.$term_tipo.'\'->0->>\'value\' AS name,';
+		$sql .= PHP_EOL . 'string->\''.$term_tipo.'\' AS names,';
 		$sql .= PHP_EOL . 'string->\''.$code_tipo.'\'->0->>\'value\' AS code';
 		$sql .= PHP_EOL . 'FROM "'.$table.'"';
 		$sql .= PHP_EOL . 'WHERE';
+		$sql .= PHP_EOL . "string @? $1";
 
-		// ar_lang_tld_clean. Clean tld from 'lg-' prefix
-		$ar_lang_tld_clean = array_map(function($lang_tld){
-			// lang tld formatting
-			if (strpos($lang_tld, 'lg-')===0) {
-				$lang_tld = substr($lang_tld, 3);
-			}
-			return $lang_tld;
-		}, $ar_lang_tld);
-
-		// add
-		$sql .= PHP_EOL . "string->'hierarchy41'->0->>'value' = ANY($1)"; // using ANY operator parametrized
-
-		// The parameters array must be an array of values to replace the placeholders.
-		// Since you only have one placeholder ($1), the parameters array has one element.
-		// IMPORTANT: pg_query_params() expects a string for the array parameter.
-		// The array should be passed as a PostgreSQL array literal string (e.g., '{"a", "b", "c"}').
+		// Build condiionals as ['@ == "eng"', '@ == "spa"']
+		$conds = array_map(
+			fn($l) => '@ == "' . str_replace('lg-', '', $l) . '"',
+			$ar_lang_tld
+		);
 		$params = [
-			'{'. implode(',', array_map(function($v) {
-				return '"' . addslashes($v) . '"'; // Quote and escape each element
-			}, $ar_lang_tld_clean)) . '}'
+			"\$.{$code_tipo}[*].value ? (" . implode(' || ', $conds) . ')'
 		];
-	
+
 		// DB query exec
 		$result = matrix_db_manager::exec_search($sql, $params);
 		if ($result===false) {
@@ -126,20 +100,27 @@ class lang {
 				, logger::ERROR
 			);
 			return null;
-		}		
+		}
 
 		// items
 		$items = [];
 		while ($rows = pg_fetch_assoc($result)) {
 
 			$section_id	= (int)$rows['section_id'];
-			$names		= $rows['name']; // json_handler::decode($rows['names']);
 			$code		= $rows['code'];
+			$names		= json_handler::decode($rows['names']);
+
+			$value = new stdClass();
+			if(is_array($names)) {
+				foreach($names as $n) {
+					$value->{$n->lang} = $n->value; // As lg-spa => Spanish
+				}
+			}
 
 			$items[] = (object)[
 				'code'			=> $code,
 				'section_id'	=> $section_id,
-				'names'			=> [$names]
+				'names'			=> $value
 			];
 		}
 
@@ -223,61 +204,88 @@ class lang {
 
 	/**
 	* GET_NAME_FROM_CODE
-	* @param string $code
-	*	like 'lg-spa'
+	*
+	* @param string $lang_code
+	* Search language code like 'lg-spa'
 	* @param string $lang = DEDALO_DATA_LANG
+    * Language to return the result (if not found, return with fallback)
 	* @param bool $from_cache = true
 	* @return string|null $name
+	* E.g. 'Spanish'
 	*/
-	public static function get_name_from_code(string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
-		$start_time = start_time();	
-		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
-			if ($code===DEDALO_DATA_NOLAN) {
-				return null;
-			}
+	public static function get_name_from_code(string $lang_code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
+		$start_time = start_time();
 
-		// cache
-			$cache_uid = $code.'_'.$lang;
-			if ($from_cache===true && isset($_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid])) {
-				return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
+		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
+			if ($lang_code === DEDALO_DATA_NOLAN) {
+				return null;
 			}
 
 		// resolve
-			$result = lang::resolve($code);
+			$result = lang::resolve( $lang_code );
+
+			// expected result format:
+			// {
+			//    "code": "spa",
+			//    "section_id": 17344,
+			//    "names": {
+			//        "lg-eng": "Spanish",
+			//        "lg-spa": "Castellano"
+			//    }
+			// }
 
 		// not founded name
-			if(!isset($result->names)) {
+			if(!isset($result->names) || empty($result->names)) {
 				return null;
 			}
 
-		// Set names from object result
-			$names = $result->names;
-
-		// Fallback
-			if (!empty($names->$lang)) {
-
-				$name = $names->$lang[0] ?? null;
-
-			}else{
-
-				$section_tipo	= DEDALO_LANGS_SECTION_TIPO;
-				$main_lang		= hierarchy::get_main_lang($section_tipo);
-				// Recursion in main_lang lang
-				if (isset($names->$main_lang)) {
-					$name = $names->$main_lang[0] ?? null;
-				}else{
-					return null;
-				}
-			}
-
-		// cache
-			if($from_cache===true){
-				$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
-			}
-
+		// try to get the name in the requested language, else fallback to main lang or any.
+		$name = lang::fallback_lang_value($result->names, $lang);
 
 		return $name;
 	}//end get_name_from_code
+
+
+
+	/**
+	* FALLBACK_LANG_VALUE
+	* @param object $names
+	* Sample:
+	* {
+	* 	"lg-eng": "Spanish",
+	* 	"lg-spa": "Castellano"
+	* }
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $name
+	*/
+	public static function fallback_lang_value(object $names, string $lang=DEDALO_DATA_LANG) : ?string {
+
+		// try to get the name in the requested language
+		if(isset($names->{$lang})) {
+
+			$name = $names->{$lang};
+
+		}else{
+
+			// main lang try
+			$main_lang = hierarchy::get_main_lang(DEDALO_LANGS_SECTION_TIPO);
+
+			if(isset($names->{$main_lang})) {
+				// main lang
+				$name = $names->{$main_lang};
+			}else{
+				// first not empty lang available
+				foreach($names as $code => $label) {
+					if( !empty($label) ) {
+						$name = $label;
+						break;
+					}
+				}
+			}
+		}
+
+		return $name ?? null;
+	}//end fallback_lang_value
 
 
 
@@ -314,7 +322,7 @@ class lang {
 			}
 
 		// section_tipo
-			$section_tipo = DEDALO_LANGS_SECTION_TIPO;		
+			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
 		// component value (code)
 			$tipo		= DEDALO_THESAURUS_CODE_TIPO;
@@ -328,14 +336,14 @@ class lang {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			$code = $component->get_value(); // changed from 'get_value' 13-01-2024 Paco to modernize value calls
+			$code = $component->get_value();
 
-		if(empty($code)) {
-			return null;
-		}
+			if(empty($code)) {
+				return null;
+			}
 
-		// add_prefix. Default is true		
-		$code = 'lg-'.$code;			
+		// add_prefix. Default is true
+		$code = 'lg-'.$code;
 
 
 		return $code;
@@ -810,7 +818,6 @@ class lang {
 				break;
 		}
 
-
 		return $locale;
 	}//end get_locale_from_code
 
@@ -828,7 +835,6 @@ class lang {
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}
-
 
 		return $lang;
 	}//end get_label_lang

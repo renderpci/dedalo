@@ -161,17 +161,22 @@ class component_select_lang extends component_relation_common {
 	* @param bool $include_negative = false
 	* @return object $response
 	*/
-	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {	
+	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
 		// datalist. Resolving multiple langs at once
 			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
-			$datalist = array_map(function ($item) {				
+			$datalist = array_map(function ($item) use ($lang) {
+
 				$locator = new locator();
 				$locator->set_section_id($item->section_id);
-				$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);	
+				$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
+
+				// try to get the name in the requested language, else fallback to main lang or any.
+				$name = lang::fallback_lang_value($item->names, $lang);
+
 				$item_value = new stdClass();
 					$item_value->value		= $locator;
-					$item_value->label		= $item->names[0] ?? $item->code;
+					$item_value->label		= $name ?? $item->code;
 					$item_value->section_id	= 'lg-'.$item->code;
 
 				return $item_value;
