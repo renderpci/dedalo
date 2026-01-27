@@ -1262,10 +1262,10 @@ final class section_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_modified_by_userID
+	* TEST_get_modified_by_user_id
 	* @return void
 	*/
-	public function test_get_modified_by_userID() : void {
+	public function test_get_modified_by_user_id() : void {
 
 		$section_id		= self::$section_id;
 		$section_tipo	= self::$section_tipo;
@@ -1277,7 +1277,7 @@ final class section_test extends BaseTestCase {
 			$mode
 		);
 
-		$result = $section->get_modified_by_userID();
+		$result = $section->get_modified_by_user_id();
 
 		$this->assertTrue(
 			gettype($result)==='integer' || gettype($result)==='NULL',
@@ -1291,7 +1291,7 @@ final class section_test extends BaseTestCase {
 				.' result: ' . $result . PHP_EOL
 				.' TEST_USER_ID: ' . TEST_USER_ID
 		);
-	}//end test_get_modified_by_userID
+	}//end test_get_modified_by_user_id
 
 
 
@@ -1362,10 +1362,10 @@ final class section_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_user_name_by_userID
+	* TEST_get_user_name_by_user_id
 	* @return void
 	*/
-	public function test_get_user_name_by_userID() : void {
+	public function test_get_user_name_by_user_id() : void {
 
 		$section_id		= self::$section_id;
 		$section_tipo	= self::$section_tipo;
@@ -1379,7 +1379,7 @@ final class section_test extends BaseTestCase {
 
 		$user_id = -1;
 
-		$result = $section->get_user_name_by_userID( $user_id, true );
+		$result = $section->get_user_name_by_user_id( $user_id, true );
 
 		$this->assertTrue(
 			gettype($result)==='string' || gettype($result)==='NULL',
@@ -1393,14 +1393,14 @@ final class section_test extends BaseTestCase {
 			.' result: ' . $result
 		);
 
-		$result2 = $section->get_user_name_by_userID( $user_id, false );
+		$result2 = $section->get_user_name_by_user_id( $user_id, false );
 
 		$this->assertTrue(
 			$result2==='root',
 			'expected $result === root '. PHP_EOL
 			.' result: ' . $result2
 		);
-	}//end test_get_user_name_by_userID
+	}//end test_get_user_name_by_user_id
 
 
 
