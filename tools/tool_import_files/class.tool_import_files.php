@@ -660,8 +660,8 @@ class tool_import_files extends tool_common {
 
 								$section = section::get_instance( $section_tipo, 'list', false );
 								$creation_options = new stdClass();
-									// Direct numeric case like 1.jpg									
-									// First record of current section_id force create record. Next files with same section_id, not.									
+									// Direct numeric case like 1.jpg
+									// First record of current section_id force create record. Next files with same section_id, not.
 									$creation_options->section_id = $file_data['regex']->section_id ?? null;
 
 								$_base_section_id = $section->create_record( $creation_options );
@@ -684,18 +684,16 @@ class tool_import_files extends tool_common {
 									# Re-use safe already created section_id (file with same base_name like 'ánforas')
 									$_base_section_id = $filter_result->section_id;
 								}else{
-									$section = section::get_instance(null, $section_tipo,'edit',false);
-									$section->Save();
-									$_base_section_id = $section->get_section_id();
+									$section = section::get_instance($section_tipo, 'edit', false);
+									$_base_section_id = $section->create_record();
 								}
 								$section_id = (int)$_base_section_id;
 								break;
 
 							default:
 								// Create new section
-								$section 		= section::get_instance(null, $section_tipo);
-								$section->Save();
-								$section_id 	= $section->get_section_id();
+								$section = section::get_instance($section_tipo);
+								$section_id = $section->create_record();
 								break;
 						}//end switch ($import_file_name_mode)
 
@@ -1039,7 +1037,7 @@ class tool_import_files extends tool_common {
 		// search exec
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
-		
+
 		// stored the section_id of the match sections.
 		$match_section_id = [];
 		foreach ($db_result as $section_data) {
