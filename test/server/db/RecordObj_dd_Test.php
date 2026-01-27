@@ -34,14 +34,14 @@ final class ontology_node_test extends BaseTestCase {
 				.'tipo: ' . $tipo
 		);
 
-		$ontology_node	= ontology_node::get_instance( null, 'dd' );
+		$ontology_node	= ontology_node::get_instance('dd1');
 		$tipo		= $ontology_node->get_tipo();
 
-		$eq = $tipo===null;
+		$eq = $tipo==='dd1';
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'test_term_id: null'  . PHP_EOL
+				.'test_term_id: dd1'  . PHP_EOL
 				.'tipo: ' . $tipo
 		);
 

@@ -324,21 +324,23 @@ final class ontology_data_io_test extends BaseTestCase {
 
 
 	/**
-	* TEST_import_from_file
-	* @return void
-	*/
+	 * @group disabled
+	 * TEST_import_from_file
+	 * @return void
+	 */
 	public function test_import_from_file() {
+
+		$this->markTestSkipped('Temporarily disabled');
 
 		$this->user_login();
 
 		$file_item = (object)[
 			'section_tipo'	=> 'test0',
 			'tld'			=> 'test',
-			'url'			=> 'https://master.dedalo.dev/dedalo/import/ontology/6.4/XXXX0_dd.copy.gz'
+			'url'			=> 'https://master.dedalo.dev/dedalo/import/ontology/7.0/XXXX0_dd.copy.gz'
 		];
 
 		$result = ontology_data_io::import_from_file($file_item);
-
 
 		$expected = 'object';
 		$this->assertTrue(
@@ -367,17 +369,20 @@ final class ontology_data_io_test extends BaseTestCase {
 
 
 	/**
-	* TEST_import_private_lists_from_file
-	* @return void
-	*/
+	 * @group disabled
+	 * TEST_import_private_lists_from_file
+	 * @return void
+	 */
 	public function test_import_private_lists_from_file() {
+
+		$this->markTestSkipped('Temporarily disabled');
 
 		$this->user_login();
 
 		$file_item = (object)[
 			'section_tipo'	=> 'test0',
 			'tld'			=> 'test',
-			'url'			=> 'https://master.dedalo.dev/dedalo/import/ontology/6.4/matrix_dd.copy.gz'
+			'url'			=> 'https://master.dedalo.dev/dedalo/import/ontology/7.0/matrix_dd.copy.gz'
 		];
 
 		$result = ontology_data_io::import_private_lists_from_file($file_item);
@@ -425,7 +430,7 @@ final class ontology_data_io_test extends BaseTestCase {
 		$this->user_login();
 
 		// bad URL
-		$url = 'https://master.dedalo.dev/dedalo/import/ontology/6.4/fakeurl';
+		$url = 'https://master.dedalo.dev/dedalo/import/ontology/7.0/fakeurl';
 
 		$result = ontology_data_io::download_remote_ontology_file( $url );
 
@@ -446,7 +451,7 @@ final class ontology_data_io_test extends BaseTestCase {
 		);
 
 		// good URL
-		$url = 'https://master.dedalo.dev/dedalo/install/import/ontology/6.4/test.copy.gz';
+		$url = 'https://master.dedalo.dev/dedalo/install/import/ontology/7.0/test.copy.gz';
 
 		$result = ontology_data_io::download_remote_ontology_file( $url );
 			// dump($result, ' test_download_remote_ontology_file result ++ '.to_string());

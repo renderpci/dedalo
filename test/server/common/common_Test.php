@@ -144,6 +144,8 @@ final class common_test extends BaseTestCase {
 	*/
 	public function test_get_ar_all_langs_resolved() {
 
+		$this->user_login();
+
 		$result = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 
 		$this->assertTrue(
@@ -216,7 +218,7 @@ final class common_test extends BaseTestCase {
 	*/
 	public function test_truncate_text() {
 
-		$result = common::truncate_text(
+		$result = component_string_common::truncate_text(
 			'loooong text heeeeeereeeeeee ç Ñ ? ï ...... !!!!',
 			36
 		);
@@ -242,7 +244,7 @@ final class common_test extends BaseTestCase {
 	*/
 	public function test_truncate_html() {
 
-		$result = common::truncate_html(
+		$result = component_string_common::truncate_html(
 			36,
 			'loooong text <br> heeeeeereeeeeee ç Ñ ? ï ...... !!!!',
 		);

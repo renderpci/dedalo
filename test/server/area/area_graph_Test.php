@@ -127,19 +127,21 @@ final class area_graph_test extends BaseTestCase {
 
 		$area = $this->build_instance();
 
-		$result = $area->get_active_networks_sections();
+		// Returns db_result object
+ 		$result = $area->get_active_networks_sections();
 
 		$this->assertTrue(
-			gettype($result)==='array' ,
-			'expected array' . PHP_EOL
+			gettype($result)==='object' ,
+			'expected object' . PHP_EOL
 				. gettype($result)
 		);
 
 		if (!empty($result)) {
+			$first_row = $result->fetch_one();
 			$this->assertTrue(
-				gettype($result[0])==='object' ,
+				gettype($first_row)==='object' ,
 				'expected object' . PHP_EOL
-					. to_string($result[0])
+					. to_string($first_row)
 			);
 		}
 	}//end test_get_active_networks_sections
