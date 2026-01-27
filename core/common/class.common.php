@@ -2954,10 +2954,17 @@ abstract class common {
 									}
 
 								// mode
+								// if mode is not set in properties in the request_config:
+								//  1. if the caller mode is tm, set the mode to tm
+								//  2. otherwise set the mode to list when the caller is not section, to preserve the columns of component_portal
 									if (!isset($current_ddo->mode)) {
-										$current_ddo->mode = $model!=='section'
-											? 'list'
-											: $mode;
+										if($mode==='tm'){
+											$current_ddo->mode = $mode;
+										}else{
+											$current_ddo->mode = $model!=='section'
+												? 'list'
+												: $mode;
+										}
 									}
 
 								// fields_map. Used by component external to map to different API format, defined in the component,
