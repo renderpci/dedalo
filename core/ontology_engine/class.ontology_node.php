@@ -73,7 +73,7 @@ class ontology_node {
 	* 	E.g. 'dd156'
 	* @return self
 	*/
-	public static function get_instance( ?string $tipo = null ) : self {
+	public static function get_instance( string $tipo ) : self {
 
 		if (!isset(self::$instances[$tipo])) {
 			self::$instances[$tipo] = new self($tipo);
@@ -89,7 +89,7 @@ class ontology_node {
 	* Check the ontology identification; tipo
 	* to ensure that it is a valid and safe before construct the ontology node object
 	*/
-	function __construct( ?string $tipo=null ) {
+	function __construct( string $tipo ) {
 
 		if( !empty($tipo) ) {
 
