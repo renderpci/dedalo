@@ -521,8 +521,8 @@ class tm_record {
 
 				$this->set_section_record_factory(
 					$tipo,
-					$data, 
-					$section_record 
+					is_array($data) ? $data : [$data],
+					$section_record
 				);
 
 			}
