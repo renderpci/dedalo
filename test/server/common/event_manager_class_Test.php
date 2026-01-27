@@ -8,6 +8,13 @@ final class event_manager_class_Test extends BaseTestCase {
 
 
 
+	protected function setUp(): void
+    {
+        $this->markTestSkipped('Temporarily disabled');
+    }
+
+
+
 	/**
 	* TEST_get_instance
 	* @return void

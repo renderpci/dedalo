@@ -994,7 +994,12 @@ final class dd_api_Test extends BaseTestCase {
 	*/
 	public function test_save() : void {
 
-		$new_value = ar_random_string();
+		$new_value = ar_random_string(); // as ['Raspa456123x']
+		$data_element = (object)[
+			'value' => $new_value[0],
+			'id' => 1,
+			'lang' => DEDALO_DATA_LANG,
+		];
 
 		$rqo = json_decode('
 			{
@@ -1015,14 +1020,14 @@ final class dd_api_Test extends BaseTestCase {
 					"section_id"			: "1",
 					"lang"					: "'.DEDALO_DATA_LANG.'",
 					"from_component_tipo"	: "test52",
-					"value"					: '.json_encode($new_value).',
+					"value"					: '.json_encode([$data_element]).',
 					"parent_tipo" 			: "test3",
 					"parent_section_id" 	: "1",
 					"changed_data": [{
 						"action"	: "update",
 						"key"		: 0,
-						"value"		: "'.reset($new_value).'"
-			        }]
+						"value"		: '.json_encode($data_element).'
+					}]
 				}
 			}
 		');
@@ -1294,268 +1299,144 @@ final class dd_api_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_COMPONENT_PORTAL_TEST44
-	* Check service_autocomplete for countermarks test (test44)
+	* TEST_COMPONENT_PORTAL_AUTOCOMPLETE
+	* Check service_autocomplete for countermarks test (autocomplete)
 	* @return void
 	*/
-	public function test_component_portal_test44() : void {
+	public function test_component_portal_autocomplete() : void {
+
+		$this->user_login();
 
 		$rqo = json_handler::decode('
 			{
-		    "id": "component_portal_test44_test2_1_edit_lg-nolan_test2_test2_1_test2_1",
-		    "action": "read",
-		    "source": {
-		        "typo": "source",
-		        "type": "component",
-		        "action": "search",
-		        "model": "component_portal",
-		        "tipo": "test44",
-		        "section_tipo": "test2",
-		        "section_id": "1",
-		        "mode": "edit",
-		        "view": "line",
-		        "lang": "lg-nolan",
-		        "properties": {
-		            "view": "line",
-		            "source": {
-		                "mode": "external",
-		                "request_config": [
-		                    {
-		                        "sqo": {
-		                            "fixed_filter": [
-		                                {
-		                                    "value": [
-		                                        {
-		                                            "q": {
-		                                                "type": "dd151",
-		                                                "section_id": "2",
-		                                                "section_tipo": "dd64",
-		                                                "from_component_tipo": "hierarchy24"
-		                                            },
-		                                            "path": [
-		                                                {
-		                                                    "name": "Usable in indexing",
-		                                                    "model": "component_radio_button",
-		                                                    "section_tipo": "hierarchy20",
-		                                                    "component_tipo": "hierarchy24"
-		                                                }
-		                                            ],
-		                                            "q_operator": null
-		                                        }
-		                                    ],
-		                                    "source": "fixed_dato"
-		                                }
-		                            ],
-		                            "section_tipo": [
-		                                {
-		                                    "value": [
-		                                        "sccmk1"
-		                                    ],
-		                                    "source": "section"
-		                                }
-		                            ],
-		                            "distinct_values": false
-		                        },
-		                        "show": {
-		                            "ddo_map": [
-		                                {
-		                                    "tipo": "hierarchy25",
-		                                    "parent": "self",
-		                                    "section_tipo": "self",
-		                                    "value_with_parents": false
-		                                }
-		                            ],
-		                            "interface": {
-		                                "show_autocomplete": true
-		                            },
-		                            "sqo_config": {
-		                                "limit": 30
-		                            },
-		                            "fields_separator": ", "
-		                        },
-		                        "type": "main"
-		                    },
-		                    {
-		                        "sqo": {
-		                            "section_tipo": [
-		                                {
-		                                    "value": [
-		                                        "sccmk1"
-		                                    ],
-		                                    "source": "section"
-		                                }
-		                            ],
-		                            "children_recursive": true,
-		                            "fixed_children_filter": {
-		                                "q": {
-		                                    "type": "dd151",
-		                                    "section_id": "1",
-		                                    "section_tipo": "dd64",
-		                                    "from_component_tipo": "hierarchy24"
-		                                },
-		                                "path": [
-		                                    {
-		                                        "name": "Usable in indexing",
-		                                        "model": "component_radio_button",
-		                                        "section_tipo": "hierarchy20",
-		                                        "component_tipo": "hierarchy24"
-		                                    }
-		                                ],
-		                                "q_operator": null
-		                            }
-		                        },
-		                        "show": {
-		                            "ddo_map": [
-		                                {
-		                                    "mode": "list",
-		                                    "tipo": "hierarchy95",
-		                                    "parent": "self",
-		                                    "section_tipo": "self",
-		                                    "value_with_parents": false
-		                                }
-		                            ],
-		                            "sqo_config": {
-		                                "limit": 0
-		                            }
-		                        },
-		                        "type": "secondary"
-		                    }
-		                ],
-		                "section_to_search": [
-		                    "numisdata4"
-		                ],
-		                "set_observed_data": [
-		                    {
-		                        "tipo": "numisdata197",
-		                        "perform": {
-		                            "params": {
-		                                "ar_tags": [
-		                                    "svg"
-		                                ]
-		                            },
-		                            "function": "get_locators_of_tags"
-		                        }
-		                    }
-		                ]
-		            },
-		            "observe_DES": [
-		                {
-		                    "info": "Reverse countermark save",
-		                    "client": {
-		                        "event": "update_value",
-		                        "perform": {
-		                            "function": "refresh"
-		                        }
-		                    },
-		                    "server": {
-		                        "perform": {
-		                            "params": {
-		                                "save": true,
-		                                "changed": false,
-		                                "current_data": false,
-		                                "references_limit": 0
-		                            },
-		                            "function": "set_data_external"
-		                        }
-		                    },
-		                    "component_tipo": "numisdata197"
-		                }
-		            ],
-		            "service_autocomplete": {
-		                "events": [
-		                    {
-		                        "info": "When the user select a value in datalist do not send the value, but perform render_grid_choose",
-		                        "event": "add_value",
-		                        "perform": {
-		                            "params": {
-		                                "mode": "list",
-		                                "view": "tag",
-		                                "request_config_type": "secondary"
-		                            },
-		                            "function": "render_grid_choose"
-		                        }
-		                    }
-		                ]
-		            }
-		        }
-		    },
-		    "show": {
-		        "ddo_map": [
-		            {
-		                "mode": "list",
-		                "tipo": "hierarchy95",
-		                "parent": "test44",
-		                "section_tipo": [
-		                    "sccmk1"
-		                ],
-		                "value_with_parents": false,
-		                "label": "Illustration",
-		                "fixed_mode": true,
-		                "model": "component_svg",
-		                "view": "line",
-		                "column_id": "hierarchy95"
-		            }
-		        ],
-		        "fields_separator": ", ",
-		        "columns": [
-		            [
-		                {
-		                    "mode": "list",
-		                    "tipo": "hierarchy95",
-		                    "parent": "test44",
-		                    "section_tipo": [
-		                        "sccmk1"
-		                    ],
-		                    "value_with_parents": false,
-		                    "label": "Illustration",
-		                    "fixed_mode": true,
-		                    "model": "component_svg",
-		                    "view": "line",
-		                    "column_id": "hierarchy95"
-		                }
-		            ]
-		        ]
-		    },
-		    "sqo": {
-		        "mode": "edit",
-		        "section_tipo": [
-		            "sccmk1"
-		        ],
-		        "filter": {
-		            "$or": []
-		        },
-		        "offset": 0,
-		        "limit": 200,
-		        "full_count": false,
-		        "allow_sub_select_by_id": true,
-		        "children_recursive": true,
-		        "fixed_children_filter": {
-		            "q": {
-		                "type": "dd151",
-		                "section_id": "1",
-		                "section_tipo": "dd64",
-		                "from_component_tipo": "hierarchy24"
-		            },
-		            "path": [
-		                {
-		                    "name": "Usable in indexing",
-		                    "model": "component_radio_button",
-		                    "section_tipo": "hierarchy20",
-		                    "component_tipo": "hierarchy24"
-		                }
-		            ],
-		            "q_operator": null
-		        },
-		        "filter_by_locators": [
-		            {
-		                "section_id": "1",
-		                "section_tipo": "sccmk1"
-		            }
-		        ]
-		    },
-			"sqo_options": {
-				"operator": "$or"
-			}
+			"id": "component_portal_test80_test3_1_edit_lg-nolan_test3_test3_1_test3_1_0.7427921861359996",
+			"action": "read",
+			"source": {
+				"typo": "source",
+				"type": "component",
+				"action": "search",
+				"model": "component_portal",
+				"tipo": "test80",
+				"section_tipo": "test3",
+				"section_id": "1",
+				"mode": "list",
+				"view": "default",
+				"lang": "lg-nolan",
+				"properties": {
+					"source": {
+						"request_config": [
+							{
+								"sqo": {
+									"section_tipo": [
+										{
+											"value": [
+												"test3"
+											],
+											"source": "section"
+										}
+									]
+								},
+								"show": {
+									"ddo_map": [
+										{
+											"info": "component_input_text traducible",
+											"mode": "list",
+											"tipo": "test52",
+											"parent": "self",
+											"section_tipo": "self"
+										}
+									]
+								},
+								"search": {
+									"ddo_map": [
+										{
+											"tipo": "test52",
+											"parent": "self",
+											"section_tipo": "self"
+										}
+									],
+									"sqo_config": {
+										"limit": 30
+									},
+									"fields_separator": ", "
+								}
+							}
+						]
+					}
+				},
+				"config": {
+					"read_only": true
+				}
+			},
+			"show": {
+				"ddo_map": [
+					{
+						"tipo": "test52",
+						"parent": "test80",
+						"section_tipo": [
+							"test3"
+						],
+						"model": "component_input_text",
+						"label": "input_text",
+						"mode": "list",
+						"view": "text",
+						"column_id": "test52"
+					}
+				],
+				"fields_separator": ", ",
+				"columns": [
+					[
+						{
+							"tipo": "test52",
+							"parent": "test80",
+							"section_tipo": [
+								"test3"
+							],
+							"model": "component_input_text",
+							"label": "input_text",
+							"mode": "list",
+							"view": "text",
+							"column_id": "test52"
+						}
+					]
+				]
+			},
+			"sqo": {
+				"mode": "edit",
+				"section_tipo": [
+					"test3"
+				],
+				"filter": {
+					"$and": [
+						{
+							"$or": [
+								{
+									"q": "a",
+									"path": [
+										{
+											"tipo": "test52",
+											"parent": "test80",
+											"section_tipo": "test3",
+											"model": "component_input_text",
+											"label": "input_text",
+											"mode": "list",
+											"component_tipo": "test52"
+										}
+									],
+									"q_split": true
+								}
+							]
+						}
+					]
+				},
+				"offset": 0,
+				"limit": 30,
+				"full_count": false,
+				"allow_sub_select_by_id": true,
+				"skip_projects_filter": true
+			},
+			"prevent_lock": true,
+			"dd_api": "dd_core_api"
 		}
 		');
 
@@ -1567,10 +1448,10 @@ final class dd_api_Test extends BaseTestCase {
 			$first_data = $response->result->data[0];
 
 			$this->assertTrue(
-				$first_data->tipo==='test44',
-				'expected first_data->tipo: test44'
+				$first_data->typo==='sections',
+				'expected first_data->typo: sections'
 			);
-	}//end test_component_portal_test44
+	}//end test_component_portal_autocomplete
 
 
 

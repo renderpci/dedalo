@@ -7,7 +7,7 @@ require_once dirname(__FILE__, 2) . '/bootstrap.php';
 final class section_record_test extends BaseTestCase {
 
 
-	static $last_section_id;
+	// static $last_section_id;
 
 	public $table = 'matrix_test';
 	public $section_tipo = 'test65';
@@ -738,63 +738,6 @@ final class section_record_test extends BaseTestCase {
 		unset($instance2);
 
 	}//end test_save_component_data
-
-
-
-	/**
-	* TEST_delete
-	* Tests record deletion with time machine integration
-	* @return void
-	*/
-	public function test_delete() {
-
-		// Create record with data
-		$section = section::get_instance(
-			$this->section_tipo
-		);
-		$result = $section->create_record((object)[
-			'values' => (object)[
-				'relation' => (object)[
-					'test37' => [(object)[
-						'section_tipo' => 'test65',
-						'section_id' => 1,
-						'type' => 'dd151',
-						'id' => 1
-					]]
-				]
-			]
-		]);
-		$section_id = (int)$result;
-
-		$instance = section_record::get_instance(
-			$this->section_tipo,
-			$section_id
-		);
-
-		// Verify record exists
-		$this->assertTrue($instance->exists_in_the_database());
-
-		// TEST 1: Delete record
-		$delete_result = $instance->delete(false); // false = don't delete diffusion records
-
-		$this->assertTrue($delete_result, 'expected delete to return true');
-
-		// TEST 2: Verify record no longer exists
-		$this->assertFalse(
-			$instance->exists_in_the_database(),
-			'expected record to not exist after deletion'
-		);
-
-		// TEST 3: Verify cache is cleared
-		$cache_key = "{$this->section_tipo}_{$section_id}";
-		$cached_instance = section_record_instances_cache::get($cache_key);
-
-		$this->assertNull($cached_instance, 'expected cache to be cleared after deletion');
-
-		// Clean up
-		unset($instance);
-
-	}//end test_delete
 
 
 

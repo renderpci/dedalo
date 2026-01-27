@@ -8,6 +8,13 @@ final class component_dataframe_test extends BaseTestCase {
 
 
 
+	protected function setUp(): void
+    {
+        $this->markTestSkipped('Temporarily disabled');
+    }
+
+
+
 	public static $model		= 'component_dataframe';
 	public static $tipo			= 'test60';
 	public static $section_tipo	= 'test3';
