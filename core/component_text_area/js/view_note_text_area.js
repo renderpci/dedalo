@@ -57,16 +57,16 @@ view_note_text_area.render = async function(self, options) {
 			e.stopPropagation()
 
 			// validating note creation
-				// created_by_userID: component text area note creation if is already created
-				const created_by_userID	= self.data.created_by_userID
+				// created_by_user_id: component text area note creation if is already created
+				const created_by_user_id = self.data.created_by_user_id
 				// user_id: current logged user
 				const user_id			= page_globals.user_id
 				// tm_user_id: column userID from time machine record
-				const tm_user_id		= parseInt(self.data.tm_user_id)
+				const tm_user_id		= parseInt(self.caller.locator.user_id)
 
 				// If a note does not yet exist, one will be created, but only the user who
 				// made the change will be able to create it.
-				if (!created_by_userID && user_id!==tm_user_id) {
+				if (!created_by_user_id && user_id!==tm_user_id) {
 					alert(get_label.not_allow_to_create_note || 'Cannot create notes of a change that is not yours')
 					console.error('Access prohibited. This note is not yours');
 					return
@@ -230,7 +230,7 @@ view_note_text_area.render = async function(self, options) {
 				// user_name_info. Append user name (change owner) before the component
 					// user_instance: contains the resolved user name (from section record)
 					const section_record	= self.caller
-					const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd543')
+					const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd578')
 					if (user_instance) {
 						// user_name_info
 						const user_name_info = ui.create_dom_element({
@@ -242,9 +242,9 @@ view_note_text_area.render = async function(self, options) {
 						user_name_info.appendChild( user_instance.node.cloneNode(true) )
 					}else{
 						// If refresh_service is false, the section_id is not new and the section_record
-						// must to contains the component 'dd543'
+						// must to contains the component 'dd578'
 						if (!refresh_service) {
-							console.error('Unable to get user instance (dd543) from section_record:', section_record);
+							console.error('Unable to get user instance (dd578) from section_record:', section_record);
 						}
 					}
 
