@@ -36,27 +36,37 @@ class component_check_box extends component_relation_common {
 		// this information is required to get specific tool information
 		if($this->tipo===DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO) {
 
-			$component_tool_simple_object_tipo = tools_register::$simple_tool_obj_component_tipo; // 'dd1353'
-			$model_name = ontology_node::get_model_by_tipo($component_tool_simple_object_tipo, true);
+			$tipo_tool_name = tools_register::$tipo_tool_name;
+			$model_tool_name = ontology_node::get_model_by_tipo($tipo_tool_name, true);
+
+			$tipo_always_active = tools_register::$tipo_always_active;
+			$model_always_active = ontology_node::get_model_by_tipo($tipo_always_active, true);
 
 			$datalist = [];
 			$list = $ar_list_of_values_response->result ?? [];
 			foreach ($list as $key => $item) {
 
-				// create the component of tool_simple_object_tipo and get his data				
-				$component_tool_name = component_common::get_instance(
-					$model_name, // string model
-					$component_tool_simple_object_tipo, // string tipo
-					$item->value->section_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					$item->value->section_tipo // string section_tipo
+				// name
+				$component_tool_name  = component_common::get_instance(
+					$model_tool_name,
+					$tipo_tool_name,
+					$item->value->section_id,
+					'list',
+					$lang,
+					$item->value->section_tipo
 				);
-				$data = $component_tool_name->get_data();
+				$item->tool_name = $component_tool_name->get_data()[0]->value ?? '';
 
-				// add to the datalist the tool name and always_active value from the tool_simple_object
-				$item->tool_name		= $data[0]->value->name ?? '';
-				$item->always_active	= $data[0]->value->always_active ?? false;
+				// always_active
+				$component_always_active  = component_common::get_instance(
+					$model_always_active,
+					$tipo_always_active,
+					$item->value->section_id,
+					'list',
+					$lang,
+					$item->value->section_tipo
+				);
+				$item->always_active = $component_always_active->get_data()[0]->section_id ?? false;
 
 				$datalist[] = $item;
 			}
