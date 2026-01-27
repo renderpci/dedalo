@@ -224,8 +224,9 @@ class tool_import_zotero extends tool_common {
 											// Use existing record
 										}else{
 											// create a new record in list
-											$section_container_list		= section::get_instance(null,$section_tipo_series);
-											$section_id_list			= (int)$section_container_list->Save();
+											$section_container_list	= section::get_instance($section_tipo_series);
+											$section_id_list = $section_container_list->create_record();
+
 											$current_model 				= ontology_node::get_model_by_tipo($series_ddo->tipo,true);
 											$component_series_name		= component_common::get_instance(
 												$current_model ,
@@ -887,7 +888,7 @@ class tool_import_zotero extends tool_common {
 
 		// search the sections that has this title
 		$search		= search::get_instance($sqo);
-		$db_result	= $search->search();		
+		$db_result	= $search->search();
 
 		$section_id = null; // Default
 		if ($db_result->row_count() > 0) {

@@ -254,8 +254,8 @@ final class dd_ts_api {
 			$section_id		= $source->section_id;
 
 		// new section. Create a new empty section
-			$new_section	= section::get_instance(null, $section_tipo);
-			$new_section_id	= $new_section->Save();
+			$new_section = section::get_instance($section_tipo);
+			$new_section_id = $new_section->create_record();
 			if (empty($new_section_id)) {
 				$response->msg = 'Error on create new section from parent. Stopped add_child process !';
 				debug_log(__METHOD__
