@@ -81,7 +81,7 @@ export const common_render = async function(self, options) {
 	// ar_section_record. section_record instances (initialized and built)
 		const ar_section_record	= await get_section_records({
 			caller : self,
-			mode : 'list',
+			mode : 'tm',
 			view : 'line'
 		})
 		// store to allow destroy later
@@ -229,17 +229,6 @@ export const rebuild_columns_map = async function(self) {
 			: [
 				// 'matrix_id' // matrix_id dd1573
 			  ])
-		// map names to tipo (columns already parse id for another uses)
-		// .map(el => {
-		// 	switch (el) {
-		// 		case 'matrix_id'		: return 'dd1573';
-		// 		case 'bulk_process_id'	: return 'dd1371';
-		// 		case 'when'				: return 'dd559';
-		// 		case 'who'				: return 'dd578';
-		// 		case 'where'			: return 'dd577';
-		// 		default					: return el;
-		// 	}
-		// })
 
 	// modify list and labels
 		const base_columns_map_length = base_columns_map.length
@@ -247,7 +236,7 @@ export const rebuild_columns_map = async function(self) {
 			const el = base_columns_map[i]
 
 			// ignore some columns
-				if (ignore_columns.includes(el.tipo)) {
+				if (ignore_columns.includes(el.id)) {
 					continue;
 				}
 
