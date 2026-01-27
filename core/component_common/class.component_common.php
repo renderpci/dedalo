@@ -3052,9 +3052,9 @@ abstract class component_common extends common {
 					case ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
 
 						// his own section
-							$section = $this->get_my_section();
+							$section_record = $this->get_my_section_record();
 
-							$this->permissions = (logged_user_id()===$section->get_created_by_userID())
+							$this->permissions = (logged_user_id()===$section_record->get_created_by_user_id())
 								? 2
 								: 1;
 						break;
