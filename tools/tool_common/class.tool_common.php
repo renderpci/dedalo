@@ -88,20 +88,6 @@ class tool_common {
 		// tool name. Fixed on construct
 			$name = $this->name;
 
-		// component dato simple_tool_obj (dd1353)
-			// $component_tipo			= tools_register::$simple_tool_obj_component_tipo;
-			// $model					= ontology_node::get_model_by_tipo($component_tipo,true);
-			// $simple_tool_component	= component_common::get_instance(
-			// 	$model,
-			// 	$component_tipo,
-			// 	$this->section_id,
-			// 	'list',
-			// 	DEDALO_DATA_NOLAN,
-			// 	$this->section_tipo
-			// );
-			// $simple_tool_obj_data	= $simple_tool_component->get_data();
-			// $tool_object			= $simple_tool_obj_data[0] ?? null;
-
 			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
 
 			// sample tool object
@@ -290,7 +276,7 @@ class tool_common {
 				'name'				=> $name,
 				'label'				=> $tool_label,
 				'developer'			=> $developer,
-				'tipo'				=> tools_register::$simple_tool_obj_component_tipo,
+				'tipo'				=> $tool_object->section_tipo ?? null,
 				'section_tipo'		=> $tool_object->section_tipo ?? 'Unknown',
 				'model'				=> $name,
 				'lang'				=> $lang,
@@ -489,36 +475,18 @@ class tool_common {
 				$section_record = section_record::get_instance($record->section_tipo, $record->section_id);
 				$section_record->set_data( $record );
 
-				// simple tool object 'dd1353'
-				$component_tipo	= 'dd1353'; // component_json
-				$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-				$component		= component_common::get_instance(
-					$model,
-					$component_tipo,
-					$record->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$record->section_tipo
-				);
-				$data = $component->get_data_lang();
-				$current_value = $data[0]->value ?? null;
-				if (empty($current_value)) {
-					debug_log(__METHOD__
-						." Ignored empty dato of  $record->section_tipo - $component_tipo - $record->section_id " . PHP_EOL
-						.' model: ' . to_string($model)
-						, logger::WARNING
-					);
-					continue;
-				}
+				// simple tool object 'dd1353'. Created on the fly.
+				$current_simple_tool_object = tools_register::create_simple_tool_object($record->section_tipo, $record->section_id);
+
 				// append config
-				$current_config	= array_find($ar_config, function($el) use($current_value) {
-					return $el->name===$current_value->name;
+				$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
+					return $el->name===$current_simple_tool_object->name;
 				});
 
 				if(!is_object($current_config)){
 					$ar_config		= tools_register::get_all_default_config_tool_client();
-					$current_config	= array_find($ar_config, function($el) use($current_value) {
-						return is_object($el) && is_object($current_value) && $el->name===$current_value->name;
+					$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
+						return is_object($el) && is_object($current_simple_tool_object) && $el->name===$current_simple_tool_object->name;
 					});
 				}
 
@@ -531,12 +499,12 @@ class tool_common {
 					continue;
 				}
 
-				$current_value->config = is_object($current_config)
+				$current_simple_tool_object->config = is_object($current_config)
 					? $current_config->config
 					: null;
 
 				// append tool object
-				$registered_tools[] = $current_value;
+				$registered_tools[] = $current_simple_tool_object;
 			}//end foreach ($db_result as $record)
 		}
 
