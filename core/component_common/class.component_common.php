@@ -3128,20 +3128,25 @@ abstract class component_common extends common {
 
 		// split multiple (true by default)
 			// (!) Moved split logic to components
-			$current_query_object = $query_object;
+			// Clone always to prevent changes in the original object
+			$current_query_object = clone $query_object;
 
 		// conform each object
 			if (search::is_search_operator($current_query_object)===true) {
 				foreach ($current_query_object as $operator => $ar_elements) {
 					foreach ($ar_elements as $c_query_object) {
 						// update all resolved query objects
-						// Note that object $c_query_object is changed by the component, it not new object,
-						// it's the same object but with the component additions
-						$c_query_object = $called_class::resolve_query_object_sql( $c_query_object );
+						// Note that object $c_query_object is changed by the component, is not a new object,
+						// it's the same object but with the component additions (sentence, params).
+						if(!isset($c_query_object->sentence)) {
+							$c_query_object = $called_class::resolve_query_object_sql( $c_query_object );
+						}
 					}
 				}
 			}else{
-				$current_query_object = $called_class::resolve_query_object_sql( $current_query_object );
+				if(!isset($current_query_object->sentence)) {
+					$current_query_object = $called_class::resolve_query_object_sql( $current_query_object );
+				}
 			}
 
 		// convert to array always
