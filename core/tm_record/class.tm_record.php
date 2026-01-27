@@ -144,6 +144,19 @@ class tm_record {
 
 
 	/**
+	* SAVE
+	* Persist the current data into the database.
+	* DO NOT MODIFY THE TIME MACHINE RECORDS. Use only for updates (!)
+	* @return bool
+	*/
+	public function save() : bool {
+
+		return $this->data_instance->save_data();
+	}//end save
+
+
+
+	/**
 	* CREATE
 	* Inserts a single row into a "matrix_time_machine" table.
 	* @param object $values
