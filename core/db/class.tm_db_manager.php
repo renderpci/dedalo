@@ -18,7 +18,7 @@ class tm_db_manager {
 	public static string $table = 'matrix_time_machine';
 
 	// columns list
-	public static array $columns = [		
+	public static array $columns = [
 		'section_id'		=> true,
 		'section_tipo'		=> true,
 		'tipo'				=> true,
@@ -31,12 +31,12 @@ class tm_db_manager {
 
 	// JSON columns to decode
 	public static array $json_columns = [
-		'data'				=> true		
+		'data'				=> true
 	];
 
 	// int columns to parse
 	public static array $int_columns = [
-		'id'				=> true,		
+		'id'				=> true,
 		'section_id'		=> true,
 		'user_id'			=> true,
 		'bulk_process_id'	=> true

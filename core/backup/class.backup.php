@@ -584,7 +584,7 @@ abstract class backup {
 	* 		'media',
 	* 		'misc',
 	* 		'relation_search',
-	* 		'meta'				
+	* 		'meta'
 	* 	]
 	* @return object $response
 	* {
@@ -684,9 +684,9 @@ abstract class backup {
 			debug_log(__METHOD__." Gunzip response: ".json_encode($command_output), logger::DEBUG);
 
 		// verify uncompressed file exists
-			if (!file_exists($uncompressed_file)) {
-				$response->msg = 'Error. Uncompressed file was not created';
-				$response->errors[] = 'Uncompressed file missing after gunzip';
+			if (!file_exists($uncompressed_file) || filesize($uncompressed_file) == 0) {
+				$response->msg = 'Error. Uncompressed file was not created or is empty';
+				$response->errors[] = 'Uncompressed file missing or empty after gunzip';
 				return $response;
 			}
 

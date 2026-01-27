@@ -219,6 +219,37 @@ abstract class dd_ontology_db_manager {
 			return self::$load_cache[$tipo];
 		}
 
+		// from cache file
+		// @TODO Working progress
+		// $cache_data = dd_cache::cache_from_file((object)[
+		// 	'file_name' => 'cache_ontology.php',
+		// 	'prefix' => ''
+		// ]);
+		// if( isset($cache_data[$tipo]) ) {
+		// 	$row = $cache_data[$tipo]; // raw db data without parse
+		// 	foreach ($row as $key => $value) {
+		// 		if ($value === null) {
+		// 			continue;
+		// 		}
+		// 		// parse values
+		// 		if (isset(dd_ontology_db_manager::$json_columns[$key])) {
+		// 			$row[$key] = json_decode($value, false);
+		// 		} elseif (isset(dd_ontology_db_manager::$int_columns[$key])) {
+		// 			$row[$key] = (int)$value;
+		// 		} elseif (isset(dd_ontology_db_manager::$boolean_columns[$key])) {
+		// 			$row[$key] = ($value === 't' || $value === true || $value === '1');
+		// 		}
+		// 	}
+
+		// 	// metrics
+		// 	$total_time_ms = exec_time_unit($start_time,'ms');
+		// 	metrics::$ontology_total_time += $total_time_ms;
+		// 	metrics::$ontology_total_calls_cached++;
+
+		// 	return $row;
+		// }
+
+
 		$conn = DBi::_getConnection();
 		$table = self::$table;
 

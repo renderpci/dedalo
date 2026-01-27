@@ -267,43 +267,37 @@ abstract class counter {
 			$response->errors	= [];
 			$response->datalist	= [];
 
-		// Find all db tables
-			$sql	= 'SELECT tipo, value FROM matrix_counter ORDER BY tipo ASC';
-			$result = matrix_db_manager::exec_search($sql, []);
-			if ($result===false) {
-				debug_log(__METHOD__
-					. " Error reading counters " . PHP_EOL
-					. to_string()
-					, logger::ERROR
-				);
+		// Find all matrix_counter rows
+		$sql	= 'SELECT tipo, value FROM "matrix_counter" ORDER BY tipo ASC';
+		$result = matrix_db_manager::exec_search($sql, []);
+		if ($result===false) {
+			debug_log(__METHOD__
+				. " Error reading counters " . PHP_EOL
+				. to_string()
+				, logger::ERROR
+			);
 
-				$response->result	= false;
-				$response->errors[] = ' Error reading DB counters. Unable to access table matrix_counter';
+			$response->result	= false;
+			$response->errors[] = ' Error reading DB counters. Unable to access table matrix_counter';
 
-				return $response;
-			}
-
-			// debug
-				debug_log(__METHOD__
-					.' check_counters done ' . PHP_EOL
-					.' SQL: '  . $sql . PHP_EOL
-					.' time: ' . exec_time_unit($start_time,'ms') . ' ms'
-					, logger::DEBUG
-				);
+			return $response;
+		}
 
 		$i=0;
-		while ($rows = pg_fetch_assoc($result)) {
+		while ($row = pg_fetch_assoc($result)) {
 
-			$section_tipo	= $rows['tipo'];
-			$counter_value	= (int)$rows['value'];
+			$section_tipo	= $row['tipo'];
+			$counter_value	= (int)$row['value'];
 
 			// model check
 				$model_name = ontology_node::get_model_by_tipo($section_tipo,true);
 				if ($model_name!=='section') {
-					$msg = " Counter row with tipo: '$section_tipo' is a '$model_name' . Only sections can use counters. Fix ASAP ";
+					$msg = empty($model_name)
+						? "Counter row with tipo: '$section_tipo' is empty model_name. Maybe deleted TLD?"
+						: "Counter row with tipo: '$section_tipo' is a '$model_name' . Only sections can use counters. Fix ASAP";
 					debug_log(__METHOD__
-						. $msg
-						, logger::ERROR
+						. ' ' . $msg
+						, logger::WARNING
 					);
 					$response->errors[] = $msg;
 
@@ -312,15 +306,13 @@ abstract class counter {
 
 			// Find last id of current section
 				$table_name = common::get_matrix_table_from_tipo($section_tipo);
-				$sql2 = 'SELECT section_id 
-					FROM "'.$table_name.'" 
-					WHERE section_tipo = $1 
-					ORDER BY section_id DESC 
-					LIMIT 1 
-				';
-				//
+				$sql2  = 'SELECT section_id' . PHP_EOL;
+				$sql2 .= 'FROM "'.$table_name.'"' . PHP_EOL;
+				$sql2 .= 'WHERE section_tipo = $1' . PHP_EOL;
+				$sql2 .= 'ORDER BY section_id DESC' . PHP_EOL;
+				$sql2 .= 'LIMIT 1';
 				$result2 = matrix_db_manager::exec_search($sql2, [$section_tipo]);
-				$last_section_id	= ($result2 === false)
+				$last_section_id = ($result2 === false)
 					? 0 // Skip empty tables
 					: ((pg_num_rows($result2)===0)
 						? 0 // Skip empty tables
@@ -337,7 +329,7 @@ abstract class counter {
 				$response->datalist[] = $item_info;
 
 			$i++;
-		}//end while ($rows = pg_fetch_assoc($result)) {
+		}//end while ($row = pg_fetch_assoc($result)) {
 
 		// debug
 			$response->debug = (object)[

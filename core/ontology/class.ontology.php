@@ -124,7 +124,7 @@ class ontology {
 			$data = null;
 			if(!empty($tld)){
 				$value = new stdClass();
-					$value->value 	= $tld;
+					$value->value = $tld;
 				$data = [$value];
 			}
 			$tld_component->set_data( $data );
@@ -678,9 +678,9 @@ class ontology {
 			$model 	= ontology_node::get_model_by_tipo( $tipo );
 			$column = section_record_data::get_column_name( $model );
 			$tld_data = [(object)[
-				"id"	=> 1,
-				"lang" 	=> DEDALO_DATA_NOLAN,
-				"value" => $tld
+				'id'	=> 1,
+				'lang' 	=> DEDALO_DATA_NOLAN,
+				'value' => $tld
 			]];
 
 			$section_record->set_component_data($tipo, $column, $tld_data);
@@ -691,9 +691,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 
 			$target_section_tipo_data = [(object)[
-				"id"	=> 1,
-				"lang" 	=> DEDALO_DATA_NOLAN,
-				"value" => $target_section_tipo
+				'id'	=> 1,
+				'lang' 	=> DEDALO_DATA_NOLAN,
+				'value' => $target_section_tipo
 			]];
 
 			$section_record->set_component_data($tipo, $column, $target_section_tipo_data);
@@ -892,9 +892,10 @@ class ontology {
 				$file_data->name_data			= $name_data;
 				$file_data->parent_grouper_tipo	= 'ontologytype14';// don't create parent grouper
 
+			// create the main section (table 'matrix_ontology_main') - equivalent to hierarchy main section
 			ontology::add_main_section( $file_data );
 
-			// create dd_ontology node for the main section
+			// create dd_ontology node for the main section (table 'dd_ontology')
 			ontology::create_dd_ontology_ontology_section_node( $file_data );
 
 		// Check parent
@@ -906,7 +907,7 @@ class ontology {
 			$parent_section_id	= get_section_id_from_tipo( $parent_group );
 			$parent_node_tipo	= $parent_tld.'0';
 
-			// dd_ontology. Check if the parent already exists in dd_ontology
+			// dd_ontology. Check if the parent already exists in 'dd_ontology' table
 				$parent_node = ontology_node::get_instance( $parent_node_tipo );
 				$parent_ontology_row_data = $parent_node->get_data();
 				if( empty($parent_ontology_row_data) ){
@@ -952,12 +953,9 @@ class ontology {
 			$section_tipo = $tld.'0'; // it can be: ontologytype0, hierarchytype0, hierarchymtype0
 
 			if($typology_id === null){
-				$typology_section = section::get_instance(
-					$section_tipo // string section_tipo
-				);
-
+				$typology_section = section::get_instance( $section_tipo );
 				// create the record in matrix_ontology table.
-					$typology_id = $typology_section->create_record();
+				$typology_id = $typology_section->create_record();
 			}
 
 			$section_record = section_record::get_instance( $section_tipo, $typology_id);
@@ -1001,7 +999,6 @@ class ontology {
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
 
-
 		// Translatable (= No, by default)
 			$tipo 	= DEDALO_ONTOLOGY_TRANSLATABLE_TIPO;
 			$model 	= ontology_node::get_model_by_tipo( $tipo );
@@ -1014,7 +1011,6 @@ class ontology {
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
-
 
 		// Is model (= No, by default)
 			$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
@@ -1034,9 +1030,9 @@ class ontology {
 			$model 	= ontology_node::get_model_by_tipo( $tipo );
 			$column = section_record_data::get_column_name( $model );
 			$tld_data = [(object)[
-				"id"	=> 1,
-				"lang" 	=> DEDALO_DATA_NOLAN,
-				"value" => $tld
+				'id'	=> 1,
+				'lang' 	=> DEDALO_DATA_NOLAN,
+				'value' => $tld
 			]];
 
 			$section_record->set_component_data($tipo, $column, $tld_data);
@@ -1059,7 +1055,6 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 
 			$section_record->set_component_data($tipo, $column, $typology_term_full_data);
-
 
 		// parent
 			$tipo 	= DEDALO_ONTOLOGY_PARENT_TIPO;

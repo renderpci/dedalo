@@ -20,7 +20,7 @@ class ontology_node {
 	// tipo use the TLD and one unique id for this TLD as oh1
 	// oh = TLD, top level domain, to identify the name space of the ontology, oh = Oral History
 	// 1 = unique and sequential id.
-	public $tipo; // string
+	public string $tipo; // string
 
 	// data
 	// An object with the all properties of the ontology node
@@ -42,11 +42,11 @@ class ontology_node {
 
 	// is_loaded_data
 	// A boolean property to identify if the node was loaded from database
-	protected $is_loaded_data = false;
+	protected bool $is_loaded_data = false;
 
 	// ar_recursive_children_of_this
 	// cache for expensive calculation of recursive children.
-	protected $ar_recursive_children_of_this = [];
+	protected array $ar_recursive_children_of_this = [];
 
 	// default table
 	// Table used for storage the ontology nodes
