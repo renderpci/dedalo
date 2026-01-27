@@ -104,10 +104,10 @@ class ontology {
 		$section_id = (int)get_section_id_from_tipo( $node_tipo );
 
 		// Section, create new section
-			$section = section_record::create(
-				$target_section_tipo,
-				$section_id
-			);
+		$section = section::get_instance($target_section_tipo);
+		$section->create_record((object)[
+			'section_id' => $section_id // force creation with specific section_id
+		]);
 
 		// tld
 			$tld_tipo		= 'ontology7';
