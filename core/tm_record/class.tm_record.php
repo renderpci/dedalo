@@ -442,6 +442,13 @@ class tm_record {
 				[$user_locator], 
 				$section_record 
 			);
+			//include the dd200 node also to be compatble with other section records
+			// it will be used for component_text_area to know the user who created the section record
+			$this->set_section_record_factory(
+				DEDALO_SECTION_INFO_CREATED_BY_USER,
+				[$user_locator], 
+				$section_record 
+			);
 
 		// Annotation
 			// Remark about the change made. This is used to provide context for the change and can be useful in auditing purposes. It's not mandatory.
@@ -471,9 +478,17 @@ class tm_record {
 				$db_result = $search->search();
 
 				$note_section_id = $db_result->fetch_one()->section_id ?? null;
+
 			// 2. Create the component and get its data
 			// the data will used as (injected into) the component data of the time_machine annotation component.
-
+			
+			// Empty data as default
+			// this data is needed because the note text_area will use to get the text_area data and
+			// parent_section_id and parent_section_tipo to build the target section.
+			// @see: component_text_area_json.php
+			$note_value = [
+				(object)[]
+			];
 			if($note_section_id) {
 				$note_model			= ontology_node::get_model_by_tipo( 'rsc329', true );
 				$current_component	= component_common::get_instance(
@@ -482,17 +497,25 @@ class tm_record {
 					$note_section_id,
 					'tm', // use tm mode to preserve service_time_machine coherence
 					$ddo->lang ?? DEDALO_DATA_LANG,
-					$sqo->section_tipo
+					DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO
 				);
-
-				$note_value = $current_component->get_data();				
-
-				$this->set_section_record_factory(
-					'dd732',
-					$note_value, 
-					$section_record 
-				);
+				// if get_data returns null, use empty data as default
+				$note_value = $current_component->get_data() ?? $note_value;
 			}
+			
+			// inject parent_section_id and parent_section_tipo
+			// it will use to build the target section in client side
+			// @see: component_text_area_json.php
+			$note_value[0]->parent_section_id = $note_section_id;				
+			$note_value[0]->parent_section_tipo = DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO;				
+
+			$this->set_section_record_factory(
+				'rsc329',
+				$note_value, 
+				$section_record 
+			);
+
+			
 
 		// Bulk process id
 			// Process id for the bulk process. This is used to track and manage multiple changes together. It is used to identify the changes in a bulk operation.
