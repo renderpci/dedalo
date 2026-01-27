@@ -65,7 +65,7 @@ class tm_record {
 		if( isset($this->data_instance) ){
 			$this->data_instance->__destruct();
 		}
-		
+
 	}//end __destruct
 
 
@@ -121,7 +121,7 @@ class tm_record {
 		$tm_data = $this->get_data();
 
 		$element_data = $tm_data->data;
-		
+
 		return $element_data;
 	}//end get_element_data
 
@@ -179,7 +179,7 @@ class tm_record {
 					. ' values: ' . json_encode($values, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
-				return false;			
+				return false;
 			}
 		}
 
@@ -192,21 +192,21 @@ class tm_record {
 				$tm_values->section_id 		= $values->section_id; // string|int section_id (component parent)
 				$tm_values->section_tipo 	= $values->section_tipo; // string section_tipo
 				$tm_values->tipo 			= $values->tipo; // string $tipo (component_tipo)
-				$tm_values->lang			= $values->lang; // string $lang			
-				
+				$tm_values->lang			= $values->lang; // string $lang
+
 			// Set the limit to 1
 			// When the search give 1 record stop the search because time machine has previous data
 			$limit = 1;
 
-			$db_result = tm_record::search( $tm_values, $limit ); 
-		 
+			$db_result = tm_record::search( $tm_values, $limit );
+
 			// empty records or not data match, mints that previous data exists in component but not in time_machine.
 			// To fix this, save before the previous data and later the new data
 			if ($db_result->row_count() < 1) {
 
 				// Create a new record with the previous data
 				$new_values = clone($values);
-					// set a previous timestamp to save in db. This will make sure that we have not use the same timestamp of the changed data. 
+					// set a previous timestamp to save in db. This will make sure that we have not use the same timestamp of the changed data.
 					$new_values->timestamp = dd_date::get_timestamp_now_for_db( ['sub' => 'PT1M'] ); // now minus 1 minute.
 					// use previous data as to-save data
 					$new_values->data = $previous_data;
@@ -225,7 +225,7 @@ class tm_record {
 						. " Error creating new record: "
 						.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
 						, logger::ERROR
-					);								
+					);
 					return false;
 				}
 				debug_log(__METHOD__
@@ -235,7 +235,7 @@ class tm_record {
 				);
 			}
 		}//end if (!empty($previous_data))
-		
+
 
 		$id = tm_db_manager::create(
 			$values
@@ -251,22 +251,6 @@ class tm_record {
 		return $tm_record;
 	}//end create
 
-
-	/**
-	* DELETE
-	* Delete the record from the database and destroy the instance
-	* @return bool $result
-	*/
-	public function delete() : bool {
-
-		$result = $this->data_instance->delete();
-		unset($this->data_instance);
-	
-		$this->__destruct();
-		
-		return $result;
-	}//end delete
-	
 
 
 	/**
@@ -327,8 +311,8 @@ class tm_record {
 
 		// wrap result in db_result iterator
 		$db_result = new db_result($result, $json_columns);
-		
-		
+
+
 		return $db_result;
 	}//end search
 
@@ -369,15 +353,15 @@ class tm_record {
 		$section_id 		= $tm_data->section_id;
 		$section_tipo 		= $tm_data->section_tipo;
 		$tipo				= $tm_data->tipo;
-		$lang				= $tm_data->lang;	
+		$lang				= $tm_data->lang;
 		$timestamp			= $tm_data->timestamp;
 		$user_id			= $tm_data->user_id;
 		$bulk_process_id	= $tm_data->bulk_process_id;
 		$data				= $tm_data->data;
 
-		$section_record = section_record::get_instance( 'dd15', $id);
+		$section_record = section_record::get_instance('dd15', $id);
 
-		// section_id 
+		// section_id
 			// the section_id that store the time machine data
 			// dd1212 - component_number
 			$id_data = new stdClass();
@@ -386,12 +370,12 @@ class tm_record {
 
 			$this->set_section_record_factory(
 				'dd1212',
-				[$id_data], 
-				$section_record 
-			);		
+				[$id_data],
+				$section_record
+			);
 
 		// When.
-			// The time of the record was created in Time Machine. 
+			// The time of the record was created in Time Machine.
 			// dd559 - component_date
 			$date = dd_date::get_dd_date_from_timestamp( $timestamp );
 			$date_value = new stdClass();
@@ -400,8 +384,8 @@ class tm_record {
 
 			$this->set_section_record_factory(
 				'dd559',
-				[$date_value], 
-				$section_record 
+				[$date_value],
+				$section_record
 			);
 
 		// Where
@@ -422,8 +406,8 @@ class tm_record {
 
 			$this->set_section_record_factory(
 				'dd577',
-				[$where_value], 
-				$section_record 
+				[$where_value],
+				$section_record
 			);
 
 
@@ -439,15 +423,15 @@ class tm_record {
 
 			$this->set_section_record_factory(
 				'dd578',
-				[$user_locator], 
-				$section_record 
+				[$user_locator],
+				$section_record
 			);
 
 		// Annotation
 			// Remark about the change made. This is used to provide context for the change and can be useful in auditing purposes. It's not mandatory.
 			// Resolve the the annotation as string and inject into the component.
 			// dd732 -  component_text_area
-			
+
 			// 1. search notes with current matrix_id
 				$sqo = new search_query_object();
 					$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
@@ -485,12 +469,12 @@ class tm_record {
 					$sqo->section_tipo
 				);
 
-				$note_value = $current_component->get_data();				
+				$note_value = $current_component->get_data();
 
 				$this->set_section_record_factory(
 					'dd732',
-					$note_value, 
-					$section_record 
+					$note_value,
+					$section_record
 				);
 			}
 
@@ -503,15 +487,14 @@ class tm_record {
 
 			$this->set_section_record_factory(
 				'dd1371',
-				[$bulk_process_id_value], 
-				$section_record 
+				[$bulk_process_id_value],
+				$section_record
 			);
 
-		
 		// Data
 			$source_model = ontology_node::get_model_by_tipo($tipo,true);
-			if($source_model==='section'){		
-				
+			if($source_model==='section'){
+
 				foreach ($data as $column => $components) {
 					if($column === 'data' || empty($components)){
 						continue;
@@ -520,9 +503,9 @@ class tm_record {
 						$section_record->set_component_data( $compnonent_tipo, $column, $component_data );
 					}
 				}
-				
+
 			}else{
-				
+
 				$this->set_section_record_factory(
 					$tipo,
 					$data, 

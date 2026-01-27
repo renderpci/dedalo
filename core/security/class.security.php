@@ -94,15 +94,6 @@ class security {
 				}
 			}
 
-		// cache
-			// $use_cache = false;
-			// if ($use_cache===true) {
-			// 	$cache_uid = $parent_tipo . '_' . $tipo;
-			// 	if (isset($_SESSION['dedalo']['auth']['permissions'][$cache_uid])) {
-			// 		return $_SESSION['dedalo']['auth']['permissions'][$cache_uid];
-			// 	}
-			// }
-
 		// logged root user id
 			$user_id = logged_user_id();
 			if ((int)$user_id===DEDALO_SUPERUSER) {
@@ -155,11 +146,6 @@ class security {
 					}
 				}
 			}
-
-		// cache
-			// if ($use_cache===true) {
-			// 	$_SESSION['dedalo']['auth']['permissions'][$cache_uid] = (int)$permissions;
-			// }
 
 		// debug
 			if(SHOW_DEBUG===true) {

@@ -860,6 +860,12 @@ class login extends common {
 						'file_name'		=> $cache_file_name,
 						'wait'			=> false
 					]);
+
+					// cache ontology
+					// @TODO Working progress
+					// ontology::build_cache_file();
+					// register_shutdown_function(['ontology','build_cache_file']);
+
 				} catch (Exception $e) {
 					debug_log(__METHOD__." $e ", logger::CRITICAL);
 				}

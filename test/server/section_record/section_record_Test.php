@@ -71,7 +71,7 @@ final class section_record_test extends BaseTestCase {
 		$instance = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);		
+		);
 
 		// the instance is an object
 		$eq = gettype($instance) === 'object';
@@ -155,8 +155,8 @@ final class section_record_test extends BaseTestCase {
 		$instance = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);	
-		
+		);
+
 		$data = $instance->get_data();
 
 		// the data is an object
@@ -204,7 +204,7 @@ final class section_record_test extends BaseTestCase {
 		);
 
 
-		// 2 - Change data 
+		// 2 - Change data
 		$instance->set_component_data('test37', 'relation', [
 			(object)[
 				'section_tipo' => 'test65',
@@ -250,12 +250,12 @@ final class section_record_test extends BaseTestCase {
 			]
 		]);
 		$section_id = (int)$result;
-		
+
 		// get data
 		$instance = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);		
+		);
 		$data = $instance->get_data();
 
 		// change data
@@ -268,7 +268,7 @@ final class section_record_test extends BaseTestCase {
 			]
 		]);
 
-		$data = $instance->get_data();		
+		$data = $instance->get_data();
 
 		// save
 		$result = $instance->save();
@@ -296,7 +296,7 @@ final class section_record_test extends BaseTestCase {
 		$instance2 = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);		
+		);
 		$data2 = $instance2->get_data();
 
 		// check data value after the change
@@ -337,12 +337,12 @@ final class section_record_test extends BaseTestCase {
 			]
 		]);
 		$section_id = (int)$result;
-		
+
 		// get data
 		$instance = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);		
+		);
 		$data = $instance->get_data();
 
 		// save column
@@ -379,7 +379,7 @@ final class section_record_test extends BaseTestCase {
 		$instance2 = section_record::get_instance(
 			$this->section_tipo,
 			$section_id
-		);		
+		);
 		$data2 = $instance2->get_data();
 
 		// check data value after the change
@@ -978,7 +978,7 @@ final class section_record_test extends BaseTestCase {
 			]
 		]);
 		$section_id = (int)$result;
-		
+
 		// Get instance
 		$instance = section_record::get_instance(
 			$this->section_tipo,
@@ -993,7 +993,7 @@ final class section_record_test extends BaseTestCase {
 				'key' => 'test37'
 			]
 		];
-		
+
 		// First set the data in memory
 		$instance->set_component_data('test37', 'relation', [
 			(object)[

@@ -124,28 +124,30 @@ trait where {
 		$operator	= array_key_first(get_object_vars($this->sqo->filter));
 		$ar_value	= $this->sqo->filter->{$operator};
 
-		if(!empty($ar_value)) {
-
-			// Duplicated caller
-			// if the skip duplicated control is in true
-			// the caller is inside of the component with duplicated search operator(!!)
-			// the call is inside the parse_search_object_sql() of the component
-			// it need the filter of other components to be applied into the duplicated search
-			// but it can't include itself in the filter, so, here remove all duplicated search components
-			// it ensure that other search will applied to get the duplicates.
-			if( isset($this->sqo->skip_duplicated) && $this->sqo->skip_duplicated === true ){
-				$ar_value = array_filter($ar_value, function($item){
-					$duplicated = $item->duplicated ?? false;
-					return $duplicated===false;
-				});
-				// remove the key of the array (added by the array filter)
-				$ar_value = array_values($ar_value);
-				// reset the skip control for the next calls.
-				$this->skip_duplicated = false;
-			}
-
-			$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);
+		if(empty($ar_value)) {
+			return;
 		}
+
+		// Duplicated caller
+		// if the skip duplicated control is in true
+		// the caller is inside of the component with duplicated search operator(!!)
+		// the call is inside the parse_search_object_sql() of the component
+		// it need the filter of other components to be applied into the duplicated search
+		// but it can't include itself in the filter, so, here remove all duplicated search components
+		// it ensure that other search will applied to get the duplicates.
+		if( isset($this->sqo->skip_duplicated) && $this->sqo->skip_duplicated === true ){
+			$ar_value = array_filter($ar_value, function($item){
+				$duplicated = $item->duplicated ?? false;
+				return $duplicated===false;
+			});
+			// remove the key of the array (added by the array filter)
+			$ar_value = array_values($ar_value);
+			// reset the skip control for the next calls.
+			$this->skip_duplicated = false;
+		}
+
+		// filter_parser
+		$this->sql_obj->where[] = $this->filter_parser($operator, $ar_value);
 	}//end build_sql_filter
 
 
@@ -612,7 +614,8 @@ trait where {
 			);
 			return false;
 		}
-		$table_alias    = $query_object->table_alias;
+
+		$table_alias = $query_object->table_alias;
 
 		$query_object->params = [
 			'_Q1_' => $q

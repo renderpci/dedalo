@@ -37,9 +37,9 @@ trait search_component_section_id {
     * EXTRACT_NORMALIZED_SECTION_ID_Q
     */
     protected static function extract_normalized_section_id_q(object $query_object) : string|false {
-        
-        $q_raw = isset($query_object->q) && is_array($query_object->q) 
-            ? reset($query_object->q) 
+
+        $q_raw = isset($query_object->q) && is_array($query_object->q)
+            ? reset($query_object->q)
             : ($query_object->q ?? null);
 
         // if q is a locator, get the section_id as int
@@ -67,19 +67,19 @@ trait search_component_section_id {
     * GET_SECTION_ID_SEARCH_CONTEXT
     */
     protected static function get_section_id_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
         }
 
         $column = section_record_data::get_column_name(get_called_class());
-        
+
         $ctx = new stdClass();
         $ctx->column         = $column;
         $ctx->table_alias    = $query_object->table_alias;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
         // Set fixed values on query_object
         $query_object->type           = 'number';
         $query_object->unaccent       = false;
@@ -137,7 +137,7 @@ trait search_component_section_id {
 	* What it returns: Records whose section_id falls within the specified numeric range.
     */
     protected static function resolve_section_id_between_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         $between_separator = '...';
         $ar_parts          = explode($between_separator, $q);
         $first_val         = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
@@ -167,7 +167,7 @@ trait search_component_section_id {
 	* What it returns: Records whose section_id matches any of the IDs provided in the comma-separated list.
     */
     protected static function resolve_section_id_sequence_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         $sequence_separator = ',';
         $ar_parts           = explode($sequence_separator, $q);
         $q_clean            = array_map(function($el){
@@ -190,7 +190,7 @@ trait search_component_section_id {
 	* What it returns: All records except the one with the specified section_id.
     */
     protected static function resolve_section_id_different_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
@@ -210,7 +210,7 @@ trait search_component_section_id {
 	* What it returns: Records with section_id equal to or higher than X.
     */
     protected static function resolve_section_id_bigger_or_equal_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
@@ -230,7 +230,7 @@ trait search_component_section_id {
 	* What it returns: Records with section_id equal to or lower than X.
     */
     protected static function resolve_section_id_smaller_or_equal_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
@@ -250,9 +250,9 @@ trait search_component_section_id {
 	* What it returns: Records with section_id strictly higher than X.
     */
     protected static function resolve_section_id_bigger_than_sql(object $query_object, string $q, object $ctx) : object {
-        
-        // remove non valid characters. Accepted: 0-9	
-		$q_clean = preg_replace('/[^0-9]/', '', $q);  
+
+        // remove non valid characters. Accepted: 0-9
+		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer > _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -270,9 +270,9 @@ trait search_component_section_id {
 	* What it returns: Records with section_id strictly lower than X.
     */
     protected static function resolve_section_id_smaller_than_sql(object $query_object, string $q, object $ctx) : object {
-        
-		// remove non valid characters. Accepted: 0-9	
-		$q_clean = preg_replace('/[^0-9]/', '', $q);  
+
+		// remove non valid characters. Accepted: 0-9
+		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer < _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -290,9 +290,9 @@ trait search_component_section_id {
 	* What it returns: The specific record matching the provided section_id.
     */
     protected static function resolve_section_id_equal_sql(object $query_object, string $q, object $ctx) : object {
-        
-		// remove non valid characters. Accepted: 0-9	
-		$q_clean = preg_replace('/[^0-9]/', '', $q);		
+
+		// remove non valid characters. Accepted: 0-9
+		$q_clean = preg_replace('/[^0-9]/', '', $q);
 
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer = _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];

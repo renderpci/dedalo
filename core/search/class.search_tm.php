@@ -73,7 +73,7 @@ class search_tm extends search {
 		}
 
 		$ar_sql_select = [];
-		
+
 		// Add all columns
 		$ar_sql_select[] = '*';
 

@@ -29,7 +29,7 @@ class component_check_box extends component_relation_common {
 	public function get_datalist( ?string $lang=DEDALO_DATA_LANG ) : array {
 
 		// Execute get_ar_list_of_values
-		$ar_list_of_values_response = component_common::get_ar_list_of_values($lang, false);		
+		$ar_list_of_values_response = component_common::get_ar_list_of_values($lang, false);
 
 		// Add tool information when the component is component_security_tools (dd1353)
 		// the component_security_tools is built as component_check_box and rendered as 'view_tools'
@@ -59,12 +59,12 @@ class component_check_box extends component_relation_common {
 				$item->always_active	= $data[0]->value->always_active ?? false;
 
 				$datalist[] = $item;
-			}			
-		
+			}
+
 		}else{
-			
+
 			$datalist = $ar_list_of_values_response->result;
-		}		
+		}
 
 
 		return $datalist;

@@ -32,7 +32,7 @@ class component_select_lang extends component_relation_common {
 		if (empty($locator)) {
 			return null;
 		}
-		
+
 		// code resolution
 		$code = lang::get_code_from_locator($locator);
 
