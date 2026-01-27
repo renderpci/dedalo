@@ -254,13 +254,19 @@ class area_graph extends area_common {
 			);
 			$value = $component->get_valor($lang);
 
-		$typology_name = empty($value)
-			? $component->extract_component_value_fallback()
-			: $value;
+			if(empty($value)) {
+				$value = $model_name::get_value_with_fallback_from_data(
+					$component->get_data(),
+					false,
+					$lang
+				);
+			}
 
-		if (empty($typology_name)) {
-			$typology_name = 'Typology untranslated ' . $tipo .' '. $parent;
-		}
+			$typology_name = $value;
+
+			if (empty($typology_name)) {
+				$typology_name = 'Typology untranslated ' . $tipo .' '. $parent;
+			}
 
 		// cache. Store for speed
 		$typology_names[$typology_section_id] = $typology_name;
@@ -340,12 +346,18 @@ class area_graph extends area_common {
 				$lang,
 				$section_tipo
 			);
-			$value = $component->get_valor($lang);
+			$value = $component->get_value();
 
-		// hierarchy name
-			$hierarchy_name = empty($value)
-				? $component->extract_component_value_fallback()
-				: $value;
+			// hierarchy name
+			if(empty($value)) {
+				$value = $model_name::get_value_with_fallback_from_data(
+					$component->get_data(),
+					false,
+					$lang
+				);
+			}
+
+			$hierarchy_name = $value;
 
 			if (empty($hierarchy_name)) {
 				$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $section_id;

@@ -886,10 +886,10 @@ class component_relation_common extends component_common {
 					$locator->section_tipo
 				);
 
-				$current_value = $current_component->extract_component_value_fallback(
-					$lang, // string lang
-					true, // bool mark
-					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				$current_value = $model_name::get_value_with_fallback_from_data(
+					$current_component->get_data(),
+					false,
+					$lang
 				);
 
 				$value[] = $current_value;
