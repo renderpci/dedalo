@@ -114,53 +114,6 @@ final class tool_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_tool_simple_context
-	* @return void
-	*/
-	public function test_create_tool_simple_context() {
-
-		$section_id		= 1;
-		$section_tipo	= 'dd1324'; // Registerd tools section
-
-		$component_tipo			= tools_register::$simple_tool_obj_component_tipo;
-		$model					= ontology_node::get_model_by_tipo($component_tipo,true);
-		$simple_tool_component	= component_common::get_instance(
-			$model,
-			$component_tipo,
-			$section_id,
-			'list',
-			DEDALO_DATA_NOLAN,
-			$section_tipo
-		);
-		$simple_tool_obj_data	= $simple_tool_component->get_data();
-		$tool_object			= $simple_tool_obj_data[0]->value ?? null;
-
-		if ($tool_object === null) {
-			$this->markTestSkipped('No tool object found');
-			return;
-		}
-
-		$tool_simple_context = tool_common::create_tool_simple_context(
-			$tool_object
-		);
-
-		$this->assertTrue(
-			gettype($tool_simple_context)==='object',
-			'expected type is object'
-				.' and is : '.gettype($tool_simple_context)
-		);
-
-		$this->assertTrue(
-			$tool_simple_context->typo==='ddo',
-			'expected typo is ddo'
-				.' and is : '.$tool_simple_context->typo
-		);
-
-	}//end test_create_tool_simple_context
-
-
-
-	/**
 	* TEST_GET_ALL_REGISTERED_TOOLS
 	* @return void
 	*/
