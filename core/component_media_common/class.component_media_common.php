@@ -2624,7 +2624,7 @@ class component_media_common extends component_common {
 		// default check default quality
 			$default_quality	= $this->get_default_quality();
 			$file_path			= $this->get_media_filepath($default_quality);
-			if (!file_exists($file_path)) {
+			if (!file_exists($file_path) || $this->quality===$this->get_modified_quality()) {
 				$this->build_version($default_quality);
 			}
 
