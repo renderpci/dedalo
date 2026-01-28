@@ -4470,7 +4470,7 @@ abstract class common {
 				//'component_relation_parent',
 				//'component_relation_index',
 				//'component_relation_struct',
-				'component_geolocation',
+				// 'component_geolocation',
 				'component_info',
 				'component_state',
 				'component_semantic_node',

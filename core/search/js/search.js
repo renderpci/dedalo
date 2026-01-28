@@ -143,7 +143,7 @@ search.prototype.init = async function(options) {
 			'component_av',
 			'component_pdf',
 			'component_security_administrator',
-			'component_geolocation',
+			// 'component_geolocation',
 			'component_info',
 			'component_state',
 			'component_semantic_node',
