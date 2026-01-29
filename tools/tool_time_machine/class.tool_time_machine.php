@@ -83,7 +83,7 @@ class tool_time_machine extends tool_common {
 								// add to response
 								$response->restore_deleted_section_media_files = $restored_result;
 
-							// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+							// LOGGER ACTIVITY : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)
 								$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 								logger::$obj['activity']->log_message(
 									'RECOVER SECTION',
@@ -115,7 +115,7 @@ class tool_time_machine extends tool_common {
 							$model,
 							$tipo,
 							$section_id,
-							'list', // the component always in list because the edit could fire a save with the dato_default
+							'list', // the component always in list because the edit could fire a save with the data_default
 							$lang,
 							$section_tipo,
 							false
@@ -288,9 +288,9 @@ class tool_time_machine extends tool_common {
 			$model						= ontology_node::get_model_by_tipo($tipo,true);
 
 		// get all changes saved in time_machine with the same bulk_process_id
-			$sql = "SELECT * FROM \"matrix_time_machine\" WHERE bulk_process_id = $1 ORDER BY id DESC";
-			$result = matrix_db_manager::exec_search($sql, [$bulk_process_id]);
-			if($result===false) {
+			$search_values = (object)['bulk_process_id' => $bulk_process_id];
+			$db_result = tm_record::search($search_values, 0, 0, 'id DESC');
+			if($db_result===false) {
 				$response->msg = "Failed Search bulk_process_id $bulk_process_id. Data is not found.";
 				debug_log(__METHOD__
 					." ERROR: $response->msg "
@@ -298,9 +298,8 @@ class tool_time_machine extends tool_common {
 				);
 				return $response ;
 			}
-			$n_rows = pg_num_rows($result);
 
-			if ($n_rows<1) {
+			if ($db_result->row_count() < 1) {
 				$response->errors[] = 'empty result from matrix_time_machine search';
 				return $response;
 			}
@@ -310,13 +309,11 @@ class tool_time_machine extends tool_common {
 			// PROCESS
 			// create new process section
 				$process_section = section::get_instance(
-					null, // string|null section_id
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$process_section->Save();
 
-			// get the bulk_process_id as the section_id of the section process
-				$new_bulk_process_id = $process_section->get_section_id();
+			// get the bulk_process_id as the section_id of the section record
+				$new_bulk_process_id = $process_section->create_record();
 
 			// Save the process name into the process section
 				$process_label_component = component_common::get_instance(
@@ -327,40 +324,39 @@ class tool_time_machine extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$process_label_component->set_dato($bulk_revert_process_label);
-				$process_label_component->Save();
+				$data_to_save = (object)['value' => $bulk_revert_process_label, 'lang' => DEDALO_DATA_NOLAN];
+				$process_label_component->set_data([$data_to_save]);
+				$process_label_component->save();
 
 		// 2. revert the values in time machine
 
-			while($row = pg_fetch_assoc($result)) {
+			foreach($db_result as $row) {
 
-				$tipo			= $row['tipo'];
-				$section_tipo	= $row['section_tipo'];
-				$section_id		= $row['section_id'];
+				$tipo			= $row->tipo;
+				$section_tipo	= $row->section_tipo;
+				$section_id		= $row->section_id;
+
 				// search all changes of the component
-				$sql = "
-					SELECT * FROM \"matrix_time_machine\"
-					WHERE 
-						tipo = $1 AND
-						section_tipo = $2 AND
-						section_id = $3
-					ORDER BY id DESC
-				";
-				$sub_result = matrix_db_manager::exec_search($sql, [$tipo, $section_tipo, $section_id]);
+				$sub_values = (object)[
+					'tipo'			=> $tipo,
+					'section_tipo'	=> $section_tipo,
+					'section_id'	=> $section_id
+				];
+				$sub_db_result = tm_record::search($sub_values, 0, 0, 'id DESC');
+
 				// get the total changes,
 				// if the component has only 1 change, it will be the bulk change
 				// in those cases the data to save into the component will be a empty array
-				$sub_n_rows = pg_num_rows($sub_result);
+				$sub_n_rows = $sub_db_result->row_count();
 
 				// next row is the data to be reverted.
 				$reverted_next = false;
-				while($current_row = pg_fetch_assoc($sub_result)) {
+				foreach($sub_db_result as $current_row) {
+
 					// get the bulk_process_id to be checked with the global proces_id
 					// loop the component data saved in tm one of this has the bulk_process_id to revert
-					$current_bulk_process_id	= (int)$current_row['bulk_process_id'];
-					$time_machine_data			= $current_row['dato'] === 'null'
-						? null
-						: $current_row['dato'];
+					$current_bulk_process_id	= (int)$current_row->bulk_process_id;
+					$time_machine_data			= $current_row->data;
 
 					// if the time_machine doesn't has any other register than the bulk_process_id change
 					// the change is a null data because the component has only 1 change and previous change is empty value.
@@ -388,7 +384,7 @@ class tool_time_machine extends tool_common {
 							$model,
 							$tipo,
 							$section_id,
-							'list', // the component always in list because the edit could fire a save with the dato_default
+							'list', // the component always in list because the edit could fire a save with the data_default
 							$lang,
 							$section_tipo,
 							false
@@ -399,10 +395,10 @@ class tool_time_machine extends tool_common {
 						$element->set_bulk_process_id($new_bulk_process_id);
 
 					// Set data overwrites the data of the current element
-						$element->set_dato($time_machine_data);
+						$element->set_data($time_machine_data);
 
 					// Save the component with a new updated data from time machine
-						$saved_id = $element->Save();
+						$saved_id = $element->save();
 						if ($saved_id===false) {
 							$response->errors[] = 'failed element save';
 						}
@@ -420,14 +416,14 @@ class tool_time_machine extends tool_common {
 								'section_id'	=> $section_id,
 								'section_tipo'	=> $section_tipo,
 								'table'			=> $matrix_table,
-								'tm_id'			=> $current_row['id']
+								'tm_id'			=> $current_row->id
 							],
 							logged_user_id() // int
 						);
 
 					break;
 				}
-			}// end while
+			}// end foreach
 
 		// response OK
 			$response->result	= true;
