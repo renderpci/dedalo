@@ -366,11 +366,8 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			parent			: automatic_translation_container
 		})
 
-		// const button_automatic_translation = document.createElement('button');
-		// 	  button_automatic_translation.type = 'button'
-		// 	  button_automatic_translation.textContent = get_label['automatic_translation'] || "Automatic translation"
-		// 	  automatic_translation_container.appendChild(button_automatic_translation)
-		button_automatic_translation.addEventListener('click', () => {
+		const click_handler = (e) => {
+			e.stopPropagation()
 
 			components_container.classList.add('loading')
 
@@ -382,7 +379,8 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			.then(()=>{
 				components_container.classList.remove('loading')
 			})
-		})
+		}
+		button_automatic_translation.addEventListener('click', click_handler)
 
 	// select
 		self.translator_engine_select = ui.create_dom_element({
@@ -403,12 +401,13 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				option.selected = true
 			}
 		}
-		self.translator_engine_select.addEventListener('change', function(){
+		const change_handler = (e) => {
 			data_manager.set_local_db_data({
 				id		: 'translator_engine_select',
 				value	: self.translator_engine_select.value
 			}, 'status')
-		})
+		}
+		self.translator_engine_select.addEventListener('change', change_handler)
 
 
 	return automatic_translation_container
@@ -433,15 +432,6 @@ export const change_component_lang = async (options) => {
 		const component	= options.component
 		const lang		= options.lang
 
-	// check if source component or target component has the lang selected to lock the component edition
-	// if not release read_only property
-		// if (lang===self.main_element.lang || lang===self.target_component.lang) {
-		// 	// node.classList.add('disabled_component')
-		// 	component.show_interface.read_only = true
-		// }else{
-		// 	component.show_interface.read_only = false
-		// }
-
 	// id_variant: tool_lang / target_component
 		const is_main = component.id_variant==='tool_lang'
 
@@ -454,7 +444,7 @@ export const change_component_lang = async (options) => {
 		component.auto_init_editor = true
 
 		await component.refresh()
-		// const node		= await component.render()
+
 
 	return true
 }//end change_component_lang

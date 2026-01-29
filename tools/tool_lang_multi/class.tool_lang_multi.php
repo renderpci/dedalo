@@ -1,5 +1,5 @@
 <?php
-require_once( dirname(dirname(__FILE__)) . '/tool_lang/class.tool_lang.php');
+require_once( dirname(__FILE__, 2) . '/tool_lang/class.tool_lang.php');
 /*
 * CLASS TOOL_LANG_MULTI
 *

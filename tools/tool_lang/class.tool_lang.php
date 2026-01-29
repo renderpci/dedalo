@@ -35,13 +35,8 @@ class tool_lang extends tool_common {
 
 		// config
 			// get all tools config sections
-				$tool_name	= get_called_class();
-				$config = tool_common::get_config($tool_name);
-			// select current from all tool config matching tool name
-				// $tool_name	= get_called_class(); // tool_lang
-				// $config		= array_find($ar_config, function($el) use($tool_name) {
-				// 	return $el->name===$tool_name;
-				// });
+			$tool_name	= get_called_class();
+			$config = tool_common::get_config($tool_name) ?? new stdClass();
 
 		// config JSON . Must be compatible with tool properties translator_engine data
 			$ar_translator_configs	= $config->config->translator_config->value ?? [];
@@ -66,8 +61,8 @@ class tool_lang extends tool_common {
 				}
 
 		// data from options translator
-			$uri	= $translator_config->uri;
-			$key	= $translator_config->key;
+			$uri = $translator_config->uri;
+			$key = $translator_config->key;
 
 		// Source text . Get source text from component (source_lang)
 			$model		= ontology_node::get_model_by_tipo($component_tipo,true);
@@ -79,11 +74,11 @@ class tool_lang extends tool_common {
 				$source_lang,
 				$section_tipo
 			);
-			$dato = (array)$component->get_dato();
+			$data_lang = $component->get_data_lang($source_lang);
 
 		// iterate component array data
 			$translated_data = [];
-			foreach ($dato as $key => $value) {
+			foreach ($data_lang as $data_element) {
 
 				switch ($translator_name) {
 
@@ -102,7 +97,7 @@ class tool_lang extends tool_common {
 							'key'			=> $key,
 							'source_lang'	=> $source_lang,
 							'target_lang'	=> $target_lang,
-							'text'			=> $value
+							'text'			=> $data_element->value ?? '',
 						]);
 						$result	= $translate->result;
 						if ($result===false) {
@@ -121,10 +116,17 @@ class tool_lang extends tool_common {
 			if (empty($translated_data)) {
 
 				// skip save empty values
-				debug_log(__METHOD__." Skip empty received translation value ".to_string(), logger::ERROR);
+				debug_log(__METHOD__." Skip empty received translation value ", logger::ERROR);
 				$response->msg = 'Ignored empty result. Nothing is saved!';
 
 			}else{
+
+				$first_translated_data = $translated_data[0] ?? '';
+				if ( str_starts_with($first_translated_data, 'Sorry. Quota exceeded') ) {
+					debug_log(__METHOD__." ERROR: $first_translated_data ", logger::ERROR);
+					$response->msg = 'Sorry. Quota exceeded';
+					return $response;
+				}
 
 				$component = component_common::get_instance(
 					$model,
@@ -134,8 +136,15 @@ class tool_lang extends tool_common {
 					$target_lang,
 					$section_tipo
 				);
-				$component->set_dato($translated_data);
-				$component->Save(false); // (!) Important: send argument 'false' to save to prevent alter other langs tags (propagate)
+
+				$component_data = array_map(function($item) use($target_lang) {
+					return (object)[
+						'value' => $item,
+						'lang' => $target_lang
+					];
+				}, $translated_data);
+				$component->set_data_lang($component_data, $target_lang);
+				$component->save();
 
 				// response OK
 					$response->result	= true;
@@ -146,7 +155,7 @@ class tool_lang extends tool_common {
 			if(SHOW_DEBUG===true) {
 				$response->debug = new stdClass();
 				$response->debug->translated_data	= $translated_data;
-				$response->debug->raw_result		= $translate->raw_result;
+				$response->debug->raw_result		= $translate->raw_result ?? null;
 			}
 
 
