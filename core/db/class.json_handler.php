@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+include __DIR__ .'/class.json_streaming_handler.php';
 /**
 * JSON_HANDLER
 *

@@ -89,7 +89,6 @@ class tool_common {
 			$name = $this->name;
 
 			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
-
 			// sample tool object
 				// {
 				//   "name": "tool_transcription",
@@ -193,9 +192,9 @@ class tool_common {
 					? ($ar_description->value ?? null)
 					: null);
 
-		// labels. take care of empty objects like '{}'
+		// labels. take care of empty objects like '{}' casting array on check.
 			$labels = [];
-			if(!empty($tool_object->labels) && !empty($tool_object->labels[0])) {
+			if(!empty((array)$tool_object->labels)) {
 
 				// get the lang to be used to get the labels
 					$current_lang = lang::get_label_lang( DEDALO_APPLICATION_LANG );

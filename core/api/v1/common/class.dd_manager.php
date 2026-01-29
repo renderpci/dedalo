@@ -195,8 +195,8 @@ final class dd_manager {
 						'--> section_record_total: ' . section_record::$section_record_total,
 						'--> section_record_total_calls: ' . section_record::$section_record_total_calls,
 						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,
-						'--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
-						'--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
+						// '--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
+						// '--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
 						// Subdatum
 						// 'Subdatum',
 						// '--> subdatum_total_time: ' . metrics::$subdatum_total_time.' ms',
@@ -219,12 +219,14 @@ final class dd_manager {
 						, logger::WARNING
 					);
 					if(section_record_instances_cache::getAnalyticsStatus()===true) {
+						error_log('--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()));
+						error_log('--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()));
 						error_log(section_record_instances_cache::exportAnalytics('json'));
 					}
 
 				// end line info
 					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
-					$text			= 'API REQUEST ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' . dd_memory_usage();
+					$text			= 'API REQUEST (dd_manager) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' .exec_time_unit($api_manager_start_time,'ms') . ' - ' . dd_memory_usage();
 					$text_length	= strlen($text) +1;
 					// $nchars		= 200;
 					// $repeat 		= ($nchars - $text_length) ?? 0;
