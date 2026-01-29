@@ -456,9 +456,9 @@ class sections extends common {
 				// If current section is a Ontology section (ends with zero like 'numisdata0'),
 				// the 'dd_ontology' record must to be deleted too, to preserve the deletion coherence.
 					$section_id_from_tipo = get_section_id_from_tipo($section_tipo);
-					if ($section_id_from_tipo=='0') {
+					if ($section_id_from_tipo=='0' && !empty($current_section_id)) {
 						// is ontology. Create a 'tipo' value for delete it in 'dd_ontology'
-						$tipo_to_delete	= get_tld_from_tipo($section_tipo) . $section_id; // as 'numisdata631'
+						$tipo_to_delete	= get_tld_from_tipo($section_tipo) . $current_section_id; // as 'numisdata631'
 						$ontology_node	= ontology_node::get_instance($tipo_to_delete);
 						$delete_result	= $ontology_node->delete();
 						if (!$delete_result) {
