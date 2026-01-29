@@ -240,13 +240,7 @@ try {
 } catch (Throwable $e) {
 
 	// Final fallback error handling
-
-	debug_log(
-		' API end point caught exception ' . PHP_EOL
-		. ' msg: ' . $e->getMessage()  . PHP_EOL
-		. ' trace: ' . json_encode($e->getTrace(), JSON_PRETTY_PRINT),
-		logger::ERROR
-	);
+	dd_error::captureException($e);
 
 	$response = new stdClass();
 	$response->result	= false;
