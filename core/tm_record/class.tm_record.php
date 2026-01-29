@@ -340,8 +340,12 @@ class tm_record {
 		$sql .= PHP_EOL.'WHERE';
 		$sql .= PHP_EOL.implode( PHP_EOL.' AND ',$sql_sentences );
 		$sql .= PHP_EOL.'ORDER BY '.$order_by;
-		$sql .= PHP_EOL.'LIMIT '. $limit;
-		$sql .= PHP_EOL.'OFFSET '. $offset;
+		if ($limit > 0) {
+			$sql .= PHP_EOL.'LIMIT '. $limit;
+		}
+		if ($offset > 0) {
+			$sql .= PHP_EOL.'OFFSET '. $offset;
+		}
 
 		// Perform SQL query and return result set
 		$result = matrix_db_manager::exec_search($sql, $params);
