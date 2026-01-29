@@ -180,10 +180,9 @@
 				if ($mode === 'tm') {
 					// set the parent_section_id and parent_section_tipo to the item
 					$item->parent_section_id	= $value[0]->parent_section_id ?? null;
-					$item->parent_section_tipo	= $value[0]->parent_section_tipo ?? null;
-					// remove the parent_section_id and parent_section_tipo from the value
-					unset($item->value[0]->parent_section_id);
-					unset($item->value[0]->parent_section_tipo);			
+					$item->parent_section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO;
+					// remove the parent_section_id from the value
+					unset($item->value[0]->parent_section_id);		
 
 					// created_by_user_id. Used for time machine notes user verification
 					$item->created_by_user_id = abs(intval($this->section_id))>0
@@ -191,7 +190,9 @@
 						: null;
 					// set the matrix_id as section_id
 					$item->matrix_id = $this->section_id;
+
 				}
+
 
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
