@@ -173,7 +173,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
 				self.rqo.options = {
-					caller_tipo : self.caller.caller.tipo
+					caller_tipo : self.caller.caller?.tipo
 				}
 		}
 		await generate_rqo()
