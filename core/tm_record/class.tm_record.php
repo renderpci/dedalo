@@ -267,6 +267,24 @@ class tm_record {
 
 
 	/**
+	* DELETE
+	* Delete the record from the database and destroy the instance.
+	* It's used to delete full section records once the section is recovered.
+	* @return bool $result
+	*/
+	public function delete() : bool {
+
+		$result = $this->data_instance->delete();
+		unset($this->data_instance);
+
+		$this->__destruct();
+
+		return $result;
+	}//end delete
+
+
+
+	/**
 	 * SEARCH
 	 * Search records in the matrix table
 	 * Compares columns with given search values and returns matching records
