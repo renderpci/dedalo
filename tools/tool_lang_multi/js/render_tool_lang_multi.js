@@ -237,32 +237,6 @@ const build_automatic_translation = (options) => {
 			class_name		: 'automatic_translation_container'
 		})
 
-	// button
-		// const button_automatic_translation = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'warning button_automatic_translation',
-		// 	inner_html		: self.get_tool_label('automatic_translation') || "Automatic translation",
-		// 	parent			: automatic_translation_container
-		// })
-
-		// // const button_automatic_translation = document.createElement('button');
-		// // 	  button_automatic_translation.type = 'button'
-		// // 	  button_automatic_translation.textContent = get_label['automatic_translation'] || "Automatic translation"
-		// // 	  automatic_translation_container.appendChild(button_automatic_translation)
-		// button_automatic_translation.addEventListener("click", () => {
-
-		// 	components_container.classList.add('loading')
-
-		// 	const translator	= translator_engine_select.value
-		// 	const source_lang	= source_select_lang.value
-		// 	const target_lang	= target_select_lang.value
-
-		// 	self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-		// 	.then(()=>{
-		// 		components_container.classList.remove('loading')
-		// 	})
-		// })
-
 	// select
 		self.translator_engine_select = ui.create_dom_element({
 			element_type	: 'select',
