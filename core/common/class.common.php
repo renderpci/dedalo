@@ -1052,16 +1052,9 @@ abstract class common {
 	*/
 	public static function build_element_json_output(array $context, array $data=[]) : object {
 
-		$element = new stdClass();
-			$element->context	= $context;
-			$element->data		= $data;
-
-		#if(SHOW_DEBUG===true) {
-		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-		#}else{
-		#	$result = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-		#}
-		$result = $element;
+		$result = new stdClass();
+			$result->context	= $context;
+			$result->data		= $data;
 
 		return $result;
 	}//end build_element_json_output
