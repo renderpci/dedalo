@@ -80,6 +80,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.mode					= 'list' // only allowed 'tm'
 	self.view					= options.view || 'default'
 	self.lang					= options.lang
+	self.caller_tipo			= options.caller_tipo || null
 
 	self.caller			= options.caller || null
 
@@ -141,6 +142,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		// self.context = await self.build_context()
 		const generate_rqo = async function(){
 
+			if (!self.caller || self.status==='destroyed') {
+				return false
+			}
+
 			if (self.context) {
 				// request_config_object. get the request_config_object from context
 				self.request_config_object	= self.context && self.context.request_config
@@ -173,7 +178,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// add component info. For API navigation track info only
 			// get tipo from caller (tool_time_machine) caller (component or section)
 				self.rqo.options = {
-					caller_tipo : self.caller.caller.tipo
+					caller_tipo : self.caller_tipo || self.caller?.caller?.tipo || null
 				}
 		}
 		await generate_rqo()
@@ -436,7 +441,7 @@ service_time_machine.prototype.build_request_config = function() {
 				view			: 'mini'
 			}
 		]
-		
+
 		// tool view case
 			if (self.view==='tool' && model.includes('component')) {
 				default_ddo_map.push(
@@ -455,7 +460,7 @@ service_time_machine.prototype.build_request_config = function() {
 					}
 				)
 			}
-			
+
 		// Remove ignore_columns by id defined in callers (tool, inspector, etc)
 		const ddo_map = default_ddo_map.filter( el => !self.config.ignore_columns.includes(el.id) )
 

@@ -1401,6 +1401,7 @@ export const load_time_machine_list = async function(self) {
 			view			: 'mini',
 			id_variant		: self.section_tipo + '_tm_list',
 			caller			: self,
+			caller_tipo		: self.caller.section_tipo,
 			config			: {
 				id					: 'section_history',
 				model				: 'dd_grid', // used to create the filter
@@ -1423,6 +1424,13 @@ export const load_time_machine_list = async function(self) {
 				}]
 			}
 		})
+
+		// check if inspector is destroyed after await
+		if (self.status === 'destroyed' || !self.caller) {
+			if (service_time_machine) service_time_machine.destroy(true, true)
+			return null
+		}
+
 		await service_time_machine.build(true)
 		const time_machine_list_wrap = await service_time_machine.render()
 
@@ -1560,6 +1568,7 @@ export const load_component_history = async function(self, component) {
 			view			: 'history',
 			id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
 			caller			: self,
+			caller_tipo		: component.tipo,
 			config			: {
 				id					: 'component_history_' + component.tipo,
 				model				: component.model, // used to create the filter
@@ -1599,6 +1608,13 @@ export const load_component_history = async function(self, component) {
 				]
 			}
 		})
+
+		// check if inspector is destroyed after await
+		if (self.status === 'destroyed' || !self.caller) {
+			if (service_time_machine) service_time_machine.destroy(true, true)
+			return null
+		}
+
 		await service_time_machine.build(true)
 		const component_history_wrap = await service_time_machine.render()
 
