@@ -94,12 +94,6 @@ view_note_text_area.render = async function(self, options) {
 					return
 				}
 
-			// force to refresh this component caller (service time machine) (new note is created)
-				if (refresh_service) {
-					const service_time_machine = self.caller.caller
-					await service_time_machine.refresh(true)
-				}
-
 			// modal creation
 
 			// content. Modal content node
@@ -230,6 +224,7 @@ view_note_text_area.render = async function(self, options) {
 				// user_name_info. Append user name (change owner) before the component
 					// user_instance: contains the resolved user name (from section record)
 					const section_record	= self.caller
+
 					const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd578')
 					if (user_instance) {
 						// user_name_info

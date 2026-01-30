@@ -151,6 +151,12 @@ class tm_record {
 	*/
 	public function save() : bool {
 
+		// do not allow to save time machine records of the section_tipo dd15
+		// dd15 is used to represent the time machine records
+		if($this->data_instance->section_tipo === 'dd15') {
+			return false;
+		}
+
 		return $this->data_instance->save_data();
 	}//end save
 
@@ -194,6 +200,12 @@ class tm_record {
 				);
 				return false;
 			}
+		}
+
+		// do not allow to save time machine records of the section_tipo dd15
+		// dd15 is used to represent the time machine records
+		if($values->section_tipo === 'dd15') {
+			return false;
 		}
 
 		// time_machine save before.
@@ -521,11 +533,10 @@ class tm_record {
 			// inject parent_section_id and parent_section_tipo
 			// it will use to build the target section in client side
 			// @see: component_text_area_json.php
-			$note_value[0]->parent_section_id = $note_section_id;				
-			$note_value[0]->parent_section_tipo = DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO;
+			$note_value[0]->parent_section_id = $note_section_id;
 
 			$this->set_section_record_factory(
-				'dd732',
+				'rsc329',
 				$note_value,
 				$section_record
 			);
