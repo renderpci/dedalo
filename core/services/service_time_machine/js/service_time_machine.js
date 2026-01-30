@@ -301,7 +301,7 @@ service_time_machine.prototype.build_request_config = function() {
 		const sqo = config_sqo
 			? config_sqo
 			: {
-				id				: 'tmp',
+				id				: 'time_machine_temporal',
 				mode			: 'tm',
 				section_tipo	: [{ tipo : section_tipo_caller }],
 				limit			: self.limit,
