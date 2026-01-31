@@ -27,8 +27,8 @@ class ts_object {
 	// ts_parent as dd1_1
 	public $ts_parent;
 	// cache
-	public static $term_by_locator_data_cache;
-	public static $resolved_child_cache;
+	public static $term_by_locator_data_cache = [];
+	public static $resolved_child_cache = [];
 
 
 	/**
@@ -231,7 +231,7 @@ class ts_object {
 					DEDALO_DATA_NOLAN,
 					$locator->section_tipo
 				);
-				$data = $component->get_data();
+				$data = $component->get_data() ?? [];
 				$order = $data[0]->value ?? null;
 				$ts_options->order = $order;
 			} else {
@@ -269,7 +269,7 @@ class ts_object {
 		// $start_time=start_time();
 
 		// Is index-able check
-		$is_indexable = (bool)self::is_indexable($this->section_tipo, $this->section_id);
+		$is_indexable = self::is_indexable($this->section_tipo, $this->section_id);
 
 		// Permissions calculation
 		$permissions_button_new		= $this->get_permissions_element('button_new');
@@ -646,6 +646,7 @@ class ts_object {
 			);
 
 			// Set default pagination if not defined
+			$current_pagination = $pagination;
 			if (empty($current_pagination)) {
 				$current_pagination = (object)[
 					'limit' => $default_limit,
@@ -677,7 +678,7 @@ class ts_object {
 		// build children_data result object
 			$children_data = (object)[
 				'ar_children_data'	=> $ar_children_data,
-				'pagination'		=> $current_pagination ?? $pagination
+				'pagination'		=> $current_pagination
 			];
 
 		// response
@@ -881,7 +882,7 @@ class ts_object {
 					);
 				}
 
-				$ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
+				// $ar_elements[$key]->value = $obj_value->value; //'<span class="no_descriptor">' .  . '</span>';
 				break;
 			}
 		}
@@ -916,6 +917,14 @@ class ts_object {
 		$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
 		$section_id		= $locator->section_id;
 		$section_tipo	= $locator->section_tipo;
+
+		if(empty($ar_tipo) || empty($section_id) || empty($section_tipo)) {
+			debug_log(__METHOD__
+				." ERROR on get term. ar_tipo is empty or section_id or section_tipo is empty. NULL VALUE IS RETURNED !"
+				, logger::ERROR
+			);
+			return null;
+		}
 
 		$ar_value = [];
 		foreach ($ar_tipo as $tipo) {
@@ -972,7 +981,6 @@ class ts_object {
 
 		// Cache control (session)
 			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-
 			if ($from_cache===true && isset(self::$term_by_locator_data_cache[$cache_uid])) {
 				return self::$term_by_locator_data_cache[$cache_uid];
 			}
@@ -1045,6 +1053,9 @@ class ts_object {
 			*/
 
 		// cache control
+			if (count(self::$term_by_locator_data_cache) >= 1000) {
+				self::$term_by_locator_data_cache = [];
+			}
 			self::$term_by_locator_data_cache[$cache_uid] = $valor;
 
 
@@ -1056,9 +1067,9 @@ class ts_object {
 	/**
 	* RESOLVE_LOCATOR
 	* Alias of get_term_by_locator
-	* @return string|null $valor
+	* @return string|null
 	*/
-	public function resolve_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) {
+	public function resolve_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 		return ts_object::get_term_by_locator($locator, $lang, $from_cache);
 	}//end resolve_locator
 
@@ -1201,6 +1212,9 @@ class ts_object {
 						$db_result	= $search->search();
 						$ar_records	= $db_result->fetch_all();
 						// cache
+						if (count(self::$resolved_child_cache) >= 1000) {
+							self::$resolved_child_cache = [];
+						}
 						self::$resolved_child_cache[$hash] = $ar_records;
 					}
 
