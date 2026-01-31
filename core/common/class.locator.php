@@ -258,10 +258,7 @@ class locator extends stdClass {
 	*/
 	public function set_section_id(string|int $value) : bool {
 
-		if(	abs(intval($value))<0
-			&& $value!='unknown'
-			&& strpos((string)$value, DEDALO_SECTION_ID_TEMP)===false
-		) {
+		if(	abs(intval($value))<0 && $value != 'unknown' ) {
 			debug_log(__METHOD__
 				. ' Invalid section_id' . PHP_EOL
 				. ' value: ' . to_string($value)

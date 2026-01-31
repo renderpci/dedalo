@@ -557,9 +557,9 @@
 
 
 
-// dedalo_section_id_temp
+// dedalo_section_id_temp (DEPRECATED)
 	// name / prefix of section_id temporal used to store special sections in memory or session. Do not change this
-	define('DEDALO_SECTION_ID_TEMP', 'tmp');
+	// define('DEDALO_SECTION_ID_TEMP', 'tmp');
 
 
 

@@ -833,7 +833,8 @@ const render_left = async (self) => {
 		const component = await get_instance({
 			tipo			: source,
 			section_tipo	: self.section_tipo,
-			section_id		: 'tmp',
+			section_id		: 1, // Fake section_id for temporal component
+			is_temporal		: true,
 			mode			: 'list'
 		})
 		return component.context

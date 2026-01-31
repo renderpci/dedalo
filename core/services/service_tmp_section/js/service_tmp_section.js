@@ -94,10 +94,11 @@ service_tmp_section.prototype.build = async function(autoload=false) {
 				mode			: el.mode,
 				tipo			: el.tipo,
 				section_tipo	: el.section_tipo,
-				section_id		: 'tmp',
+				section_id		: 1, // Fake temporal section_id
 				lang			: self.lang,
 				type			: el.type,
 				id_variant		: self.model,  // id_variant prevents id conflicts
+				is_temporal		: true, // This sets the component to use the temporal data handler (matrix_temp_manager)
 				caller			: self // set tool as caller of the component :-)
 			}
 

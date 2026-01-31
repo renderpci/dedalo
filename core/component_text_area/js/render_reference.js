@@ -92,9 +92,10 @@ export const render_reference = async function(options) {
 			model			: references_component_model,
 			tipo			: references_component_tipo,
 			section_tipo	: references_section_tipo,
-			section_id		: 'tmp',
+			section_id		: 1, // Fake section_id for temporal component
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan,
+			is_temporal		: true,
 			caller			: self
 		}
 		// get the instance, built and render

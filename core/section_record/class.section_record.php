@@ -25,6 +25,9 @@ class section_record {
 	// int permissions
 	protected int $permissions;
 
+	// string data_handler
+	public string $data_handler = 'matrix_db_manager';
+
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -37,9 +40,10 @@ class section_record {
 	* It returns a cached instance if it exists.
 	* @param string $section_tipo
 	* @param string|int $section_id
+	* @param string $data_handler matrix_db_manager* | matrix_temp_manager
 	* @return section_record $section_record
 	*/
-	public static function get_instance( string $section_tipo, string|int $section_id ) : section_record {
+	public static function get_instance( string $section_tipo, string|int $section_id, string $data_handler = 'matrix_db_manager' ) : section_record {
 
 		// metrics
 		self::$section_record_total_calls++;
@@ -49,7 +53,15 @@ class section_record {
 		$instance = section_record_instances_cache::get($cache_key);
 		if ($instance === null) {
 			// Cache miss - Create a new instance and load from database
-			$instance = new section_record($section_tipo, (int)$section_id);
+			if(!in_array( $data_handler, ['matrix_db_manager', 'matrix_temp_manager'])) {
+				$data_handler = 'matrix_db_manager';
+				debug_log(__METHOD__
+					." Invalid data_handler: " .$data_handler . PHP_EOL
+					." Falling back to: " .$data_handler
+					, logger::ERROR
+				);
+			}
+			$instance = new section_record($section_tipo, (int)$section_id, $data_handler);
 			section_record_instances_cache::set($cache_key, $instance);
 		}
 
@@ -66,7 +78,7 @@ class section_record {
 	* @param int $section_id
 	* @return void
 	*/
-	private function __construct( string $section_tipo, int $section_id ) {
+	private function __construct( string $section_tipo, int $section_id, string $data_handler ) {
 
 		// Set general vars
 			$this->section_tipo	= $section_tipo;
@@ -78,6 +90,9 @@ class section_record {
 				$this->section_tipo,
 				$section_id
 			);
+
+		// set data handler
+			$this->data_handler = $data_handler;
 
 		// metrics
 		self::$section_record_total++;
@@ -279,7 +294,7 @@ class section_record {
 		$table = $this->data_instance->get_table();
 		$data = $this->data_instance->get_data();
 
-		$result = matrix_db_manager::update(
+		$result = $this->data_handler::update(
 			$table,
 			$section_tipo,
 			$section_id,
@@ -323,7 +338,7 @@ class section_record {
 		$values = new stdClass();
 			$values->$column = $this->data_instance->get_column_data($column) ?? null;
 
-		$result = matrix_db_manager::update(
+		$result = $this->data_handler::update(
 			$table,
 			$section_tipo,
 			$section_id,
@@ -403,7 +418,7 @@ class section_record {
 			foreach ($columns_to_delete as $current_column) {
 				$values->$current_column = null;
 			}
-			$save_result = matrix_db_manager::update(
+			$save_result = $this->data_handler::update(
 				$table,
 				$section_tipo,
 				$section_id,
@@ -446,7 +461,7 @@ class section_record {
 			);
 		}
 
-		$result = matrix_db_manager::update_by_key(
+		$result = $this->data_handler::update_by_key(
 			$table,
 			$section_tipo,
 			$section_id,
@@ -590,7 +605,7 @@ class section_record {
 
 		// 2. Delete the record in DB
 			$table = $this->data_instance->get_table();
-			$delete_result = matrix_db_manager::delete(
+			$delete_result = $this->data_handler::delete(
 				$table,
 				$section_tipo,
 				$section_id
@@ -1236,7 +1251,8 @@ class section_record {
 		}
 
 		// insert a new record in the database
-		$section_id = matrix_db_manager::create(
+		$data_handler = 'matrix_db_manager';
+		$section_id = $data_handler::create(
 			$table,
 			$section_tipo,
 			$values
@@ -1415,7 +1431,7 @@ class section_record {
 		$section_tipo = $this->section_tipo;
 		$section_id	= $this->section_id;
 
-		$row = matrix_db_manager::read(
+		$row = $this->data_handler::read(
 			$table,
 			$section_tipo,
 			$section_id

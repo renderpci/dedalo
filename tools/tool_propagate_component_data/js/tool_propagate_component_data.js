@@ -111,9 +111,12 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 
 	return new Promise(async function(resolve){
 
+		const section_id = 1 // fake section id for temporal data
+
 		const instance_options = {
+			is_temporal		: true,
 			section_tipo	: self.main_element.section_tipo,
-			section_id		: 'tmp',
+			section_id		: section_id,
 			model			: self.main_element.model,
 			mode			: self.main_element.mode,
 			tipo			: self.main_element.tipo,
@@ -122,7 +125,8 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			context			: self.main_element.context,
 			id_variant		: 'propagate_'+new Date().getUTCMilliseconds(),
 			standalone		: true,
-			caller			: self
+			caller			: self,
+			is_temporal		: true
 		}
 		// init
 			self.component_to_propagate = await get_instance(instance_options)
@@ -133,7 +137,7 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 		// configure the component
 			self.component_to_propagate.datum			= self.main_element.datum
 			self.component_to_propagate.data			= self.main_element.data
-			self.component_to_propagate.data.section_id	= 'tmp'
+			self.component_to_propagate.data.section_id	= section_id
 
 		// show_interface. Change to add link and add buttons and remove save animation
 			self.component_to_propagate.show_interface.button_add				= true
