@@ -926,6 +926,11 @@ export const create_source = function (self, action) {
 			source.data_source = self.data_source
 		}
 
+	// is temporal bool optional (used in tools like 'tool_propagate_component_data')
+		if (self.is_temporal) {
+			source.is_temporal = self.is_temporal
+		}
+
 	// caller_dataframe
 		if(self.model==='component_dataframe'){
 			source.caller_dataframe = self.caller_dataframe

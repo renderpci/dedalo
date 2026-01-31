@@ -16,6 +16,7 @@ include DEDALO_CORE_PATH . '/logger/class.logger_backend_activity.php';
 include DEDALO_CORE_PATH . '/db/class.DBi.php';
 include DEDALO_CORE_PATH . '/db/class.dd_ontology_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_db_manager.php';
+include DEDALO_CORE_PATH . '/db/class.matrix_temp_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_activity_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.tm_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.db_result.php';

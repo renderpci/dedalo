@@ -896,11 +896,19 @@ class tool_import_files extends tool_common {
 			}//end foreach ((array)$files_data as $key => $value_obj)
 
 		// Reset the temporary section of the components, for empty the fields.
-			foreach ($input_components_section_tipo as $current_section_tipo) {
-				$temp_data_uid = $current_section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
-				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
-				}
+			if (!empty($input_components_section_tipo) && !empty($_SESSION['dedalo']['section_temp_data'])) {
+
+				// Create regex pattern to match any of the section types. Pattern example: /_(type1|type2)_/
+				$pattern = '/(' . implode('|', array_map(function($t){ return preg_quote($t, '/'); }, $input_components_section_tipo)) . ')/';
+
+				$_SESSION['dedalo']['section_temp_data'] = array_filter(
+					(array)$_SESSION['dedalo']['section_temp_data'],
+					function($key) use ($pattern) {
+						// Keep items that DO NOT match the pattern
+						return preg_match($pattern, (string)$key) === 0;
+					},
+					ARRAY_FILTER_USE_KEY
+				);
 			}
 
 		// response
