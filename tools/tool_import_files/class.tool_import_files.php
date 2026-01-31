@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_FILES
 * Specialized tool class for handling file import operations.
@@ -37,7 +37,6 @@ class tool_import_files extends tool_common {
 		// des
 			// $ar_data['image']['image_url']			= DEDALO_ROOT_WEB . "/inc/img.php?s=".$ar_data['file_path'];
 			// $ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
-
 
 		// PREVIOUS
 			// it only allow digits in middle of the filename as : 712-2-A.jpg
@@ -136,7 +135,6 @@ class tool_import_files extends tool_common {
 		) : bool {
 
 		$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
-
 
 		// logger activity. Note that this log is here because generic service_upload
 		// is not capable to know if the uploaded file is the last one in a chunked file scenario
@@ -285,8 +283,8 @@ class tool_import_files extends tool_common {
 				if(isset($matches[2])) $dd_date->set_year((int)$matches[2]);
 				if(isset($matches[3])) $dd_date->set_month((int)$matches[3]);
 				if(isset($matches[4])) $dd_date->set_day((int)$matches[4]);
-
 				break;
+
 			default:
 				debug_log(__METHOD__
 					. " Error. get_media_file_date . Model is not defined ". PHP_EOL
@@ -296,6 +294,10 @@ class tool_import_files extends tool_common {
 				);
 				// CLI process data
 					if ( running_in_cli()===true ) {
+						if (empty(common::$pdata)) {
+							common::$pdata = new stdClass();
+							common::$pdata->errors = [];
+						}
 						common::$pdata->errors[] = 'Error. get_media_file_date . Model is not defined';
 						// send to output
 						print_cli(common::$pdata);
@@ -928,7 +930,7 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_MEDIA_SECTION_MATCH_FROM_SOUCE
-	* check the filename uploaded with the previous names saved into media sections (image, av, document)
+	* Checks the filename uploaded with the previous names saved into media sections (image, av, document)
 	* 1 get the target section to get all media files into the section_id (as tch11)
 	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
 	* 3 match the filename without the extensions 11-1 === 11-1

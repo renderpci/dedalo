@@ -45,7 +45,7 @@ class component_filter extends component_relation_common {
 	/**
 	* SET_DATA
 	* Overwrites component_relation_common method checking user projects access.
-	* The method prevents a security issue where a non-admin user could remove filter projects 
+	* The method prevents a security issue where a non-admin user could remove filter projects
 	* they don't have access to.
 	* @param ?array $data
 	* @return bool
@@ -112,7 +112,7 @@ class component_filter extends component_relation_common {
 				// get the permissions from current component_filter
 				$permissions = $this->get_component_permissions();
 			}
-			if ($permissions < 2) {				
+			if ($permissions < 2) {
 				return false;
 			}
 
@@ -134,10 +134,10 @@ class component_filter extends component_relation_common {
 
 		// dedalo_default_project
 		// If component is in edit mode and don't have data, we assign the default data defined in config.
-			if ($this->mode==='edit' &&
-				get_called_class()==='component_filter' && // Remember that component_filter_master extends this class
+			if ($this->mode === 'edit' &&
+				get_called_class() === 'component_filter' && // Remember that component_filter_master extends this class
 				$this->section_id !== null &&
-				$this->section_tipo!=='test3' // exclude unit_test 'test3' section to create default data
+				$this->section_tipo !== 'test3' // exclude unit_test 'test3' section to create default data
 				) {
 
 				$data = $this->get_data();
@@ -442,7 +442,7 @@ class component_filter extends component_relation_common {
 
 		return true;
 	}//end propagate_filter
-	
+
 
 
 	/**

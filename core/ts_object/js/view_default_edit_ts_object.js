@@ -510,7 +510,7 @@ const render_ts_line = function(self) {
 					}
 					button_duplicate.addEventListener('click', click_handler_duplicate)
 				}
-		
+
 				break;
 			}
 
@@ -819,7 +819,7 @@ const render_id_column = function(self) {
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const is_descriptor		= self.is_descriptor
-		const is_indexable		= self.is_indexable		
+		const is_indexable		= self.is_indexable
 		const mode				= self.mode
 		const virtual_order		= self.virtual_order
 		const is_root_node		= self.is_root_node
@@ -1675,7 +1675,7 @@ const render_link_children = function (self) {
 					// show children container
 					self.children_container.classList.remove('hide')
 					// set arrow down
-					link_children_element.classList.add('open')					
+					link_children_element.classList.add('open')
 
 				}else{
 
