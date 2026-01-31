@@ -587,7 +587,7 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	const index = this.children_data.ar_children_data.findIndex(el => el.ts_id === children_data.ts_id);
 
 	if (index === -1) {
-		console.error('Children data not found with ts_id:', children_data.ts_id);
+		console.log('Children data not found with ts_id:', children_data.ts_id);
 		return false;
 	}
 
@@ -1008,7 +1008,10 @@ ts_object.prototype.delete_term = async function(options) {
 	// destroy section after use it
 		section.destroy()
 
-
+	// refresh parent children data
+		if (delete_section_result && self.caller) {
+			self.caller.remove_children_item(self.data)
+		}
 	return delete_section_result
 }//end delete_term
 
@@ -1265,7 +1268,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 					// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
 					const save_handler = function() {
-						
+
 						const caller = current_component
 
 						const ar_values = []
@@ -1284,7 +1287,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 							}
 						}
 
-						const value = ar_values.map(el => el.value).join(' ')						
+						const value = ar_values.map(el => el.value).join(' ')
 						// change the value of the current DOM element
 						self.term_text.textContent = value
 
@@ -1868,9 +1871,9 @@ ts_object.prototype.save_order = async function( value ) {
 	const old_value = parseInt( self.virtual_order )
 
 	// check is new_value is valid
-	if (new_value===old_value) {
+	if (isNaN(new_value) || new_value===old_value) {
 		if(SHOW_DEBUG===true) {
-			console.log("[ts_object.save_order] Value is not changed. ignored save_order action")
+			console.log("[ts_object.save_order] Value is not changed or invalid. ignored save_order action")
 		}
 		return Promise.resolve(false);
 	}
@@ -1883,7 +1886,7 @@ ts_object.prototype.save_order = async function( value ) {
 	// new_value. Prevent set invalid values
 	if ( new_value > child_nodes_len ){
 		new_value = child_nodes_len // max value is array length
-	}else if ( new_value<1 ) {
+	}else if ( new_value < 1 ) {
 		new_value = 1; // min value is 1
 	}
 
@@ -1903,7 +1906,7 @@ ts_object.prototype.save_order = async function( value ) {
 		// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
 		// };
 
-	// move_locator
+		// move_locator
 		function move_locator(array, pos1, pos2) {
 			// local variables
 			let i, tmp;

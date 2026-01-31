@@ -510,7 +510,7 @@ const render_ts_line = function(self) {
 					}
 					button_duplicate.addEventListener('click', click_handler_duplicate)
 				}
-		
+
 				break;
 			}
 
@@ -819,7 +819,7 @@ const render_id_column = function(self) {
 		const section_tipo		= self.section_tipo
 		const section_id		= self.section_id
 		const is_descriptor		= self.is_descriptor
-		const is_indexable		= self.is_indexable		
+		const is_indexable		= self.is_indexable
 		const mode				= self.mode
 		const virtual_order		= self.virtual_order
 		const is_root_node		= self.is_root_node
@@ -936,6 +936,9 @@ const render_id_column = function(self) {
 								console.warn("[ts_object.render_children] Error, children_data is null");
 								return false
 							}
+
+						// Update self children data
+							self.children_data = children_data
 
 						// refresh children container
 							self.render_children({
@@ -1197,10 +1200,14 @@ const render_delete_record_dialog = function (options) {
 						return
 					}
 
-					// refresh wrap
-					self.refresh_element(
-						false // hilite
-					)
+					// refresh parent (caller) wrap
+					if (self.caller) {
+						self.caller.refresh({
+							build_autoload : false, // Local only update
+							render_level   : 'full',
+							destroy        : false
+						})
+					}
 
 					// close modal
 					modal.close()
@@ -1675,7 +1682,7 @@ const render_link_children = function (self) {
 					// show children container
 					self.children_container.classList.remove('hide')
 					// set arrow down
-					link_children_element.classList.add('open')					
+					link_children_element.classList.add('open')
 
 				}else{
 

@@ -1479,7 +1479,7 @@ class section extends common {
 			$values = $options->values ?? null;
 
 			// section_id, force creation with specific section_id (import processes)
-			$section_id = $options->section_id ?? null;
+			$section_id = isset($options->section_id) ? (int)$options->section_id : null;
 
 		// Tipo. Current section tipo
 			$tipo = $this->get_tipo();
@@ -4906,12 +4906,12 @@ class section extends common {
 
 		// common cases permissions calculation
 			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
-		
+
 		// maintains dedalo_activity_section_tipo < 2 to prevent edition
 		if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1){
 			$this->permissions = 1;
 		}
-		
+
 
 		return $this->permissions;
 	}//end get_permissions

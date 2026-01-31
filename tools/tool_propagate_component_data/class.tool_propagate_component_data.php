@@ -85,31 +85,27 @@ class tool_propagate_component_data extends tool_common {
 				print_cli($pdata);
 			}
 
-		// PROCESS
+		// BULK_PROCESS
 			// create new process section
 				$process_section = section::get_instance(
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
 
-				// create bulk process record
-				// and get the new section_id
-				$bulk_process_id = $process_section->create_record();
+			// get the bulk_process_id as the section_id of the section process
+				$bulk_process_id = $process_section->get_section_id();
 
 			// Save the process name into the process section
+				$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
 				$bulk_process_label_component = component_common::get_instance(
-					'component_input_text', // string model
-					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+					$bulk_process_label_model, // expected 'component_input_text'
+					DEDALO_BULK_PROCESS_LABEL_TIPO, // dd796
 					$bulk_process_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$data_to_save = (object)[
-					'value' => $bulk_process_label,
-					'lang' => DEDALO_DATA_NOLAN
-				];
-				$bulk_process_label_component->set_data([$data_to_save]);
-				$bulk_process_label_component->save();
+				$bulk_process_label_component->set_dato($bulk_process_label);
+				$bulk_process_label_component->Save();
 
 		// result records iterate
 			foreach ($db_result as $row) {
@@ -134,7 +130,7 @@ class tool_propagate_component_data extends tool_common {
 						print_cli($pdata);
 					}
 
-				// current component
+				// current temp component
 					$current_component = component_common::get_instance(
 						$model,
 						$component_tipo,
@@ -143,7 +139,7 @@ class tool_propagate_component_data extends tool_common {
 						$lang,
 						$section_tipo
 					);
-					$current_data = $current_component->get_data();
+					$current_dato = $current_component->get_dato();
 
 				// final_data. Build final_data based on action type
 					$final_data = $current_data ?? [];
@@ -152,7 +148,7 @@ class tool_propagate_component_data extends tool_common {
 
 						case 'replace':
 
-							$final_data = $propagate_data_value;
+							$final_dato = $propagate_data_value;
 							$save = true;
 							break;
 
@@ -193,8 +189,8 @@ class tool_propagate_component_data extends tool_common {
 						// set the bulk_process_id to save it into time_machine
 						// this allow to revert the bulk import
 						$current_component->set_bulk_process_id($bulk_process_id);
-						$current_component->set_data($final_data);
-						$current_component->save();
+						$current_component->set_dato($final_dato);
+						$current_component->Save();
 
 						debug_log(__METHOD__
 							." Updated data of $section_tipo - $current_section_id - $component_tipo "

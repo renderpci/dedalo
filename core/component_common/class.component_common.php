@@ -78,6 +78,8 @@ abstract class component_common extends common {
 		public $data_column_name;
 		// Property to enable or disable the get and set data in different languages
 		protected $supports_translation;
+		// boolean is_temporal (used to identify temporal data that is saved differently)
+		public $is_temporal;
 
 		// Cache for list of values
 		public static $ar_list_of_values_data_cache = [];
@@ -195,11 +197,9 @@ abstract class component_common extends common {
 								, logger::ERROR
 							);
 						}
-						if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-							dump($section_id," section_id - DEDALO_SECTION_ID_TEMP:" . DEDALO_SECTION_ID_TEMP);
+						if ( abs(intval($section_id))<1 ) {
 							debug_log(__METHOD__
-								." Error: DEDALO_SECTION_ID_TEMP. Trying to use wrong var: section_id: '$section_id' to load as component " . PHP_EOL
-								.' DEDALO_SECTION_ID_TEMP: '. DEDALO_SECTION_ID_TEMP
+								." Error: Trying to use wrong var: section_id: '$section_id' to load as component " . PHP_EOL
 								.' backtrace: '.to_string($bt)
 								, logger::ERROR
 							);
@@ -422,9 +422,12 @@ abstract class component_common extends common {
 			}
 
 		// set_data_default
-			if ( $this->mode==='edit' && !is_null($this->section_id) && $this->data_source!=='tm' ) {
-				$this->set_data_default();
-			}
+			if (   $this->mode === 'edit'
+				&& $this->data_source !== 'tm'
+				&& (int)$this->section_id > 0
+				) {
+					$save_default = $this->set_data_default();
+				}
 
 		// pagination. Set defaults
 			if (!isset($this->pagination)) {
@@ -571,8 +574,8 @@ abstract class component_common extends common {
 							$this->set_data( $data_default );
 
 						// temp section cases do not save anything
-							if ( strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false ) {
-								$this->Save();
+							if ( (int)$this->section_id > 0 ) {
+								$this->save();
 							}
 
 						// debug
@@ -1563,7 +1566,7 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $save_path );
 
 		// time machine data.
-
+		if((int)$section_id > 0 && $this->is_temporal!==true) {
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
@@ -1588,14 +1591,15 @@ abstract class component_common extends common {
 					$tm_value->bulk_process_id = $this->bulk_process_id;
 				}
 			// Save the time machine record
-				$tm_result = tm_record::create( $tm_value );
-				if ($tm_result === false) {
-					debug_log(__METHOD__
-					   .' Error saving Time Machine data for'
-					   .' tm_value: ' . to_string($tm_value)
-					   , logger::ERROR
-					);
-				}
+			$tm_result = tm_record::create( $tm_value );
+			if ($tm_result === false) {
+				debug_log(__METHOD__
+					.' Error saving Time Machine data for'
+					.' tm_value: ' . to_string($tm_value)
+					, logger::ERROR
+				);
+			}
+		}
 
 		// activity
 			$this->save_activity();
@@ -3326,11 +3330,25 @@ abstract class component_common extends common {
 		// section record build instance
 			$this->section_record = section_record::get_instance(
 				$this->section_tipo,
-				$this->section_id
+				$this->section_id,
+				$this->get_data_handler()
 			);
+
 
 		return $this->section_record;
 	}//end get_my_section_record
+
+
+
+	/**
+	* GET_DATA_HANDLER
+	* Returns the data handler to use for the current component to build the section record.
+	* @return string $data_handler
+	*/
+	public function get_data_handler() : string {
+
+		return $this->is_temporal ? 'matrix_temp_manager' : 'matrix_db_manager';
+	}//end get_data_handler
 
 
 

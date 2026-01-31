@@ -1070,6 +1070,7 @@ final class dd_core_api {
 			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
 			$changed_data		= $data->changed_data ?? null;
 			$caller_dataframe	= $source->caller_dataframe ?? null;
+			$is_temporal		= $source->is_temporal ?? false;
 
 		// activity section check
 			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
@@ -1102,6 +1103,11 @@ final class dd_core_api {
 				// view
 					if (!empty($view)) {
 						$component->set_view($view);
+					}
+
+				// is_temporal
+					if ($is_temporal===true) {
+						$component->is_temporal = true;
 					}
 
 				// permissions. Get the component permissions and check if the user can update the component
@@ -1644,6 +1650,7 @@ final class dd_core_api {
 			$model				= $ddo_source->model ?? ontology_node::get_model_by_tipo($ddo_source->tipo,true);
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
+			$is_temporal		= $ddo_source->is_temporal ?? false;
 			$session_save		= $ddo_source->session_save ?? true;
 			$session_key		= $ddo_source->session_key ?? (($model==='section')
 				? section::build_sqo_id($tipo)
@@ -1810,6 +1817,11 @@ final class dd_core_api {
 							$element->set_view($view);
 						}
 
+					// is_temporal
+						if ($is_temporal===true) {
+							$element->is_temporal = true;
+						}
+
 					// unlock user components. Normally this occurs when user navigate across sections or paginate
 						if (DEDALO_LOCK_COMPONENTS===true) {
 							lock_components::force_unlock_all_components( logged_user_id() );
@@ -1879,6 +1891,11 @@ final class dd_core_api {
 							// view optional
 								if (!empty($view)) {
 									$element->set_view($view);
+								}
+
+							// is_temporal
+								if ($is_temporal===true) {
+									$element->is_temporal = true;
 								}
 
 							// properties optional
@@ -2603,7 +2620,6 @@ final class dd_core_api {
 			'SHOW_DEBUG'							=> SHOW_DEBUG,
 			'SHOW_DEVELOPER'						=> SHOW_DEVELOPER,
 			'DEVELOPMENT_SERVER'					=> DEVELOPMENT_SERVER,
-			'DEDALO_SECTION_ID_TEMP'				=> DEDALO_SECTION_ID_TEMP,
 			'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'		=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
 			'DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT'	=> (defined('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT') ? DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT : 50),
 			'DEDALO_LOCK_COMPONENTS'				=> DEDALO_LOCK_COMPONENTS,

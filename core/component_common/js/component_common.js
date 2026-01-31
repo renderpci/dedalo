@@ -59,7 +59,6 @@ component_common.prototype.init = async function(options) {
 		self.column_id		= options.column_id // id of the column when the instance is created to render a column list.
 		self.type			= options.type || 'component' // a instance type
 
-
 		self.section_lang	= options.section_lang // current section lang like 'lg-eng'
 		self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
 
@@ -67,6 +66,7 @@ component_common.prototype.init = async function(options) {
 		self.context		= options.context	|| null // structure context of current component (include properties, tools, etc.)
 		self.data			= options.data		|| null // current specific data of this component
 		self.datum			= options.datum		|| null // global data including dependent data (used in portals, etc.)
+		self.is_temporal	= options.is_temporal ?? false // temporal data (used in tools, etc.)
 
 	// data_source
 		self.data_source = options.data_source

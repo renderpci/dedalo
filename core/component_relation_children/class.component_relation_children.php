@@ -649,6 +649,12 @@ class component_relation_children extends component_relation_common {
 				continue;
 			}
 
+			if(empty($data)) {
+				$data = [(object)[
+					'value' => $order
+				]];
+			}
+
 			$data[0]->value = $order;
 
 			// save changed value
