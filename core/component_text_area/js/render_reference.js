@@ -187,7 +187,7 @@ export const render_reference = async function(options) {
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: current_value.fallback_value.join(' | '),
+					inner_html		: current_value.fallback_value ? current_value.fallback_value.join(' | ') : '',
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -311,7 +311,7 @@ export const render_reference = async function(options) {
 					 // is possible that user don't select any text (collapse selection), in those cases it will insert a text value of the locator or empty text.
 					 // get the resolution of the new locator with the value_fallback (ensure text value if it's not translated)
 					 // if the locator data is not set, empty space is used to create the text for the collapse selection
-					 selected_tag.fallback_value  = locator_data
+					 selected_tag.fallback_value  = locator_data?.fallback_value
 					 	? locator_data.fallback_value.join(' | ')
 					 	: ' '
 				 }

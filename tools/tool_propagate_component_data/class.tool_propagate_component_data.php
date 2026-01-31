@@ -85,7 +85,7 @@ class tool_propagate_component_data extends tool_common {
 				print_cli($pdata);
 			}
 
-		// PROCESS
+		// BULK_PROCESS
 			// create new process section
 				$process_section = section::get_instance(
 					null, // string|null section_id
@@ -131,7 +131,7 @@ class tool_propagate_component_data extends tool_common {
 						print_cli($pdata);
 					}
 
-				// current component
+				// current temp component
 					$current_component = component_common::get_instance(
 						$model,
 						$component_tipo,

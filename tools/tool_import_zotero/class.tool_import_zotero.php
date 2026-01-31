@@ -72,7 +72,7 @@ class tool_import_zotero extends tool_common {
 
 			// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map;
-			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
+			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
 
 			// read Zotero file in JSON format:
 				$ar_zotero_files_data = array_filter($files_data, function($el) {
@@ -454,9 +454,9 @@ class tool_import_zotero extends tool_common {
 								switch ($ddo->role) {
 									case 'input_component':
 
-										// imput_components_section_tipo store
-											if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-												$imput_components_section_tipo[] = $ddo->section_tipo;
+										// input_components_section_tipo store
+											if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+												$input_components_section_tipo[] = $ddo->section_tipo;
 											}
 
 										// component_data. Get from request and save
