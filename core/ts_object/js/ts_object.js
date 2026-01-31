@@ -1008,7 +1008,10 @@ ts_object.prototype.delete_term = async function(options) {
 	// destroy section after use it
 		section.destroy()
 
-
+	// refresh parent children data
+		if (delete_section_result && self.caller) {
+			self.caller.remove_children_item(self.data)
+		}
 	return delete_section_result
 }//end delete_term
 
