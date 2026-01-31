@@ -329,5 +329,39 @@ final class component_relation_children_test extends BaseTestCase {
 		);
 	}//end test_has_children_of_type
 
+
+
+	/**
+	* TEST_SORT_CHILDREN
+	* @return void
+	*/
+	public function test_sort_children() {
+		$section_tipo = self::$section_tipo;
+
+		// Create dummy locators
+		$locator1 = new locator();
+		$locator1->set_section_tipo($section_tipo);
+		$locator1->set_section_id(1);
+
+		$locator2 = new locator();
+		$locator2->set_section_tipo($section_tipo);
+		$locator2->set_section_id(2);
+
+		$locators = [$locator1, $locator2];
+
+		$result = component_relation_children::sort_children($section_tipo, $locators);
+
+		$this->assertTrue(
+			is_array($result),
+			'Expected array from sort_children, got: ' . gettype($result)
+		);
+
+		foreach ($result as $item) {
+			$this->assertIsObject($item, 'Each item in changed array should be an object');
+			$this->assertObjectHasProperty('value', $item);
+			$this->assertObjectHasProperty('locator', $item);
+		}
+	}//end test_sort_children
+
 }//end class component_relation_children_test
 
