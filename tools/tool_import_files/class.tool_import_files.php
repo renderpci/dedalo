@@ -946,29 +946,36 @@ class tool_import_files extends tool_common {
 		$full_name				= $options->full_name;
 		$target_filename		= $options->target_filename;
 
+		// short vars
+		$tipo	= $target_filename->tipo;
+		$model	= ontology_node::get_model_by_tipo($tipo,true);
+		$lang	= ontology_node::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
 		// target section of the tool as tch, tch1,...
 		// as filename could has the section_id as 11-1.tiff (section_id = 11)
 		// create the section and give his all data.
-		$section = section::get_instance(
-			$section_id, // string|null section_id
-			$section_tipo // string section_tipo
+		$section_record = section_record::get_instance(
+			$section_tipo,
+			$section_id
 		);
 
-		$data = $section->get_dato();
+		$data = $section_record->get_data();
 
 		// give all locators that match with the target_section_tipo (as rsc170, image section)
-		$target_locators = array_filter($data->relations, function( $item ) use ($target_section_tipo){
-			return $item->section_tipo === $target_section_tipo;
-		});
+		$target_locators = [];
+		if (!empty($data->relation)) {
+			foreach ($data->relation as $component_tipo => $locators) {
+				foreach ($locators as $locator) {
+					if ($locator->section_tipo === $target_section_tipo) {
+						$target_locators[] = $locator;
+					}
+				}
+			}
+		}
 
 		// create the image section and check the filename saved previously.
 		$match_section_id = [];
 		foreach ($target_locators as $target_locator) {
-
-			$tipo	= $target_filename->tipo;
-
-			$model	= ontology_node::get_model_by_tipo($tipo,true);
-			$lang	= ontology_node::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
 			// component with the previous filename saved
 			$target_name_component = component_common::get_instance(
@@ -1061,7 +1068,12 @@ class tool_import_files extends tool_common {
 
 	/**
 	* SET_COMPONENTS_DATA
-	* @param object $options
+	* Propagates and stores data into specific components of a section during the import process.
+	* This method iterates through a DDO map and performs actions based on the component role:
+	* - 'target_filename': Saves the original filename to the target component.
+	* - 'target_date': Extracts and saves media file dates (EXIF/metadata).
+	* - 'input_component': Propagates data from temporal components or request data (import form inputs).
+	* @param object $options Configuration options
 	* @return void
 	*/
 	public static function set_components_data( object $options ) {
@@ -1077,6 +1089,14 @@ class tool_import_files extends tool_common {
 			$target_component_model			= $options->target_component_model;
 			$components_temp_data			= $options->components_temp_data ?? [];
 
+		// Index components_temp_data by tipo and section_tipo for faster lookup
+		$indexed_temp_data = [];
+		foreach ($components_temp_data as $item) {
+			if (isset($item->tipo) && isset($item->section_tipo)) {
+				$indexed_temp_data[$item->tipo][$item->section_tipo] = $item;
+			}
+		}
+
 		// ar_ddo_map iterate. role based actions
 		// Create the ddo components with the data to store with the import
 		// when the component has a input in the tool propagate temp section_data
@@ -1088,12 +1108,14 @@ class tool_import_files extends tool_common {
 				continue;
 			}
 
+			$is_translatable		= ontology_node::get_translatable($ddo->tipo);
 			$model					= ontology_node::get_model_by_tipo($ddo->tipo,true);
-			$current_lang			= ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$current_lang			= $is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
 				? $section_id
 				: $target_section_id;
 
+			// Current component instance
 			$component = component_common::get_instance(
 				$model,
 				$ddo->tipo,
@@ -1106,91 +1128,78 @@ class tool_import_files extends tool_common {
 			switch ($ddo->role) {
 				case 'target_filename':
 
-					// fill the component with image data only when the field is empty
-					// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
-					$component_data = $component->get_dato();
-
+					// Fill the component with image data only when the field is empty. Do not update existing data
+					$component_data = $component->get_data();
 					if(empty($component_data)){
 						// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
+						// If the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
 						$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
 							? $file_data['regex']->base_name // only the name of the file without section_id or field
 							: $current_file_name; // full name with extension
 
-						$component->set_dato([$name_to_save]);
-						$component->Save();
+						$data_to_save = [(object) [
+							'value' => $name_to_save,
+							'lang' => $current_lang
+						]];
+						$component->set_data($data_to_save);
+						$component->save();
 					}
 					break;
 
 				case 'target_date':
 
 					// media_file_date (using EXIF or similar metadata source into the file)
+					// Fill the component with date only when the field is empty. Do not update existing data
+					$component_data = $component->get_data();
+					if (empty($component_data)) {
 						$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
 						if (!empty($dd_date)) {
-							$dato = new stdClass();
-								$dato->start = $dd_date;
-							$component->set_dato([$dato]);
-							$component->Save();
+							$data_element = new stdClass();
+								$data_element->start = $dd_date;
+							$component->set_data([$data_element]);
+							$component->save();
 						}
+					}
 					break;
 
 				case 'input_component':
 
 					// component_data save
-						$is_translatable = ontology_node::get_translatable($ddo->tipo);
-						if ($is_translatable===false) {
+					if ($is_translatable===false) {
 
-							// use value from request
+						// use value from request
 
-							// component_data. Get from request and save
-							$component_data = array_find($components_temp_data, function($item) use($ddo){
-								return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-							});
-							if(is_object($component_data) && !empty($component_data->value)){
-								$component->set_dato($component_data->value);
-								$component->Save();
-							}
+						// component_data. Get from indexed temp data or request and save
+						$component_data = $indexed_temp_data[$ddo->tipo][$ddo->section_tipo] ?? null;
 
-						}else{
-
-							// get value from instances of the temporal component in each lang
-
-							$temp_component = component_common::get_instance(
-								$model,
-								$ddo->tipo,
-								DEDALO_SECTION_ID_TEMP,
-								'list',
-								$current_lang,
-								$ddo->section_tipo
-							);
-
-							$temp_data = $temp_component->get_data();
-							$component->set_data($temp_data);
+						// Note that the component data is inside the value property because is
+						// part of the client component data like {value:[], datalist:[], ..}
+						if(is_object($component_data) && !empty($component_data->value)){
+							$component->set_data($component_data->value);
 							$component->save();
 						}
 
-					// component_filter. Propagate the project to the media section, that will be the target_section_tipo
-						if($model==='component_filter'){
-							// get the component_filter of the target_ddo section_tipo
-							$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-								$target_ddo_component->section_tipo,
-								[$model],
-								true,
-								true
-							);
-							$component_filter_tipo= $ar_children_tipo[0];
+					}else{
 
-							$target_component = component_common::get_instance(
-								$model,
-								$component_filter_tipo,
-								$target_section_id,
-								'list',
-								$current_lang,
-								$target_ddo_component->section_tipo
-									);
-									$target_component->set_dato($component_data->value);
-									$target_component->Save();
-								}
-							break;
+						// get value from instances of the temporal component in all languages
+
+						$temp_component = component_common::get_instance(
+							$model,
+							$ddo->tipo,
+							1, // Fake section_id for temporal component
+							'list',
+							$current_lang,
+							$ddo->section_tipo
+						);
+						// Set as temporal component forces to use the tmp data handler.
+						$temp_component->is_temp = true;
+
+						// set to real component the temporal component data in all languages
+						$temp_data = $temp_component->get_data();
+						$component->set_data($temp_data);
+						$component->save();
+					}
+					break;
 
 				default:
 					// Nothing to do here
