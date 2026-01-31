@@ -937,6 +937,9 @@ const render_id_column = function(self) {
 								return false
 							}
 
+						// Update self children data
+							self.children_data = children_data
+
 						// refresh children container
 							self.render_children({
 								clean_children_container : true,
@@ -1197,10 +1200,14 @@ const render_delete_record_dialog = function (options) {
 						return
 					}
 
-					// refresh wrap
-					self.refresh_element(
-						false // hilite
-					)
+					// refresh parent (caller) wrap
+					if (self.caller) {
+						self.caller.refresh({
+							build_autoload : false, // Local only update
+							render_level   : 'full',
+							destroy        : false
+						})
+					}
 
 					// close modal
 					modal.close()
