@@ -102,11 +102,10 @@ tool_import_files.prototype.build = async function(autoload=false) {
 			const target_component = self.tool_config.ddo_map.find(el => el.role==='target_component')
 			const element_context_response = await data_manager.get_element_context({
 				tipo			: target_component.tipo,
-				section_tipo	: target_component.section_tipo,
-				section_id		: 'tmp'
+				section_tipo	: target_component.section_tipo
 			})
 
-			return element_context_response.result[0]
+			return element_context_response.result[0] || null
 		}//end load_target_component_context
 		self.target_component_context = await load_target_component_context()
 

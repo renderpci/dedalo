@@ -2568,7 +2568,7 @@ class component_relation_common extends component_common {
 		// 1 PROJECTS GET
 			// We get current portal filter data (projects) to heritage in the new portal record
 			$section_id				= $this->get_section_id();
-			$component_filter_data	= (strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false)
+			$component_filter_data	= ($this->is_temporal===true)
 				? null
 				: $this->get_current_section_filter_data();
 			if(empty($component_filter_data)) {

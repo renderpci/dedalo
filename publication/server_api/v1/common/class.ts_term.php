@@ -29,7 +29,10 @@ class ts_term extends stdClass {
 	/**
 	* GET_INSTANCE
 	* Singleton pattern
-	* @returns array array of component objects by key
+	* @param string $term_id
+	* @param string $lang
+	* @param object $request_options
+	* @return ts_term instance of ts_term
 	*/
 	public static function get_ts_term_instance($term_id, $lang=WEB_CURRENT_LANG_CODE, $request_options=null) {
 

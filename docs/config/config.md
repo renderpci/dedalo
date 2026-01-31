@@ -2749,19 +2749,6 @@ define('DEDALO_TEST_INSTALL', true);
 
 ---
 
-### Defining section_id temporal
-
-./dedalo/config/config.php
-
-DEDALO_SECTION_ID_TEMP `string`
-
-This parameter defines the section_id used to create temporal sections on the fly.
-
-Temporal sections are previous version of the section, created before it has a section_id assigned by the database counter. The temporal section_id identify those sections to be managed before that the section will saved into database.
-
-```php
-define('DEDALO_SECTION_ID_TEMP', 'tmp');
-```
 
 ## Tools variables
 

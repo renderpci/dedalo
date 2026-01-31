@@ -72,7 +72,7 @@ class tool_import_zotero extends tool_common {
 
 			// ddo_map
 			$ar_ddo_map = $tool_config->ddo_map;
-			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
+			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
 
 			// read Zotero file in JSON format:
 				$ar_zotero_files_data = array_filter($files_data, function($el) {
@@ -454,9 +454,9 @@ class tool_import_zotero extends tool_common {
 								switch ($ddo->role) {
 									case 'input_component':
 
-										// imput_components_section_tipo store
-											if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-												$imput_components_section_tipo[] = $ddo->section_tipo;
+										// input_components_section_tipo store
+											if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+												$input_components_section_tipo[] = $ddo->section_tipo;
 											}
 
 										// component_data. Get from request and save
@@ -487,11 +487,19 @@ class tool_import_zotero extends tool_common {
 				}//end foreach $ar_zotero_files
 
 		// Reset the temporary section of the components, for empty the fields.
-			foreach ($imput_components_section_tipo as $current_section_tipo) {
-				$temp_data_uid = $current_section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
-				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
-				}
+			if (!empty($input_components_section_tipo) && !empty($_SESSION['dedalo']['section_temp_data'])) {
+
+				// Create regex pattern to match any of the section types. Pattern example: /_(type1|type2)_/
+				$pattern = '/(' . implode('|', array_map(function($t){ return preg_quote($t, '/'); }, $input_components_section_tipo)) . ')/';
+
+				$_SESSION['dedalo']['section_temp_data'] = array_filter(
+					(array)$_SESSION['dedalo']['section_temp_data'],
+					function($key) use ($pattern) {
+						// Keep items that DO NOT match the pattern
+						return preg_match($pattern, (string)$key) === 0;
+					},
+					ARRAY_FILTER_USE_KEY
+				);
 			}
 
 		// response

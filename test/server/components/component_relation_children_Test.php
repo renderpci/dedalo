@@ -204,7 +204,7 @@ final class component_relation_children_test extends BaseTestCase {
 		$this->assertFalse($result, 'sortable should always be false');
 		$this->assertIsBool($result, 'sortable should return boolean');
 	}//end test_get_sortable
-	
+
 
 
 	/**
@@ -214,11 +214,11 @@ final class component_relation_children_test extends BaseTestCase {
 	public function test_get_children() {
 		$section_id = 1;
 		$section_tipo = self::$section_tipo;
-		
+
 		$children = component_relation_children::get_children($section_id, $section_tipo);
-		
+
 		$this->assertTrue(
-			is_array($children), 
+			is_array($children),
 			'Expected array from get_children, got: ' . gettype($children)
 		);
 
@@ -235,9 +235,9 @@ final class component_relation_children_test extends BaseTestCase {
 	*/
 	public function test_get_children_tipo() {
 		$section_tipo = self::$section_tipo;
-		
+
 		$result = component_relation_children::get_children_tipo($section_tipo);
-		
+
 		$this->assertTrue(
 			is_null($result) || is_string($result),
 			'Expected string or null from get_children_tipo, got: ' . gettype($result)
@@ -257,9 +257,9 @@ final class component_relation_children_test extends BaseTestCase {
 	public function test_get_ar_related_parent_tipo() {
 		$tipo = self::$tipo;
 		$section_tipo = self::$section_tipo;
-		
+
 		$result = component_relation_children::get_ar_related_parent_tipo($tipo, $section_tipo);
-		
+
 		$this->assertIsArray($result, 'Expected array from get_ar_related_parent_tipo');
 
 		// Additional assertions
@@ -282,11 +282,11 @@ final class component_relation_children_test extends BaseTestCase {
 	public function test_get_children_recursive() {
 		$section_id = 1;
 		$section_tipo = self::$section_tipo;
-		
+
 		$children_recursive = component_relation_children::get_children_recursive($section_id, $section_tipo);
-		
+
 		$this->assertTrue(
-			is_array($children_recursive), 
+			is_array($children_recursive),
 			'Expected array from get_children_recursive, got: ' . gettype($children_recursive)
 		);
 
@@ -305,7 +305,7 @@ final class component_relation_children_test extends BaseTestCase {
 		$section_id = 1;
 		$section_tipo = self::$section_tipo;
 		$component_tipo = self::$tipo;
-		
+
 		// descriptor check
 		$has_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'descriptor');
 		$this->assertTrue(
@@ -313,7 +313,7 @@ final class component_relation_children_test extends BaseTestCase {
 			'Expected bool from has_children_of_type(descriptor)'
 		);
 
-		// non_descriptor check 
+		// non_descriptor check
 		$has_non_descriptor = component_relation_children::has_children_of_type($section_id, $section_tipo, $component_tipo, 'non_descriptor');
 		$this->assertTrue(
 			is_bool($has_non_descriptor),
@@ -328,6 +328,40 @@ final class component_relation_children_test extends BaseTestCase {
 			'Both checks should return boolean values'
 		);
 	}//end test_has_children_of_type
+
+
+
+	/**
+	* TEST_SORT_CHILDREN
+	* @return void
+	*/
+	public function test_sort_children() {
+		$section_tipo = self::$section_tipo;
+
+		// Create dummy locators
+		$locator1 = new locator();
+		$locator1->set_section_tipo($section_tipo);
+		$locator1->set_section_id(1);
+
+		$locator2 = new locator();
+		$locator2->set_section_tipo($section_tipo);
+		$locator2->set_section_id(2);
+
+		$locators = [$locator1, $locator2];
+
+		$result = component_relation_children::sort_children($section_tipo, $locators);
+
+		$this->assertTrue(
+			is_array($result),
+			'Expected array from sort_children, got: ' . gettype($result)
+		);
+
+		foreach ($result as $item) {
+			$this->assertIsObject($item, 'Each item in changed array should be an object');
+			$this->assertObjectHasProperty('value', $item);
+			$this->assertObjectHasProperty('locator', $item);
+		}
+	}//end test_sort_children
 
 }//end class component_relation_children_test
 

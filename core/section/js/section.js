@@ -511,11 +511,11 @@ section.prototype.build = async function(autoload=false) {
 				// Note that rqo is calculated once and need to be updated when build autoload is made
 				// and the context is loaded / updated
 				self.rqo.sqo = self.context.sqo_session
-				
+
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
 					self.request_config_object.sqo.mode = 'tm'
-				}					
+				}
 			}
 		}
 		await generate_rqo()
@@ -574,7 +574,7 @@ section.prototype.build = async function(autoload=false) {
 
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
-				}	
+				}
 
 			// build_autoload
 			// Use unified way to load context and data with
