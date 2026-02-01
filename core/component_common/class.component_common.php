@@ -127,7 +127,7 @@ abstract class component_common extends common {
 	* @param object|null $caller_dataframe = null
 	* @return object|null $component
 	*/
-	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null ) : ?object {
+	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null, bool $is_temporal=false ) : ?object {
 
 		// tipo check. Is mandatory
 			if (empty($tipo) || safe_tipo($tipo)===false) {
@@ -297,7 +297,8 @@ abstract class component_common extends common {
 					$mode,
 					$lang,
 					$section_tipo,
-					$cache
+					$cache,
+					$is_temporal
 				);
 				// dataframe add ons
 				if(isset($caller_dataframe)) {
@@ -346,7 +347,7 @@ abstract class component_common extends common {
 	* @param string|null $section_tipo = null
 	* @return void
 	*/
-	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
+	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, bool $is_temporal=false ) {
 
 		// uid
 			$this->uid = hrtime(true); // nanoseconds
@@ -395,6 +396,9 @@ abstract class component_common extends common {
 
 		// cache
 			$this->cache = (bool)$cache;
+
+		// is_temporal
+			$this->is_temporal = $is_temporal;
 
 		// structure data (load from Ontology)
 			// We set the received type and load the structure previously to determine if this type is translatable
@@ -1877,7 +1881,6 @@ abstract class component_common extends common {
 					// use the inverse relations to get all sections that call to the observable section
 					case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
 						$section_observable = section::get_instance(
-							$locator->section_id,
 							$locator->section_tipo,
 							'edit',
 							true
@@ -2497,7 +2500,7 @@ abstract class component_common extends common {
 				// it prevent to call multiple times to DDBB
 				$section_record = section_record::get_instance(
 					$row->section_tipo,
-					$row->section_id
+					(int)$row->section_id
 				);
 				$section_record->set_data( $row );
 
@@ -3330,8 +3333,8 @@ abstract class component_common extends common {
 		// section record build instance
 			$this->section_record = section_record::get_instance(
 				$this->section_tipo,
-				$this->section_id,
-				$this->get_data_handler()
+				(int)$this->section_id,
+				$this->is_temporal
 			);
 
 
@@ -3340,15 +3343,7 @@ abstract class component_common extends common {
 
 
 
-	/**
-	* GET_DATA_HANDLER
-	* Returns the data handler to use for the current component to build the section record.
-	* @return string $data_handler
-	*/
-	public function get_data_handler() : string {
 
-		return $this->is_temporal ? 'matrix_temp_manager' : 'matrix_db_manager';
-	}//end get_data_handler
 
 
 
@@ -3745,8 +3740,10 @@ abstract class component_common extends common {
 
 		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($data_paginated as $key => $value) {
-				$paginated_key = $key + $offset;
-				$value->paginated_key = $paginated_key;
+				if (is_object($value)) {
+					$paginated_key = $key + $offset;
+					$value->paginated_key = $paginated_key;
+				}
 			}
 
 
