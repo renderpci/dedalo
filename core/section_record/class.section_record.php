@@ -43,29 +43,25 @@ class section_record {
 	* Get an instance of a section_record object.
 	* It returns a cached instance if it exists.
 	* @param string $section_tipo
-	* @param string|int $section_id
-	* @param string $data_handler matrix_db_manager* | matrix_temp_manager
+	* @param int $section_id
+	* @param bool $is_temporal
 	* @return section_record $section_record
 	*/
-	public static function get_instance( string $section_tipo, string|int $section_id, string $data_handler = 'matrix_db_manager' ) : section_record {
+	public static function get_instance( string $section_tipo, int $section_id, bool $is_temporal = false ) : section_record {
 
 		// metrics
 		self::$section_record_total_calls++;
 
-		$cache_key = $section_tipo .'_' .$section_id;
+		$cache_key = $section_tipo .'_' .$section_id . ($is_temporal ? '_temp' : '');
 
 		$instance = section_record_instances_cache::get($cache_key);
 		if ($instance === null) {
-			// Cache miss - Create a new instance and load from database
-			if(!in_array( $data_handler, ['matrix_db_manager', 'matrix_temp_manager'])) {
-				$data_handler = 'matrix_db_manager';
-				debug_log(__METHOD__
-					." Invalid data_handler: " .$data_handler . PHP_EOL
-					." Falling back to: " .$data_handler
-					, logger::ERROR
-				);
+
+			if ($is_temporal) {
+				$instance = new section_record_temp($section_tipo, $section_id);
+			} else {
+				$instance = new section_record($section_tipo, $section_id);
 			}
-			$instance = new section_record($section_tipo, (int)$section_id, $data_handler);
 			section_record_instances_cache::set($cache_key, $instance);
 		}
 
@@ -82,7 +78,7 @@ class section_record {
 	* @param int $section_id
 	* @return void
 	*/
-	private function __construct( string $section_tipo, int $section_id, string $data_handler ) {
+	protected function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
 			$this->section_tipo	= $section_tipo;
@@ -98,6 +94,8 @@ class section_record {
 		// set table
 			$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
 
+		// set default data handler
+			$this->data_handler = 'matrix_db_manager';
 
 		// metrics
 		self::$section_record_total++;
@@ -127,7 +125,7 @@ class section_record {
 	* Dispatches a save event for this section record
 	* @return void
 	*/
-	private function save_event() : void {
+	protected function save_event() : void {
 
 		// Invalidate request config cache file.
 		// This is used to invalidate the request config cache file
@@ -152,7 +150,7 @@ class section_record {
 	* 'this->is_loaded_data_columns' to false.
 	* @return bool
 	*/
-	private function load_data() : bool {
+	protected function load_data() : bool {
 
 		// If the section_record_data instance has already been loaded,
 		// it returns the cached data without reconnecting to the database.
@@ -1208,7 +1206,7 @@ class section_record {
 	* @param object|null $values = null (optional)
 	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
-	* @return section_record|false $section_id
+	* @return section_record|false
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
@@ -1773,7 +1771,7 @@ class section_record {
 			return null;
 		}
 
-		$user_name = section::get_user_name_by_user_id(
+		$user_name = self::get_user_name_by_user_id(
 			$user_id,
 			$full_name // bool full_name
 		);
