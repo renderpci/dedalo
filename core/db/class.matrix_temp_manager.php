@@ -86,7 +86,7 @@ class matrix_temp_manager extends matrix_db_manager {
 	 * @package Dedalo
 	 * @subpackage Core
 	 */
-	public static function read(string $table='temp', string $section_tipo, int|string $section_id): object|false	{
+	public static function read(string $table, string $section_tipo, int|string $section_id): object|false	{
 
 		$key = self::get_uid($section_tipo);
 
@@ -131,7 +131,7 @@ class matrix_temp_manager extends matrix_db_manager {
 	* @package Dedalo
 	* @subpackage Core
 	*/
-	public static function update(string $table='temp', string $section_tipo, int|string $section_id, object $values): bool {
+	public static function update(string $table, string $section_tipo, int|string $section_id, object $values): bool {
 
 		if (empty((array)$values)) {
 			return false;
@@ -196,7 +196,7 @@ class matrix_temp_manager extends matrix_db_manager {
 	 * @subpackage Core
 	 */
 	public static function update_by_key(
-		string $table='temp',
+		string $table,
 		string $section_tipo,
 		int|string $section_id,
 		array $data_to_save
@@ -302,7 +302,7 @@ class matrix_temp_manager extends matrix_db_manager {
 	 * @package Dedalo
 	 * @subpackage Core
 	 */
-	public static function delete(string $table='temp', string $section_tipo, int|string $section_id) : bool {
+	public static function delete(string $table, string $section_tipo, int|string $section_id) : bool {
 
 		$key = self::get_uid($section_tipo);
 		$sql = "DELETE FROM \"$table\" WHERE key = $1";
