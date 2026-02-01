@@ -1885,7 +1885,7 @@ abstract class common {
 										true // cache
 									);
 
-									$section_record = section_record::get_instance( $section_tipo, $section_id );
+									$section_record = section_record::get_instance( $section_tipo, (int)$section_id );
 
 									$section->add_section_record( $section_record );
 

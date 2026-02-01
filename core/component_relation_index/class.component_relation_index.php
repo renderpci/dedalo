@@ -373,7 +373,7 @@ class component_relation_index extends component_relation_common {
 			);
 
 		// section record, Add section record to section instance to get the subdatum with current locator
-			$section_record	= section_record::get_instance($current_section_tipo, $current_section_id);
+			$section_record	= section_record::get_instance($current_section_tipo, (int)$current_section_id);
 			$section->add_section_record($section_record);
 
 		$section_datum	= $section->get_json();
