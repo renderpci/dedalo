@@ -1586,9 +1586,9 @@ class section_record {
 			true
 		);
 
-		$dato = $this->get_dato(); // Force load
-		$dato->created_date = $date_with_format;
-		$this->set_dato($dato); // Force update
+		$data = $this->get_data(); // Force load
+		$data->created_date = $date_with_format;
+		$this->set_data($data); // Force update
 	}//end set_created_date
 
 
@@ -1608,9 +1608,9 @@ class section_record {
 			true
 		);
 
-		$dato = $this->get_dato(); // Force load
-		$dato->modified_date = $date_with_format;
-		$this->set_dato($dato); // Force update
+		$data = $this->get_data(); // Force load
+		$data->modified_date = $date_with_format;
+		$this->set_data($data); // Force update
 	}//end set_modified_date
 
 
@@ -1621,10 +1621,10 @@ class section_record {
 	*/
 	public function get_created_date() : ?string {
 
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->created_date)
+		$data			= $this->get_data();
+		$local_value	= isset($data->created_date)
 			? dd_date::timestamp_to_date(
-				$dato->created_date,
+				$data->created_date,
 				true // bool full
 			  )
 			: null;
@@ -1640,10 +1640,10 @@ class section_record {
 	*/
 	public function get_modified_date() : ?string {
 
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->modified_date)
+		$data			= $this->get_data();
+		$local_value	= isset($data->modified_date)
 			? dd_date::timestamp_to_date(
-				$dato->modified_date,
+				$data->modified_date,
 				true // bool full
 			  )
 			: null;
@@ -1666,7 +1666,7 @@ class section_record {
 			return (int)$data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}[0]->section_id;
 		}
 
-	
+
 
 		return null;
 	}//end get_created_by_user_id
@@ -1680,10 +1680,10 @@ class section_record {
 	*/
 	public function set_created_by_user_id(int $value) : bool {
 
-		// force get dato
-		$this->get_dato();
-
-		$this->dato->created_by_userID = $value;
+		// force get data
+		$data = $this->get_data();
+		$data->created_by_userID = $value;
+		$this->set_data($data);
 
 		return true;
 	}//end set_created_by_userID
@@ -1697,9 +1697,9 @@ class section_record {
 	*/
 	public function get_modified_by_user_id() : ?int {
 
-		$dato = $this->get_dato();
-		if( isset($dato->modified_by_userID) )  {
-			return (int)$dato->modified_by_userID;
+		$data = $this->get_data();
+		if( isset($data->modified_by_userID) )  {
+			return (int)$data->modified_by_userID;
 		}
 
 		return null;
@@ -1714,10 +1714,10 @@ class section_record {
 	*/
 	public function set_modified_by_user_id(int $value) : bool {
 
-		// force get dato
-		$this->get_dato();
-
-		$this->dato->modified_by_userID = $value;
+		// force get data
+		$data = $this->get_data();
+		$data->modified_by_userID = $value;
+		$this->set_data($data);
 
 		return true;
 	}//end set_modified_by_userID
@@ -1758,7 +1758,7 @@ class section_record {
 			return null;
 		}
 
-		$user_name = section::get_user_name_by_user_id(
+		$user_name = self::get_user_name_by_user_id(
 			$user_id,
 			$full_name // bool full_name
 		);
@@ -1794,8 +1794,8 @@ class section_record {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$dato		= $component->get_dato();
-			$user_name	= $dato[0] ?? null;
+			$data		= $component->get_data();
+			$user_name	= $data[0] ?? null;
 		}
 
 		return $user_name;
