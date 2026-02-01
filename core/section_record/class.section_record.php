@@ -1681,7 +1681,7 @@ class section_record {
 			return (int)$data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}[0]->section_id;
 		}
 
-	
+
 
 		return null;
 	}//end get_created_by_user_id
@@ -1807,8 +1807,8 @@ class section_record {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$dato		= $component->get_data();
-			$user_name	= $dato[0] ?? null;
+			$data		= $component->get_data();
+			$user_name	= $data[0] ?? null;
 		}
 
 		return $user_name;
