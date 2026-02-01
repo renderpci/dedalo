@@ -28,6 +28,10 @@ class section_record {
 	// string data_handler
 	public string $data_handler = 'matrix_db_manager';
 
+	// string table.
+	// The name of the table to query.
+	private readonly string $table;
+
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -39,29 +43,25 @@ class section_record {
 	* Get an instance of a section_record object.
 	* It returns a cached instance if it exists.
 	* @param string $section_tipo
-	* @param string|int $section_id
-	* @param string $data_handler matrix_db_manager* | matrix_temp_manager
+	* @param int $section_id
+	* @param bool $is_temporal
 	* @return section_record $section_record
 	*/
-	public static function get_instance( string $section_tipo, string|int $section_id, string $data_handler = 'matrix_db_manager' ) : section_record {
+	public static function get_instance( string $section_tipo, int $section_id, bool $is_temporal = false ) : section_record {
 
 		// metrics
 		self::$section_record_total_calls++;
 
-		$cache_key = $section_tipo .'_' .$section_id;
+		$cache_key = $section_tipo .'_' .$section_id . ($is_temporal ? '_temp' : '');
 
 		$instance = section_record_instances_cache::get($cache_key);
 		if ($instance === null) {
-			// Cache miss - Create a new instance and load from database
-			if(!in_array( $data_handler, ['matrix_db_manager', 'matrix_temp_manager'])) {
-				$data_handler = 'matrix_db_manager';
-				debug_log(__METHOD__
-					." Invalid data_handler: " .$data_handler . PHP_EOL
-					." Falling back to: " .$data_handler
-					, logger::ERROR
-				);
+
+			if ($is_temporal) {
+				$instance = new section_record_temp($section_tipo, $section_id);
+			} else {
+				$instance = new section_record($section_tipo, $section_id);
 			}
-			$instance = new section_record($section_tipo, (int)$section_id, $data_handler);
 			section_record_instances_cache::set($cache_key, $instance);
 		}
 
@@ -78,7 +78,7 @@ class section_record {
 	* @param int $section_id
 	* @return void
 	*/
-	private function __construct( string $section_tipo, int $section_id, string $data_handler ) {
+	protected function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
 			$this->section_tipo	= $section_tipo;
@@ -91,8 +91,11 @@ class section_record {
 				$section_id
 			);
 
-		// set data handler
-			$this->data_handler = $data_handler;
+		// set table
+			$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
+
+		// set default data handler
+			$this->data_handler = 'matrix_db_manager';
 
 		// metrics
 		self::$section_record_total++;
@@ -122,7 +125,7 @@ class section_record {
 	* Dispatches a save event for this section record
 	* @return void
 	*/
-	private function save_event() : void {
+	protected function save_event() : void {
 
 		// Invalidate request config cache file.
 		// This is used to invalidate the request config cache file
@@ -147,7 +150,7 @@ class section_record {
 	* 'this->is_loaded_data_columns' to false.
 	* @return bool
 	*/
-	private function load_data() : bool {
+	protected function load_data() : bool {
 
 		// If the section_record_data instance has already been loaded,
 		// it returns the cached data without reconnecting to the database.
@@ -291,7 +294,7 @@ class section_record {
 		$section_id = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 		$data = $this->data_instance->get_data();
 
 		$result = $this->data_handler::update(
@@ -334,7 +337,7 @@ class section_record {
 		$section_id	 = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 		$values = new stdClass();
 			$values->$column = $this->data_instance->get_column_data($column) ?? null;
 
@@ -375,7 +378,7 @@ class section_record {
 		$section_id		= $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 
 		// check for empty columns. If any column is empty,
 		// remove it from the database for maintaining clean DB data
@@ -607,7 +610,7 @@ class section_record {
 				}
 
 		// 2. Delete the record in DB
-			$table = $this->data_instance->get_table();
+			$table = $this->get_table();
 			$delete_result = $this->data_handler::delete(
 				$table,
 				$section_tipo,
@@ -1203,7 +1206,7 @@ class section_record {
 	* @param object|null $values = null (optional)
 	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
-	* @return section_record|false $section_id
+	* @return section_record|false
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
@@ -1232,7 +1235,7 @@ class section_record {
 		// If the section_id is not provided, it is a new record.
 		if( $section_id !== null ) {
 			// set section_record instance
-			$section_record = section_record::get_instance($section_tipo, $section_id);
+			$section_record = section_record::get_instance($section_tipo, (int)$section_id);
 				// update modified section data
 				// this is necesary to allow the setion record update in the database
 				$section_record->update_modified_section_data( (object)[
@@ -1265,7 +1268,7 @@ class section_record {
 			return false;
 		}
 
-		$section_record = section_record::get_instance( $section_tipo, $section_id );
+		$section_record = section_record::get_instance( $section_tipo, (int)$section_id );
 		$section_record->record_in_the_database = true;
 
 		// update values
@@ -1317,7 +1320,7 @@ class section_record {
 			}
 
 		// new section_record
-		$new_section_record = section_record::get_instance($section_tipo, $new_section_id);
+		$new_section_record = section_record::get_instance($section_tipo, (int)$new_section_id);
 
 		// ar_section_info_tipos.
 		// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
@@ -1429,7 +1432,7 @@ class section_record {
 			return $this->data_instance->get_data();
 		}
 
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 
 		$section_tipo = $this->section_tipo;
 		$section_id	= $this->section_id;
@@ -1537,6 +1540,18 @@ class section_record {
 
 
 	/**
+	* GET_TABLE
+	* Returns the full table object
+	* @return string $this->table
+	*/
+	public function get_table() : string {
+
+		return $this->table;
+	}//end get_table
+
+
+
+	/**
 	* GET_PERMISSIONS
 	* @return int $this->permissions
 	*/
@@ -1586,9 +1601,9 @@ class section_record {
 			true
 		);
 
-		$data = $this->get_data(); // Force load
-		$data->created_date = $date_with_format;
-		$this->set_data($data); // Force update
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->created_date = $date_with_format;
+		$this->data_instance->set_column_data('data', $data_col);
 	}//end set_created_date
 
 
@@ -1608,9 +1623,9 @@ class section_record {
 			true
 		);
 
-		$data = $this->get_data(); // Force load
-		$data->modified_date = $date_with_format;
-		$this->set_data($data); // Force update
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->modified_date = $date_with_format;
+		$this->data_instance->set_column_data('data', $data_col);
 	}//end set_modified_date
 
 
@@ -1621,10 +1636,10 @@ class section_record {
 	*/
 	public function get_created_date() : ?string {
 
-		$data			= $this->get_data();
-		$local_value	= isset($data->created_date)
+		$data_col		= $this->data_instance->get_column_data('data');
+		$local_value	= isset($data_col->created_date)
 			? dd_date::timestamp_to_date(
-				$data->created_date,
+				$data_col->created_date,
 				true // bool full
 			  )
 			: null;
@@ -1640,10 +1655,10 @@ class section_record {
 	*/
 	public function get_modified_date() : ?string {
 
-		$data			= $this->get_data();
-		$local_value	= isset($data->modified_date)
+		$data_col		= $this->data_instance->get_column_data('data');
+		$local_value	= isset($data_col->modified_date)
 			? dd_date::timestamp_to_date(
-				$data->modified_date,
+				$data_col->modified_date,
 				true // bool full
 			  )
 			: null;
@@ -1680,13 +1695,12 @@ class section_record {
 	*/
 	public function set_created_by_user_id(int $value) : bool {
 
-		// force get data
-		$data = $this->get_data();
-		$data->created_by_userID = $value;
-		$this->set_data($data);
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->created_by_user = $value;
 
+		$this->data_instance->set_column_data('data', $data_col);
 		return true;
-	}//end set_created_by_userID
+	}//end set_created_by_user_id
 
 
 
@@ -1697,12 +1711,12 @@ class section_record {
 	*/
 	public function get_modified_by_user_id() : ?int {
 
-		$data = $this->get_data();
-		if( isset($data->modified_by_userID) )  {
-			return (int)$data->modified_by_userID;
-		}
-
-		return null;
+		$data_col = $this->data_instance->get_column_data('data');
+		$local_value = isset($data_col->modified_by_user)
+			? $data_col->modified_by_user
+			: null;
+		
+		return $local_value;
 	}//end get_modified_by_user_id
 
 
@@ -1714,13 +1728,12 @@ class section_record {
 	*/
 	public function set_modified_by_user_id(int $value) : bool {
 
-		// force get data
-		$data = $this->get_data();
-		$data->modified_by_userID = $value;
-		$this->set_data($data);
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->modified_by_user = $value;
 
+		$this->data_instance->set_column_data('data', $data_col);
 		return true;
-	}//end set_modified_by_userID
+	}//end set_modified_by_user_id
 
 
 

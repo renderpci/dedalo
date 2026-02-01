@@ -99,7 +99,7 @@ view_tool_time_machine_list.render_column_id = function(options) {
 						section_id		: section_id,
 						matrix_id		: matrix_id,
 						modification_component_date	: modification_component_date,
-						bulk_process_id	:  null,
+						bulk_process_id	: bulk_process_id || null,
 						mode			: 'tm',
 						caller			: options
 					}
