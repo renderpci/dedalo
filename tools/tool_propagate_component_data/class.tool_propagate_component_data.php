@@ -92,7 +92,7 @@ class tool_propagate_component_data extends tool_common {
 				);
 
 			// get the bulk_process_id as the section_id of the section process
-				$bulk_process_id = $process_section->get_section_id();
+				$bulk_process_id = $process_section->create_record();
 
 			// Save the process name into the process section
 				$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
@@ -104,8 +104,12 @@ class tool_propagate_component_data extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$bulk_process_label_component->set_dato($bulk_process_label);
-				$bulk_process_label_component->Save();
+				$data_label = [(object)[
+					'lang' => DEDALO_DATA_NOLAN,
+					'value' => $bulk_process_label
+				]];
+				$bulk_process_label_component->set_data($data_label);
+				$bulk_process_label_component->save();
 
 		// result records iterate
 			foreach ($db_result as $row) {
@@ -139,7 +143,7 @@ class tool_propagate_component_data extends tool_common {
 						$lang,
 						$section_tipo
 					);
-					$current_dato = $current_component->get_dato();
+					$current_data = $current_component->get_data_lang($lang);
 
 				// final_data. Build final_data based on action type
 					$final_data = $current_data ?? [];
@@ -147,9 +151,11 @@ class tool_propagate_component_data extends tool_common {
 					switch ($action) {
 
 						case 'replace':
-
-							$final_dato = $propagate_data_value;
-							$save = true;
+							if($current_data === $propagate_data_value) {
+								$save = false;
+							} else {
+								$final_data = $propagate_data_value;
+							}
 							break;
 
 						case 'delete':
@@ -189,8 +195,8 @@ class tool_propagate_component_data extends tool_common {
 						// set the bulk_process_id to save it into time_machine
 						// this allow to revert the bulk import
 						$current_component->set_bulk_process_id($bulk_process_id);
-						$current_component->set_dato($final_dato);
-						$current_component->Save();
+						$current_component->set_data_lang($final_data, $lang);
+						$current_component->save();
 
 						debug_log(__METHOD__
 							." Updated data of $section_tipo - $current_section_id - $component_tipo "
