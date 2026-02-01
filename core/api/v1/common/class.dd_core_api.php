@@ -890,7 +890,7 @@ final class dd_core_api {
 
 		// section_record
 		// section_record duplicate current. Returns the section_id created
-			$section_record	= section_record::get_instance( $section_tipo, $section_id );
+			$section_record	= section_record::get_instance( $section_tipo, (int)$section_id );
 			$section_id	= $section_record->duplicate();
 
 			if (empty($section_id)) {

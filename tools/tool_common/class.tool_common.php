@@ -471,7 +471,7 @@ class tool_common {
 
 			foreach ($db_result as $record) {
 
-				$section_record = section_record::get_instance($record->section_tipo, $record->section_id);
+				$section_record = section_record::get_instance($record->section_tipo, (int)$record->section_id);
 				$section_record->set_data( $record );
 
 				// simple tool object 'dd1353'. Created on the fly.

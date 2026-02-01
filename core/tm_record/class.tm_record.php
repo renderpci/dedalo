@@ -406,7 +406,7 @@ class tm_record {
 		$bulk_process_id	= $tm_data->bulk_process_id;
 		$data				= $tm_data->data;
 
-		$section_record = section_record::get_instance('dd15', $id);
+		$section_record = section_record::get_instance('dd15', (int)$id);
 
 		// section_id
 			// the section_id that store the time machine data
