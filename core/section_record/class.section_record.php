@@ -28,6 +28,10 @@ class section_record {
 	// string data_handler
 	public string $data_handler = 'matrix_db_manager';
 
+	// string table.
+	// The name of the table to query.
+	private readonly string $table;
+
 	// metrics
 	public static int $section_record_total = 0;
 	public static int $section_record_total_calls = 0;
@@ -91,8 +95,9 @@ class section_record {
 				$section_id
 			);
 
-		// set data handler
-			$this->data_handler = $data_handler;
+		// set table
+			$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
+
 
 		// metrics
 		self::$section_record_total++;
@@ -291,7 +296,7 @@ class section_record {
 		$section_id = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 		$data = $this->data_instance->get_data();
 
 		$result = $this->data_handler::update(
@@ -334,7 +339,7 @@ class section_record {
 		$section_id	 = $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 		$values = new stdClass();
 			$values->$column = $this->data_instance->get_column_data($column) ?? null;
 
@@ -375,7 +380,7 @@ class section_record {
 		$section_id		= $this->section_id;
 
 		// data_instance
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 
 		// check for empty columns. If any column is empty,
 		// remove it from the database for maintaining clean DB data
@@ -607,7 +612,7 @@ class section_record {
 				}
 
 		// 2. Delete the record in DB
-			$table = $this->data_instance->get_table();
+			$table = $this->get_table();
 			$delete_result = $this->data_handler::delete(
 				$table,
 				$section_tipo,
@@ -1429,7 +1434,7 @@ class section_record {
 			return $this->data_instance->get_data();
 		}
 
-		$table = $this->data_instance->get_table();
+		$table = $this->get_table();
 
 		$section_tipo = $this->section_tipo;
 		$section_id	= $this->section_id;
@@ -1537,6 +1542,18 @@ class section_record {
 
 
 	/**
+	* GET_TABLE
+	* Returns the full table object
+	* @return string $this->table
+	*/
+	public function get_table() : string {
+
+		return $this->table;
+	}//end get_table
+
+
+
+	/**
 	* GET_PERMISSIONS
 	* @return int $this->permissions
 	*/
@@ -1586,9 +1603,9 @@ class section_record {
 			true
 		);
 
-		$dato = $this->get_dato(); // Force load
-		$dato->created_date = $date_with_format;
-		$this->set_dato($dato); // Force update
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->created_date = $date_with_format;
+		$this->data_instance->set_column_data('data', $data_col);
 	}//end set_created_date
 
 
@@ -1608,9 +1625,9 @@ class section_record {
 			true
 		);
 
-		$dato = $this->get_dato(); // Force load
-		$dato->modified_date = $date_with_format;
-		$this->set_dato($dato); // Force update
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->modified_date = $date_with_format;
+		$this->data_instance->set_column_data('data', $data_col);
 	}//end set_modified_date
 
 
@@ -1621,10 +1638,10 @@ class section_record {
 	*/
 	public function get_created_date() : ?string {
 
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->created_date)
+		$data_col		= $this->data_instance->get_column_data('data');
+		$local_value	= isset($data_col->created_date)
 			? dd_date::timestamp_to_date(
-				$dato->created_date,
+				$data_col->created_date,
 				true // bool full
 			  )
 			: null;
@@ -1640,10 +1657,10 @@ class section_record {
 	*/
 	public function get_modified_date() : ?string {
 
-		$dato			= $this->get_dato();
-		$local_value	= isset($dato->modified_date)
+		$data_col		= $this->data_instance->get_column_data('data');
+		$local_value	= isset($data_col->modified_date)
 			? dd_date::timestamp_to_date(
-				$dato->modified_date,
+				$data_col->modified_date,
 				true // bool full
 			  )
 			: null;
@@ -1680,13 +1697,12 @@ class section_record {
 	*/
 	public function set_created_by_user_id(int $value) : bool {
 
-		// force get dato
-		$this->get_dato();
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->created_by_user = $value;
 
-		$this->dato->created_by_userID = $value;
-
+		$this->data_instance->set_column_data('data', $data_col);
 		return true;
-	}//end set_created_by_userID
+	}//end set_created_by_user_id
 
 
 
@@ -1697,12 +1713,12 @@ class section_record {
 	*/
 	public function get_modified_by_user_id() : ?int {
 
-		$dato = $this->get_dato();
-		if( isset($dato->modified_by_userID) )  {
-			return (int)$dato->modified_by_userID;
-		}
-
-		return null;
+		$data_col = $this->data_instance->get_column_data('data');
+		$local_value = isset($data_col->modified_by_user)
+			? $data_col->modified_by_user
+			: null;
+		
+		return $local_value;
 	}//end get_modified_by_user_id
 
 
@@ -1714,13 +1730,12 @@ class section_record {
 	*/
 	public function set_modified_by_user_id(int $value) : bool {
 
-		// force get dato
-		$this->get_dato();
+		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
+		$data_col->modified_by_user = $value;
 
-		$this->dato->modified_by_userID = $value;
-
+		$this->data_instance->set_column_data('data', $data_col);
 		return true;
-	}//end set_modified_by_userID
+	}//end set_modified_by_user_id
 
 
 
@@ -1794,7 +1809,7 @@ class section_record {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$dato		= $component->get_dato();
+			$dato		= $component->get_data();
 			$user_name	= $dato[0] ?? null;
 		}
 
