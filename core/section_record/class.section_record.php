@@ -1237,7 +1237,7 @@ class section_record {
 		// If the section_id is not provided, it is a new record.
 		if( $section_id !== null ) {
 			// set section_record instance
-			$section_record = section_record::get_instance($section_tipo, $section_id);
+			$section_record = section_record::get_instance($section_tipo, (int)$section_id);
 				// update modified section data
 				// this is necesary to allow the setion record update in the database
 				$section_record->update_modified_section_data( (object)[
@@ -1270,7 +1270,7 @@ class section_record {
 			return false;
 		}
 
-		$section_record = section_record::get_instance( $section_tipo, $section_id );
+		$section_record = section_record::get_instance( $section_tipo, (int)$section_id );
 		$section_record->record_in_the_database = true;
 
 		// update values
@@ -1322,7 +1322,7 @@ class section_record {
 			}
 
 		// new section_record
-		$new_section_record = section_record::get_instance($section_tipo, $new_section_id);
+		$new_section_record = section_record::get_instance($section_tipo, (int)$new_section_id);
 
 		// ar_section_info_tipos.
 		// Section info tipos can get they from ontology children of DEDALO_SECTION_INFO_SECTION_GROUP
