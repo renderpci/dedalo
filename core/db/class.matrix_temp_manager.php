@@ -14,278 +14,320 @@
 */
 class matrix_temp_manager extends matrix_db_manager {
 
+	public static array $tables = [
+		'temp' => true
+	];
+
+	public static array $columns = [
+		'key' => [
+			'type' => 'string',
+			'required' => true,
+		],
+		'value' => [
+			'type' => 'jsonb',
+			'required' => true,
+		],
+	];
+
+	public static array $json_columns = [
+		'value' => true,
+	];
 
 
 	/**
-	* CREATE
-	* Creates the session.
-	* @param string $table
-	* 	Table name. E.g. 'matrix'
-	* @param string $section_tipo
-	* 	Section tipo. E.g. 'oh1'
-	* @param object $values
-	* 	Object with {column name : value} structure
-	* 	Keys are column names, values are their new values.
-	* @return int|false
-	* 	Returns true on success, or false on failure.
-	*/
-	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
+	 * CREATE
+	 * Inserts a new record into the temp table or updates it if it exists using an upsert pattern.
+	 * This method performs an atomic operation: if a record with the specified key exists, it merges
+	 * the new values into the existing JSONB data using PostgreSQL's JSONB merge operator; otherwise,
+	 * it creates a new record with the provided values. The function defaults to an empty object if
+	 * no values are provided.
+	 *
+	 * @param string $section_tipo The section tipo identifier used to generate the unique key
+	 * @param string $table The table name to operate on (default: 'temp')
+	 * @param object|null $values An object containing the values to insert or merge (defaults to empty object)
+	 *
+	 * @return int|false Returns 0 on success, false if the operation fails
+	 *
+	 * @package Dedalo
+	 * @subpackage Core
+	 */
+	public static function create(string $section_tipo, string $table='temp', ?object $values = null): int|false {
 
-		if(isset($values->section_id)) {
-			$section_id = $values->section_id;
-			$temp_data_uid = self::get_uid($section_tipo); // E.g. 'oh1'
-			if(!isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = new stdClass();
-			}
+		$key = self::get_uid($section_tipo);
+		$value = json_handler::encode($values ?: new stdClass());
 
-			return (int)$section_id;
-		}
+		$sql = "INSERT INTO \"$table\" (key, value)
+				VALUES ($1, $2)
+				ON CONFLICT (key) DO UPDATE SET value = COALESCE(temp.value, '{}'::jsonb) || EXCLUDED.value
+				RETURNING 0 as section_id"; // Always return 0 as section_id for temp
 
-		return false;
+		$result = self::exec_search($sql, [$key, $value]);
+
+		return $result ? 0 : false;
 	}//end create
 
 
 
 	/**
-	* READ
-	* Retrieves a single row of data from a specified PostgreSQL table
-	* based on section_id and section_tipo.
-	* It's designed to provide a unified way of accessing data from
-	* various "matrix" tables within the Dédalo application.
-	* @param string $table
-	* 	Table name. E.g. 'matrix'
-	* @param string $section_tipo
-	* 	Section tipo. E.g. 'oh1'
-	* @param int|string $section_id
-	* 	Section id. E.g. '1'
-	* @return object|false $row
-	* 	Returns the processed data as an object with parsed JSON values.
-	* 	If no row is found, or if a critical error occurs, it returns false.
-	*/
-	public static function read(string $table, string $section_tipo, int|string $section_id): object|false	{
+	 * READ
+	 * Retrieves temporal data from the temp table and formats it as a matrix record.
+	 * This method fetches the JSONB data stored in the temp table for a given section tipo,
+	 * then constructs a fake database row object that mimics the structure of a matrix table.
+	 * The section_id is set to 0 to indicate this is a temporary record, and all non-string
+	 * values are JSON-encoded to match the expected format. If no record is found, the method
+	 * returns false.
+	 *
+	 * @param string $table The table name to read from (default: 'temp')
+	 * @param string $section_tipo The section tipo identifier used to generate the unique key
+	 * @param int|string $section_id The section ID (ignored, uses section_tipo as key for lookup)
+	 *
+	 * @return object|false Returns a fake matrix row object with section_id=0, or false if no record found
+	 *
+	 * @package Dedalo
+	 * @subpackage Core
+	 */
+	public static function read(string $table='temp', string $section_tipo, int|string $section_id): object|false	{
 
-		$temp_data_uid = self::get_uid($section_tipo); // E.g. 'oh1'
-		$data = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid] ?? null;
+		$key = self::get_uid($section_tipo);
 
-		// Return the result or false if not found
-		return $data ?: false;
+		$sql = "SELECT value FROM \"$table\" WHERE key = $1";
+		$res = self::exec_search($sql, [$key]);
+
+		if ($res && pg_num_rows($res) > 0) {
+			$row = pg_fetch_object($res);
+			$data = json_decode($row->value);
+
+			// Mimic a database row for matrix tables
+			$fake_row = new stdClass();
+			$fake_row->section_id = 0;
+			$fake_row->section_tipo = $section_tipo;
+
+			foreach (matrix_db_manager::get_columns_name() as $col) {
+				$fake_row->$col = $data->$col ?? null;
+				if ($fake_row->$col !== null && !is_string($fake_row->$col)) {
+					$fake_row->$col = json_encode($fake_row->$col);
+				}
+			}
+			return $fake_row;
+		}
+
+		return false;
 	}//end read
 
 
 
 	/**
 	* UPDATE
-	* Safely updates one or more columns in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param string $table
-	* 	Table name. E.g. 'matrix'
-	* @param string $section_tipo
-	* 	Section tipo. E.g. 'oh1'
-	* @param int|string $section_id
-	* 	Section id. E.g. '1'
-	* @param object $values
-	* 	Object with {column name : value} structure
-	* 	Keys are column names, values are their new values.
-	* @return bool
-	* 	Returns `true` on success, or `false` on failure.
+	* Merges new values into the existing JSONB 'value' column in the temp table using PostgreSQL's JSONB merge operator.
+	* This method performs an upsert operation: if a record with the specified key exists, it merges the new values
+	* into the existing JSONB data; otherwise, it creates a new record with the provided values.
+	*
+	* @param string $table The table name (default: 'temp')
+	* @param string $section_tipo The section tipo identifier used to generate the unique key
+	* @param int|string $section_id The section ID (ignored, kept for API compatibility)
+	* @param object $values An object containing the values to merge into the JSONB column
+	* @return bool True if the update was successful, false if values are empty or operation failed
+	*
+	* @package Dedalo
+	* @subpackage Core
 	*/
-	public static function update(string $table, string $section_tipo, int|string $section_id, object $values): bool {
+	public static function update(string $table='temp', string $section_tipo, int|string $section_id, object $values): bool {
 
-		// Check for empty update payload. Cast to array to avoid empty() false positives
 		if (empty((array)$values)) {
-			debug_log(
-				__METHOD__
-					. " Ignored update with empty values " . PHP_EOL
-					. ' values: ' . json_encode($values),
-				logger::WARNING
-			);
 			return false;
 		}
 
-		$temp_data_uid = self::get_uid($section_tipo); // E.g. 'oh1'
-		if(!isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-			$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = new stdClass();
-		}
+		$key = self::get_uid($section_tipo);
 
-		// Add values to session
-		foreach ($values as $column => $value) {
-			// Validate column name (Security/Guardrail)
-			if (!isset(matrix_db_manager::$columns[$column])) {
-				debug_log(
-					__METHOD__
-						. " Ignored invalid column name: $column" . PHP_EOL
-						. ' allowed_columns: ' . json_encode(matrix_db_manager::$columns),
-					logger::ERROR
-				);
-				continue;
+		// Prepare values for JSONB merge. Ensure all columns are JSON encoded if needed.
+		$prepared_values = new stdClass();
+		foreach ($values as $col => $val) {
+			if ($val !== null && !is_string($val)) {
+				$prepared_values->$col = $val;
+			} else {
+				$prepared_values->$col = $val;
 			}
-
-			// Prepare value: JSON encode if it's a designated JSON column and not null
-			$safe_value = ($value !== null && isset(self::$json_columns[$column]))
-				? json_handler::encode($value)
-				: $value;
-
-			$_SESSION['dedalo']['section_temp_data'][$temp_data_uid]->$column = $safe_value;
 		}
 
+		$json_values = json_handler::encode($prepared_values);
 
-		return true;
+		$sql = "INSERT INTO \"$table\" (key, value)
+				VALUES ($1, $2)
+				ON CONFLICT (key) DO UPDATE
+				SET value = COALESCE(\"$table\".value, '{}'::jsonb) || EXCLUDED.value";
+
+		$result = self::exec_search($sql, [$key, $json_values]);
+
+		return (bool)$result;
 	}//end update
 
 
 
 	/**
 	* UPDATE_BY_KEY
-	* Saves given value into the specified JSON key, it could be:
-	* a component container
-	* a section property data as created_date
-	* a component counter data
-	* Creates the path from the given key as componente_tipo {dd197} or property {created_date}.
-	* If the given value is empty, the path will be removed for clean database.
-	* @param string $table
-	* 	Table name. E.g. 'matrix'
-	* @param string $section_tipo
-	* 	Section tipo. E.g. 'oh1'
-	* @param int|string $section_id
-	* 	Section id. E.g. '1'
-	* @param array $data_to_save
-	* 	Array of objects with the column, key and value to be update
-	* 	[{
-	* 		"column" 	: "relation",
-	* 		"key"		: "oh25",
-	* 		"value"		: [{"section_id":3,"section_tipo":"oh1"}]
-	* 	}]
-	* @return bool
-	* 	Returns false if JSON fragment save fails.
-	*/
+	* Updates individual component values within the JSONB 'value' column of the temp table.
+	* 
+	* This method performs granular updates to specific component fields within a JSONB structure,
+	* using PostgreSQL's jsonb_set and jsonb_set_lax functions. Updates are grouped by column,
+	* allowing for efficient batch updates to multiple components within the same section.
+	*
+	* The data structure is: 
+	 * - Column-level objects: Each key represents a database column name
+	 * - Component-level objects: Each component is stored within its column object with the
+	 *   component tipo as the key and the component value as the value
+	 * - Null values are removed from the JSONB structure using the 'delete_key' option
+	 *
+	 * The function constructs nested jsonb_set expressions like:
+	 * SET value = jsonb_set(jsonb_set(value, '{column}', 
+	 *   jsonb_set_lax(COALESCE(value->'column', '{}'), '{comp_id}', value, true, 'delete_key')
+	 * ), '{column}', ..., true)
+	 * 
+	 * @param string $table The table name to update (default: 'temp')
+	 * @param string $section_tipo The section tipo identifier used to generate the unique key
+	 * @param int|string $section_id The section ID (kept for API compatibility, not used in logic)
+	 * @param array $data_to_save Array of objects, each containing:
+	 *                             - column: string The column name in the JSONB structure
+	 *                             - key: string The component tipo (used as the JSON path key)
+	 *                             - value: mixed The value to set for the component (null removes the key)
+	 * @return bool True if the update was successful, false if data_to_save is empty or operation failed
+	 * @throws Exception If database operation fails during exec_search
+	 *
+	 * @package Dedalo
+	 * @subpackage Core
+	 */
 	public static function update_by_key(
-		string $table,
+		string $table='temp',
 		string $section_tipo,
 		int|string $section_id,
 		array $data_to_save
 		): bool {
 
-		// check data_to_save
 		if (empty($data_to_save)) {
-			debug_log(
-				__METHOD__
-					. " Wrong data_to_save. Expected non empty array:  " . PHP_EOL
-					. ' type: ' . gettype($data_to_save) . PHP_EOL
-					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-					. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
-				logger::ERROR
-			);
 			return false;
 		}
 
-		// Group data by column to handle multiple updates to the same column
-		$columns_data = [];
+		$key = self::get_uid($section_tipo);
+
+		// Ensure record exists to avoid UPDATE on non-existent key
+		$sql_ensure = "INSERT INTO \"$table\" (key, value)
+				VALUES ($1, '{}'::jsonb)
+				ON CONFLICT (key) DO NOTHING";
+		self::exec_search($sql_ensure, [$key]);
+
+
+		// Group updates by column
+		$column_updates = [];
 		foreach ($data_to_save as $data) {
-
-			// Check valid data
-			if (!is_object($data)) {
-				// Query failed
-				debug_log(
-					__METHOD__
-						. " Wrong data_to_save => data. Expected object:  " . PHP_EOL
-						. ' type: ' . gettype($data) . PHP_EOL
-						. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-						. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
-					logger::ERROR
-				);
-				return false;
+			$column = $data->column;
+			if (!isset($column_updates[$column])) {
+				$column_updates[$column] = [];
 			}
-
-			$column		= $data->column;
-			$key		= $data->key;
-			$value		= $data->value;
-
-			// Group by column
-			if (!isset($columns_data[$column])) {
-				$columns_data[$column] = [];
-			}
-
-			$columns_data[$column][] = [
-				'key' => $key,
-				'value' => $value
-			];
+			$column_updates[$column][] = $data;
 		}
 
-		$temp_data_uid = self::get_uid($section_tipo); // E.g. 'oh1'
-		if(!isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-			$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = new stdClass();
+
+		// Build the SQL expression
+		// We want to achieve: SET value = jsonb_set(value, '{string}', NewStringObj, true) ...
+		// where NewStringObj = jsonb_set(COALESCE(value->'string', '{}'), '{comp_id}', val, true) ...
+
+		$expression = "value"; // Start with existing value
+		$params = [$key];
+		$param_index = 2;
+
+		foreach ($column_updates as $column => $updates) {
+			
+			// Build the expression for this specific column's new object
+			// Start with existing column data or empty object
+			$col_expr = "COALESCE(value->'$column', '{}'::jsonb)";
+			
+			foreach ($updates as $data) {
+				$comp_tipo = $data->key;
+				$val = $data->value;
+				
+				$json_val = ($val === null) ? null : json_handler::encode($val);
+				
+				$current_param_index = $param_index; // Index for path '{comp_tipo}'
+				$value_param_index = $param_index + 1; // Index for value
+				
+				// jsonb_set(target, path, value)
+				// Note: using jsonb_set_lax for better null handling if needed, but standard logic:
+				// If val is null, we want to remove the key. jsonb_set_lax with 'delete_key' does this.
+				$col_expr = "jsonb_set_lax($col_expr, \${$current_param_index}::text[], \${$value_param_index}::jsonb, true, 'delete_key')";
+				
+				$params[] = '{' . $comp_tipo . '}';
+				$params[] = $json_val;
+				$param_index += 2;
+			}
+			
+			// Now wrap the expression to update the main value
+			// value = jsonb_set(value, '{column}', NewColumnObject, true)
+			// effectively ensuring the column key exists
+			$col_param_index = $param_index;
+			$params[] = '{' . $column . '}';
+			$param_index++;
+			
+			// We cannot use $col_expr as a parameter because it contains SQL function calls.
+			// carefully construct the string.
+			$expression = "jsonb_set($expression, \${$col_param_index}::text[], $col_expr, true)";
 		}
 
-		// Update the session data - one per column
-		foreach ($columns_data as $column => $updates) {
+		$sql = "UPDATE \"$table\"
+				SET value = $expression
+				WHERE key = $1";
 
-			// Current column value in session
-			$current_column_value = $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]->$column ?? null;
+		$result = self::exec_search($sql, $params);
 
-			// Decode if it's a string (simulation of DB row where JSON columns are strings)
-			if (is_string($current_column_value)) {
-				$column_object = json_decode($current_column_value);
-			} else {
-				$column_object = $current_column_value ?: new stdClass();
-			}
-
-			foreach ($updates as $update) {
-				$key = $update['key'];
-				$value = $update['value'];
-
-				if ($value === null) {
-					if (is_object($column_object)) {
-						unset($column_object->$key);
-					} else if (is_array($column_object)) {
-						unset($column_object[$key]);
-					}
-				} else {
-					if (is_object($column_object)) {
-						$column_object->$key = $value;
-					} else if (is_array($column_object)) {
-						$column_object[$key] = $value;
-					}
-				}
-			}
-
-			// Re-encode and store back
-			$_SESSION['dedalo']['section_temp_data'][$temp_data_uid]->$column = json_encode($column_object, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-		}
-
-		return true;
+		return (bool)$result;
 	}//end update_by_key
 
 
 
+
 	/**
-	* DELETE
-	* Safely deletes one record in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
-	*/
-	public static function delete(string $table, string $section_tipo, int|string $section_id) : bool {
+	 * DELETE
+	 * Removes the record from the temp table based on section_tipo.
+	 *
+	 * Deletes the temporary record associated with the given section tipo. The function generates
+	 * a unique key using get_uid() and executes a DELETE statement against the specified table.
+	 * This is used to clean up temporary data when a section record is no longer needed.
+	 *
+	 * @param string $table The table name to delete from (default: 'temp')
+	 * @param string $section_tipo The section tipo identifier used to generate the unique key
+	 * @param int|string $section_id The section ID (kept for API compatibility, not used in logic)
+	 *
+	 * @return bool True if the record was deleted, false if no record was found or operation failed
+	 *
+	 * @throws Exception If database operation fails
+	 *
+	 * @package Dedalo
+	 * @subpackage Core
+	 */
+	public static function delete(string $table='temp', string $section_tipo, int|string $section_id) : bool {
 
-		$temp_data_uid = self::get_uid($section_tipo); // E.g. 'oh1'
-		if(isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
-			unset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
-		}
+		$key = self::get_uid($section_tipo);
+		$sql = "DELETE FROM \"$table\" WHERE key = $1";
+		$result = self::exec_search($sql, [$key]);
 
-		return true;
+		return (bool)$result;
 	}//end delete
 
 
 
 	/**
-	* GET_UID
-	* Returns the unic id of the temp data
-	* @return string
-	*/
+	 * GET_UID
+	 * Generates a unique key for the temp table by combining the section tipo with the logged-in user's ID.
+	 * This ensures that temporary data is isolated per user and section, preventing conflicts when multiple
+	 * users work on the same section simultaneously.
+	 *
+	 * @param string $section_tipo The section tipo identifier used to generate the unique key
+	 *
+	 * @return string The unique key composed of section_tipo and logged_user_id()
+	 *
+	 * @package Dedalo
+	 * @subpackage Core
+	 */
 	public static function get_uid(string $section_tipo) : string {
-		return $section_tipo;
+		return $section_tipo . logged_user_id();
 	}//end get_uid
 
 
