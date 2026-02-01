@@ -46,7 +46,7 @@ $updates->$v = new stdClass();
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 5;
+	$updates->$v->update_from_minor		= 6;
 
 	// require a clean installation
 	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -373,3 +373,19 @@ $updates->$v = new stdClass();
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
 			];
+
+		// Create new temprary table with key -> value
+		// Use to storage temporay sections (sections without section_id or section_id=0)
+		// key string as section_tipo_user_id or any other string combination as section_tipo_section_id_user_id
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				CREATE UNLOGGED TABLE IF NOT EXISTS temp (
+					key text PRIMARY KEY,
+					value jsonb NULL
+				);
+			');
+
+		// Set the matrix_notifications as UNLOGGED
+		// Optimize write operations
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				ALTER TABLE "matrix_notifications" SET UNLOGGED;
+			');

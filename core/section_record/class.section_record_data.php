@@ -103,10 +103,6 @@ class section_record_data {
 	// A numerical identifier for the section. Used as the primary lookup key in the WHERE clauses.
 	protected readonly int $section_id;
 
-	// string table.
-	// The name of the table to query.
-	protected readonly string $table;
-
 	// metrics
 	public static int $section_record_data_total_calls = 0;
 
@@ -144,7 +140,6 @@ class section_record_data {
 
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
-		$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
 
 		// Data columns
 		$this->data = new stdClass();
@@ -296,18 +291,6 @@ class section_record_data {
 
 		return true;
 	}//end set_key_data
-
-
-
-	/**
-	* GET_TABLE
-	* Returns the full table object
-	* @return string $this->table
-	*/
-	public function get_table() : string {
-
-		return $this->table;
-	}//end get_table
 
 
 

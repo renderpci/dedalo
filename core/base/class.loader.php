@@ -49,6 +49,8 @@ include DEDALO_CORE_PATH . '/common/class.static_profiler.php';
 // Section
 include DEDALO_CORE_PATH . '/section/class.section.php';
 include DEDALO_CORE_PATH . '/section_record/class.section_record_data.php';
+include DEDALO_CORE_PATH . '/section_record/class.section_record.php';
+include DEDALO_CORE_PATH . '/section_record/class.section_record_temp.php';
 // Time machine
 include DEDALO_CORE_PATH . '/tm_record/class.tm_record_data.php';
 include DEDALO_CORE_PATH . '/tm_record/class.tm_record.php';
