@@ -42,7 +42,7 @@ class tool_dev_template extends tool_common {
 				DEDALO_DATA_NOLAN, // string lang
 				$section_tipo // string section_tipo
 			);
-			$dato = $component->get_dato();
+			$data = $component->get_data();
 
 		// awesome tool process...
 			$my_process_result = (object)[
@@ -54,7 +54,7 @@ class tool_dev_template extends tool_common {
 				],
 				'test_value4'		=> ['array_val_1','array_val_2'],
 				'date'				=> date("Y-m-d H:i:s"),
-				'component_data'	=> $dato
+				'component_data'	=> $data
 			];
 
 		// response

@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_GEOLOCATION
-* Manages 
+* Manages
 * data_column_name : 'geo'
 */
 class component_geolocation extends component_common {
@@ -28,36 +28,6 @@ class component_geolocation extends component_common {
 
 
 	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @see class.diffusion_mysql.php
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
-	*/
-	// public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
-
-	// 	$diffusion_value = null;
-
-	// 	$dato = $this->get_dato();
-	// 	if (empty($dato)) {
-	// 		return $diffusion_value;
-	// 	}
-
-	// 	$value = is_array($dato) ? reset($dato) : $dato;
-	// 	$diffusion_value = !empty($value)
-	// 		? json_encode($value)
-	// 		: null;
-
-
-	// 	return $diffusion_value;
-	// }//end get_diffusion_value
-
-
-
-	/**
 	* BUILD_GEOLOCATION_TAG_STRING
 	* Sample:
 	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
@@ -80,7 +50,7 @@ class component_geolocation extends component_common {
 	* @return string $result
 	*/
 	public static function build_geolocation_tag_string(string $tag_id, $lon, $lat) : string {
-		
+
 		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
 
 
@@ -182,7 +152,7 @@ class component_geolocation extends component_common {
 		}
 
 		$data = $data[0];
-		
+
 		// $socrata_data = 'POINT ('.$data->lat.', '.$data->lon.')';
 
 		// {
@@ -205,7 +175,7 @@ class component_geolocation extends component_common {
 		//	 $point->longitude = -122.334540;
 
 		// diffusion object
-		$diffusion_value_socrata = $geo_json_point; 
+		$diffusion_value_socrata = $geo_json_point;
 
 
 		return $diffusion_value_socrata;
