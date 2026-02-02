@@ -1570,36 +1570,37 @@ abstract class component_common extends common {
 			$result = $section_record->save_component_data( $save_path );
 
 		// time machine data.
-		if((int)$section_id > 0 && $this->is_temporal!==true) {
+		if((int)$section_id > 0 && $this->is_temporal !== true && tm_record::$save_tm) {
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
-			$tm_value = new stdClass();
-				$tm_value->data				= $this->get_time_machine_data_to_save();
-				$tm_value->lang				= $lang;
-				$tm_value->tipo				= $tipo;
-				$tm_value->section_tipo		= $section_tipo;
-				$tm_value->section_id		= (int)$this->section_id;
-				$tm_value->previous_data 	= $this->db_data ?? null;
-
+			$tm_values = new stdClass();
+				$tm_values->section_id		= $section_id;
+				$tm_values->section_tipo	= $section_tipo;
+				$tm_values->tipo			= $tipo;
+				$tm_values->lang			= $lang;
 				// component_dataframe
 				// when the component is dataframe, save all information together
 				// use the main and dataframe data as locators, mix all and save with the main component tipo
 				if ( $model==='component_dataframe' ) {
 					// use the main component
 					$main_tipo = $this->get_main_component_tipo();
-					$tm_value->tipo	= $main_tipo;
+					$tm_values->tipo	= $main_tipo;
 				}
 				// bulk_process_id column
 				if( isset($this->bulk_process_id) ){
-					$tm_value->bulk_process_id = $this->bulk_process_id;
+					$tm_values->bulk_process_id = $this->bulk_process_id;
 				}
+				// data
+				$tm_values->data = $this->get_time_machine_data_to_save();
 			// Save the time machine record
-			$tm_result = tm_record::create( $tm_value );
+			$previous_data = $this->db_data ?? null;
+			$tm_result = tm_record::create($tm_values,  $previous_data);
 			if ($tm_result === false) {
 				debug_log(__METHOD__
 					.' Error saving Time Machine data for'
-					.' tm_value: ' . to_string($tm_value)
+					.' tm_value: ' . to_string($tm_values). PHP_EOL
+					.'result: ' . to_string($tm_result)
 					, logger::ERROR
 				);
 			}

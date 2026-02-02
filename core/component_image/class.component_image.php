@@ -1586,6 +1586,9 @@ class component_image extends component_media_common implements component_media_
 				$regenerate_options->delete_normalized_files = $delete_normalized_files;
 
 			$result = parent::regenerate_component( $regenerate_options );
+			if ( $result === false ) {
+				return false;
+			}
 
 		// svg file. Create file if not exists
 			$svg_file_path = $this->get_svg_file_path();

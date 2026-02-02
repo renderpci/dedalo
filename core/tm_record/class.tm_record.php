@@ -220,7 +220,7 @@ class tm_record {
 				$tm_values->lang			= $values->lang; // string $lang
 
 			// Set the limit to 1
-			// When the search give 1 record stop the search because time machine has previous data
+			// When the search give 1 record, stop the search because time machine has previous data
 			$limit = 1;
 
 			$db_result = tm_record::search( $tm_values, $limit );
@@ -267,6 +267,11 @@ class tm_record {
 		);
 
 		if( $id === false ){
+			debug_log( __METHOD__
+				. " Error creating new record: " . PHP_EOL
+				.' values:  ' . json_encode($values, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
 			return false;
 		}
 
@@ -477,8 +482,8 @@ class tm_record {
 			// it will be used for component_text_area to know the user who created the section record
 			$this->set_section_record_factory(
 				DEDALO_SECTION_INFO_CREATED_BY_USER,
-				[$user_locator], 
-				$section_record 
+				[$user_locator],
+				$section_record
 			);
 
 		// Annotation
@@ -512,7 +517,7 @@ class tm_record {
 
 			// 2. Create the component and get its data
 			// the data will used as (injected into) the component data of the time_machine annotation component.
-			
+
 			// Empty data as default
 			// this data is needed because the note text_area will use to get the text_area data and
 			// parent_section_id and parent_section_tipo to build the target section.
@@ -533,7 +538,7 @@ class tm_record {
 				// if get_data returns null, use empty data as default
 				$note_value = $current_component->get_data() ?? $note_value;
 			}
-			
+
 			// inject parent_section_id and parent_section_tipo
 			// it will use to build the target section in client side
 			// @see: component_text_area_json.php

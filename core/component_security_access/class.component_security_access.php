@@ -10,21 +10,43 @@ class component_security_access extends component_common {
 
 
 	/**
-	* @var
-	*/
-	// datalist array
+	 * @var array Datalist array
+	 */
 	public $datalist;
 
+	/**
+	 * @var array Cache of admin types
+	 */
 	public static $ar_tipo_admin_cache;
 
-
-	// Property to enable or disable the get and set data in different languages
+	/**
+	 * @var bool Property to enable or disable the get and set data in different languages
+	 */
 	protected $supports_translation = false;
+
+
 
 	/**
 	* GET_CACHE_TREE_FILE_NAME
+	* Generates the cache file name for storing the ontology tree datalist
+	*
+	* This method creates a standardized filename used by the caching system to store
+	* the pre-calculated security access tree (datalist) for a specific language.
+	* The cache file is generated during user login (in background) and contains the
+	* complete ontology hierarchy with areas, sections, and components.
+	*
+	* The actual cache file path is managed by dd_cache::cache_from_file() using
+	* DEDALO_CACHE_MANAGER['files_path'] configuration.
+	*
+	* @see get_datalist() - Uses this method to retrieve/store cached datalist
+	* @see dd_cache::cache_from_file() - Handles the actual file operations
+	*
 	* @param string $lang
+	* 	Language code (e.g., 'lg-eng', 'lg-spa')
+	*
 	* @return string
+	* 	Cache filename in format: 'cache_tree_{lang}.php'
+	* 	Example: 'cache_tree_lg-eng.php'
 	*/
 	public static function get_cache_tree_file_name(string $lang) : string {
 
@@ -117,7 +139,7 @@ class component_security_access extends component_common {
 				// filtered by user data case
 
 				$user_component_security_access	= security::get_user_security_access($user_id);
-				$user_data						= $user_component_security_access->get_data() ?? [];
+				$user_data						= !empty($user_component_security_access) ? ($user_component_security_access->get_data() ?? []) : [];
 
 				$ar_auth_areas = [];
 				foreach ($ar_areas as $current_area) {
@@ -125,7 +147,7 @@ class component_security_access extends component_common {
 					$found = array_find($user_data, function($el) use($current_area){
 						return $el->tipo===$current_area->tipo;
 					});
-					if ($found!==null) {
+					if (!empty($found)) {
 						$ar_auth_areas[] = $current_area;
 					}
 				}
@@ -278,6 +300,9 @@ class component_security_access extends component_common {
 
 				// create the children list of the v6 components
 				foreach ($v6_children as $ddo) {
+					if (!is_object($ddo) || !isset($ddo->tipo)) {
+						continue;
+					}
 					$item = [
 						'tipo'			=> $ddo->tipo,
 						'section_tipo'	=> $section_tipo,
@@ -304,7 +329,6 @@ class component_security_access extends component_common {
 
 
 		$ar_parent = [];
-
 		foreach ($children_list as $current_child) {
 
 			$parent_key = $current_child['parent'];
@@ -340,14 +364,7 @@ class component_security_access extends component_common {
 	 * @param array|null $ar_tipo_to_be_exclude
 	 * @return array $element_datalist
 	 */
-	private static function get_children_recursive_security_access(string $tipo, ?array $ar_tipo_to_be_exclude = null): array
-	{
-
-		// static cache
-		// static $children_recursive_security_access_data;
-		// if(isset($children_recursive_security_access_data[$tipo])) {
-		// 	return $children_recursive_security_access_data[$tipo];
-		// }
+	private static function get_children_recursive_security_access(string $tipo, ?array $ar_tipo_to_be_exclude = null): array {
 
 		$ar_elements = [];
 
@@ -439,9 +456,6 @@ class component_security_access extends component_common {
 			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_access($element_tipo, $ar_tipo_to_be_exclude) );
 		}
 
-		// STORE CACHE DATA
-		// $children_recursive_security_access_data[$tipo] = $ar_elements;
-
 
 		return $ar_elements;
 	}//end get_children_recursive_security_access
@@ -456,26 +470,25 @@ class component_security_access extends component_common {
 	public static function get_ar_tipo_admin() : array {
 
 		// static cache
+		if(isset(self::$ar_tipo_admin_cache)) {
+			return self::$ar_tipo_admin_cache;
+		}
 
-			if(isset(self::$ar_tipo_admin_cache)) {
-				return self::$ar_tipo_admin_cache;
-			}
-
-		$ar_result 	= ontology_utils::get_ar_tipo_by_model($modelo_name='area_admin', $prefijo='dd');
-		$ar_tesauro = array();
+		$ar_result 	= ontology_utils::get_ar_tipo_by_model('area_admin');
+		$ar_tesauro = [];
 
 		if(!empty($ar_result[0])) {
 			$tipo					= $ar_result[0];
 			$obj					= ontology_node::get_instance($tipo);
 			$ar_children_of_this	= $obj->get_ar_children_of_this();
 			$ar_tesauro				= $ar_children_of_this;
+
+			// We add the term itself as the father of the tree
+			array_unshift($ar_tesauro, $tipo);
 		}
-		// We add the term itself as the father of the tree
-		// array_push($ar_tesauro, $tipo);
-		array_unshift($ar_tesauro, $tipo);
 
 		// store cache data
-			self::$ar_tipo_admin_cache = $ar_tesauro ;
+		self::$ar_tipo_admin_cache = $ar_tesauro;
 
 
 		return $ar_tesauro ;
@@ -545,56 +558,49 @@ class component_security_access extends component_common {
 		$start_time = start_time();
 
 		// profile_section_id
-			if(security::is_global_admin($user_id)===true){
+		if(security::is_global_admin($user_id)===true){
 
-				$section_id = null;
+			$section_id = null;
 
+		}else{
+
+			$user_profile_locator = security::get_user_profile( $user_id );
+			if (!empty($user_profile_locator)) {
+				$section_id = (int)$user_profile_locator->section_id;
 			}else{
-
-				$user_profile_locator = security::get_user_profile( $user_id );
-				if (!empty($user_profile_locator)) {
-					$section_id = (int)$user_profile_locator->section_id;
-				}else{
-					debug_log(__METHOD__.
-						" ERROR on get user_profile_locator: user_id: ".to_string($user_id),
-						logger::ERROR
-					);
-				}
+				debug_log(__METHOD__.
+					" ERROR on get user_profile_locator: user_id: ".to_string($user_id),
+					logger::ERROR
+				);
 			}
+		}
 
-		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
+		debug_log(__METHOD__
+			. " (1 start) user_id: " .$user_id. ' ('.$lang.')'
+			. ' ))) launching datalist ///////////////////////////////////////////////////// '
+			, logger::WARNING
+		);
 
-			debug_log(__METHOD__
-				. " (1 start) user_id: " .$user_id. ' ('.$lang.')'
-				. ' ))) launching datalist ///////////////////////////////////////////////////// '
-				, logger::WARNING
-			);
+		$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
+		$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
+		$model						= ontology_node::get_model_by_tipo($tipo,true);
+		$component_security_access	= component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id, // string|null section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			$section_tipo, // string section_tipo
+			false
+		);
+		$datalist = $component_security_access->get_datalist( $user_id );
 
-			$section_tipo				= DEDALO_SECTION_PROFILES_TIPO;
-			$tipo						= DEDALO_COMPONENT_SECURITY_ACCESS_PROFILES_TIPO;
-			$model						= ontology_node::get_model_by_tipo($tipo,true);
-			$component_security_access	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string|null section_id
-				'list', // string mode
-				DEDALO_DATA_NOLAN, // string lang
-				$section_tipo, // string section_tipo
-				false
-			);
-			$datalist = $component_security_access->get_datalist( $user_id );
+		debug_log(__METHOD__
+			. " (2 end) lang: $lang, count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+			. ' ))) finished calculation datalist ////////////////////////// '
+			, logger::WARNING
+		);
 
-			// Fiber::suspend();
-			debug_log(__METHOD__
-				. " (2 end) lang: $lang, count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
-				. ' ))) finished calculation datalist ////////////////////////// '
-				, logger::WARNING
-			);
-
-			// return $datalist;
-		// });
-		// $fiber->start(); // running a Fiber
-		// return $fiber->getReturn();
 
 		return $datalist;
 	}//end calculate_tree
@@ -610,9 +616,9 @@ class component_security_access extends component_common {
 	public static function set_section_permissions(object $options) : bool {
 
 		// options
-			$ar_section_tipo	= $options->ar_section_tipo ?? null;
+			$ar_section_tipo	= $options->ar_section_tipo ?? [];
 			$permissions		= $options->permissions ?? 2; // (zero is accepted)
-			$user_id			= $options->user_id;
+			$user_id			= $options->user_id ?? null;
 
 		// user_id
 			if (empty($user_id)) {
@@ -690,7 +696,7 @@ class component_security_access extends component_common {
 					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
 				});
 				if (is_object($found)) {
-					$found->permissions = $permissions;
+					$found->value = (int)$permissions;
 					debug_log(__METHOD__." Updated already existing value ".to_string($found), logger::WARNING);
 				}else{
 					$unique_values[] = $value;
@@ -700,7 +706,7 @@ class component_security_access extends component_common {
 
 		// Save calculated data
 			$component_security_access->set_data($new_data);
-			$component_security_access->Save();
+			$component_security_access->save();
 
 		// debug
 			if(SHOW_DEBUG===true) {
