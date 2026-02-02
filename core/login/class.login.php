@@ -111,15 +111,15 @@ class login extends common {
 				#
 				# STOP: USERNAME DO NOT EXISTS
 				#
-				$activity_datos['result']	= 'deny';
-				$activity_datos['cause']	= 'User does not exist';
-				$activity_datos['username']	= $username;
+				$activity_data['result']	= 'deny';
+				$activity_data['cause']	= 'User does not exist';
+				$activity_data['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by: $username. This user does not exist in the database",
 					'LOG IN',
-					$activity_datos
+					$activity_data
 				);
 				// delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
@@ -143,15 +143,15 @@ class login extends common {
 				#
 				# STOP: USERNAME DUPLICATED
 				#
-				$activity_datos['result']	= 'deny';
-				$activity_datos['cause']	= 'User duplicated in database';
-				$activity_datos['username']	= $username;
+				$activity_data['result']	= 'deny';
+				$activity_data['cause']	= 'User duplicated in database';
+				$activity_data['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by : $username. This user exist more than once in the database ".$user_count,
 					'LOG IN',
-					$activity_datos
+					$activity_data
 				);
 				# delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
@@ -210,15 +210,15 @@ class login extends common {
 					#
 					# STOP : PASSWORD IS WRONG
 					#
-					$activity_datos['result']	= 'deny';
-					$activity_datos['cause']	= 'wrong password';
-					$activity_datos['username']	= $username;
+					$activity_data['result']	= 'deny';
+					$activity_data['cause']	= 'wrong password';
+					$activity_data['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
 					self::login_activity_report(
 						"Denied login attempted by: $username. Wrong password [1] (Incorrect password)",
 						'LOG IN',
-						$activity_datos
+						$activity_data
 					);
 					# delay failed output by 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
@@ -248,7 +248,7 @@ class login extends common {
 				self::login_activity_report(
 					"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
 					'LOG IN',
-					// activity_datos
+					// activity_data
 					array(
 						'result' 	=> 'deny',
 						'cause' 	=> 'account inactive',
@@ -397,7 +397,7 @@ class login extends common {
 							self::login_activity_report(
 								"[Login_SAML] Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
 								'LOG IN',
-								// activity_datos
+								// activity_data
 								array(
 									'result' 	=> 'deny',
 									'cause' 	=> 'account inactive',
@@ -476,7 +476,7 @@ class login extends common {
 						self::login_activity_report(
 							"[Login_SAML] Denied login attempted by: saml_user. This code does not exist in the database",
 							'LOG IN',
-							// activity_datos
+							// activity_data
 							array(
 								'result' 	=> 'deny',
 								'cause' 	=> 'code not exist',
@@ -886,17 +886,17 @@ class login extends common {
 			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
-			$activity_datos['result']		= 'allow';
-			$activity_datos['cause']		= 'correct user and password';
-			$activity_datos['username']		= $username;
-			$activity_datos['browser']		= $browser;
-			$activity_datos['DB-backup']	= $backup_info;
+			$activity_data['result']	= 'allow';
+			$activity_data['cause']		= 'correct user and password';
+			$activity_data['username']	= $username;
+			$activity_data['browser']	= $browser;
+			$activity_data['DB-backup']	= $backup_info;
 
 			// login activity report
 			self::login_activity_report(
 				"User $user_id is logged. Hello $username",
 				'LOG IN',
-				$activity_datos
+				$activity_data
 			);
 
 		// OK response
@@ -1201,7 +1201,7 @@ class login extends common {
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
 				'LOG OUT',
-				// $activity_datos
+				// $activity_data
 				array(
 					'result'	=> 'quit',
 					'cause'		=> $cause,
@@ -1288,21 +1288,21 @@ class login extends common {
 	* Save activity info into logger file
 	* @param string $msg
 	* @param string $login_label
-	* @param array|null $activity_datos = null
+	* @param array|null $activity_data = null
 	* @return void
 	*/
-	public static function login_activity_report( string $msg, string $login_label, ?array $activity_datos=null ) : void {
+	public static function login_activity_report( string $msg, string $login_label, ?array $activity_data=null ) : void {
 
 		// data base
 			$data = [
 				'msg' => $msg
 			];
-			// append activity_datos if exists
-			if(!empty($activity_datos) && is_array($activity_datos)) {
-				$data = array_merge($data, $activity_datos);
+			// append activity_data if exists
+			if(!empty($activity_data) && is_array($activity_data)) {
+				$data = array_merge($data, $activity_data);
 			}
 
-		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)
 			logger::$obj['activity']->log_message(
 				$login_label,
 				logger::INFO,
@@ -1331,9 +1331,9 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data();
 
-		if (is_null($dato)) {
+		if (empty($data) || empty($data[0]->value)) {
 			return true;
 		}
 
