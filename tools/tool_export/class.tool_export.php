@@ -1,37 +1,83 @@
 <?php declare(strict_types=1);
 /**
-* CLASS tool_export
-*
-*
-*/
+ * CLASS TOOL_EXPORT
+ * Manages data export functionality for Dédalo sections
+ *
+ * This tool handles the export of section records to various formats (CSV, Excel, etc.)
+ * by building a grid structure from section data. It supports:
+ * - Multiple data formats (standard, dedalo_raw, grid_value)
+ * - Portal and related component resolution
+ * - High-performance streaming for large datasets
+ * - Memory-efficient chunked processing
+ * - Flexible column mapping via DDO (Data Definition Objects)
+ *
+ * Key features:
+ * - Two-pass streaming for memory efficiency
+ * - Dynamic column discovery for portals
+ * - Caching for ontology lookups
+ * - Support for nested portal structures
+ * - Configurable data formatting
+ *
+ * @package Dedalo
+ * @subpackage Tools
+ */
 class tool_export extends tool_common {
 
+	/**
+	 * @var int Maximum execution time in seconds (10 hours)
+	 */
+	private const MAX_EXECUTION_TIME = 36000;
 
 	/**
-	* CLASS VARS
-	*/
-		// string data_format. Values: 'standard', 'dedalo'
-		public $data_format;
-		// array ar_ddo_map
-		public $ar_ddo_map;
-		// object sqo
-		public $sqo;
-		// string model
-		public $model;
-		// array|null ar_records.  Array of records to export (section_id) or null
-		public $ar_records;
-		// static caches for performance
-		protected static $locator;
-		protected static $ontology_cache = [];
+	 * @var string Data format mode: 'standard', 'dedalo_raw', 'grid_value', 'value'
+	 */
+	public string $data_format;
+
+	/**
+	 * @var array Array of DDO (Data Definition Objects) defining columns to export
+	 */
+	public array $ar_ddo_map;
+
+	/**
+	 * @var object Search query object defining records to export
+	 */
+	public object $sqo;
+
+	/**
+	 * @var string Model type (typically 'section')
+	 */
+	public string $model;
+
+	/**
+	 * @var db_result|null Iterator of records to export (section_id) or null if using sqo
+	 */
+	public ?db_result $records = null;
+
+	/**
+	 * @var locator|null Static cache for locator object to avoid recreation
+	 */
+	protected static ?locator $locator = null;
+
+	/**
+	 * @var array Static cache for ontology data (model, lang) by tipo
+	 */
+	protected static array $ontology_cache = [];
 
 
 
 	/**
-	* SETUP
-	* Fix main class vars to be accessible
-	* @param object options
-	* @return void
-	*/
+	 * SETUP
+	 * Initializes main class variables for export operation
+	 *
+	 * @param object $options Configuration object with:
+	 *   - data_format: string Export format ('standard', 'dedalo_raw', 'grid_value', 'value')
+	 *   - ar_ddo_map: array DDO map defining columns to export
+	 *   - sqo: object Search query object
+	 *   - model: string Model type (typically 'section')
+	 *   - section_tipo: string Section tipo identifier
+	 *
+	 * @return void
+	 */
 	protected function setup(object $options) : void {
 
 		// options
@@ -46,7 +92,7 @@ class tool_export extends tool_common {
 
 		// fix ar_ddo_map
 			$this->ar_ddo_map = $ar_ddo_map;
-		
+
 		// fix sqo
 			// add filter from saved session if exists
 			$sqo_id = section::build_sqo_id($section_tipo);
@@ -63,69 +109,80 @@ class tool_export extends tool_common {
 			$this->model = $model;
 
 		// fix records
-			$this->ar_records = null;
+			$this->records = null;
 	}//end setup
 
 
 
 	/**
-	* GET_EXPORT_GRID
-	* Builds the grid ready to parse it in export_tool (client)
-	* @see class.request_query_object.php
-	* @param object options
-	* Sample:
-		* {
-		*    "section_tipo": "oh1",
-		*    "model": "section",
-		*    "data_format": "standard",
-		*    "ar_ddo_to_export": [
-		*        {
-		*            "id": "oh1_oh62_list_lg-nolan",
-		*            "tipo": "oh62",
-		*            "section_tipo": "oh1",
-		*            "model": "component_section_id",
-		*            "parent": "oh1",
-		*            "lang": "lg-nolan",
-		*            "mode": "search",
-		*            "label": "Id",
-		*            "path": [
-		*                {
-		*                    "section_tipo": "oh1",
-		*                    "component_tipo": "oh62",
-		*                    "model": "component_section_id",
-		*                    "name": "Id"
-		*                }
-		*            ]
-		*        }
-		*    ],
-		*    "sqo": {
-		*        "section_tipo": [
-		*            "oh1"
-		*        ],
-		*        "limit": 0,
-		*        "offset": 0
-		*    }
-		* }
-	* @return dd_grid object $result
-	*/
+	 * GET_EXPORT_GRID
+	 * Builds the export grid ready to parse in export_tool (client)
+	 * Main entry point for export operations
+	 *
+	 * @see class.request_query_object.php
+	 *
+	 * @param object $options Configuration object with:
+	 *   - section_tipo: string Section tipo identifier - REQUIRED
+	 *   - model: string Model type (default: 'section')
+	 *   - data_format: string Export format - REQUIRED
+	 *   - ar_ddo_to_export: array DDO map defining columns - REQUIRED
+	 *   - sqo: object Search query object - REQUIRED
+	 *   - ndjson_stream: bool Whether to use streaming mode (default: false)
+	 *
+	 * Sample options:
+	 * {
+	 *    "section_tipo": "oh1",
+	 *    "model": "section",
+	 *    "data_format": "standard",
+	 *    "ar_ddo_to_export": [
+	 *        {
+	 *            "id": "oh1_oh62_list_lg-nolan",
+	 *            "tipo": "oh62",
+	 *            "section_tipo": "oh1",
+	 *            "model": "component_section_id",
+	 *            "parent": "oh1",
+	 *            "lang": "lg-nolan",
+	 *            "mode": "search",
+	 *            "label": "Id",
+	 *            "path": [{
+	 *                "section_tipo": "oh1",
+	 *                "component_tipo": "oh62",
+	 *                "model": "component_section_id",
+	 *                "name": "Id"
+	 *            }]
+	 *        }
+	 *    ],
+	 *    "sqo": {
+	 *        "section_tipo": ["oh1"],
+	 *        "limit": 0,
+	 *        "offset": 0
+	 *    }
+	 * }
+	 *
+	 * @return object Response object with:
+	 *   - result: array|false Export grid data or false on error
+	 *   - msg: string Status message
+	 *
+	 * @throws Exception If setup or grid building fails
+	 */
 	public static function get_export_grid(object $options) : object {
-	
-		set_time_limit ( 36000 );  // 10 hours (36000 secs)
-		
+
+		set_time_limit(self::MAX_EXECUTION_TIME);
+
 		$is_stream = $options->ndjson_stream ?? false;
-	
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-	
+
 		// options
 			$section_tipo		= $options->section_tipo ?? $options->tipo;
 			$model				= $options->model ?? 'section';
 			$data_format		= $options->data_format;
 			$ar_ddo_to_export	= $options->ar_ddo_to_export;
 			$sqo				= $options->sqo;
-	
+
 		// export options
 			$tool_export = new tool_export(null, $section_tipo);
 			$tool_export->setup((object)[
@@ -135,20 +192,20 @@ class tool_export extends tool_common {
 				'model'			=> $model,
 				'section_tipo'	=> $section_tipo
 			]);
-	
+
 		if ($is_stream) {
 			if (SHOW_DEBUG) debug_log(__METHOD__ . " Stream started for section_tipo: " . $section_tipo, logger::DEBUG);
 			$tool_export->stream_export_grid();
 			if (SHOW_DEBUG) debug_log(__METHOD__ . " Stream finished", logger::DEBUG);
 			exit();
 		}
-	
+
 		$export_grid = $tool_export->build_export_grid();
-	
+
 		// response OK
 			$response->msg		= 'OK. Request done';
 			$response->result	= $export_grid;
-	
+
 		return $response;
 	}//end get_export_grid
 
@@ -157,18 +214,18 @@ class tool_export extends tool_common {
 	/**
 	 * STREAM_EXPORT_GRID
 	 * High-performance, memory-efficient streaming of the export grid.
-	 * 
+	 *
 	 * Logic:
 	 * 1. Pass 1 (Discovery): Iterates through records to identify all unique columns.
 	 * 2. Seek(0): Resets the DB cursor without re-executing the query.
 	 * 3. Pass 2 (Streaming): Streams rows line-by-line in NDJSON format.
-	 * 
+	 *
 	 * Optimizations:
 	 * - Uses unbuffered output and explicit flushing.
 	 * - Implements aggressive memory management: cache clearing and periodic GC.
 	 * - Sets streaming-optimized headers (X-Accel-Buffering, Cache-Control, etc.).
 	 * - Initial 4KB padding to bypass certain proxy/server buffer limits.
-	 * 
+	 *
 	 * @return void
 	 */
 	protected function stream_export_grid() : void {
@@ -185,7 +242,7 @@ class tool_export extends tool_common {
 		header('Pragma: no-cache'); // HTTP 1.0
 		header('Expires: 0'); // Proxies
 		header('Content-Encoding: identity'); // Disable compression / mod_deflate
-		
+
 		// 4KB Padding to bypass some Apache/Proxy buffer limits (like mod_proxy_fcgi or mod_deflate)
 		// Small chunks might be held otherwise.
 		echo str_repeat(" ", 4096) . "\n";
@@ -207,7 +264,7 @@ class tool_export extends tool_common {
 		$total_count = $db_result->row_count();
 		foreach ($db_result as $row_index => $row) {
 			$needs_full_process = empty($ar_columns_obj); // Always process first row
-			
+
 			// Quick check for portal count increases without full instantiation
 			if (!$needs_full_process) {
 				foreach ($ar_ddo_map as $current_ddo) {
@@ -270,7 +327,7 @@ class tool_export extends tool_common {
 					$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
 					if (empty($column_label)) $column_label = $column_tipo;
 					$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-						? $column_label.' '.$column_path[1]+1
+						? $column_label.' '.($column_path[1] + 1)
 						: $column_label;
 				}
 			}
@@ -310,7 +367,7 @@ class tool_export extends tool_common {
 			$row_grid->set_value($ar_row_value->ar_cells);
 
 			echo json_encode($row_grid, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
-			
+
 			if ($row_index % 100 === 0) {
 				// Clear internal caches and collect garbage to prevent growth
 				if (class_exists('section_record_instances_cache')) section_record_instances_cache::clear();
@@ -335,9 +392,22 @@ class tool_export extends tool_common {
 
 
 	/**
-	* BUILD_EXPORT_GRID
-	* @return array
-	*/
+	 * BUILD_EXPORT_GRID
+	 * Builds the complete export grid in memory (non-streaming mode)
+	 *
+	 * This method:
+	 * - Retrieves all records via get_records()
+	 * - Processes each row to build grid values
+	 * - Dynamically discovers columns (important for portals)
+	 * - Builds header row with column labels
+	 * - Returns complete grid structure
+	 *
+	 * Note: For large datasets, use stream_export_grid() instead
+	 *
+	 * @return array Array of dd_grid_cell_object (header row + data rows)
+	 *
+	 * @throws Exception If record retrieval or grid building fails
+	 */
 	protected function build_export_grid() : array {
 
 		$ar_ddo_map	= $this->ar_ddo_map;
@@ -452,7 +522,7 @@ class tool_export extends tool_common {
 							$column_label = $column_tipo;
 						}
 						$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-							? $column_label.' '.$column_path[1]+1
+							? $column_label .' '. ($column_path[1]+1)
 							: $column_label;
 					}
 				}
@@ -492,14 +562,18 @@ class tool_export extends tool_common {
 
 
 	/**
-	* GET_RECORDS
-	* @return db_result $this->ar_records
-	*/
+	 * GET_RECORDS
+	 * Retrieves records to export based on sqo or cached records
+	 *
+	 * @return db_result Iterator of records with section data
+	 *
+	 * @throws Exception If sqo is empty or sections retrieval fails
+	 */
 	protected function get_records() : db_result {
 
 		// empty records case
-		if (!empty($this->ar_records)) {
-			return $this->ar_records;
+		if (!empty($this->records)) {
+			return $this->records;
 		}
 
 		// search_options
@@ -522,24 +596,39 @@ class tool_export extends tool_common {
 				}
 
 	 			// sections
-				$sections			= sections::get_instance(null, $sqo, $section_tipo);
-				$this->ar_records	= $sections->get_data(); // returns db_result format (Iterator)
+				$sections		= sections::get_instance(null, $sqo, $section_tipo);
+				$this->records	= $sections->get_data(); // returns db_result format (Iterator)
 				break;
 		}
 
-		return $this->ar_records;
+		return $this->records;
 	}//end get_records
 
 
 
 	/**
-	* GET_GRID_VALUE
-	* Builds dd_grid value object
-	* @param array $ar_ddo
-	* @param locator $locator
-	*
-	* @return object $value
-	*/
+	 * GET_GRID_VALUE
+	 * Builds dd_grid value object for a single row
+	 * Processes DDO map to extract component values and build grid cells
+	 *
+	 * This method:
+	 * - Iterates through DDO map for the row
+	 * - Instantiates components with caching
+	 * - Handles nested portals via sub_ddo_map
+	 * - Builds column objects for dynamic grid
+	 * - Returns structured value object
+	 *
+	 * @param array $ar_ddo Array of DDO objects defining columns
+	 * @param object $row Row object from db_result with section_tipo, section_id, relation
+	 *
+	 * @return object Value object with:
+	 *   - ar_row_count: array Row counts for each component
+	 *   - ar_column_count: int Total number of columns
+	 *   - ar_columns_obj: array Column definition objects
+	 *   - ar_cells: array Cell values
+	 *
+	 * @throws Exception If component instantiation fails
+	 */
 	protected function get_grid_value(array $ar_ddo, object $row) : object {
 
 		$ar_cells		= [];
@@ -587,7 +676,7 @@ class tool_export extends tool_common {
 				$column_obj = new stdClass();
 					$column_obj->id = $ddo->section_tipo.'_'.$ddo->component_tipo;
 				$current_component->column_obj = $column_obj;
-			
+
 				// check if the component has ddo children in the path,
 				// used by portals to define the path to the "text" component that has the value, it will be the last component in the chain of locators
 				$sub_ddo_map = [];
