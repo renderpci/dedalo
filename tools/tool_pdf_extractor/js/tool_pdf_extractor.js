@@ -65,7 +65,7 @@ tool_pdf_extractor.prototype.init = async function(options) {
 
 		// specific init variables
 		self.config = {
-			method		: 'text_engine',
+			method		: 'text',
 			page_in		: false,
 			page_out	: false,
 			offset		: offset
@@ -200,10 +200,10 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 		// if the engine is text the server will provide the final version.
 		// it ensure coherent process with the process of uploaded file or regenerate
 		// Don't add any process here, change the buil_pdf_transcription method into the componnet_pdf class.
-		case 'text_engine':
+		case 'text':
 			final_text = original_text
 			break
-		case 'html_engine':
+		case 'html':
 			// the original_text is html but become txt and it need to be parsed
 			const html = new DOMParser().parseFromString(original_text, "text/html")
 			const body = html.body

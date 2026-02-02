@@ -159,8 +159,24 @@ function logger_backend_activity(){};
 function get_base_binary_path(){};
 class Linfo{};
 class system{};
-function pg_escape_string(){};
+function pg_escape_string($connection = null, string $data = ''): ?string {};
 function get_called_class(){};
 class metrics{};
 function pg_fetch_assoc(){};
 function pg_fetch_object(){};
+class ImageMagick {
+	public static function get_date_time_original(string $file_path): ?object {}
+	public static function get_imagemagick_pdfinfo_path(): string {}
+	public static function get_version(): string {}
+	public static function get_imagemagick_installed_path(): string {}
+}
+class Ffmpeg {
+	public static function get_date_time_original(string $file_path): ?object {}
+	public static function get_ffmpeg_installed_path(): string {}
+	public static function get_version(): string {}
+	public static function get_ffprove_version(): string {}
+	public static function get_ffprove_installed_path(): string {}
+	public static function check_lib(string $lib): bool {}
+	public static function get_setting_name(string $file_path, string $quality): string {}
+	public static function build_av_alternate_command(object $options): object {}
+}

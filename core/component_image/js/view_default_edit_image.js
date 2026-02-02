@@ -383,7 +383,7 @@ const render_image_node = function(self, file_info, content_value) {
 
 		// auto-change url the first time
 		const load_handler = async () => {
-			if (quality!==self.context.features.default_quality) {
+			if (quality!==self.context.features?.default_quality) {
 				await image_quality_change_handler(url)
 			}
 

@@ -129,7 +129,7 @@ const get_content_data = async function(self) {
 			// change_handler
 				const change_handler = (e) => {
 					// fix config.method
-					const method = e.target.value // html_engine | text_engine
+					const method = e.target.value // html | text
 					self.config.method = method
 				}
 
@@ -144,13 +144,13 @@ const get_content_data = async function(self) {
 				const option_txt = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'radio',
-					value			: 'text_engine',
+					value			: 'text',
 					name			: self.id
 				})
 				// set as checked by default
 				option_txt.checked = 'checked'
 				// set as method by default
-				self.config.method = 'text_engine'
+				self.config.method = 'text'
 				// change event
 				option_txt.addEventListener('change', change_handler)
 				option_txt_label.prepend(option_txt)
@@ -165,7 +165,7 @@ const get_content_data = async function(self) {
 				const option_html = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'radio',
-					value			: 'html_engine',
+					value			: 'html',
 					name			: self.id
 				})
 				// change event
