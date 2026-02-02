@@ -1,28 +1,75 @@
-<?php
-require_once( dirname(dirname(dirname(__FILE__))) .'/lib/vendor/autoload.php');
-
+<?php declare(strict_types=1);
+require_once dirname(__FILE__, 3) .'/lib/vendor/autoload.php';
 /**
 * CLASS TOOL_IMPORT_RDF
+* Handles the import and processing of RDF (Resource Description Framework) data into Dédalo
 *
+* This tool provides functionality for importing RDF data and mapping it to Dédalo's
+* ontology-driven data structures. It handles:
+* - RDF graph parsing and traversal
+* - Data transformation and mapping between RDF classes/properties and Dédalo components
+* - Resource matching and creation
+* - Complex data processing (dates, geolocation, splitting, mapping)
+* - Component data population with imported RDF values
 *
+* Features:
+* - Support for OWL Object Properties and Classes
+* - Namespace management for RDF vocabularies
+* - Deep resource linking with locator tracking
+* - Special handling for component_iri, geolocation, and date components
+* - Data mapping with ontology-driven process configuration
+*
+* @package Dedalo
+* @subpackage Tools
 */
 class tool_import_rdf extends tool_common {
+	
+	// EasyRdf files load (added in constructor for dynamic loading)
+	private static $easyrdf_loaded = false;
 
 
 
 	/**
-	* GET_ONTOLOGY
+	* LOAD_EASYRDF
+	* Loads EasyRdf library files required for RDF processing
+	* Uses lazy loading to ensure files are loaded only once
+	*
+	* @return void
+	*/
+	private static function load_easyrdf() : void {
+		if (self::$easyrdf_loaded === true) {
+			return;
+		}
+
+		// EasyRdf library files
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
+		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
+
+		self::$easyrdf_loaded = true;
+	}//end load_easyrdf
+
+
+
+	/**
+	* GET_ONTOLOGY_TIPO
 	* Get the ontology tipo associated with a given component tipo.
 	* This method retrieves the ontology tipo associated with a specified component tipo.
 	* It relies on the 'tool_import_rdf' property of the Data Definition (dd) corresponding
 	* to the provided component tipo.
-	* @param string $component_tipo
-	* @return string $ontology_tipo
+	*
+	* @param string $component_tipo The component type identifier
+	* @return string $ontology_tipo The ontology type identifier
 	*/
 	public function get_ontology_tipo(string $component_tipo) : string {
 
 		$ontology_node	= ontology_node::get_instance($component_tipo);
-		$properties		= $ontology_node->get_properties(true);
+		$properties		= $ontology_node->get_properties();
 
 		// Retrieve the ontology tipo from the 'tool_import_rdf' property
 		$ontology_tipo	= $properties->ar_tools_name->tool_import_rdf->external_ontology;
@@ -33,12 +80,14 @@ class tool_import_rdf extends tool_common {
 
 
 	/**
-	* GET_COMPONENT_DATO
-	* @param int|string $section_id
-	* @param string $component_tipo
-	* @return mixed $component_dato
+	* GET_COMPONENT_DATA
+	* Retrieves the component data from a section
+	*
+	* @param int|string $section_id The section identifier
+	* @param string $component_tipo The component type identifier
+	* @return mixed $component_data The component data retrieved from the section
 	*/
-	public function get_component_dato(int|string $section_id,	string $component_tipo) : mixed {
+	public function get_component_data(int|string $section_id,	string $component_tipo) : mixed {
 
 		$lang	= ontology_node::get_translatable($component_tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 		$model	= ontology_node::get_model_by_tipo($component_tipo);
@@ -53,20 +102,33 @@ class tool_import_rdf extends tool_common {
 			$this->section_tipo
 		);
 
-		$component_dato = $component->get_dato();
+		$component_data = $component->get_data_lang($lang);
 
 
-		return $component_dato;
-	}//end get_component_dato
+		return $component_data;
+	}//end get_component_data
 
 
 
 	/**
 	* GET_RDF_DATA
-	* @param object $options
-	* @return object $response
+	* Fetches and processes RDF data from provided URIs
+	*
+	* Loads RDF graphs from the specified URIs, extracts resources and properties,
+	* and maps them to the Dédalo ontology structure.
+	*
+	* @param object $options Configuration options containing:
+	*        - ontology_tipo: The ontology type identifier
+	*        - ar_values: Array of RDF URIs to fetch
+	*        - locator: Optional locator object for context
+	* @return object $response Response object with result and msg properties:
+	*         - result: Array of processed RDF data or false on error
+	*         - msg: Status message
 	*/
 	public static function get_rdf_data($options) : object {
+
+		// Load EasyRdf library
+		self::load_easyrdf();
 
 		// options
 			$ontology_tipo	= $options->ontology_tipo ?? null;
@@ -142,13 +204,17 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* GET_CLASS_MAP_TO_DD
+	* Maps RDF Classes to Dédalo Data Definition objects
 	*
-	* @param array $ar_class_children
-	* @param string $rdf_type
-	* @param $rdf_graph
-	* @param $base_uri
-	* @param $locator
-	* @return array $ar_dd_object
+	* Converts RDF class hierarchies into Dédalo's data structure by matching RDF types
+	* to ontology classes and extracting their properties (OWL Object Properties).
+	*
+	* @param array $ar_class_children Array of child ontology class tipos
+	* @param string $rdf_type The RDF class type to match
+	* @param object $rdf_graph The EasyRdf Graph object containing RDF data
+	* @param string $base_uri The base URI of the RDF resource
+	* @param mixed $locator Locator object for context reference
+	* @return array $ar_dd_object Array of Dédalo data definition objects representing the mapped structure
 	*/
 	public static function get_class_map_to_dd(array $ar_class_children, string $rdf_type, $rdf_graph, $base_uri, $locator) : array {
 
@@ -241,7 +307,7 @@ class tool_import_rdf extends tool_common {
 
 			// properties
 				$ontology_node = ontology_node::get_instance($ObjectProperty_tipo);
-				$properties = $ontology_node->get_properties(true);
+			$properties = $ontology_node->get_properties();
 			// When the data to import has a section between the source and resource (as ref biblio or ref person)
 			// it will have a ddo_map to indicate the path to the resource.
 				if(isset($properties->ddo_map)){
@@ -623,9 +689,19 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* GET_RESOURCE_MATCH
-	* Search for received value in section. If it found, returns locator, else create the new value
-	* and returns the resultant locator
-	* @return object $locator
+	* Searches for or creates a resource record matching the provided data
+	*
+	* This method searches for an existing record in the specified section that matches
+	* the provided value. If found, it returns the locator of the existing record.
+	* If not found, it creates a new record with the provided value and returns the
+	* new locator. This is essential for linking external RDF resources to existing
+	* Dédalo records or creating new ones as needed.
+	*
+	* @param string $section_tipo The section type to search/create within
+	* @param string $component_tipo The component type to search/create
+	* @param string $value The value to search for or create
+	* @param string|null $filter Optional custom filter for the search
+	* @return object $locator Locator object referencing the found or newly created record
 	*/
 	public static function get_resource_match( string $section_tipo, string $component_tipo, string $value, ?string $filter=null ) : object {
 
@@ -701,12 +777,12 @@ class tool_import_rdf extends tool_common {
 				$section_id	= $section->create_record();
 
 				if($model_name==='component_iri'){
-					$dato = new stdClass();
-						$dato->iri = $value;
+					$data = new stdClass();
+						$data->iri = $value;
 				}
 
-				$value = (isset($dato))
-					? $dato
+				$value = (isset($data))
+					? $data
 					: $value;
 
 			// save new value
@@ -719,8 +795,8 @@ class tool_import_rdf extends tool_common {
 					$lang,
 					$section_tipo
 				);
-				$dato = is_array($value) ? $value : [$value];
-				$code_component->set_data( $dato );
+				$data = is_array($value) ? $value : [$value];
+				$code_component->set_data( $data );
 				$code_component->save();
 
 			// debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
@@ -781,7 +857,7 @@ class tool_import_rdf extends tool_common {
 			);
 
 		// old data
-			$old_data = $code_component->get_dato();
+			$old_data = $code_component->get_data();
 			if(is_object($old_data)) {
 				$count = 0;
 				foreach ($old_data as $old_value) {
@@ -847,8 +923,8 @@ class tool_import_rdf extends tool_common {
 					, logger::DEBUG
 				);
 
-				$code_component->set_dato( $value );
-				$code_component->Save();
+				$code_component->set_data( $value );
+				$code_component->save();
 
 				return true;
 			}
@@ -861,11 +937,20 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* CREATE_NEW_RESOURCE
-	* create new section when the component has a section between values. as ref biblio or ref persons
-	* Search for received value in section. If it found, returns locator, else create the new value
-	* and returns the resultant locator
-	* @param object properties
-	* @return object|null $locator
+	* Creates a new resource section record for intermediary link components
+	*
+	* This method handles the creation of new section records when the component hierarchy
+	* has an intermediary section between values (e.g., ref_biblio or ref_person).
+	* It searches for an existing record matching the resource URI. If not found,
+	* it creates a new empty record and returns the locator for further population.
+	*
+	* @param object $properties Configuration object containing:
+	*        - locator: Current locator context
+	*        - target_ddo: Target data definition object
+	*        - current_tipo: Current component tipo
+	*        - path: Path configuration array
+	*        - value: The value/URI to search for or use for creation
+	* @return object|null $locator New locator for the created resource, or null if resource already exists
 	*/
 	public static function create_new_resource(object $properties) : ?object {
 
@@ -925,7 +1010,7 @@ class tool_import_rdf extends tool_common {
 			$lang,
 			$locator->section_tipo
 		);
-		$data = $component->get_dato();
+		$data = $component->get_data() ?? [];
 
 		// no found. Create a new empty record
 		$section = section::get_instance($target_ddo->section_tipo);
