@@ -168,11 +168,13 @@ class tm_record {
 	* @param object $values
 	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
+	* @param mixed $previous_data=null
+	* Previous data to check if time machine record already exists.
 	* @return section_record|false $section_id
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( object $values ) : tm_record|false {
+	public static function create( object $values, mixed $previous_data=null ) : tm_record|false {
 
 		// save_tm. To disable time machine save, set: tm_record::$save_tm = false;
 		// This is useful for some bulk operations like 'portalize'
@@ -210,7 +212,6 @@ class tm_record {
 
 		// time_machine save before.
 		// This allow safe time machine save data not already saved (old imports case for example)
-		$previous_data = $values->previous_data ?? null;
 		if ( !empty($previous_data) ) {
 
 			$tm_values = new stdClass();
@@ -235,19 +236,17 @@ class tm_record {
 					$new_values->timestamp = dd_date::get_timestamp_now_for_db( ['sub' => 'PT1M'] ); // now minus 1 minute.
 					// use previous data as to-save data
 					$new_values->data = $previous_data;
-					 // clean previous component dato to prevent infinite loop
-					$new_values->previous_data = null;
 					// unset the bulk_process_id
 					// unsaved time_machine data is a fix of previous saved data, it need to be outside the process because
 					// the process need to be coherent to the change, the fix time_machine is other process than not happen previously.
-					//save current data as previous of the process, to prevent revert it.
+					// save current data as previous of the process, to prevent revert it.
 					$new_values->bulk_process_id = null;
 
 				$new_tm_record = tm_record::create( $new_values );
 
 				if(!$new_tm_record){
 					debug_log( __METHOD__
-						. " Error creating new record: "
+						. " Error creating new record (previous data): " . PHP_EOL
 						.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);
