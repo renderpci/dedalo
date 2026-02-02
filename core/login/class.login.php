@@ -515,11 +515,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$username = !empty($dato)
-			? implode(' ', (array)$dato)
-			: '';
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$username = implode(' ', $values);
 
 		return $username;
 	}//end get_username
@@ -541,11 +544,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$full_username = !empty($dato)
-			? implode(' ', (array)$dato)
-			: '';
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$full_username = implode(' ', $values);
 
 		return $full_username;
 	}//end get_full_username
@@ -570,11 +576,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$code = !empty($dato)
-			? implode(' ', (array)$dato)
-			: null;
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$code = implode(' ', $values);
 
 		return $code;
 	}//end get_user_code
@@ -690,12 +699,12 @@ class login extends common {
 			DEDALO_DATA_LANG,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$filter_master_dato = (array)$component_filter_master->get_dato();
-		if (!empty($filter_master_dato) && count($filter_master_dato)>0) {
+		$filter_master_data = $component_filter_master->get_data() ?? [];
+		if (!empty($filter_master_data) && count($filter_master_data)>0) {
 			$user_have_projects = true;
 		}
 
-		return (bool)$user_have_projects;
+		return $user_have_projects;
 	}//end user_have_projects_check
 
 
@@ -720,10 +729,9 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato				= $component->get_dato();
-		$default_section	= !empty($dato) && !empty($dato[0])
-			? $dato[0]
-			: null;
+		$data = $component->get_data();
+
+		$default_section = $data[0]->value ?? null;
 
 		return $default_section;
 	}//end get_default_section
