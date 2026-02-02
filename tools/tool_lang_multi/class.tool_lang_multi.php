@@ -1,10 +1,18 @@
-<?php
+<?php declare(strict_types=1);
 require_once( dirname(__FILE__, 2) . '/tool_lang/class.tool_lang.php');
-/*
-* CLASS TOOL_LANG_MULTI
-*
-*
-*/
+/**
+ * CLASS TOOL_LANG_MULTI
+ *
+ * This tool allows for the automatic translation of content from a source component
+ * into multiple target languages simultaneously. It leverages external translation
+ * services (like Babel, Google, etc.) configured in Dédalo.
+ *
+ * It extends tool_common and utilizes methods from tool_lang for the actual
+ * translation logic.
+ *
+ * @package    Dédalo
+ * @subpackage Tools
+ */
 class tool_lang_multi extends tool_common {
 
 
