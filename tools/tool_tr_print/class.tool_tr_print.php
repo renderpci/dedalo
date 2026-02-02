@@ -1,29 +1,20 @@
 <?php
-// require_once( dirname(dirname(dirname(__FILE__))) .'/media_engine/class.OptimizeTC.php');
-// require_once( dirname(dirname(dirname(__FILE__))) .'/tools/tool_subtitles/class.subtitles.php');
-
 /**
-* CLASS TOOL_TR_PRINT
-*/
+ * CLASS TOOL_TR_PRINT
+ *
+ * This tool manages the generation of printable versions of interview transcripts.
+ * It provides functionality to process transcription text, handle embedded tags
+ * (timecodes, descriptors, indexation), and generate formatted outputs such as
+ * VTT (Web Video Text Tracks) for subtitles or custom printable layouts.
+ *
+ * @package    Dédalo
+ * @subpackage Tools
+ */
 class tool_tr_print extends tool_common {
 
 
 
 	protected $component_obj;
-
-
-
-	/**
-	* __CONSTRUCT
-	*/
-		// public function __construct($component_obj, $mode='button') {
-
-		// 	# Fix mode
-		// 	$this->mode = $mode;
-
-		// 	# Fix current media component
-		// 	$this->component_obj = $component_obj;
-		// }
 
 
 
@@ -42,8 +33,8 @@ class tool_tr_print extends tool_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		# Source text
-		$raw_text = $this->component_obj->get_dato();
-			#dump($raw_text, ' raw_text ++ '.to_string());
+		$data = $this->component_obj->get_data_lang();
+		$raw_text = $data[0]->value ?? '';
 
 		# Get all timecodes
 		#$pattern = TR::get_mark_pattern($mark='tc',$standalone=false);
@@ -199,7 +190,7 @@ class tool_tr_print extends tool_common {
 		#$text = subtitles::clean_text_for_subtitles($text);
 
 		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
-		html_entity_decode($text);
+		$text = html_entity_decode($text);
 
 		$text	= strip_tags($text, '<br><strong><em>');
 
@@ -229,18 +220,35 @@ class tool_tr_print extends tool_common {
 
 	/**
 	* GET_DESCRIPTORS
-	* @return
+	* @return array $descriptors
 	*/
 	public function get_descriptors( $fragment, $type ) {
 
-		$section_tipo 	= $this->component_obj->get_section_tipo();
-		$section_id 	= $this->component_obj->get_parent();
-		$component_tipo = $this->component_obj->get_tipo();
+		$descriptors = array();
 
-		$descriptors 	= component_text_area::get_descriptors( $fragment, $section_tipo, $section_id, $component_tipo, $type );
-			#dump($descriptors, ' $descriptors ++ '.to_string());
+		// Check valid types in TR class
+		if (!in_array($type, TR::$tag_types)) {
+			// 'struct' or other legacy types are ignored to avoid errors
+			return $descriptors;
+		}
 
-		return (array)$descriptors;
+		$ar_tags = TR::get_tags_of_type_in_text($fragment, [$type]);
+
+		foreach($ar_tags as $tag_info) {
+			$tag = $tag_info->tag;
+			// Parse tag to get label
+			// For 'index' pattern: \[/{0,1}(index)-([a-z])-([0-9]{1,6})(-([^-]{0,22})-data:(.*?):data)?\]
+			// Group 5 is the label
+			$pattern = TR::get_mark_pattern($type, false);
+			if (preg_match("/$pattern/", $tag, $matches)) {
+				$label = $matches[5] ?? '';
+				if (!empty($label)) {
+					$descriptors[] = $label;
+				}
+			}
+		}
+
+		return $descriptors;
 	}//end get_descriptors
 
 
@@ -249,8 +257,11 @@ class tool_tr_print extends tool_common {
 	* GET_RAW_TEXT
 	* @return string $raw_text
 	*/
-	public function get_raw_text() {
-		$raw_text = $this->component_obj->get_dato();
+	public function get_raw_text() : string {
+
+		$data = $this->component_obj->get_data_lang();
+
+		$raw_text = $data[0]->value ?? '';
 
 		return $raw_text;
 	}//end get_raw_text
@@ -261,9 +272,11 @@ class tool_tr_print extends tool_common {
 	* GET_ORIGINAL_TEXT
 	* @return
 	*/
-	public function get_original_text() {
+	public function get_original_text() : string {
 
-		$raw_text = $this->component_obj->get_dato();
+		$data = $this->component_obj->get_data_lang();
+		$raw_text = $data[0]->value ?? '';
+
 		$raw_text = self::format_text_for_tool( $raw_text );
 
 		return $raw_text;
@@ -277,7 +290,8 @@ class tool_tr_print extends tool_common {
 	*/
 	public function get_source_text() {
 
-		$raw_text = $this->component_obj->get_dato();
+		$data = $this->component_obj->get_data_lang();
+		$raw_text = $data[0]->value ?? '';
 
 		$raw_text = htmlentities($raw_text);
 
@@ -316,83 +330,88 @@ class tool_tr_print extends tool_common {
 			$tr_data->ID = $parent;
 
 		# source lang
-			$model_name 			= 'component_select_lang';
-			$ar_related 			= common::get_ar_related_by_model( $model_name, $tipo );
+			$model_name = 'component_select_lang';
+			$ar_related = common::get_ar_related_by_model( $model_name, $tipo );
 			if (isset($ar_related[0])) {
-				$component_select_lang 	= $ar_related[0];
-				#dump($component_select_lang, ' $component_select_lang ++ '.to_string());
-				$component 	 = component_common::get_instance($model_name,
-															  $component_select_lang,
-															  $parent,
-															  'edit',
-															  $lang,
-															  $section_tipo);
-				$value = $component->get_valor( $lang );
+				$component_select_lang = $ar_related[0];
+				$component = component_common::get_instance(
+					$model_name,
+					$component_select_lang,
+					$parent,
+					'edit',
+					$lang,
+					$section_tipo
+				);
+				$value = $component->get_value();
 				$tr_data->source_lang = $value;
 			}else{
 				$tr_data->source_lang = DEDALO_DATA_LANG;
 			}
 
-
-
 		# date
 			$current_tipo	= 'rsc44';
 			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // 'component_date';
-			$component		= component_common::get_instance($model_name,
-														  $current_tipo,
-														  $parent,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $section_tipo);
-			$dato    = $component->get_dato();
+			$component		= component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$data    = $component->get_data();
 			$value 	 = null;
-			if (!empty($dato[0])) {
-			$dd_date = new dd_date($dato[0]);
-			$value   = $dd_date->get_dd_timestamp($date_format="d-m-Y");
+			if (!empty($data[0])) {
+				$dd_date = new dd_date($data[0]);
+				$value   = $dd_date->get_dd_timestamp($date_format="d-m-Y");
 			}
 			$tr_data->date = $value;
 
 		# municipality
 			$current_tipo	= 'rsc46';
 			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component		= component_common::get_instance($model_name,
-														  $current_tipo,
-														  $parent,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $section_tipo);
-			$value = $component->get_valor( $lang );
+			$component		= component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$value = $component->get_value();
 			$tr_data->municipality = $value;
 
 		# code
 			$current_tipo	= 'rsc21';
 			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component		= component_common::get_instance($model_name,
-														  $current_tipo,
-														  $parent,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $section_tipo);
-			$value = $component->get_valor( $lang );
+			$component		= component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$value = $component->get_value();
 			$tr_data->code = $value;
 
 		# posterframe
 			$current_tipo	= 'rsc35';
 			$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_autocomplete_ts
-			$component		= component_common::get_instance($model_name,
-														  $current_tipo,
-														  $parent,
-														  'edit',
-														  DEDALO_DATA_NOLAN,
-														  $section_tipo);
+			$component		= component_common::get_instance(
+				$model_name,
+				$current_tipo,
+				$parent,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 			$value = $component->get_posterframe_url($test_file=true, $absolute=false);
 			$tr_data->posterframe = $value;
 
 		# interview
 			$tr_data->interview = $this->get_interview_data();
 
-
-		#dump($tr_data, ' tr_data ++ '.to_string());
 
 		return (object)$tr_data;
 	}//end get_tr_data
@@ -412,9 +431,8 @@ class tool_tr_print extends tool_common {
 
 		$section = section::get_instance($parent, $section_tipo);
 		$inverse_locators = $section->get_inverse_references();
-			#dump($inverse_locators, ' $inverse_locators ++ '.to_string());
 
-		$ar_interviews = array();
+		$ar_interviews = [];
 		foreach ($inverse_locators as $current_locator) {
 
 			$current_section_tipo = $current_locator->from_section_tipo;
@@ -425,14 +443,16 @@ class tool_tr_print extends tool_common {
 				# Informants
 					$current_tipo	= 'oh24';
 					$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_portal
-					$component		= component_common::get_instance($model_name,
-																  $current_tipo,
-																  $current_section_id,
-																  'edit',
-																  DEDALO_DATA_NOLAN,
-																  $current_section_tipo);
-					$dato = $component->get_dato();
-					$informants = $this->get_informants_data( $dato );
+					$component		= component_common::get_instance(
+						$model_name,
+						$current_tipo,
+						$current_section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$current_section_tipo
+					);
+					$data = $component->get_data();
+					$informants = $this->get_informants_data( $data );
 
 				# interview
 				$interview = new stdClass();
@@ -461,24 +481,28 @@ class tool_tr_print extends tool_common {
 			# name
 				$current_tipo	= 'rsc85';
 				$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_input_text
-				$component		= component_common::get_instance($model_name,
-															  $current_tipo,
-															  $current_locator->section_id,
-															  'edit',
-															  DEDALO_DATA_NOLAN,
-															  $current_locator->section_tipo);
-				$name = $component->get_valor();
+				$component		= component_common::get_instance(
+					$model_name,
+					$current_tipo,
+					$current_locator->section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$current_locator->section_tipo
+				);
+				$name = $component->get_value();
 
 			# surname
 				$current_tipo	= 'rsc86';
 				$model_name		= ontology_node::get_model_by_tipo($current_tipo, true); // component_input_text
-				$component		= component_common::get_instance($model_name,
-															  $current_tipo,
-															  $current_locator->section_id,
-															  'edit',
-															  DEDALO_DATA_NOLAN,
-															  $current_locator->section_tipo);
-				$surname = $component->get_valor();
+				$component		= component_common::get_instance(
+					$model_name,
+					$current_tipo,
+					$current_locator->section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$current_locator->section_tipo
+				);
+				$surname = $component->get_value();
 
 
 			$informants_data[] = "$name $surname";
