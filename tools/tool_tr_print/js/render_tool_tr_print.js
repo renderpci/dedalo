@@ -103,10 +103,9 @@ const get_content_data_edit = async function(self) {
 		// value is a raw html without parse into nodes (txt format)
 		const node_len 	= self.ar_raw_data.length
 		for (let i = 0; i < node_len; i++) {
-			const raw_data	= self.ar_raw_data[i]
+			const raw_data	= self.ar_raw_data[i].value || ''
 			const text_node	= self.tags_to_html(raw_data)
 			right_container_text.insertAdjacentHTML('beforeend', text_node);
-			// right_container.appendChild(node)
 		}
 
 	// content_data
@@ -192,7 +191,7 @@ const render_text_process_options = function(self, content_data) {
 					// re-create nodes
 						const node_len 	= self.ar_raw_data.length
 						for (let i = 0; i < node_len; i++) {
-							const raw_data	= self.ar_raw_data[i]
+							const raw_data	= self.ar_raw_data[i].value || ''
 							const text_node	= self.tags_to_html(raw_data)
 							// add the new one
 							content_data.right_container_text.insertAdjacentHTML('beforeend', text_node);
@@ -569,7 +568,7 @@ const render_text_process_options = function(self, content_data) {
 
 				const node_len 	= self.ar_raw_data.length
 				for (let i = 0; i < node_len; i++) {
-					const raw_data = self.ar_raw_data[i]
+					const raw_data = self.ar_raw_data[i].value || ''
 					const text_node = self.tags_to_html(raw_data)
 					// add the new one
 					content_data.right_container_text.insertAdjacentHTML("beforeend", text_node);
@@ -585,10 +584,10 @@ const render_text_process_options = function(self, content_data) {
 
 				const node_len 	= self.ar_raw_data.length
 				for (let i = 0; i < node_len; i++) {
-					const raw_data = self.ar_raw_data[i]
+					const raw_data = self.ar_raw_data[i].value || ''
 					// const text_node = self.tags_to_html(raw_data)
 					// add the new one
-					content_data.right_container_text.innerText =raw_data;
+					content_data.right_container_text.innerText = raw_data;
 				}
 			}
 		})
@@ -614,7 +613,7 @@ const render_default = function(self) {
 
 	for (let i = 0; i < node_len; i++) {
 
-		const raw_data = self.ar_raw_data[i]
+		const raw_data = self.ar_raw_data[i].value || ''
 
 		// BR
 		// break into fragments with br tag
@@ -773,13 +772,17 @@ const render_default = function(self) {
 					// get the match of the locator with the tag_persons array inside the instance
 					// console.log("self.data:",self.data);
 					// const tags_notes = self.transcription_component.data.tags_notes || []
-					const tags_notes	= self.tags_info.tags_notes || []
+					const tags_notes	= (self.tags_info.tags_notes || []).filter(item => item != null)
 
 					const note = tags_notes.find(el =>
-						el.data.section_tipo			===locator.section_tipo &&
+						el.data.section_tipo			=== locator.section_tipo &&
 						parseInt(el.data.section_id)	=== parseInt(locator.section_id) &&
-						el.data.component_tipo			===locator.component_tipo
+						el.data.component_tipo			=== locator.component_tipo
 					)
+
+					if(!note){
+						return ''
+					}
 
 					const note_title = (note.title)
 						? note.title.join(' | ')
@@ -858,6 +861,7 @@ const render_header = function(self) {
 			section_id		: value[i].section_id
 		}
 		if(current_locator.section_tipo !== transcription_component.section_tipo){
+
 			const section_label			= context.find(el => el.model === 'section' && el.section_tipo===current_locator.section_tipo).label
 			const ar_component_context	= context.filter(el => el.model !== 'section' && el.section_tipo===current_locator.section_tipo)
 
@@ -905,7 +909,7 @@ const render_header = function(self) {
 					parseInt(el.section_id)===parseInt(current_locator.section_id)
 				)
 				const current_component_value = current_component_data && current_component_data.value
-					? current_component_data.value.join(' | ')
+					? current_component_data.value.map(item => item.value).join(' | ')
 					: ''
 
 				const component_container = ui.create_dom_element({
