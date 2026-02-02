@@ -47,7 +47,16 @@ class section_record {
 	* @param bool $is_temporal
 	* @return section_record $section_record
 	*/
-	public static function get_instance( string $section_tipo, int $section_id, bool $is_temporal = false ) : section_record {
+	public static function get_instance( string $section_tipo, int|string $section_id, bool $is_temporal = false ) : section_record {
+
+		// debug
+		if(is_string($section_id)) {
+			$section_id = (int)$section_id;
+			debug_log(__METHOD__
+			   ." WARNING! send section_id as string is DEPRECATED. Changed section_id type from string to int"
+			   , logger::ERROR
+			);
+		}
 
 		// metrics
 		self::$section_record_total_calls++;
