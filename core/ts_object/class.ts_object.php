@@ -1,9 +1,51 @@
 <?php declare(strict_types=1);
 /**
-* CLASS TS_OBJECT
-* Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
-*
-*/
+ * CLASS TS_OBJECT
+ * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
+ *
+ * This class handles the retrieval and formatting of thesaurus objects, including terms, icons,
+ * and child relationships. It processes the configuration defined in the ontology (section_list_thesaurus)
+ * to build the object representation.
+ *
+ * Example of Use:
+ * ```php
+ * $ts_obj = new ts_object($section_id, $section_tipo);
+ * $data = $ts_obj->get_data();
+ * echo $data->ar_elements[0]->value;
+ * ```
+ *
+ * Sample of elements from Ontology 'section_list_thesaurus' properties:
+ * [
+ *     {
+ *         "tipo": "actv10",
+ *         "type": "term"
+ *     },
+ *     {
+ *         "icon": "ND",
+ *         "tipo": "actv9",
+ *         "type": "icon"
+ *     },
+*     {
+*         "icon": "M",
+*         "tipo": "actv6",
+*         "type": "icon"
+*     },
+*     {
+*         "icon": "U",
+*         "tipo": "actv25",
+*         "type": "icon"
+*     },
+*     {
+*         "icon": "CH",
+*         "tipo": "actv23",
+*         "type": "icon"
+*     },
+*     {
+*         "tipo": "actv23",
+*         "type": "link_children"
+*     }
+ * ]
+ */
 class ts_object {
 
 
@@ -262,11 +304,13 @@ class ts_object {
 
 
 	/**
-	* GET_DATA
- 	* @return object $child_data
-	*/
+	 * GET_DATA
+	 * Builds and returns the data object for the thesaurus element.
+	 * This method iterates through the configured elements (from ontology) and processes them.
+	 *
+	 * @return object $child_data
+	 */
 	public function get_data() : object {
-		// $start_time=start_time();
 
 		// Is index-able check
 		$is_indexable = self::is_indexable($this->section_tipo, $this->section_id);
@@ -282,325 +326,57 @@ class ts_object {
 			$data->ts_id						= $this->ts_id;
 			$data->ts_parent					= $this->ts_parent;
 			$data->order						= $this->order;
-			$data->mode							= 'list';	//'list_thesaurus';
+			$data->mode							= 'list';
 			$data->lang							= DEDALO_DATA_LANG;
 			$data->is_descriptor				= true;
 			$data->is_indexable					= $is_indexable;
 			$data->ar_elements					= [];
 			$data->permissions_button_new		= $permissions_button_new;
 			$data->permissions_button_delete	= $permissions_button_delete;
-			// Permissions indexation is commented now because it has not yet been implemented in thesaurus v7.
-			// $data->permissions_indexation	= $this->get_permissions_element('component_relation_index');
 
 		// model boolean
-			$model = $this->options->model ?? null; // options are set when building the class
+		$model = $this->options->model ?? null;
 
-		// short vars
-			$separator = ' ';
-
-		// elements from 'section_list_thesaurus' properties
-		// Sample value:
-			// [
-			//     {
-			//         "tipo": "actv10",
-			//         "type": "term"
-			//     },
-			//     {
-			//         "icon": "ND",
-			//         "tipo": "actv9",
-			//         "type": "icon"
-			//     },
-			//     {
-			//         "icon": "M",
-			//         "tipo": "actv6",
-			//         "type": "icon"
-			//     },
-			//     {
-			//         "icon": "U",
-			//         "tipo": "actv25",
-			//         "type": "icon"
-			//     },
-			//     {
-			//         "icon": "CH",
-			//         "tipo": "actv23",
-			//         "type": "icon"
-			//     },
-			//     {
-			//         "tipo": "actv23",
-			//         "type": "link_children"
-			//     }
-			// ]
+		// Get elements configuration
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
+
 		foreach ($ar_elements as $current_object) {
 
-			// sample
-				// 	{
-				// 	 "icon": "TCHI",
-				// 	 "tipo": "tchi59",
-				// 	 "type": "icon"
-				// 	}
-
-			// element_tipo
-				$current_element_tipo = $current_object->tipo ?? null;
-				if (empty($current_element_tipo)) {
-					debug_log(__METHOD__
-						." Warning. Ignored bad formed empty element_tipo in current_object" . PHP_EOL
-						.' current_element_tipo:'. to_string($current_element_tipo) . PHP_EOL
-						.' current_object:'. to_string($current_object)
-						, logger::WARNING
-					);
-					continue;
-				}
-
-			// No descriptors do not have children. Avoid calculate children
-				if ($data->is_descriptor===false && $current_object->type==='link_children') {
-					// fix children_tipo
-					$data->children_tipo = null;
-					continue;
-				}
-
-			// allow array for terms
-				$ar_element_tipo = is_array($current_element_tipo)
-					? $current_element_tipo
-					: [$current_element_tipo];
-
-			// Each element
-				$element_obj = new stdClass();
-					$element_obj->type	= $current_object->type;
-					$element_obj->tipo	= $current_element_tipo;
-
-			// iterate every tipo
-				foreach ($ar_element_tipo as $element_tipo) {
-
-					$model_name = ontology_node::get_model_by_tipo($element_tipo,true);
-					// remove the box elements
-					// it could be any old component not used as old component_relation_struct
-					if(empty($model_name) || $model_name === 'box elements'){
-						continue 2;
-					}
-					// ignore v5 component_relation_struct
-						if ($model_name==='component_relation_index') {
-							$legacy_model = ontology_node::get_legacy_model_by_tipo($element_tipo);
-							if ($legacy_model==='component_relation_struct') {
-								continue 2;
-							}
-						}
-
-					// component
-						$lang		= common::get_element_lang($element_tipo, DEDALO_DATA_LANG);
-						$component	= component_common::get_instance(
-							$model_name,
-							$element_tipo,
-							$this->section_id,
-							'list_thesaurus',
-							$lang,
-							$this->section_tipo
-						);
-						// get the data when the component is not a relation_index
-						// relation index get full data when get_data() is called
-						// but this component needs a pagination data
-						$component_data = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
-							? ($component->get_data_lang() ?? [])
-							: [];
-
-					// re-format data in some cases:
-						switch (true) {
-
-							case (in_array($element_tipo, hierarchy::$hierarchy_portals_tipo)):
-								// Do not change main hierarchy portals data, component_children in main section
-								break;
-
-							case ($model_name==='component_autocomplete_hi' || $model_name==='component_portal'):
-								if (!empty($component_data)) {
-									$values = [];
-									foreach ($component_data as $current_locator) {
-										$values[] = ts_object::get_term_by_locator(
-											$current_locator,
-											DEDALO_DATA_LANG,
-											true
-										);
-									}
-									$component_data = $values;
-								}
-								break;
-
-							case ($model_name==='component_relation_related'):
-								// Add inverse related (bidirectional only)
-								$type_rel = $component->get_type_rel();
-								if($type_rel!==DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO){
-									$component_rel = $component->get_references(); //$component->relation_type_rel
-									#$inverse_related = component_relation_related::get_inverse_related($this->section_id, $this->section_tipo, DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO);
-									$component_data = array_merge($component_data, $component_rel);
-								}
-								break;
-
-							case ($model_name==='component_svg'):
-								// file exists check
-								$file_path	= $component->get_media_filepath(DEDALO_SVG_QUALITY_DEFAULT);
-								$file_url	= (file_exists($file_path)===true)
-									? $component->get_url() . '?' . start_time()
-									: '';
-
-								$component_data = $file_url;
-								break;
-
-							default:
-								// nothing to do
-								break;
-						}//end switch (true) re-format dato
-
-					// value
-						switch (true) {
-
-							case ($element_obj->type==='term'):
-
-								// term Is translatable and uses lang fallback here
-								if(empty($component_data)) {
-									$data_item_fallback = $component->get_component_data_fallback();
-									$element_value = $data_item_fallback[0]->value ?? $data_item_fallback[0] ?? '';
-									$element_value = component_common::decorate_untranslated($element_value);
-								}else{
-									$element_value = $component_data[0]->value ?? $component_data[0] ?? '';
-								}
-
-								// (!) Note that this element (term) could be multiple (various items) and
-								// the value is cumulative added in $element_obj->value on each iteration
-								$element_obj->value = isset($element_obj->value)
-									? to_string($element_obj->value) . $separator . to_string($element_value)
-									: to_string($element_value);
-								break;
-
-							case ($element_obj->type==='icon'):
-
-								if($current_object->icon==='CH') {
-									continue 3;
-								}
-
-								// ND element can change term value when 'descriptor' value is 'no' (locator of 'no')
-									if($current_object->icon==='ND') {
-										if (isset($component_data[0])
-											&& isset($component_data[0]->section_id)
-											&& (int)$component_data[0]->section_id===2) {
-											ts_object::set_term_as_nd($data->ar_elements);
-											$data->is_descriptor = false;
-										}
-										continue 3;
-									}
-
-								// icon do not need more info. Value is property 'type'
-								$element_obj->value = $current_object->icon;
-
-								if ($model_name==='component_relation_index') {
-
-									// Counts indexation related items
-									$count_data_group_by = $this->get_count_data_group_by(
-										$component,
-										$current_object
-									);
-
-									// total 0 case. Nothing to display, skip
-									if($count_data_group_by->total === 0){
-										continue 3;
-									}
-
-									$element_obj->value .= ':' . $count_data_group_by->total;
-
-									// flat key and set label
-									array_map(function($item){
-										$item->label	= ontology_node::get_term_by_tipo($item->key[0]);
-										$item->key		= $item->key[0]; // flat the key to be more useful in JavaScript, only 1 section is received
-									}, $count_data_group_by->totals_group);
-
-									$element_obj->count_result = $count_data_group_by;
-
-								}else{
-
-									// dato check
-									$considered_empty_data = (bool)is_empty($component_data);
-									if($considered_empty_data===true) {
-										continue 3; // Skip empty icon value links
-									}
-								}
-								break;
-
-							case ($element_obj->type==='link_children'):
-
-								// fix children_tipo
-								$data->children_tipo = $element_tipo;
-
-								// fix children dato
-								// $data->children = $component_data;
-
-								// set has_descriptor_children value
-								$data->has_descriptor_children = empty($component_data)
-									? false
-									: $this->has_children_of_type($component_data, 'descriptor');
-								// $data->has_descriptor_children = component_relation_children::has_children_of_type(
-								// 	$this->section_id,
-								// 	$this->section_tipo,
-								// 	$element_tipo,
-								// 	'descriptor'
-								// );
-
-								// D : Descriptors
-								$element_obj->value = ($data->has_descriptor_children===true)
-									? 'button show children'
-									: 'button show children unactive';
-
-								// ND : No descriptors case
-								$has_children_of_type_result = empty($component_data)
-									? false
-									: $this->has_children_of_type($component_data, 'nd');
-								// $has_children_of_type_result = component_relation_children::has_children_of_type(
-								// 	$this->section_id,
-								// 	$this->section_tipo,
-								// 	$element_tipo,
-								// 	'non_descriptor'
-								// );
-
-								if($has_children_of_type_result===true) {
-
-									$nd_element = new stdClass();
-										$nd_element->type	= 'link_children_nd';
-										$nd_element->tipo	= $element_tipo;
-										$nd_element->value	= 'ND';
-
-									$data->ar_elements[] = $nd_element;
-								}
-								break;
-
-							default:
-								$element_obj->value = $component_data;
-								break;
-						}//end switch (true) value
-
-					// ontology model case. Used in area ontology to display the current element model like 'root'
-						if ($element_obj->value==='M') {
-							$element_obj->model_value = $component->get_value();
-						}
-
-					// set model. Only first element if more than one exists (multiple term cases with same model)
-						if (!isset($element_obj->model)) {
-							$element_obj->model = $model_name;
-						}
-					// set data_type. set the data_type when is set.
-						if (isset($current_object->show_data)) {
-							$element_obj->show_data = $current_object->show_data;
-						}
-				}//end foreach ($ar_element_tipo as $element_tipo)
-
-			// Add
-				$data->ar_elements[] = $element_obj;
-
-		}//end foreach ($ar_elements as $k_element_tipo => $current_object)
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				// $total = exec_time_unit_auto($start_time);
-				// debug_log(__METHOD__.")))))))))))))) Total2: $total", logger::DEBUG);
-				// $data->total_time = $total;
-				// error_log('********************* get_data total: '. exec_time_unit($start_time,'ms'));
+			// Validate and resolve current element tipo
+			$current_element_tipo = $current_object->tipo ?? null;
+			if (empty($current_element_tipo)) {
+				debug_log(__METHOD__
+					." Warning. Ignored bad formed empty element_tipo in current_object" . PHP_EOL
+					.' current_element_tipo:'. to_string($current_element_tipo) . PHP_EOL
+					.' current_object:'. to_string($current_object)
+					, logger::WARNING
+				);
+				continue;
 			}
+
+			// No descriptors do not have children config
+			if ($data->is_descriptor===false && $current_object->type==='link_children') {
+				$data->children_tipo = null;
+				continue;
+			}
+
+			// normalize to array
+			$ar_element_tipo = is_array($current_element_tipo)
+				? $current_element_tipo
+				: [$current_element_tipo];
+
+			// Initialize element object
+			$element_obj = new stdClass();
+			$element_obj->type	= $current_object->type;
+			$element_obj->tipo	= $current_element_tipo;
+
+			// Process details
+			$is_valid_element = $this->process_element_details($current_object, $ar_element_tipo, $element_obj, $data);
+
+			if ($is_valid_element) {
+				$data->ar_elements[] = $element_obj;
+			}
+		}// end foreach $ar_elements
 
 		return $data;
 	}//end get_data
@@ -694,70 +470,83 @@ class ts_object {
 
 
 	/**
-	* HAS_CHILDREN_OF_TYPE
-	* @param array $ar_children
-	* 	Array of locators
-	* @param string $type
-	* 	As 'descriptor'
-	* @return bool
-	*/
+	 * HAS_CHILDREN_OF_TYPE
+	 * Checks if any of the children matching the criteria exists.
+	 * Optimized with local caching for model and section map lookups.
+	 *
+	 * @param array $ar_children Array of locators
+	 * @param string $type Criteria type ('descriptor' or 'nd')
+	 * @return bool
+	 */
 	public function has_children_of_type( array $ar_children, string $type ) : bool {
 
 		if (empty($ar_children)) {
-
 			// options forced have_children cases (persons for example from trigger.ts_object.php)
 			if ($type==='descriptor') {
 				return $this->options->have_children ?? false;
 			}
-
 			return false;
 		}
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
 
+		// Local cache to avoid repetitive DB/Config lookups for the same section_tipo
+		$cache_models = [];
+
 		foreach($ar_children as $current_locator) {
 
-			$model = ontology_node::get_model_by_tipo($current_locator->section_tipo,true);
-			if (empty($model)) {
-				debug_log(__METHOD__
-					. " Ignored non resolved model for section: $current_locator->section_tipo" . PHP_EOL
-					. ' Maybe is a non installed TLD : ' . get_tld_from_tipo($current_locator->section_tipo)
-					, logger::ERROR
-				);
+			$section_tipo = $current_locator->section_tipo;
+
+			// Resolve cache
+			if (!isset($cache_models[$section_tipo])) {
+				$model = ontology_node::get_model_by_tipo($section_tipo, true);
+				if (empty($model)) {
+					// cache explicit false to avoid retry
+					$cache_models[$section_tipo] = false;
+					debug_log(__METHOD__ . " Ignored non resolved model for section: $section_tipo", logger::ERROR);
+					continue;
+				}
+
+				$section_map = section::get_section_map($section_tipo);
+				if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
+					$cache_models[$section_tipo] = false;
+					debug_log(__METHOD__ . " Invalid section_map for section $section_tipo", logger::ERROR);
+					continue;
+				}
+
+				$component_tipo = $section_map->thesaurus->is_descriptor;
+				$model_name     = ontology_node::get_model_by_tipo($component_tipo, true);
+
+				$cache_models[$section_tipo] = (object)[
+					'component_tipo' => $component_tipo,
+					'model_name'     => $model_name
+				];
+			}
+
+			// Check cached value
+			if ($cache_models[$section_tipo] === false) {
 				continue;
 			}
 
-			$section_map = section::get_section_map( $current_locator->section_tipo );
-			if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__
-					." Invalid section_map 'is_descriptor' property " .PHP_EOL
-					.' section_map: ' . json_encode($section_map, JSON_PRETTY_PRINT) . PHP_EOL
-					.' Please, define a valid section_map for section ' .$current_locator->section_tipo
-					, logger::ERROR
-				);
-				continue;
-			}
+			$info = $cache_models[$section_tipo];
 
-			$component_tipo	= $section_map->thesaurus->is_descriptor;
-			$model_name		= ontology_node::get_model_by_tipo($component_tipo,true);
-			$component		= component_common::get_instance(
-				$model_name,
-				$component_tipo,
+			$component = component_common::get_instance(
+				$info->model_name,
+				$info->component_tipo,
 				$current_locator->section_id,
 				'list',
 				DEDALO_DATA_NOLAN,
-				$current_locator->section_tipo
+				$section_tipo
 			);
 			$data = $component->get_data();
 
 			// When first element is found, return true
 			if (isset($data[0])
 				&& isset($data[0]->section_id)
-				&& (int)$data[0]->section_id==$descriptor_value) {
+				&& (int)$data[0]->section_id == $descriptor_value) {
 				return true;
 			}
 		}
-
 
 		return false;
 	}//end has_children_of_type
@@ -955,14 +744,14 @@ class ts_object {
 
 
 	/**
-	* GET_TERM_BY_LOCATOR
-	* Resolve locator to string value to show in list etc.
-	* @param object $locator
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param bool $from_cache = false
-	*
-	* @return string|null $valor
-	*/
+	 * GET_TERM_BY_LOCATOR
+	 * Retrieves the string representation of a term given its locator.
+	 *
+	 * @param object $locator
+	 * @param string $lang
+	 * @param bool $from_cache
+	 * @return string|null
+	 */
 	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 
 		$valor = null;
@@ -1260,6 +1049,254 @@ class ts_object {
 
 
 
+	/**
+	 * PROCESS_ELEMENT_DETAILS
+	 * Iterates over the element types configuration and processes the data for the current object.
+	 *
+	 * @param object $current_object
+	 * @param array $ar_element_tipo
+	 * @param object $element_obj
+	 * @param object $data Global data object
+	 * @return bool Returns true if the element is valid and should be added, false if it should be skipped.
+	 */
+	protected function process_element_details(object $current_object, array $ar_element_tipo, object $element_obj, object $data) : bool {
+
+		foreach ($ar_element_tipo as $element_tipo) {
+
+			$model_name = ontology_node::get_model_by_tipo($element_tipo, true);
+
+			// Check validity of model
+			if (empty($model_name) || $model_name === 'box elements') {
+				return false;
+			}
+			// Special legacy check for component_relation_struct
+			if ($model_name === 'component_relation_index') {
+				$legacy_model = ontology_node::get_legacy_model_by_tipo($element_tipo);
+				if ($legacy_model === 'component_relation_struct') {
+					return false;
+				}
+			}
+
+			// Load component instance
+			$component = $this->load_component_instance($model_name, $element_tipo);
+
+			// Retrieve component data
+			$component_data = $model_name !== 'component_relation_index'
+				? ($component->get_data_lang() ?? [])
+				: [];
+
+			// Format component data based on specific rules
+			$component_data = $this->format_component_data($model_name, $element_tipo, $component, $component_data);
+
+			// Process the value and update element_obj or data
+			$processing_success = $this->resolve_element_value(
+				$current_object,
+				$element_obj,
+				$element_tipo,
+				$model_name,
+				$component,
+				$component_data,
+				$data
+			);
+
+			// if false, it means we should abort adding this element_obj (equivalent to continue 3 in original loop)
+			if ($processing_success === false) {
+				return false;
+			}
+
+			// Capture ontology model value if applicable
+			if (isset($element_obj->value) && $element_obj->value === 'M') {
+				$element_obj->model_value = $component->get_value();
+			}
+
+			// Set model if not already set
+			if (!isset($element_obj->model)) {
+				$element_obj->model = $model_name;
+			}
+
+			// Set data_type if configured
+			if (isset($current_object->show_data)) {
+				$element_obj->show_data = $current_object->show_data;
+			}
+
+		} // end foreach
+
+		return true;
+	}
+
+	/**
+	 * LOAD_COMPONENT_INSTANCE
+	 * Helper to instantiate a component
+	 */
+	protected function load_component_instance(string $model_name, string $element_tipo) : component_common {
+		$lang = common::get_element_lang($element_tipo, DEDALO_DATA_LANG);
+		return component_common::get_instance(
+			$model_name,
+			$element_tipo,
+			$this->section_id,
+			'list_thesaurus',
+			$lang,
+			$this->section_tipo
+		);
+	}
+
+	/**
+	 * FORMAT_COMPONENT_DATA
+	 * detailed data formatting logic
+	 */
+	protected function format_component_data(string $model_name, string $element_tipo, component_common $component, mixed $component_data): mixed {
+
+		switch (true) {
+			case (in_array($element_tipo, hierarchy::$hierarchy_portals_tipo)):
+				// Do not change main hierarchy portals data
+				break;
+
+			case ($model_name === 'component_autocomplete_hi' || $model_name === 'component_portal'):
+				if (!empty($component_data)) {
+					$values = [];
+					foreach ($component_data as $current_locator) {
+						$values[] = ts_object::get_term_by_locator(
+							$current_locator,
+							DEDALO_DATA_LANG,
+							true
+						);
+					}
+					$component_data = $values;
+				}
+				break;
+
+			case ($model_name === 'component_relation_related'):
+				// Add inverse related (bidirectional only)
+				$type_rel = $component->get_type_rel();
+				if ($type_rel !== DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO) {
+					$component_rel = $component->get_references();
+					$component_data = array_merge($component_data, $component_rel);
+				}
+				break;
+
+			case ($model_name === 'component_svg'):
+				// file exists check
+				$file_path = $component->get_media_filepath(DEDALO_SVG_QUALITY_DEFAULT);
+				$file_url = (file_exists($file_path) === true)
+					? $component->get_url() . '?' . start_time()
+					: '';
+
+				$component_data = $file_url;
+				break;
+		}
+
+		return $component_data;
+	}
+
+	/**
+	 * RESOLVE_ELEMENT_VALUE
+	 * Processes the logic for assigning values to the element object based on its type.
+	 *
+	 * @return bool Returns false if the processing indicates the element should be skipped.
+	 */
+	protected function resolve_element_value(object $current_object, object $element_obj, string $element_tipo, string $model_name, component_common $component, mixed $component_data, object $data): bool {
+
+		switch (true) {
+
+			case ($element_obj->type === 'term'):
+				$separator = ' ';
+				// Term uses lang fallback if data is empty
+				if (empty($component_data)) {
+					$data_item_fallback = $component->get_component_data_fallback();
+					$element_value = $data_item_fallback[0]->value ?? $data_item_fallback[0] ?? '';
+					$element_value = component_common::decorate_untranslated($element_value);
+				} else {
+					$element_value = $component_data[0]->value ?? $component_data[0] ?? '';
+				}
+
+				// Cumulative value addition
+				$element_obj->value = isset($element_obj->value)
+					? to_string($element_obj->value) . $separator . to_string($element_value)
+					: to_string($element_value);
+				break;
+
+			case ($element_obj->type === 'icon'):
+
+				if ($current_object->icon === 'CH') {
+					return false; // Skip element
+				}
+
+				// ND element check
+				if ($current_object->icon === 'ND') {
+					if (isset($component_data[0])
+						&& isset($component_data[0]->section_id)
+						&& (int)$component_data[0]->section_id === 2) {
+						ts_object::set_term_as_nd($data->ar_elements);
+						$data->is_descriptor = false;
+					}
+					return false; // Skip element after processing logic
+				}
+
+				// Basic icon value
+				$element_obj->value = $current_object->icon;
+
+				if ($model_name === 'component_relation_index') {
+					// Count indexation
+					$count_data_group_by = $this->get_count_data_group_by($component, $current_object);
+
+					if ($count_data_group_by->total === 0) {
+						return false; // Nothing to display, skip
+					}
+
+					$element_obj->value .= ':' . $count_data_group_by->total;
+
+					// Enrich totals logic
+					array_map(function($item){
+						$item->label	= ontology_node::get_term_by_tipo($item->key[0]);
+						$item->key		= $item->key[0];
+					}, $count_data_group_by->totals_group);
+
+					$element_obj->count_result = $count_data_group_by;
+
+				} else {
+					// Empty data check for standard icons
+					if (is_empty($component_data) === true) {
+						return false; // Skip empty icon value
+					}
+				}
+				break;
+
+			case ($element_obj->type === 'link_children'):
+				$data->children_tipo = $element_tipo;
+
+				// Has descriptor children
+				$data->has_descriptor_children = empty($component_data)
+					? false
+					: $this->has_children_of_type($component_data, 'descriptor');
+
+				$element_obj->value = ($data->has_descriptor_children === true)
+					? 'button show children'
+					: 'button show children unactive';
+
+				// ND children check
+				$has_children_of_type_result = empty($component_data)
+					? false
+					: $this->has_children_of_type($component_data, 'nd');
+
+				if ($has_children_of_type_result === true) {
+					$nd_element = new stdClass();
+					$nd_element->type	= 'link_children_nd';
+					$nd_element->tipo	= $element_tipo;
+					$nd_element->value	= 'ND';
+
+					$data->ar_elements[] = $nd_element;
+				}
+				break;
+
+			default:
+				$element_obj->value = $component_data;
+				break;
+		}
+
+		return true;
+	}
+
+
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
@@ -1267,7 +1304,7 @@ class ts_object {
 		$strMethodMember 	= substr($strFunction, 4);
 		switch($strMethodType) {
 			case 'set_' :
-				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
+				if(!isset($arArguments[0])) return(false);
 				return($this->SetAccessor($strMethodMember, $arArguments[0]));
 				break;
 			case 'get_' :
