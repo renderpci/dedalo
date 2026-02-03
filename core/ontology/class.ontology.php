@@ -610,7 +610,7 @@ class ontology {
 				$main_section_id = $main_section->create_record();
 			}
 		// create the main section_record
-			$section_record = section_record::get_instance(self::$main_section_tipo, $main_section_id);
+			$section_record = section_record::get_instance(self::$main_section_tipo, (int)$main_section_id);
 
 		// Project
 			$tipo 	= DEDALO_HIERARCHY_FILTER_TIPO;
@@ -937,7 +937,7 @@ class ontology {
 			$found = false;
 			// if parent_section_id is not null, check if the parent exists in matrix
 			if($parent_section_id !== null){
-				$section_record = section_record::get_instance( $parent_node_tipo, $parent_section_id );
+				$section_record = section_record::get_instance( $parent_node_tipo, (int)$parent_section_id );
 				$found = $section_record->exists_in_the_database();
 			}
 			// if parent_section does not exist in matrix, create it
@@ -958,7 +958,7 @@ class ontology {
 				$typology_id = $typology_section->create_record();
 			}
 
-			$section_record = section_record::get_instance( $section_tipo, $typology_id);
+			$section_record = section_record::get_instance( $section_tipo, (int)$typology_id);
 
 		// Publication (= Yes, by default)
 			$tipo 	= DEDALO_ONTOLOGY_PUBLICATION_TIPO;

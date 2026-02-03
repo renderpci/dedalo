@@ -55,8 +55,8 @@ class tool_ontology_parser extends tool_common {
 			foreach ($ontology_records as $row) {
 
 				// section_record
-				$section_record = section_record::get_instance( $row->section_tipo, $row->section_id );
-				$section_record->set_data($row);			
+				$section_record = section_record::get_instance( $row->section_tipo, (int)$row->section_id );
+				$section_record->set_data($row);
 
 				// target_section_tipo
 					$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TARGET_SECTION_TIPO );
@@ -108,7 +108,7 @@ class tool_ontology_parser extends tool_common {
 						DEDALO_DATA_LANG, // string lang
 						$row->section_tipo // string section_tipo
 					);
-					$name = $name_component->get_value();				
+					$name = $name_component->get_value();
 
 				// typology
 					$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
@@ -155,7 +155,7 @@ class tool_ontology_parser extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage()
 				, logger::ERROR
@@ -263,7 +263,7 @@ class tool_ontology_parser extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage()
 				, logger::ERROR

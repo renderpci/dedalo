@@ -1050,7 +1050,7 @@ class tool_import_files extends tool_common {
 		// create the section and give his all data.
 		$section_record = section_record::get_instance(
 			$section_tipo,
-			$section_id
+			(int)$section_id
 		);
 
 		$data = $section_record->get_data();

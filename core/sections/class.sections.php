@@ -430,7 +430,7 @@ class sections extends common {
 					}
 
 				// Delete the section record
-					$section_record = section_record::get_instance( $current_section_tipo, $current_section_id );
+					$section_record = section_record::get_instance( $current_section_tipo, (int)$current_section_id );
 					// perform the delete in correct function
 					$deleted = false;
 					if ($delete_mode==='delete_record') {

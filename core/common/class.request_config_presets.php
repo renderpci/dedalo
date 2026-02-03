@@ -76,7 +76,7 @@ class request_config_presets {
 			$section_id   = $row->section_id;
 
 			// Get cached section record (hydrated with parsed row data)
-			$section_record = section_record::get_instance($section_tipo, $section_id);
+			$section_record = section_record::get_instance($section_tipo, (int)$section_id);
 			$section_record->set_data($row);
 
 			// Extract raw data directly

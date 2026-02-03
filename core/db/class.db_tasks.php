@@ -36,11 +36,12 @@ class db_tasks {
 				'session_data',
 				'matrix_counter',
 				'matrix_counter_dd',
+				'temp'
 			];
 
 			// Find and iterate all db tables
 			$sql	= " SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name ASC ";
-			$result	= matrix_db_manager::exec_search($sql, []);			
+			$result	= matrix_db_manager::exec_search($sql, []);
 
 			while ($rows = pg_fetch_assoc($result)) {
 
@@ -58,7 +59,7 @@ class db_tasks {
 				# Find last id in table
 				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
 				$result2	= matrix_db_manager::exec_search($sql, []);
-				
+
 				if (!$result2) {
 					continue;
 				}
@@ -111,7 +112,7 @@ class db_tasks {
 
 					$sql2 	 = "SELECT setval('public.{$table_name}_id_seq', $last_id, true);";
 					$result2 = matrix_db_manager::exec_search($sql2, []);
-					
+
 					if (!$result2) {
 						$response->msg .= "Use: <b>SELECT setval('public.{$table_name}_id_seq', $last_id, true);</b>";
 					}

@@ -45,7 +45,7 @@ class tool_time_machine extends tool_common {
 
 		// get time machine data with the matrix_id
 		// if the component has a dataframe the data will has both data: main data and dataframe data.
-			$data_time_machine = $tm_record->get_element_data();	
+			$data_time_machine = $tm_record->get_element_data();
 
 		// apply time machine data to element and save
 			switch (true) {
@@ -56,7 +56,7 @@ class tool_time_machine extends tool_common {
 					// section. Inject data
 						$element = section_record::get_instance(
 							$tipo,
-							$section_id							
+							(int)$section_id
 						);
 
 					// Set data overwrites the data of the current element

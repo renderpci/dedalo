@@ -2,6 +2,9 @@
 
 This file provides comprehensive guidance for AI coding agents working in the Dédalo repository. Follow these patterns, commands, and conventions to ensure consistent, high-quality contributions.
 
+## Interactions
+- In all interactions and commit messages, be extremely concise and precise and sacrifice grammar for the sake of concision.
+
 ## Project Overview
 
 **Dédalo** is a PHP-based knowledge management system for Cultural Heritage using an ontology-driven model. Key characteristics:
@@ -122,7 +125,7 @@ include_once 'trait.from.php';
 class search {
     // Use traits for code organization
     use select, from, where, order, count, utils;
-    
+
     // Implementation
 }
 ```
@@ -143,31 +146,31 @@ class search {
  * @subpackage Core
  */
 class component_text_area extends component_string_common {
-    
+
     // Class constants
     public const CONSTANT_NAME = 'value';
-    
+
     // Properties with visibility
     public $arguments;
     protected $protected_property;
     private static $static_property = [];
-    
+
     // Constructor (if needed)
     public function __construct(object $options) {
         parent::__construct($options);
         // Additional initialization
     }
-    
+
     // Public methods
     public function is_empty(?object $data_item) : bool {
         // Implementation
     }
-    
+
     // Protected methods
     protected function validate_data(object $data) : bool {
         // Implementation
     }
-    
+
     // Private methods
     private function internal_process() : void {
         // Implementation
@@ -189,7 +192,7 @@ public function get_identifier() : string {
     if (empty($this->get_tipo())) {
         throw new Exception("Cannot generate identifier: tipo is empty", 1);
     }
-    
+
     return $this->tipo;
 }
 ```
@@ -215,16 +218,16 @@ if ($data_item !== null) {
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 final class component_text_area_test extends BaseTestCase {
-    
+
     // Test configuration
     public static $model = 'component_text_area';
     public static $tipo = 'test17';
     public static $section_tipo = 'test3';
-    
+
     // Helper methods
     private function build_component_instance() {
         $this->user_login();
-        
+
         $component = component_common::get_instance(
             self::$model,
             self::$tipo,
@@ -233,10 +236,10 @@ final class component_text_area_test extends BaseTestCase {
             DEDALO_DATA_NOLAN, // lang
             self::$section_tipo
         );
-        
+
         return $component;
     }
-    
+
     // Test methods
     public function test_is_empty() {
         $component = $this->build_component_instance();
