@@ -29,8 +29,8 @@ view_text_inverse.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value_string	= data.value && data.value[0] && data.value[0].locator
-			? data.value[0].locator.from_section_id
+		const value_string	= data.entries && data.entries[0] && data.entries[0].locator
+			? data.entries[0].locator.from_section_id
 			: ''
 
 	// wrapper. Set as span

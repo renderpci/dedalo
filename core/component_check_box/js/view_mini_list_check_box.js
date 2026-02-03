@@ -29,14 +29,14 @@ view_mini_list_check_box.render = async function(self, options) {
 
 
 	// Options vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = entries.join(self.context.fields_separator)
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

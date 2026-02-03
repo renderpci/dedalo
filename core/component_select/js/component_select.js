@@ -90,8 +90,8 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 
 	// check current value. LImit to one
 		const current_data	= self.data || {}
-		const value			= current_data.value || []
-		if (value.length>0) {
+		const entries		= current_data.entries || []
+		if (entries.length>0) {
 			// remove previous value
 			const source = create_source(self, null)
 			const data = clone(self.data)

@@ -30,14 +30,14 @@ export const view_text_list_check_box = function() {
 view_text_list_check_box.render = async function(self) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// fields_separator
 		const fields_separator = self.context.fields_separator || ', '
 
 	// Value as string
-		const value_string = value.join( fields_separator )
+		const value_string = entries.join( fields_separator )
 
 		// const text_node = document.createTextNode(value_string)
 

@@ -29,14 +29,14 @@ export const view_mini_list_av = function() {
 view_mini_list_av.render = async function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// files_info
-		const files_info = value
+		const files_info = entries
 
 	// thumb
 		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)

@@ -31,7 +31,8 @@ view_mini_section_id.render = function(self, options) {
 		const data = self.data
 
 	// Value as string
-		const value_string = data.value
+		const entries		= data.entries || []
+		const value_string	= (entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0]
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

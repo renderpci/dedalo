@@ -28,14 +28,14 @@ export const view_mini_geolocation = function() {
 view_mini_geolocation.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const string_values = value.map(el => {
+		const string_values = entries.map(el => {
 			return JSON.stringify(el)
 		})
 		const value_string = string_values.join(self.context.fields_separator)

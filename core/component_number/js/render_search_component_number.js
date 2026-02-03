@@ -61,8 +61,8 @@ render_search_component_number.prototype.search = async function(options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -89,8 +89,8 @@ const get_content_data = function(self) {
 		input_q_operator.addEventListener('change', change_handler)
 
 	// values (inputs)
-		const inputs_value	= value
-		const value_length	= value.length || 1
+		const inputs_value	= entries
+		const value_length	= entries.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)

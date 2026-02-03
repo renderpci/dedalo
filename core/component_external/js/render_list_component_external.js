@@ -40,7 +40,7 @@ render_list_component_external.prototype.list = async function(options) {
 
 		case 'default':
 		default:
-			return view_default_edit_component_external.render(self, options)
+			return view_default_list_component_external.render(self, options)
 	}
 }//end list
 

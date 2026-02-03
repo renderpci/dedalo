@@ -29,10 +29,10 @@ view_default_list_geolocation.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		// const value_string	= value.join(' | ')
+		const entries		= data.entries || []
+		// const value_string	= entries.join(' | ')
 
-		const string_values = value.map(el => {
+		const string_values = entries.map(el => {
 			return JSON.stringify(el)
 		})
 		const value_string = string_values.join(self.context.fields_separator)

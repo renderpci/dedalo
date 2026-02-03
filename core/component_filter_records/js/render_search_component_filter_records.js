@@ -88,11 +88,11 @@ const add_events = function(self, wrapper) {
 					: null;
 
 				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
-					const current_values	= self.data.value || []
-					const values_length		= current_values.length
-					let key_found			= values_length // default is last (length of array)
-					for (let i = 0; i < values_length; i++) {
-						if(current_values[i].tipo===section_tipo) {
+					const current_entries	= self.data.entries || []
+					const entries_length	= current_entries.length
+					let key_found			= entries_length // default is last (length of array)
+					for (let i = 0; i < entries_length; i++) {
+						if(current_entries[i].tipo===section_tipo) {
 							key_found = i;
 							break;
 						}
@@ -127,7 +127,7 @@ const add_events = function(self, wrapper) {
 */
 const get_content_data = function(self) {
 
-	const value				= self.data.value
+	const entries			= self.data.entries
 	const datalist			= self.data.datalist
 	const datalist_length	= datalist.length
 	const mode				= self.mode
@@ -212,9 +212,9 @@ const get_input_element = (i, datalist_item, self) => {
 	const tipo	 		 	 = datalist_item.tipo
 
 	// value
-	const value  		 	 = self.data.value || []
-	const value_length   	 = value.length
-	const item 		  	 	 = value.find(item => item.tipo===tipo)
+	const entries  		 	= self.data.entries || []
+	const entries_length   	 = entries.length
+	const item 		  	 	= entries.find(item => item.tipo===tipo)
 	const input_value_string = typeof item!=="undefined" ? item.value.join(',') : ''
 
 	// create li

@@ -107,12 +107,12 @@ export const get_ar_raw_data_value = (self) => {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
+		const entries		= data.entries || []
 		const date_mode		= self.get_date_mode()
 		const ar_raw_value	= []
 
 	// build values
-		const inputs_value	= value
+		const inputs_value	= entries
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 

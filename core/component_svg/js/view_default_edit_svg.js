@@ -67,8 +67,8 @@ view_default_edit_svg.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -76,9 +76,9 @@ export const get_content_data = function(self) {
 		content_data.classList.add('media_content_data')
 
 	// values iterate (one or zero is expected)
-		const inputs_value	= value.length>0 ? value : [null]
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value		= entries.length>0 ? entries : [null]
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			// get the content_value
 			const content_value = (self.permissions===1)
 				? get_content_value_read(i, inputs_value[i], self)

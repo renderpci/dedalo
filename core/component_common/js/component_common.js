@@ -201,7 +201,7 @@ component_common.prototype.build = async function(autoload=false) {
 			context	: []
 		}
 		self.data = self.data || {
-			value : null
+			entries : null
 		}
 		// changed_data. Set as empty array always
 		self.data.changed_data = []
@@ -400,7 +400,7 @@ export const init_events_subscription = function(self) {
 /**
 * SAVE
 * Exec a save action calling the API
-* Returns the updated data after save (useful to re-assign data value array keys)
+* Returns the updated data after save (useful to re-assign data entries array keys)
 * @param array new_changed_data
 * [{
 * 	action : "update",
@@ -456,8 +456,8 @@ component_common.prototype.save = async function(new_changed_data) {
 
 				const changed_data_item = update_items[i]
 
-				const original_value	= self.db_data.value && self.db_data.value[changed_data_item.key]
-					? self.db_data.value[changed_data_item.key]
+				const original_value	= self.db_data.entries && self.db_data.entries[changed_data_item.key]
+					? self.db_data.entries[changed_data_item.key]
 					: undefined
 				const new_value			= changed_data_item.value
 
@@ -624,11 +624,11 @@ component_common.prototype.save = async function(new_changed_data) {
 						? self.db_data
 						: {}
 
-					self.db_data.value = self.db_data.value
-						? self.db_data.value
+					self.db_data.entries = self.db_data.entries
+						? self.db_data.entries
 						: [null]
 
-					// self.db_data.value[changed_data.key] = clone(changed_data.value)
+					// self.db_data.entries[changed_data.key] = clone(changed_data.value)
 					self.db_data = clone(response.result.data)
 					// console.log('response:.result', response.result);
 				}
@@ -683,12 +683,12 @@ component_common.prototype.save = async function(new_changed_data) {
 
 /**
 * GET_VALUE
-* Look component data value (we assume that it is updated)
+* Look component data entries (we assume that it is updated)
 * @return array value
 */
 component_common.prototype.get_value = function() {
 
-	const value = this.data.value
+	const value = this.data.entries
 
 	return value
 }//end get_value
@@ -697,13 +697,13 @@ component_common.prototype.get_value = function() {
 
 /**
 * SET_VALUE
-* Update component data value (usually with with DOM node actual value)
+* Update component data entries (usually with with DOM node actual value)
 * @return bool true
 */
 component_common.prototype.set_value = function(value) {
 
 	// set value in data instance
-	this.data.value = value
+	this.data.entries = value
 
 	return true
 }//end set_value
@@ -712,7 +712,7 @@ component_common.prototype.set_value = function(value) {
 
 /**
 * UPDATE_DATUM
-* Update component data value with changed_data send by the DOM element
+* Update component data entries with changed_data send by the DOM element
 * Update the datum and the data of the instance with the data changed and saved.
 * @param object new_data
 *	new_data contains fresh calculated data of saved component
@@ -761,7 +761,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 							: true
 
 						if(to_delete){
-							el.value = [];
+							el.entries = [];
 						}
 					}
 				}
@@ -799,7 +799,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 						// update already existing data item
 						for (let j = ar_data_el_len - 1; j >= 0; j--) {
 							const current_data_element = ar_data_elements[j]
-								  current_data_element.value			= data_item.value
+								  current_data_element.entries			= data_item.entries
 								  current_data_element.fallback_value	= data_item.fallback_value
 						}
 					}else{
@@ -925,7 +925,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 /**
 * UPDATE_DATA_VALUE
-* Updates component data value with changed_data_item sent by the DOM element
+* Updates component data entries with changed_data_item sent by the DOM element
 * @param object changed_data_item
 * Sample data:
 * {
@@ -957,22 +957,22 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 
 	// set_data. If action is 'set_data' the value is changed as is, exec a bulk insert or update the data of the component.
 		if(action==='set_data'){
-			self.data.value = changed_value || []
+			self.data.entries = changed_value || []
 			return true
 		}
 
-	// data.value. When the data_key is false and value is null, the value is propagated to all items in the array
+	// data.entries. When the data_key is false and value is null, the value is propagated to all items in the array
 		if (data_key===false && changed_value===null) {
 				// delete all values
-				self.data.value = []
+				self.data.entries = []
 		}else{
 			if (changed_value===null && self.data.value) {
 				// delete current value key from array
-				self.data.value.splice(data_key, 1)
+				self.data.entries.splice(data_key, 1)
 			}else{
 				// add / update array key value
-				self.data.value = self.data.value || []
-				self.data.value[data_key] = changed_value
+				self.data.entries = self.data.entries || []
+				self.data.entries[data_key] = changed_value
 			}
 		}
 
@@ -980,7 +980,7 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 		if(SHOW_DEBUG===true) {
 			//console.log('***** update_data_value data_key:',clone(data_key));
 			//console.log('======= update_data_value:',clone(self.data.value));
-			console.log('======= [component_common] update_data_value POST CHANGE:', clone(self.data.value), self.id);
+			console.log('======= [component_common] update_data_value POST CHANGE:', clone(self.data.entries), self.id);
 		}
 
 
@@ -992,7 +992,7 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 /**
 * CHANGE_VALUE (AND SAVE)
 * 	Changes one or more component's values:
-* 		1 - Update self.data.value
+* 		1 - Update self.data.entries
 * 		2 - Save values to DDBB
 * 		3 - Reset self.data.changed_data to empty array
 * 	Publish event 'update_value_'+self.id_base
@@ -1400,8 +1400,8 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 	// Check if changed_data was really changed.
 	// Test if the changed_data is not the original data (the data in server database)
-		const original_value	= self.db_data.value && self.db_data.value[key]
-			? self.db_data.value[key]
+		const original_value	= self.db_data.entries && self.db_data.entries[key]
+			? self.db_data.entries[key]
 			: null
 		const new_value			= changed_data_item.value
 

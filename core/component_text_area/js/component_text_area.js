@@ -462,15 +462,15 @@ component_text_area.prototype.set_value = function(key, string_value) {
 	const self = this
 	// get the unchange value object from component
 	const data			= self.data || {}
-	const value			= data.value || []
-	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	const entries		= data.entries || []
+	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 	
 	// set the new value changing the item.value
 	item_value.value = string_value
 
 	const changed_data = [Object.freeze({
 		action	: 'update',
-		key		: value.key,
+		key		: entries.key,
 		value	: item_value 
 	})]
 	return self.change_value({
@@ -496,8 +496,8 @@ component_text_area.prototype.save_value = async function(key, string_value) {
 
 	// get the unchange value object from component
 	const data			= self.data || {}
-	const value			= data.value || []
-	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	const entries		= data.entries || []
+	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 
 	// set the value to be saved in component
 	const new_data = await self.preprocess_text_to_save(string_value)
@@ -745,8 +745,8 @@ component_text_area.prototype.update_changed_data = function (options) {
 
 	// get the unchange value object from component
 	const data			= self.data || {}
-	const value			= data.value || []
-	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	const entries		= data.entries || []
+	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 	// get the text editor value
 	const string_value = text_editor.editor.getData();	
 

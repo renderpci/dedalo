@@ -30,12 +30,12 @@ export const view_default_list_number = function() {
 view_default_list_number.render = async function(self, options) {
 
 	// short vars
-		const data			= self.data || {}
-		const value			= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// Value as string
-		const value_string	= (value.length>0)
-			? value.map(item => item.value).join(self.context.fields_separator)
+		const value_string	= (entries.length>0)
+			? entries.map(item => item.value).join(self.context.fields_separator)
 			: ''
 
 	// wrapper

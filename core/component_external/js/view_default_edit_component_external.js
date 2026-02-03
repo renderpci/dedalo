@@ -57,17 +57,17 @@ view_default_edit_component_external.render = async function(self, options)  {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
-		const value_length	= inputs_value.length
+		const inputs_value		= (entries.length<1) ? [null] : entries // force one empty input at least
+		const entries_length	= inputs_value.length
 
-		for (let i = 0; i < value_length; i++) {
+		for (let i = 0; i < entries_length; i++) {
 			// get the content_value
 			const content_value = get_content_value(i, inputs_value[i], self)
 			// set the pointer

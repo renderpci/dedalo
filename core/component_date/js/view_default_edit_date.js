@@ -83,15 +83,15 @@ view_default_edit_date.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
-		const input_nodes = []
-		const inputs_value	= (value.length<1) ? [''] : value
+		const input_nodes 	= []
+		const inputs_value	= (entries.length<1) ? [''] : entries
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = (self.permissions===1)
@@ -188,7 +188,7 @@ const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
-				const key = self.data.value.length
+				const key = self.data.entries.length
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',

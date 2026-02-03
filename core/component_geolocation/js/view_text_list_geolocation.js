@@ -31,8 +31,8 @@ view_text_list_geolocation.render = async function(self, options) {
 
 	// value fallback
 		const data			= self.data || {}
-		const value			= data.value || []
-		const string_values	= value.map(el => {
+		const entries		= data.entries || []
+		const string_values	= entries.map(el => {
 			return JSON.stringify(el)
 		})
 		const value_string	= string_values.join(self.context.fields_separator)

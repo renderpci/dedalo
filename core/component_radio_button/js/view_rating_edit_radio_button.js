@@ -88,7 +88,7 @@ const get_content_data_edit = function(self) {
 
 		update_status({
 			content_data	: content_data,
-			value			: self.data.value[0]
+			value			: self.data.entries[0]
 		})
 
 
@@ -110,7 +110,7 @@ const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || []
+		const entries			= data.entries || []
 		const datalist_value	= datalist_item.value
 		const label				= datalist_item.label
 
@@ -148,7 +148,7 @@ const get_content_value = (i, datalist_item, self) => {
 			// update label checked status
 			update_status({
 				content_data	: self.node.content_data,
-				value			: self.data.value[0] || {}
+				value			: self.data.entries[0] || {}
 			})
 		})//end change event
 

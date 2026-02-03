@@ -34,7 +34,7 @@ view_note_text_area.render = async function(self, options) {
 
 	// short vars
 		const data					= self.data
-		const value					= data.value || []
+		const entries				= data.entries || []
 		const matrix_id				= data.matrix_id
 		const parent_section_tipo	= data.parent_section_tipo || self.section_tipo
 
@@ -45,7 +45,7 @@ view_note_text_area.render = async function(self, options) {
 		})
 
 	// image_note
-		const css = value.length===0 ? '' : ' green'
+		const css = entries.length===0 ? '' : ' green'
 		const image_note = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button note' + css,

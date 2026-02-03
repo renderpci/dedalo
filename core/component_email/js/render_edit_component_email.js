@@ -69,14 +69,14 @@ render_edit_component_email.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
-		const inputs_value = value
+		const inputs_value = entries
 		const value_length = inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = (self.permissions===1)
@@ -245,12 +245,12 @@ export const get_buttons = (self) => {
 				e.stopPropagation()
 
 				// no value case
-				if (!self.data.value || !self.data.value.length) {
+				if (!self.data.entries || !self.data.entries.length) {
 					self.node.content_data[0].querySelector('input').focus()
 					return
 				}
 
-				const key = self.data.value.length
+				const key = self.data.entries.length
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
@@ -378,8 +378,8 @@ export const change_handler = function(e, key, self) {
 	const input_value = e.target.value || ''
 
 	const data			= self.data || {}
-	const value			= data.value || []
-	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	const entries			= data.entries || []
+	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 
 	// validate
 	const validated = self.verify_email(input_value)

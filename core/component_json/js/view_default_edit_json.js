@@ -69,7 +69,7 @@ view_default_edit_json.render = async function(self, options) {
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value || {}
+	const value = self.data.entries || {}
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)

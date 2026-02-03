@@ -90,8 +90,8 @@ const render_content_value = function(options) {
 		const self	= options.self
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -107,7 +107,7 @@ const render_content_value = function(options) {
 			parent			: content_value
 		})
 
-		if(value.length >= 1) {
+		if(entries.length >= 1) {
 
 			const rating_data = self.get_rating()
 			if(rating_data && rating_data.value){

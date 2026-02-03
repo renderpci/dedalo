@@ -29,10 +29,10 @@ export const view_text_list_select = function() {
 view_text_list_select.render = async function(self) {
 
 	// Value as string
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
-		const value_string = value.join(self.context.fields_separator)
+		const value_string = entries.join(self.context.fields_separator)
 
 	// const text_node = document.createTextNode(value_string)
 

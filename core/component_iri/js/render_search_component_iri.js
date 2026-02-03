@@ -59,8 +59,8 @@ render_search_component_iri.prototype.search = async function(options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -76,19 +76,19 @@ const get_content_data = function(self) {
 		})
 		input_q_operator.addEventListener('change', function() {
 			// value
-				const value = input_q_operator.value.length>0
+				const op_value = input_q_operator.value.length>0
 					? input_q_operator.value
 					: null
 			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
+				self.data.q_operator = op_value
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value	= entries.length>0 ? entries : ['']
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 		}

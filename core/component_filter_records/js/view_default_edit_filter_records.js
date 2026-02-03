@@ -74,7 +74,7 @@ const get_content_data = function(self) {
 		const data				= self.data || {}
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
-		const value				= data.value || []
+		const entries			= data.entries || []
 		const permissions		= self.permissions
 
 	// content_data
@@ -113,8 +113,8 @@ const get_content_data = function(self) {
 		if (permissions===1) {
 
 			// filtered_datalist. Datalist values that exists into component value
-				for (let i = 0; i < value.length; i++) {
-					const data_value = value[i]
+				for (let i = 0; i < entries.length; i++) {
+					const data_value = entries[i]
 					const current_datalist_item	= datalist.find(el =>
 						el.tipo===data_value.tipo
 					)
@@ -190,7 +190,7 @@ const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+		const entries	= data.entries || []
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -217,7 +217,7 @@ const get_content_value = (i, datalist_item, self) => {
 		})
 
 	// input field
-		const item					= value.find(item => item.tipo===tipo)
+		const item					= entries.find(item => item.tipo===tipo)
 		const input_value_string	= typeof item!=="undefined" ? item.value.join(',') : ''
 		const input_node			= ui.create_dom_element({
 			element_type	: 'input',
@@ -239,11 +239,11 @@ const get_content_value = (i, datalist_item, self) => {
 					: null;
 
 				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
-					const current_values	= self.data.value || []
-					const values_length		= current_values.length
-					let key_found			= values_length // default is last (length of array)
-					for (let j = 0; j < values_length; j++) {
-						if(current_values[j].tipo===section_tipo) {
+					const current_entries	= self.data.entries || []
+					const entries_length		= current_entries.length
+					let key_found			= entries_length // default is last (length of array)
+					for (let j = 0; j < entries_length; j++) {
+						if(current_entries[j].tipo===section_tipo) {
 							key_found = j;
 							break;
 						}
@@ -307,7 +307,7 @@ const get_content_value = (i, datalist_item, self) => {
 * GET_CONTENT_VALUE_READ
 * Render a element based on passed value
 * @param int i
-* 	data.value array key
+* 	data.entries array key
 * @param object current_value
 * @param object self
 *

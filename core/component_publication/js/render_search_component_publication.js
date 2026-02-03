@@ -64,7 +64,7 @@ const get_content_data = function(self) {
 
 	// short vars
 		const data		= self.data || {}
-		const value		= data.value || []
+		const entries	= data.entries || []
 		const datalist	= data.datalist || []
 
 	// content_data
@@ -118,8 +118,8 @@ const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
 		const label				= datalist_item.label
-		const value				= self.data.value || []
-		const value_length		= value.length
+		const entries			= self.data.entries || []
+		const entries_length	= entries.length
 		const datalist_value	= datalist_item.value // is locator like {section_id:"1",section_tipo:"dd174"}
 		if (datalist_value) {
 			datalist_value.from_component_tipo = self.tipo
@@ -168,7 +168,7 @@ const get_content_value = (i, datalist_item, self) => {
 				// remove checked state
 					input.checked = false
 
-				if (self.data.value.length===0) {
+				if (self.data.entries.length===0) {
 					return true
 				}
 
@@ -187,10 +187,10 @@ const get_content_value = (i, datalist_item, self) => {
 		})//end click
 
 	// checked option set on match
-		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
+		for (let j = 0; j < entries_length; j++) {
+			if (entries[j] && datalist_value &&
+				entries[j].section_id===datalist_value.section_id &&
+				entries[j].section_tipo===datalist_value.section_tipo
 				) {
 					input.checked = 'checked'
 			}

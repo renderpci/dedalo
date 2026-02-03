@@ -32,9 +32,9 @@ view_default_list_text_area.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data
-		const value				= data.value || []
+		const entries			= data.entries || []
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(value, fallback_value)
+		const fallback			= get_fallback_value(entries, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
 	// wrapper
