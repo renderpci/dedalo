@@ -279,7 +279,7 @@ service_time_machine.prototype.build_request_config = function() {
 
 	// config. config is an object with basic component/section definitions and preferences (model, tipo, section_tipo, section_id, lang)
 		const config = self.config
-		if (!config) {
+		if (!config || Object.keys(config).length === 0) {
 			console.error('Error. config is mandatory');
 			return null
 		}
@@ -443,7 +443,7 @@ service_time_machine.prototype.build_request_config = function() {
 		]
 
 		// tool view case
-			if (self.view==='tool' && model.includes('component')) {
+			if (self.view==='tool' && model?.includes('component')) {
 				default_ddo_map.push(
 					// annotations rsc329 (section_tipo "rsc832")
 					{
@@ -461,8 +461,11 @@ service_time_machine.prototype.build_request_config = function() {
 				)
 			}
 
+		// ignore_columns
+		const ignore_columns = config.ignore_columns || []
+
 		// Remove ignore_columns by id defined in callers (tool, inspector, etc)
-		const ddo_map = default_ddo_map.filter( el => !self.config.ignore_columns.includes(el.id) )
+		const ddo_map = default_ddo_map.filter( el => !ignore_columns.includes(el.id) )
 
 		// config_ddo_map. Additional ddo array
 			if (config_ddo_map) {
