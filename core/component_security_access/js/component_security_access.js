@@ -114,7 +114,7 @@ component_security_access.prototype.build = async function(options) {
 	// to be processed by client interface (to propagate values)
 		// const filled_value		= []
 		// const data				= self.data || {}
-		// const value				= data.value || []
+		// const value				= data.entries || []
 		// const datalist			= data.datalist || []
 		// const datalist_length	= datalist.length
 		// for (let i = datalist_length - 1; i >= 0; i--) {
@@ -140,7 +140,7 @@ component_security_access.prototype.build = async function(options) {
 		// optimized version using map
 		const data		= self.data || {};
 		const datalist	= data.datalist || [];
-		const value_map	= new Map(data.value?.map(item => [`${item.tipo}-${item.section_tipo}`, item]) || []);
+		const value_map	= new Map(data.entries?.map(item => [`${item.tipo}-${item.section_tipo}`, item]) || []);
 
 		self.filled_value = datalist.map(item => {
 			const key = `${item.tipo}-${item.section_tipo}`;
@@ -160,7 +160,7 @@ component_security_access.prototype.build = async function(options) {
 * UPDATE_VALUE
 * Update component var self.changed_value with received value
 * Note that component property 'changed_value' begins as copy of
-* DB self.data.value first element (key zero)
+* DB self.data.entries first element (key zero)
 * Will be used to save component data in a compact block
 * @param object item
 * 	datalist item with info about tipo, model, value as
@@ -192,7 +192,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 			return value
 		}
 
-	// value . Copy of current data.value
+	// value . Copy of current data.entries
 		const value = self.filled_value
 			? [...self.filled_value]
 			: []
@@ -216,7 +216,7 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	// fix updated changed_value
 		self.filled_value = value
 
-	// event. publish update_item_value_xx event on change data.value
+	// event. publish update_item_value_xx event on change data.entries
 		event_manager.publish(
 			'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
 			input_value
@@ -369,7 +369,7 @@ component_security_access.prototype.update_parents_radio_butons = function(item,
 
 /**
 * SAVE_CHANGES
-* Rebuild self.data.value removing empty zero values and save result
+* Rebuild self.data.entries removing empty zero values and save result
 * @return promise
 * 	Resolve bool|object (API response) from change_value()
 */

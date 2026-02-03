@@ -29,10 +29,10 @@ view_collapse_list_filter.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data
-		const value			= data.value || []
+		const entries		= data.entries || []
 		const value_string	= (self.section_tipo==='dd542')
-			? value.join('<br>') // activity case
-			: value.join(' | ')
+			? entries.join('<br>') // activity case
+			: entries.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

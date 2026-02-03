@@ -69,7 +69,7 @@ component_info.prototype.get_widgets = async function() {
 	const self = this
 
 	const datalist	= self.data.datalist || []
-	const value		= self.data.value || []
+	const value		= self.data.entries || []
 		// self data verification
 		if (!value || value.length===0) {
 			return false
@@ -186,7 +186,7 @@ component_info.prototype.update_data = async function() {
 
 	const self = this
 
-	const value = self.data.value || []
+	const value = self.data.entries || []
 
 	// iterate records
 		const widgets_properties		= self.context.properties.widgets

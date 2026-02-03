@@ -28,14 +28,14 @@ export const view_mini_list_filter = function() {
 view_mini_list_filter.render = async function(self) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = value.join(' | ')
+		const value_string = entries.join(' | ')
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)

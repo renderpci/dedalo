@@ -61,8 +61,8 @@ view_line_edit_number.render = async function(self, options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -72,7 +72,7 @@ const get_content_data = function(self) {
 		content_data.appendChild(button_exit_edit)
 
 	// build values
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
+		const inputs_value	= (entries.length<1) ? [null] : entries // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)

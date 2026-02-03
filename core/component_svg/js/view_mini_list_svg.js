@@ -51,15 +51,15 @@ export const get_value_fragment = function(self) {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
+		const entries			= data.entries || [] // value is a files_info list
+		const files_info		= entries
 		const external_source	= data.external_source
 		const quality			= self.quality || self.context.features.quality
 
 	const fragment = new DocumentFragment()
 
 	// svg elements
-		const inputs_value	= value
+		const inputs_value	= entries
 		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 

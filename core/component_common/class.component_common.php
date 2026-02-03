@@ -3377,7 +3377,7 @@ abstract class component_common extends common {
 			$item->mode 				= $this->get_mode();
 			$item->lang					= $this->get_lang();
 			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
-			$item->value				= $value;
+			$item->entries				= $value;
 
 		if($this->mode === 'solved'){
 			$item->literal 				= $this->get_value();

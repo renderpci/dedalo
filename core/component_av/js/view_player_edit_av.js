@@ -79,9 +79,9 @@ export const get_content_data_player = function(options) {
 	// short vars
 		const context		= self.context || {}
 		const data			= self.data || {}
-		const value			= data.value || []
-		const files_info	= value[0]
-			? (value[0].files_info || [])
+		const entries		= data.entries || []
+		const files_info	= entries[0]
+			? (entries[0].files_info || [])
 			: []
 		const quality		= self.quality || context.features.quality
 		const extension		= self.context.features.extension

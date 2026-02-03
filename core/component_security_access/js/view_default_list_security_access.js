@@ -29,7 +29,7 @@ view_default_list_security_access.render = async function(self, options) {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+		const value	= data.entries || []
 
 	// Value as string
 		// const value_string = JSON.stringify(value, null, 2)

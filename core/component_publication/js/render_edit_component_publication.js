@@ -65,7 +65,7 @@ render_edit_component_publication.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const value = self.data.value || []
+		const entries = self.data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
@@ -74,7 +74,7 @@ export const get_content_data = function(self) {
 		content_data.classList.add('nowrap')
 
 	// build values
-		const inputs_value	= (value.length<1) ? [''] : value
+		const inputs_value	= (entries.length<1) ? [''] : entries
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			// get the content_value

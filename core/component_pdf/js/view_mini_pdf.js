@@ -28,7 +28,7 @@ export const view_mini_pdf = function() {
 view_mini_pdf.render = async function(self, options) {
 
 		const data				= self.data || {}
-		const files_info		= data.value || []
+		const files_info		= data.entries || []
 		const extension			= self.context.features.extension
 		const quality			= self.context.features.quality;
 

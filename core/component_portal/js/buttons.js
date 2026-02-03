@@ -114,13 +114,13 @@ buttons.render_button_add = (self) => {
 			if (result===true) {
 
 				// Validate data structure
-				if (!self.data?.value || !Array.isArray(self.data.value) || self.data.value.length === 0) {
+				if (!self.data?.entries || !Array.isArray(self.data.entries) || self.data.entries.length === 0) {
 					console.error('Invalid data structure');
 					return;
 				}
 
 				// last_value. Get the last value of the portal to open the new section
-				const last_value	= self.data.value[self.data.value.length-1]
+				const last_value	= self.data.entries[self.data.entries.length-1]
 				const section_tipo	= last_value.section_tipo
 				const section_id	= last_value.section_id
 
@@ -419,7 +419,7 @@ buttons.render_list_from_component_data_button = (self) => {
 			return;
 		}
 
-		const value		= self.data.value || [];
+		const value		= self.data.entries || [];
 		const has_data	= value.length > 0;
 
 		// Toggle for display the button

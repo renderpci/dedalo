@@ -32,8 +32,8 @@ view_default_list_pdf.render = async function(self, options) {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || []
-		const files_info		= value
+		const entries			= data.entries || []
+		const files_info		= entries
 		const external_source	= data.external_source
 		const extension			= self.context.features.extension
 		const quality			= self.context.features.quality;

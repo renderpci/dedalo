@@ -1138,17 +1138,17 @@ vector_editor.prototype.save_data = async function(self) {
 	}
 
 	// update the data in the instance previous to save
-	const value =  typeof(self.data.value[0])!=='undefined'
-		? clone(self.data.value[0])
+	const entries =  typeof(self.data.entries[0])!=='undefined'
+		? clone(self.data.entries[0])
 		: {}
-	value.lib_data		= self.ar_layers
-	value.svg_file_data	= stage.getSvgString()
+	entries.lib_data		= self.ar_layers
+	entries.svg_file_data	= stage.getSvgString()
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
 			action	: 'update',
 			key		: 0,
-			value	: value
+			value	: entries
 		}
 
 	// set the change_data to the instance

@@ -30,8 +30,8 @@ view_text_list_svg.render = function(self, options) {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
+		const entries			= data.entries || [] // value is a files_info list
+		const files_info		= entries
 		const external_source	= data.external_source
 
 	// url

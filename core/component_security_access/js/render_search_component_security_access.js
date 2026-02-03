@@ -58,7 +58,7 @@ render_search_component_security_access.prototype.search = async function(option
 */
 const get_content_data = function(self) {
 
-	const value		= self.data.value
+	const value		= self.data.entries
 	const datalist	= self.data.datalist
 
 	const fragment = new DocumentFragment()

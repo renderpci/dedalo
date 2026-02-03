@@ -21,8 +21,8 @@ export const handler_open_viewer = function(e) {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
+		const entries			= data.entries || [] // entries is a files_info list
+		const files_info		= entries
 		const external_source	= data.external_source
 		// open_window_features. Optional property of the caller image node
 		const width			= e.srcElement.open_window_features?.width || 1024

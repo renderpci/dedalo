@@ -29,8 +29,8 @@ export const view_mini_password = function() {
 view_mini_password.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// Value as string
 		const value_string = '****************' // value

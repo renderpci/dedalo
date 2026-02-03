@@ -29,8 +29,8 @@ view_default_list_check_box.render = async function(self) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		const value_string	= value.join(self.context.fields_separator)
+		const entries		= data.entries || []
+		const value_string	= entries.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

@@ -182,8 +182,8 @@ const get_input_element = (i, current_value, self) => {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || []
-		const value_length		= value.length
+		const entries			= data.entries || []
+		const value_length		= entries.length
 		const datalist_item		= current_value
 		const datalist_value	= datalist_item.value
 		const section_id		= datalist_item.section_id
@@ -230,9 +230,9 @@ const get_input_element = (i, current_value, self) => {
 		})//end change event
 		// checked input_checkbox set on match
 		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
+			if (entries[j] && datalist_value &&
+				entries[j].section_id===datalist_value.section_id &&
+				entries[j].section_tipo===datalist_value.section_tipo
 				) {
 					input_checkbox.checked = 'checked'
 			}

@@ -35,9 +35,9 @@ view_viewer_edit_av.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		const files_info	= value[0]
-			? (value[0].files_info || [])
+		const entries		= data.entries || []
+		const files_info	= entries[0]
+			? (entries[0].files_info || [])
 			: []
 		const extension		= self.context.features.extension
 
@@ -123,8 +123,8 @@ view_viewer_edit_av.render = async function(self, options) {
 
 			// get the name of the original file uploaded (user filename)
 			// else get the default name
-			const name = self.data.value[0].original_file_name
-				? self.data.value[0].original_file_name
+			const name = self.data.entries[0].original_file_name
+				? self.data.entries[0].original_file_name
 				: self.tipo+'_'+self.section_tipo+'_'+self.section_id
 
 			download_original_av({

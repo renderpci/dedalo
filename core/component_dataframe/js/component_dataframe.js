@@ -111,11 +111,11 @@ component_dataframe.prototype.get_rating = function() {
 		return null
 	}
 
-	const value = self.data.value || []
+	const entries = self.data.entries || []
 
-	if(value.length >= 1){
+	if(entries.length >= 1){
 
-		const locator = value[0]
+		const locator = entries[0]
 
 		const data_rating = self.datum.data.find(el =>
 			el.tipo === rating_ddo.tipo

@@ -28,7 +28,7 @@ export const view_mini_list_select = function() {
 view_mini_list_select.render = async function(self, options) {
 
 	// short vars
-		const value_string	= self.data.value || ''
+		const value_string	= self.data.entries || ''
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {

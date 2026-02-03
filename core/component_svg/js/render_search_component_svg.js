@@ -61,16 +61,16 @@ render_search_component_svg.prototype.search = async function(options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value		= entries.length>0 ? entries : ['']
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			const input_element_node = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer

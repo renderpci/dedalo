@@ -63,14 +63,14 @@ render_search_component_input_text.prototype.search = async function(options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 	
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : [{value : ''}]
+		const inputs_value	= entries.length>0 ? entries : [{value : ''}]
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 

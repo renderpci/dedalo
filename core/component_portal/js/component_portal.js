@@ -370,7 +370,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				add_show // bool add_show
 			)
 			if(self.mode==='search') {
-				self.rqo.source.value = self.data.value || []
+				self.rqo.source.value = self.data.entries || []
 			}
 		}
 		await generate_rqo()
@@ -697,7 +697,7 @@ component_portal.prototype.add_value = async function(value) {
 	const self = this
 
 	// current_value. Get the current_value of the component
-		const current_value	= self.data.value || []
+		const current_entries	= self.data.entries || []
 
 	// data_limit. Maximum records allowed by this portal
 		if (data_limit_reached(self)) {
@@ -706,11 +706,11 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
-		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
+		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=='undefined') {
 			console.log('[add_value] Value already exists (1) !');
 			if(SHOW_DEBUG===true) {
-				console.log('add_value current_value:', current_value);
+				console.log('add_value current_entries:', current_entries);
 				console.log('add_value value:', value);
 			}
 			return false
@@ -893,7 +893,7 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 const data_limit_reached = function (self) {
 
 	// current_value. Get the current_value of the component
-		const current_value	= self.data.value || []
+		const current_value	= self.data.entries || []
 
 	// data_limit. Maximum records allowed by this portal
 	// Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
@@ -1038,8 +1038,8 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		self.data = clone(full_data)
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
-		self.data.value = self.data.value
-			? self.data.value.filter(el => el.tag_id==tag_id)
+		self.data.entries = self.data.entries
+			? self.data.entries.filter(el => el.tag_id==tag_id)
 			: []
 
 	// reset status to enable re-render
@@ -1094,7 +1094,7 @@ component_portal.prototype.get_search_value = function() {
 	const self = this
 
 	const data			= self.data || {}
-	const current_value	= data.value || []
+	const current_value	= data.entries || []
 
 	const new_value = [];
 	const value_len = current_value.length

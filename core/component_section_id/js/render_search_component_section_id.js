@@ -62,13 +62,13 @@ render_search_component_section_id.prototype.search = async function(options) {
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value
+	const entries = self.data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
+		const inputs_value	= entries.length>0 ? entries : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element_search(i, inputs_value[i], self)
@@ -106,7 +106,7 @@ const get_input_element_search = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: (typeof current_value==='object') ? current_value.value : current_value,
 			parent			: content_value
 		})
 

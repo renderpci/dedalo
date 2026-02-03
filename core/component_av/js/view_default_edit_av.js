@@ -72,8 +72,8 @@ view_default_edit_av.render = async function(self, options) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -81,9 +81,9 @@ const get_content_data_edit = function(self) {
 		content_data.classList.add('media_content_data')
 
 	// values (inputs)
-		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value		= (entries.length>0) ? entries : [null] // force one empty input at least
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			// force use new separate task
 			dd_request_idle_callback(
 				() => {
@@ -312,9 +312,9 @@ const get_quality_selector = (content_value, self) => {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		const files_info	= value[0] && value[0].files_info
-			? value[0].files_info
+		const entries		= data.entries || []
+		const files_info	= entries[0] && entries[0].files_info
+			? entries[0].files_info
 			: []
 		const quality		= self.quality || self.context?.features?.quality
 		const extension		= self.context?.features?.extension

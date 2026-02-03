@@ -72,7 +72,7 @@ export const get_content_data_edit = function(self) {
 		const data				= self.data || {}
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
-		const value				= data.value || []
+		const entries			= data.entries || []
 		const permissions		= self.permissions
 
 	// content_data
@@ -82,8 +82,8 @@ export const get_content_data_edit = function(self) {
 		if (permissions===1) {
 
 			// filtered_datalist. Datalist values that exists into component value
-				for (let i = 0; i < value.length; i++) {
-					const data_value = value[i]
+				for (let i = 0; i < entries.length; i++) {
+					const data_value = entries[i]
 					const current_datalist_item	= datalist.find(el =>
 						el.value &&
 						el.value.section_id==data_value.section_id &&
@@ -138,8 +138,8 @@ export const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
+		const entries			= self.data.entries || []
+		const value_length		= entries.length
 		const datalist_item		= current_value
 		const datalist_value	= datalist_item.value
 		const label				= datalist_item.label
@@ -186,9 +186,9 @@ const get_content_value = (i, current_value, self) => {
 
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {
-				if (value[j] && datalist_value &&
-					value[j].section_id===datalist_value.section_id &&
-					value[j].section_tipo===datalist_value.section_tipo
+				if (entries[j] && datalist_value &&
+					entries[j].section_id===datalist_value.section_id &&
+					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_checkbox.checked = 'checked'
 				}
@@ -302,7 +302,7 @@ export const get_buttons = (self) => {
 			button_reset.addEventListener('click', function(e) {
 				e.stopPropagation()
 
-				if (self.data.value.length===0) {
+				if (self.data.entries.length===0) {
 					return true
 				}
 

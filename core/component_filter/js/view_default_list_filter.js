@@ -29,8 +29,8 @@ view_default_list_filter.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data
-		const value			= data.value || []
-		const value_string	= value.join('<br>')
+		const entries		= data.entries || []
+		const value_string	= entries.join('<br>')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
