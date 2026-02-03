@@ -99,7 +99,6 @@ class matrix_temp_manager extends matrix_db_manager {
 
 			// Mimic a database row for matrix tables
 			$fake_row = new stdClass();
-			$fake_row->section_id = 0;
 			$fake_row->section_tipo = $section_tipo;
 
 			foreach (matrix_db_manager::get_columns_name() as $col) {
@@ -108,6 +107,7 @@ class matrix_temp_manager extends matrix_db_manager {
 					$fake_row->$col = json_encode($fake_row->$col);
 				}
 			}
+			$fake_row->section_id = 0;
 			return $fake_row;
 		}
 
@@ -166,22 +166,22 @@ class matrix_temp_manager extends matrix_db_manager {
 	/**
 	* UPDATE_BY_KEY
 	* Updates individual component values within the JSONB 'value' column of the temp table.
-	* 
+	*
 	* This method performs granular updates to specific component fields within a JSONB structure,
 	* using PostgreSQL's jsonb_set and jsonb_set_lax functions. Updates are grouped by column,
 	* allowing for efficient batch updates to multiple components within the same section.
 	*
-	* The data structure is: 
+	* The data structure is:
 	 * - Column-level objects: Each key represents a database column name
 	 * - Component-level objects: Each component is stored within its column object with the
 	 *   component tipo as the key and the component value as the value
 	 * - Null values are removed from the JSONB structure using the 'delete_key' option
 	 *
 	 * The function constructs nested jsonb_set expressions like:
-	 * SET value = jsonb_set(jsonb_set(value, '{column}', 
+	 * SET value = jsonb_set(jsonb_set(value, '{column}',
 	 *   jsonb_set_lax(COALESCE(value->'column', '{}'), '{comp_id}', value, true, 'delete_key')
 	 * ), '{column}', ..., true)
-	 * 
+	 *
 	 * @param string $table The table name to update (default: 'temp')
 	 * @param string $section_tipo The section tipo identifier used to generate the unique key
 	 * @param int|string $section_id The section ID (kept for API compatibility, not used in logic)
@@ -235,37 +235,37 @@ class matrix_temp_manager extends matrix_db_manager {
 		$param_index = 2;
 
 		foreach ($column_updates as $column => $updates) {
-			
+
 			// Build the expression for this specific column's new object
 			// Start with existing column data or empty object
 			$col_expr = "COALESCE(value->'$column', '{}'::jsonb)";
-			
+
 			foreach ($updates as $data) {
 				$comp_tipo = $data->key;
 				$val = $data->value;
-				
+
 				$json_val = ($val === null) ? null : json_handler::encode($val);
-				
+
 				$current_param_index = $param_index; // Index for path '{comp_tipo}'
 				$value_param_index = $param_index + 1; // Index for value
-				
+
 				// jsonb_set(target, path, value)
 				// Note: using jsonb_set_lax for better null handling if needed, but standard logic:
 				// If val is null, we want to remove the key. jsonb_set_lax with 'delete_key' does this.
 				$col_expr = "jsonb_set_lax($col_expr, \${$current_param_index}::text[], \${$value_param_index}::jsonb, true, 'delete_key')";
-				
+
 				$params[] = '{' . $comp_tipo . '}';
 				$params[] = $json_val;
 				$param_index += 2;
 			}
-			
+
 			// Now wrap the expression to update the main value
 			// value = jsonb_set(value, '{column}', NewColumnObject, true)
 			// effectively ensuring the column key exists
 			$col_param_index = $param_index;
 			$params[] = '{' . $column . '}';
 			$param_index++;
-			
+
 			// We cannot use $col_expr as a parameter because it contains SQL function calls.
 			// carefully construct the string.
 			$expression = "jsonb_set($expression, \${$col_param_index}::text[], $col_expr, true)";

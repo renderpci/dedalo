@@ -2499,10 +2499,7 @@ abstract class component_common extends common {
 
 				// create the section instance and set current row as his own data
 				// it prevent to call multiple times to DDBB
-				$section_record = section_record::get_instance(
-					$row->section_tipo,
-					(int)$row->section_id
-				);
+				$section_record = section_record::get_instance( $row->section_tipo, (int)$row->section_id );
 				$section_record->set_data( $row );
 
 				// get the locator of the current row

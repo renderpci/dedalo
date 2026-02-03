@@ -38,7 +38,7 @@ class tool_tr_print extends tool_common {
 
 		# Get all timecodes
 		#$pattern = TR::get_mark_pattern($mark='tc',$standalone=false);
-		# Search math patern tags
+		# Search math pattern tags
 		#preg_match_all($pattern,  $raw_text,  $matches_tc, PREG_PATTERN_ORDER);
 			#dump($matches_tc,"matches_tc ".to_string($pattern));
 
@@ -49,7 +49,7 @@ class tool_tr_print extends tool_common {
 		$ar_fragments = preg_split($pattern_tc, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
 
 			if (!isset($ar_fragments[0])) {
-				$response->msg = 'No fragements are found';
+				$response->msg = 'No fragments are found';
 				return $response;
 			}
 
@@ -66,7 +66,7 @@ class tool_tr_print extends tool_common {
 			# Fix consecutive tc case
 			foreach ($ar_fragments as $key => $value) {
 				if ( $key>0 && strpos($value, '[TC_')!==false && isset($ar_fragments[$key-1]) && strpos($ar_fragments[$key-1], '[TC_')!==false ) {
-					// Remove second tc apperance
+					// Remove second tc appearance
 					unset($ar_fragments[$key]);
 				}
 			}
