@@ -165,7 +165,7 @@ component_image.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const data		= data_obj || {}
+	const data		= self.data || {}
 	const entries	= data.entries || []
 
 	const lib_data = typeof entries[0]!=='undefined' && entries[0].lib_data
