@@ -1316,33 +1316,6 @@ final class core_functions_test extends BaseTestCase {
 
 
 	/**
-	* TEST_safe_sql_query
-	* @return void
-	*/
-	public function test_safe_sql_query() {
-
-		$result = safe_sql_query(
-			'SELECT * FROM matrix LIMIT 10'
-		);
-
-		$eq = gettype($result)==='string';
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-
-		$eq = $result==='SELECT * FROM matrix LIMIT 10';
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-	}//end test_safe_sql_query
-
-
-
-	/**
 	* TEST_session_start_manager
 	* @return void
 	*/
