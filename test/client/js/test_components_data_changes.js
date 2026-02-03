@@ -94,11 +94,11 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						const response_value = data.find(el => el.tipo===old_instance.tipo)
 
 						// api_returned_value
-							const api_returned_value = response_value && response_value.value
-								? (element.new_value_action==='set_data' ? response_value.value : response_value.value[0])
+							const api_returned_value = response_value && (response_value.entries || response_value.value)
+								? (element.new_value_action==='set_data' ? (response_value.entries || response_value.value) : (response_value.entries || response_value.value)[0])
 								: undefined
-							const component_data_value = old_instance.data.value
-								? (element.new_value_action==='set_data' ? old_instance.data.value : old_instance.data.value[0])
+							const component_data_entries = old_instance.data.entries
+								? (element.new_value_action==='set_data' ? old_instance.data.entries : old_instance.data.entries[0])
 								: undefined
 
 							// portal locator cases remove paginated_key
@@ -114,8 +114,8 @@ describe("COMPONENTS DATA CHANGES", async function() {
 									`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(api_returned_value)}\n\n`
 								)
 
-								assert.deepEqual( new_value, component_data_value,
-									`component_data_value: Not equal values 2 (new_value, component_data_value): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(component_data_value)}\n\n`
+								assert.deepEqual( new_value, component_data_entries,
+									`component_data_entries: Not equal values 2 (new_value, component_data_entries): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(component_data_entries)}\n\n`
 								)
 							}
 
@@ -146,8 +146,8 @@ describe("COMPONENTS DATA CHANGES", async function() {
 							await new_instance.build(true)
 						// read value from saved DDBB
 							const data			= new_instance.data || {}
-							const value			= data.value || []
-							const read_value	= value[0] || null
+							const entries		= data.entries || []
+							const read_value	= entries[0] || null
 
 						// portal locator cases remove paginated_key
 							if (read_value && read_value.hasOwnProperty('paginated_key')) {
@@ -175,15 +175,15 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						// compare values
 						assert.deepEqual(
 							new_value,
-							element.new_value_action==='set_data' ? value : read_value,
+							element.new_value_action==='set_data' ? entries : read_value,
 							`Not equal values 3 (new_value, read_value): \n ${JSON.stringify(new_value)}, \n\n ${JSON.stringify(read_value)}\n`
 						)
 					}
 
 					// check type of data is object
 					assert.isOk( typeof new_instance.data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(new_instance.data)}, \n ${typeof new_instance.data}\n` )
-					// check type of data value is array
-					assert.isOk( Array.isArray(new_instance.data.value), `new_instance.data.value is NOT as expected type (array): \n ${JSON.stringify(new_instance.data.value)}, \n ${typeof new_instance.data.value}\n` )
+					// check type of data entries is array
+					assert.isOk( Array.isArray(new_instance.data.entries), `new_instance.data.entries is NOT as expected type (array): \n ${JSON.stringify(new_instance.data.entries)}, \n ${typeof new_instance.data.entries}\n` )
 				}
 
 		})//end describe(element.model, function() {
