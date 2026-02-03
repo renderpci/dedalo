@@ -470,7 +470,7 @@ component_text_area.prototype.set_value = function(key, string_value) {
 
 	const changed_data = [Object.freeze({
 		action	: 'update',
-		key		: entries.key,
+		key		: key,
 		value	: item_value 
 	})]
 	return self.change_value({

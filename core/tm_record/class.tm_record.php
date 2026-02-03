@@ -168,11 +168,13 @@ class tm_record {
 	* @param object $values
 	* Object with {column name : value} structure.
 	* Keys are column names, values are their new values.
+	* @param mixed $previous_data=null
+	* Previous data to check if time machine record already exists.
 	* @return section_record|false $section_id
 	* Returns the new section_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
-	public static function create( object $values ) : tm_record|false {
+	public static function create( object $values, mixed $previous_data=null ) : tm_record|false {
 
 		// save_tm. To disable time machine save, set: tm_record::$save_tm = false;
 		// This is useful for some bulk operations like 'portalize'
@@ -210,7 +212,6 @@ class tm_record {
 
 		// time_machine save before.
 		// This allow safe time machine save data not already saved (old imports case for example)
-		$previous_data = $values->previous_data ?? null;
 		if ( !empty($previous_data) ) {
 
 			$tm_values = new stdClass();
@@ -220,7 +221,7 @@ class tm_record {
 				$tm_values->lang			= $values->lang; // string $lang
 
 			// Set the limit to 1
-			// When the search give 1 record stop the search because time machine has previous data
+			// When the search give 1 record, stop the search because time machine has previous data
 			$limit = 1;
 
 			$db_result = tm_record::search( $tm_values, $limit );
@@ -235,19 +236,17 @@ class tm_record {
 					$new_values->timestamp = dd_date::get_timestamp_now_for_db( ['sub' => 'PT1M'] ); // now minus 1 minute.
 					// use previous data as to-save data
 					$new_values->data = $previous_data;
-					 // clean previous component dato to prevent infinite loop
-					$new_values->previous_data = null;
 					// unset the bulk_process_id
 					// unsaved time_machine data is a fix of previous saved data, it need to be outside the process because
 					// the process need to be coherent to the change, the fix time_machine is other process than not happen previously.
-					//save current data as previous of the process, to prevent revert it.
+					// save current data as previous of the process, to prevent revert it.
 					$new_values->bulk_process_id = null;
 
 				$new_tm_record = tm_record::create( $new_values );
 
 				if(!$new_tm_record){
 					debug_log( __METHOD__
-						. " Error creating new record: "
+						. " Error creating new record (previous data): " . PHP_EOL
 						.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);
@@ -267,6 +266,11 @@ class tm_record {
 		);
 
 		if( $id === false ){
+			debug_log( __METHOD__
+				. " Error creating new record: " . PHP_EOL
+				.' values:  ' . json_encode($values, JSON_PRETTY_PRINT)
+				, logger::ERROR
+			);
 			return false;
 		}
 
@@ -477,8 +481,8 @@ class tm_record {
 			// it will be used for component_text_area to know the user who created the section record
 			$this->set_section_record_factory(
 				DEDALO_SECTION_INFO_CREATED_BY_USER,
-				[$user_locator], 
-				$section_record 
+				[$user_locator],
+				$section_record
 			);
 
 		// Annotation
@@ -512,7 +516,7 @@ class tm_record {
 
 			// 2. Create the component and get its data
 			// the data will used as (injected into) the component data of the time_machine annotation component.
-			
+
 			// Empty data as default
 			// this data is needed because the note text_area will use to get the text_area data and
 			// parent_section_id and parent_section_tipo to build the target section.
@@ -533,7 +537,7 @@ class tm_record {
 				// if get_data returns null, use empty data as default
 				$note_value = $current_component->get_data() ?? $note_value;
 			}
-			
+
 			// inject parent_section_id and parent_section_tipo
 			// it will use to build the target section in client side
 			// @see: component_text_area_json.php

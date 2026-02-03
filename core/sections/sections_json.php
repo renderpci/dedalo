@@ -80,12 +80,12 @@
 				if( $mode === 'tm' || $this->caller_tipo ==='dd15' ){
 					$tm_record = tm_record::get_instance( $current_record->id );
 					$tm_record->set_data( $current_record );
-					// OVERWRITE! section_id and section_tipo to convert it into a regular section record				
+					// OVERWRITE! section_id and section_tipo to convert it into a regular section record
 					$current_record = $tm_record->get_section_record();
 				}
 
 				$section_tipo	= $current_record->section_tipo;
-				$section_id		= $current_record->section_id;
+				$section_id		= (int)$current_record->section_id;
 
 				// section record
 					$section_record = section_record::get_instance( $section_tipo, $section_id );
@@ -122,7 +122,7 @@
 
 						// Set permissions when the section record has permissions > 0
 						// allow to override section permissions
-						// in cases as Time Machine notes or User panel 
+						// in cases as Time Machine notes or User panel
 						// in those cases the user could get access to its own notes or user panel
 						if($section_record_permissions > 0){
 							$section->set_permissions($section_record_permissions);

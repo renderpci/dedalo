@@ -84,7 +84,7 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_dato().
+	* Get the value of the components. By default will be get_data().
 	* overwrite in every different specific component
 	* The direct components can set the value with the dato directly
 	* The relation components will separate the locator in rows
@@ -130,10 +130,6 @@ class component_section_id extends component_common {
 
 
 
-
-
-
-
 	/**
 	* GET_DIFFUSION_DATA
 	* Resolve the default diffusion data
@@ -152,7 +148,7 @@ class component_section_id extends component_common {
 		$diffusion_data_object = new diffusion_data_object( (object)[
 			'tipo'	=> $this->tipo,
 			'lang'	=> null,
-			'value'	=> $this->get_dato(),
+			'value'	=> $this->get_data(),
 			'id'	=> $ddo->id ?? null
 		]);
 

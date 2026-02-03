@@ -136,6 +136,9 @@ const get_buttons = function(self) {
 					parent			: identifying_image_block
 				})
 				button_create_identifying_image.addEventListener('click', async function(){
+					// Check identifying_image_selector value
+					if(!identifying_image_selector.value) return false;
+					
 					self.node.content_data.classList.add('loading')
 					const item_value	= JSON.parse(identifying_image_selector.value)
 					const current_time	= self.main_element.video.currentTime

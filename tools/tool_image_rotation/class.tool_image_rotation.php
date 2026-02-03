@@ -1,18 +1,44 @@
-<?php
+<?php declare(strict_types=1);
 /**
-* CLASS TOOL_IMAGE_ROTATION
-* Handle the images rotation tool logic
-*/
+ * CLASS TOOL_IMAGE_ROTATION
+ * Handle the images rotation and cropping tool logic
+ *
+ * Key features:
+ * - Applies rotation transformations to image files at various quality levels
+ * - Supports background color and alpha channel configuration for rotated images
+ * - Implements multiple rotation modes (default and custom)
+ * - Enables crop area selection with proportional scaling across image qualities
+ * - Processes media components to apply transformations
+ * - Calculates proportional crop areas based on image dimensions
+ *
+ * @package Dedalo
+ * @subpackage Tools
+ */
 class tool_image_rotation extends tool_common {
 
 
 
 	/**
-	* APPLY_ROTATION
-	* Render the image file using the user selected rotation parameters
-	* @param object $options
-	* @return object $response
-	*/
+	 * APPLY_ROTATION
+	 * Render the image file using the user selected rotation and crop parameters.
+	 * Processes all available quality levels of an image component, applying rotation
+	 * and crop transformations while preserving the original quality version.
+	 *
+	 * @param object $options Configuration object containing:
+	 *   - tipo (string): Component type identifier
+	 *   - section_id (int): Section identifier
+	 *   - section_tipo (string): Section type identifier
+	 *   - rotation_degrees (mixed): Rotation angle in degrees (default: 0)
+	 *   - background_color (string): Background color in hex format (default: '#ffffff')
+	 *   - alpha (float|null): Alpha transparency value
+	 *   - rotation_mode (string): Rotation processing mode (default: 'default')
+	 *   - crop_area (object|null): Crop area with x, y, width, height properties
+	 *
+	 * @return object Response object containing:
+	 *   - result (bool): Success status of the operation
+	 *   - msg (string): Human-readable result message
+	 *   - errors (array): Array of error messages if any operation failed
+	 */
 	public static function apply_rotation(object $options) : object {
 
 		$response = new stdClass();
@@ -28,8 +54,8 @@ class tool_image_rotation extends tool_common {
 			// the current rotation in degrees.
 			$degrees			= $options->rotation_degrees ?? 0;
 			$background_color	= $options->background_color ?? '#ffffff';
-			$alpha				= $options->alpha?? null;
-			$rotation_mode		= $options->rotation_mode?? 'default';
+			$alpha				= $options->alpha ?? null;
+			$rotation_mode		= $options->rotation_mode ?? 'default';
 			$crop_area 			= $options->crop_area ?? null;
 
 		// component
@@ -45,7 +71,6 @@ class tool_image_rotation extends tool_common {
 
 		$data		= $component->get_data()[0] ?? null;
 		$files_info	= $data->files_info ?? [];
-		// $value
 
 		$result = true;
 		if($degrees !== "0"){
@@ -85,6 +110,7 @@ class tool_image_rotation extends tool_common {
 				if($value->quality === 'original'){
 					continue;
 				}
+				
 				if($value->file_exist === true){
 
 					$current_file		= $component->get_media_filepath($value->quality, $value->extension);
@@ -114,8 +140,6 @@ class tool_image_rotation extends tool_common {
 				}
 			}
 		}
-
-
 
 		// response
 		$response->result	= $result;

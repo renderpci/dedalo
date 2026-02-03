@@ -823,7 +823,7 @@ export const render_component_info = function(self, component) {
 		const model			= component.model
 		const mode			= component.mode
 		const view			= component.view || 'default'
-		const translatable	= component.context.translatable
+		const translatable	= component.context?.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
 		// const ontology_info = component.context.ontology_info || ''

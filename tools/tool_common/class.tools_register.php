@@ -349,7 +349,8 @@ class tools_register {
 		$records = section::get_resource_all_section_records_unfiltered(self::$section_registered_tools_tipo, 'section_id');
 
 		while ($current_row = pg_fetch_assoc($records)) {
-			$current_section_id = $current_row['section_id'];
+
+			$current_section_id = (int)$current_row['section_id'];
 
 			// Identify tool by its registered name
 			$component_tipo = self::$tipo_tool_name;

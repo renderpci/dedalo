@@ -397,13 +397,13 @@ class ts_object {
 							$this->section_tipo
 						);
 						// get the data when the component is not a relation_index
-						// relation index get full data when get_dato() is called
+						// relation index get full data when get_data() is called
 						// but this component needs a pagination data
 						$component_data = $model_name!=='component_relation_index' // && $model_name!=='component_relation_children'
 							? ($component->get_data_lang() ?? [])
 							: [];
 
-					// re-format dato in some cases:
+					// re-format data in some cases:
 						switch (true) {
 
 							case (in_array($element_tipo, hierarchy::$hierarchy_portals_tipo)):

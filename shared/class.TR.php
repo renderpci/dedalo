@@ -1,12 +1,29 @@
-<?php
-// declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
-* TR
-* Provides service to transcriptions (component_text_area) but also to public parts.
-* This class is generic and should also serve public parts.
-* When used outside of Dédalo, copy this file.
-* To be able to take advantage of the improvements and error corrections from Dédalo's development, keep version control of this class
-*/
+ * CLASS TR
+ * Provides transcription tag management services for Dédalo's component_text_area and public implementations.
+ *
+ * This abstract utility class manages special markup tags used in transcriptions and text annotations,
+ * including timecodes, index markers, references, SVG/draw annotations, geolocation tags, and more.
+ * It provides regex patterns for matching tags, tag generation, extraction, and conversion utilities.
+ *
+ * Features:
+ * - Unified pattern generation for all supported tag types (tc, index, reference, svg, draw, geo, page, person, note, lang)
+ * - Tag-to-HTML conversion for client-side rendering with editable attributes
+ * - Babel/translation tag preservation with apertium-notrans wrapping
+ * - Text cleaning and normalization with configurable mark removal
+ * - Character and word counting utilities
+ * - Tag extraction and parsing from text
+ *
+ * Generic class design:
+ * This class is generic and self-contained. When used outside of Dédalo, copy this file as-is.
+ * To benefit from improvements and bug fixes from Dédalo's development, maintain version control
+ * and periodically pull updates from the main repository.
+ *
+ * @package Dedalo
+ * @subpackage Shared
+ * @version 2.0.0
+ */
 abstract class TR {
 
 
@@ -577,8 +594,22 @@ abstract class TR {
 
 
 	/**
-	* TRUNCATE_TEXT
-	*/
+	 * TRUNCATE_TEXT
+	 * Truncates a string to a specified length, breaking on word boundaries
+	 *
+	 * Safely truncates a text string without cutting words in the middle. Attempts to break
+	 * at the nearest word boundary (specified by $break parameter) if the string exceeds the limit.
+	 * Returns the original string unchanged if it is shorter than the limit.
+	 *
+	 * @param string $string The text string to truncate
+	 * @param int|float $limit Maximum length of the returned string
+	 * @param string $break Character or string used as word boundary (default: single space)
+	 * @param string $pad Suffix to append to truncated string (default: "...")
+	 * @return string Truncated string with padding appended if truncation occurred
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
 	public static function truncate_text(string $string, $limit, $break=" ", $pad="...") : string {
 
 	  // return with no change if string is shorter than $limit
@@ -597,11 +628,22 @@ abstract class TR {
 
 
 	/**
-	* GET_CHARS_INFO
-	* Obtain the total number of charaters and words of a text string (raw or processed)
-	* @param string $raw_text
-	* @return object $chars_info
-	*/
+	 * GET_CHARS_INFO
+	 * Calculate comprehensive character statistics from raw text content
+	 *
+	 * Analyzes a text string and returns detailed character count information. Performs cleaning
+	 * of Dédalo markup tags, HTML tags, and special characters before counting to provide
+	 * accurate statistics. Also counts characters excluding whitespace for alternative metrics.
+	 * Supports UTF-8 multi-byte character counting.
+	 *
+	 * @param string $raw_text The input text string to analyze (may contain Dédalo tags and HTML)
+	 * @return object Returns stdClass with properties:
+	 *         - total_chars (int): Total character count including spaces
+	 *         - total_chars_no_spaces (int): Character count excluding whitespace
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
 	public static function get_chars_info(string $raw_text) : object {
 
 		$chars_info = new stdClass();
@@ -638,12 +680,22 @@ abstract class TR {
 
 
 	/**
-	* GET_TAGS_OF_TYPE_IN_TEXT
-	* Locate text tags from text
-	* @param string $raw_text
-	* @param array $ar_tag_types
-	* @return array $ar_tags_of_type
-	*/
+	 * GET_TAGS_OF_TYPE_IN_TEXT
+	 * Extract and index all tags of specified types from text content
+	 *
+	 * Searches through the provided text for all occurrences of tags matching the given types.
+	 * Returns a structured array of tag objects containing both the tag type and the full tag text.
+	 * Supports all standard Dédalo tag types (index, tc, person, note, reference, svg, draw, geo, page, lang).
+	 *
+	 * @param string $raw_text The input text to search for tags
+	 * @param array $ar_tag_types Array of tag type identifiers to search for (e.g., ['index', 'tc', 'person'])
+	 * @return array Array of stdClass objects with properties:
+	 *         - type (string): The tag type identifier
+	 *         - tag (string): The complete matched tag text
+	 *
+	 * @package Dedalo
+	 * @subpackage Shared
+	 */
 	public static function get_tags_of_type_in_text(string $raw_text, array $ar_tag_types) : array {
 
 		$ar_tags_of_type = array();

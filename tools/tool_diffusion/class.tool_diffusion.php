@@ -1,28 +1,71 @@
-<?php declare(strict_types=1); // NOT IN UNIT TEST !
+<?php declare(strict_types=1);
 /**
-* CLASS TOOL_DIFFUSION
-* Manages Dédalo diffusion features
-*
-*/
+ * CLASS TOOL_DIFFUSION
+ * Manages Dédalo diffusion (publication/export) features for records
+ *
+ * This tool handles the export and publication of Dédalo records to external systems
+ * including databases, APIs, and file formats. It supports:
+ * - Multiple diffusion targets (SQL databases, Socrata, XML, etc.)
+ * - Bulk publication with chunked processing
+ * - Reference resolution across related records
+ * - Progress tracking for long-running operations
+ * - Post-processing actions (e.g., file merging)
+ *
+ * Key features:
+ * - Configurable diffusion maps defining export targets
+ * - Chunk-based processing to manage memory
+ * - Bulk process tracking for auditing
+ * - Support for publication state filtering
+ * - CLI progress reporting
+ *
+ * @package Dedalo
+ * @subpackage Tools
+ */
 class tool_diffusion extends tool_common {
 
+	/**
+	 * @var int Default chunk size for processing records
+	 */
+	private const CHUNK_SIZE = 1000;
 
+	/**
+	 * @var int Maximum execution time in seconds (20 minutes)
+	 */
+	private const MAX_EXECUTION_TIME = 1200;
 
-	public static $last_update_record_response;
+	/**
+	 * @var object|null Stores the last update_record response for debugging
+	 */
+	public static ?object $last_update_record_response = null;
 
 
 
 	/**
-	* GET_DIFFUSION_INFO
-	* Collect basic tool info needed to create user options
-	* Is called on tool build by client
-	* @param object $options
-	* {
-	* 	section_tipo: string
-	* }
-	* @return object $response
-	* 	{ result: [{}], msg: '' }
-	*/
+	 * GET_DIFFUSION_INFO
+	 * Collects basic tool info needed to create user options
+	 * Called on tool build by client to retrieve available diffusion targets
+	 *
+	 * This method:
+	 * - Retrieves diffusion map from ontology
+	 * - Filters excluded diffusion elements
+	 * - Validates diffusion groups and elements
+	 * - Collects table/field information for each target
+	 * - Returns configuration for UI rendering
+	 *
+	 * @param object $options Configuration object with:
+	 *   - section_tipo: string Section type identifier - REQUIRED
+	 *
+	 * @return object Response object with:
+	 *   - result: object|false Diffusion info object or false on error:
+	 *     - resolve_levels: int Number of reference resolution levels
+	 *     - skip_publication_state_check: int Whether to skip publication state check
+	 *     - diffusion_map: array Filtered diffusion map
+	 *     - ar_data: array Table and field information for each diffusion target
+	 *   - msg: string Status message
+	 *   - errors: array Error messages if any
+	 *
+	 * @throws Exception If diffusion map retrieval fails
+	 */
 	public static function get_diffusion_info(object $options) : object {
 
 		$response = new stdClass();
@@ -236,18 +279,28 @@ class tool_diffusion extends tool_common {
 
 
 	/**
-	* EXPORT
-	* Redirects to proper export manager based on mode (edit/list)
-	* @param object $options {
-	*	@property string $section_tipo
-	*	@property int|string|null $section_id
-	*	@property string $diffusion_element_tipo
-	*	@property int|null $resolve_levels
-	*	@property bool|null $skip_publication_state_check
-	* 	@property object|null $additions_options
-	* }
-	* @return object $response
-	*/
+	 * EXPORT
+	 * Redirects to export_list method for processing diffusion
+	 * Main entry point for diffusion operations from the client
+	 *
+	 * @param object $options Configuration object with:
+	 *   - section_tipo: string Section type identifier - REQUIRED
+	 *   - section_id: int|string|null Section ID (null for list mode)
+	 *   - diffusion_element_tipo: string Diffusion element tipo - REQUIRED
+	 *   - resolve_levels: int|null Number of reference resolution levels (default: 1)
+	 *   - skip_publication_state_check: bool|null Skip publication state filtering
+	 *   - additions_options: object|null Additional processing options
+	 *
+	 * @return object Response object with:
+	 *   - result: bool Success status
+	 *   - msg: array Status messages
+	 *   - errors: array Error messages
+	 *   - diffusion_data: array Exported data
+	 *   - time: string Execution time
+	 *   - memory: string Memory usage
+	 *
+	 * @throws Exception If export_list fails
+	 */
 	public static function export(object $options) : object {
 		$start_time=start_time();
 
@@ -297,18 +350,39 @@ class tool_diffusion extends tool_common {
 
 
 	/**
-	* EXPORT_LIST
-	* Export all SQO filtered records
-	* @param object $options
-	* @return object $response
-	*/
+	 * EXPORT_LIST
+	 * Exports all SQO filtered records in chunks to prevent memory issues
+	 *
+	 * This method:
+	 * - Processes records in chunks of CHUNK_SIZE
+	 * - Creates bulk process record for tracking
+	 * - Iterates through all matching records
+	 * - Calls diffusion class update_record for each
+	 * - Handles post-processing actions if defined
+	 * - Manages memory with gc_collect_cycles()
+	 *
+	 * @param object $options Configuration object with:
+	 *   - section_tipo: string Section type identifier - REQUIRED
+	 *   - section_id: int|null Section ID (null for list mode)
+	 *   - diffusion_element_tipo: string Diffusion element tipo - REQUIRED
+	 *   - resolve_levels: int Number of reference resolution levels
+	 *   - additions_options: object|null Additional options including post_actions
+	 *
+	 * @return object Response object with:
+	 *   - result: bool Success status
+	 *   - msg: array Status messages
+	 *   - errors: array Error messages
+	 *   - diffusion_data: array Flattened diffusion data from all records
+	 *   - memory: string Memory usage
+	 *   - last_update_record_response: object|null Last record's response
+	 *
+	 * @throws Exception If diffusion element not found or class instantiation fails
+	 */
 	public static function export_list(object $options) : object {
 		$start_time=start_time();
 
 		// time_limit set
-			$minutes = 20;
-			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Avoiding some cases of infinite loop when data are badly formed
+			set_time_limit(self::MAX_EXECUTION_TIME); // Avoiding some cases of infinite loop when data are badly formed
 
 		// response
 			$response = new stdClass();
@@ -422,34 +496,36 @@ class tool_diffusion extends tool_common {
 					}
 
 				// chunk_n_rows. Set maximum number of records we get from search at once
-				$chunk_n_rows = 1000;
+				$chunk_n_rows = self::CHUNK_SIZE;
 				// fix limit of SQO to prevent large sets with PHP memory implications
-				$sqo->limit = $chunk_n_rows; // chunk results <= 1000 rows
+				$sqo->limit = $chunk_n_rows; // chunk results <= CHUNK_SIZE rows
 				// reset offset
 				$sqo->offset = 0;
 
 				// BULK PROCESS ID
 					// create new process section
-						$bulk_process_section = section::get_instance(
-							null, // string|null section_id
-							DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-						);
-						$bulk_process_section->Save();
-
 					// get the bulk_process_id as the section_id of the section process
-						$bulk_process_id = $bulk_process_section->get_section_id();
+						$section = section::get_instance(DEDALO_BULK_PROCESS_SECTION_TIPO);
+						$bulk_process_id = $section->create_record();
 
 					// Save the process name into the process section
+						$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
 						$bulk_process_label_component = component_common::get_instance(
-							'component_input_text', // string model
+							$bulk_process_label_model, // string model
 							DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
 							$bulk_process_id, // string section_id
 							'list', // string mode
 							DEDALO_DATA_NOLAN, // string lang
 							DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 						);
-						$bulk_process_label_component->set_dato(['publication']);
-						$bulk_process_label_component->Save();
+						$bulk_process_data = [
+							(object)[
+								'value'	=> 'publication',
+								'lang'	=> $bulk_process_label_component->get_lang()
+							]
+						];
+						$bulk_process_label_component->set_data($bulk_process_data);
+						$bulk_process_label_component->save();
 						//set the static var with the bulk_process_id, it will be use to save last publication date
 						diffusion::$bulk_process_id = $bulk_process_id;// bulk process id to group the section published.
 
@@ -457,8 +533,12 @@ class tool_diffusion extends tool_common {
 				while (true) {
 
 					// search
-					$db_result		= $search->search();
-					$found_records	= $db_result->row_count();
+					$db_result = $search->search();
+					if ($db_result === false) {
+						break;
+					}
+
+					$found_records = $db_result->row_count();
 					if ($found_records<1) {
 						break;
 					}
@@ -551,7 +631,7 @@ class tool_diffusion extends tool_common {
 
 		// response OK
 			$response->result			= true;
-			$response->diffusion_data	= array_merge(...$diffusion_data); // flatten array
+			$response->diffusion_data	= !empty($diffusion_data) ? array_merge(...$diffusion_data) : []; // flatten array
 			$response->msg[]			= ($total_errors > 0)
 				? 'Warning. Request done with some errors: ' . $total_errors
 				: 'OK. Request done successfully';
@@ -565,21 +645,23 @@ class tool_diffusion extends tool_common {
 
 
 	/**
-	* ITERATE_ROWS
-	* Simple records chunk iterator
-	* Group in max 1000 rows
-	* @param array $rows
-	* @param string $diffusion_element_tipo
-	* @param string $diffusion_class_name
-	* @param int &$counter Process counter
-	* @param object &$pdata Process data
-	* @return object $response
-	* 	{
-	* 		data: [{}]
-	* 		errors: []
-	* 	}
-	*/
-	public static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : object {
+	 * ITERATE_ROWS
+	 * Simple records chunk iterator processing up to CHUNK_SIZE rows
+	 * Calls diffusion class update_record method for each row
+	 *
+	 * @param array $rows Array of row objects from search results
+	 * @param string $diffusion_element_tipo Diffusion element tipo identifier
+	 * @param string $diffusion_class_name Name of diffusion class to instantiate
+	 * @param int &$counter Process counter (passed by reference, incremented for each row)
+	 * @param object &$pdata Process data object for CLI output (passed by reference)
+	 *
+	 * @return object Response object with:
+	 *   - diffusion_data: array Flattened array of diffusion data from all rows
+	 *   - errors: array Error messages from failed operations
+	 *
+	 * @throws Exception If diffusion class not found
+	 */
+	private static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : object {
 
 		// errors
 		$errors = [];
@@ -671,7 +753,7 @@ class tool_diffusion extends tool_common {
 
 		// response object
 		$response = new stdClass();
-			$response->diffusion_data	= array_merge(...$diffusion_data); // flatten data array of arrays
+			$response->diffusion_data	= !empty($diffusion_data) ? array_merge(...$diffusion_data) : []; // flatten data array of arrays
 			$response->errors			= $errors;
 
 
