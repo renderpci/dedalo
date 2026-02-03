@@ -966,7 +966,7 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 				// delete all values
 				self.data.entries = []
 		}else{
-			if (changed_value===null && self.data.value) {
+			if (changed_value===null && self.data.entries) {
 				// delete current value key from array
 				self.data.entries.splice(data_key, 1)
 			}else{

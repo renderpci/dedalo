@@ -307,11 +307,11 @@ export const change_handler = function(e, key, self) {
 		: null;
 
 	// update value item
-	const item = self.data.value
+	const item = self.data.entries
 		? self.data.entries[key]
 		: {}
 
-	const action = self.data.value
+	const action = self.data.entries
 		? 'update'
 		: 'insert'
 

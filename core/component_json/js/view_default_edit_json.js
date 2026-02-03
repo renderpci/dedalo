@@ -236,7 +236,7 @@ const get_buttons = (self) => {
 		})
 		button_download.addEventListener('click', function(e) {
 			e.stopPropagation()
-			const export_obj  = self.data.value[0]
+			const export_obj  = self.data.entries[0]
 			const export_name = self.id
 			download_object_as_json(export_obj, export_name)
 		})
@@ -252,7 +252,7 @@ const get_buttons = (self) => {
 			button_sample_data.addEventListener('click', function(e) {
 				e.stopPropagation()
 				// const export_obj  = self.data.value[0]
-				if (self.data.value && self.data.value[0] && self.data.value[0].length) {
+				if (self.data.entries && self.data.entries[0] && self.data.entries[0].length) {
 					if(!confirm("Current value is not empty. \nOverwrite actual value?")) {
 						return
 					}
