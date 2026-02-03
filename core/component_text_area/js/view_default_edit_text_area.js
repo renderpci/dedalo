@@ -1294,7 +1294,7 @@ const render_note = async function(options) {
 						note_section.destroy(true,true,true)
 					}
 
-				if (!note_section.data.value || !note_section.data.value[0]) {
+				if (!note_section.data.entries || !note_section.data.entries[0]) {
 					section_info.remove()
 					button_remove.remove()
 					return false
@@ -1303,13 +1303,13 @@ const render_note = async function(options) {
 				// header_label. Created label with Title case (first letter to uppercase)
 					const created_label			= get_label.created || 'created'
 					const by_user_label			= get_label.by_user || 'by user'
-					const created_by_user		= note_section.data.value[0].created_by_user_name || 'undefined'
+					const created_by_user		= note_section.data.entries[0].created_by_user_name || 'undefined'
 					const header_label			= (get_label.note || 'Note') + ' ' + created_label +' '+ by_user_label + ': ' + created_by_user
 					header_label_node.innerHTML	= header_label
 
 				// section info (bottom)
 					const date_label			= get_label.date.toLowerCase() || 'date'
-					const created_date			= note_section.data.value[0].created_date || ''
+					const created_date			= note_section.data.entries[0].created_date || ''
 					section_info.innerHTML		= created_label + ' ' + date_label + ': '+ created_date
 					section_info.classList.remove('hide')
 					button_remove.classList.remove('hide')

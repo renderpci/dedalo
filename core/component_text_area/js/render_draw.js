@@ -53,11 +53,11 @@ export const render_draw = async function(options) {
 			el.section_tipo===component_tags_draw.section_tipo &&
 			el.section_id==component_tags_draw.section_id)
 
-		const all_tag_data = found_tag_data && found_tag_data.value
-			? found_tag_data.value
+		const all_tag_data = found_tag_data && found_tag_data.entries
+			? found_tag_data.entries
 			: []
 
-		const ar_tags_values = component_tags_draw.data.value
+		const ar_tags_values = component_tags_draw.data.entries
 
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'draw')
@@ -311,7 +311,7 @@ export const render_draw = async function(options) {
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
 				const locator = (selected_tag.reuse === false)
-					? reference_component.data.value
+					? reference_component.data.entries
 					: [selected_tag.data]
 
 				if(!locator || locator.length === 0){
@@ -347,7 +347,7 @@ export const render_draw = async function(options) {
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
 		modal.on_close = async () => {
 
-			if( reference_component.data.value){
+			if( reference_component.data.entries){
 				// change data to set empty value in the component (it saved in Session instead DDBB)
 					const changed_data = [Object.freeze({
 						action	: 'set_data',
