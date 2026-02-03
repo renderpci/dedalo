@@ -2480,6 +2480,12 @@ function get_cookie_properties() : object {
 function create_directory(string $folder_path, int $create_dir_permissions=0750) : bool {
 
 	if( !is_dir($folder_path) ) {
+
+		debug_log(__METHOD__
+			." CREATING DIR: $folder_path"
+			, logger::WARNING
+		);
+
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
 			// error creating directory
