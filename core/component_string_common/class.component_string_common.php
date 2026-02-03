@@ -122,7 +122,7 @@ class component_string_common extends component_common {
 		$data_lang = $this->get_data_lang();
 
 		if( empty($data_lang) ){
-			$data_lang = $this->get_component_data_fallback();
+			$data_lang = $this->get_component_data_fallback($this->get_lang());
 		}
 
 		return $data_lang;
