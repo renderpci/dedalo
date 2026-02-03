@@ -131,9 +131,9 @@ const get_content_data = async function(self) {
 			for (let i = 0; i < current_group_length; i++) {
 				const item = current_group[i]
 
-				const current_value = self.data.value.find(el => el.section_id === item.section_id)
+				const current_entry = self.data.entries.find(el => el.section_id === item.section_id)
 
-				grouped_value.push(current_value)
+				grouped_value.push(current_entry)
 			}
 
 			// ar_section_record. section_record instances (initialized and built)

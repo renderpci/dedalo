@@ -488,7 +488,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							if(current_ddo.with_value){
 								new_context.properties.with_value = current_ddo.with_value
 
-								if(current_data.value && current_data.value.length > 0){
+								if(current_data.entries && current_data.entries.length > 0){
 									new_context.view = current_ddo.with_value.view
 									new_context.mode = current_ddo.with_value.mode
 								}
@@ -496,7 +496,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 
 						// instance create and set
 							const instance_data = current_ddo.model==='dd_grid'
-								? [current_data.value]
+								? [current_data.entries]
 								: current_data;
 
 							const current_instance = await build_instance(
@@ -612,7 +612,7 @@ section_record.prototype.get_component_data = function(options) {
 				section_tipo	: section_tipo,
 				section_id		: section_id,
 				info			: 'No data found for this component',
-				value			: [],
+				entries			: [],
 				fallback_value	: ['']
 			}
 
