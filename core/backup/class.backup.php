@@ -194,14 +194,8 @@ abstract class backup {
 		$result = matrix_db_manager::exec_search($strQuery, []);
 
 		if(!$result) {
-			$msg = "Failed Search. Data is not found. Please contact with your admin (1)" ;
-			if(SHOW_DEBUG===true) {
-				throw new Exception($msg, 1);
-			}
-			debug_log(__METHOD__
-				." ERROR: $msg "
-				, logger::ERROR
-			);
+			$response->msg = 'Error. Failed to retrieve tables from the database.';
+			debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
 			return [];
 		}
 		$tableList = array();
@@ -231,13 +225,12 @@ abstract class backup {
 		$res='';
 
 		// file exists check
+			if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+				debug_log(__METHOD__ . ' Invalid table name: ' . $table, logger::ERROR);
+				return '';
+			}
 			if (!file_exists($path_file)) {
-				// throw new Exception("Error Processing Request. File $path_file not found", 1);
-				debug_log(__METHOD__
-					. " Error Processing Request. File not found " . PHP_EOL
-					. ' path_file: ' . to_string($path_file)
-					, logger::ERROR
-				);
+				debug_log(__METHOD__ . ' File not found: ' . $path_file, logger::ERROR);
 				return '';
 			}
 
@@ -331,6 +324,7 @@ abstract class backup {
 			}else{
 				$response->result	= false;
 				$response->msg		= "Error on consolidate sequence: $sequence_name - table: $table";
+				debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
 			}
 
 		return (object)$response;

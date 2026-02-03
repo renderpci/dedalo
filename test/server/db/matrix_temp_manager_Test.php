@@ -6,21 +6,25 @@ class matrix_temp_manager_test extends BaseTestCase {
 
     public static $model = 'matrix_temp_manager';
 
+    // The class defines $table='temp' by default, and allows passing it.
+    // referencing class.matrix_temp_manager.php
+    protected string $table = 'temp';
+    protected string $section_tipo = 'oh1';
+    protected string|int $section_id = 1;
+
     /**
      * Set up before each test
      */
     protected function setUp(): void {
         parent::setUp();
-        // Ensure session structure exists
-        if (!isset($_SESSION)) {
-            $_SESSION = [];
-        }
-        if (!isset($_SESSION['dedalo'])) {
-            $_SESSION['dedalo'] = [];
-        }
-        if (!isset($_SESSION['dedalo']['section_temp_data'])) {
-            $_SESSION['dedalo']['section_temp_data'] = [];
-        }
+        // Clean up before test
+        matrix_temp_manager::delete($this->table, $this->section_tipo, $this->section_id);
+    }
+
+    protected function tearDown(): void {
+        // Clean up after test
+        matrix_temp_manager::delete($this->table, $this->section_tipo, $this->section_id);
+        parent::tearDown();
     }
 
     /**
@@ -28,12 +32,11 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_get_uid(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
-
-        $uid = matrix_temp_manager::get_uid($section_tipo);
-        $this->assertEquals("matrix_oh1_tmp", $uid);
+        // Implementation: $section_tipo . logged_user_id()
+        // Assuming user 1 from bootstrap/test env
+        $uid = matrix_temp_manager::get_uid($this->section_tipo);
+        $expected = $this->section_tipo . logged_user_id();
+        $this->assertEquals($expected, $uid);
     }
 
     /**
@@ -41,17 +44,20 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_create(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
-        $values = (object)['section_id' => $section_id];
+        $values = (object)['section_id' => $this->section_id, 'data' => (object)['test'=>'creation']];
 
-        $result = matrix_temp_manager::create($table, $section_tipo, $values);
+        // defined as create(string $section_tipo, string $table='temp', ?object $values = null)
+        $result = matrix_temp_manager::create($this->section_tipo, $this->table, $values);
 
-        $this->assertEquals((int)$section_id, $result);
-        $temp_data_uid = matrix_temp_manager::get_uid($section_tipo);
-        $this->assertArrayHasKey($temp_data_uid, $_SESSION['dedalo']['section_temp_data']);
-        $this->assertInstanceOf('stdClass', $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
+        $this->assertEquals(0, $result, "Create should return 0 as section_id");
+
+        // Verify with read
+        $read_data = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
+        $this->assertIsObject($read_data);
+        $this->assertEquals(0, $read_data->section_id);
+
+        $this->assertIsString($read_data->data);
+        $this->assertStringContainsString('creation', $read_data->data);
     }
 
     /**
@@ -59,27 +65,27 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_update(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
-
         // Initial create
-        matrix_temp_manager::create($table, $section_tipo, (object)['section_id' => $section_id]);
+        matrix_temp_manager::create($this->section_tipo, $this->table, (object)['section_id' => $this->section_id]);
 
         $values = (object)[
             'data' => (object)['foo' => 'bar'],
-            'string' => [(object)['lang' => 'lg-spa', 'value' => 'some string']]
+            'string' => 'some string value'
         ];
 
-        $result = matrix_temp_manager::update($table, $section_tipo, $section_id, $values);
+        // update(string $table, string $section_tipo, int|string $section_id, object $values)
+        $result = matrix_temp_manager::update($this->table, $this->section_tipo, $this->section_id, $values);
 
         $this->assertTrue($result);
-        $temp_data_uid = matrix_temp_manager::get_uid($section_tipo);
 
-        // Check if data was encoded (since 'data' is a JSON column)
-        $this->assertEquals(json_handler::encode((object)['foo' => 'bar']), $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]->data);
-        // Check if string was encoded too (since 'string' is a JSON column in v7)
-        $this->assertEquals(json_handler::encode([(object)['lang' => 'lg-spa', 'value' => 'some string']]), $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]->string);
+        $read_data = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
+
+        // Check data content
+        $decoded_data = json_decode($read_data->data);
+        $this->assertEquals('bar', $decoded_data->foo);
+
+        // Check string content (if it was stored)
+        $this->assertEquals('some string value', $read_data->string);
     }
 
     /**
@@ -87,22 +93,19 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_read(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
+        // Create with data
+        $values = (object)['string' => 'hello world'];
+        matrix_temp_manager::create($this->section_tipo, $this->table, $values);
 
-        matrix_temp_manager::create($table, $section_tipo, (object)['section_id' => $section_id]);
-
-        $values = (object)['string' => [(object)['lang' => 'lg-spa', 'value' => 'hello']]];
-        matrix_temp_manager::update($table, $section_tipo, $section_id, $values);
-
-        $result = matrix_temp_manager::read($table, $section_tipo, $section_id);
+        // read(string $table, string $section_tipo, int|string $section_id)
+        $result = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
 
         $this->assertInstanceOf('stdClass', $result);
-        $this->assertEquals(json_handler::encode([(object)['lang' => 'lg-spa', 'value' => 'hello']]), $result->string);
+        $this->assertEquals(0, $result->section_id);
+        $this->assertEquals('hello world', $result->string);
 
         // Test non-existing
-        $result_none = matrix_temp_manager::read($table, $section_tipo, 'non_existent');
+        $result_none = matrix_temp_manager::read($this->table, 'non_existent_type', 'x');
         $this->assertFalse($result_none);
     }
 
@@ -111,11 +114,8 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_update_by_key(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
-
-        matrix_temp_manager::create($table, $section_tipo, (object)['section_id' => $section_id]);
+        // Setup
+        matrix_temp_manager::create($this->section_tipo, $this->table);
 
         $data_to_save = [
             (object)[
@@ -130,19 +130,19 @@ class matrix_temp_manager_test extends BaseTestCase {
             ]
         ];
 
-        $result = matrix_temp_manager::update_by_key($table, $section_tipo, $section_id, $data_to_save);
+        // update_by_key(string $table, string $section_tipo, int|string $section_id, array $data_to_save)
+        $result = matrix_temp_manager::update_by_key($this->table, $this->section_tipo, $this->section_id, $data_to_save);
         $this->assertTrue($result);
 
-        $read = matrix_temp_manager::read($table, $section_tipo, $section_id);
+        $read = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
 
-        // Column 'data' should be a JSON string
         $this->assertIsString($read->data);
         $decoded_data = json_decode($read->data);
 
         $this->assertEquals((object)['val1' => 123], $decoded_data->key1);
         $this->assertEquals('val2', $decoded_data->key2);
 
-        // Test deletion
+        // Test deletion (value = null)
         $delete_data = [
             (object)[
                 'column' => 'data',
@@ -150,9 +150,11 @@ class matrix_temp_manager_test extends BaseTestCase {
                 'value'  => null
             ]
         ];
-        matrix_temp_manager::update_by_key($table, $section_tipo, $section_id, $delete_data);
-        $read_after_delete = matrix_temp_manager::read($table, $section_tipo, $section_id);
+        matrix_temp_manager::update_by_key($this->table, $this->section_tipo, $this->section_id, $delete_data);
+
+        $read_after_delete = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
         $decoded_after_delete = json_decode($read_after_delete->data);
+
         $this->assertObjectNotHasProperty('key1', $decoded_after_delete);
         $this->assertEquals('val2', $decoded_after_delete->key2);
     }
@@ -162,16 +164,20 @@ class matrix_temp_manager_test extends BaseTestCase {
      * @return void
      */
     public function test_delete(): void {
-        $table = 'matrix';
-        $section_tipo = 'oh1';
-        $section_id = 'tmp';
+        // Create
+        matrix_temp_manager::create($this->section_tipo, $this->table);
 
-        matrix_temp_manager::create($table, $section_tipo, (object)['section_id' => $section_id]);
-        $temp_data_uid = matrix_temp_manager::get_uid($section_tipo);
-        $this->assertArrayHasKey($temp_data_uid, $_SESSION['dedalo']['section_temp_data']);
+        // Verify exists
+        $read = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
+        $this->assertNotFalse($read);
 
-        $result = matrix_temp_manager::delete($table, $section_tipo, $section_id);
+        // Delete
+        // delete(string $table, string $section_tipo, int|string $section_id)
+        $result = matrix_temp_manager::delete($this->table, $this->section_tipo, $this->section_id);
         $this->assertTrue($result);
-        $this->assertArrayNotHasKey($temp_data_uid, $_SESSION['dedalo']['section_temp_data']);
+
+        // Verify gone
+        $read_gone = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
+        $this->assertFalse($read_gone);
     }
 }
