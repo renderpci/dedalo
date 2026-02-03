@@ -3,6 +3,9 @@
  * CORE FUNCTIONS
  * Moved from core/base/core_functions.php to shared/core_functions.php
  * to prevent duplication of functions in publication classes
+ *
+ * Dependencies: logger, json_handler, matrix_db_manager, DBi, backup, ontology_node
+ * (These must be included in the calling context)
  */
 
 
@@ -35,9 +38,9 @@ function dump( mixed $val=null, ?string $var_name=null, ?array $arguments=null )
 
 	// msg
 		$root_path = defined('DEDALO_ROOT_PATH') ? DEDALO_ROOT_PATH : dirname(__FILE__, 2);
-		$msg  = ' DUMP ' . PHP_EOL
-			   .' Caller: ' . str_replace($root_path, '', $bt[0]['file']) . PHP_EOL
-			   .' Line: ' . @$bt[0]['line'];
+		$msg = ' DUMP ' . PHP_EOL
+			   . ' Caller: ' . str_replace($root_path, '', $bt[0]['file'] ?? 'unknown') . PHP_EOL
+			   . ' Line: ' . ($bt[0]['line'] ?? 'unknown');
 
 	// LEVEL 1
 
@@ -242,7 +245,7 @@ function logged_user_is_global_admin() : bool {
 		: false;
 
 	return $is_global_admin;
-}//end logged_user_is_developer
+}//end logged_user_is_global_admin
 
 
 
@@ -949,7 +952,7 @@ function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 * @param bool $strict Optional. Whether to be strict about the end of the string. Default true.
 * @return bool False if not serialized and true if it was.
  */
-function is_serialized( $data, $strict = true ) {
+function is_serialized( $data, $strict = true): bool {
 	// If it isn't a string, it isn't serialized.
 	if ( ! is_string( $data ) ) {
 		return false;
@@ -1376,21 +1379,13 @@ function br2nl(string $string) : string {
 * @param string $url
 * @return int|false
 */
-function get_http_response_code(string $url) : int|false {
-	stream_context_set_default(
-		array(
-			'http' => array(
-				'method' => 'HEAD'
-			)
-		)
-	);
-	$headers = get_headers($url);
-
-	if ($headers===false || !isset($headers[0])) {
-		return false;
-	}
-
-	return (int)substr($headers[0], 9, 3);
+function get_http_response_code(string $url): ?int {
+    stream_context_set_default(['http' => ['method' => 'HEAD']]);
+    $headers = @get_headers($url);
+    if ($headers === false || !isset($headers[0])) {
+        return null;
+    }
+    return (int)substr($headers[0], 9, 3);
 }//end get_http_response_code
 
 
@@ -1518,32 +1513,6 @@ function safe_xss(mixed $value) : mixed {
 
 	return $value;
 }//end safe_xss
-
-
-
-/**
-* SAFE_SQL_QUERY
-* @return string $value
-*/
-function safe_sql_query(string $sql_query) : string {
-
-	// WORKING HERE..
-
-	/*
-	if (is_string($value)) {
-
-		if ($decode_json=json_decode($value)) {
-			// If var is a stringify json, not verify string now
-		}else{
-			$value = strip_tags($value,'<br><strong><em>');
-			$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-		}
-	}
-	#error_log("value: ".to_string($value));
-	*/
-
-	return $sql_query;
-}//end safe_sql_query
 
 
 
