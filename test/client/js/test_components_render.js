@@ -18,7 +18,7 @@ async function fn_change_search_element(instance) {
 	ui.component.exec_save_successfully_animation(instance)
 	// set instance as changed or not based on their value
 	const hilite = (
-		(instance.data.value && instance.data.value.length>0) ||
+		(instance.data.entries && instance.data.entries.length>0) ||
 		(instance.data.q_operator && instance.data.q_operator.length>0)
 	)
 	ui.hilite({

@@ -67,9 +67,9 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 					tmp_api_response	: api_response // pass api_response before build to avoid call API again
 				})
 				assert.equal(
-					(!self.data.value || self.data.value.length===0),
+					(!self.data.entries || self.data.entries.length===0),
 					true,
-					`self.data.value length must be zero. > `
+					`self.data.entries length must be zero. > `
 				);
 			}
 			await pause(500)
@@ -93,7 +93,7 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 				assert.equal(
 					self.data.pagination.total,
 					ar_section_id_length,
-					`self.data.value length must be identical. > `
+					`self.data.entries length must be identical. > `
 				);
 			}
 			await pause(500)
@@ -106,9 +106,9 @@ return
 				self.rqo.sqo.limit	= self.request_config_object.sqo.limit 	= 0 // (limit + 1) + 1000
 				await self.refresh()
 				assert.equal(
-					self.data.value.length,
+					self.data.entries.length,
 					ar_section_id_length,
-					`self.data.value length must be identical to total. > `
+					`self.data.entries length must be identical to total. > `
 				);
 			}
 			await pause(500)
@@ -117,9 +117,9 @@ return
 		// unlink_record
 			async function unlink_record() {
 				let key = 0
-				while(component.data.value && component.data.value[key]) {
+				while(component.data.entries && component.data.entries[key]) {
 
-					const current_value = component.data.value[key]
+					const current_value = component.data.entries[key]
 
 					const options = {
 						paginated_key	: current_value.paginated_key,
@@ -132,9 +132,9 @@ return
 					await pause(100)
 				}
 				assert.equal(
-					(!self.data.value || self.data.value.length===0),
+					(!self.data.entries || self.data.entries.length===0),
 					true,
-					`self.data.value length must be zero. > `
+					`self.data.entries length must be zero. > `
 				);
 			}
 			await pause(500)
@@ -149,9 +149,9 @@ return
 				})
 				console.log('self:', self);
 				// assert.equal(
-				// 	self.data.value.length,
+				// 	self.data.entries.length,
 				// 	ar_section_id_length,
-				// 	`self.data.value length must be identical to total. > `
+				// 	`self.data.entries length must be identical to total. > `
 				// );
 			}
 			await pause(500)
@@ -164,16 +164,16 @@ return
 
 				await component.add_new_element(target_section_tipo)
 				assert.equal(
-					self.data.value.length,
+					self.data.entries.length,
 					1,
-					`self.data.value length must be 1. > `
+					`self.data.entries length must be 1. > `
 				);
 
 				await component.add_new_element(target_section_tipo)
 				assert.equal(
-					self.data.value.length,
+					self.data.entries.length,
 					2,
-					`self.data.value length must be 2. > `
+					`self.data.entries length must be 2. > `
 				);
 			}
 			await pause(500)

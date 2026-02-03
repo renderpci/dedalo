@@ -77,10 +77,10 @@ describe("COMPONENTS ACTIVATE", async function() {
 
 					}else{
 						// console.log('instance.data:', instance.data);
-						// const value = instance.data.value
-						// 	? instance.data.value[0]
+						// const entries = instance.data.entries
+						// 	? instance.data.entries[0]
 						// 	: null
-						// console.log(`${element.model} value:`, value);
+						// console.log(`${element.model} entries:`, entries);
 
 						// new_value. Calculated as random proper data for current component
 						const new_value = element.new_value(element.new_value_params)
