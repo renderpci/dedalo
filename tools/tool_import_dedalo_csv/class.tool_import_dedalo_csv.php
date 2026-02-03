@@ -1,9 +1,17 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_DEDALO_CSV
-* Tool to import data into Dédalo.
-* Often used to import CSV files previously exported from Dédalo tool_export in raw format.
+* Tool to import data into Dédalo from CSV files
 *
+* Key features:
+* - Import CSV files previously exported from Dédalo tool_export in raw format
+* - Support for multi-language values and component-specific data conforming
+* - Time machine history tracking for bulk imports
+* - Validation of component tipos against ontology definitions
+* - Progress tracking and error reporting for large batch operations
+*
+* @package Dedalo
+* @subpackage Tools
 */
 class tool_import_dedalo_csv extends tool_common {
 
@@ -381,25 +389,30 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* IMPORT_DEDALO_CSV_FILE
-	* 	Import CSV array data to Dédalo
+	* 	Import CSV array data to Dédalo sections and components
 	*
-	* @param object $options
+	* Processes CSV data row by row, creating new section records or updating existing ones.
+	* Handles component-specific data formatting, multi-language values, and metadata fields.
+	* Supports time machine history tracking for audit trail.
+	*
+	* @param object $options Configuration object
 	* {
-	* 	"section_tipo"		: "oh1", 				// string $section_tipo
-	* 	"ar_csv_data"		: [], 					// array $ar_csv_data
-	* 	"time_machine_save"	: true, 				// bool $time_machine_save
-	* 	"ar_columns_map"	: [] 					// array $ar_columns_map
-	* 	""current_file" 	: my_import_csv-oh1 	// string $current_file
+	* 	@type string section_tipo The destination section type (e.g., "oh1")
+	* 	@type array ar_csv_data Array of CSV data rows (first row is headers)
+	* 	@type bool time_machine_save Whether to save time machine history
+	* 	@type array ar_columns_map Column mapping configuration with checked/map_to properties
+	* 	@type string current_file Original CSV filename for reference
+	* 	@type string bulk_process_label Human-readable label for the bulk operation
 	* }
 	*
-	* @return object $response
+	* @return object Response object
 	* {
-	* 	result			: bool,
-	* 	msg				: string
-	*	created_rows	: array
-	*	updated_rows	: array
-	*	failed_rows		: array;
-	*	time			: string
+	* 	@type bool result True on success
+	* 	@type string msg Summary message with statistics
+	* 	@type array created_rows Array of section_ids for newly created records
+	* 	@type array updated_rows Array of section_ids for updated records
+	* 	@type array failed_rows Array of failed row objects with error details
+	* 	@type string time Execution time in milliseconds
 	* }
 	*/
 	public static function import_dedalo_csv_file(object $options) : object {
@@ -791,8 +804,8 @@ class tool_import_dedalo_csv extends tool_common {
 					}
 				}//end foreach ($columns as $key => $value)
 
-			// action add for statistics
-				if($create_record===true) {
+			// action add for statistics (BUG FIX: use !$exists instead of undefined $create_record)
+				if(!$exists) {
 					$created_rows[] = $section_id;
 				}else{
 					$updated_rows[] = $section_id;
@@ -830,12 +843,14 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* VERIFY_CSV_MAP
-	* @param array $csv_map
-	* @param string $section_tipo
-	* @return object $response
+	* Validates CSV column mapping against ontology definitions
+	*
+	* @param array $csv_map Array of column mapping objects with type and target information
+	* @param string $section_tipo The target section type to validate against
+	* @return object Response object
 	* {
-	* 	result : bool
-	* 	msg : string
+	* 	@type bool result True if mapping is valid
+	* 	@type string msg Status message or error description
 	* }
 	*/
 	public static function verify_csv_map(array $csv_map, string $section_tipo) : object {
@@ -1196,8 +1211,18 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* GET_SECTION_COMPONENTS_LIST
-	* @param string $value
-	* @return object $response
+	* Retrieves all available components for a given section type
+	*
+	* @param object $options Configuration object
+	* {
+	* 	@type string section_tipo The section type to query
+	* }
+	* @return object Response object
+	* {
+	* 	@type array result Array of component objects with label, value, and model properties
+	* 	@type string label The section type label from ontology
+	* 	@type string msg Status message
+	* }
 	*/
 	public static function get_section_components_list(object $options) : object {
 
@@ -1267,21 +1292,21 @@ class tool_import_dedalo_csv extends tool_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Simply moves previously uploaded temp file to the definitive location and name
-	* It's called from tool_import_dedalo after event 'upload_file_' + id is published
-	* from 'tool_import_dedalo_csv.js' file
-	* @param object $options
-	* 	Object $options->file_data
-	* Sample:
+	* Moves uploaded CSV file from temporary location to user's import directory
+	*
+	* Called after file upload completion via 'upload_file_' event from JavaScript
+	*
+	* @param object $options File upload configuration
 	* {
-	*	error: 0
-	*	extension: "csv"
-	*	name: "name-rsc197.csv"
-	*	size: 184922784
-	*	tmp_name: "/hd/media/upload/service_upload/tmp/csv/phpPJQvCp"
-	*	type: "text/csv"
+	* 	@type object file_data Upload metadata (name, tmp_name, error, size, extension, etc.)
 	* }
-	* @return object $response
+	* @return object Response object
+	* {
+	* 	@type bool result True on successful move
+	* 	@type string file_name Final filename in import directory
+	* 	@type string msg Status message
+	* 	@type object debug Debug information (when SHOW_DEBUG=true)
+	* }
 	*/
 	public static function process_uploaded_file(object $options) : object {
 		$start_time=start_time();

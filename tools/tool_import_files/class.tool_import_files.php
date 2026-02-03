@@ -1,24 +1,54 @@
 <?php declare(strict_types=1);
 /**
-* CLASS TOOL_IMPORT_FILES
-* Specialized tool class for handling file import operations.
-* Extends the base tool_common class to provide file import functionality.
-*/
+ * CLASS TOOL_IMPORT_FILES
+ * Specialized tool class for handling file import operations.
+ *
+ * Key features:
+ * - Extracts and parses file data using regex patterns to identify section IDs and field mappings
+ * - Processes uploaded media files and stores them in appropriate media directories
+ * - Extracts metadata (EXIF dates) from image, video, and PDF files
+ * - Supports multiple import modes: default, section, section_resource
+ * - Handles file naming strategies: enumerate, named, match, match_freename
+ * - Executes custom file processors for specialized transformations
+ * - Manages component data propagation during import process
+ * - Supports multi-file batch processing with CLI output
+ *
+ * Integration:
+ * - Works with ontology definitions and component model registration
+ * - Leverages ImageMagick and FFmpeg for metadata extraction
+ * - Uses search queries to match files to existing media sections
+ * - Integrates with component_image, component_av, component_pdf and portal components
+ *
+ * @package Dedalo
+ * @subpackage Tools
+ */
 class tool_import_files extends tool_common {
 
 
 
 	/**
-	* GET_FILE_DATA
-	* Extract the information about given file using regex to get the file name patterns
-	* @param string $dir
-	* 	Directory absolute path where file is located
-	* @param string $file
-	* 	Full file name like 'my_photo.today.tif'
-	*
-	* @return array $ar_data
-	* 	Associative array with all extracted data
-	*/
+	 * GET_FILE_DATA
+	 * Extract file information using regex to parse filename patterns.
+	 * Analyzes filename components to identify section IDs, target fields, and file metadata.
+	 * Supports multiple naming conventions:
+	 *   - section_id-filename-field.extension (e.g., 73-my image-A.tiff)
+	 *   - section_id-field.extension (e.g., 73-A.tiff)
+	 *   - section_id.extension (e.g., 73.jpg)
+	 *   - filename-field.extension (e.g., My image-A.tiff)
+	 *   - filename.extension (e.g., My image.tiff)
+	 *
+	 * @param string $dir Directory absolute path where file is located
+	 * @param string $file Full filename like 'my_photo.today.tif'
+	 *
+	 * @return array Associative array with extracted data:
+	 *   - dir_path: Directory absolute path
+	 *   - file_path: Full file path
+	 *   - file_name: Filename without extension
+	 *   - file_name_full: Complete filename with extension
+	 *   - extension: File extension (preserves case)
+	 *   - file_size: Formatted file size (e.g., '1.7 MB')
+	 *   - regex: Object with parsed components (section_id, base_name, letter, extension)
+	 */
 	public static function get_file_data( string $dir, string $file ) : array {
 
 		$ar_data = array();
@@ -119,14 +149,25 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* SET_MEDIA_FILE
-	* Insert in target section, current uploaded file
-	* @param object $add_file_options
-	* @param string tipo $target_section_tipo
-	* @param int section_id $current_section_id
-	* @param string tipo $target_component
-	* @return bool
-	*/
+	 * SET_MEDIA_FILE
+	 * Moves uploaded file from temporary directory to permanent media storage.
+	 * Processes file through component handler to create quality versions and formats.
+	 *
+	 * @param object $add_file_options File information containing:
+	 *   - name (string): Original filename like 'IMG_3007.jpg'
+	 *   - key_dir (string): Upload caller identifier like 'oh1_oh1'
+	 *   - tmp_dir (string): Constant name like 'DEDALO_UPLOAD_TMP_DIR'
+	 *   - tmp_name (string): Temporary filename
+	 *   - quality (string|null): Target quality level (default: original)
+	 *   - source_file (mixed|null): Source file specification
+	 *   - size (string): File size with units
+	 *   - extension (string): File extension
+	 * @param string $target_section_tipo Section type identifier
+	 * @param int $current_section_id Section ID for storage
+	 * @param string $target_component_tipo Component type identifier
+	 *
+	 * @return bool Success status of file import operation
+	 */
 	public static function set_media_file(
 		object $add_file_options,
 		string $target_section_tipo,
@@ -140,7 +181,8 @@ class tool_import_files extends tool_common {
 		// is not capable to know if the uploaded file is the last one in a chunked file scenario
 			// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
 			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-			$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
+			$connection			= DBi::_getConnection();
+			$safe_file_data		= pg_escape_string($connection, $file_data_encoded);
 			logger::$obj['activity']->log_message(
 				'UPLOAD COMPLETE',
 				logger::INFO,
@@ -229,12 +271,19 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* GET_MEDIA_FILE_DATE
-	* Calculates the media file date
-	* @param array $media_file
-	* 	Assoc array with file info like file_path
-	* @return object|null dd_date $dd_date
-	*/
+	 * GET_MEDIA_FILE_DATE
+	 * Extracts creation date from media file metadata (EXIF, ID3, PDF properties).
+	 * Uses appropriate tool for each media type:
+	 *   - Images: ImageMagick EXIF extraction
+	 *   - Audiovisual: FFmpeg metadata extraction
+	 *   - PDF: pdfinfo metadata parsing
+	 *
+	 * @param array $media_file Associative array with:
+	 *   - file_path (string): Absolute path to media file
+	 * @param string $model Component model type (component_image, component_av, component_pdf)
+	 *
+	 * @return object|null dd_date object if metadata found, null otherwise
+	 */
 	public static function get_media_file_date( array $media_file, string $model ) : ?object {
 
 		$dd_date			= null;
@@ -312,10 +361,27 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* FILE_PROCESSOR
-	* @param $options
-	* @return object $response
-	*/
+	 * FILE_PROCESSOR
+	 * Executes optional custom file processing scripts for specialized transformations.
+	 * Includes and calls file processor functions defined in tool configuration.
+	 *
+	 * @param object $options Processing configuration containing:
+	 *   - file_processor (string): Name of processor function to execute
+	 *   - file_processor_properties (array): Processor definitions from tool config
+	 *   - file_name (string): Name of file being processed
+	 *   - file_path (string): Directory path of file
+	 *   - section_tipo (string): Current section type
+	 *   - section_id (int): Current section ID
+	 *   - tool_config (object): Tool configuration object
+	 *   - key_dir (string): Upload caller identifier
+	 *   - custom_target_quality (string|null): Target quality level
+	 *   - components_temp_data (array): Temporary component data
+	 *
+	 * @return object Response object with:
+	 *   - result (bool): Success status
+	 *   - msg (string): Result message
+	 *   - errors (array): Array of error messages
+	 */
 	public static function file_processor( object $options ) : object {
 
 		$response = new stdClass();
@@ -414,11 +480,28 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* IMPORT_FILES
-	* Process previously uploaded images
-	* @param object $options
-	* @return object $response
-	*/
+	 * IMPORT_FILES
+	 * Main orchestration method for batch file import processing.
+	 * Handles complete workflow: file validation, section creation, component population, and media storage.
+	 * Supports multiple import modes with configurable file naming strategies.
+	 *
+	 * @param object $options Import configuration containing:
+	 *   - tipo (string): Component type identifier (e.g., 'oh17')
+	 *   - section_tipo (string): Current section type (e.g., 'oh1')
+	 *   - section_id (int): Current section ID
+	 *   - tool_config (object): Tool configuration with ddo_map and processing rules
+	 *   - files_data (array): Array of file objects with name, processor, options
+	 *   - components_temp_data (array|null): Temporary component data to propagate
+	 *   - key_dir (string): Upload caller identifier
+	 *   - custom_target_quality (string|null): Target media quality level
+	 *
+	 * @return object Response object with:
+	 *   - result (bool): Overall operation success status
+	 *   - msg (string): Summary message with file counts
+	 *   - errors (array): Accumulated error messages
+	 *   - time (string): Total execution time
+	 *   - memory (mixed): Memory usage statistics
+	 */
 	public static function import_files( object $options ) : object {
 		$start_time=start_time();
 
@@ -929,15 +1012,26 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* GET_MEDIA_SECTION_MATCH_FROM_SOUCE
-	* Checks the filename uploaded with the previous names saved into media sections (image, av, document)
-	* 1 get the target section to get all media files into the section_id (as tch11)
-	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
-	* 3 match the filename without the extensions 11-1 === 11-1
-	* return all section_id of the image section that filename match.
-	* @param  object $options
-	* @return array $match_section_id
-	*/
+	 * GET_MEDIA_SECTION_MATCH_FROM_SOUCE
+	 * Matches uploaded file to existing media sections using section ID from filename.
+	 * Workflow:
+	 *   1. Extract section ID from uploaded filename (e.g., '11' from '11-1.tiff')
+	 *   2. Retrieve target section and its related media sections
+	 *   3. Compare uploaded filename basename with stored filenames
+	 *   4. Return array of matching media section IDs
+	 *
+	 * Note: Filename comparison ignores extension to allow format variations
+	 * (original .jpg vs modified .tiff with alpha channel)
+	 *
+	 * @param object $options Search configuration containing:
+	 *   - section_id (string): Source section ID from filename
+	 *   - section_tipo (string): Source section type
+	 *   - target_section_tipo (string): Target media section type
+	 *   - full_name (string): Complete uploaded filename
+	 *   - target_filename (object): Target filename component definition
+	 *
+	 * @return array Array of section_id values that match uploaded filename
+	 */
 	public static function get_media_section_match_from_souce( object $options ) : array {
 
 		$section_id				= $options->section_id;
@@ -956,7 +1050,7 @@ class tool_import_files extends tool_common {
 		// create the section and give his all data.
 		$section_record = section_record::get_instance(
 			$section_tipo,
-			$section_id
+			(int)$section_id
 		);
 
 		$data = $section_record->get_data();
@@ -1005,13 +1099,23 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* GET_MEDIA_SECTION_MATCH
-	* uses the name of the uploaded file as: 7ftTgmN-Mn.tiff | 456Mnc.mov
-	* remove the extension but use the '.' to close match in the search
-	* the sections that match will returned as array of his section_id
-	* @param  object $options
-	* @return array $match_section_id
-	*/
+	 * GET_MEDIA_SECTION_MATCH
+	 * Searches for media sections matching the uploaded filename using database search query.
+	 * Matches by filename basename (without extension) with boundary marker to avoid false positives.
+	 *
+	 * Filename search strategy:
+	 *   - Removes file extension to allow format variations
+	 *   - Adds '.' after basename as match boundary (e.g., 'my_image.' matches 'my_image.jpg' not 'my_image2.jpg')
+	 *   - Uses ontology search path to construct query
+	 *   - Returns all matching section IDs
+	 *
+	 * @param object $options Search configuration containing:
+	 *   - target_filename->tipo (string): Component type to search
+	 *   - target_filename->section_tipo (string): Section type to search
+	 *   - full_name (string): Uploaded filename with extension
+	 *
+	 * @return array Array of matching section IDs from search results
+	 */
 	public static function get_media_section_match( object $options ) : array {
 
 		// short vars

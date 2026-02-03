@@ -1,8 +1,27 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS TOOL_LANG
+* Tool for managing multilingual content and automatic translations
 *
+* Provides automation for translating component data across multiple languages
+* using external translation services (Babel, Google Translate, etc.).
 *
+* Key features:
+* - Automatic translation of component data using external translator services
+* - Support for multiple translation engines (Babel, Google Translate)
+* - Translation-specific configuration stored in tool settings (Tools configuration section)
+* - Source and target language flexibility for each translation request
+* - Error handling and quota monitoring for translation services
+* - Batch translation of component array data
+*
+* Translation workflow:
+* 1. Retrieves source text from component in source language
+* 2. Calls external translator service with configured credentials
+* 3. Saves translated result to target component in target language
+* 4. Handles translation engine-specific implementations and error states
+*
+* @package Dedalo
+* @subpackage Tools
 */
 class tool_lang extends tool_common {
 
@@ -10,11 +29,37 @@ class tool_lang extends tool_common {
 
 	/**
 	* AUTOMATIC_TRANSLATION
-	* Exec a translation request against the translator service given (babel, google, etc.)
-	* and save the result to the target component in the target lang.
-	* Note that translator config is stored in the tool section data (tools_register)
-	* @param object $options
-	* @return object $response
+	* Execute automatic translation of component data using configured translator service
+	*
+	* Retrieves source text from a component in the source language, sends it to an
+	* external translation service (Babel, Google Translate, etc.), and saves the 
+	* translated result to the target component in the target language.
+	*
+	* Translator configurations (URI, authentication keys) are stored in the tool's
+	* configuration section (Tools configuration - dd996) and retrieved at runtime.
+	*
+	* @param object $options Configuration object for translation request
+	* {
+	* 	@type string source_lang Source language code (default: DEDALO_DATA_LANG)
+	* 	@type string target_lang Target language code for translation result
+	* 	@type string component_tipo The component type to translate
+	* 	@type int section_id The section ID containing the component
+	* 	@type string section_tipo The section type of the component
+	* 	@type string translator Name of translator service ('babel', 'google_translation', etc.)
+	* 	@type object config Optional translator configuration object
+	* }
+	*
+	* @return object Response object
+	* {
+	* 	@type bool result True if translation succeeded
+	* 	@type string msg Status message or error description
+	* 	@type array errors Array of error message strings
+	* 	@type object debug Debug information when SHOW_DEBUG=true
+	* 	@type array debug->translated_data Array of translated values
+	* 	@type string debug->raw_result Raw response from translator service
+	* }
+	*
+	* @throws Exception When translator config is invalid or required parameters missing
 	*/
 	public static function automatic_translation(object $options) : object {
 
@@ -31,7 +76,6 @@ class tool_lang extends tool_common {
 			$section_id		= $options->section_id		?? null;
 			$section_tipo	= $options->section_tipo	?? null;
 			$translator		= $options->translator		?? null;
-			$config			= $options->config			?? null;
 
 		// config
 			// get all tools config sections
@@ -78,6 +122,7 @@ class tool_lang extends tool_common {
 
 		// iterate component array data
 			$translated_data = [];
+			$translate = null; // Initialize to prevent undefined variable in debug section
 			foreach ($data_lang as $data_element) {
 
 				switch ($translator_name) {
@@ -87,7 +132,6 @@ class tool_lang extends tool_common {
 						$response->msg = "Sorry. '{$translator_name}' is not implemented yet"; // error msg
 						$response->errors[] = 'Tool not implemented';
 						return $response;
-						break;
 
 					case 'babel':
 					default:
@@ -109,7 +153,7 @@ class tool_lang extends tool_common {
 				}
 
 				$translated_data[] = $result ?? null;
-			}//end foreach ($dato as $key => $value)
+			}//end foreach ($data_lang as $data_element)
 
 
 		// Save result on target component (target_lang)

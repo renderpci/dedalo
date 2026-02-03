@@ -111,15 +111,15 @@ class login extends common {
 				#
 				# STOP: USERNAME DO NOT EXISTS
 				#
-				$activity_datos['result']	= 'deny';
-				$activity_datos['cause']	= 'User does not exist';
-				$activity_datos['username']	= $username;
+				$activity_data['result']	= 'deny';
+				$activity_data['cause']	= 'User does not exist';
+				$activity_data['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by: $username. This user does not exist in the database",
 					'LOG IN',
-					$activity_datos
+					$activity_data
 				);
 				// delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
@@ -143,15 +143,15 @@ class login extends common {
 				#
 				# STOP: USERNAME DUPLICATED
 				#
-				$activity_datos['result']	= 'deny';
-				$activity_datos['cause']	= 'User duplicated in database';
-				$activity_datos['username']	= $username;
+				$activity_data['result']	= 'deny';
+				$activity_data['cause']	= 'User duplicated in database';
+				$activity_data['username']	= $username;
 
 				# LOGIN ACTIVITY REPORT ($msg, $projects=NULL, $login_label='LOG IN', $ar_datos=NULL)
 				self::login_activity_report(
 					"Denied login attempted by : $username. This user exist more than once in the database ".$user_count,
 					'LOG IN',
-					$activity_datos
+					$activity_data
 				);
 				# delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
@@ -210,15 +210,15 @@ class login extends common {
 					#
 					# STOP : PASSWORD IS WRONG
 					#
-					$activity_datos['result']	= 'deny';
-					$activity_datos['cause']	= 'wrong password';
-					$activity_datos['username']	= $username;
+					$activity_data['result']	= 'deny';
+					$activity_data['cause']	= 'wrong password';
+					$activity_data['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
 					self::login_activity_report(
 						"Denied login attempted by: $username. Wrong password [1] (Incorrect password)",
 						'LOG IN',
-						$activity_datos
+						$activity_data
 					);
 					# delay failed output by 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
@@ -248,7 +248,7 @@ class login extends common {
 				self::login_activity_report(
 					"Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
 					'LOG IN',
-					// activity_datos
+					// activity_data
 					array(
 						'result' 	=> 'deny',
 						'cause' 	=> 'account inactive',
@@ -397,7 +397,7 @@ class login extends common {
 							self::login_activity_report(
 								"[Login_SAML] Denied login attempted by username: $username, id: $section_id. Account inactive or not defined [1]",
 								'LOG IN',
-								// activity_datos
+								// activity_data
 								array(
 									'result' 	=> 'deny',
 									'cause' 	=> 'account inactive',
@@ -476,7 +476,7 @@ class login extends common {
 						self::login_activity_report(
 							"[Login_SAML] Denied login attempted by: saml_user. This code does not exist in the database",
 							'LOG IN',
-							// activity_datos
+							// activity_data
 							array(
 								'result' 	=> 'deny',
 								'cause' 	=> 'code not exist',
@@ -515,11 +515,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$username = !empty($dato)
-			? implode(' ', (array)$dato)
-			: '';
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$username = implode(' ', $values);
 
 		return $username;
 	}//end get_username
@@ -541,11 +544,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$full_username = !empty($dato)
-			? implode(' ', (array)$dato)
-			: '';
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$full_username = implode(' ', $values);
 
 		return $full_username;
 	}//end get_full_username
@@ -570,11 +576,14 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data_lang() ?? [];
 
-		$code = !empty($dato)
-			? implode(' ', (array)$dato)
-			: null;
+		// Extract values
+		$values = array_map(function($item) {
+			return $item->value;
+		}, $data);
+
+		$code = implode(' ', $values);
 
 		return $code;
 	}//end get_user_code
@@ -690,12 +699,12 @@ class login extends common {
 			DEDALO_DATA_LANG,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$filter_master_dato = (array)$component_filter_master->get_dato();
-		if (!empty($filter_master_dato) && count($filter_master_dato)>0) {
+		$filter_master_data = $component_filter_master->get_data() ?? [];
+		if (!empty($filter_master_data) && count($filter_master_data)>0) {
 			$user_have_projects = true;
 		}
 
-		return (bool)$user_have_projects;
+		return $user_have_projects;
 	}//end user_have_projects_check
 
 
@@ -720,10 +729,9 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato				= $component->get_dato();
-		$default_section	= !empty($dato) && !empty($dato[0])
-			? $dato[0]
-			: null;
+		$data = $component->get_data();
+
+		$default_section = $data[0]->value ?? null;
 
 		return $default_section;
 	}//end get_default_section
@@ -886,17 +894,17 @@ class login extends common {
 			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 			if (strpos($browser, 'AppleWebKit')===false) $browser = '<i style="color:red">'.$browser.'</i>';
 
-			$activity_datos['result']		= 'allow';
-			$activity_datos['cause']		= 'correct user and password';
-			$activity_datos['username']		= $username;
-			$activity_datos['browser']		= $browser;
-			$activity_datos['DB-backup']	= $backup_info;
+			$activity_data['result']	= 'allow';
+			$activity_data['cause']		= 'correct user and password';
+			$activity_data['username']	= $username;
+			$activity_data['browser']	= $browser;
+			$activity_data['DB-backup']	= $backup_info;
 
 			// login activity report
 			self::login_activity_report(
 				"User $user_id is logged. Hello $username",
 				'LOG IN',
-				$activity_datos
+				$activity_data
 			);
 
 		// OK response
@@ -1201,7 +1209,7 @@ class login extends common {
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
 				'LOG OUT',
-				// $activity_datos
+				// $activity_data
 				array(
 					'result'	=> 'quit',
 					'cause'		=> $cause,
@@ -1288,21 +1296,21 @@ class login extends common {
 	* Save activity info into logger file
 	* @param string $msg
 	* @param string $login_label
-	* @param array|null $activity_datos = null
+	* @param array|null $activity_data = null
 	* @return void
 	*/
-	public static function login_activity_report( string $msg, string $login_label, ?array $activity_datos=null ) : void {
+	public static function login_activity_report( string $msg, string $login_label, ?array $activity_data=null ) : void {
 
 		// data base
 			$data = [
 				'msg' => $msg
 			];
-			// append activity_datos if exists
-			if(!empty($activity_datos) && is_array($activity_datos)) {
-				$data = array_merge($data, $activity_datos);
+			// append activity_data if exists
+			if(!empty($activity_data) && is_array($activity_data)) {
+				$data = array_merge($data, $activity_data);
 			}
 
-		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)
 			logger::$obj['activity']->log_message(
 				$login_label,
 				logger::INFO,
@@ -1331,9 +1339,9 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_dato();
+		$data = $component->get_data();
 
-		if (is_null($dato)) {
+		if (empty($data) || empty($data[0]->value)) {
 			return true;
 		}
 

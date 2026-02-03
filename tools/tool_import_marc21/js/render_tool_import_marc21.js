@@ -177,7 +177,7 @@ const get_content_data_edit = async function(self) {
 						// get message
 						const msg = (response.result===true)
 							? self.get_tool_label('upload_done') || 'Files imported successfully'
-							: self.get_tool_label('upload_error') || 'Files no imported!'
+							: self.get_tool_label('upload_error') || 'Error: Files not imported!'
 						// add the message to wrapper (outside content_data that has loading class)
 						const msg_container = ui.create_dom_element({
 							element_type	: 'div',

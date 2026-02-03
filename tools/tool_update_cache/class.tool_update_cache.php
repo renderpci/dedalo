@@ -1,33 +1,76 @@
-<?php
+<?php declare(strict_types=1);
 /**
-* CLASS TOOL_UPDATE_CACHE
-* Manages Dédalo cache clean actions
-*
-*/
+ * CLASS TOOL_UPDATE_CACHE
+ * Manages Dédalo cache clean actions
+ *
+ * Key features:
+ * - Bulk cache regeneration for components
+ * - Chunk processing to manage memory usage
+ * - Support for selective component regeneration
+ * - Progress tracking for long-running operations
+ *
+ * @package Dedalo
+ * @subpackage Tools
+ */
 class tool_update_cache extends tool_common {
 
 
 
-	public static $n_records = 0;
-	public static $total; // count records search
+	/**
+	 * @var int Number of records processed in current operation
+	 */
+	public static int $n_records = 0;
+
+	/**
+	 * @var int Total number of records to process
+	 */
+	public static int $total = 0;
+
+	/**
+	 * @var int Default chunk size for processing records
+	 */
+	private const CHUNK_SIZE = 1000;
+
+	/**
+	 * @var int Maximum execution time in seconds (3 hours)
+	 */
+	private const MAX_EXECUTION_TIME = 10800;
 
 
 
 	/**
-	* UPDATE_CACHE
-	* Exec a custom action called from client
-	* Note that tool config is stored in the tool section data (tools_register)
-	* @param object $options
-	* {
-	* 	section_tipo: string as 'rsc197'
-	* 	components_selection: array as [{tipo:'rsc197', regenerate_options:{delete_normalized_files:true}}]
-	* }
-	* @return object $response
-	*/
+	 * UPDATE_CACHE
+	 * Executes cache update for selected components in a section
+	 * Processes records in chunks to manage memory usage and prevent timeouts
+	 *
+	 * This method:
+	 * - Disables logging and time machine to improve performance
+	 * - Creates a bulk process record for tracking
+	 * - Processes records recursively in chunks defined by CHUNK_SIZE
+	 * - Re-enables logging after completion
+	 *
+	 * Note: Tool config is stored in the tool section data (tools_register)
+	 * Note: Requires active session with valid sqo (search query object)
+	 *
+	 * @param object $options Configuration object with the following properties:
+	 *   - section_tipo: string Section identifier (e.g., 'rsc197') - REQUIRED
+	 *   - components_selection: array Components to update, each with:
+	 *     - tipo: string Component tipo
+	 *     - regenerate_options: object Options for regeneration (e.g., {delete_normalized_files:true})
+	 *
+	 * @return object Response object with:
+	 *   - result: bool Success status
+	 *   - msg: string Status message
+	 *   - counter: int Number of records processed
+	 *   - total: int Total records found
+	 *   - n_components: int Number of components updated
+	 *
+	 * @throws Exception If session sqo is not found or invalid
+	 */
 	public static function update_cache(object $options) : object {
 
 		// set time limit
-			set_time_limit( 3600 * 3 );  // 3 hours
+			set_time_limit(self::MAX_EXECUTION_TIME);
 
 		// unlock session
 			session_write_close();
@@ -43,8 +86,8 @@ class tool_update_cache extends tool_common {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// Disable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log				= false;
-			tm_record::$save_tm	= false;
+			logger_backend_activity::$enable_log	= false;
+			tm_record::$save_tm						= false;
 
 		// RECORDS. Use actual list search options as base to build current search
 			$sqo_id	= section::build_sqo_id($section_tipo);
@@ -63,18 +106,14 @@ class tool_update_cache extends tool_common {
 
 		// PROCESS
 			// create new process section
-				$bulk_process_section = section::get_instance(
-					null, // string|null section_id
-					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-				);
-				$bulk_process_section->Save();
-
 			// get the bulk_process_id as the section_id of the section process
-				$bulk_process_id = (int)$bulk_process_section->get_section_id();
+			$section = section::get_instance(DEDALO_BULK_PROCESS_SECTION_TIPO);
+			$bulk_process_id = $section->create_record();
 
 			// Save the process name into the process section
+				$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
 				$bulk_process_label_component = component_common::get_instance(
-					'component_input_text', // string model
+					$bulk_process_label_model, // string model
 					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
 					$bulk_process_id, // string section_id
 					'list', // string mode
@@ -88,12 +127,18 @@ class tool_update_cache extends tool_common {
 				}
 				$component_names = implode(', ', $ar_component_names);
 				$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
-				$bulk_process_label_component->set_dato($bulk_process_label);
-				$bulk_process_label_component->Save();
+				$bulk_process_data = [
+					(object)[
+						'value'	=> $bulk_process_label,
+						'lang'	=> $bulk_process_label_component->get_lang()
+					]
+				];
+				$bulk_process_label_component->set_data($bulk_process_data);
+				$bulk_process_label_component->save();
 
 		// process_chunk
 			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-			$sqo->limit		= 1000;
+			$sqo->limit		= self::CHUNK_SIZE;
 			$sqo->offset	= 0;
 
 		// count records
@@ -102,7 +147,6 @@ class tool_update_cache extends tool_common {
 			self::$total	= $rows_data->total;
 
 		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
-
 			tool_update_cache::process_chunk(
 				$sqo,
 				$section_tipo,
@@ -111,8 +155,8 @@ class tool_update_cache extends tool_common {
 			);
 
 		// Enable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log				= true;
-			tm_record::$save_tm	= true;
+			logger_backend_activity::$enable_log	= true;
+			tm_record::$save_tm						= true;
 
 		$section_label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
 
@@ -130,14 +174,30 @@ class tool_update_cache extends tool_common {
 
 
 	/**
-	* PROCESS_CHUNK
-	* Recursive
-	* Chunk the process into chunks by sqo limit
-	* @param object object $sqo
-	* @param string $section_tipo
-	* @param array $components_selection
-	* @return bool
-	*/
+	 * PROCESS_CHUNK
+	 * Recursively processes cache updates in chunks to prevent memory overflow
+	 *
+	 * This method:
+	 * - Searches for records using the provided sqo (limited by CHUNK_SIZE)
+	 * - Iterates through each record and selected component
+	 * - Regenerates component data with provided options
+	 * - Recursively calls itself with incremented offset until no more records
+	 * - Calls gc_collect_cycles() between chunks to free memory
+	 *
+	 * Recursion terminates when row_count() returns 0 (no more records found)
+	 *
+	 * @param object $sqo Search query object for record retrieval
+	 *   Must include: limit (chunk size), offset (current position)
+	 * @param string $section_tipo Section type identifier (e.g., 'rsc197')
+	 * @param array $components_selection Components to regenerate, each with:
+	 *   - tipo: string Component tipo
+	 *   - regenerate_options: object|null Options for component regeneration
+	 * @param int $bulk_process_id Bulk process section identifier for tracking and reversion
+	 *
+	 * @return bool True on successful completion of all chunks
+	 *
+	 * @throws Exception If component instantiation or regeneration fails
+	 */
 	public static function process_chunk(object $sqo, string $section_tipo, array $components_selection, int $bulk_process_id) : bool {
 
 		$start_time=start_time();
@@ -147,14 +207,14 @@ class tool_update_cache extends tool_common {
 			$db_result	= $search->search();
 
 		// CLI process data
-		if ( running_in_cli()===true ) {
-			$pdata = new stdClass();
-				$pdata->msg		= (label::get_label('processing') ?? 'Processing');
-				$pdata->counter	= self::$n_records;
-				$pdata->total	= self::$total;
-			// send to output
-			print_cli($pdata);
-		}
+			if ( running_in_cli()===true ) {
+				$pdata = new stdClass();
+					$pdata->msg		= (label::get_label('processing') ?? 'Processing');
+					$pdata->counter	= self::$n_records;
+					$pdata->total	= self::$total;
+				// send to output
+				print_cli($pdata);
+			}
 
 		// result records iterate
 			foreach ($db_result as $row) {
@@ -205,7 +265,9 @@ class tool_update_cache extends tool_common {
 						$current_component->set_bulk_process_id($bulk_process_id);
 
 					// regenerate data
-						$current_component->get_dato(); // !! Important get dato before regenerate
+						// IMPORTANT: Load component data into memory before regeneration
+						// Some regeneration operations depend on existing data being available
+						$current_component->get_data();
 						// exec component regeneration with options
 						$result = $current_component->regenerate_component(
 							$current_regenerate_options
@@ -235,11 +297,10 @@ class tool_update_cache extends tool_common {
 				, logger::DEBUG
 			);
 
-		// recursion			
+		// recursion
 			if ($db_result->row_count() > 0) {
 
 				// Forces collection of any existing garbage cycles
-					$db_result->free();  // ~ 40MB/1000
 					gc_collect_cycles();
 
 				$sqo->offset = $sqo->offset + $sqo->limit;
@@ -261,23 +322,30 @@ class tool_update_cache extends tool_common {
 
 
 	/**
-	* GET_COMPONENT_LIST
-	* List of components ready to update cache
-	* Uses get_section_elements_context to get a full list
-	* of elements context including section_groups
-	* @see common::get_section_elements_context
-	* Note that whole options are passed to method get_section_elements_context
-	* @param object $options
-	* {
-	* 	ar_section_tipo: array|null
-	* 	use_real_sections: bool = false
-	* 	skip_permissions: bool = false
-	* 	ar_tipo_exclude_elements: array (optional)
-	* 	ar_components_exclude: array (optional)
-	* }
-	* @return object $response
-	* 	->result = array of objects
-	*/
+	 * GET_COMPONENT_LIST
+	 * Retrieves list of components available for cache updates
+	 * Uses get_section_elements_context to get full element context including section_groups
+	 *
+	 * This method enriches each component with its regenerate_options by calling
+	 * the static method get_regenerate_options() on each component model class.
+	 * If the method doesn't exist, a warning is logged and null is set.
+	 *
+	 * @see common::get_section_elements_context
+	 *
+	 * @param object $options Configuration options passed to get_section_elements_context:
+	 *   - ar_section_tipo: array|null Section types to include
+	 *   - use_real_sections: bool Default false
+	 *   - skip_permissions: bool Default false
+	 *   - ar_tipo_exclude_elements: array (optional) Elements to exclude
+	 *   - ar_components_exclude: array (optional) Components to exclude
+	 *
+	 * @return object Response object with:
+	 *   - result: array Component list, each element enriched with:
+	 *     - regenerate_options: object|null Options available for component regeneration
+	 *   - msg: string Status message
+	 *
+	 * @throws Exception If get_section_elements_context fails
+	 */
 	public static function get_component_list(object $options) : object {
 
 		// filtered_components
@@ -286,19 +354,26 @@ class tool_update_cache extends tool_common {
 			);
 
 		// add regenerate_options to components
-			array_map(function($el){
-
+			foreach ($component_list as $el) {
+				$regenerate_options = null;
 				if ($el->type==='component') {
-					$regenerate_options = call_user_func([$el->model, 'get_regenerate_options']);
+					// Check if the model class has the get_regenerate_options method
+					if (method_exists($el->model, 'get_regenerate_options')) {
+						$regenerate_options = call_user_func([$el->model, 'get_regenerate_options']);
+					} else {
+						debug_log(__METHOD__
+							. " Method 'get_regenerate_options' not found in model: {$el->model} for tipo: {$el->tipo}"
+							, logger::WARNING
+						);
+					}
 				}
-				$el->regenerate_options = $regenerate_options ?? null;
-			}, $component_list);
+				$el->regenerate_options = $regenerate_options;
+			}
 
 		// response
 			$response = new stdClass();
 				$response->result	= $component_list;
 				$response->msg		= 'OK. Request done successfully';
-
 
 		return $response;
 	}//end get_component_list

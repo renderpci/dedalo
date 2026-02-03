@@ -847,6 +847,9 @@ const render_automatic_transcription = function (options) {
 					// return a Promise with the data to be saved into transcription component.
 					self.automatic_transcription(automatic_transcription_options)
 					.then((response)=>{
+						if(SHOW_DEBUG){
+							console.log('----> automatic_transcription response', response);
+						}
 
 						button_automatic_transcription.classList.remove('disable')
 						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
@@ -854,8 +857,8 @@ const render_automatic_transcription = function (options) {
 
 						// set value and implicit save action in component_text_area
 						self.transcription_component.set_value(
-							key		= 0,
-							value	= response
+							0, // key
+							response[0] || '' // value
 						)
 					})
 					break;

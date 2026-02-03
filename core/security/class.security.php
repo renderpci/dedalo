@@ -259,31 +259,6 @@ class security {
 
 
 	/**
-	* GET_AR_PERMISSIONS_IN_MATRIX_FOR_CURRENT_USER (REMOVED 19-03-2024 BECAUSE IT IS NOT NECESSARY)
-	* Search in matrix record with this id (user_id) as parent,
-	* filter by tipo - model name (component_security_access) and get dato if exists in db
-	* @param int $user_id
-	* @return array $dato_access
-	*	Array of all elements of current Ontology with permission values
-	*	Include areas and components permissions
-	*/
-		// private static function get_ar_permissions_in_matrix_for_current_user(int $user_id) : array {
-
-		// 	// get reliable component (assigned profile checked)
-		// 		$component_security_access = security::get_user_security_access($user_id);
-
-		// 	// dato_access. is the first value of the result array if not empty
-		// 	// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
-		// 		$dato_access = !empty($component_security_access)
-		// 			? $component_security_access->get_dato()
-		// 			: [];
-
-		// 	return $dato_access ?? [];
-		// }//end get_ar_permissions_in_matrix_for_current_user
-
-
-
-	/**
 	* GET_USER_SECURITY_ACCESS
 	* Locate component_security_access of current logged user based on user profile
 	* and return the component instance

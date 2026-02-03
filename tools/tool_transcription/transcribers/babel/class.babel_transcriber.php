@@ -355,14 +355,14 @@ class babel_transcriber {
 
 		// check if the component has any data to avoid delete user changes in data.
 		// if the user want re-create the automatic transcription first need to delete previous data.
-		$current_data = $component_transcription->get_dato();
+		$current_data = $component_transcription->get_data_lang($lang);
 
 		if(!empty($current_data) && !empty($current_data[0])){
 			return false;
 		}
 
-		$component_transcription->set_dato($data);
-		$component_transcription->Save();
+		$component_transcription->set_data_lang($data, $lang);
+		$component_transcription->save();
 
 		return true;
 	}//end process_file

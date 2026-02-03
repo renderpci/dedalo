@@ -508,7 +508,7 @@ class indexation_grid {
 							DEDALO_DATA_NOLAN,
 							$section_top_tipo
 						);
-						$component_filter_data = (array)$component_filter->get_dato();
+						$component_filter_data = $component_filter->get_data() ?? [];
 
 						$in_user_projects = false;
 						foreach ($ar_user_projects as $user_project_locator) {

@@ -59,33 +59,44 @@ class system {
 	*/
 	public static function get_mhz() : ?int {
 
-		$info		= system::get_info();
-		$cpu_info	= $info->getCPU();
+		$info = system::get_info();
+		$cpu_info = $info->getCPU();
 
-		// sample data
-		// $cpu_info = json_decode('[
-		//   {
-		// 	"Vendor": "GenuineIntel",
-		// 	"Model": "Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz",
-		// 	"MHz": "3500.000"
-		//   },
-		//   {
-		// 	"Model": "Intel(R) Xeon(R) CPU E3-1230 v6 @ 3.50GHz",
-		// 	"Vendor": "GenuineIntel",
-		// 	"MHz": "3500.000"
-		//   }
-		// ]');
+		$mhz_values = [];
 
-		preg_match_all('/.*"MHz": "([0-9]+)\.[0-9]+".*/', to_string($cpu_info), $output_array);
-
-		$match_list = $output_array[1] ?? [];
-		if (!empty($match_list)) {
-			// max value
-			$total_mhz = intval( max($match_list) );
+		// If Linfo returns an array/object, try to read the MHz field directly
+		if (is_array($cpu_info)) {
+			foreach ($cpu_info as $entry) {
+				if (is_array($entry) && isset($entry['MHz'])) {
+					$mhz_values[] = intval(round(floatval($entry['MHz'])));
+				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
+					$mhz_values[] = intval(round(floatval($entry->MHz)));
+				}
+			}
+		} elseif (is_object($cpu_info)) {
+			foreach (get_object_vars($cpu_info) as $entry) {
+				if (is_array($entry) && isset($entry['MHz'])) {
+					$mhz_values[] = intval(round(floatval($entry['MHz'])));
+				} elseif (is_object($entry) && property_exists($entry, 'MHz')) {
+					$mhz_values[] = intval(round(floatval($entry->MHz)));
+				}
+			}
+		} else {
+			// Fallback: stringify / json-encode and extract with regex
+			$json = is_string($cpu_info) ? $cpu_info : @json_encode($cpu_info);
+			if (!empty($json)) {
+				preg_match_all('/"MHz"\s*:\s*"([0-9]+(?:\.[0-9]+)?)"/i', $json, $matches);
+				foreach ($matches[1] ?? [] as $m) {
+					$mhz_values[] = intval(round(floatval($m)));
+				}
+			}
 		}
 
+		if (!empty($mhz_values)) {
+			return intval(max($mhz_values));
+		}
 
-		return $total_mhz ?? null;
+		return null;
 	}//end get_mhz
 
 
@@ -339,17 +350,19 @@ class system {
 	*/
 	public static function get_php_memory() : int {
 
-		$memory_limit = ini_get('memory_limit') ?? 0;
-		if (empty($memory_limit)) {
+		$memory_limit = ini_get('memory_limit') ?? '';
+		if ($memory_limit === '' || $memory_limit === null) {
 			return 0;
 		}
 
-		$bytes = system::return_bytes( $memory_limit );
+		$bytes = system::return_bytes($memory_limit);
+		if ($bytes <= 0) {
+			// Treat -1 (no limit) or invalid values as 0 for reporting in GB
+			return 0;
+		}
 
 		$gigabytes_float = $bytes / (1024 * 1024 * 1024);
-
-		$gigabytes = intval( round($gigabytes_float, 0) );
-
+		$gigabytes = intval(round($gigabytes_float, 0));
 
 		return $gigabytes;
 	}//end get_php_memory
@@ -365,23 +378,40 @@ class system {
 	* @return int $val
 	*/
 	public static function return_bytes( string $val ) : int {
-		$val	= trim($val);
-		$last	= strtolower($val[strlen($val)-1]);
-		$size	= (int)substr($val, 0, -1);
-		switch($last) {
-			// The 'G' modifier is available since PHP 5.1.0
-			case 'g':
-				$size *= (1024 * 1024 * 1024);
-				break;
-			case 'm':
-				$size *= (1024 * 1024);
-				break;
-			case 'k':
-				$size *= 1024;
-				break;
+		$val = trim($val);
+		// Handle special -1 value (no limit)
+		if ($val === '-1') {
+			return -1;
 		}
 
-		return $size;
+		// Pure numeric value (bytes)
+		if (is_numeric($val)) {
+			return (int)$val;
+		}
+
+		$len = strlen($val);
+		if ($len === 0) {
+			return 0;
+		}
+
+		$last = strtolower($val[$len - 1]);
+		$number = floatval(substr($val, 0, -1));
+		switch ($last) {
+			case 'g':
+				$number *= (1024 * 1024 * 1024);
+				break;
+			case 'm':
+				$number *= (1024 * 1024);
+				break;
+			case 'k':
+				$number *= 1024;
+				break;
+			default:
+				// Unknown suffix — try integer cast of full string
+				return (int)filter_var($val, FILTER_SANITIZE_NUMBER_INT);
+		}
+
+		return (int)$number;
 	}//end return_bytes
 
 
