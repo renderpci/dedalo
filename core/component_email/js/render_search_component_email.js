@@ -60,7 +60,7 @@ render_search_component_email.prototype.search = async function(options) {
 const get_content_data = function(self) {
 
 	const data	= self.data || {}
-	const value	= data.value || []
+	const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -85,7 +85,7 @@ const get_content_data = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
+		const inputs_value	= entries.length>0 ? entries : ['']
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)

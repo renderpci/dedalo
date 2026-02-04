@@ -106,12 +106,12 @@ component_geolocation.prototype.init = async function(options) {
 
 	// self default value when the component doesn't has any value, data = null
 	// default value
-		self.default_value = [{
+		self.default_value = {
 			lat		: 39.462571,
 			lon		: -0.376295,
 			zoom	: 16,
 			alt		: 0
-		}]
+		}
 
 	// load dependencies js/css. Set the self specific libraries and variables not defined by the generic init
 		// await self.load_libs()
@@ -230,25 +230,25 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		await self.load_libs()
 
 	// defaults
-		const value = self.data.value || self.default_value
+		const entries = self.data.entries || [self.default_value]
 
 	// get data
-		const field_lat		= value[key].lat
-		const field_lon		= value[key].lon
-		const field_zoom	= value[key].zoom
-		const field_alt		= value[key].alt
+		const field_lat		= entries[key].lat
+		const field_lon		= entries[key].lon
+		const field_zoom	= entries[key].zoom
+		const field_alt		= entries[key].alt
 
 	// update the current_value with the data from DDBB
 	// current_value will be update with different changes to create change_data to save
-		self.current_value[key] = clone(value[key])
+		self.current_value[key] = clone(entries[key])
 
 	// load all layers
-		self.ar_layer_loaded = typeof value[key].lib_data!=='undefined'
-			? clone(value[key].lib_data)
+		self.ar_layer_loaded = typeof entries[key].lib_data!=='undefined'
+			? clone(entries[key].lib_data)
 			: []
 
 	// map_data
-		const map_data = (typeof value!=='undefined')
+		const map_data = (typeof entries!=='undefined')
 			? {
 				x		: field_lat,
 				y		: field_lon,
@@ -836,8 +836,8 @@ component_geolocation.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = self.data.value && typeof(self.data.value[0])!=='undefined' && typeof(self.data.value[0].lib_data)!=='undefined'
-		? self.data.value[0].lib_data
+	const lib_data = self.data.entries && typeof(self.data.entries[0])!=='undefined' && typeof(self.data.entries[0].lib_data)!=='undefined'
+		? self.data.entries[0].lib_data
 		: [{
 				layer_id		: 1,
 				layer_data		: [],
@@ -1110,8 +1110,8 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
 
 	// update the data in the instance previous to save
-		// const value = typeof (self.data.value[0])!=='undefined'
-		// 	? clone(self.data.value[0])
+		// const entries = typeof (self.data.entries[0])!=='undefined'
+		// 	? clone(self.data.entries[0])
 		// 	: {}
 
 	// publish the change to used by component_text_area from properties like 'hierarchy42'
@@ -1199,7 +1199,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		el => el.role === 'target_geolocation_tipo').tipo
 		|| 'hierarchy31' // Default geolocation map in thesarus
 
-	const original_value = caller.data.value
+	const original_value = caller.data.entries
 	// if the caller has not data, do not update the map
 	if(!original_value){
 		return
@@ -1217,7 +1217,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 	if(target_geolocation_data){
 		// geolocation doesn't has multiple maps and the key of the data array is always 0
 		const key = 0
-		self.current_value = target_geolocation_data.value
+		self.current_value = target_geolocation_data.entries
 		self.update_input_values(
 			key,
 			self.current_value[key],

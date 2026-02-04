@@ -153,8 +153,8 @@ export const get_content_data = function(self) {
 export const get_input_element = (element, self) => {
 
 	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
+		const entries			= self.data.entries || []
+		const entries_length	= entries.length
 		const label				= element.label || ''
 		const section_id		= element.section_id
 		const section_tipo		= element.section_tipo
@@ -254,10 +254,10 @@ export const get_input_element = (element, self) => {
 		}
 
 		// checked option set on match
-			for (let j = 0; j < value_length; j++) {
-				if (value[j] && datalist_value &&
-					value[j].section_id===datalist_value.section_id &&
-					value[j].section_tipo===datalist_value.section_tipo
+			for (let j = 0; j < entries_length; j++) {
+				if (entries[j] && datalist_value &&
+					entries[j].section_id===datalist_value.section_id &&
+					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_node.checked = 'checked'
 				}
@@ -280,12 +280,12 @@ export const get_input_element = (element, self) => {
 export const get_input_element_read = (element, self) => {
 
 	// short vars
-		const value				= self.data.value || []
+		const entries			= self.data.entries || []
 		const datalist_value	= element.value
 		const label				= element.label || (element.section_tipo+'_'+element.section_id)
 
 	// checked option set on match
-		const found = value.find(el => datalist_value &&
+		const found = entries.find(el => datalist_value &&
 			el.section_id===datalist_value.section_id &&
 			el.section_tipo===datalist_value.section_tipo
 		)
@@ -400,7 +400,7 @@ export const get_buttons = (self) => {
 			button_reset.addEventListener('click', function(e) {
 				e.stopPropagation()
 
-				if (self.data.value.length===0) {
+				if (self.data.entries.length===0) {
 					return true
 				}
 

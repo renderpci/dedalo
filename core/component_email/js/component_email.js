@@ -178,7 +178,7 @@ component_email.prototype.get_ar_emails = async function() {
 		const max_characters = 30 ; //1900 max characters, in win are 2000
 		// check the data and remove the empty values
 		for (let i = len - 1; i >= 0; i--) {
-			const current_data = data[i].value
+			const current_data = data[i].entries
 			if(current_data.length<=0) {
 				continue
 			}

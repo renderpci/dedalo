@@ -111,7 +111,7 @@ component_json.prototype.save_sequence = async function(editor) {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+		const value	= data.entries || []
 
 
 	// check if the editor validate the current value

@@ -113,8 +113,8 @@ const get_content_data = function(self) {
 const get_input_element = (i, current_value, self) => {
 
 	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
+		const entries			= self.data.entries || []
+		const value_length		= entries.length
 		const datalist_item		= current_value // is object as {label, section_id, value}
 		const label				= datalist_item.label
 		const section_id		= datalist_item.section_id
@@ -165,9 +165,9 @@ const get_input_element = (i, current_value, self) => {
 
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {
-				if (value[j] && datalist_value &&
-					value[j].section_id===datalist_value.section_id &&
-					value[j].section_tipo===datalist_value.section_tipo
+				if (entries[j] && datalist_value &&
+					entries[j].section_id===datalist_value.section_id &&
+					entries[j].section_tipo===datalist_value.section_tipo
 					) {
 						input_checkbox.checked = 'checked'
 				}

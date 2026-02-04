@@ -66,14 +66,14 @@ view_default_edit_inverse.render = async function(self, options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value
+		const inputs_value	= entries
 		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 

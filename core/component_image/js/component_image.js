@@ -165,11 +165,11 @@ component_image.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const data	= self.data || {}
-	const value	= data.value || []
+	const data		= self.data || {}
+	const entries	= data.entries || []
 
-	const lib_data = typeof value[0]!=='undefined' && value[0].lib_data
-		? value[0].lib_data
+	const lib_data = typeof entries[0]!=='undefined' && entries[0].lib_data
+		? entries[0].lib_data
 		: null
 
 
@@ -209,7 +209,7 @@ component_image.prototype.load_vector_editor = async function() {
 	const self = this
 
 	const data					= self.data || {}
-	const value					= data.value || []
+	const entries					= data.entries || []
 	const default_layer_color	= '#ffffff';
 
 	// options
@@ -250,8 +250,8 @@ component_image.prototype.load_vector_editor = async function() {
 	// load all layers if the data is empty it create the first layer
 		if(self.ar_layers.length < 1){
 			// add the data from instance to the ar_layers, it control the all project layers that will showed in the vector editor
-			self.ar_layers = typeof value[0]!=='undefined' && value[0].lib_data
-				? value[0].lib_data
+			self.ar_layers = typeof entries[0]!=='undefined' && entries[0].lib_data
+				? entries[0].lib_data
 				: [{
 					layer_id		: 0,
 					layer_data		: [],
@@ -325,8 +325,8 @@ component_image.prototype.update_draw_data = function() {
 	current_layer.user_layer_name	= project.activeLayer.data.user_layer_name
 
 	// update the data in the instance previous to save
-	const value =  typeof(self.data.value[0])!=='undefined'
-		? clone(self.data.value[0])
+	const value =  typeof(self.data.entries[0])!=='undefined'
+		? clone(self.data.entries[0])
 		: {}
 	value.lib_data		= self.ar_layers
 	value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
@@ -367,10 +367,10 @@ component_image.prototype.get_default_file_info = function(key=0) {
 
 	const default_quality = self.context.features.default_quality
 
-	const value = self.data.value || [];
+	const entries = self.data.entries || [];
 
-	const default_file_info = (default_quality && value[key])
-		? value[key].files_info.find(el => el.quality === default_quality)
+	const default_file_info = (default_quality && entries[key])
+		? entries[key].files_info.find(el => el.quality === default_quality)
 		: null
 
 	return default_file_info
@@ -391,10 +391,10 @@ component_image.prototype.get_quality_file_info = function( quality='original', 
 
 	const self = this
 
-	const value = self.data.value || [];
+	const entries = self.data.entries || [];
 
-	const quality_file_info = (quality && value[key])
-		? value[key].files_info.find(el => el.quality === quality && el.extension === extension)
+	const quality_file_info = (quality && entries[key])
+		? entries[key].files_info.find(el => el.quality === quality && el.extension === extension)
 		: null
 
 	return quality_file_info
@@ -413,10 +413,10 @@ component_image.prototype.get_original_file_name = function( key=0 ) {
 
 	const self = this
 
-	const value = self.data.value || [];
+	const entries = self.data.entries || [];
 
-	const original_file_name = (value[key].original_file_name)
-		? value[key].original_file_name
+	const original_file_name = (entries[key].original_file_name)
+		? entries[key].original_file_name
 		: null
 
 	return original_file_name
@@ -435,10 +435,10 @@ component_image.prototype.get_original_normalized_file_name = function( key=0 ) 
 
 	const self = this
 
-	const value = self.data.value || [];
+	const entries = self.data.entries || [];
 
-	const original_normalized_file_name = (value[key].original_normalized_name)
-		? value[key].original_normalized_name
+	const original_normalized_file_name = (entries[key].original_normalized_name)
+		? entries[key].original_normalized_name
 		: null
 
 	return original_normalized_file_name

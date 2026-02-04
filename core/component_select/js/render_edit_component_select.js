@@ -78,7 +78,7 @@ export const get_content_data = function(self, options) {
 		const data				= self.data || {}
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
-		const value				= data.value || []
+		const entries			= data.entries || []
 		const permissions		= self.permissions
 
 	// content_data
@@ -88,8 +88,8 @@ export const get_content_data = function(self, options) {
 		if (permissions===1) {
 
 			// filtered_datalist. Datalist values that exists into component value
-				for (let i = 0; i < value.length; i++) {
-					const data_value = value[i]
+				for (let i = 0; i < entries.length; i++) {
+					const data_value = entries[i]
 					const current_datalist_item	= datalist.find(el =>
 						el.value &&
 						el.value.section_id==data_value.section_id &&
@@ -117,10 +117,10 @@ export const get_content_data = function(self, options) {
 		}else{
 
 			// build options. Only one value is expected
-				const value_length = value.length || 1
-				for (let i = 0; i < value_length; i++) {
+				const entries_length = entries.length || 1
+				for (let i = 0; i < entries_length; i++) {
 					// get the content_value
-					const content_value = render_content_data(i, value[i], self)
+					const content_value = render_content_data(i, entries[i], self)
 					// add node to content_data
 					content_data.appendChild(content_value)
 					// set pointers

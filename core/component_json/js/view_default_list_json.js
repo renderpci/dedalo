@@ -91,7 +91,7 @@ export const get_value_string = function(self) {
 
 	// short vars
 		const data	= self.data
-		const value	= data.value || []
+		const value	= data.entries || []
 
 	// value_string Activity. Moved to view 'collapse' (view_collapse_list_json)
 		// if(self.section_tipo==='dd542'){

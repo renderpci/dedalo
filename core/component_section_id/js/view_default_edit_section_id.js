@@ -80,7 +80,8 @@ view_default_edit_section_id.render = async function(self, options) {
 */
 const get_content_data_edit = function(self) {
 
-	const value = self.data.value
+	const entries = self.data.entries || []
+	const value = (entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0]
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)

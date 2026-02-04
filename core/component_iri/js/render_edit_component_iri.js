@@ -72,16 +72,16 @@ render_edit_component_iri.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= (value.length<1) ? [{}] : value
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value	= (entries.length<1) ? [{}] : entries
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			const current_value = inputs_value[i]
 			const content_value_node = (self.permissions===1)
 				? get_content_value_read(i, current_value, self)
@@ -423,7 +423,7 @@ const get_content_value = (i, current_value, self) => {
 						// Refresh caller instances (tool_lang_multi case)
 						if (self.caller?.ar_instances) {
 							const components = self.caller.ar_instances.filter(el =>
-								el.model===self.model && el.data?.value
+								el.model===self.model && el.data?.entries
 							)
 
 							if(SHOW_DEBUG===true) {
@@ -640,13 +640,13 @@ export const get_buttons = (self) => {
 				// check existing key in transliterate_value
 				// If the same key exists in the transliterate_value, force to refresh the component_iri
 				// to get the subdatum of the dataframe.
-				const current_key			= self.data.value?.length || 0
+				const current_key			= self.data.entries?.length || 0
 				const transliterate_value	= self.data.transliterate_value || []
 				const build_autoload		= transliterate_value[current_key] ? true : false
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value?.length || 0,
+					key		: self.data.entries?.length || 0,
 					value	: null
 				})]
 				self.change_value({

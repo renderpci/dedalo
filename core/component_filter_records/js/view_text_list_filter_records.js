@@ -30,9 +30,9 @@ view_text_list_filter_records.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data
-		const value			= data.value || []
-		const value_flat	= value.flat() // remove first level
-		const string_values	= value_flat.map((el)=>{
+		const entries		= data.entries || []
+		const entries_flat	= entries.flat() // remove first level
+		const string_values	= entries_flat.map((el)=>{
 			return JSON.stringify(el)
 		})
 		const value_string	= string_values.join('\n')

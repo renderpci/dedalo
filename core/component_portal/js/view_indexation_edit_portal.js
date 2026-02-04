@@ -49,16 +49,16 @@ view_indexation_edit_portal.render = async function(self, options) {
 	// columns_map
 		self.columns_map = await rebuild_columns_map(self)
 
-	// value_combined (grouped by tag id)
+	// entries_combined (grouped by tag id)
 		const data				= self.data || {}
-		const value				= data.value || []
-		const value_combined	= []
-		const value_length		= value.length
-		for (let i = 0; i < value_length; i++) {
-			const item = value[i]
-			const found = value_combined.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
+		const entries			= data.entries || []
+		const entries_combined	= []
+		const entries_length	= entries.length
+		for (let i = 0; i < entries_length; i++) {
+			const item = entries[i]
+			const found = entries_combined.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
 			if (!found) {
-				value_combined.push(item)
+				entries_combined.push(item)
 			}
 		}
 
@@ -71,7 +71,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 			caller		: self,
 			mode		: 'list',
 			columns_map	: self.columns_map,
-			value		: value_combined,
+			value		: entries_combined,
 			id_variant	: id_variant,
 			view		: 'text'
 		})
@@ -311,18 +311,18 @@ const render_tag_column = function(options) {
 		const locator		= options.locator
 		const caller		= options.caller
 		const data			= caller.data || {}
-		const value			= data.value || []
-		const value_tags	= value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
+		const entries		= data.entries || []
+		const entries_tags	= entries.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
 
 	const self = caller
 
 	const fragment = new DocumentFragment()
 
 	// add a tag for each value
-		const value_tags_length = value_tags.length
-		for (let i = 0; i < value_tags_length; i++) {
+		const entries_tags_length = entries_tags.length
+		for (let i = 0; i < entries_tags_length; i++) {
 
-			const current_locator = value_tags[i]
+			const current_locator = entries_tags[i]
 
 			const class_name = !current_locator.tag_id
 				? 'no_tag'

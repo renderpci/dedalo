@@ -90,8 +90,8 @@ const render_content_value = function(options) {
 		const self	= options.self
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 		const default_bk_color = '#006ed2';
 
 	// content_value
@@ -116,7 +116,7 @@ const render_content_value = function(options) {
 				return
 			}
 
-			if(value.length<1) {
+			if(entries.length<1) {
 
 				// hide self button
 				button_activate.classList.add('hide')
@@ -138,7 +138,7 @@ const render_content_value = function(options) {
 			}
 		}//end fn_mousedown
 
-		if(value.length >= 1) {
+		if(entries.length >= 1) {
 
 			const rating_data = self.get_rating()
 			if(rating_data && rating_data.value){
@@ -196,7 +196,7 @@ const render_content_value = function(options) {
 const open_target_section = async function (self) {
 
 	// last_value. Get the last value of the portal to open the new section
-		const last_value	= self.data.value[self.data.value.length-1]
+		const last_value	= self.data.entries[self.data.entries.length-1]
 		const section_tipo	= last_value.section_tipo
 		const section_id	= last_value.section_id
 

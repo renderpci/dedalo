@@ -632,12 +632,12 @@ section.prototype.build = async function(autoload=false) {
 			// set Data
 				self.data		= self.datum?.data?.find(el => el.tipo===self.tipo && el.typo==='sections') || {}
 				self.section_id = null; // Initialize to null
-				if (self.mode !== 'list' && self.data && Array.isArray(self.data.value)) {
-					const found = self.data.value.find(el => el.section_tipo === self.section_tipo);
+				if (self.mode !== 'list' && self.data && Array.isArray(self.data.entries)) {
+					const found = self.data.entries.find(el => el.section_tipo === self.section_tipo);
 					if (found && found.section_id) {
 						self.section_id = found.section_id;
 					} else {
-						console.warn('Empty value found or section_id missing in self.data.value: ', self.data.value);
+						console.warn('Empty value found or section_id missing in self.data.entries: ', self.data.entries);
 					}
 				}
 
@@ -921,17 +921,17 @@ export const get_section_records = async function(options) {
 			: clone(context.request_config)
 		const fields_separator	= options.fields_separator || context.fields_separator || {}
 		const lang				= options.lang || self.section_lang || self.lang
-		const value				= options.value || ((self.data && self.data.value)
-			? self.data.value
+		const entries			= options.entries || ((self.data && self.data.entries)
+			? self.data.entries
 			: [])
 		const section_record_mode = mode
 
 	// iterate records
-		const ar_promises	= []
-		const value_length	= value.length
-		for (let i = 0; i < value_length; i++) {
+		const ar_promises		= []
+		const entries_length	= entries.length
+		for (let i = 0; i < entries_length; i++) {
 
-			const locator				= value[i];
+			const locator				= entries[i];
 			const current_section_id	= locator.section_id
 			const current_section_tipo	= locator.section_tipo
 

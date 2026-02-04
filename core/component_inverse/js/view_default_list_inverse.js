@@ -25,12 +25,12 @@ export const view_default_list_inverse = function() {
 view_default_list_inverse.render = async function(self, options) {
 
 	// short vars
-		const data = self.data || {}
-		const value = data.value || []
+		const data 		= self.data || {}
+		const entries 	= data.entries || []
 
 	// Value as string
-		const value_string = value && value[0] && value[0].locator
-			? value[0].locator.from_section_id
+		const value_string = entries && entries[0] && entries[0].locator
+			? entries[0].locator.from_section_id
 			: null
 
 	// wrapper

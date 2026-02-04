@@ -80,8 +80,8 @@ view_default_edit_image.render = function(self, options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -89,9 +89,9 @@ const get_content_data = function(self) {
 		content_data.classList.add('media_content_data')
 
 	// values (images)
-		const inputs_value	= value
-		const value_length	= inputs_value.length || 1
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value	= entries
+		const entries_length	= inputs_value.length || 1
+		for (let i = 0; i < entries_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set the pointer

@@ -28,7 +28,8 @@ export const view_default_list_section_id = function() {
 view_default_list_section_id.render = function(self, options) {
 
 	// Value as string
-		const value_string = self.data.value
+		const entries		= self.data.entries || []
+		const value_string	= (entries[0] && typeof entries[0]==='object') ? entries[0].value : entries[0]
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

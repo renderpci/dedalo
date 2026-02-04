@@ -76,7 +76,7 @@ export const component_check_box = function(){
  * @param value
  * @param source
  */
-component_check_box.prototype.get_changed_key = function(action, value, source=this.data.value) {
+component_check_box.prototype.get_changed_key = function(action, value, source=this.data.entries) {
 
 	// const self = this
 
@@ -150,7 +150,7 @@ component_check_box.prototype.change_handler = async function(options) {
 		const changed_key	= self.get_changed_key(
 			action,
 			datalist_value,
-			self.data.value
+			self.data.entries
 		)
 		const changed_value	= (action==='insert') ? datalist_value : null
 
