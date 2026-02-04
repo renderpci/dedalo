@@ -617,30 +617,32 @@ class component_relation_children extends component_relation_common {
 
 		// children
 			$ar_parent = [];
-			foreach ($children_locators as $current_locator) {
+			if (!empty($children_locators)) {
+				foreach ($children_locators as $current_locator) {
 
-				$child_compnent_tipo	= $current_locator->from_component_tipo;
-				$ar_target_parent_tipo	= component_relation_children::get_ar_related_parent_tipo(
-					$child_compnent_tipo,
-					'hierarchy20' // ITS NOT CORRECT, but is not possible know the section_tipo here
-				);
-				if (!empty($ar_target_parent_tipo)) {
-					foreach ($ar_target_parent_tipo as $children_component_tipo) {
+					$child_compnent_tipo	= $current_locator->from_component_tipo;
+					$ar_target_parent_tipo	= component_relation_children::get_ar_related_parent_tipo(
+						$child_compnent_tipo,
+						'hierarchy20' // ITS NOT CORRECT, but is not possible know the section_tipo here
+					);
+					if (!empty($ar_target_parent_tipo)) {
+						foreach ($ar_target_parent_tipo as $children_component_tipo) {
 
-						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
-						$component	= component_common::get_instance(
-							$model_name,
-							$children_component_tipo,
-							$current_locator->section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$current_locator->section_tipo
-						);
-						$component_parent_dato = $component->get_dato();
-						foreach ($component_parent_dato as $parent_locator) {
-							$ar_parent[] = $parent_locator->section_id;
-						}
-					}//end foreach ($ar_target_parent_tipo as $children_component_tipo)
+							$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
+							$component	= component_common::get_instance(
+								$model_name,
+								$children_component_tipo,
+								$current_locator->section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$current_locator->section_tipo
+							);
+							$component_parent_dato = $component->get_dato();
+							foreach ($component_parent_dato as $parent_locator) {
+								$ar_parent[] = $parent_locator->section_id;
+							}
+						}//end foreach ($ar_target_parent_tipo as $children_component_tipo)
+					}
 				}
 			}
 
@@ -661,6 +663,20 @@ class component_relation_children extends component_relation_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Overrides relation common operators.
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() : array {
+
+		$ar_operators = [];
+
+		return $ar_operators;
+	}//end search_operators_info
 
 
 

@@ -90,7 +90,8 @@ const render_content_data = async function(self, ar_section_record) {
 
 	// q operator (search only)
 		const non_q_operator_models = [
-			'component_relation_parent'
+			'component_relation_parent',
+			'component_relation_children'
 		]
 		if (!non_q_operator_models.includes(self.model)) {
 			const q_operator = self.data.q_operator || self.q_operator
@@ -128,6 +129,9 @@ const render_content_data = async function(self, ar_section_record) {
 				parent			: fragment
 			})
 			fake_input_value.setAttribute('readonly', true);
+			if (non_q_operator_models.includes(self.model)) {
+				fake_input_value.classList.add('no_operator')
+			}
 			// click event
 			const click_handler = async (e) => {
 				e.preventDefault()
