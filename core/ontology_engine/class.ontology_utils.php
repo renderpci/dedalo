@@ -1,16 +1,15 @@
 <?php declare(strict_types=1);
 /**
-* ontology_utils
-* Complementary utilities used to get multiple records of the dd_ontology table.
-* Manages the active and functional ontology records,
-* ontology utils is using to interpreted data, schemas, behaviors, etc. in execution time.
-* It makes resolutions of multiples active nodes.
-* It uses `dd_ontology` table in DDBB.
-* It's a read only object.
-*
-* Note: As ontology nodes are not editable nodes.
-* For doing changes into ontology use ../core/ontology/class.ontology.php
-*/
+ * ONTOLOGY_UTILS
+ *
+ * Complementary utilities used to get multiple records from the dd_ontology table.
+ * Manages active and functional ontology records.
+ * Used to interpret data, schemas, behaviors, etc., at runtime.
+ * Resolves multiple active nodes and interfaces with the `dd_ontology` table.
+ *
+ * This is a read-only object for retrieval purposes.
+ * Note: To modify ontology records, use core/ontology/class.ontology.php.
+ */
 class ontology_utils {
 
 
@@ -22,11 +21,13 @@ class ontology_utils {
 
 
 	/**
-	* get_ar_tipo_by_model
-	* Resolves all terms matching the given model
-	* @param string $model_name
-	* @return array $ar_result
-	*/
+	 * GET_AR_TIPO_BY_MODEL
+	 *
+	 * Resolves all terms matching the given model name.
+	 *
+	 * @param string $model_name The model name to filter by (e.g., 'section', 'component_input_text').
+	 * @return array List of found tipos.
+	 */
 	public static function get_ar_tipo_by_model( string $model_name ) : array {
 
 		// static cache
@@ -51,11 +52,13 @@ class ontology_utils {
 
 
 	/**
-	* GET_AR_ALL_MODELS
-	* It is used in the edit thesaurus selector to assign model
-	* @return array $all_models
-	* 	Array of all models tipo as ["dd3","dd1226","dd1259",..]
-	*/
+	 * GET_AR_ALL_MODELS
+	 *
+	 * Retrieves all ontology records designated as models.
+	 * Used in selectors to assign models to terms.
+	 *
+	 * @return array Array of model tipos, e.g., ["dd3", "dd1226", ...].
+	 */
 	public static function get_ar_all_models() : array {
 
 		// search
@@ -71,13 +74,14 @@ class ontology_utils {
 
 
 	/**
-	* GET_AR_ALL_TIPO_OF_MODEL_TIPO
-	* Resolves all term id of given model tipo, like
-	* dd6 => ["oh1","dd917",..]
-	* @param string $modelo_tipo
-	* @return array $ar_all_tipo
-	* 	Array of all term_id as ["oh1","dd917",..]
-	*/
+	 * GET_AR_ALL_TIPO_OF_MODEL_TIPO
+	 *
+	 * Resolves all term IDs belonging to a specific model tipo.
+	 * Example: dd6 => ["oh1", "dd917", ...]
+	 *
+	 * @param string $model_tipo The source model tipo (e.g., 'dd6' for sections).
+	 * @return array Array of term IDs.
+	 */
 	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo ) : array {
 
 		// search
@@ -88,20 +92,19 @@ class ontology_utils {
 		$ar_all_tipo = ( $result===false ) ? [] : $result;
 
 		return $ar_all_tipo;
-	}//end model_tipo
+	}//end get_ar_all_tipo_of_model_tipo
 
 
 
 	/**
-	* CHECK_TIPO_IS_VALID
-	* Checks if given tipo is usable trying to resolve model from tipo
-	* If model is empty, the tipo is not available because dd_ontology is
-	* damaged or the TLD is not installed.
-	* It is also used to validate old data pointing to a non active TLD.
-	* @param string $tipo
-	* 	Could be a component tipo or a section / area tipo.
-	* @return bool
-	*/
+	 * CHECK_TIPO_IS_VALID
+	 *
+	 * Checks if a given tipo is usable by attempting to resolve its model.
+	 * If the model is empty, the tipo is considered invalid (ontology damage or missing TLD).
+	 *
+	 * @param string $tipo The tipo to validate (section, component, etc.).
+	 * @return bool True if valid, false otherwise.
+	 */
 	public static function check_tipo_is_valid( string $tipo ) : bool {
 
 		// check tipo is safe. Exclude bad formed tipos
@@ -121,23 +124,22 @@ class ontology_utils {
 
 
 	/**
-	* GET_ACTIVE_TLDS
-	* Get from dd_ontology table all active/installed tlds.
-	* Used to check if the tipo has a valid definition in the ontology.
-	* If the tipo is not installed is not possible to resolve it
-	* The callers will decide if is necessary remove the tipo from definition, as remove from sqo, show error, or ...
-	* @return array $active_tlds
-	*/
+	 * GET_ACTIVE_TLDS
+	 *
+	 * Retrieves all active/installed TLDs from the `dd_ontology` table.
+	 *
+	 * @return array List of installed TLDs (e.g., ['dd', 'activity', 'oh']).
+	 */
 	public static function get_active_tlds() : array {
 
-		// Cache		
+		// Cache
 		if(isset(self::$active_tlds_cache)){
 			return self::$active_tlds_cache;
 		}
 
-		$table	= ontology_node::$table; // dd_ontology | dd_ontology_backup
-		$sql_query	= "SELECT tld FROM \"$table\" GROUP BY tld";
-		$result	= pg_query(DBi::_getConnection(), $sql_query);
+		$table      = ontology_node::$table;
+		$sql_query  = "SELECT tld FROM \"{$table}\" GROUP BY tld";
+		$result     = pg_query(DBi::_getConnection(), $sql_query);
 
 		$active_tlds = [];
 		while($row = pg_fetch_assoc($result)) {
@@ -153,11 +155,13 @@ class ontology_utils {
 
 
 	/**
-	* CHECK_ACTIVE_TLD
-	* Checks if the tipo tld is available and installed in the Ontology looking for the dd_ontology
-	* @param string $tipo
-	* @return bool
-	*/
+	 * CHECK_ACTIVE_TLD
+	 *
+	 * Checks if the TLD of a given tipo is available and installed.
+	 *
+	 * @param string $tipo The tipo to check.
+	 * @return bool True if the TLD is active.
+	 */
 	public static function check_active_tld( string $tipo ) : bool {
 
 		// allow 'section_id' as valid tipo for SQO uses
@@ -174,11 +178,13 @@ class ontology_utils {
 
 
 	/**
-	* DELETE_TLD_NODES
-	* Removes all tld nodes (records) in dd_ontology
-	* @param string $tld
-	* @return bool
-	*/
+	 * DELETE_TLD_NODES
+	 *
+	 * Removes all ontology records belonging to a specific TLD.
+	 *
+	 * @param string $tld The TLD identifier (e.g., 'oh').
+	 * @return bool True on success, false on failure.
+	 */
 	public static function delete_tld_nodes( string $tld ) : bool {
 
 		$table = ontology_node::$table; // dd_ontology | dd_ontology_backup
@@ -196,16 +202,11 @@ class ontology_utils {
 		}
 
 		// dd_ontology. delete terms (records)
-		$sql_query = '
-			DELETE FROM "'.$table.'" WHERE "tld" = \''.$safe_tld.'\';
-		';
-		$delete_result = pg_query(DBi::_getConnection(), $sql_query);
-		if (!$delete_result) {
-			debug_log(__METHOD__
-				. " Error deleting tld from table dd_ontology" . PHP_EOL
-				. ' tld: ' . to_string($tld)
-				, logger::ERROR
-			);
+		$sql_query = 'DELETE FROM "' . $table . '" WHERE "tld" = $1;';
+		$result = pg_query_params(DBi::_getConnection(), $sql_query, [$safe_tld]);
+
+		if ($result === false) {
+			debug_log(__METHOD__ . " Error deleting tld records. tld: {$tld}", logger::ERROR);
 			return false;
 		}
 
@@ -215,30 +216,34 @@ class ontology_utils {
 
 
 	/**
-	* CREATE_BK_TABLE
-	* Backup table is a copy of the given tlds
-	* Used to ensure that the dd_ontology can be restore in process as regenerate it.
-	* @param array $tld
-	* @return bool
-	*/
-	public static function create_bk_table( array $tld ) : bool {
+	 * CREATE_BK_TABLE
+	 *
+	 * Creates a backup table `dd_ontology_bk` from selected TLDs.
+	 * Used to protect records during major ontology operations.
+	 *
+	 * @param array $tlds Array of TLD identifiers.
+	 * @return bool True on success.
+	 */
+	public static function create_bk_table( array $tlds ) : bool {
 
-		$where = implode('\' OR tld = \'', $tld);
+		$table = ontology_node::$table;
+		$conn  = DBi::_getConnection();
+		$where_clauses = [];
+		foreach ($tlds as $tld) {
+			$where_clauses[] = "tld = " . pg_escape_literal($conn, $tld);
+		}
+		$where_sql = implode(' OR ', $where_clauses);
 
-		$sql_query = '
-			DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE;
-			CREATE TABLE IF NOT EXISTS dd_ontology_bk AS
-			SELECT * FROM dd_ontology WHERE tld = \''.$where.'\';
-		';
+		// 1. Drop existing backup table
+		$sql_drop = 'DROP TABLE IF EXISTS "dd_ontology_bk" CASCADE;';
+		pg_query($conn, $sql_drop);
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		// 2. Create new backup table with selected records
+		$sql_create = "CREATE TABLE dd_ontology_bk AS SELECT * FROM \"{$table}\" WHERE {$where_sql};";
+		$result = pg_query($conn, $sql_create);
 
-		if($result===false) {
-			debug_log(__METHOD__
-				. ' Failed consolidate_table dd_ontology' .PHP_EOL
-				. 'query: ' . to_string($sql_query)
-				, logger::ERROR
-			);
+		if ($result === false) {
+			debug_log(__METHOD__ . ' Failed to create backup table dd_ontology_bk', logger::ERROR);
 			return false;
 		}
 
@@ -248,10 +253,12 @@ class ontology_utils {
 
 
 	/**
-	* DELETE_BK_TABLE
-	* Remove the backup table of dd_ontology with clone rows
-	* @return bool
-	*/
+	 * DELETE_BK_TABLE
+	 *
+	 * Removes the backup table `dd_ontology_bk`.
+	 *
+	 * @return bool True on success.
+	 */
 	public static function delete_bk_table() : bool {
 
 		$sql_query = '
@@ -275,43 +282,42 @@ class ontology_utils {
 
 
 	/**
-	* RESTORE_FROM_BK_TABLE
-	* Delete the given tlds from `dd_ontology` table
-	* Use `dd_ontology_bk` table to insert his rows into `dd_ontology`
-	* Note: `dd_ontology_bk` is not a full backup of `dd_ontology`, it's a selection tlds
-	* Do not use as full backup!
-	* @param array $tld
-	* @return bool
-	*/
-	public static function restore_from_bk_table( array $tld ) : bool {
+	 * RESTORE_FROM_BK_TABLE
+	 *
+	 * Restores ontology records from the backup table for specific TLDs.
+	 *
+	 * @param array $tlds Array of TLD identifiers to restore.
+	 * @return bool True on success.
+	 */
+	public static function restore_from_bk_table( array $tlds ) : bool {
 
-		// delete the original nodes in dd_ontology
-		foreach ($tld as $current_tld) {
-			ontology_utils::delete_tld_nodes( $current_tld );
+		// delete original nodes in dd_ontology
+		foreach ($tlds as $tld) {
+			self::delete_tld_nodes($tld);
 		}
 
-		// restore all tld into dd_ontology_bk
-		$where = implode('\' OR tld = \'', $tld);
+		$table = ontology_node::$table;
+		$conn  = DBi::_getConnection();
+		$where_clauses = [];
+		foreach ($tlds as $tld) {
+			$where_clauses[] = "tld = " . pg_escape_literal($conn, $tld);
+		}
+		$where_sql = implode(' OR ', $where_clauses);
 
-		$sql_query = '
-			INSERT INTO dd_ontology
-			SELECT * FROM "dd_ontology_bk" WHERE tld = \''.$where.'\';
-		';
+		$sql_query = "
+			INSERT INTO \"{$table}\"
+			SELECT * FROM \"dd_ontology_bk\" WHERE {$where_sql};
+		";
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = pg_query($conn, $sql_query);
 
-		if($result===false) {
-			debug_log(__METHOD__
-				. ' Failed restore_from_bk_table dd_ontology_bk' .PHP_EOL
-				. 'query: ' . to_string($sql_query)
-				, logger::ERROR
-			);
+		if ($result === false) {
+			debug_log(__METHOD__ . ' Failed to restore from backup table', logger::ERROR);
 			return false;
 		}
 
 		return true;
 	}//end restore_from_bk_table
-
 
 
 
