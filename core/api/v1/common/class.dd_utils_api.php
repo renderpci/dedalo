@@ -2097,9 +2097,8 @@ final class dd_utils_api {
 			$thumbnail_file	= $tmp_dir . '/thumbnail/' . $filename . '.jpg';
 
 		// convert based on mime type
-			$mime		= mime_content_type($target_path);
-			$ar_mime	= explode('/', $mime);
-			$file_type	= $ar_mime[0] ?? null;
+			$finfo = new finfo(FILEINFO_MIME_TYPE);
+			$mime = $finfo->file($target_path);
 
 			switch (true) {
 
@@ -2115,7 +2114,7 @@ final class dd_utils_api {
 					]);
 					break;
 
-				case ($file_type==='image'):
+				case (strpos($mime, 'image/')===0):
 					ImageMagick::convert((object)[
 						'source_file'	=> $target_path,
 						'target_file'	=> $thumbnail_file,
@@ -2123,7 +2122,7 @@ final class dd_utils_api {
 					]);
 					break;
 
-				case ($file_type==='video'):
+				case (strpos($mime, 'video/')===0):
 					Ffmpeg::create_posterframe((object)[
 						'timecode'				=> '10', // like '10'
 						'src_file'				=> $target_path,
