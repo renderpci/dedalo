@@ -30,11 +30,11 @@ export const view_text_list_3d = function() {
 view_text_list_3d.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// files_info
-		const files_info = value
+		const files_info = entries
 
 	// thumb, if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
 		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)

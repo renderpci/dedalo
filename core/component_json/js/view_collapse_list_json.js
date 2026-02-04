@@ -67,8 +67,8 @@ view_collapse_list_json.render = async function(self, options) {
 export const get_value_string = function(self) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value?.[0].value || {}
+		const data	= self.data.entries
+		const value	= data?.[0].value || {}
 
 	// value_string
 		// dd542 Activity section case

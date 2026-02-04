@@ -81,8 +81,8 @@ view_line_edit_date.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -92,7 +92,7 @@ export const get_content_data = function(self) {
 		content_data.appendChild(button_exit_edit)
 
 	// build values
-		const inputs_value	= (value.length<1) ? [''] : value
+		const inputs_value	= (entries.length<1) ? [''] : entries
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 			const input_element_edit = (self.permissions===1)

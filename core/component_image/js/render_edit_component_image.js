@@ -70,9 +70,9 @@ export const get_quality_selector = (self) => {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		const files_info	= value[0] && value[0].files_info
-			? value[0].files_info
+		const entries		= data.entries || []
+		const files_info	= entries[0] && entries[0].files_info
+			? entries[0].files_info
 			: []
 		const quality		= self.quality || self.context.features.quality
 		const extension		= self.context.features.extension

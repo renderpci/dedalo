@@ -28,8 +28,8 @@ export const view_mini_info = function() {
 view_mini_info.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data	= self.data.entries
+		const value	= data || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)

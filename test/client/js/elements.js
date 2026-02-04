@@ -180,7 +180,8 @@ export const permissions	= 2
 		section_id		: section_id,
 		mode			: mode,
 		lang			: lang,
-		new_value		: fn.random_string_value
+		new_value		: fn.random_string_value,
+		new_value_params: [lang]
 	})
 
 // component_inverse -section_id from caller-
@@ -434,7 +435,8 @@ export const permissions	= 2
 		section_id		: section_id,
 		mode			: mode,
 		lang			: lang,
-		new_value		: fn.random_string_value
+		new_value		: fn.random_string_value,
+		new_value_params: [lang]
 	})
 
 

@@ -72,8 +72,8 @@ view_default_edit_pdf.render = async function(self, options) {
 export const get_content_data_edit = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -81,9 +81,9 @@ export const get_content_data_edit = function(self) {
 		content_data.classList.add('media_content_data')
 
 	// values (documents)
-		const inputs_value	= (value.length<1) ? [null] : value // force one empty element at least
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value		= (entries.length<1) ? [null] : entries // force one empty element at least
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 			// get the content_value
 			const content_value = get_content_value(i, inputs_value[i], self)
 			// add node to content_data
@@ -128,9 +128,9 @@ const get_content_value = function(i, current_value, self) {
 			? current_value.lib_data.offset
 			: 1
 		const data			= self.data || {}
-		const value			= data.value || []
-		const files_info	= value[0]
-			? (value[0].files_info || [])
+		const entries		= data.entries || []
+		const files_info	= entries[0]
+			? (entries[0].files_info || [])
 			: []
 		const external_source	= data.external_source
 		const extension			= self.context.features.extension
@@ -286,9 +286,9 @@ const get_content_value = function(i, current_value, self) {
 
 			if (this.value.length>0) {
 
-				current_value[i].lib_data = current_value[i].lib_data || {}
+				current_value.lib_data = current_value.lib_data || {}
 				// add/update offset
-				current_value[i].lib_data.offset = parseInt(this.value)
+				current_value.lib_data.offset = parseInt(this.value)
 
 				const changed_data = [Object.freeze({
 					action	: 'update',

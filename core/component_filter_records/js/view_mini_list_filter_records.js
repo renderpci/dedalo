@@ -29,9 +29,9 @@ view_mini_list_filter_records.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		// const value_flat	= value.flat()
-		const string_values = value.map(el => {
+		const entries		= data.entries || []
+		// const value_flat	= entries.flat()
+		const string_values = entries.map(el => {
 			return JSON.stringify(el)
 		})
 		const value_string = string_values.join(self.context.fields_separator)

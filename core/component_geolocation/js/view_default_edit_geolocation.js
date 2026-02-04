@@ -70,22 +70,22 @@ view_default_edit_geolocation.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value = data.value || self.default_value
+		const data		= self.data || {}
+		const entries	= data.entries || [self.default_value]
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// inputs - loop with the value array (expected only one value)
-		const inputs_value	= value //(value.length<1) ? [''] : value
-		const value_length	= inputs_value.length
-		for (let i = 0; i < value_length; i++) {
+		const inputs_value		= entries //(entries.length<1) ? [''] : entries
+		const entries_length	= inputs_value.length
+		for (let i = 0; i < entries_length; i++) {
 
 			// force new separate task
 			dd_request_idle_callback(
 				() => {
 					// value
-					const value_item = inputs_value[i] || self.default_value[0]
+					const value_item = inputs_value[i] || self.default_value
 
 					const input_element_node = (self.permissions===1)
 						? get_content_value_read(i, value_item, self)
@@ -267,9 +267,9 @@ export const get_content_value = (i, current_value, self) =>{
 			function fn_refresh(e) {
 				e.stopPropagation()
 
-				const lat	= self.data.value[i].lat
-				const lon	= self.data.value[i].lon
-				const zoom	= self.data.value[i].zoom
+				const lat	= self.data.entries[i].lat
+				const lon	= self.data.entries[i].lon
+				const zoom	= self.data.entries[i].zoom
 
 				self.map.panTo([lat, lon],{animate:false,duration:0});
 		 		self.map.setZoom(zoom)
@@ -281,7 +281,7 @@ export const get_content_value = (i, current_value, self) =>{
 							lat		: lat,
 							lon		: lon,
 							zoom	: zoom,
-							alt		: self.data.value[i].alt
+							alt		: self.data.entries[i].alt
 						},
 						map_container
 					)

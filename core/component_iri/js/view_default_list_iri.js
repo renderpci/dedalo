@@ -30,21 +30,21 @@ export const view_default_list_iri = function() {
 view_default_list_iri.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// Value as string
 		const ar_value_string	= [];
-		const value_length		= value.length
-		for (let i = 0; i < value_length; i++) {
+		const entries_length	= entries.length
+		for (let i = 0; i < entries_length; i++) {
 
 			const ar_line = []
 
-			if (value[i].title) {
-				ar_line.push(value[i].title)
+			if (entries[i].title) {
+				ar_line.push(entries[i].title)
 			}
-			if (value[i].iri) {
-				ar_line.push(value[i].iri)
+			if (entries[i].iri) {
+				ar_line.push(entries[i].iri)
 			}
 
 			if (ar_line.length>0) {

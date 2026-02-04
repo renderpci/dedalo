@@ -27,11 +27,12 @@
 		return result;
 	}
 
-	export const random_string_value = function() {
+	export const random_string_value = function(params) {
+		const lang = (Array.isArray(params) && params[0]) ? params[0] : page_globals.dedalo_data_lang;
 		const data_element = {
 			id		: 1,
 			value	: random_string(),
-			lang	: page_globals.dedalo_data_lang
+			lang	: lang
 		}
 		return data_element;
 	}		

@@ -8,7 +8,7 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
 {
     public static $files = array (
         '6124b4c8570aa390c21fafd04a26c69f' => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy/deep_copy.php',
-        '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
+        'ace6d88241f812b4accb2d847454aef6' => __DIR__ . '/..' . '/halaxa/json-machine/src/functions.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
     );
 
@@ -22,27 +22,12 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
             'rdfInterface\\' => 13,
             'rdfHelpers\\' => 11,
         ),
-        'T' =>
-        array (
-            'Temporal\\' => 9,
-        ),
-        'S' =>
-        array (
-            'Symfony\\Polyfill\\Php83\\' => 23,
-            'Spiral\\RoadRunner\\KeyValue\\' => 27,
-            'Spiral\\RoadRunner\\Http\\' => 23,
-            'Spiral\\RoadRunner\\' => 18,
-            'Spiral\\Goridge\\' => 15,
-        ),
         'R' =>
         array (
             'RobRichards\\XMLSecLibs\\' => 23,
-            'RoadRunner\\' => 11,
         ),
         'P' =>
         array (
-            'Psr\\SimpleCache\\' => 16,
-            'Psr\\Log\\' => 8,
             'Psr\\Http\\Message\\' => 17,
             'PhpParser\\' => 10,
         ),
@@ -50,19 +35,13 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         array (
             'OneLogin\\' => 9,
         ),
-        'N' =>
-        array (
-            'Nyholm\\Psr7\\' => 12,
-        ),
         'L' =>
         array (
             'Linfo\\' => 6,
         ),
-        'G' =>
+        'J' =>
         array (
-            'Google\\Protobuf\\' => 16,
-            'GPBMetadata\\Google\\Protobuf\\' => 28,
-            'GPBMetadata\\' => 12,
+            'JsonMachine\\' => 12,
         ),
         'E' =>
         array (
@@ -87,50 +66,13 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         array (
             0 => __DIR__ . '/..' . '/sweetrdf/rdf-helpers/src/rdfHelpers',
         ),
-        'Temporal\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/roadrunner-php/roadrunner-api-dto/generated/Temporal',
-        ),
-        'Symfony\\Polyfill\\Php83\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/symfony/polyfill-php83',
-        ),
-        'Spiral\\RoadRunner\\KeyValue\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/spiral/roadrunner-kv/src',
-        ),
-        'Spiral\\RoadRunner\\Http\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/spiral/roadrunner-http/src',
-        ),
-        'Spiral\\RoadRunner\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/spiral/roadrunner-worker/src',
-        ),
-        'Spiral\\Goridge\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/spiral/goridge/src',
-        ),
         'RobRichards\\XMLSecLibs\\' =>
         array (
             0 => __DIR__ . '/..' . '/robrichards/xmlseclibs/src',
         ),
-        'RoadRunner\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/roadrunner-php/roadrunner-api-dto/generated/RoadRunner',
-        ),
-        'Psr\\SimpleCache\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/psr/simple-cache/src',
-        ),
-        'Psr\\Log\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/psr/log/src',
-        ),
         'Psr\\Http\\Message\\' =>
         array (
-            0 => __DIR__ . '/..' . '/psr/http-factory/src',
-            1 => __DIR__ . '/..' . '/psr/http-message/src',
+            0 => __DIR__ . '/..' . '/psr/http-message/src',
         ),
         'PhpParser\\' =>
         array (
@@ -140,25 +82,13 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         array (
             0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
         ),
-        'Nyholm\\Psr7\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/nyholm/psr7/src',
-        ),
         'Linfo\\' =>
         array (
             0 => __DIR__ . '/..' . '/linfo/linfo/src/Linfo',
         ),
-        'Google\\Protobuf\\' =>
+        'JsonMachine\\' =>
         array (
-            0 => __DIR__ . '/..' . '/google/protobuf/src/Google/Protobuf',
-        ),
-        'GPBMetadata\\Google\\Protobuf\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/google/protobuf/src/GPBMetadata/Google/Protobuf',
-        ),
-        'GPBMetadata\\' =>
-        array (
-            0 => __DIR__ . '/..' . '/roadrunner-php/roadrunner-api-dto/generated/GPBMetadata',
+            0 => __DIR__ . '/..' . '/halaxa/json-machine/src',
         ),
         'EasyRdf\\' =>
         array (
@@ -172,16 +102,6 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
-        'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',
-        'DateInvalidOperationException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidOperationException.php',
-        'DateInvalidTimeZoneException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidTimeZoneException.php',
-        'DateMalformedIntervalStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedIntervalStringException.php',
-        'DateMalformedPeriodStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedPeriodStringException.php',
-        'DateMalformedStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedStringException.php',
-        'DateObjectError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateObjectError.php',
-        'DateRangeError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateRangeError.php',
-        'Override' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/Override.php',
         'PHPUnit\\Event\\Application\\Finished' => __DIR__ . '/..' . '/phpunit/phpunit/src/Event/Events/Application/Finished.php',
         'PHPUnit\\Event\\Application\\FinishedSubscriber' => __DIR__ . '/..' . '/phpunit/phpunit/src/Event/Events/Application/FinishedSubscriber.php',
         'PHPUnit\\Event\\Application\\Started' => __DIR__ . '/..' . '/phpunit/phpunit/src/Event/Events/Application/Started.php',
@@ -861,6 +781,7 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         'PHPUnit\\Runner\\ClassDoesNotExtendTestCaseException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Exception/ClassDoesNotExtendTestCaseException.php',
         'PHPUnit\\Runner\\ClassIsAbstractException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Exception/ClassIsAbstractException.php',
         'PHPUnit\\Runner\\CodeCoverage' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/CodeCoverage.php',
+        'PHPUnit\\Runner\\CodeCoverageFileExistsException' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/Exception/CodeCoverageFileExistsException.php',
         'PHPUnit\\Runner\\CodeCoverageInitializationStatus' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/CodeCoverageInitializationStatus.php',
         'PHPUnit\\Runner\\DeprecationCollector\\Collector' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/DeprecationCollector/Collector.php',
         'PHPUnit\\Runner\\DeprecationCollector\\Facade' => __DIR__ . '/..' . '/phpunit/phpunit/src/Runner/DeprecationCollector/Facade.php',
@@ -1250,7 +1171,6 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         'PharIo\\Version\\VersionConstraintParser' => __DIR__ . '/..' . '/phar-io/version/src/VersionConstraintParser.php',
         'PharIo\\Version\\VersionConstraintValue' => __DIR__ . '/..' . '/phar-io/version/src/VersionConstraintValue.php',
         'PharIo\\Version\\VersionNumber' => __DIR__ . '/..' . '/phar-io/version/src/VersionNumber.php',
-        'SQLite3Exception' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/SQLite3Exception.php',
         'SebastianBergmann\\CliParser\\AmbiguousOptionException' => __DIR__ . '/..' . '/sebastian/cli-parser/src/exceptions/AmbiguousOptionException.php',
         'SebastianBergmann\\CliParser\\Exception' => __DIR__ . '/..' . '/sebastian/cli-parser/src/exceptions/Exception.php',
         'SebastianBergmann\\CliParser\\OptionDoesNotAllowArgumentException' => __DIR__ . '/..' . '/sebastian/cli-parser/src/exceptions/OptionDoesNotAllowArgumentException.php',

@@ -30,11 +30,11 @@ export const view_text_list_av = function() {
 view_text_list_av.render = async function(self, options) {
 
 	// short vars
-		const data = self.data || {}
-		const value	= data.value || []
+		const data 		= self.data || {}
+		const entries	= data.entries || []
 
 	// files_info
-		const files_info = value
+		const files_info = entries
 
 	// thumb
 		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)

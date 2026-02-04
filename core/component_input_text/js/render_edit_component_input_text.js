@@ -91,8 +91,8 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 export const change_handler = function(e, key, self) {
 
 	const data			= self.data || {}
-	const value			= data.value || []
-	const item_value	= (value[key]) ? value[key] : {lang: self.lang}
+	const entries		= data.entries || []
+	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 
 	const safe_value = self.context.properties?.validation
 		? self.validate(e.target.value)

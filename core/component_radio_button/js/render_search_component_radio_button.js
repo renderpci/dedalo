@@ -110,8 +110,8 @@ const get_content_data_search = function(self) {
 const get_input_element = (i, datalist_item, self) => {
 
 	// short vars
-		const value				= self.data.value || []
-		const value_length		= value.length
+		const entries			= self.data.entries || []
+		const value_length		= entries.length
 		const label				= datalist_item.label
 		const datalist_value	= datalist_item.value
 		if (datalist_value) {
@@ -161,7 +161,7 @@ const get_input_element = (i, datalist_item, self) => {
 				// remove checked state
 					input.checked = false
 
-				if (self.data.value.length===0) {
+				if (self.data.entries.length===0) {
 					return true
 				}
 
@@ -181,9 +181,9 @@ const get_input_element = (i, datalist_item, self) => {
 
 	// checked input set on match
 		for (let j = 0; j < value_length; j++) {
-			if (value[j] && datalist_value &&
-				value[j].section_id===datalist_value.section_id &&
-				value[j].section_tipo===datalist_value.section_tipo
+			if (entries[j] && datalist_value &&
+				entries[j].section_id===datalist_value.section_id &&
+				entries[j].section_tipo===datalist_value.section_tipo
 				) {
 					input.checked = 'checked'
 			}

@@ -126,14 +126,14 @@ const get_content_value = (i, current_value, self) => {
 					: null
 
 				// when user change the value of the select, remove its dataframe
-				if(self.data.value?.[0]?.section_id){
+				if(self.data.entries?.[0]?.section_id){
 					delete_dataframe({
 						self				: self,
 						section_id			: self.section_id,
 						section_tipo		: self.section_tipo,
-						section_id_key		: self.data.value[0].section_id,
-						section_tipo_key	: self.data.value[0].section_tipo,
-						main_component_tipo	: self.data.value[0].main_component_tipo,
+						section_id_key		: self.data.entries[0].section_id,
+						section_tipo_key	: self.data.entries[0].section_tipo,
+						main_component_tipo	: self.data.entries[0].main_component_tipo,
 						delete_instace 		: true
 					})
 				}
@@ -382,8 +382,8 @@ const get_buttons = (self) => {
 
 				// check current value. LImit to one
 					const data	= self.data || {}
-					const value	= data.value || []
-					// if (value.length>0) {
+					const entries	= data.entries || []
+					// if (entries.length>0) {
 					// 	alert('Warning. Only one value is allowed');
 					// 	return
 					// }
@@ -402,7 +402,7 @@ const get_buttons = (self) => {
 					if (result===true) {
 
 						// last_value. Get the last value of the portal to open the new section
-							const last_value	= self.data.value[self.data.value.length-1]
+							const last_value	= self.data.entries[self.data.entries.length-1]
 							const section_tipo	= last_value.section_tipo
 							const section_id	= last_value.section_id
 

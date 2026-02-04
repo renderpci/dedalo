@@ -86,7 +86,7 @@ component_filter.prototype.get_changed_key = function(action, value) {
 		// insert value
 
 		// check if value already exists
-		const ar_found = self.data.value?.filter(item =>
+		const ar_found = self.data.entries?.filter(item =>
 			item.section_id===value.section_id && item.section_tipo===value.section_tipo
 		)
 		if (ar_found?.length>0) {
@@ -95,13 +95,13 @@ component_filter.prototype.get_changed_key = function(action, value) {
 		}
 
 		// component common add value and save (without refresh)
-		return self.data.value?.length || 0
+		return self.data.entries?.length || 0
 
 	}else{
 
 		// remove value
 
-		const value_key = self.data.value?.findIndex( (item) => {
+		const value_key = self.data.entries?.findIndex( (item) => {
 			return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
 		})
 		if (value_key===-1) {
@@ -138,7 +138,7 @@ component_filter.prototype.change_handler = async function(options) {
 		const changed_key = self.get_changed_key(
 			action,
 			datalist_value,
-			self.data.value
+			self.data.entries
 		)
 		const changed_value	= (action==='insert') ? datalist_value : null
 

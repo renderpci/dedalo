@@ -125,8 +125,8 @@ component_pdf.prototype.go_to_page = async function(options) {
 component_pdf.prototype.get_data_tag = function() {
 
 	const self = this
-	const offset 		= self.data.value[0] && self.data.value[0].lib_data
-		? self.data.value[0].lib_data.offset
+	const offset 		= self.data.entries[0] && self.data.entries[0].lib_data
+		? self.data.entries[0].lib_data.offset
 		: 0
 	const total_pages 	= self.pdf_viewer.pagesCount
 

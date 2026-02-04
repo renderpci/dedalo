@@ -63,15 +63,15 @@ view_line_edit_text_area.render = async function(self, options) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value	= value // is array
+		const inputs_value	= entries // is array
 		const value_length	= inputs_value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			// get the content_value
@@ -98,9 +98,9 @@ const get_content_value = (i, current_value, self) => {
 	// get fallback when current_value is empty
 	// clean fallback to only text
 		const data					= self.data || {}
-		const value					= data.value || []
+		const entries				= data.entries || []
 		const ar_fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(value, ar_fallback_value)
+		const fallback				= get_fallback_value(entries, ar_fallback_value)
 		const dirty_fallback_value	= fallback[i]
 	// clean fallback of any tag
 		const fallback_fragment = document.createDocumentFragment();
@@ -275,7 +275,7 @@ const get_content_value = (i, current_value, self) => {
 const get_content_value_read = (i, current_value, self) => {
 
 	// value is a raw html without parse into nodes (txt format)
-		const value = self.tags_to_html(current_value.value)
+		const value = self.tags_to_html(current_value?.value)
 
 	// content_value
 		const content_value = ui.create_dom_element({

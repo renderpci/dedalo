@@ -73,18 +73,18 @@ render_edit_component_number.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.value || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
-		const value_length = value.length || 1
+		const value_length = entries.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const content_value_node = (self.permissions===1)
-				? get_content_value_read(i, value[i], self)
-				: get_content_value(i, value[i], self)
+				? get_content_value_read(i, entries[i], self)
+				: get_content_value(i, entries[i], self)
 			content_data.appendChild(content_value_node)
 			// set pointers
 			content_data[i] = content_value_node
@@ -239,7 +239,7 @@ export const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
-				const key = self.data.value.length
+				const key = self.data.entries.length
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
@@ -307,11 +307,11 @@ export const change_handler = function(e, key, self) {
 		: null;
 
 	// update value item
-	const item = self.data.value
-		? self.data.value[key]
+	const item = self.data.entries
+		? self.data.entries[key]
 		: {}
 
-	const action = self.data.value
+	const action = self.data.entries
 		? 'update'
 		: 'insert'
 

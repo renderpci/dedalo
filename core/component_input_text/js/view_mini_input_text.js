@@ -33,14 +33,14 @@ view_mini_input_text.render = async function(self, options) {
 
 	// short vars
 		const data					= self.data
-		const value					= data.value || []
+		const entries				= data.entries || []
 		const fallback_value		= data.fallback_value || []
-		const fallback				= get_fallback_value(value, fallback_value)
+		const fallback				= get_fallback_value(entries, fallback_value)
 		const with_lang_versions	= self.context.properties.with_lang_versions ?? false
 
 	// transliterate components
 	// add the translation of the data
-		const transliterate_value = (with_lang_versions && self.data.transliterate_value && value.length)
+		const transliterate_value = (with_lang_versions && self.data.transliterate_value && entries.length)
 			? ' (' + self.data.transliterate_value + ')'
 			: ''
 
@@ -80,7 +80,7 @@ view_mini_input_text.render = async function(self, options) {
 			}
 
 			// separator
-			if( i !== value.length -1 ){
+			if( i < entries.length -1 ){
 				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: self.context.fields_separator,

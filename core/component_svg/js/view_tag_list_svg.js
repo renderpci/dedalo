@@ -33,8 +33,8 @@ view_tag_list_svg.render = function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || [] // value is a files_info list
-		const files_info	= value
+		const entries		= data.entries || [] // value is a files_info list
+		const files_info	= entries
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})

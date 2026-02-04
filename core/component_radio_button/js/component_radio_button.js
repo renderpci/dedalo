@@ -75,12 +75,12 @@ component_radio_button.prototype.get_checked_value_label = function() {
 
 	const self = this
 
-	if (typeof self.data.value[0]==='undefined' || self.data.value[0]===null) {
+	if (typeof self.data.entries[0]==='undefined' || self.data.entries[0]===null) {
 		return ''
 	}
 
 	const checked_key = self.data.datalist.findIndex( (item) => {
-		return (item.section_id===self.data.value[0].section_id)
+		return (item.section_id===self.data.entries[0].section_id)
 	})
 
 	const label = self.data.datalist[checked_key].label

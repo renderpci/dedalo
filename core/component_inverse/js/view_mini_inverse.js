@@ -31,8 +31,8 @@ view_mini_inverse.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// Value as string
-		const value_string = data.value && data.value[0] && data.value[0].locator
-			? data.value[0].locator.from_section_id
+		const value_string = data.entries && data.entries[0] && data.entries[0].locator
+			? data.entries[0].locator.from_section_id
 			: null
 
 	// Set value

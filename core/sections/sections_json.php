@@ -54,7 +54,7 @@
 				$item->typo			= 'sections';
 				$item->tipo			= $this->caller_tipo;
 				$item->section_tipo	= []; // $ar_section_tipo;
-				$item->value		= []; // $value;
+				$item->entries		= []; // $entries;
 
 			$data[] = $item;
 
@@ -174,7 +174,7 @@
 						}
 
 					// add value to item
-						$item->value[] = $current_value;
+						$item->entries[] = $current_value;
 			}
 
 		// subdatum

@@ -68,7 +68,7 @@ render_search_component_date.prototype.search = async function(options) {
 */
 const get_content_data = function(self) {
 
-	const value	= self.data.value
+	const value	= self.data.entries
 
 	// content_data
 		const content_data = ui.component.build_content_data(self, {})

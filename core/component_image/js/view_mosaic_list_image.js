@@ -60,8 +60,8 @@ const get_content_data = function(self) {
 
 	// short vars
 		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
+		const entries			= data.entries || [] // value is a files_info list
+		const files_info		= entries
 		const external_source	= data.external_source
 
 	// content_data

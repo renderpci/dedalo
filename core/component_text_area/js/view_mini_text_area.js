@@ -29,12 +29,12 @@ export const view_mini_text_area = function() {
 view_mini_text_area.render = async function(self, options) {
 
 	// short vars
-		const data	= self.data
-		const value	= data.value || []
+		const data		= self.data
+		const entries	= data.entries || []
 
 	// fallback
 		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(value, fallback_value)
+		const fallback			= get_fallback_value(entries, fallback_value)
 
 
 	// Value as string

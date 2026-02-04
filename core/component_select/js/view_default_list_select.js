@@ -31,8 +31,8 @@ view_default_list_select.render = async function(self, options) {
 
 	// short vars
 		const data			= self.data || {}
-		const value			= data.value || []
-		const value_string	= value.join(' ')
+		const entries		= data.entries || []
+		const value_string	= entries.join(' ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
