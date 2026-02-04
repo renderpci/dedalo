@@ -936,31 +936,26 @@ class tool_common {
 				}
 			}
 
-		// active tools records (db_result)
-			// Get all active tools from DB first. This returns a db_result object.
-			$active_tools_db_result = tool_common::get_active_tools();
+		// all unfiltered tools
+			$registered_tools = tool_common::get_all_registered_tools();
 
 		// user_tools
 			if ($user_id==DEDALO_SUPERUSER) {
 
-				// For Superuser, all active tools are allowed
-				// We call get_all_registered_tools() which handles the full instantiation
-				$user_tools = tool_common::get_all_registered_tools();
+				$user_tools = $registered_tools;
 
 			}else{
 
-				// tool permissions check
-					$allowed_section_ids = [];
+				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+					$security_tools_data = (function() use($user_id) {
 
-					// 1. Get authorized tool IDs from user profile
-					$user_profile = security::get_user_profile($user_id);
-					if (!empty($user_profile)) {
-
-						$user_profile_id = (int)$user_profile->section_id;
-
-						// Get security tools component
-						$security_tools_model = ontology_node::get_model_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
-						$component = component_common::get_instance(
+						$user_profile = security::get_user_profile($user_id);
+						if (empty($user_profile)) {
+							return []; // empty array
+						}
+						$user_profile_id		= (int)$user_profile->section_id;
+						$security_tools_model	= ontology_node::get_model_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
+						$component				= component_common::get_instance(
 							$security_tools_model,
 							DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
 							$user_profile_id,
@@ -968,86 +963,22 @@ class tool_common {
 							DEDALO_DATA_NOLAN,
 							DEDALO_SECTION_PROFILES_TIPO
 						);
+						// data
+						return $component->get_data();
+					})();
 
-						// Get allowed tools data
-						$security_tools_data = $component->get_data();
+				// allowed tools
+					$ar_allowed_id = array_map(function($el){
+						return $el->section_id;
+					}, $security_tools_data);
 
-						// Extract section_ids
-						if (!empty($security_tools_data)) {
-							foreach ($security_tools_data as $el) {
-								if (isset($el->section_id)) {
-									$allowed_section_ids[] = $el->section_id;
-								}
-							}
-						}
-					}
+				// filter user authorized tools
+					foreach ($registered_tools as $tool) {
 
-					// 2. Identify "Always Active" tool IDs
-					static $always_active_tool_ids = null;
-					if (is_null($always_active_tool_ids)) {
-
-						// Use filter_by_locators for a direct, efficient search without component parsing
-						$sqo_aa = new stdClass();
-							$sqo_aa->section_tipo		= [tools_register::$section_registered_tools_tipo];
-							$sqo_aa->filter_by_locators	= [
-								(object)[
-									'section_tipo'	=> tools_register::$section_registered_tools_tipo,
-									// 'section_id' is optional for filter_by_locators, using 'current' or omitting it
-									// depends on how search interprets it. Here, we want all IDs for this section_tipo.
-									'key'			=> tools_register::$tipo_always_active,
-									'value'			=> '1'
-								]
-							];
-
-						$search_aa = search::get_instance($sqo_aa);
-						$db_result_aa = $search_aa->search();
-						$always_active_tool_ids = [];
-						if ($db_result_aa) {
-							foreach ($db_result_aa as $row_aa) {
-								if (isset($row_aa->section_id)) {
-									$always_active_tool_ids[] = $row_aa->section_id;
-								}
-							}
-						}
-					}
-
-					// 3. Iterate active tools and instantiate ONLY the authorized/always-active ones
-					if ($active_tools_db_result) {
-
-						// Get all tools config sections for client once
-						$ar_config = tools_register::get_all_config_tool_client();
-						$ar_default_config = null; // Lazy loaded
-
-						foreach ($active_tools_db_result as $record) {
-
-							$section_id = $record->section_id;
-
-							// Check if ID is allowed or always active
-							if (in_array($section_id, $allowed_section_ids) || in_array($section_id, $always_active_tool_ids)) {
-
-								// Create simple tool object
-								$tool_obj = tools_register::create_simple_tool_object($record->section_tipo, $section_id);
-
-								// Attach config
-								$current_config = array_find($ar_config, function($el) use($tool_obj) {
-									return is_object($el) && $el->name === $tool_obj->name;
-								});
-
-								if (!is_object($current_config)) {
-									if ($ar_default_config === null) {
-										$ar_default_config = tools_register::get_all_default_config_tool_client();
-									}
-									$current_config = array_find($ar_default_config, function($el) use($tool_obj) {
-										return is_object($el) && $el->name === $tool_obj->name;
-									});
-								}
-
-								if (is_object($current_config)) {
-									$tool_obj->config = $current_config->config;
-								}
-
-								$user_tools[] = $tool_obj;
-							}
+						if( (isset($tool->always_active) && $tool->always_active===true) ||
+							 in_array($tool->section_id, $ar_allowed_id)
+							) {
+							$user_tools[] = $tool;
 						}
 					}
 			}
