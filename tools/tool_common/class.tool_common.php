@@ -1004,7 +1004,7 @@ class tool_common {
 								static $always_active_tool_ids = null;
 								if (is_null($always_active_tool_ids)) {
 									$sqo_aa = json_decode('{
-										"select": ["section_id"],
+										"select": [{"column":"section_id"}],
 										"section_tipo": ["'.tools_register::$section_registered_tools_tipo.'"],
 										"filter": {
 											"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"'.tools_register::$tipo_always_active.'"},
@@ -1020,7 +1020,13 @@ class tool_common {
 										}
 									}');
 									$search_aa = search::get_instance($sqo_aa);
-									$always_active_tool_ids = $search_aa->search_simple_list() ?? [];
+									$db_result_aa = $search_aa->search();
+									$always_active_tool_ids = [];
+									if ($db_result_aa) {
+										foreach ($db_result_aa as $row_aa) {
+											$always_active_tool_ids[] = (int)$row_aa->section_id;
+										}
+									}
 								}
 								$is_allowed = in_array($section_id, $always_active_tool_ids);
 							}
