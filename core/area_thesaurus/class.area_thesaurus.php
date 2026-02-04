@@ -1,17 +1,24 @@
 <?php declare(strict_types=1);
 /**
-* AREA_THESAURUS
-* Manage whole thesaurus hierarchies
-*/
+ * AREA_THESAURUS
+ *
+ * Class to manage whole thesaurus hierarchies, providing methods to retrieve
+ * hierarchy sections, typologies, and search functionality with path resolution.
+ */
 class area_thesaurus extends area_common {
 
 
 
 	/**
-	* CLASS VARS
-	* @var
-	*/
-	public static $typologies_section_tipo	= DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	 * Typologies section tipo
+	 * @var string
+	 */
+	public static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+
+	/**
+	 * Typologies name tipo
+	 * @var string
+	 */
 	public static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
@@ -27,9 +34,12 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_HIERARCHY_SECTION_TIPO
-	* @return string $section_tipo
-	*/
+	 * GET_HIERARCHY_SECTION_TIPO
+	 *
+	 * Returns the default hierarchy section tipo.
+	 *
+	 * @return string The hierarchy section tipo (e.g., 'hierarchy1')
+	 */
 	public function get_hierarchy_section_tipo() : string {
 
 		$hierarchy_section_tipo = DEDALO_HIERARCHY_SECTION_TIPO; // 'hierarchy1'
@@ -40,10 +50,12 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_MAIN_TABLE
-	* Get the main table name of current hierarchy
-	* @return string
-	*/
+	 * GET_MAIN_TABLE
+	 *
+	 * Get the main table name of current hierarchy.
+	 *
+	 * @return string The main table name
+	 */
 	public function get_main_table() : string {
 
 		return hierarchy::$main_table; // matrix_hierarchy_main
@@ -52,10 +64,12 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_HIERARCHY_TYPOLOGIES
-	* Get an array of all section_id from records of current section
-	* @return array $hierarchy_typologies
-	*/
+	 * GET_HIERARCHY_TYPOLOGIES
+	 *
+	 * Get an array of all section_id from records of current section.
+	 *
+	 * @return array Array of section records
+	 */
 	public function get_hierarchy_typologies() : array {
 
 		$hierarchy_typologies = section::get_ar_all_section_records_unfiltered(
@@ -68,16 +82,16 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_HIERARCHY_SECTIONS
-	* Resolves the list of hierarchy section active in thesaurus from the active hierarchies/ontologies.
-	* Skips hierarchies/ontologies without root terms.
-	* @param array|null $hierarchy_types_filter = null
-	* @param array|null $hierarchy_sections_filter = null
-	* @param bool $terms_are_model = false
-	* 	This param comes from rqo->source->build_options->terms_are_model sent by the client from
-	* 	area_thesaurus when building and self.thesaurus_view_mode==='model'
-	* @return array $ar_items
-	*/
+	 * GET_HIERARCHY_SECTIONS
+	 *
+	 * Resolves the list of hierarchy section active in thesaurus from the active hierarchies/ontologies.
+	 * Skips hierarchies/ontologies without root terms.
+	 *
+	 * @param array|null $hierarchy_types_filter Optional filter for typology IDs
+	 * @param array|null $hierarchy_sections_filter Optional filter for target section tipos
+	 * @param bool $terms_are_model Flag to indicate if terms are treated as model (source->build_options->terms_are_model)
+	 * @return array List of objects containing hierarchy section details
+	 */
 	public function get_hierarchy_sections( ?array $hierarchy_types_filter=null, ?array $hierarchy_sections_filter=null, bool $terms_are_model=false ) : array {
 
 		// get all hierarchy sections
@@ -144,12 +158,14 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_TYPOLOGY_DATA
-	* This function retrieves the typology data for a given section ID.
-	* It uses DEDALO's hierarchy9 model and returns an object with all relevant information about that specific section if it exists
-	* @param int|string int|string $section_id
-	* @return object|null $locator
-	*/
+	 * GET_TYPOLOGY_DATA
+	 *
+	 * This function retrieves the typology data for a given section ID.
+	 * It uses DEDALO's hierarchy9 model.
+	 *
+	 * @param int|string $section_id The section ID to retrieve data for
+	 * @return object|null The typology locator object if found, null otherwise
+	 */
 	public function get_typology_data( int|string $section_id ) : ?object {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
@@ -173,15 +189,16 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_TYPOLOGY_NAME
-	* Resolve typology name from section_id
-	* @param int $typology_section_id
-	* @return string $typology_name
-	*/
+	 * GET_TYPOLOGY_NAME
+	 *
+	 * Resolve typology name from section_id, with internal caching for performance.
+	 *
+	 * @param int|string $typology_section_id The typology section ID
+	 * @return string The resolved typology name
+	 */
 	public function get_typology_name( int|string $typology_section_id ) : string {
 
 		// cache Store for speed
-
 			if (isset(self::$typology_names_cache[$typology_section_id])) {
 				return self::$typology_names_cache[$typology_section_id];
 			}
@@ -189,7 +206,7 @@ class area_thesaurus extends area_common {
 		// component
 			$tipo			= DEDALO_HIERARCHY_TYPES_NAME_TIPO;
 			$model_name		= ontology_node::get_model_by_tipo($tipo,true);
-			$parent			= $typology_section_id;
+			$parent			= (string)$typology_section_id;
 			$mode			= 'list';
 			$lang			= DEDALO_DATA_LANG;
 			$section_tipo	= self::$typologies_section_tipo;
@@ -212,7 +229,7 @@ class area_thesaurus extends area_common {
 				);
 			}
 
-			$typology_name = $value;
+			$typology_name = (string)$value;
 
 		if (empty($typology_name)) {
 			$typology_name = 'Typology untranslated ' . $tipo .' '. $parent;
@@ -228,11 +245,13 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_TYPOLOGY_ORDER
-	* Retrieve the order value for a typology section.
-	* @param int|string $typology_section_id
-	* @return int $order_value
-	*/
+	 * GET_TYPOLOGY_ORDER
+	 *
+	 * Retrieve the order value for a typology section, with internal caching.
+	 *
+	 * @param int|string $typology_section_id The typology section ID
+	 * @return int The order value
+	 */
 	public function get_typology_order( int|string $typology_section_id ) : int {
 
 		// cache. Store for speed
@@ -242,20 +261,21 @@ class area_thesaurus extends area_common {
 
 		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
 		$model_name		= ontology_node::get_model_by_tipo($tipo,true);
-		$parent			= $typology_section_id;
 		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 		$section_tipo	= self::$typologies_section_tipo;
-		$component		= component_common::get_instance(
+
+		$component = component_common::get_instance(
 			$model_name,
 			$tipo,
-			$parent,
+			$typology_section_id,
 			$mode,
 			$lang,
 			$section_tipo
 		);
-		$data			= $component->get_data();
-		$order_value	= $data[0]->value ?? 0;
+
+		$data		 = $component->get_data();
+		$order_value = $data[0]->value ?? 0;
 
 		// cache
 		self::$typology_order_values_cache[$typology_section_id] = $order_value;
@@ -267,30 +287,30 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_HIERARCHY_NAME
-	* Get the name of a hierarchy section.
-	* @param string|int $hierarchy_section_id
-	* @return string $hierarchy_name
-	*/
+	 * GET_HIERARCHY_NAME
+	 *
+	 * Get the name of a hierarchy section, with internal caching.
+	 *
+	 * @param string|int $hierarchy_section_id The hierarchy section ID
+	 * @return string The hierarchy name
+	 */
 	public function get_hierarchy_name( int|string $hierarchy_section_id ) : string {
 
 		# Store for speed
-
 		if (isset(self::$hierarchy_names_cache[$hierarchy_section_id])) {
 			return self::$hierarchy_names_cache[$hierarchy_section_id];
 		}
 
-		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
-		$model_name 	 = ontology_node::get_model_by_tipo($tipo,true);
-		$parent 		 = $hierarchy_section_id;
-		$mode 			 = 'list';
-		$lang 			 = DEDALO_DATA_LANG;
-		$section_tipo 	 = $this->get_hierarchy_section_tipo();
+		$tipo			= DEDALO_HIERARCHY_TERM_TIPO;
+		$model_name		= ontology_node::get_model_by_tipo($tipo,true);
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+		$section_tipo	= $this->get_hierarchy_section_tipo();
 
-		$component 		 = component_common::get_instance(
+		$component = component_common::get_instance(
 			$model_name,
 			$tipo,
-			$parent,
+			$hierarchy_section_id,
 			$mode,
 			$lang,
 			$section_tipo
@@ -306,27 +326,28 @@ class area_thesaurus extends area_common {
 		}
 
 		$hierarchy_name = $value;
-
 		if (empty($hierarchy_name)) {
-			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $parent;
+			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $hierarchy_section_id;
 		}
 
 		// Store for speed
 		self::$hierarchy_names_cache[$hierarchy_section_id] = $hierarchy_name;
 
 
-		return (string)$hierarchy_name;
+		return $hierarchy_name;
 	}//end get_hierarchy_name
 
 
 
 	/**
-	* SEARCH_THESAURUS
-	* Exec the given SQO search adding recursive parents as path for each term
-	* In Area Ontology calls, all parents children are added to the result for easy edit
-	* @param object $search_query_object
-	* @return object $response
-	*/
+	 * SEARCH_THESAURUS
+	 *
+	 * Exec the given SQO search adding recursive parents as path for each term.
+	 * Optimized using associative array for fast component lookup.
+	 *
+	 * @param object $search_query_object The Search Query Object
+	 * @return object Response containing results, record count, and found items
+	 */
 	public function search_thesaurus( object $search_query_object ) : object {
 		$start_time = start_time();
 
@@ -336,15 +357,6 @@ class area_thesaurus extends area_common {
 				$response->msg		= '';
 				$response->errors	= [];
 
-		// terms_are_model. This value comes from rqo->source->build_options->terms_are_model
-			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
-			// $terms_are_model				= $this->build_options->terms_are_model ?? false;
-			// $hierarchy_from_component_tipo	= $terms_are_model
-			// 	? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
-			// 	: DEDALO_HIERARCHY_CHILDREN_TIPO;
-
-			// $hierarchy_section_tipo = $this->get_hierarchy_section_tipo();
-
 		// Search records
 			$search			= search::get_instance($search_query_object);
 			$db_result		= $search->search();
@@ -353,8 +365,8 @@ class area_thesaurus extends area_common {
 			$total_records = $db_result->row_count();
 
 		// ar_path_mix . Calculate full path of each result
-			$ar_ts_objects	= [];
-			$found			= [];
+			$ar_ts_objects_map	= [];
+			$found				= [];
 
 			foreach ($db_result as $row) {
 
@@ -366,26 +378,6 @@ class area_thesaurus extends area_common {
 					'section_id'	=> $section_id
 				];
 
-				// properties children_search check (case rsc197 People)
-					// $ontology_node		= ontology_node::get_instance($section_tipo);
-					// $section_properties	= $ontology_node->get_properties();
-
-					// switch (true) {
-					// 	case (!empty($section_properties) && isset($section_properties->children_search)):
-
-					// 		// defined section properties 'children_search' case
-
-					// 		$ar_path = [];
-
-					// 		// root locator
-					// 		$root_locator	= self::get_root_locator($section_tipo, $hierarchy_section_tipo);
-					// 		$ar_path[]		= $root_locator;
-					// 		break;
-
-					// 	default:
-
-							// default case
-
 				// get all parents of the node
 				$ar_parents = component_relation_parent::get_parents_recursive(
 					$section_id,
@@ -394,16 +386,17 @@ class area_thesaurus extends area_common {
 
 				if (empty($ar_parents)) {
 					// create the ts_object of the root and get its data
-					// to be stored into the full array.
-					$ts_object = new ts_object(
-						$section_id,
-						$section_tipo,
-						null,
-						'edit',
-						'root' // root node
-					);
-
-					$ar_ts_objects[] = $ts_object->get_data();
+					$key = $section_tipo . ':' . $section_id;
+					if (!isset($ar_ts_objects_map[$key])) {
+						$ts_object = new ts_object(
+							$section_id,
+							$section_tipo,
+							null,
+							'edit',
+							'root' // root node
+						);
+						$ar_ts_objects_map[$key] = $ts_object->get_data();
+					}
 					continue;
 				}
 
@@ -415,7 +408,6 @@ class area_thesaurus extends area_common {
 
 					// Children
 						// get all children of every parent, first term is the root term
-						// therefore get its children, they will given in the correct order
 						$parent_tipo = $current_parent->from_component_tipo;
 
 						$children_tipo			= component_relation_parent::get_component_relation_children_tipo( $parent_tipo );
@@ -437,14 +429,10 @@ class area_thesaurus extends area_common {
 
 						// built the ts_object with every child data
 						foreach ($children_data as $children_key => $child_locator) {
-							// find if the current child was resolved and is stored previously.
-							// avoid duplicates
-							$current_found = array_find($ar_ts_objects, function($el) use($child_locator) {
-								return	$el->section_tipo===$child_locator->section_tipo &&
-										$el->section_id==$child_locator->section_id;
-							});
+							$key = $child_locator->section_tipo . ':' . $child_locator->section_id;
+
 							// if the child doesn't exist create the ts_object, build it and get its data
-							if (!$current_found) {
+							if (!isset($ar_ts_objects_map[$key])) {
 								// ts_parent. Used to link the child node to its parent in the tree
 								$ts_parent = $children_section_tipo.'_'.$children_section_id;
 								// set the order number(int) in the ts_options
@@ -452,7 +440,6 @@ class area_thesaurus extends area_common {
 									$ts_options->order = $children_key+1;
 
 								// create the ts_object of the child and get its data
-								// to be stored into the full array.
 								$ts_object = new ts_object(
 									$child_locator->section_id,
 									$child_locator->section_tipo,
@@ -461,24 +448,14 @@ class area_thesaurus extends area_common {
 									$ts_parent
 								);
 
-								$ar_ts_objects[] = $ts_object->get_data();
+								$ar_ts_objects_map[$key] = $ts_object->get_data();
 							}
 						}
 
 					// Parent
-						// Find if the current parent was resolved previously
-						// avoiding duplicates
-						// here only root parents will be not stored (and not found)
-						// because the previous children resolution will include any others than root.
-						// all parents are checked, but only root parent will be processed.
-						$current_found = array_find($ar_ts_objects, function($el) use($current_parent) {
-							return	$el->section_tipo===$current_parent->section_tipo &&
-									$el->section_id==$current_parent->section_id;
-						});
-						if (!$current_found) {
+						$key = $current_parent->section_tipo . ':' . $current_parent->section_id;
+						if (!isset($ar_ts_objects_map[$key])) {
 							// set its parent to link it in the tree
-							// if the node is the first one, it is the root node, the top node
-							// else the parent is the previous parent in the array
 							$ts_parent = ($parent_key === 0)
 								? 'root'
 								: $ar_path[$parent_key-1]->section_tipo.'_'.$ar_path[$parent_key-1]->section_id;
@@ -495,7 +472,6 @@ class area_thesaurus extends area_common {
 								}
 							}
 							// create the ts_object of the child and get its data
-							// to be stored into the full array.
 							$ts_object = new ts_object(
 								$current_parent->section_id,
 								$current_parent->section_tipo,
@@ -504,14 +480,14 @@ class area_thesaurus extends area_common {
 								$ts_parent
 							);
 
-							$ar_ts_objects[] = $ts_object->get_data();
+							$ar_ts_objects_map[$key] = $ts_object->get_data();
 						}
 				}
 			}
 
 		// response
 			$response->msg		= 'Records found: ' . $total_records;
-			$response->result	= $ar_ts_objects;
+			$response->result	= array_values($ar_ts_objects_map);
 			$response->total	= $total_records;
 			$response->found	= $found;
 
@@ -527,17 +503,14 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_HIERARCHY_TERMS_SQO
-	* Creates a SQO with a custom filter using hierarchy_terms
-	* @param array $hierarchy_terms
-	* [
-	* 	{
-	* 		value : [{"section_tipo":"dd43","section_id":"2"}]
-	* 	}
-	* ]
-	* @return object $sqo
-	* 	Full Search query object
-	*/
+	 * GET_HIERARCHY_TERMS_SQO
+	 *
+	 * Creates a SQO with a custom filter using hierarchy_terms.
+	 * Used for searching within specified hierarchy nodes.
+	 *
+	 * @param array $hierarchy_terms Array of objects containing 'value' (array of section_tipo/section_id)
+	 * @return object The constructed Search Query Object
+	 */
 	public function get_hierarchy_terms_sqo( array $hierarchy_terms ) : object {
 
 		// filter_custom. hierarchy_terms
