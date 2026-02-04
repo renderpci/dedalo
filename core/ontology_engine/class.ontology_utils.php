@@ -138,12 +138,14 @@ class ontology_utils {
 		}
 
 		$table      = ontology_node::$table;
-		$sql_query  = "SELECT tld FROM \"{$table}\" GROUP BY tld";
-		$result     = pg_query(DBi::_getConnection(), $sql_query);
+		$sql_query  = "SELECT \"tld\" FROM \"{$table}\" GROUP BY \"tld\"";
+		$result     = matrix_db_manager::exec_search($sql_query);
 
 		$active_tlds = [];
-		while($row = pg_fetch_assoc($result)) {
-			$active_tlds[] = $row['tld'];
+		if ($result) {
+			while($row = pg_fetch_assoc($result)) {
+				$active_tlds[] = $row['tld'];
+			}
 		}
 
 		self::$active_tlds_cache = $active_tlds;
@@ -203,7 +205,7 @@ class ontology_utils {
 
 		// dd_ontology. delete terms (records)
 		$sql_query = 'DELETE FROM "' . $table . '" WHERE "tld" = $1;';
-		$result = pg_query_params(DBi::_getConnection(), $sql_query, [$safe_tld]);
+		$result = matrix_db_manager::exec_search($sql_query, [$safe_tld]);
 
 		if ($result === false) {
 			debug_log(__METHOD__ . " Error deleting tld records. tld: {$tld}", logger::ERROR);
@@ -297,10 +299,11 @@ class ontology_utils {
 		}
 
 		$table = ontology_node::$table;
-		$conn  = DBi::_getConnection();
+		$params = [];
 		$where_clauses = [];
-		foreach ($tlds as $tld) {
-			$where_clauses[] = "tld = " . pg_escape_literal($conn, $tld);
+		foreach ($tlds as $index => $tld) {
+			$params[] = $tld;
+			$where_clauses[] = "\"tld\" = $" . ($index + 1);
 		}
 		$where_sql = implode(' OR ', $where_clauses);
 
@@ -309,7 +312,7 @@ class ontology_utils {
 			SELECT * FROM \"dd_ontology_bk\" WHERE {$where_sql};
 		";
 
-		$result = pg_query($conn, $sql_query);
+		$result = matrix_db_manager::exec_search($sql_query, $params);
 
 		if ($result === false) {
 			debug_log(__METHOD__ . ' Failed to restore from backup table', logger::ERROR);
