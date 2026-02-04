@@ -1,15 +1,15 @@
 <?php declare(strict_types=1);
 /**
-* ontology_node
-* Manages the active and functional ontology node,
-* ontology node is using to interpreted data, schemas, behaviors, etc. in execution time.
-* It manages every node of active ontologies.
-* It uses `dd_ontology` table in DDBB.
-* It's a read only object.
-*
-* Note: ontology nodes are not editable nodes.
-* For doing changes into ontology use ../core/ontology/class.ontology.php
-*/
+ * ONTOLOGY_NODE
+ * Manages the active and functional ontology node,
+ * ontology node is using to interpreted data, schemas, behaviors, etc. in execution time.
+ * It manages every node of active ontologies.
+ * It uses `dd_ontology` table in DDBB.
+ * It's a read only object.
+ *
+ * Note: ontology nodes are not editable nodes.
+ * For doing changes into ontology use ../core/ontology/class.ontology.php
+ */
 class ontology_node {
 
 	// tipo
@@ -67,12 +67,12 @@ class ontology_node {
 
 
 	/**
-	* GET_INSTANCE
-	* Create the ontology node instance with the ontology identification; tipo
-	* @param ?string $tipo = null
-	* 	E.g. 'dd156'
-	* @return self
-	*/
+	 * GET_INSTANCE
+	 * Create the ontology node instance with the ontology identification; tipo
+	 * @param ?string $tipo = null
+	 * 	E.g. 'dd156'
+	 * @return self
+	 */
 	public static function get_instance( string $tipo ) : self {
 
 		if (!isset(self::$instances[$tipo])) {
@@ -85,10 +85,10 @@ class ontology_node {
 
 
 	/**
-	* __CONSTRUCT
-	* Check the ontology identification; tipo
-	* to ensure that it is a valid and safe before construct the ontology node object
-	*/
+	 * __CONSTRUCT
+	 * Check the ontology identification; tipo
+	 * to ensure that it is a valid and safe before construct the ontology node object
+	 */
 	function __construct( string $tipo ) {
 
 		if( !empty($tipo) ) {
@@ -117,10 +117,10 @@ class ontology_node {
 
 
 	/**
-	* LOAD_DATA
-	* Get the row data of the node from table
-	* @return bool
-	*/
+	 * LOAD_DATA
+	 * Get the row data of the node from table
+	 * @return bool
+	 */
 	public function load_data() : bool {
 
 		//check if data was loaded
@@ -153,10 +153,10 @@ class ontology_node {
 
 
 	/**
-	* GET_DATA
-	* Get all node data
-	* @return object|null
-	*/
+	 * GET_DATA
+	 * Get all node data
+	 * @return object|null
+	 */
 	public function get_data() : ?object {
 		$this->load_data();
 
@@ -166,10 +166,10 @@ class ontology_node {
 
 
 	/**
-	* GET_TIPO
-	* Get the ontology identification; tipo of the instance
-	* @return string|null
-	*/
+	 * GET_TIPO
+	 * Get the ontology identification; tipo of the instance
+	 * @return string|null
+	 */
 	public function get_tipo() : ?string{
 		return $this->tipo;
 	}//end get_tipo
@@ -177,10 +177,10 @@ class ontology_node {
 
 
 	/**
-	* GET_PARENT
-	* Get the ontology identification for parent (as parent tipo) of the instance
-	* @return string|null
-	*/
+	 * GET_PARENT
+	 * Get the ontology identification for parent (as parent tipo) of the instance
+	 * @return string|null
+	 */
 	public function get_parent() : ?string {
 		$this->load_data();
 		return $this->data->parent ?? null;
@@ -189,10 +189,10 @@ class ontology_node {
 
 
 	/**
-	* GET_TERM_DATA
-	* Get ontology node terms (concept names) in all languages
-	* @return object|null
-	*/
+	 * GET_TERM_DATA
+	 * Get ontology node terms (concept names) in all languages
+	 * @return object|null
+	 */
 	public function get_term_data() : ?object {
 		$this->load_data();
 		return $this->data->term ?? null;
@@ -201,11 +201,11 @@ class ontology_node {
 
 
 	/**
-	* GET_term
-	* Get specific term in one language given
-	* If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
-	* @return string
-	*/
+	 * GET_TERM
+	 * Get specific term in one language given
+	 * If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
+	 * @return string
+	 */
 	public function get_term( string $lang, $fallback=true ) : ?string {
 
 		$term_data = $this->get_term_data();
@@ -248,14 +248,15 @@ class ontology_node {
 
 
 	/**
-	* GET_MODEL
-	* Model is an ontology node typology term, it uses an unique term in ontology lang.
-	* Model are not translatable, is used to create instances of sections, components, etc.
-	* Therefore, models are unique name that point to specific code scripts in Dédalo.
-	* section 			---> class.section.php / section.js / section.css
-	* component_portal 	---> class.componnet_portal.php / componnet_portal.js / componnet_portal.css
-	* @return string|null $model
-	*/
+	 * GET_MODEL
+	 * Model is an ontology node typology term, it uses a unique term in ontology lang.
+	 * Models are not translatable, they are used to create instances of sections, components, etc.
+	 * Therefore, models are unique names that point to specific code scripts in Dédalo.
+	 * section          ---> class.section.php / section.js / section.css
+	 * component_portal ---> class.component_portal.php / component_portal.js / component_portal.css
+	 *
+	 * @return string|null The model name or null if not found.
+	 */
 	public function get_model() : ?string {
 
 		$this->load_data();
@@ -264,33 +265,24 @@ class ontology_node {
 			return null;
 		}
 
-		// forced models in v6 (while we are using structure v5)
-		switch ($this->tipo) {
-			case DEDALO_SECURITY_ADMINISTRATOR_TIPO:
-				return 'component_radio_button';
-			case DEDALO_USER_PROFILE_TIPO:
-				return 'component_select';
-			case 'dd546': // activity where
-				return 'component_input_text';
-			case 'dd545': // activity what
-				return 'component_select';
-			case 'dd544': // activity ip
-				return 'component_input_text';
-			case 'dd551': // activity 'data'
-				return 'component_json';
-			case 'hierarchy48': // hierarchy 'order'
-				return 'component_number';
-			case 'dd1067': // tools component_security_tools
-				return 'component_check_box';
-			// temporal 6.4.5
-				case 'hierarchy45': // hierarchy main: General term
-				case 'hierarchy59': // hierarchy main: General term model
-				// case 'hierarchy49':
-				// case 'ontology14';
-					return 'component_portal';
+		// forced models in v6/v7 (while we are using structure v5)
+		$forced_models = [
+			DEDALO_SECURITY_ADMINISTRATOR_TIPO => 'component_radio_button',
+			DEDALO_USER_PROFILE_TIPO            => 'component_select',
+			'dd546'                             => 'component_input_text',  // activity where
+			'dd545'                             => 'component_select',      // activity what
+			'dd544'                             => 'component_input_text',  // activity ip
+			'dd551'                             => 'component_json',        // activity 'data'
+			'hierarchy48'                       => 'component_number',      // hierarchy 'order'
+			'dd1067'                            => 'component_check_box',   // tools component_security_tools
+			'hierarchy45'                       => 'component_portal',      // hierarchy main: General term
+			'hierarchy59'                       => 'component_portal',      // hierarchy main: General term model
+		];
+		if (isset($forced_models[$this->tipo])) {
+			return $forced_models[$this->tipo];
 		}
 
-		// new model resolution with fallback
+		// model resolution with fallback
 		$model = $this->data->model ?? null;
 		if (empty($model)) {
 
@@ -302,14 +294,8 @@ class ontology_node {
 				if (!defined('DEDALO_AREA_MAINTENANCE_TIPO')) {
 					define('DEDALO_AREA_MAINTENANCE_TIPO', 'dd88');
 				}
-				if ($this->tipo===DEDALO_AREA_MAINTENANCE_TIPO) {
-					debug_log(__METHOD__
-						. " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP " . PHP_EOL
-						. ' Fixed resolution is returned to allow all works temporally' . PHP_EOL
-						.' tipo: ' . $this->tipo . PHP_EOL
-						.' model expected: (dd72) area_maintenance'
-						, logger::ERROR
-					);
+				if ($this->tipo === DEDALO_AREA_MAINTENANCE_TIPO) {
+					debug_log(__METHOD__ . " WARNING. Model dd72 'area_maintenance' is not defined! Update your Ontology ASAP. tipo: {$this->tipo}", logger::ERROR);
 					return 'area_maintenance'; // temporal !
 				}
 
@@ -326,7 +312,6 @@ class ontology_node {
 				, logger::ERROR
 			);
 
-			// empty case check
 			if (empty($model)) {
 
 				debug_log(__METHOD__
@@ -336,23 +321,22 @@ class ontology_node {
 				);
 				return null;
 			}
-		}//end if (empty($model))
+		}
 
-		// Model replacements (obsolete models)
-			$model_map = [
-				'component_input_text_large'	=> 'component_text_area',
-				'component_html_text'			=> 'component_text_area',
-				'component_autocomplete'		=> 'component_portal',
-				'component_autocomplete_hi'		=> 'component_portal',
-				'component_state'				=> 'component_info',
-				'component_calculation'			=> 'component_info',
-				'section_group_div'				=> 'section_group',
-				'tab'							=> 'section_tab',
-				'component_relation_struct'		=> 'box elements',
-				'component_security_tools'		=> 'component_check_box',
-				'dataframe'						=> 'box elements',
-			];
-
+		// Model replacements (obsolete/legacy models)
+		$model_map = [
+			'component_input_text_large' => 'component_text_area',
+			'component_html_text'       => 'component_text_area',
+			'component_autocomplete'     => 'component_portal',
+			'component_autocomplete_hi'  => 'component_portal',
+			'component_state'            => 'component_info',
+			'component_calculation'      => 'component_info',
+			'section_group_div'          => 'section_group',
+			'tab'                        => 'section_tab',
+			'component_relation_struct'  => 'box elements',
+			'component_security_tools'   => 'component_check_box',
+			'dataframe'                  => 'box elements',
+		];
 
 		return $model_map[$model] ?? $model;
 	}//end get_model
@@ -360,10 +344,10 @@ class ontology_node {
 
 
 	/**
-	* GET_ORDER_NUMBER
-	* The position of the ontology node with respect to its siblings.
-	* @return int|null
-	*/
+	 * GET_ORDER_NUMBER
+	 * The position of the ontology node with respect to its siblings.
+	 * @return int|null
+	 */
 	public function get_order_number() : ?int {
 		$this->load_data();
 		return $this->data->order_number ?? null;
@@ -372,13 +356,13 @@ class ontology_node {
 
 
 	/**
-	* GET_RELATIONS
-	* Ontology node relations are the connection between nodes in unidirectional way.
-	* node1 point to node4 and node5;
-	* "oh1" -> [{"tipo": "tch7"},{"tipo": "numisdata8"}]
-	* relations are stored as JSONB in table column 'relations'
-	* @return array|null
-	*/
+	 * GET_RELATIONS
+	 * Ontology node relations are the connection between nodes in unidirectional way.
+	 * node1 point to node4 and node5;
+	 * "oh1" -> [{"tipo": "tch7"},{"tipo": "numisdata8"}]
+	 * relations are stored as JSONB in table column 'relations'
+	 * @return array|null
+	 */
 	public function get_relations() : ?array {
 		$this->load_data();
 		return $this->data->relations ?? null;
@@ -387,16 +371,16 @@ class ontology_node {
 
 
 	/**
-	* GET_TLD
-	* TLD, Top Level Domain. Ontology name space.
-	* It defines a field of heritage or common parts of the ontology.
-	* oh = Oral History
-	* tch = Tangible Cultural Heritage
-	* ich = Intangible Cultural Heritage
-	* dd = Dédalo core, defines users, profiles, menu, login, etc.
-	* rsc = Resources as People, Media (av, image, pdf), etc.
-	* @return string|null
-	*/
+	 * GET_TLD
+	 * TLD, Top Level Domain. Ontology name space.
+	 * It defines a field of heritage or common parts of the ontology.
+	 * oh = Oral History
+	 * tch = Tangible Cultural Heritage
+	 * ich = Intangible Cultural Heritage
+	 * dd = Dédalo core, defines users, profiles, menu, login, etc.
+	 * rsc = Resources as People, Media (av, image, pdf), etc.
+	 * @return string|null
+	 */
 	public function get_tld() : ?string {
 		$this->load_data();
 		return $this->data->tld ?? null;
@@ -405,16 +389,16 @@ class ontology_node {
 
 
 	/**
-	* GET_PROPERTIES
-	* Properties are the configuration of the ontology node
-	* Properties defines:
-	* 	Behavior : how the node will process its data, how resolve relations (how is connected to other nodes) and represent itself
-	* 	Options  : properties that can be specifically set in the instances of the nodes.
-	* 	Layout 	 : How the node will be render
-	* Return the value of property 'properties', stored as JSONB in table column 'properties'
-	* Properties value is an object.
-	* @return object|null
-	*/
+	 * GET_PROPERTIES
+	 * Properties are the configuration of the ontology node
+	 * Properties defines:
+	 * 	Behavior : how the node will process its data, how resolve relations (how is connected to other nodes) and represent itself
+	 * 	Options  : properties that can be specifically set in the instances of the nodes.
+	 * 	Layout 	 : How the node will be render
+	 * Return the value of property 'properties', stored as JSONB in table column 'properties'
+	 * Properties value is an object.
+	 * @return object|null
+	 */
 	public function get_properties() : ?object {
 		$this->load_data();
 		return $this->data->properties ?? null;
@@ -423,14 +407,14 @@ class ontology_node {
 
 
 	/**
-	* GET_MODEL_TIPO
-	* Model tipo is the ontology node identification for the model (the node typology).
-	* dd6 	---> section
-	* dd592 ---> component_portal
-	* The ontology node has a model to identify its own typology, and the model is defined as an ontology node by itself
-	* Model nodes are identify in ontology with the property: is_model as true
-	* @return string|null
-	*/
+	 * GET_MODEL_TIPO
+	 * Model tipo is the ontology node identification for the model (the node typology).
+	 * dd6 	---> section
+	 * dd592 ---> component_portal
+	 * The ontology node has a model to identify its own typology, and the model is defined as an ontology node by itself
+	 * Model nodes are identify in ontology with the property: is_model as true
+	 * @return string|null
+	 */
 	public function get_model_tipo() : ?string {
 		$this->load_data();
 		return $this->data->model_tipo ?? null;
@@ -439,16 +423,16 @@ class ontology_node {
 
 
 	/**
-	* GET_IS_MODEL
-	* Identify if the ontology node is a model or not
-	* The ontology has to main types of nodes, descriptors and models
-	* both are defined in the same way. Both has an ontology node identification; tipo
-	* both has relations, parent, properties, etc.
-	* and models are identify with the property is_model with true
-	* the other ones are identify with the property is_mode as false.
-	* Retrieve from DDBB the column is_model
-	* @return bool
-	*/
+	 * GET_IS_MODEL
+	 * Identify if the ontology node is a model or not
+	 * The ontology has to main types of nodes, descriptors and models
+	 * both are defined in the same way. Both has an ontology node identification; tipo
+	 * both has relations, parent, properties, etc.
+	 * and models are identify with the property is_model with true
+	 * the other ones are identify with the property is_mode as false.
+	 * Retrieve from DDBB the column is_model
+	 * @return bool
+	 */
 	public function get_is_model() : bool {
 		$this->load_data();
 		return $this->data->is_model;
@@ -457,12 +441,12 @@ class ontology_node {
 
 
 	/**
-	* GET_IS_TRANSLATABLE
-	* Identify in the ontology node data is translatable
-	* Used by strings components to store its data with specific language.
-	* Retrieve from DDBB the column is_translatable
-	* @return bool
-	*/
+	 * GET_IS_TRANSLATABLE
+	 * Identify in the ontology node data is translatable
+	 * Used by strings components to store its data with specific language.
+	 * Retrieve from DDBB the column is_translatable
+	 * @return bool
+	 */
 	public function get_is_translatable() : bool {
 		$this->load_data();
 		return $this->data->is_translatable ?? false;
@@ -471,12 +455,12 @@ class ontology_node {
 
 
 	/**
-	* GET_TRANSLATABLE
-	* Get current if given tipo is translatable as boolean value
-	* based on column 'translatable' value
-	* @param string $tipo
-	* @return bool
-	*/
+	 * GET_TRANSLATABLE
+	 * Get current if given tipo is translatable as boolean value
+	 * based on column 'translatable' value
+	 * @param string $tipo
+	 * @return bool
+	 */
 	public static function get_translatable( string $tipo ) : bool {
 
 		$ontology_node	= ontology_node::get_instance($tipo);
@@ -488,13 +472,13 @@ class ontology_node {
 
 
 	/**
-	* GET_PROPIEDADES
-	* Return the value of property 'properties', stored as plain text in table column 'properties'
-	* Values expected in 'propiedades' are always JSON. You can obtain raw value (default) or JSON decoded (called with argument 'true')
-	* @param bool $json_decode = false
-	* @return mixed $propiedades
-	* 	object / string parent::$properties
-	*/
+	 * GET_PROPIEDADES
+	 * Return the value of property 'properties', stored as plain text in table column 'properties'
+	 * Values expected in 'propiedades' are always JSON. You can obtain raw value (default) or JSON decoded (called with argument 'true')
+	 * @param bool $json_decode = false
+	 * @return mixed $propiedades
+	 * 	object / string parent::$properties
+	 */
 	public function get_propiedades( bool $json_decode = false ) : mixed {
 		$this->load_data();
 
@@ -510,11 +494,12 @@ class ontology_node {
 	}//end get_propiedades
 
 
+
 	/**
-	* set_parent
-	* Set given $parent value. e.g. 'oh1'
-	* @param string|null $parent
-	*/
+	 * set_parent
+	 * Set given $parent value. e.g. 'oh1'
+	 * @param string|null $parent
+	 */
 	public function set_parent( ?string $parent ) {
 
 		$safe_parent = safe_tipo($parent);
@@ -524,10 +509,10 @@ class ontology_node {
 
 
 	/**
-	* SET_TERM_DATA
-	* Set given $term value. e.g. {"lg-eng": "Activity"}
-	* @param object|null $term
-	*/
+	 * SET_TERM_DATA
+	 * Set given $term value. e.g. {"lg-eng": "Activity"}
+	 * @param object|null $term
+	 */
 	public function set_term_data( ?object $term ) {
 
 		$this->data->term = $term;
@@ -536,10 +521,10 @@ class ontology_node {
 
 
 	/**
-	* SET_MODEL
-	* Set given $model value. e.g. "component_input_text"
-	* @param string|null $model
-	*/
+	 * SET_MODEL
+	 * Set given $model value. e.g. "component_input_text"
+	 * @param string|null $model
+	 */
 	public function set_model( ?string $model ) {
 
 		$this->data->model = $model;
@@ -548,10 +533,10 @@ class ontology_node {
 
 
 	/**
-	* SET_ORDER_NUMBER
-	* Set given $order_number value. e.g. 5
-	* @param int|null $order_number
-	*/
+	 * SET_ORDER_NUMBER
+	 * Set given $order_number value. e.g. 5
+	 * @param int|null $order_number
+	 */
 	public function set_order_number( ?int $order_number ) {
 
 		$this->data->order_number = $order_number;
@@ -560,10 +545,10 @@ class ontology_node {
 
 
 	/**
-	* SET_RELATIONS
-	* Set 'relations' e.g. [{"tipo": "actv1"}]
-	* @param array|null $ar_relations
-	*/
+	 * SET_RELATIONS
+	 * Set 'relations' e.g. [{"tipo": "actv1"}]
+	 * @param array|null $ar_relations
+	 */
 	public function set_relations( ?array $relations) {
 
 		$this->data->relations = $relations;
@@ -572,10 +557,10 @@ class ontology_node {
 
 
 	/**
-	* SET_TLD
-	* Set given $tld value. e.g. 'tch'
-	* @param string|null $tld
-	*/
+	 * SET_TLD
+	 * Set given $tld value. e.g. 'tch'
+	 * @param string|null $tld
+	 */
 	public function set_tld( ?string $tld ) {
 
 		$this->data->tld = $tld;
@@ -584,10 +569,10 @@ class ontology_node {
 
 
 	/**
-	* SET_PROPERTIES
-	* Set the value of property 'properties' e.g. {"css": {".wrapper_component": {"grid-column": "span 2"}}}
-	* @param object|null $properties
-	*/
+	 * SET_PROPERTIES
+	 * Set the value of property 'properties' e.g. {"css": {".wrapper_component": {"grid-column": "span 2"}}}
+	 * @param object|null $properties
+	 */
 	public function set_properties( ?object $properties) {
 
 		$this->data->properties = $properties;
@@ -596,10 +581,10 @@ class ontology_node {
 
 
 	/**
-	* SET_MODEL_TIPO
-	* Set given $model_tipo value. e.g. 'dd6'
-	* @param string|null $tld
-	*/
+	 * SET_MODEL_TIPO
+	 * Set given $model_tipo value. e.g. 'dd6'
+	 * @param string|null $tld
+	 */
 	public function set_model_tipo( ?string $model_tipo ) {
 
 		$this->data->model_tipo = $model_tipo;
@@ -608,10 +593,10 @@ class ontology_node {
 
 
 	/**
-	* SET_IS_MODEL
-	* Set given $is_model value e.g. true
-	* @param bool $is_model
-	*/
+	 * SET_IS_MODEL
+	 * Set given $is_model value e.g. true
+	 * @param bool $is_model
+	 */
 	public function set_is_model( bool $is_model) {
 
 		$this->data->is_model = $is_model;
@@ -620,10 +605,10 @@ class ontology_node {
 
 
 	/**
-	* SET_IS_TRANSLATABLE
-	* Set given $is_translatable value e.g. true
-	* @param bool $is_model
-	*/
+	 * SET_IS_TRANSLATABLE
+	 * Set given $is_translatable value e.g. true
+	 * @param bool $is_model
+	 */
 	public function set_is_translatable( bool $is_translatable ) {
 
 		$this->data->is_translatable = $is_translatable;
@@ -632,10 +617,10 @@ class ontology_node {
 
 
 	/**
-	* SET_PROPIEDADES
-	* Set given $is_translatable value e.g. {"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}
-	* @param ?string $propiedades
-	*/
+	 * SET_PROPIEDADES
+	 * Set given $is_translatable value e.g. {"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}
+	 * @param ?string $propiedades
+	 */
 	public function set_propiedades( ?string $propiedades ) {
 
 		$this->data->propiedades = $propiedades;
@@ -644,13 +629,13 @@ class ontology_node {
 
 
 	/**
-	* INSERT
-	* Create/Update a row into dd_ontology table with ontology data
-	* The insert will search if tipo exists previously,
-	* if the tipo was found, delete it and insert as new one
-	* else insert new one
-	* @return string|false|null $tipo(tipo)
-	*/
+	 * INSERT
+	 * Create/Update a row into dd_ontology table with ontology data
+	 * The insert will search if tipo exists previously,
+	 * if the tipo was found, delete it and insert as new one
+	 * else insert new one
+	 * @return string|false|null $tipo(tipo)
+	 */
 	public function insert() : bool {
 
 		$tipo = $this->get_tipo();
@@ -687,10 +672,10 @@ class ontology_node {
 
 
 	/**
-	* DELETE
-	* Deletes a row from 'dd_ontology' table based on current tipo.
-	* @return string|false|null $tipo(tipo)
-	*/
+	 * DELETE
+	 * Deletes a row from 'dd_ontology' table based on current tipo.
+	 * @return string|false|null $tipo(tipo)
+	 */
 	public function delete() : bool {
 
 		$tipo = $this->get_tipo();
@@ -707,15 +692,15 @@ class ontology_node {
 
 
 	/**
-	* GET_TERM_BY_TIPO
-	* Get label value from 'term' in given lang
-	* It use a fallback to: DEDALO_APPLICATION_LANG, DEDALO_DATA_LANG, DEDALO_STRUCTURE_LANG
-	* @param string $tipo
-	* @param string $lang = null
-	* @param bool $from_cache = true
-	* @param bool $fallback = true
-	* @return string|null $result
-	*/
+	 * GET_TERM_BY_TIPO
+	 * Get label value from 'term' in given lang
+	 * It use a fallback to: DEDALO_APPLICATION_LANG, DEDALO_DATA_LANG, DEDALO_STRUCTURE_LANG
+	 * @param string $tipo
+	 * @param string $lang = null
+	 * @param bool $from_cache = true
+	 * @param bool $fallback = true
+	 * @return string|null $result
+	 */
 	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
 		// cache
@@ -752,12 +737,12 @@ class ontology_node {
 
 
 	/**
-	* GET_MODEL_BY_TIPO
-	* Get model of the given tipo (ontology node)
-	* @param string $tipo
-	* @param bool $from_cache = true
-	* @return string|null $model
-	*/
+	 * GET_MODEL_BY_TIPO
+	 * Get model of the given tipo (ontology node)
+	 * @param string $tipo
+	 * @param bool $from_cache = true
+	 * @return string|null $model
+	 */
 	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : ?string {
 
 		// cache
@@ -779,12 +764,12 @@ class ontology_node {
 
 
 	/**
-	* GET_LEGACY_MODEL_BY_TIPO
-	* Temporal function to manage transitional models
-	* Get the model for given tipo (ontology node) without match/change it to v6 valid models.
-	* @param string $tipo
-	* @return string|null $model_name
-	*/
+	 * GET_LEGACY_MODEL_BY_TIPO
+	 * Temporal function to manage transitional models
+	 * Get the model for given tipo (ontology node) without match/change it to v6 valid models.
+	 * @param string $tipo
+	 * @return string|null $model_name
+	 */
 	public static function get_legacy_model_by_tipo( string $tipo ) : ?string {
 
 		$ontology_node	= ontology_node::get_instance( $tipo );
@@ -796,11 +781,11 @@ class ontology_node {
 
 
 	/**
-	* GET_LEGACY_MODEL
-	* Temporal function to manage transitional models
-	* Get the model without match/change it to v6 valid models.
-	* @return string|null $model_name
-	*/
+	 * GET_LEGACY_MODEL
+	 * Temporal function to manage transitional models
+	 * Get the model without match/change it to v6 valid models.
+	 * @return string|null $model_name
+	 */
 	public function get_legacy_model() : ?string {
 
 		$model_name = ontology_node::get_term_by_tipo(
@@ -816,12 +801,12 @@ class ontology_node {
 
 
 	/**
-	* GET_TIPO_FROM_MODEL
-	* Resolves tipo searching node model names
-	* Only one node exist by model name (models are unique)
-	* @param string $model
-	* @return string|null $tipo
-	*/
+	 * GET_TIPO_FROM_MODEL
+	 * Resolves tipo searching node model names
+	 * Only one node exist by model name (models are unique)
+	 * @param string $model
+	 * @return string|null $tipo
+	 */
 	public static function get_tipo_from_model( string $model ) : ?string {
 
 		$json_search = (object)[
@@ -850,11 +835,11 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_CHILDREN_OF_THIS
-	* Get array of terms (tipo) with parent = $this->tipo
-	* Its mean that only direct children (first level) will be returned
-	* @return array $ar_children_of_this
-	*/
+	 * GET_AR_CHILDREN_OF_THIS
+	 * Get array of terms (tipo) with parent = $this->tipo
+	 * Its mean that only direct children (first level) will be returned
+	 * @return array $ar_children_of_this
+	 */
 	public function get_ar_children_of_this() : array {
 
 		// check self tipo
@@ -886,13 +871,13 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_CHILDREN
-	* Resolves all terms that have given tipo as parent
-	* Not discriminates descriptors or models, result includes all children
-	* @param string $tipo
-	* @param string $order_by = 'order_number'
-	* @return array $ar_children
-	*/
+	 * GET_AR_CHILDREN
+	 * Resolves all terms that have given tipo as parent
+	 * Not discriminates descriptors or models, result includes all children
+	 * @param string $tipo
+	 * @param string $order_by = 'order_number'
+	 * @return array $ar_children
+	 */
 	public static function get_ar_children( string $tipo ) : array {
 
 		$ontology_node	= ontology_node::get_instance( $tipo );
@@ -904,89 +889,71 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDREN_OF_THIS
-	* Resolves all the children of the current term recursively.
-	* @param string $tipo
-	* @param int $is_recursion = 0
-	* @return array $this->ar_recursive_children_of_this
-	*/
+	 * GET_AR_RECURSIVE_CHILDREN_OF_THIS
+	 * Resolves all the children of the current term recursively.
+	 * WARNING: This method statefully populates $this->ar_recursive_children_of_this.
+	 *
+	 * @param string $tipo The starting tipo
+	 * @param int $is_recursion INTERNAL use for recursion level
+	 * @return array The complete list of recursive children
+	 */
 	public function get_ar_recursive_children_of_this( string $tipo, int $is_recursion=0 ) : array {
 
-		// IMPORTANT: DO NOT CACHE THIS METHOD (AFFECTS COMPONENT_FILTER_MASTER)
+		// IMPORTANT: DO NOT CACHE THIS METHOD COMPLETELY AS IS (AFFECTS COMPONENT_FILTER_MASTER)
+		// But ensure we clear the state on initial call
+		if ($is_recursion === 0) {
+			$this->ar_recursive_children_of_this = [];
+		}
 
-		// We create an independent instance of ontology_node and resolve the direct children.
-		$ontology_node			= ontology_node::get_instance( $tipo );
-		$ar_children_of_this	= $ontology_node->get_ar_children_of_this();
-		$ar_children_of_this_size = sizeof( $ar_children_of_this );
+		$ontology_node        = ontology_node::get_instance($tipo);
+		$ar_children_of_this = $ontology_node->get_ar_children_of_this();
 
-		// iterate children
-		for ($i=0; $i < $ar_children_of_this_size; $i++) {
-
-			$children_tipo = $ar_children_of_this[$i];
-
-			// Add current element
+		foreach ($ar_children_of_this as $children_tipo) {
 			$this->ar_recursive_children_of_this[] = $children_tipo;
 
 			// Recursion
 			$this->get_ar_recursive_children_of_this( $children_tipo, 1 );
 		}
 
-		if(isset($this->ar_recursive_children_of_this)) {
-			return $this->ar_recursive_children_of_this;
-		}
-
-		return [];
+		return $this->ar_recursive_children_of_this ?? [];
 	}//end get_ar_recursive_children_of_this
 
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDREN
-	* Static version of get_ar_recursive_children_of_this
-	* note: There is no noticeable increase in speed between the static and dynamic versions. Only a reduction of about 140 KB in memory consumption.
-	* @param string $tipo
-	* @param bool $is_recursion = false
-	* @param array|null $ar_exclude_models = null
-	* @param string|null $order_by = null
-	* @param bool $use_cache = true
-	* @return array $ar_resolved
-	*/
-	public static function get_ar_recursive_children( string $tipo, bool $is_recursion=false, ?array $ar_exclude_models=null ) : array {
+	 * GET_AR_RECURSIVE_CHILDREN
+	 * Static version of get_ar_recursive_children_of_this.
+	 * Optimized to avoid repetitive array_merge by using a collector array passed by reference.
+	 *
+	 * @param string $tipo Starting tipo
+	 * @param bool $is_recursion INTERNAL use
+	 * @param array|null $ar_exclude_models Models to skip (and their children)
+	 * @param array &$ar_resolved Collector array for recursion
+	 * @return array The complete list of recursive children
+	 */
+	public static function get_ar_recursive_children( string $tipo, bool $is_recursion=false, ?array $ar_exclude_models=null, ?array &$ar_resolved=null ) : array {
 
-		$ar_resolved=array();
+		if ($ar_resolved === null) {
+			$ar_resolved = [];
+		}
 
-		if( $is_recursion===true ) {
+		if ($is_recursion === true) {
 			$ar_resolved[] = $tipo;
 		}
 
-		$ontology_node	= ontology_node::get_instance( $tipo );
-		$ar_children	= $ontology_node->get_ar_children_of_this();
-		$ar_children_size = sizeof( $ar_children );
+		$ontology_node = ontology_node::get_instance($tipo);
+		$ar_children   = $ontology_node->get_ar_children_of_this();
 
-		// foreach($ar_children as $current_tipo) {
-		for ($i=0; $i < $ar_children_size; $i++) {
-
-			$current_tipo = $ar_children[$i];
-
-			// Exclude models optional
+		foreach ($ar_children as $current_tipo) {
 			if (!empty($ar_exclude_models)) {
-				$modelo_name = ontology_node::get_model_by_tipo( $current_tipo, true );
-				if (in_array($modelo_name, $ar_exclude_models)) {
-					continue; // Skip current model and children
+				$model_name = ontology_node::get_model_by_tipo($current_tipo, true);
+				if (in_array($model_name, $ar_exclude_models)) {
+					continue;
 				}
 			}
 
-			// Recursion
-			$ar_resolved = array_merge(
-				$ar_resolved,
-				ontology_node::get_ar_recursive_children(
-					$current_tipo,
-					true,
-					$ar_exclude_models
-				)
-			);
+			self::get_ar_recursive_children($current_tipo, true, $ar_exclude_models, $ar_resolved);
 		}
-
 
 		return $ar_resolved;
 	}//end get_ar_recursive_children
@@ -994,12 +961,12 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_PARENTS_OF_THIS
-	* Resolves the current term's parents recursively
-	* @param bool $ksort = true
-	* @return array $ar_parents_of_this
-	* Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
-	*/
+	 * GET_AR_PARENTS_OF_THIS
+	 * Resolves the current term's parents recursively
+	 * @param bool $ksort = true
+	 * @return array $ar_parents_of_this
+	 * Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
+	 */
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
 		// static cache
@@ -1041,11 +1008,11 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_SIBLINGS_OF_THIS
-	* Resolves all siblings descriptors of current term
-	* searching same parent that term parent
-	* @return array $ar_siblings_of_this
-	*/
+	 * GET_AR_SIBLINGS_OF_THIS
+	 * Resolves all siblings descriptors of current term
+	 * searching same parent that term parent
+	 * @return array $ar_siblings_of_this
+	 */
 	public function get_ar_siblings_of_this() : array {
 
 		// static cache
@@ -1070,14 +1037,14 @@ class ontology_node {
 
 
 	/**
-	* GET_RELATION_NODES
-	* @param string $tipo
-	* @param bool $cache = false
-	* @param bool $simple = false
-	* @return array $ar_relations
-	* JSON_VERSION
-	* In 'simple' mode it returns only an array with 'tipo'.
-	*/
+	 * GET_RELATION_NODES
+	 * @param string $tipo
+	 * @param bool $cache = false
+	 * @param bool $simple = false
+	 * @return array $ar_relations
+	 * JSON_VERSION
+	 * In 'simple' mode it returns only an array with 'tipo'.
+	 */
 	public static function get_relation_nodes( string $tipo, bool $cache=false, bool $simple=false ) : array {
 
 		// do not use cache in this method !
@@ -1119,214 +1086,93 @@ class ontology_node {
 
 
 	/**
-	* GET_AR_TIPO_BY_MODEL_AND_RELATION
-	* Returns the termID of the related term (specify relation) of given model name
-	* e.g. to know the related terms of model 'filter'.
-	* @param string $tipo like 'dd20'
-	* @param string $model_name like 'component_input_text'
-	* @param string $relation_type like 'related'
-	* @param bool $search_exact = false
-	* @return array $result
-	*/
+	 * GET_AR_TIPO_BY_MODEL_AND_RELATION
+	 * Returns the termID of the related term (specify relation) of given model name
+	 * e.g. to know the related terms of model 'filter'.
+	 * @param string $tipo like 'dd20'
+	 * @param string $model_name like 'component_input_text'
+	 * @param string $relation_type like 'related'
+	 * @param bool $search_exact = false
+	 * @return array $result
+	 */
 	public static function get_ar_tipo_by_model_and_relation( string $tipo, string $model_name, string $relation_type, bool $search_exact=false ) : array {
 
-		$result	= array();
-
-		// empty case
-			if(empty($tipo)) {
-				return $result;
-			}
+		if (empty($tipo)) {
+			return [];
+		}
 
 		// static cache
-			$uid = $tipo.'_'.$model_name.'_'.$relation_type.'_'.(int)$search_exact;
-			if(isset(self::$ar_tipo_by_model_name_and_relation_data[$uid])) {
-				return self::$ar_tipo_by_model_name_and_relation_data[$uid];
-			}
+		$uid = $tipo . '_' . $model_name . '_' . $relation_type . '_' . (int)$search_exact;
+		if (isset(self::$ar_tipo_by_model_name_and_relation_data[$uid])) {
+			return self::$ar_tipo_by_model_name_and_relation_data[$uid];
+		}
+
+		$ar_resolved = [];
+		$ar_targets  = [];
 
 		switch($relation_type) {
-
 			case 'children' :
-
-				// we get the children
-				$ontology_node	= ontology_node::get_instance($tipo);
-				$ar_children	= $ontology_node->get_ar_children_of_this();
-
-				// we go through them to filter by model
-				if(is_array($ar_children)) foreach($ar_children as $tipo) {
-
-					$ontology_node	= ontology_node::get_instance($tipo);
-					$model			= $ontology_node->get_model_tipo();
-					if(empty($model)) {
-						debug_log(__METHOD__
-							." Error processing relation children. Model is empty. Please define model for $tipo" . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' relation_type: ' . $relation_type . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_term_by_tipo($tipo) . PHP_EOL
-							.' ontology_node: ' . json_encode($ontology_node)
-							, logger::ERROR
-						);
-						return [];
-					}
-
-					$current_model_name = ontology_node::get_term_by_tipo($model);
-
-					if($search_exact===true) {
-						if ($current_model_name===$model_name) {
-							$result[] = $tipo;
-						}
-					}else{
-						if(strpos($current_model_name, $model_name)!==false) {
-							$result[] = $tipo;
-						}
-					}
-				}
+				$ontology_node = ontology_node::get_instance($tipo);
+				$ar_targets    = $ontology_node->get_ar_children_of_this();
 				break;
 
 			case 'children_recursive' :
-
-				// We get the children recursively
-				$ontology_node	= ontology_node::get_instance($tipo);
-				$ar_children	= $ontology_node->get_ar_recursive_children_of_this($tipo);
-
-				// we go through them to filter by model
-				if(is_array($ar_children)) foreach($ar_children as $tipo) {
-
-					$ontology_node	= ontology_node::get_instance($tipo);
-					$model_tipo		= $ontology_node->get_model_tipo();
-					if(empty($model_tipo)) {
-						debug_log(__METHOD__
-							." Error processing relation children_recursive. Model is empty. Please define model for $tipo" . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' relation_type: ' . $relation_type . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_term_by_tipo($tipo)
-							, logger::ERROR
-						);
-						return [];
-					}
-
-					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
-
-					if($search_exact===true) {
-						if ($current_model_name===$model_name) {
-							$result[] = $tipo;
-						}
-					}else{
-						if(strpos($current_model_name, $model_name)!==false) {
-							 $result[] = $tipo;
-						}
-					}
-				}
+				$ontology_node = ontology_node::get_instance($tipo);
+				$ar_targets    = $ontology_node->get_ar_recursive_children_of_this($tipo);
 				break;
 
 			case 'related' :
-
-				// We get the related terms
-				$ontology_node	= ontology_node::get_instance($tipo);
-				$relation_nodes	= $ontology_node->get_relation_nodes(
-					$tipo,
-					true, // bool cache
-					true // bool simple
-				);
-
-				// we go through them to filter by model
-				foreach($relation_nodes as $tipo) {
-
-					$ontology_node	= ontology_node::get_instance($tipo);
-					$model_tipo		= $ontology_node->get_model_tipo();
-					if(empty($model_tipo)) {
-						debug_log(__METHOD__
-							." Error processing relation related. Model is empty. Please define model for $tipo" . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' relation_type: ' . $relation_type . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_term_by_tipo($tipo)
-							, logger::ERROR
-						);
-						return [];
-					}
-
-					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);
-
-					if($search_exact===true) {
-						if ($current_model_name===$model_name) {
-							$result[] = $tipo;
-						}
-					}else{
-						if(strpos($current_model_name, $model_name)!==false) {
-							$result[] = $tipo;
-						}
-					}
-				}
+				$ontology_node = ontology_node::get_instance($tipo);
+				$ar_targets    = $ontology_node->get_relation_nodes($tipo, true, true);
 				break;
 
 			case 'parent' :
-
-				// we get the parents
-				$ontology_node	= ontology_node::get_instance($tipo);
-				$ar_parents		= $ontology_node->get_ar_parents_of_this();
-
-				// we go through them to filter by model
-				if(is_array($ar_parents)) foreach($ar_parents as $tipo) {
-
-					$ontology_node	= ontology_node::get_instance($tipo);
-					$model_tipo		= $ontology_node->get_model_tipo();
-					if(empty($model_tipo)) {
-						debug_log(__METHOD__
-							." Error processing relation parent. Model is empty. Please define model for $tipo" . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' relation_type: ' . $relation_type . PHP_EOL
-							.' tipo: ' . $tipo . PHP_EOL
-							.' name: ' . ontology_node::get_term_by_tipo($tipo)
-							, logger::ERROR
-						);
-						return [];
-					}
-
-					$current_model_name = ontology_node::get_term_by_tipo($model_tipo);		#dump($model_name);
-
-					if($search_exact===true) {
-						if ($current_model_name===$model_name) {
-							$result[] = $tipo;
-						}
-					}else{
-						if($current_model_name===$model_name) {
-							 $result[] = $tipo;
-						}
-					}
-				}
+				$ontology_node = ontology_node::get_instance($tipo);
+				$ar_targets    = $ontology_node->get_ar_parents_of_this();
 				break;
 
 			default :
-				debug_log(__METHOD__
-					." ERROR: relation_type [$relation_type] not defined! "
-					.' tipo: ' . $tipo
-					, logger::ERROR
-				);
+				debug_log(__METHOD__ . " ERROR: relation_type [{$relation_type}] not defined! tipo: {$tipo}", logger::ERROR);
 				return [];
-				break;
+		}
+
+		// Filter targets by model
+		if (is_array($ar_targets)) foreach($ar_targets as $current_tipo) {
+
+			$current_model_name = ontology_node::get_model_by_tipo($current_tipo, true);
+			if (empty($current_model_name)) {
+				debug_log(__METHOD__ . " Error processing relation {$relation_type}. Model is empty for {$current_tipo}", logger::ERROR);
+				continue;
+			}
+
+			if ($search_exact) {
+				if ($current_model_name === $model_name) {
+					$ar_resolved[] = $current_tipo;
+				}
+			} else {
+				if (str_contains($current_model_name, $model_name)) {
+					$ar_resolved[] = $current_tipo;
+				}
+			}
 		}
 
 		// store cache data
-			self::$ar_tipo_by_model_name_and_relation_data[$uid] = $result;
+		self::$ar_tipo_by_model_name_and_relation_data[$uid] = $ar_resolved;
 
-
-		return $result;
+		return $ar_resolved;
 	}//end get_ar_tipo_by_model_and_relation
 
 
 
 	/**
-	* GET_COLOR
-	* Get the color defined in properties
-	* if it's not defined return default gray
-	* It is used to set custom styles to component_section_id in some sections
-	* @param string $section_tiop
-	* @return string $color
-	* 	like '#b9b9b9'
-	*/
+	 * GET_COLOR
+	 * Get the color defined in properties
+	 * if it's not defined return default gray
+	 * It is used to set custom styles to component_section_id in some sections
+	 * @param string $section_tiop
+	 * @return string $color
+	 * 	like '#b9b9b9'
+	 */
 	public static function get_color( string $section_tipo ) : string {
 
 		$ontology_node	= ontology_node::get_instance( $section_tipo );
