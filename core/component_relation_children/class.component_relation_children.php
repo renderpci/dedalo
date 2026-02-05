@@ -59,6 +59,17 @@ class component_relation_children extends component_relation_common {
 	*/
 	public function get_data() : ?array {
 
+		/**
+		 * SEARCH MODE: Special case behavior
+		 * In search mode, this component delegates data retrieval to the parent class
+		 * because search operations require actual stored data (unlike normal mode
+		 * where data is calculated from component_relation_parent relations).
+		 * This maintains consistency with set_dato() which also uses parent behavior in search mode.
+		 */
+		if ($this->mode === 'search') {
+			return parent::get_data();
+		}
+
 		// data_resolved. Already resolved case
 		if(isset($this->data_resolved)) {
 			return $this->data_resolved;
@@ -131,6 +142,17 @@ class component_relation_children extends component_relation_common {
 	* @return bool True on success.
 	*/
 	public function set_data( ?array $data ) : bool {
+
+		/**
+		 * SEARCH MODE: Special case behavior
+		 * In search mode, this component delegates data storage to the parent class
+		 * because search operations require actual data persistence (unlike normal mode
+		 * where data is calculated from component_relation_parent relations).
+		 * This maintains consistency with get_dato() which also uses parent behavior in search mode.
+		 */
+		if ($this->mode === 'search') {
+			return parent::set_data($data);
+		}
 
 		// empty data: [] to null
 		if ( empty($data) ) {
@@ -305,7 +327,9 @@ class component_relation_children extends component_relation_common {
 				$model,
 				$parent_tipo,
 				$parent_section_id,
-				'edit',
+				$this->mode,  // CRITICAL: Preserve the current mode to ensure consistency.
+						      // In search mode, the parent component must also operate in search mode
+						      // to prevent accidental data persistence when modifying relations.
 				DEDALO_DATA_NOLAN,
 				$parent_section_tipo
 			);
