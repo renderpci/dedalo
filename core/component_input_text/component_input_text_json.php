@@ -72,7 +72,7 @@
 
 			case 'edit':
 			default:
-				$value			= $this->get_data_lang();				
+				$value			= $this->get_data_lang();
 				$fallback_value	= $this->is_empty_data( $value )
 					? $this->get_component_data_fallback($this->lang)
 					: null;
@@ -155,47 +155,6 @@
 			if(SHOW_DEBUG===true) {
 				metrics::add_metric('data_total_time', $start_time);
 				metrics::add_metric('data_total_calls');
-
-				/*
-				@v7 test
-				*/
-				// load_matrix_db_manager @v7
-					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
-					// $section_data = $matrix_db_manager->load();
-					// // dump($section_data, ' section_data //////////////////////////////////////////////////////////// ++ '.to_string());
-
-				// update_matrix_db_manager @v7
-					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
-					// $res = $matrix_db_manager->update(
-					// 	[
-					// 		'iri' => [
-					// 			'test3333' => [
-					// 				[
-					// 					'id' => 4,
-					// 					'value' => 'Test for write column iri ++ 5'
-					// 				]
-					// 			]
-					// 		],
-					// 		'geo' => null
-					// 	]
-					// );
-					// // dump($res, ' res ++ '.to_string("$this->section_tipo, $this->section_id"));
-
-				// insert_matrix_db_manager @v7
-					// $matrix_db_manager = matrix_db_manager::get_instance($this->section_tipo, $this->section_id);
-					// $res = $matrix_db_manager->insert(
-					// 	[
-					// 		'data' => [
-					// 			'test3333' => [
-					// 				[
-					// 					'id' => 4,
-					// 					'value' => 'Test for write column iri + INSERT'
-					// 				]
-					// 			]
-					// 		]
-					// 	]
-					// );
-					// dump($res, ' res insert_matrix_db_manager ++ '.to_string("$this->section_tipo, $this->section_id"));
 			}
 
 		$data[] = $item;

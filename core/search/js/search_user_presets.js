@@ -511,6 +511,7 @@ export const create_new_search_preset = function(options) {
 							const json_filter_parsed = self.parse_dom_to_json_filter({
 								save_arguments : true
 							})
+
 							const json_filter = json_filter_parsed.filter
 							if (json_filter) {
 								const changed_data_user = [{

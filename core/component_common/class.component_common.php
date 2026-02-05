@@ -1582,6 +1582,12 @@ abstract class component_common extends common {
 
 		// time machine data.
 		if((int)$section_id > 0 && $this->is_temporal !== true && tm_record::$save_tm) {
+
+			/**
+			 * @TODO
+			 * dd655 Temporal search presets case : evaluate .... to save time machine !
+			 */
+
 			// We save only current component lang 'data' in time machine
 			// get the time_machine data from component
 			// it could has a dataframe and in those cases it will return its data and the data from its dataframe mixed.
