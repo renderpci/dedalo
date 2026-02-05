@@ -618,18 +618,4 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	/**
-	* SEARCH_OPERATORS_INFO
-	* Overrides relation common operators.
-	* @return array $ar_operators
-	*/
-	public function search_operators_info() : array {
-
-		$ar_operators = [];
-
-		return $ar_operators;
-	}//end search_operators_info
-
-
-
 }//end class component_relation_parent

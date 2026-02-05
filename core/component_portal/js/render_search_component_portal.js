@@ -90,7 +90,6 @@ const render_content_data = async function(self, ar_section_record) {
 
 	// q operator (search only)
 		const non_q_operator_models = [
-			'component_relation_parent',
 			'component_relation_children'
 		]
 		if (!non_q_operator_models.includes(self.model)) {
