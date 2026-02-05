@@ -24,7 +24,7 @@ trait search_component_iri {
 
         // 2. Handle Query Splitting (if applicable)
         if (($query_object->q_split ?? false) === true && !search::is_literal($q)) {
-            
+
             // Pre-process q for splitting (join operators and wildcards)
             $q_proc = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
             $q_proc = preg_replace('/\s+(\*)/', '$1', $q_proc);
@@ -52,9 +52,9 @@ trait search_component_iri {
     * Extracts and normalizes the search query value (q) from the input object.
     */
     protected static function extract_normalized_iri_q(object $query_object) : string|false {
-        
-        $q_raw = isset($query_object->q) && is_array($query_object->q) 
-            ? $query_object->q[0] 
+
+        $q_raw = isset($query_object->q) && is_array($query_object->q)
+            ? $query_object->q[0]
             : ($query_object->q ?? null);
 
         if ((empty($q_raw) || (is_object($q_raw) && empty($q_raw->value))) && empty($query_object->q_operator)) {
@@ -72,7 +72,7 @@ trait search_component_iri {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_iri_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -80,7 +80,7 @@ trait search_component_iri {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo;
-        
+
         $ctx = new stdClass();
         $ctx->component_tipo = $component_tipo;
         $ctx->translatable   = ontology_node::get_translatable($component_tipo);
@@ -88,7 +88,7 @@ trait search_component_iri {
         $ctx->table_alias    = $query_object->table_alias;
         $ctx->table          = $query_object->table;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
         // Set defaults on query_object
         $query_object->type = 'string';
         $query_object->lang = $query_object->lang ?? DEDALO_DATA_LANG;
@@ -317,7 +317,7 @@ trait search_component_iri {
 	* What it returns: Records matching the pattern (begins with, ends with, or literal).
     */
     protected static function resolve_iri_wildcard_literal_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         $is_literal = search::is_literal($q);
         $q_clean    = trim(str_replace(["'", '*'], '', $q));
         $query_object->params = ['_Q1_' => $q_clean];

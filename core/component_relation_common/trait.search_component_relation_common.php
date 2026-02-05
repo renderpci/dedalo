@@ -47,7 +47,7 @@ trait search_component_relation_common {
     * Extracts and normalizes the search query value (q) from the input object.
     */
     protected static function extract_normalized_relation_q(object $query_object) : string|false {
-        
+
         $format = $query_object->format ?? null;
         $q_raw  = $query_object->q ?? null;
 
@@ -81,7 +81,7 @@ trait search_component_relation_common {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_relation_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -89,7 +89,7 @@ trait search_component_relation_common {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo ?? null;
-        
+
         if (empty($component_tipo)) {
             debug_log(__METHOD__ . " Invalid component tipo from path", logger::ERROR);
             return false;
@@ -100,7 +100,7 @@ trait search_component_relation_common {
         $ctx->column         = section_record_data::get_column_name(get_called_class());
         $ctx->table_alias    = $query_object->table_alias;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
         // Set defaults on query_object
         $query_object->type           = 'jsonb';
         $query_object->unaccent       = false;
@@ -239,7 +239,7 @@ trait search_component_relation_common {
 			'!*'	=> 'empty',
 			'*'		=> 'no_empty', // not null
 			'!='	=> 'different_from',
-			'!=='	=> 'strict_different_from'		
+			'!=='	=> 'strict_different_from'
 		];
 
 		return $ar_operators;
@@ -255,13 +255,13 @@ trait search_component_relation_common {
 	protected static function add_relation_search( object $query_object ) : object {
 
 		// q_operator
-			$q_operator = $query_object->q_operator ?? null;
+		$q_operator = $query_object->q_operator ?? null;
 
 		// Clone and modify query_object for search in relation_search too if the operator is different to ==
-			$relation_search_obj = clone $query_object;
-			if ($q_operator!=='==') {
-				$relation_search_obj->component_path = ['relation_search'];
-			}
+        $relation_search_obj = clone $query_object;
+        if ($q_operator!=='==') {
+            $relation_search_obj->component_path = ['relation_search'];
+        }
 
 		// Group the two query_object in a 'or' clause
 		$operator = '$or';
@@ -273,7 +273,7 @@ trait search_component_relation_common {
 
 
 		return $new_query_object;
-	}//end add_relation_search	
+	}//end add_relation_search
 
 
 

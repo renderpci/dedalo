@@ -47,9 +47,9 @@ trait search_component_string_common {
     * Extracts and normalizes the search value from the query object.
     */
     protected static function extract_normalized_q(object $query_object) : string|false {
-        
-        $q_raw = isset($query_object->q) && is_array($query_object->q) 
-            ? $query_object->q[0] 
+
+        $q_raw = isset($query_object->q) && is_array($query_object->q)
+            ? $query_object->q[0]
             : ($query_object->q ?? null);
 
         if ((empty($q_raw) || (is_object($q_raw) && empty($q_raw->value))) && empty($query_object->q_operator)) {
@@ -57,7 +57,7 @@ trait search_component_string_common {
         }
 
         $q = (is_object($q_raw) ? $q_raw->value : $q_raw) ?? '';
-        
+
         return stripslashes($q);
     }
 
@@ -68,11 +68,11 @@ trait search_component_string_common {
     * Process operators and wildcards before splitting the query string.
     */
     protected static function split_search_terms(string $q) : array {
-        
+
         // Join operators with next word (remove space)
         // Operators: !=, ==, !!, !*, =, -
         $q = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
-        
+
         // Join wildcard at the end (remove space before wildcard)
         $q = preg_replace('/\s+(\*)/', '$1', $q);
 
@@ -86,7 +86,7 @@ trait search_component_string_common {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -94,7 +94,7 @@ trait search_component_string_common {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo;
-        
+
         $ctx = new stdClass();
         $ctx->component_tipo = $component_tipo;
         $ctx->translatable   = ontology_node::get_translatable($component_tipo);
@@ -102,7 +102,7 @@ trait search_component_string_common {
         $ctx->table_alias    = $query_object->table_alias;
         $ctx->table          = $query_object->table;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
         // Set defaults on query_object
         $query_object->type = 'string';
         $query_object->lang = $query_object->lang ?? DEDALO_DATA_LANG;
@@ -320,7 +320,7 @@ trait search_component_string_common {
 	* What it returns: Records matching the specified string pattern.
     */
     protected static function resolve_wildcard_literal_sql(object $query_object, string $q, object $ctx) : object {
-        
+
         $is_literal = search::is_literal($q);
         $q_clean    = trim(str_replace(["'", '*'], '', $q));
         $query_object->params = ['_Q1_' => $q_clean];
@@ -389,7 +389,7 @@ trait search_component_string_common {
 
         $ar_operators = [
             '!*'		=> 'empty', // null
-            '*'			=> 'no_empty', // not null            
+            '*'			=> 'no_empty', // not null
             '=='		=> 'exactly',
             '='			=> 'similar_to',
             '!='		=> 'different_from',

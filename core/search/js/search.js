@@ -113,7 +113,6 @@ search.prototype.init = async function(options) {
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
 
-
 	// sections_selector_data
 		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=='undefined'
 			? self.caller.get_sections_selector_data()
@@ -685,10 +684,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.
-				const search_value = get_search_value(component_instance);				  
+				const search_value = get_search_value(component_instance);
 				if(SHOW_DEBUG) {
 					console.log("[recursive_groups] search_value:", search_value);
-				}				
+				}
 
 				// overwrite
 				q			= search_value.length > 0 ? search_value : null
