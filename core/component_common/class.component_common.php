@@ -1235,6 +1235,22 @@ abstract class component_common extends common {
 				return null;
 			}
 
+		/**
+		 * SEARCH MODE: Prevent accidental data persistence
+		 * Search mode is used exclusively for querying and filtering purposes.
+		 * Attempting to save component data while in search mode is an error condition
+		 * that indicates a logical flaw in the calling code. We abort the operation
+		 * and log the error to prevent unintended data modifications.
+		 */
+		if ($mode==='search') {
+			debug_log(__METHOD__
+				. " Stop saving in search mode ! " . PHP_EOL
+				. ' : ' . to_string()
+				, logger::ERROR
+			);
+			return null;
+		}
+
 		// section_id validate
 			// if ( abs(intval($section_id))<1 && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)===false ) {
 			// 	if(SHOW_DEBUG===true) {
