@@ -601,6 +601,9 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 		this.link_children_element = null
 	}
 
+	// Update pagination
+	this.children_data.pagination.total = this.children_data.ar_children_data.length
+
 
 	return true
 }//end remove_children_item
