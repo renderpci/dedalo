@@ -1561,8 +1561,19 @@ abstract class component_common extends common {
 				// debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
 				return true;
 			}
-			// mode search case
-			if ($this->mode==='search') {
+
+			/**
+			 * SEARCH MODE: Prevent accidental data persistence
+			 * Search mode is used exclusively for querying and filtering purposes.
+			 * Attempting to save component data while in search mode is an error condition
+			 * that indicates a logical flaw in the calling code. We abort the operation
+			 * and log the error to prevent unintended data modifications.
+			 */
+			if ($mode==='search') {
+				debug_log(__METHOD__
+					. " Stop saving in search mode ! "
+					, logger::ERROR
+				);
 				return true;
 			}
 
