@@ -691,7 +691,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				}
 
 				// overwrite
-				q			= search_value.length > 0 ? search_value : null
+				q			= (search_value && search_value.length > 0) ? search_value : null
 				q_operator	= component_instance.data.q_operator
 
 				// q_split
