@@ -265,7 +265,7 @@ trait search_component_relation_common {
 
 		// Group the two query_object in a 'or' clause
 		$operator = '$or';
-		if ($q_operator==='!=') {
+		if ($q_operator==='!=' || $q_operator==='!*') {
 			$operator = '$and';
 		}
 		$new_query_object = new stdClass();
