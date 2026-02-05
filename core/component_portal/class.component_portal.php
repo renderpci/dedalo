@@ -1,4 +1,5 @@
 <?php declare(strict_types=1);
+      use Psr\Log\Test\DummyTest;
 /**
 * CLASS COMPONENT_PORTAL
 * Integrates former component_autocomplete
@@ -45,19 +46,18 @@ class component_portal extends component_relation_common {
 		// Force loads dato always !IMPORTANT
 		$this->get_dato();
 
-		debug_log(__METHOD__
-			." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ". PHP_EOL
-			.' tipo: '.$this->tipo
-			, logger::WARNING
-		);
-
-		if(empty($dato)) {
-			return true;
-		}
-
 		// Save component data
-			 // $this->Save();
+		$legacy_model_name = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
+		if ($legacy_model_name==='component_autocomplete_hi') {
+
+			// Set time machine to false to prevent saving time machine record
+			$section = $this->get_my_section();
+			$section->save_tm = false;
+			$this->Save();
+			// Back to set time machine to true for the next savings.
+			$section->save_tm = true;
+		}
 
 		return true;
 	}//end regenerate_component
