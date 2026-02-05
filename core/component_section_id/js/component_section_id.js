@@ -68,7 +68,8 @@ export const component_section_id = function(){
  */
 component_section_id.prototype.get_search_value = function() {
 
-	const entries	= data.entries || []
+	const data = this.data || {}
+	const entries = data.entries || []
 
 	return entries
 }//end get_search_value

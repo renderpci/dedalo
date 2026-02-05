@@ -598,7 +598,7 @@ render_search.prototype.build_search_component = async function(options) {
 
 	const parent_div		= options.parent_div
 	const path_plain		= options.path_plain
-	const current_value		= options.current_value
+	const entries			= options.entries
 	const q_operator		= options.q_operator
 	const q_lang			= options.q_lang
 	const section_id		= options.section_id
@@ -627,7 +627,7 @@ render_search.prototype.build_search_component = async function(options) {
 				model					: last_item.model,
 				ar_target_section_tipo	: last_item.ar_target_section_tipo || null,
 				mode					: 'search',
-				value					: current_value || null, // value will be injected
+				entries					: entries || null, // entries will be injected to data.entries
 				q_operator				: q_operator || null,
 				q_lang					: q_lang || null,
 				path					: path

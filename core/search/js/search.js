@@ -169,7 +169,7 @@ search.prototype.init = async function(options) {
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
 			const hilite = (
-				(instance.data.value && instance.data.value.length>0) ||
+				(instance.data.entries && instance.data.entries.length>0) ||
 				(instance.data.q_operator && instance.data.q_operator.length>0)
 			)
 			ui.hilite({
@@ -412,31 +412,31 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 			let q_lang			= filter.lang
 
 			// Resolved check (useful for sequences or split strings)
-				const section_id = self.get_section_id()
+			const section_id = self.get_section_id()
 
-				if (self.ar_resolved_elements.indexOf(section_id)===-1) {
+			if (self.ar_resolved_elements.indexOf(section_id)===-1) {
 
-					if (clean_q===true) {
-						current_value	= ''
-						q_operator		= ''
-						q_lang 			= null
-					}
-
-					// Add. If not already resolved, add
-						self.build_search_component({
-							parent_div		: dom_element,
-							path_plain		: JSON.stringify(filter.path),
-							current_value	: current_value,
-							q_operator		: q_operator,
-							q_lang			: q_lang,
-							section_id		: section_id
-						})
-
-					// Set as resolved
-						if (allow_duplicates!==true) {
-							self.ar_resolved_elements.push(section_id)
-						}
+				if (clean_q===true) {
+					current_value	= ''
+					q_operator		= ''
+					q_lang 			= null
 				}
+
+				// Add. If not already resolved, add
+				self.build_search_component({
+					parent_div		: dom_element,
+					path_plain		: JSON.stringify(filter.path),
+					entries			: current_value,
+					q_operator		: q_operator,
+					q_lang			: q_lang,
+					section_id		: section_id
+				})
+
+				// Set as resolved
+				if (allow_duplicates!==true) {
+					self.ar_resolved_elements.push(section_id)
+				}
+			}
 
 		// If key contains $ is a group
 		}else if (key.indexOf('$')!==-1) {
@@ -481,7 +481,7 @@ search.prototype.get_component_instance = async function(options) {
 		const section_tipo				= options.section_tipo
 		const component_tipo			= options.component_tipo
 		const model						= options.model
-		const value						= options.value || []
+		const entries					= options.entries || []
 		const q_operator				= options.q_operator
 		const q_lang					= options.q_lang
 		const path						= options.path
@@ -514,16 +514,16 @@ search.prototype.get_component_instance = async function(options) {
 			}
 			const component_instance = await get_instance(component_options)
 
-	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
+	// data. Inject entries from search user preset before build is needed for portal 'resolve_data' API call.
 		component_instance.data = {
-			value : value
+			entries : entries
 		}
 
 	// Include ar_target_section_tipo to the source to get the specific sections define by the selection of the user
 	// used by component_relation_model to define his own sections.
-		component_instance.source_add = {
-			ar_target_section_tipo : ar_target_section_tipo
-		}
+		// component_instance.source_add = {
+		// 	ar_target_section_tipo : ar_target_section_tipo
+		// }
 
 	// build component to force load datalist, portal resolve_data etc.
 		const build_result = await component_instance.build(true)
@@ -531,10 +531,11 @@ search.prototype.get_component_instance = async function(options) {
 			console.error("Ignored component instance, build result is: ",build_result);
 			return null
 		}
-	// data. Inject value again from search user preset is needed for regular components
-		component_instance.data.value = value
 
-	// inject permissions. Search is always enable for all users
+	// data. Inject entries from search user preset after build again for non portal components.
+		component_instance.data.entries = entries
+
+	// permissions. Inject permissions. Search is always enable for all users
 		component_instance.context.permissions = 2
 
 	// add search options to the instance
@@ -643,9 +644,9 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 		if (typeof component.get_search_value === 'function') {
 		  return component.get_search_value();
 		}
-		
-		// value is into the data.value array
-		return component.data.value;
+
+		// value is into the data.entries array
+		return component.data.entries;
 	}
 
 	const len = ar_elements.length

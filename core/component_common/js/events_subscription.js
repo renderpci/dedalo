@@ -29,7 +29,7 @@ export const events_subscription = function(self) {
 							return
 						}
 						const hilite = (
-							(instance.data.value && instance.data.value.length>0) ||
+							(instance.data.entries && instance.data.entries.length>0) ||
 							(instance.data.q_operator && instance.data.q_operator.length>0)
 						)
 						ui.hilite({

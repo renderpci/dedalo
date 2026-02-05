@@ -156,9 +156,9 @@ export const get_editing_preset_json_filter = async function(self) {
 			// fix value
 			self.component_json_data = component_json_data
 
-			// json_filter . component_json_data dato is array, select the first value
-			const json_filter = component_json_data.value && component_json_data.value[0]
-				? component_json_data.value[0]
+			// json_filter . component_json_data data.entries is an array, select the first entry
+			const json_filter = component_json_data.entries && component_json_data.entries[0]
+				? component_json_data.entries[0]
 				: null
 
 			return json_filter

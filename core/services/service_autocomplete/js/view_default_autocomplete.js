@@ -1019,7 +1019,7 @@ const render_datalist = async function(self, result) {
 	// total
 		const sections_data	= result.data.find(el => el.typo==='sections')
 		const total			= sections_data
-			? sections_data.value.length
+			? sections_data.entries.length
 			: 0
 		// if the api doesn't send any data, do not continue, return empty datalist
 		if (total===0) {
@@ -1038,7 +1038,7 @@ const render_datalist = async function(self, result) {
 		// }
 
 	// value. Remove unused value items properties (publication_first_date, publication_last_user, etc.)
-		const value = sections_data.value.map(el => {
+		const value = sections_data.entries.map(el => {
 			const item = {
 				section_tipo	: el.section_tipo,
 				section_id		: el.section_id,
