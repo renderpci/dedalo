@@ -670,6 +670,7 @@ ts_object.prototype.get_children_recursive = function( options ) {
 
 			if (response && response.result) {
 				const section_data = response.result.data.find(el => el.tipo === section_tipo)
+				console.log('----> get_children_recursive section_data X', section_data);
 				const children_recursive = section_data.value.map(el =>{
 					return {
 						section_tipo	: el.section_tipo,
@@ -1284,7 +1285,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 							default: {
 								const components_length = components.length
 								for (let i = 0; i < components_length; i++) {
-									ar_values.push(...components[i].data.value)
+									ar_values.push(...components[i].data.entries)
 								}
 								break;
 							}
@@ -1687,6 +1688,8 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 				parent_instance.children_container.classList.remove('hide')
 				// set arrow down
 				parent_instance.link_children_element.classList.add('open')
+				// set is_open flag to sync with toggle logic
+				parent_instance.is_open = true
 			})
 		})
 	);
