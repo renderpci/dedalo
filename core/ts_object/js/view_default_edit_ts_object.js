@@ -380,7 +380,7 @@ const render_ts_line = function(self) {
 				// set pointer
 				self.term_node = term_node
 
-				// id_info
+				// id_info (show_section)
 				const term_id = (area_ontology_caller)
 					? (()=>{
 						// id_info. Like '[hierarchy1_246]' (Term tipo)
@@ -388,19 +388,22 @@ const render_ts_line = function(self) {
 						const regex				= /^(.*) ([a-z]{2,}) ([0-9]+)$/gm;
 						const term_regex_result	= regex.exec(current_element.value)
 						// term_id . like 'dd_1'
-						return term_regex_result
+						const result = term_regex_result
 							? term_regex_result[2] + term_regex_result[3]
 							: self.section_tipo + self.section_id
+						return result
 					  })()
 					: self.section_tipo +'_'+ self.section_id
+
+				const section = self.section_tipo + ' - ' + self.section_id
 
 				const id_info = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'id_info ontology',
 					inner_html		: '['+ term_id +']',
-					title			: self.section_tipo + ' - ' + self.section_id,
+					title			: section,
 					data_set		: {
-						section : self.section_tipo + ' - ' + self.ection_id,
+						section : section,
 						term_id : '['+ term_id +']'
 					},
 					parent			: fragment
