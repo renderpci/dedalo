@@ -162,6 +162,13 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 			 // Handle the response from add_child. Caller e.g. 'tool_cataloging'
 			if (data_transfer_json.caller) {
 
+				const parent_id = wrap_ts_object.dataset.id
+				const parent_instance = get_instance_by_id(parent_id)
+				if (!parent_instance) {
+					console.error('[ts_object.onDrop] No parent_instance found in instances map cache.', parent_id);
+					return false;
+				}
+
 				// new_section_id . Generated as response by the trigger add_child
 				const new_section_id = response?.result
 				if(!new_section_id){
@@ -169,66 +176,37 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 					return false;
 				}
 
+				// caller
+				const caller_name = data_transfer_json.caller
+				if(!caller_name){
+					console.error('[ts_object.onDrop] No caller found in data_transfer_json.');
+					return false;
+				}
+
+				// locator
+				const locator = data_transfer_json.locator
+				if(!locator){
+					console.error('[ts_object.onDrop] No locator found in data_transfer_json.');
+					return false;
+				}
+
 				// Publish an event to update the component used as term in the new section
-				event_manager.publish(`ts_add_child_${data_transfer_json.caller}`, {
-					locator			: data_transfer_json.locator,
+				event_manager.publish(`ts_add_child_${caller_name}`, {
+					locator			: locator,
 					new_ts_section	: {
 						section_id : new_section_id,
 						section_tipo : section_tipo
 					},
-					callback : async () => {
-
-						// link_children_element. list_thesaurus_element of current wrapper
-						const link_children_element = link_children_element
-						if(!link_children_element) {
-							console.warn('[ts_object.on_drop] Error finding link_children_element');
-							return false
-						}
-
-						// children_data - render_children_data from API
-						const children_data = await self.get_children_data({
-							section_tipo	: section_tipo,
-							section_id		: section_id,
-							children_tipo	: children_tipo,
-							pagination		: null,
-							children		: link_children_element.children_list
-						})
-						if (!children_data) {
-							// error case
-							console.warn("Error, children_data is null");
-							return false
-						}
-
-						// Refresh children elements by API call
-						await render_children({
-							self						: self,
-							link_children_element		: link_children_element,
-							clean_children_container	: true,
-							children_data				: children_data
-						})
-
-						// save_opened_elements
+					callback : async (api_response) => {
+						// Refresh parent_instance to display the newly added child
 						dd_request_idle_callback(
-							() => {
-								self.save_opened_elements('add')
-							}
-						)
-
-						// update parent arrow button
-						// self.update_arrow_state(link_children_element, false)
-
-						// hilite added term. Allows arrow state update
-						dd_request_idle_callback(
-							() => {
-								const wrapper = wrap_target.querySelector(`.wrap_ts_object[data-section_id="${new_section_id}"][data-section_tipo="${section_tipo}"]`)
-								if (!wrapper) {
-									console.error('Error finding wrapper');
-									return
-								}
-								const element = wrapper.querySelector('.list_thesaurus_element[data-type="term"]')
-								if (element) {
-									self.hilite_element(element)
-								}
+							async () => {
+								await parent_instance.update_children_state({
+									fetch_data: true,
+									render: true,
+									refresh_content: true,
+									show_children: true
+								})
 							}
 						)
 					}
