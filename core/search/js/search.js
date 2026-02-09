@@ -168,10 +168,17 @@ search.prototype.init = async function(options) {
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
-			const hilite = (
-				(instance.data.entries && instance.data.entries.length>0) ||
-				(instance.data.q_operator && instance.data.q_operator.length>0)
-			)
+
+			// Check for first entry value
+			const entries0 = instance.data?.entries?.[0]
+			const is_empty_value = !entries0 || (entries0.value === undefined || entries0.value === null || entries0.value === '')
+
+			// Check for operator
+			const is_empty_operator = !instance.data?.q_operator
+
+			// Highlight if either is present
+			const hilite = ( !is_empty_value || !is_empty_operator )
+
 			ui.hilite({
 				instance	: instance, // instance object
 				hilite		: hilite // bool
