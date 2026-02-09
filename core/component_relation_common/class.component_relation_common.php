@@ -867,13 +867,14 @@ class component_relation_common extends component_common {
 			if (empty($locator) || !is_object($locator)) {
 				return null;
 			}
-			// parse as real locator class object
-			$locator = new locator($locator);
+			// parse as real locator class object if needed
+			if (!($locator instanceof locator)) {
+				$locator = new locator($locator);
+			}
 
 		$ar_value = [];
 		if(!empty($ar_components_related)){
 
-			$value = array();
 			foreach ($ar_components_related as $component_tipo) {
 
 				$model_name			= ontology_node::get_model_by_tipo($component_tipo, true);
@@ -886,19 +887,12 @@ class component_relation_common extends component_common {
 					$locator->section_tipo
 				);
 
-				$current_value = $model_name::get_value_with_fallback_from_data(
-					$current_component->get_data(),
-					false,
-					$lang
-				);
+				$current_value = $current_component->get_value();
 
-				$value[] = $current_value;
+				if (empty($current_value) || $current_value==='<mark></mark>' || trim($current_value)==='') continue;
+
+				$ar_value[] = $current_value;
 			}//end foreach ($ar_components_related as $component_tipo)
-
-			foreach ($value as $element_value) {
-				if (empty($element_value) || $element_value==='<mark></mark>' || trim($element_value)==='') continue;
-				$ar_value[] = $element_value;
-			}
 
 		}else{
 
