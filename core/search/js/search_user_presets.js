@@ -33,10 +33,10 @@
 
 /**
 * GET_EDITING_PRESET_JSON_FILTER
-* Get json_filter from temp presets if exists
-* Matching using section tipo and user id
-* @param object self (search instance)
-* @return object|null
+* Retrieves the currently active search filter (temp preset) for the user.
+* Matches the filter using the current section type and user ID.
+* @param object self - The search instance
+* @return promise object|null - The JSON filter object or null if not found
 */
 export const get_editing_preset_json_filter = async function(self) {
 
@@ -188,11 +188,9 @@ export const get_editing_preset_json_filter = async function(self) {
 
 /**
 * LOAD_USER_SEARCH_PRESETS
-* Get section search presets records
-* On click on search presets list, load all user presets from db to get the list names
-* @param object self
-* @return object section
-* 	section instance
+* Fetches the list of saved search presets for the current user and section.
+* @param object self - The search instance
+* @return promise object - The section instance containing the presets list
 */
 export const load_user_search_presets = async function(self) {
 
@@ -245,12 +243,13 @@ export const load_user_search_presets = async function(self) {
 			]
 		}
 		const sqo = {
-			limit			: 15,
-			offset			: 0,
-			filter			: fiter,
+			select			: [],
 			section_tipo	: [{
 				tipo : presets_section_tipo // 'dd623'
-			}]
+			}],
+			filter			: fiter,
+			limit			: 15,
+			offset			: 0
 		}
 
 	// request_config
@@ -280,7 +279,7 @@ export const load_user_search_presets = async function(self) {
 			id_variant		: self.section_tipo + '_search_user_presets',
 			inspector		: false, // (!) disable elements
 			filter			: false, // (!) disable elements
-			session_save	: false,
+			session_save	: true, // Set as true to save the session and preserve counter coherence
 			view			: 'search_user_presets',
 			caller			: self
 		}
@@ -295,12 +294,10 @@ export const load_user_search_presets = async function(self) {
 
 /**
 * EDIT_USER_SEARCH_PRESET
-* Builds a presets section in edit mode with given section_id
-* Normally is rendered and place it into a modal box
-* @param object self
-* @param int section_id
-* @return object section
-* 	section instance
+* Initializes a preset record in edit mode for the modal editor.
+* @param object self - The search instance
+* @param int|string section_id - The ID of the preset to edit
+* @return promise object - The initialized section instance
 */
 export const edit_user_search_preset = async function(self, section_id) {
 
@@ -308,7 +305,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 		const request_config = [{
 			api_engine	: 'dedalo',
 			type		: 'main',
-			show	: {
+			show		: {
 				ddo_map :[
 					{
 						tipo			: presets_component_name_value_tipo, // 'dd624',
@@ -364,7 +361,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 			lang			: page_globals.dedalo_data_lang,
 			request_config	: request_config,
 			add_show		: true,
-			session_save	: false,
+			session_save	: false, // Set as false to prevent overwrite of the current session
 			id_variant		: self.section_tipo +'_'+ section_id + '_search_user_preset_edit'
 		}
 		const section = await get_instance(instance_options)
@@ -383,9 +380,10 @@ export const edit_user_search_preset = async function(self, section_id) {
 
 /**
 * LOAD_SEARCH_PRESET
-* Get DDBB data from component_json in presets section with given section_id
-* On click arrow button in search presets list, load preset from db and apply to current canvas
-* @return true
+* Retrieves the JSON filter data for a specific saved preset.
+* @param object options
+* @param string options.section_id - The ID of the preset to load
+* @return promise object - The JSON filter object
 */
 export const load_search_preset = async function(options) {
 
@@ -403,11 +401,11 @@ export const load_search_preset = async function(options) {
 		}
 		const component = await get_instance(instance_options)
 		await component.build(true)
-		const value = component.data.value
+		const entries = component.data.entries
 
 	// json_filter
-		const json_filter = (value && value[0])
-			? value[0]
+		const json_filter = (entries && entries[0])
+			? entries[0]
 			: {"$and":[]} // default
 
 
@@ -418,11 +416,12 @@ export const load_search_preset = async function(options) {
 
 /**
 * CREATE_NEW_SEARCH_PRESET
-* Creates a new presets section records adding section_tipo and user_id
-* On click new button in search presets list, load preset from db and apply to current canvas
+* Creates a new search preset record in the database.
+* Stores the current section type, user ID, and current filter state.
 * @param object options
-* @return promise
-* 	Resolve section_id
+* @param object options.self - The search instance
+* @param string options.section_tipo - The section type for the preset (user or temp)
+* @return promise string|bool - The new section ID or false on error
 */
 export const create_new_search_preset = function(options) {
 
@@ -538,9 +537,12 @@ export const create_new_search_preset = function(options) {
 
 /**
 * SAVE_PRESET
-* Saves preset data given
+* Saves the current filter structure to a specific preset record.
 * @param object options
-* @return api_response
+* @param object options.self - The search instance
+* @param string options.section_tipo - The section type of the preset
+* @param string options.section_id - The ID of the preset record
+* @return promise object - The API response
 */
 export const save_preset = async function(options) {
 
@@ -603,9 +605,9 @@ export const save_preset = async function(options) {
 
 /**
 * SAVE_TEMP_PRESET
-* Alias of save_preset
-* @param object self
-* @return object api_response
+* Saves the current interface state to the user's temporary preset.
+* @param object self - The search instance
+* @return promise object - The API response
 */
 export const save_temp_preset = async function(self) {
 
@@ -621,6 +623,41 @@ export const save_temp_preset = async function(self) {
 		section_id		: self.component_json_data.section_id
 	})
 }//end save_temp_preset
+
+
+
+/**
+* DELETE_USER_SEARCH_PRESET
+* Deletes a search preset from the database.
+* @param string section_id - The ID of the preset to delete
+* @return promise object - The API response
+*/
+export const delete_user_search_preset = async function(section_id) {
+
+	// check
+		if (!section_id) {
+			console.error('Invalid section_id:', section_id);
+			return false
+		}
+
+	// rqo
+		const rqo = {
+			action	: 'delete',
+			source	: {
+				section_tipo	: presets_section_tipo, // 'dd623'
+				section_id		: section_id,
+				model			: 'section'
+			}
+		}
+
+	// API request
+		const api_response = await data_manager.request({
+			body		: rqo,
+			use_worker	: true
+		})
+
+	return api_response
+}//end delete_user_search_preset
 
 
 
