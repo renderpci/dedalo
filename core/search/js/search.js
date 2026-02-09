@@ -184,6 +184,9 @@ search.prototype.init = async function(options) {
 	// permissions
 		self.permissions = 2
 
+	// ar_resolved_elements
+		self.ar_resolved_elements = []
+
 	// status update
 		self.status = 'initialized'
 
@@ -390,7 +393,6 @@ search.prototype.get_section_id = function() {
 * @param object options = {}
 * @return HTMLElement dom_group
 */
-search.prototype.ar_resolved_elements = []
 search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 	const self = this
@@ -985,8 +987,8 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* SHOW_ALL
-	* Trigger by button 'show_all'
-	* @param DOM node button_node
+	* Resets the search filter and updates the caller to show all records.
+	* @param HTMLElement button_node - The button element that triggered the action
 	* @return promise
 	*/
 	search.prototype.show_all = async function(button_node) {
@@ -1003,6 +1005,19 @@ search.prototype.update_state = async function(options) {
 				filter	: {$and:[]}, // reset filter
 				order	: [] // reset order
 			}
+
+		// pagination
+		if(self.caller?.model === 'section') {
+
+			json_query_obj.limit = self.caller.tipo==='dd542' ? 30 : 10;
+			json_query_obj.offset = 0
+
+			// max_input
+			const max_input = self.search_group_container.querySelector("input.max_input")
+			if(max_input) {
+				max_input.value = json_query_obj.limit
+			}
+		}
 
 		// update_caller
 			const js_promise = await update_caller(
@@ -1022,34 +1037,30 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* UPDATE_CALLER
-	* Modifies the caller SQO and navigate to generate an
-	* updated version of caller data and DOM nodes
-	* @param object caller_instance
-	* 	Could be section or area_thesaurus
-	* @param object json_query_obj
-	* {
-	* 	filter	: {$and:[]},
-	* 	order	: []
-	* }
-	* @param array|null filter_by_locators
-	* @param object self
+	* Modifies the caller instance's SQO (Search Query Object) and triggers navigation/refresh.
+	* @param object caller_instance - The section or area instance to update
+	* @param object json_query_obj - The search configuration object
+	* @param array|null filter_by_locators - (Optional) Locators filter
+	* @param object self - The search instance
 	* @return promise
 	*/
 	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
 
-		// limit
-			const limit = self.limit && self.limit>0
-				? self.limit
-				: 10
+		// short vars with fallback values
+			const limit = json_query_obj.limit || (self.limit && self.limit>0 ? self.limit : 10)
+			const offset = json_query_obj.offset || 0
+			const order = json_query_obj.order || []
+			const filter = json_query_obj.filter || null
+			const children_recursive = json_query_obj.children_recursive ?? false
 
 		// rqo.sqo update
 			caller_instance.total						= null
 			caller_instance.rqo.sqo.limit				= limit
-			caller_instance.rqo.sqo.offset				= 0
-			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
-			caller_instance.rqo.sqo.order				= json_query_obj.order || null
+			caller_instance.rqo.sqo.offset				= offset
+			caller_instance.rqo.sqo.filter				= filter
+			caller_instance.rqo.sqo.order				= order
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
-			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.rqo.sqo.children_recursive	= children_recursive
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
 		// check valid sections
