@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global  */
+/*global DD_TIPOS, get_label */
 /*eslint no-undef: "error"*/
 
 
@@ -33,7 +33,7 @@ export const view_tool_cataloging_mosaic = function() {
 * Custom section view injected by the tool
 * Manages the component's logic and appearance in client side
 * @param object self
-* @para object options
+* @param object options
 * @return HTMLElement wrapper
 */
 view_tool_cataloging_mosaic.render = async function(self, options) {
@@ -205,6 +205,7 @@ const get_content_data = async function(self, ar_section_record) {
 							section_record_node	: section_record_node,
 							total_records		: self.total,
 							locator				: section_record.locator,
+							paginated_key		: i,
 							caller				: self
 						})
 
@@ -230,7 +231,7 @@ const get_content_data = async function(self, ar_section_record) {
 			}//end if (ar_section_record_length===0)
 
 	// content_data
-		const content_data = ui.component.build_content_data(self)
+		const content_data = ui.tool.build_content_data(self)
 			  content_data.appendChild(fragment)
 
 	// css
@@ -321,7 +322,7 @@ const on_dragstart_mosaic = function(node, event, options) {
 	// node.classList.add('dragging')
 
 	return true
-}//end ondrag_start
+}//end on_dragstart_mosaic
 
 
 
@@ -460,7 +461,9 @@ const render_column_drag = function(options) {
 
 	// get hierarchy sections
 	const data			= area_thesaurus.data.find(item => item.tipo==='dd100')
-	const hierarchies	= data.value.filter(node => node.type==='hierarchy')
+	const hierarchies	= data && data.value
+		? data.value.filter(node => node.type==='hierarchy')
+		: []
 
 	// get inverser_realatins data
 		const inverse_relations_tipo = DD_TIPOS.DEDALO_SECTION_INFO_INVERSE_RELATIONS
