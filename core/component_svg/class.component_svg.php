@@ -268,6 +268,28 @@ class component_svg extends component_media_common implements component_media_in
 	*/
 	public static function get_url_from_locator(object $locator) : ?string {
 
+		// check component_tipo
+		if(!isset($locator->component_tipo) || !str_starts_with(ontology_node::get_model_by_tipo($locator->component_tipo, true), 'component')) {
+			debug_log(__METHOD__
+				. ' Error. component_tipo is invalid. Ignored URL resolution form locator.' . PHP_EOL
+				. ' locator: ' . to_string($locator) . PHP_EOL
+				. ' model: ' . ontology_node::get_model_by_tipo($locator->component_tipo, true)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		// check section_tipo
+		if(!isset($locator->section_tipo) || ontology_node::get_model_by_tipo($locator->section_tipo, true) !== 'section') {
+			debug_log(__METHOD__
+				. ' Error. section_tipo is invalid. Ignored URL resolution form locator.' . PHP_EOL
+				. ' locator: ' . to_string($locator) . PHP_EOL
+				. ' model: ' . ontology_node::get_model_by_tipo($locator->section_tipo, true)
+				, logger::ERROR
+			);
+			return null;
+		}
+
 		$model		= ontology_node::get_model_by_tipo($locator->component_tipo,true);
 		$component	= component_common::get_instance(
 			$model,
