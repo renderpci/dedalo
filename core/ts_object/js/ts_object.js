@@ -211,7 +211,7 @@ export const key_instances_builder = function(options) {
 * INIT
 * Setup the ts instance
 * @param object options
-* @return
+* @return bool
 */
 ts_object.prototype.init = async function(options) {
 
@@ -602,7 +602,9 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	}
 
 	// Update pagination
-	this.children_data.pagination.total = this.children_data.ar_children_data.length
+	if (this.children_data.pagination) {
+		this.children_data.pagination.total = this.children_data.ar_children_data.length
+	}
 
 
 	return true
