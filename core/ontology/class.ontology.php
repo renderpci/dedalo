@@ -1229,35 +1229,33 @@ class ontology {
 	*/
 	public static function get_active_elements() : array {
 
-
+		// cache
 		if (isset(self::$active_ontology_elements_cache)) {
 			return self::$active_ontology_elements_cache;
 		}
 
 		// main filter
-		$filter = json_decode('
-			{
-				"$and": [
-					{
-						"q": {
-							"section_id": "1",
-							"section_tipo": "dd64",
-							"from_component_tipo": "hierarchy4"
-						},
-						"q_operator": null,
-						"path": [
-							{
-								"name": "Active",
-								"model": "component_radio_button",
-								"section_tipo": "hierarchy1",
-								"component_tipo": "hierarchy4"
-							}
-						],
-						"type": "jsonb"
-					}
+		$filter = (object)[
+			'$and' => [
+				(object)[
+					'q' => (object)[
+						'section_id'			=> '1',
+						'section_tipo'			=> 'dd64',
+						'from_component_tipo'	=> 'hierarchy4'
+					],
+					'q_operator' => null,
+					'path' => [
+						(object)[
+							'name'				=> 'Active',
+							'model'				=> 'component_radio_button',
+							'section_tipo'		=> 'hierarchy1',
+							'component_tipo'	=> 'hierarchy4'
+						]
+					],
+					'type' => 'jsonb'
 				]
-			}
-		');
+			]
+		];
 
 		// section tipo depends on the current class (hierarchy, ontology)
 		$section_tipo = ontology::$main_section_tipo;
