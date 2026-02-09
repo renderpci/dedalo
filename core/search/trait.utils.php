@@ -309,7 +309,7 @@ trait utils {
 	* @param string $value Like 'oh1'
 	* @return string $placeholder Like $1, $2, $3, ...
 	*/
-	public function get_placeholder(string $value) : string {
+	public function get_placeholder(mixed $value) : string {
 
 		if(isset($this->params[$value])){
 			// Recycle placeholder and param

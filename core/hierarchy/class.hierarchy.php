@@ -536,7 +536,7 @@ class hierarchy extends ontology {
 				return 'lg-eng';
 			}
 
-		// cache			
+		// cache
 			if(isset(self::$cache_main_lang_cache[$section_tipo])) {
 				return self::$cache_main_lang_cache[$section_tipo];
 			}
@@ -568,7 +568,7 @@ class hierarchy extends ontology {
 
 		// search
 			$result	= matrix_db_manager::exec_search($sql, $params);
-			while ($row = pg_fetch_assoc($result)) {			
+			while ($row = pg_fetch_assoc($result)) {
 
 				$main_lang_column = $row['main_lang'];
 				// JSON decode DB column
@@ -589,7 +589,7 @@ class hierarchy extends ontology {
 						true // bool add_prefix
 					);
 				}
-				
+
 				break; // only one result is expected
 			}
 
@@ -768,7 +768,7 @@ class hierarchy extends ontology {
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
 		// cache
-		
+
 		if (isset(self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
 			return self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
 		}
@@ -1310,7 +1310,7 @@ class hierarchy extends ontology {
 	* @test true
 	*/
 	public static function get_active_elements() : array {
-		
+
 		// cache
 		if (isset(self::$active_hierarchy_elements_cache)) {
 			return self::$active_hierarchy_elements_cache;

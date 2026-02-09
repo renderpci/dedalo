@@ -437,7 +437,7 @@ class component_svg extends component_media_common implements component_media_in
 			$context		= $options->context ?? 'update_component_data';
 
 		$update_version	= implode('.', $update_version);
-		switch ($update_version) {			
+		switch ($update_version) {
 
 			default:
 				$response = new stdClass();
