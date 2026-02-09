@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global Promise, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_CORE_URL, lzstring */
+/*global Promise, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_CORE_URL, get_label */
 /*eslint no-undef: "error"*/
 
 
@@ -583,7 +583,7 @@ export const open_tool = async (options) => {
 
 		// caller. Instance that calls the tool, normally a component or section
 		const caller = options.caller
-		// caller_options. Object with additional data for the the tool
+		// caller_options. Object with additional data for the tool
 		const caller_options = options.caller_options || null
 		// open_as. Mode of tool visualization: modal, tab, popup
 		const open_as = options.open_as
@@ -786,7 +786,7 @@ const view_modal = async function(options) {
 
 	// windowFeatures. To customize the modal size in a tool, set tool properties
 	// `windowFeatures` like `{"windowFeatures":{"width":"34rem","maxWidth":"100%"}}`
-		if (windowFeatures) {
+		if (windowFeatures && typeof windowFeatures==='object') {
 			for (let [key, value] of Object.entries(windowFeatures)) {
 				modal.modal_content.style[key] = value
 			}
