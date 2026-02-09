@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL */
+/*global  */
 /*eslint no-undef: "error"*/
 
 // imports
@@ -35,7 +35,7 @@ export const render_error = async function(self, options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns component wrapper
+	// wrapper. ui build_edit returns tool wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
@@ -60,20 +60,24 @@ export const render_footer = function (self) {
 	})
 
 	// icon
-	ui.create_dom_element({
-		element_type	: 'img',
-		class_name		: 'icon',
-		src				: self.context.icon,
-		parent			: footer_node
-	})
+	if (self.context?.icon) {
+		ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'icon',
+			src				: self.context.icon,
+			parent			: footer_node
+		})
+	}
 
 	// developer
-	ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'info',
-		inner_html		: `Developed by ${self.context.developer}`,
-		parent			: footer_node
-	})
+	if (self.context?.developer) {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'info',
+			inner_html		: `Developed by ${self.context.developer}`,
+			parent			: footer_node
+		})
+	}
 
 
 	return footer_node

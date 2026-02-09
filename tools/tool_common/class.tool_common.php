@@ -1,8 +1,23 @@
 <?php declare(strict_types=1);
 /**
-* CLASS TOOL_COMMON
-* Add basic methods for general use in tools
-*/
+ * CLASS TOOL_COMMON
+ *
+ * Base class for all Dédalo tools.
+ * It provides common functionality for tool initialization, configuration
+ * management, context parsing, and registration logic.
+ *
+ * All specialized tools should extend this class to ensure consistency
+ * across the application.
+ *
+ * Key features:
+ * - Common tool structure and context creation
+ * - Active tool registry management
+ * - Tool configuration and permission handling
+ * - Utility methods for file and data processing
+ *
+ * @package    Dédalo
+ * @subpackage Tools
+ */
 class tool_common {
 
 
@@ -10,16 +25,28 @@ class tool_common {
 	/**
 	* CLASS VARS
 	*/
-		public $name;
-		public $config;
-		// string section_tipo
-		public $section_tipo;
-		// string section_id
-		public $section_id;
+		/** @var string Tool identifier name (same as class name) */
+		public string $name;
 
+		/** @var object|null Tool configuration object */
+		public ?object $config;
+
+		/** @var string Section Type identifier */
+		public string $section_tipo;
+
+		/** @var string|int Section ID identifier */
+		public string|int $section_id;
+
+		/** @var array|null Cache for all registered tools */
 		protected static $all_registered_tools_cache;
+
+		/** @var db_result|false Cache for active tools db result */
 		protected static $active_tools_cache;
+
+		/** @var array Cache for individual tool configurations */
 		protected static $cache_config_tool = [];
+
+		/** @var array Cache for user-specific tool lists */
 		protected static $user_tools_cache = [];
 
 
@@ -44,11 +71,13 @@ class tool_common {
 
 	/**
 	* GET_JSON
-	* Gets tool context
-	* This function to preserve calls coherence,
-	* but only is used to get context, not data.
-	* @param object|null $options = null
-	* @return object $json
+	*
+	* Gets tool context in JSON-compatible format.
+	* This function preserves compatibility with Dédalo architecture
+	* but is primarily used for structure context, not data.
+	*
+	* @param object|null $options Configuration options (get_context, get_data)
+	* @return object JSON object containing the tool context
 	*/
 	public function get_json( ?object $options=null ) : object {
 
@@ -70,13 +99,14 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
-	* Parse the tool context
-	* Used when tools area loaded from different window
-	* like time_machine do
-	* The context data is stored in section 'dd1324' (Registered tools)
-	* pre-parsed into the component_json 'dd1353' as JSON 'simple_tool_obj'
-	* when tools are registered
-	* @return dd_object $dd_object
+	*
+	* Parses and retrieves the full structural context of the tool.
+	* This context is essential when tools are loaded in isolated environments (e.g., popups, time machine).
+	* The data is derived from the 'Registered tools' section (dd1324) and the pre-parsed JSON structure
+	* in component_json (dd1353).
+	*
+	* @return dd_object The complete Dédalo object representing the tool context
+	* @throws Exception If the class name is strictly 'tool_common' (must be instantiated by a subclass)
 	*/
 	public function get_structure_context() : dd_object {
 
@@ -188,8 +218,8 @@ class tool_common {
 			});
 			$description = is_object($tool_description_object) && !empty($tool_description_object->value)
 				? $tool_description_object->value
-				: (is_object($ar_description[0]->value)
-					? ($ar_description->value ?? null)
+				: (isset($ar_description[0]->value)
+					? $ar_description[0]->value
 					: null);
 
 		// labels. take care of empty objects like '{}' casting array on check.
@@ -298,12 +328,15 @@ class tool_common {
 
 	/**
 	* CREATE_TOOL_SIMPLE_CONTEXT
-	* Parse a tool context from a simple_tool_object
-	* @param object $tool_object (simple_tool_object from tool record JSON component dd1353)
-	* @param object|null $tool_config = null (from properties)
-	* @param string|null $tipo = null
-	* @param string|null $section_tipo = null
-	* @return dd_object $tool_simple_context
+	*
+	* Generates a lightweight tool context object from a simple_tool_object definition.
+	* This is used to build the tool's representation in lists and menus without loading the full class.
+	*
+	* @param object $tool_object The simple_tool_object (usually from JSON component dd1353)
+	* @param object|null $tool_config Optional tool configuration object (e.g., from properties)
+	* @param string|null $tipo Component type identifier
+	* @param string|null $section_tipo Section type identifier
+	* @return dd_object The simplified tool context
 	*/
 	public static function create_tool_simple_context( object $tool_object, ?object $tool_config=null, ?string $tipo=null, ?string $section_tipo=null ) : dd_object {
 
@@ -440,9 +473,13 @@ class tool_common {
 
 
 	/**
-	* GET_REGISTERED_TOOLS
-	* Get the full or filtered list data of current registered tools in database
-	* @return array $registered_tools
+	* GET_ALL_REGISTERED_TOOLS
+	*
+	* Retrieves the full list of tools registered in the database.
+	* This method constructs a simplified tool object for each registered tool,
+	* including its name, label, and client configuration.
+	*
+	* @return array List of simple_tool_objects
 	*/
 	public static function get_all_registered_tools() : array {
 
@@ -682,8 +719,13 @@ class tool_common {
 
 	/**
 	* READ_FILES
-	* Read files from directory and return all files array filtered by extension
-	* @return array $ar_data
+	*
+	* Reads files from a directory and returns an array of filenames,
+	* filtered by the specified valid extensions.
+	*
+	* @param string $dir The directory path to scan
+	* @param array $valid_extensions List of allowed file extensions (lowercase)
+	* @return array List of matching filenames
 	*/
 	public static function read_files(string $dir, array $valid_extensions=['csv']) : array {
 
@@ -741,19 +783,18 @@ class tool_common {
 
 	/**
 	* READ_CSV_FILE_AS_ARRAY
-	* Reads given csv file as array of data.
-	* Note that expected encoding is UTF-8 and
-	* the locale settings are taken into account by php fgetcsv function.
-	* If LC_CTYPE is e.g. en_US.UTF-8, files in one-byte encodings may be read wrongly by fgetcsv.
-	* When file encoding is different from UTF-8, a conversion try will be made.
-	* @param string $file
-	* @param bool $skip_header
-	* @param string $csv_delimiter
-	* @param string $enclosure
-	* @param string $escape
 	*
-	* @return array $csv_array
-	* 	An empty array is returned when something wrong happens, like when the file doesn't exist
+	* Reads a CSV file and converts it into a multi-dimensional array.
+	* Handles BOM removal for UTF-8 files and attempts encoding conversion
+	* for non-UTF-8 files.
+	*
+	* @param string $file Absolute path to the CSV file
+	* @param bool $skip_header Whether to skip the first row
+	* @param string $csv_delimiter Character used as field delimiter
+	* @param string $enclosure Character used as field enclosure
+	* @param string $escape Character used for escaping
+	*
+	* @return array The CSV data as an array. Returns empty array if file is missing.
 	*/
 	public static function read_csv_file_as_array(string $file, bool $skip_header=false, string $csv_delimiter=';', string $enclosure='"', string $escape='"') : array {
 
