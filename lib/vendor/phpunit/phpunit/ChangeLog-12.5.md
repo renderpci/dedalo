@@ -2,6 +2,23 @@
 
 All notable changes of the PHPUnit 12.5 release series are documented in this file using the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## [12.5.10] - 2026-02-08
+
+### Fixed
+
+* [#6495](https://github.com/sebastianbergmann/phpunit/pull/6495): Source map for issue trigger identification is regenerated in process isolation child processes
+
+## [12.5.9] - 2026-02-05
+
+### Added
+
+* [#6488](https://github.com/sebastianbergmann/phpunit/issues/6488): Allow disabling issue trigger identification for improved performance
+
+### Fixed
+
+* [#6486](https://github.com/sebastianbergmann/phpunit/issues/6486): Incorrect file name reported for errors for test methods declared in traits
+* [#6490](https://github.com/sebastianbergmann/phpunit/pull/6490): Incorrect test count when tests are skipped in before-class method
+
 ## [12.5.8] - 2026-01-27
 
 ### Changed
@@ -75,6 +92,8 @@ All notable changes of the PHPUnit 12.5 release series are documented in this fi
 * [#6380](https://github.com/sebastianbergmann/phpunit/pull/6380): Allow `Throwable` in `expectExceptionObject()`
 * A PHPUnit notice is now emitted for test methods that create a mock object but do not configure an expectation for it
 
+[12.5.10]: https://github.com/sebastianbergmann/phpunit/compare/12.5.9...12.5.10
+[12.5.9]: https://github.com/sebastianbergmann/phpunit/compare/12.5.8...12.5.9
 [12.5.8]: https://github.com/sebastianbergmann/phpunit/compare/12.5.7...12.5.8
 [12.5.7]: https://github.com/sebastianbergmann/phpunit/compare/12.5.6...12.5.7
 [12.5.6]: https://github.com/sebastianbergmann/phpunit/compare/12.5.5...12.5.6
