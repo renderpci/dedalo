@@ -2512,7 +2512,32 @@ final class dd_core_api {
 			if(isset($cache_data['dedalo_projects_default_langs'])) {
 				$obj->dedalo_projects_default_langs = $cache_data['dedalo_projects_default_langs'];
 			}else{
-				$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [];
+				// Use fallback for v6 to v7 migration
+				$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS) ?? [
+					(object)[
+						"code" => "spa",
+						"section_id" => 17344,
+						"names" => (object)[
+							"lg-eng" => "Spanish",
+							"lg-spa" => "Castellano"
+						]
+					],
+					(object)[
+						"code" => "cat",
+						"section_id" => 3032,
+						"names" => (object)[
+							"lg-eng" => "Catalan"
+						]
+					],
+					(object)[
+						"code" => "eng",
+						"section_id" => 5101,
+						"names" => (object)[
+							"lg-spa" => "Inglés",
+							"lg-eng" => "English"
+						]
+					]
+				];
 				$obj->dedalo_projects_default_langs = array_map(function ($item) {
 
 					/// try to get the name in the requested language, else fallback to main lang or any.
