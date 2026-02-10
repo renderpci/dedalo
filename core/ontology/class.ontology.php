@@ -671,7 +671,22 @@ class ontology {
 			$model 	= ontology_node::get_model_by_tipo( $tipo );
 			$column = section_record_data::get_column_name( $model );
 
-			$section_record->set_component_data($tipo, $column, $name_data);
+			if (!empty($name_data)) {
+				if( is_object($name_data) ) {
+					// v6 compatibility
+					$fixed_value = [];
+					foreach($name_data as $lang => $value) {
+						$fixed_value[] = (object)[
+							'id'    => 1,
+							'lang'  => $lang,
+							'value' => to_string($value)
+						];
+					}
+					$name_data = $fixed_value;
+				}
+
+				$section_record->set_component_data($tipo, $column, $name_data);
+			}
 
 		// TLD
 			$tipo 	= DEDALO_HIERARCHY_TLD2_TIPO;
@@ -801,9 +816,18 @@ class ontology {
 
 				// term
 				if (!empty($name_data)) {
-					$term = new stdClass();
-					foreach ($name_data as $data_element) {
-						$term->{$data_element->lang} = $data_element->value;
+					if( is_object($name_data) ) {
+						// v6 compatibility
+						$term = $name_data;
+						// safe string conversion (v6 conversion issues)
+						foreach($term as $lang => $value) {
+							$term->{$lang} = to_string($value);
+						}
+					} else {
+						$term = new stdClass();
+						foreach ($name_data as $data_element) {
+							$term->{$data_element->lang} = to_string($data_element->value);
+						}
 					}
 					$ontology_node->set_term_data( $term );
 				}
