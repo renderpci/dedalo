@@ -243,13 +243,6 @@
 
 // MEDIA PDF QUALITY FOLDERS
 	if(defined('DEDALO_PDF_FOLDER')) {
-		// v5 to v6 names manage
-			$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_DEFAULT;
-			$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_PDF_FOLDER.'/'.DEDALO_PDF_QUALITY_ORIGINAL;
-			if( !is_dir($default_quality_path) || !is_dir($original_quality_path) ) {
-				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
-				v5_to_v6::update_component_pdf_media_dir();
-			}
 		// Target folder exists test
 			$ar_quality = DEDALO_PDF_AR_QUALITY;
 			$ar_quality[] = DEDALO_QUALITY_THUMB; // append thumb as quality only to force iterate it
@@ -296,14 +289,6 @@
 
 // MEDIA SVG QUALITY FOLDERS
 	if(defined('DEDALO_SVG_FOLDER')) {
-		// v5 to v6 names manage
-			$default_quality_path	= DEDALO_MEDIA_PATH.DEDALO_SVG_FOLDER.'/'.DEDALO_SVG_QUALITY_DEFAULT;
-			$original_quality_path	= DEDALO_MEDIA_PATH.DEDALO_SVG_FOLDER.'/'.DEDALO_SVG_QUALITY_ORIGINAL;
-			if( !is_dir($default_quality_path) || !is_dir($original_quality_path) ) {
-				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v5_to_v6.php';
-				v5_to_v6::update_component_svg_media_dir();
-			}
-
 		// Target folder exists test
 			$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
 			if (!system::check_directory($folder_path)) {
