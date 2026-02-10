@@ -819,4 +819,37 @@ component_date.prototype.value_to_string_value = function(current_value) {
 
 
 
+/**
+* IS_EMPTY
+* Check if the instance data is empty.
+* Used in search mode for hilite the component wrapper when has value.
+* @return bool
+*/
+component_date.prototype.is_empty = function() {
+
+	const entries = this.data?.entries || []
+
+	if(entries.length === 0) {
+		return true
+	}
+
+	// Helper to check if a date/time/period object has at least one set value
+	const has_data = (obj) => {
+		if (!obj || typeof obj !== 'object') return false
+		return Object.values(obj).some(val => val !== null && val !== undefined && val !== '')
+	}
+
+	for(const entry of entries) {
+		if(entry) {
+			if(has_data(entry.start) || has_data(entry.end) || has_data(entry.period)) {
+				return false
+			}
+		}
+	}
+
+	return true
+}//end is_empty
+
+
+
 // @license-end

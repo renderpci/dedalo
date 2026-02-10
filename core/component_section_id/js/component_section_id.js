@@ -76,4 +76,29 @@ component_section_id.prototype.get_search_value = function() {
 
 
 
+/**
+* IS_EMPTY
+* Check if the instance data is empty.
+* Used in search mode for hilite the component wrapper when has value.
+* @return bool
+*/
+component_section_id.prototype.is_empty = function() {
+
+	const entries = this.data?.entries || []
+
+	if(entries.length === 0) {
+		return true
+	}
+
+	// Double check first entry exists (safety)
+	if(entries[0]) {
+		return false
+	}
+
+	return true
+}//end is_empty
+
+
+
+
 // @license-end
