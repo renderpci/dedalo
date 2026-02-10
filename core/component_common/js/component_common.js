@@ -1799,4 +1799,43 @@ export const delete_dataframe = async function(options) {
 
 
 
+/**
+* IS_EMPTY
+* Check if the instance data is empty.
+* Used in search mode for hilite the component wrapper when has value.
+* @param object instance
+* @return bool
+*/
+export const is_empty = function( instance ) {
+
+	if( !instance ) {
+		return true
+	}
+
+	if( typeof instance.is_empty === 'function' ) {
+		return instance.is_empty()
+	}
+
+	const entries = instance.data?.entries || []
+
+	if(entries.length === 0) {
+		return true
+	}
+
+	const entries0 = entries[0]
+	if(entries0 && typeof entries0 === 'object' && Object.prototype.hasOwnProperty.call(entries0, 'value')) {
+		// string components check
+		return !entries0.value || entries0.value === ''
+	}else{
+		// other components check
+		if(entries0) {
+			return false
+		}
+	}
+
+	return true;
+}//end is_empty
+
+
+
 // @license-end

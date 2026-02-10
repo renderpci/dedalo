@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {is_empty} from '../../component_common/js/component_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
@@ -170,8 +171,7 @@ search.prototype.init = async function(options) {
 			// set instance as changed or not based on their value
 
 			// Check for first entry value
-			const entries0 = instance.data?.entries?.[0]
-			const is_empty_value = !entries0 || (entries0.value === undefined || entries0.value === null || entries0.value === '')
+			const is_empty_value = is_empty(instance)
 
 			// Check for operator
 			const is_empty_operator = !instance.data?.q_operator
