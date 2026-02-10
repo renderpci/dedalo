@@ -35,8 +35,6 @@ trait where {
 				$sections_placeholders[] = $placeholder;
 			}
 			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo IN (' . implode(',', $sections_placeholders) . '))';
-		}else if($this->sqo->mode==='tm') {
-			// Nothing to add here. matrix_time_machine table do not have self section_tipo column.
 		}else{
 			// Gets current param key (default is 1 and increases by 1 after each use)
 			$placeholder = $this->get_placeholder($ar_section_tipo[0]);
