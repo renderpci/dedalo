@@ -2154,7 +2154,7 @@ class ontology {
 		// Check if we have records to process
 		if ($total===0) {
 			$response->result	= true;
-			$response->msg		= 'OK. No records found to process [set_records_in_dd_ontology] ' .$sqo->section_tipo;
+			$response->msg		= 'OK. No records found to process [set_records_in_dd_ontology] ' . to_string($sqo->section_tipo);
 			$response->msg		.= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
 			$response->total	= 0;
 			return $response;

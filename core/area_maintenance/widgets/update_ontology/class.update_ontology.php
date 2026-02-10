@@ -281,7 +281,7 @@ class update_ontology {
 
 		$data = $component->get_data();
 
-		foreach ($data as $element) {			
+		foreach ($data as $element) {
 			$lang = $element->lang;
 			$value = $element->value;
 
@@ -291,7 +291,6 @@ class update_ontology {
 
 		return $item;
 	}//end get_row_item_with_langs
-
 
 
 
