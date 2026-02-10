@@ -167,6 +167,13 @@ const get_input_element_search = (i, current_value, self) => {
 			}
 			input.addEventListener('change', change_handler)
 
+		// input handler
+			const input_handler = () => {
+				// parsed_value
+				input.value = input.value.replace(/[^\d.,><=]/g, '');
+			}
+			input.addEventListener('input', input_handler)
+
 
 	return content_value
 }//end get_input_element_search

@@ -100,5 +100,19 @@ component_section_id.prototype.is_empty = function() {
 
 
 
+/**
+* VALIDATE_INPUT
+* Constrain values to numerica values
+* @param string value
+* @return string
+*/
+component_section_id.prototype.validate_input = function( value ) {
+
+	value = value.replace(/[^\d]/g, '');
+
+	return value
+}//end validate_input
+
+
 
 // @license-end
