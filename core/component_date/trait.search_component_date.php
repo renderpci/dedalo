@@ -137,6 +137,26 @@ trait search_component_date {
     */
     protected static function dispatch_date_mode_sql(object $query_object, ?object $q_object, object $ctx) : object {
 
+        /**
+         * @TODO
+         * Work in progress
+         * Experimental case where column is 'timestamp' (Time machine table)
+         * ! NOT finished
+         */
+        // column 'timestamp' case (Time machine table)
+         if($ctx->table_alias==='dd15') {
+            dump($ctx, ' ctx +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+            dump($query_object, ' query_object +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+
+            [$dd_date, $time] = self::extract_time_from_q($q_object);
+            $Q1 = $dd_date->get_dd_timestamp("Y-m-d");
+            $query_object->params   = ['_Q1_' => $Q1];
+            $query_object->sentence = "DATE(\"timestamp\") $ctx->operator $1";
+
+            dump($query_object, ' query_object 2 +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+            return $query_object;
+        }
+
         switch ($ctx->date_mode) {
             case 'date':
             case 'range':
