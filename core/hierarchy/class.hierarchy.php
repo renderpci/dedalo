@@ -1,8 +1,21 @@
 <?php declare(strict_types=1);
 /**
-* HIERARCHY
-* Centralized hierarchy methods
-*/
+ * HIERARCHY
+ *
+ * Centralized hierarchy methods for managing thesaurus-like structures in Dédalo.
+ *
+ * The hierarchy class extends ontology and provides specialized methods for:
+ * - Managing virtual sections used for descriptors and typologies (e.g., 'es1', 'es2').
+ * - High-speed retrieval of hierarchy-related configuration (section maps, main languages).
+ * - Exporting and importing hierarchy data.
+ * - Comparing and tracking schema changes in the ontology sections.
+ * - Creating root terms for thesaurus display.
+ *
+ * It uses a main table 'matrix_hierarchy_main' and follows the ontology-driven
+ * design pattern common in Dédalo v7.
+ *
+ * @package core\hierarchy
+ */
 class hierarchy extends ontology {
 
 
@@ -759,9 +772,9 @@ class hierarchy extends ontology {
 	* GET_HIERARCHY_SECTION
 	* Search hierarchy sections by target section_tipo and
 	* get result section_id
-	* @param $section_tipo
+	* @param string $section_tipo
 	*	Source section_tipo
-	* @param $hierarchy_component_tipo
+	* @param string $hierarchy_component_tipo
 	*	Target component tipo where search section_tipo
 	* @return int|null $section_id
 	*/
@@ -815,7 +828,7 @@ class hierarchy extends ontology {
 	* GET_HIERARCHY_BY_TLD
 	* Search hierarchy sections by tld and
 	* gets result as locator object
-	* @param $tld
+	* @param string $tld
 	*	tld like 'es'
 	* @return object|null $row
 	* Sample:
