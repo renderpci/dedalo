@@ -32,6 +32,7 @@
 			window.get_label = {}
 			window.SHOW_DEBUG = false
 			window.DEVELOPMENT_SERVER = false
+			window.DEDALO_API_URL = '../../core/api/v1/json/'
 
 		const rqo = { // rqo (request query object)
 			action			: 'get_environment',

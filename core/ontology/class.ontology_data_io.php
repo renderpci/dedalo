@@ -245,10 +245,13 @@ class ontology_data_io {
 		// get section_tipo
 			$section_tipo = ontology::map_tld_to_target_section_tipo( $tld );
 
+		// columns. Like ["section_id", "section_tipo", "data", "relation", ..]
+			$columns = matrix_db_manager::get_columns_name();
+
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
 			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
 			//   to process a complete file. This can help with the buffering/flushing issues.
@@ -313,10 +316,13 @@ class ontology_data_io {
 			}
 			$file_path = "{$ontology_io_path}/matrix_dd.copy.gz";
 
+		// columns. Like ["section_id", "section_tipo", "data", "relation", ..]
+			$columns = matrix_db_manager::get_columns_name();
+
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
 			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
 			//   to process a complete file. This can help with the buffering/flushing issues.
