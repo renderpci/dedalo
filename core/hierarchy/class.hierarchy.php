@@ -1009,9 +1009,7 @@ class hierarchy extends ontology {
 			$ar_children = ontology_node::get_ar_recursive_children(
 				$real_section,
 				false,
-				null,
-				null,
-				false //use cache false
+				null
 			);
 			$simple_schema_of_sections[$current_section] = $ar_children;
 		}
@@ -1090,9 +1088,9 @@ class hierarchy extends ontology {
 	* parents is a array of objects
 	* children is a array of objects
 	* [{
-	* 	"section 	: {"tipo":"oh1","label":"Oral History"},
-	* 	"parents"	: [{"tipo":"dd323","lqbel":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
-	* 	"children"	: [{"tipo":"oh2","lqbel":"Identification"},{"tipo":"oh14","label":"Code"}]
+	* 	"section" 	: {"tipo":"oh1","label":"Oral History"},
+	* 	"parents"	: [{"tipo":"dd323","label":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
+	* 	"children"	: [{"tipo":"oh2","label":"Identification"},{"tipo":"oh14","label":"Code"}]
 	* "}]
 	* @param string $filename
 	* @return array $data

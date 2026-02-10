@@ -144,7 +144,7 @@ class ontology_data_io {
 
 	/**
 	* UPDATE_ONTOLOGY_INFO
-	* get the current Dédalo version and the ontology information
+	* Gets the current Dédalo version and the ontology information
 	* to be saved into the info properties of the component.
 	* This information will be provided to control the ontology changes.
 	* @return bool
@@ -384,7 +384,7 @@ class ontology_data_io {
 			$import_response = backup::import_from_copy_file( $options );
 
 		// set the counter of import ontology to last section_id.
-			$matrix_table	= common::get_matrix_table_from_tipo( $section_tipo );
+			$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 			counter::consolidate_counter(
 				$section_tipo,
 				$matrix_table,
@@ -482,7 +482,7 @@ class ontology_data_io {
 		// curl request
 			$curl_response = curl_request((object)[
 				'url'				=> $url,
-				// 'post'				=> true,
+				// 'post'			=> true,
 				'header'			=> false, // bool add header to result
 				'ssl_verifypeer'	=> false,
 				'timeout'			=> (60*10), // int seconds

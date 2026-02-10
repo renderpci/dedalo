@@ -141,7 +141,7 @@ const get_content_data_edit = async function(self) {
 					)
 
 				},
-				on_submit		: async (e, values) => {
+				on_submit : async (e, values) => {
 
 					// ar_dedalo_prefix_tipos
 						// sample value:
