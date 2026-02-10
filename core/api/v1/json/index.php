@@ -307,10 +307,19 @@ if ($perf_active) {
 
 
 // output the response JSON string
-$output_string = isset($rqo->pretty_print)
-	? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-	: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-echo $output_string;
+$options = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+if (isset($rqo->pretty_print)) {
+	$options |= JSON_PRETTY_PRINT;
+}
+$streamed = true;
+if($streamed) {
+	// With the streaming response handler, we avoid building the entire JSON string in memory before outputting it,
+	// adding memory stability benefits for large objects.
+	json_streaming_handler::stream($response, $options);
+} else {
+	// Required allocating full string in memory.
+	echo json_handler::encode($response, $options);
+}
 
 
 
