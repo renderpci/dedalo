@@ -262,7 +262,7 @@ view_default_list_section.rebuild_columns_map = async function(self) {
 		label		: 'Id',
 		tipo		: 'section_id', // used to sort only
 		sortable	: true,
-		width		: 'minmax(auto, 6rem)',
+		width		: 'minmax(auto, 7rem)',
 		path		: [{
 			// note that component_tipo=section_id is valid here
 			// because section_id is a direct column in search
