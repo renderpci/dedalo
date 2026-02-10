@@ -14,6 +14,19 @@ class search_tm extends search {
 
 
 	/**
+	* BUILD_MAIN_WHERE
+	* Build and fix main_where_sql filter.
+	* @return void
+	*/
+	public function build_main_where() : void {
+
+		// Nothing to add here. matrix_time_machine table do not have self section_tipo column.
+
+	}//end build_main_where
+
+
+
+	/**
 	* BUILD_FULL_COUNT_SQL_QUERY_SELECT
 	* @return string $sql_query_select
 	*/
