@@ -536,7 +536,8 @@ const navigate = async function(user_navigation_options) {
 		// refresh page. Force to load new context elements data from DDBB
 			const refresh_result = await self.refresh({
 				build_autoload	: false,
-				render_level	: 'content'
+				render_level	: 'content',
+				destroy			: false // Set false to prevent delete self.ar_instances
 			})
 
 		// reset page scroll
