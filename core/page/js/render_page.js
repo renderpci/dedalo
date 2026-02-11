@@ -89,10 +89,10 @@ const get_content_data = async function(self) {
 	// When the data is not updated, stop load page and require the recovery key
 	// if user provide the correct key, load the update data widget.
 		// check the data and code versions
-		const dedalo_version	= page_globals.dedalo_version.split('.').slice(0, 3).join(".");
-		const data_version		= page_globals.data_version.join('.')
+		const dedalo_version	= page_globals?.dedalo_version?.split('.').slice(0, 3).join(".") || '';
+		const data_version		= Array.isArray(page_globals?.data_version) ? page_globals.data_version.join('.') : (page_globals?.data_version || '');
 
-		if( dedalo_version!==data_version ){
+		if( dedalo_version && data_version && dedalo_version!==data_version ){
 			const update_data_node = await render_update_data_maintenance()
 			content_data.appendChild(update_data_node)
 			return content_data
@@ -111,8 +111,11 @@ const get_content_data = async function(self) {
 		}
 
 	// dedalo_notification. notification_msg (defined in config and get from environment)
+	// Wrapped in requestAnimationFrame to ensure self.node (wrapper) is set in edit() before publishing
 		if(typeof page_globals.dedalo_notification!=='undefined' && page_globals.is_logged===true) {
-			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+			requestAnimationFrame(() => {
+				event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+			})
 		}
 
 	// add all instance rendered nodes
@@ -148,11 +151,12 @@ const get_content_data = async function(self) {
 						}
 
 						// store instance to locate on destroy
-						self.ar_instances.push(current_instance)
+						if (!self.ar_instances.includes(current_instance)) {
+							self.ar_instances.push(current_instance)
+						}
 
 						// build (load data)
-						const autoload = true // Note that it's necessary to load data here (in addition to context)
-						await current_instance.build(autoload)
+						await current_instance.build(true)
 
 						// render node
 						const node = await current_instance.render()
@@ -165,14 +169,17 @@ const get_content_data = async function(self) {
 					}
 				})
 				render_promises.push(render_promise)
-		}//end for (let i = 0; i < elements_length; i++)
+		}//end for (let i = 0; i < context_length; i++)
 
 	// render is complete
 		Promise.all(render_promises)
-		.then(function(){
-			// event publish
-			event_manager.publish('render_page')
+		.then(()=>{
+			// event publish (wait for current animations / DOM swaps)
+			requestAnimationFrame(() => {
+				event_manager.publish('render_page')
+			})
 		})
+		.catch(err => console.error("Error rendering page components:", err));
 
 
 	return content_data
@@ -316,8 +323,8 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 			}
 		)
 
-	// fix to compare with next requests
-	self.last_dedalo_notification = dedalo_notification
+	// fix to compare with next requests. Clone object to avoid reference mutation bugs
+	self.last_dedalo_notification = Object.assign({}, dedalo_notification)
 
 
 	return notification_msg
