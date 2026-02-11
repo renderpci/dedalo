@@ -246,7 +246,7 @@ tool_subtitles.prototype.get_user_tools = async function(ar_requested_tools){
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> get_diffusion_info API response:",'DEBUG',response);
+					dd_console("-> get_user_tools API response:",'DEBUG',response);
 				}
 
 				const result = response.result // array of objects

@@ -4,6 +4,12 @@
 * Manage the publication in SQL DDBB
 * The specific SQL commands are into the MySQL class
 */
+/**
+* CLASS DIFFUSION_SQL
+* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
+* Manage the publication in SQL DDBB
+* The specific SQL commands are into the MySQL class
+*/
 class diffusion_sql extends diffusion  {
 
 
@@ -3549,6 +3555,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_LOCATOR_TO_TERMINOID
+	* @deprecated 6.0.0 Use diffusion_utils::map_locator_to_term_id instead.
 	* Returns map first locator to plain "terminoID" like "es_2"
 	* @param object $options
 	* {
@@ -3729,6 +3736,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_LOCATOR_TO_TERM_ID
+	* @deprecated 6.0.0 Use diffusion_utils::map_locator_to_term_id instead.
 	* Alias of map_locator_to_terminoID
 	* @see component_relation_common->map_locator_to_term_id
 	* @return string $section_tipo
@@ -4442,7 +4450,7 @@ class diffusion_sql extends diffusion  {
 			case 'propiedades': // properties
 
 				$ontology_node	= ontology_node::get_instance($term_id);
-				$db_value		= $ontology_node->get_propiedades();
+				$db_value		= $ontology_node->get_propiedades(true);
 
 				$value = !empty($db_value) ? $db_value : null;
 
@@ -5157,6 +5165,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SPLIT_DATE_RANGE
+	* @deprecated 6.0.0 Use diffusion_utils::split_date_range instead.
 	* Split and format a component_date value
 	* sample of properties config
 	* // Indirect (mdcat4595):
