@@ -10,7 +10,7 @@
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {when_in_viewport} from '../../../core/common/js/events.js'
+	import {dd_request_idle_callback, when_in_viewport} from '../../../core/common/js/events.js'
 	import {downloadZip} from './lib/client-zip/index.js'
 
 
@@ -134,7 +134,9 @@ const get_content_data_edit = async function(self) {
 				'data'
 			)
 			.then(function(response){
-				const target_section_tipo = self.target_section_tipo[0]
+				const target_section_tipo = Array.isArray(self.target_section_tipo)
+					? self.target_section_tipo[0]
+					: self.target_section_tipo
 				if (response?.value && response.value[target_section_tipo]) {
 					// call for each saved ddo
 					for (let i = 0; i < response.value[target_section_tipo].length; i++) {
@@ -198,7 +200,7 @@ const get_content_data_edit = async function(self) {
 		// text_fg is white and sits at the top, clipped dynamically to match the bar's progress.
 			const progress_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'export_progress_container hide',
+				class_name		: 'export_progress_container no_visible',
 				parent			: export_buttons_config
 			})
 			// Background text (dark)
@@ -316,16 +318,25 @@ const get_content_data_edit = async function(self) {
 					while (export_data_container.hasChildNodes()) {
 						export_data_container.removeChild(export_data_container.lastChild);
 					}
+
+				// clean response_container
+					while (response_container.hasChildNodes()) {
+						response_container.removeChild(response_container.lastChild);
+					}
+
+				// data_spinner add
 					const data_spinner = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'spinner',
 						parent			: export_data_container
 					});
 
-				// spinner add
-					[button_export, activate_all_columns, deactivate_all_columns].map(
+				// styles
+					[activate_all_columns, deactivate_all_columns].map(
 						el => el.classList.add('hide')
 					)
+
+				// spinner add
 					const spinner = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'spinner',
@@ -335,7 +346,7 @@ const get_content_data_edit = async function(self) {
 					const fill_the_gaps			= fill_the_gaps_check.checked;
 
 				// loading class elements
-					[components_list_container, selection_list_contaniner, export_buttons_options].map(
+					[button_export, components_list_container, selection_list_contaniner, export_buttons_options].map(
 						el => el.classList.add('loading')
 					)
 
@@ -347,14 +358,26 @@ const get_content_data_edit = async function(self) {
 						fill_the_gaps		: fill_the_gaps,
 						view				: 'table'
 					}
-					const dd_grid				= await self.get_export_grid(export_grid_options)
-					const dd_grid_export_node	= await dd_grid.render()
+					const dd_grid = await self.get_export_grid(export_grid_options)
 
-					if (dd_grid_export_node) {
+					if(dd_grid) {
+						// Render grid node
+						const dd_grid_export_node = await dd_grid.render()
+						// Appemd DOM node to export_data_container
+						if (dd_grid_export_node) {
+							export_data_container.appendChild(dd_grid_export_node)
+							// export_buttons_options.scrollIntoView(true)
+						}
+					}else{
+						response_container.innerHTML = 'No data to export'
+					}
+
+				// spinners remove
+					if(data_spinner) {
 						data_spinner.remove()
-						export_data_container.appendChild(dd_grid_export_node)
-						// export_data_container.scrollIntoView(true)
-						export_buttons_options.scrollIntoView(true)
+					}
+					if(spinner) {
+						spinner.remove()
 					}
 
 				// check if some allowed media component is present in the data
@@ -373,17 +396,24 @@ const get_content_data_edit = async function(self) {
 						button_download_media.classList[style_action]('loading')
 					}
 
-				// spinner remove
-					[button_export, activate_all_columns, deactivate_all_columns].map(
+				// hide class remove
+					[activate_all_columns, deactivate_all_columns].map(
 						el => el.classList.remove('hide')
-					)
-					spinner.remove();
+					);
 
 				// loading class elements
 					[components_list_container, selection_list_contaniner].map(
 						el => el.classList.remove('loading')
-					)
+					);
 					// Note: export_buttons_options remains in loading state until stream finishes
+			})
+			self.button_export = button_export
+
+		// response container
+			const response_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'response_container',
+				parent			: export_buttons_config
 			})
 
 		// activate_all_columns
@@ -874,6 +904,8 @@ const do_sortable = function(element, self) {
 * @return array grid_values
 */
 export const get_parsed_grid_values = (self) => {
+
+	if(!self.dd_grid) return []
 
 	// grid_values from dd_grid extract values from dd_grid data
 	const grid_values = self.dd_grid.get_grid_values(self.dd_grid.data)

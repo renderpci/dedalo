@@ -34,8 +34,8 @@ class tool_common {
 		/** @var string Section Type identifier */
 		public string $section_tipo;
 
-		/** @var string|int Section ID identifier */
-		public string|int $section_id;
+		/** @var string|int|null Section ID identifier */
+		public string|int|null $section_id;
 
 		/** @var array|null Cache for all registered tools */
 		protected static $all_registered_tools_cache;
@@ -62,7 +62,7 @@ class tool_common {
 		// set tool name as class name
 		$this->name = get_called_class();
 
-		//set
+		// set
 		$this->section_tipo	= $section_tipo;
 		$this->section_id	= $section_id;
 	}//end __construct
