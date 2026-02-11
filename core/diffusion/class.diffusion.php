@@ -10,6 +10,7 @@ if (defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) {
 }
 /**
 * CLASS DIFUSSION
+* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
 * Handles the diffusion main tasks
 */
 abstract class diffusion  {
@@ -1048,6 +1049,7 @@ abstract class diffusion  {
 
 	/**
 	* GET_IS_PUBLICABLE
+	* @deprecated 6.0.0 Use diffusion_utils::get_is_publicable instead.
 	* Locate component_publication in requested locator section and get its boolean value
 	* used by portals to determine what locators will be include as 'dato' to publish
 	* @param object $locator
@@ -1055,39 +1057,9 @@ abstract class diffusion  {
 	*/
 	public static function get_is_publicable(object $locator) : bool {
 
-		$section_tipo	= $locator->section_tipo;
-		$section_id		= $locator->section_id;
-		$uid			= $section_tipo.'_'.$section_id;
-
-		static $resolved_is_publicable;
-		if (isset($resolved_is_publicable[$uid])) {
-			return $resolved_is_publicable[$uid];
-		}
-
-		// Locate component_publication in current section
-		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
-			$section_tipo, // string section_tipo
-			['component_publication'], // array ar_modelo_name_required
-			true, // bool from_cache
-			true, // bool resolve_virtual
-			true, // bool recursive
-			true, // bool search_exact
-			false // array|bool ar_tipo_exclude_elements
-		);
-		// Check list of values cases (returns is_publicable true by default)
-		if (empty($ar_children)) {
-			return true;
-		}
-
-		$component_publication_tipo = reset($ar_children);
-
-		$is_publicable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
-
-		// cache
-		$resolved_is_publicable[$uid] = $is_publicable;
-
-		return $is_publicable;
-	}//end get_is_publicable
+		return diffusion_utils::get_is_publicable($locator);
+	}
+	//end get_is_publicable
 
 
 

@@ -97,6 +97,32 @@ class diffusion_data_object extends stdClass {
 
 
 	/**
+	* SET_NODE_TIPO
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_node_tipo( ?string $value ) : bool  {
+
+		$this->node_tipo = $value;
+
+		return true;
+	}//end set_node_tipo
+
+
+
+	/**
+	* GET_NODE_TIPO
+	* Return property value
+	* @return string|null $this->node_tipo
+	*/
+	public function get_node_tipo() : ?string {
+
+		return $this->node_tipo ?? null;
+	}//end get_node_tipo
+
+
+
+	/**
 	* SET_LANG
 	* @param string|null $value
 	* @return bool
@@ -199,6 +225,113 @@ class diffusion_data_object extends stdClass {
 
 		return $this->section_id ?? null;
 	}//end get_section_id
+
+
+
+	/**
+	* SET_KEY
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_key( ?string $value ) : bool  {
+
+		$this->key = $value;
+
+		return true;
+	}//end set_key
+
+
+
+	/**
+	* GET_KEY
+	* Return property value
+	* @return string|null $this->key
+	*/
+	public function get_key() : ?string {
+
+		return $this->key ?? null;
+	}//end get_key
+
+
+
+
+	/**
+	* SET_LABEL
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_label( ?string $value ) : bool  {
+
+		$this->label = $value;
+
+		return true;
+	}//end set_label
+
+
+
+	/**
+	* GET_LABEL
+	* Return property value
+	* @return string|null $this->label
+	*/
+	public function get_label() : ?string {
+
+		return $this->label ?? null;
+	}//end get_label
+
+
+
+
+	/**
+	* SET_MODEL
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_model( ?string $value ) : bool  {
+
+		$this->model = $value;
+
+		return true;
+	}//end set_model
+
+
+
+	/**
+	* GET_MODEL
+	* Return property value
+	* @return string|null $this->model
+	*/
+	public function get_model() : ?string {
+
+		return $this->model ?? null;
+	}//end get_model
+
+
+
+
+	/**
+	* SET_TERM
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_term( ?string $value ) : bool  {
+
+		$this->term = $value;
+
+		return true;
+	}//end set_term
+
+
+
+	/**
+	* GET_TERM
+	* Return property value
+	* @return string|null $this->term
+	*/
+	public function get_term() : ?string {
+
+		return $this->term ?? null;
+	}//end get_term
 
 
 

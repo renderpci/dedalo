@@ -54,6 +54,7 @@ class section_record_data {
 		'component_3d'					=> 'media',
 		'component_av'					=> 'media',
 		'component_check_box'			=> 'relation',
+		'component_autocomplete_hi'		=> 'relation',
 		'component_dataframe'			=> 'relation',
 		'component_date'				=> 'date',
 		'component_email'				=> 'string',

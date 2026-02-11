@@ -81,8 +81,12 @@ include DEDALO_CORE_PATH . '/diffusion/class.diffusion_section_stats.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_mysql.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_object.php';
+include DEDALO_CORE_PATH . '/diffusion/class.diffusion_api.php';
+include DEDALO_CORE_PATH . '/diffusion/class.diffusion_chain_processor.php';
+include DEDALO_CORE_PATH . '/diffusion/class.diffusion_utils.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_data.php';
 include DEDALO_CORE_PATH . '/diffusion/class.diffusion_data_object.php';
+include DEDALO_CORE_PATH . '/diffusion/class.diffusion_datum.php';
 // Dédalo API
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_manager.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php';

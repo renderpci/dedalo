@@ -159,7 +159,7 @@ class dd_object extends stdClass {
 		// resolve and set type
 			$model = $this->model ?? '';
 			switch (true) {
-				case strpos($model, 'component_')===0 :
+				case strpos($model, 'component_')===0 || strpos($model, 'field_')===0 :
 					$type = 'component';
 					break;
 				case $model==='section' :
@@ -300,7 +300,7 @@ class dd_object extends stdClass {
 	* 	Could be array or string
 	* @return bool
 	*/
-	public function set_section_tipo(string|array $value) : bool  {
+	public function set_section_tipo(string|array|null $value) : bool  {
 
 		$this->section_tipo = $value;
 
@@ -1409,12 +1409,114 @@ class dd_object extends stdClass {
 	/**
 	* GET_DATA_FN
 	* Return property value
-	* @return string|null $this->label
+	* @return string|null $this->data_fn
 	*/
 	public function get_data_fn() : ?string {
 
 		return $this->data_fn ?? null;
 	}//end get_data_fn
+
+
+
+	/**
+	* SET_FN
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_fn(?string $value) : bool {
+
+		$this->fn = $value;
+
+		return true;
+	}//end set_fn
+
+
+
+	/**
+	* SET_DIFFUSION_NODE_TIPO
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_diffusion_node_tipo(?string $value) : bool {
+
+		$this->diffusion_node_tipo = $value;
+
+		return true;
+	}//end set_diffusion_node_tipo
+
+
+
+	/**
+	* GET_DIFFUSION_NODE_TIPO
+	* Return property value
+	* @return string|null $this->diffusion_node_tipo
+	*/
+	public function get_diffusion_node_tipo() : ?string {
+
+		return $this->diffusion_node_tipo ?? null;
+	}//end get_diffusion_node_tipo
+
+
+
+	/**
+	* GET_FN
+	* @return string|null $this->fn
+	*/
+	public function get_fn() : ?string {
+
+		return $this->fn ?? null;
+	}//end get_fn
+
+
+
+	/**
+	* SET_OPTIONS
+	* @param object|null $value
+	* @return bool
+	*/
+	public function set_options(?object $value) : bool {
+
+		$this->options = $value;
+
+		return true;
+	}//end set_options
+
+
+
+	/**
+	* GET_OPTIONS
+	* @return object|null $this->options
+	*/
+	public function get_options() : ?object {
+
+		return $this->options ?? null;
+	}//end get_options
+
+
+
+	/**
+	* SET_PARSER_ARGS
+	* @param object|null $value
+	* @return bool
+	*/
+	public function set_parser_args(?object $value) : bool {
+
+		$this->parser_args = $value;
+
+		return true;
+	}//end set_parser_args
+
+
+
+	/**
+	* GET_PARSER_ARGS
+	* @return object|null $this->parser_args
+	*/
+	public function get_parser_args() : ?object {
+
+		return $this->parser_args ?? null;
+	}//end get_parser_args
+
 
 
 

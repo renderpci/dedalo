@@ -46,7 +46,7 @@ $updates->$v = new stdClass();
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 6;
+	$updates->$v->update_from_minor		= 7;
 
 	// require a clean installation
 	 // it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -389,3 +389,9 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				ALTER TABLE "matrix_notifications" SET UNLOGGED;
 			');
+
+		// Create matrix_activity_diffusion table
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(
+				file_get_contents(DEDALO_ROOT . '/install/db/matrix_activity_diffusion.sql')
+			);
+

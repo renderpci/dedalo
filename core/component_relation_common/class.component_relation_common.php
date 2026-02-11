@@ -1092,7 +1092,7 @@ class component_relation_common extends component_common {
 			$data = $this->get_data();
 
 			$diffusion_value = !empty($data)
-				? json_encode($data)
+				? $data
 				: null;
 
 			$diffusion_data_object->set_value( $diffusion_value );
