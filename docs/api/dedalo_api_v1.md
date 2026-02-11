@@ -332,6 +332,14 @@ Below is a concise index of the v1 API classes (files in `core/api/v1/common`) w
 - `dd_area_maintenance_api` (maintenance & admin)
   - Actions: `class_request`, `widget_request`, `get_widget_value`, `lock_components_actions`, `modify_counter`, `get_simple_schema_changes_files`, `parse_simple_schema_changes_files`
 
+- `dd_diffusion_api` (standardized diffusion API)
+  - Actions: `diffuse`, `validate`, `get_ontology_map`
+  - Example: diffuse records
+
+    ```json
+    { "dd_api": "dd_diffusion_api", "action": "diffuse", "source": { "diffusion_node_tipo": "rsc636" }, "sqo": { "section_tipo": ["oh1"] } }
+    ```
+
 - `dd_component_portal_api`, `dd_component_text_area_api`, `dd_component_av_api`, `dd_component_3d_api`, `dd_component_info` — component-specific helpers used by front-end components and section tools (see respective `core/component_*` folders for how components construct RQO payloads).
 
 **RQO `source` object (common properties)**
@@ -387,6 +395,7 @@ Class reference files
 - `docs/api/classes/dd_component_3d_api.md` — 3D component helpers
 - `docs/api/classes/dd_component_info.md` — generic component info helpers
 - `docs/api/classes/dd_area_maintenance_api.md` — maintenance & admin endpoints
+- `docs/api/classes/dd_diffusion_api.md` — standardized diffusion API
 - `docs/api/classes/dd_manager.md` — internal request manager/router
 
 Examples folder
