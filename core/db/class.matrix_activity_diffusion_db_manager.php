@@ -1,0 +1,122 @@
+<?php declare(strict_types=1);
+/**
+* Class MATRIX_ACTIVITY_DIFFUSION_DB_MANAGER
+*
+* Provides core operations for managing matrix_activity_diffusion records.
+*/
+class matrix_activity_diffusion_db_manager extends matrix_db_manager {
+
+	// Allowed matrix tables
+	public static array $tables = [
+		'matrix_activity_diffusion' => true
+	];
+
+
+
+	/**
+	* CREATE
+	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
+	* and guaranteed inclusion of the `section_tipo` and `section_id` columns.
+	* Before insert, creates/updates the proper counter value and uses the result as `section_id` value.
+	* It is executed using prepared statement when the values are empty (default creation of empty record
+	* adding `section_tipo` and `section_id` only) and with query params when is not (other
+	* dynamic combinations of columns data).
+	* @param string $table
+	* 	The name of the table to query. The function validates this against
+	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	* @param string $section_tipo
+	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
+	* @param object|null $values = {} (optional)
+	* 	Object with {column name : value} structure.
+	* 	Keys are column names, values are their new values.
+	* @return int|false $section_id
+	* 	Returns the new $section_id on success, or `false` if validation fails,
+	* 	query preparation fails, or execution fails.
+	*/
+	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
+
+		// Validate table
+		if (!isset(self::$tables[$table])) {
+			debug_log(
+				__METHOD__
+				. " Invalid table. This table is not allowed to create records." . PHP_EOL
+				. ' table: ' . $table . PHP_EOL
+				. ' allowed_tables: ' . json_encode(self::$tables)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// Connection
+		$conn = DBi::_getConnection();
+
+		// Start building query
+		$columns		= ['"section_tipo"']; // required columns
+		$placeholders	= ['$1']; // placeholders for them
+		$params			= [$section_tipo]; // param values (first one for tipo)
+		$param_index	= 2; // next param index ($2, $3, ...)	
+		
+		// Add fixed columns (this allows use prepared statements)
+		foreach (self::$columns as $col => $col_value) {
+			// Prevent double columns (section_tipo and section_id are added by default)
+			if ($col==='section_tipo' || $col==='section_id') continue;
+
+			$columns[] = pg_escape_identifier($conn, $col);
+
+			$value = $values->$col ?? null;
+
+			// Placeholders / Values
+			if ($value !== null && isset(self::$json_columns[$col])) {
+				// Encode PHP array/object as JSON string
+				$params[]		= json_handler::encode($value);
+				$placeholders[]	= '$' . $param_index . '::jsonb';	
+			}else{
+				$params[]		= $value;
+				$placeholders[]	= '$' . $param_index;
+			}
+
+			// Increase param index value
+			$param_index++;
+		}
+
+		// (!) Note that value returned by save action, in case of activity, is the section_id
+		// auto created by table sequence 'matrix_activity_diffusion_section_id_seq', not by the counter.	
+
+		// Execute with prepared statements
+			$stmt_name = 'create_' . $table;
+			if (!isset(DBi::$prepared_statements[$stmt_name])) {
+				$sql = "
+					INSERT INTO $table (" . implode(', ', $columns) . ")
+					VALUES (" . implode(', ', $placeholders) . ")					
+				";
+				if (!pg_prepare(
+					$conn,
+					$stmt_name,
+					$sql)
+				) {
+					debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
+					return false;
+				}
+				// Set the statement as existing.
+				DBi::$prepared_statements[$stmt_name] = true;
+			}
+			$result = pg_execute(
+				$conn,
+				$stmt_name,
+				$params
+			);
+
+		if (!$result) {
+			// Log error if COMMIT fails (rare, but possible due to network or server issues)
+			debug_log(__METHOD__ . " CRITICAL: COMMIT FAILED: " . pg_last_error($conn), logger::ERROR);
+			return false;
+		}
+
+		// Removed real return section_id for performance reasons (its not used)
+		// Return 1 to be compatible with previous behavior
+		return 1;
+	}//end create
+
+
+
+}//end class matrix_activity_diffusion_db_manager
