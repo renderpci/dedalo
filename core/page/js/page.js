@@ -90,6 +90,9 @@ page.prototype.init = async function(options) {
 		self.events_tokens	= []
 		self.menu_data		= options.menu_data
 
+	// internal state
+		self.navigation_in_progress = false
+
 	// events subscriptions
 
 		// event user_navigation. Menu navigation (not pagination)
@@ -294,7 +297,7 @@ page.prototype.build = async function(autoload=false) {
 			}else{
 
 				// searchParams
-				const searchParams = new URLSearchParams(window.location.href);
+				const searchParams = new URLSearchParams(window.location.search);
 
 				// with_menu. Boolean value about if URL contains menu param. If not, the menu is added by default.
 				const with_menu = searchParams.has('menu')
@@ -472,6 +475,13 @@ const navigate = async function(user_navigation_options) {
 			return false
 		}
 
+	// navigation lock
+		if (self.navigation_in_progress) {
+			console.warn('Navigation already in progress. Ignored call:', user_navigation_options);
+			return false
+		}
+		self.navigation_in_progress = true
+
 	// reset status to prevent errors lock
 		self.status = 'rendered'
 
@@ -525,10 +535,24 @@ const navigate = async function(user_navigation_options) {
 				self.context = context_elements_to_stay
 
 		// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
-			const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+			const instances_to_stay		= self.ar_instances.filter(item => base_models.includes(item.model))
+			const instances_to_remove	= self.ar_instances.filter(item => !base_models.includes(item.model))
+
 			for (let i = instances_to_stay.length - 1; i >= 0; i--) {
 				instances_to_stay[i].destroyable = false
 			}
+
+		// destroy instances to remove. (Free memory and events)
+			if (instances_to_remove.length > 0) {
+				await Promise.all(instances_to_remove.map(async (inst) => {
+					if (typeof inst.destroy === 'function') {
+						await inst.destroy(true, true, true) // delete_self, delete_dependencies, remove_dom
+					}
+				}))
+			}
+			// fix ar_instances to stay
+			self.ar_instances = instances_to_stay
+
 
 		// clean CSS and other garbage
 			dd_garbage_collector();
@@ -633,8 +657,40 @@ const navigate = async function(user_navigation_options) {
 		console.error(error)
 
 		return false
+	} finally {
+		// unlock navigation
+		self.navigation_in_progress = false
 	}
 }//end navigate
+
+
+
+/**
+* DESTROY
+* Extend common destroy to remove global window/document events
+* @return promise
+*/
+page.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// remove window/document events
+		if (self.popstate_handler) {
+			window.removeEventListener('popstate', self.popstate_handler)
+		}
+		if (self.beforeunload_handler) {
+			window.removeEventListener('beforeunload', self.beforeunload_handler, {capture: true})
+		}
+		if (self.keydown_handler) {
+			document.removeEventListener('keydown', self.keydown_handler)
+		}
+		if (self.mousedown_handler) {
+			document.removeEventListener('mousedown', self.mousedown_handler)
+		}
+
+	// call common destroy
+		return common.prototype.destroy.call(this, delete_self, delete_dependencies, remove_dom)
+}//end destroy
 
 
 
@@ -650,7 +706,7 @@ page.prototype.add_events = function() {
 	// window onpopstate. Triggered when user clicks on the browser navigation buttons
 		// note that navigation calls generate a history of event state, and when user click's on back button,
 		// the browser get this event form history with the state info stored previously
-		const popstate_handler = function(event) {
+		self.popstate_handler = function(event) {
 			if (event.state && event.state.user_navigation_options) {
 				// get previously stored state data
 				const new_user_navigation_options = event.state.user_navigation_options
@@ -660,10 +716,10 @@ page.prototype.add_events = function() {
 				event_manager.publish('user_navigation', new_user_navigation_options)
 			}
 		}
-		window.addEventListener('popstate', popstate_handler)
+		window.addEventListener('popstate', self.popstate_handler)
 
 	// beforeunload (event)
-		const beforeunload_handler = function(event) {
+		self.beforeunload_handler = function(event) {
 			// event.preventDefault();
 
 			const unsaved_data = typeof window.unsaved_data!=='undefined'
@@ -688,10 +744,10 @@ page.prototype.add_events = function() {
 			// like : 'Changes that you made may not be saved.'
 				event.returnValue = true
 		}
-		window.addEventListener('beforeunload', beforeunload_handler, {capture: true})
+		window.addEventListener('beforeunload', self.beforeunload_handler, {capture: true})
 
 	// keydown events
-		const keydown_handler = function(evt) {
+		self.keydown_handler = function(evt) {
 			switch(evt.key) {
 
 				case 'Escape':
@@ -767,7 +823,7 @@ page.prototype.add_events = function() {
 						if (with_filter_instance.filter.search_panel_is_open===true) {
 							// always blur active component to force set dato (!)
 							document.activeElement.blur()
-							console.warn('this:', this);
+
 							dd_request_idle_callback(
 								() => {
 									// exec search
@@ -786,14 +842,14 @@ page.prototype.add_events = function() {
 					break;
 			}//end switch
 		}
-		document.addEventListener('keydown', keydown_handler)
+		document.addEventListener('keydown', self.keydown_handler)
 
 	// page click/mousedown
-		const mousedown_handler = (e) => {
+		self.mousedown_handler = (e) => {
 
 			deactivate_components(e)
 		}
-		document.addEventListener('mousedown', mousedown_handler)
+		document.addEventListener('mousedown', self.mousedown_handler)
 }//end add_events
 
 
