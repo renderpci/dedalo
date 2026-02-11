@@ -389,3 +389,9 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 				ALTER TABLE "matrix_notifications" SET UNLOGGED;
 			');
+
+		// Create matrix_activity_diffusion table
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(
+				file_get_contents(DEDALO_ROOT . '/install/db/matrix_activity_diffusion.sql')
+			);
+
