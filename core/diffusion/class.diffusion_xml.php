@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_XML
+* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
 * Manages publication on XML format
-*
 */
 class diffusion_xml extends diffusion  {
 
