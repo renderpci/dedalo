@@ -102,7 +102,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'list_of_test',
 			parent			: content_data
 		})
-		import('../../../../unit_test/js/list.js')
+		import('../../../../../test/client/js/list.js')
 		.then(function(module){
 			ui.update_node_content(list_of_test, JSON.stringify(module.list_of_test, null, 2))
 		})
