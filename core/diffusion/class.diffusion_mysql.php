@@ -3,7 +3,8 @@
 include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
 /**
 * CLASS DIFFUSION_MYSQL
-* It is in charge of managing the communication and the transfer of data from Dédalo
+* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
+* Specific MySQL commands to the publication and the transfer of data from Dédalo
 * to diffusion databases based on conventional MYSQL models
 */
 class diffusion_mysql extends diffusion_sql  {
