@@ -380,7 +380,7 @@ class area_maintenance extends area_common {
 
 	/**
 	* WIDGET_FACTORY
-	* Unified way to create an area-development widget. 
+	* Unified way to create an area-development widget.
 	* @param object $item
 	* @return object $widget
 	*/
@@ -758,13 +758,13 @@ class area_maintenance extends area_common {
 				$ms = $update_rate;
 				usleep( $ms * 1000 );
 			}
-			
+
 			// This code is unreachable but required for type safety
 			// to satisfy the object return type declaration
 			$response = new stdClass();
 				$response->result = false;
 				$response->msg = 'Stream ended';
-			
+
 			return $response;
 		}
 	}//end long_process_stream

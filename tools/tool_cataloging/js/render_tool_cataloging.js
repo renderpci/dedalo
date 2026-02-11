@@ -63,7 +63,7 @@ render_tool_cataloging.prototype.edit = async function(options={render_level:'fu
 
 
 /**
-* GET_CONTENT_DATA_EDITç
+* GET_CONTENT_DATA_EDIT
 * @param object self
 * @return HTMLElement content_data
 */
@@ -94,7 +94,6 @@ const get_content_data_edit = async function(self) {
 				left_container.appendChild(section_node)
 			})
 
-
 	// right_container
 		const right_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -114,7 +113,7 @@ const get_content_data_edit = async function(self) {
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
-		// save the pointers of the content_data nodes, to used by the buttons to access to the components
+		// save the pointers of the content_data nodes, to be used by the buttons to access to the components
 		content_data.left_container		= left_container
 		content_data.right_container	= right_container
 

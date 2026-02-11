@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {is_empty} from '../../component_common/js/component_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
@@ -113,7 +114,6 @@ search.prototype.init = async function(options) {
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
 
-
 	// sections_selector_data
 		self.sections_selector_data = typeof self.caller.get_sections_selector_data!=='undefined'
 			? self.caller.get_sections_selector_data()
@@ -169,10 +169,16 @@ search.prototype.init = async function(options) {
 			// show save animation. add save_success class to component wrappers (green line animation)
 			ui.component.exec_save_successfully_animation(instance)
 			// set instance as changed or not based on their value
-			const hilite = (
-				(instance.data.value && instance.data.value.length>0) ||
-				(instance.data.q_operator && instance.data.q_operator.length>0)
-			)
+
+			// Check for first entry value
+			const is_empty_value = is_empty(instance)
+
+			// Check for operator
+			const is_empty_operator = !instance.data?.q_operator
+
+			// Highlight if either is present
+			const hilite = ( !is_empty_value || !is_empty_operator )
+
 			ui.hilite({
 				instance	: instance, // instance object
 				hilite		: hilite // bool
@@ -184,6 +190,9 @@ search.prototype.init = async function(options) {
 
 	// permissions
 		self.permissions = 2
+
+	// ar_resolved_elements
+		self.ar_resolved_elements = []
 
 	// status update
 		self.status = 'initialized'
@@ -391,7 +400,6 @@ search.prototype.get_section_id = function() {
 * @param object options = {}
 * @return HTMLElement dom_group
 */
-search.prototype.ar_resolved_elements = []
 search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 	const self = this
@@ -413,31 +421,31 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 			let q_lang			= filter.lang
 
 			// Resolved check (useful for sequences or split strings)
-				const section_id = self.get_section_id()
+			const section_id = self.get_section_id()
 
-				if (self.ar_resolved_elements.indexOf(section_id)===-1) {
+			if (self.ar_resolved_elements.indexOf(section_id)===-1) {
 
-					if (clean_q===true) {
-						current_value	= ''
-						q_operator		= ''
-						q_lang 			= null
-					}
-
-					// Add. If not already resolved, add
-						self.build_search_component({
-							parent_div		: dom_element,
-							path_plain		: JSON.stringify(filter.path),
-							current_value	: current_value,
-							q_operator		: q_operator,
-							q_lang			: q_lang,
-							section_id		: section_id
-						})
-
-					// Set as resolved
-						if (allow_duplicates!==true) {
-							self.ar_resolved_elements.push(section_id)
-						}
+				if (clean_q===true) {
+					current_value	= ''
+					q_operator		= ''
+					q_lang 			= null
 				}
+
+				// Add. If not already resolved, add
+				self.build_search_component({
+					parent_div		: dom_element,
+					path_plain		: JSON.stringify(filter.path),
+					entries			: current_value,
+					q_operator		: q_operator,
+					q_lang			: q_lang,
+					section_id		: section_id
+				})
+
+				// Set as resolved
+				if (allow_duplicates!==true) {
+					self.ar_resolved_elements.push(section_id)
+				}
+			}
 
 		// If key contains $ is a group
 		}else if (key.indexOf('$')!==-1) {
@@ -482,7 +490,7 @@ search.prototype.get_component_instance = async function(options) {
 		const section_tipo				= options.section_tipo
 		const component_tipo			= options.component_tipo
 		const model						= options.model
-		const value						= options.value || []
+		const entries					= options.entries || []
 		const q_operator				= options.q_operator
 		const q_lang					= options.q_lang
 		const path						= options.path
@@ -515,16 +523,16 @@ search.prototype.get_component_instance = async function(options) {
 			}
 			const component_instance = await get_instance(component_options)
 
-	// data. Inject value from search user preset before build is needed for portal 'resolve_data' API call
+	// data. Inject entries from search user preset before build is needed for portal 'resolve_data' API call.
 		component_instance.data = {
-			value : value
+			entries : entries
 		}
 
 	// Include ar_target_section_tipo to the source to get the specific sections define by the selection of the user
 	// used by component_relation_model to define his own sections.
-		component_instance.source_add = {
-			ar_target_section_tipo : ar_target_section_tipo
-		}
+		// component_instance.source_add = {
+		// 	ar_target_section_tipo : ar_target_section_tipo
+		// }
 
 	// build component to force load datalist, portal resolve_data etc.
 		const build_result = await component_instance.build(true)
@@ -532,10 +540,11 @@ search.prototype.get_component_instance = async function(options) {
 			console.error("Ignored component instance, build result is: ",build_result);
 			return null
 		}
-	// data. Inject value again from search user preset is needed for regular components
-		component_instance.data.value = value
 
-	// inject permissions. Search is always enable for all users
+	// data. Inject entries from search user preset after build again for non portal components.
+		component_instance.data.entries = entries
+
+	// permissions. Inject permissions. Search is always enable for all users
 		component_instance.context.permissions = 2
 
 	// add search options to the instance
@@ -644,9 +653,9 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 		if (typeof component.get_search_value === 'function') {
 		  return component.get_search_value();
 		}
-		
-		// value is into the data.value array
-		return component.data.value;
+
+		// value is into the data.entries array
+		return component.data.entries;
 	}
 
 	const len = ar_elements.length
@@ -685,13 +694,13 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.
-				const search_value = get_search_value(component_instance);				  
+				const search_value = get_search_value(component_instance);
 				if(SHOW_DEBUG) {
 					console.log("[recursive_groups] search_value:", search_value);
-				}				
+				}
 
 				// overwrite
-				q			= search_value.length > 0 ? search_value : null
+				q			= (search_value && search_value.length > 0) ? search_value : null
 				q_operator	= component_instance.data.q_operator
 
 				// q_split
@@ -985,8 +994,8 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* SHOW_ALL
-	* Trigger by button 'show_all'
-	* @param DOM node button_node
+	* Resets the search filter and updates the caller to show all records.
+	* @param HTMLElement button_node - The button element that triggered the action
 	* @return promise
 	*/
 	search.prototype.show_all = async function(button_node) {
@@ -1003,6 +1012,19 @@ search.prototype.update_state = async function(options) {
 				filter	: {$and:[]}, // reset filter
 				order	: [] // reset order
 			}
+
+		// pagination
+		if(self.caller?.model === 'section') {
+
+			json_query_obj.limit = self.caller.tipo==='dd542' ? 30 : 10;
+			json_query_obj.offset = 0
+
+			// max_input
+			const max_input = self.search_group_container.querySelector("input.max_input")
+			if(max_input) {
+				max_input.value = json_query_obj.limit
+			}
+		}
 
 		// update_caller
 			const js_promise = await update_caller(
@@ -1022,34 +1044,30 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* UPDATE_CALLER
-	* Modifies the caller SQO and navigate to generate an
-	* updated version of caller data and DOM nodes
-	* @param object caller_instance
-	* 	Could be section or area_thesaurus
-	* @param object json_query_obj
-	* {
-	* 	filter	: {$and:[]},
-	* 	order	: []
-	* }
-	* @param array|null filter_by_locators
-	* @param object self
+	* Modifies the caller instance's SQO (Search Query Object) and triggers navigation/refresh.
+	* @param object caller_instance - The section or area instance to update
+	* @param object json_query_obj - The search configuration object
+	* @param array|null filter_by_locators - (Optional) Locators filter
+	* @param object self - The search instance
 	* @return promise
 	*/
 	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
 
-		// limit
-			const limit = self.limit && self.limit>0
-				? self.limit
-				: 10
+		// short vars with fallback values
+			const limit = json_query_obj.limit || (self.limit && self.limit>0 ? self.limit : 10)
+			const offset = json_query_obj.offset || 0
+			const order = json_query_obj.order || []
+			const filter = json_query_obj.filter || null
+			const children_recursive = json_query_obj.children_recursive ?? false
 
 		// rqo.sqo update
 			caller_instance.total						= null
 			caller_instance.rqo.sqo.limit				= limit
-			caller_instance.rqo.sqo.offset				= 0
-			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
-			caller_instance.rqo.sqo.order				= json_query_obj.order || null
+			caller_instance.rqo.sqo.offset				= offset
+			caller_instance.rqo.sqo.filter				= filter
+			caller_instance.rqo.sqo.order				= order
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
-			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
+			caller_instance.rqo.sqo.children_recursive	= children_recursive
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
 		// check valid sections

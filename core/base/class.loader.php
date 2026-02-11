@@ -20,6 +20,7 @@ include DEDALO_CORE_PATH . '/db/class.matrix_temp_manager.php';
 include DEDALO_CORE_PATH . '/db/class.matrix_activity_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.tm_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.db_result.php';
+include DEDALO_CORE_PATH . '/db/class.locators_result.php';
 include DEDALO_CORE_PATH . '/db/class.object_cache.php';
 // include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
 // include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';

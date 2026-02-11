@@ -34,7 +34,7 @@ export const tool_cataloging = function () {
 
 	this.section_to_cataloging	= null // main section to be cataloging
 	this.area_thesaurus			= null
-}//end page
+}//end tool_cataloging
 
 
 
@@ -181,7 +181,7 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 

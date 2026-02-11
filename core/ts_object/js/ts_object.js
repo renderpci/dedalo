@@ -211,7 +211,7 @@ export const key_instances_builder = function(options) {
 * INIT
 * Setup the ts instance
 * @param object options
-* @return
+* @return bool
 */
 ts_object.prototype.init = async function(options) {
 
@@ -601,9 +601,100 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 		this.link_children_element = null
 	}
 
+	// Update pagination
+	if (this.children_data.pagination) {
+		this.children_data.pagination.total = this.children_data.ar_children_data.length
+	}
+
 
 	return true
 }//end remove_children_item
+
+
+
+/**
+* UPDATE_CHILDREN_STATE
+* Centralized method to update children-related state and UI.
+* Call this after any operation that changes children (add, remove, swap, drop).
+* @param object options
+* {
+*   children_data: object|null - New children data (if null, uses current)
+*   fetch_data: bool - If true, fetches fresh data from server
+*   render: bool - If true, renders children DOM
+*   refresh_content: bool - If true, refreshes content (term line, arrow)
+*   show_children: bool - If true, shows children container and opens arrow
+*   clean_container: bool - If true, cleans container before render
+* }
+* @return promise<bool>
+*/
+ts_object.prototype.update_children_state = async function(options = {}) {
+
+	const self = this
+
+	// Default options
+	const {
+		children_data = null,
+		fetch_data = false,
+		render = true,
+		refresh_content = true,
+		show_children = true,
+		clean_container = true
+	} = options
+
+	// 1. FETCH DATA (if requested)
+	let data = children_data
+	if (fetch_data) {
+		data = await self.get_children_data({ cache: false })
+		if (!data) {
+			console.warn('[update_children_state] Failed to fetch children data')
+			return false
+		}
+	}
+
+	// 2. UPDATE INSTANCE STATE
+	if (data) {
+		self.children_data = data
+
+		// Sync has_descriptor_children with actual data
+		const has_children = data.ar_children_data?.length > 0
+		self.has_descriptor_children = has_children
+		if (self.data) {
+			self.data.has_descriptor_children = has_children
+		}
+	}
+
+	// 3. RENDER CHILDREN (if requested and data exists)
+	if (render && self.children_data?.ar_children_data) {
+		await self.render_children({
+			clean_children_container: clean_container,
+			children_data: self.children_data
+		})
+	}
+
+	// 4. REFRESH CONTENT (updates term line, arrow icon, etc.)
+	if (refresh_content) {
+		await self.refresh({
+			build_autoload: false,
+			render_level: 'content',
+			destroy: false
+		})
+	}
+
+	// 5. SHOW CHILDREN (if requested and has children)
+	if (show_children && self.has_descriptor_children) {
+		requestAnimationFrame(() => {
+			if (self.children_container) {
+				self.children_container.classList.remove('hide')
+			}
+			if (self.link_children_element) {
+				self.link_children_element.classList.add('open')
+			}
+			self.is_open = true
+		})
+	}
+
+	return true
+}//end update_children_state
 
 
 
@@ -667,6 +758,7 @@ ts_object.prototype.get_children_recursive = function( options ) {
 
 			if (response && response.result) {
 				const section_data = response.result.data.find(el => el.tipo === section_tipo)
+				console.log('----> get_children_recursive section_data X', section_data);
 				const children_recursive = section_data.value.map(el =>{
 					return {
 						section_tipo	: el.section_tipo,
@@ -1131,43 +1223,30 @@ ts_object.prototype.swap_parent = async function (options) {
 	dd_request_idle_callback(
 		async () => {
 
-			// Updated old_parent_instance
-			// Remove children from data (client side only action)
+			// Update old_parent_instance (remove child)
 			old_parent_instance.remove_children_item( moving_instance.data )
-			// Refresh the instance data to update the children arrow
-			old_parent_instance.refresh({
-				build_autoload	: false, // Do not load data from API
-				render_level	: 'content', // updated arrow status and render
-				destroy			: false
+			await old_parent_instance.update_children_state({
+				render: false,  // No need to re-render, just refresh content
+				refresh_content: true,
+				show_children: old_parent_instance.is_open
 			})
 			if(SHOW_DEBUG===true) {
 				console.log('Updated old_parent_instance :', old_parent_instance);
 			}
 
-			// Updates target instance
-			// Add children to data (client side only action)
+			// Update target_instance (add child)
 			target_instance.add_children_item( moving_instance.data )
-
-			// Refresh the instance data to update the children arrow
-			await target_instance.refresh({
-				build_autoload	: false, // Do not load data from API
-				render_level	: 'content', // updated arrow status and render
-				destroy			: false
+			await target_instance.update_children_state({
+				render: false,  // DOM already updated above
+				refresh_content: true,
+				show_children: true
 			})
 
-			// Update styles. Ensure the target instance display the children.
-			requestAnimationFrame(() => {
-				// show children container
-				target_instance.children_container.classList.remove('hide')
-				// set arrow down
-				target_instance.link_children_element.classList.add('open')
-
-				// hilite moved term. Allows arrow state update
-				const term_node = moving_instance.term_node
-				if (term_node) {
-					self.hilite_element(term_node)
-				}
-			})
+			// Hilite moved term
+			const term_node = moving_instance.term_node
+			if (term_node) {
+				self.hilite_element(term_node)
+			}
 
 			if(SHOW_DEBUG===true) {
 				console.log('Updated target_instance :', target_instance);
@@ -1281,7 +1360,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 							default: {
 								const components_length = components.length
 								for (let i = 0; i < components_length; i++) {
-									ar_values.push(...components[i].data.value)
+									ar_values.push(...components[i].data.entries)
 								}
 								break;
 							}
@@ -1684,6 +1763,8 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 				parent_instance.children_container.classList.remove('hide')
 				// set arrow down
 				parent_instance.link_children_element.classList.add('open')
+				// set is_open flag to sync with toggle logic
+				parent_instance.is_open = true
 			})
 		})
 	);

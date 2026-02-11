@@ -49,7 +49,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 		const data = self.data.find(item => item.tipo==='dd100' || item.tipo==='dd5') || {}
 
 	// content_data
-		if (render_level==='content') {
+		if (render_level === 'content') {
 
 			if (data.ts_search) {
 
@@ -58,23 +58,47 @@ render_area_thesaurus.prototype.list = async function(options) {
 				// prevent to re-create content_data again
 					const content_data = self.node.content_data
 
-				// clean children_container nodes (inside categories)
-					// const children_container = content_data.querySelectorAll('[data-role="children_container"]')
-					// const children_container_length = children_container.length
-					// for (let i = 0; i < children_container_length; i++) {
-					// 	const item = children_container[i]
-					// 	while (item.firstChild) {
-					// 		item.removeChild(item.firstChild);
-					// 	}
-					// }
-
 				// render. Search : parse_search_result with ts_object
+					// Identify root nodes from search results and wait for them to be rendered
+					const result_data = data.ts_search.result || []
+					const root_items = result_data.filter(item => item.ts_parent === 'root')
+
+					if (root_items.length > 0) {
+						// Get instances for root nodes with exact same parameters as render_root_term
+						const root_promises = root_items.map(async (item) => {
+							const instance = await ts_object.get_instance({
+								section_tipo			: item.section_tipo,
+								section_id				: item.section_id,
+								children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
+								thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+								// others
+								caller					: self,
+								linker					: self.linker, // usually a portal component instance
+								thesaurus_view_mode		: self.thesaurus_view_mode,
+								is_root_node			: true,
+								area_model				: self.model,
+								is_ontology				: self.model === 'area_ontology'
+							})
+
+							// Wait for render if not already rendered
+							if (instance.status !== 'rendered') {
+								return new Promise((resolve) => {
+									const token = event_manager.subscribe('render_' + instance.id, () => {
+										event_manager.unsubscribe(token)
+										resolve()
+									})
+								})
+							}
+						})
+
+						// Wait for all roots to be ready
+						await Promise.all(root_promises)
+					}
+
 					const ts_object_instance = await ts_object.get_instance({
 						// key options
 						section_tipo			: self.section_tipo,
 						section_id				: self.section_id,
-						// children_tipo		: children_tipo,
-						// target_section_tipo	: null,
 						thesaurus_mode			: self.context?.thesaurus_mode || 'default',
 						// others
 						caller					: self,
@@ -84,6 +108,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 						area_model				: self.model,
 						is_ontology				: self.model === 'area_ontology'
 					})
+
 					self.ar_instances.push(ts_object_instance)
 					await ts_object_instance.parse_search_result(
 						data.ts_search.result, // object data
@@ -132,19 +157,63 @@ render_area_thesaurus.prototype.list = async function(options) {
 
 	// ts_search case
 		if (data.ts_search) {
-			const render_handler = () => {
+			const render_handler = (wrapper_search) => {
 				dd_request_idle_callback(
 					async () => {
+
+						// Identify root nodes from search results and wait for them to be rendered
+						const result_data = data.ts_search.result || []
+						const root_items = result_data.filter(item => item.ts_parent === 'root')
+
+						if (root_items.length > 0) {
+							// Get instances for root nodes with exact same parameters as render_root_term
+							const root_promises = root_items.map(async (item) => {
+								const instance = await ts_object.get_instance({
+									section_tipo			: item.section_tipo,
+									section_id				: item.section_id,
+									children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
+									thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+									// others
+									caller					: self,
+									linker					: self.linker,
+									thesaurus_view_mode		: self.thesaurus_view_mode,
+									is_root_node			: true,
+									area_model				: self.model,
+									is_ontology				: self.model === 'area_ontology'
+								})
+
+								// Wait for render if not already rendered
+								if (instance.status !== 'rendered') {
+									return new Promise((resolve) => {
+										const token = event_manager.subscribe('render_' + instance.id, () => {
+											event_manager.unsubscribe(token)
+											resolve()
+										})
+									})
+								}
+							})
+
+							// Wait for all roots to be ready
+							await Promise.all(root_promises)
+						}
+
+						// Now call parse_search_result to build the search tree
 						const ts_object_instance = await ts_object.get_instance({
-							caller			: self,
-							section_tipo	: self.section_tipo
+							section_tipo			: self.section_tipo,
+							section_id				: self.section_id,
+							thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+							// others
+							caller					: self,
+							linker					: self.linker,
+							thesaurus_view_mode		: self.thesaurus_view_mode,
+							is_root_node			: true,
+							area_model				: self.model,
+							is_ontology				: self.model === 'area_ontology'
 						})
-						self.ar_instances.push(ts_object_instance)
-						ts_object.parse_search_result(
+
+						await ts_object_instance.parse_search_result(
 							data.ts_search.result,
-							data.ts_search.found, // to hilite
-							null,
-							false
+							data.ts_search.found
 						)
 					}
 				)
@@ -188,8 +257,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 				)
 			}
 		}
-		document.removeEventListener('keydown', keydown_handler)
-		document.addEventListener('keydown', keydown_handler)
+		if (self.keydown_handler) {
+			document.removeEventListener('keydown', self.keydown_handler)
+		}
+		self.keydown_handler = keydown_handler
+		document.addEventListener('keydown', self.keydown_handler)
 
 
 	return wrapper
@@ -379,7 +451,7 @@ export const render_root_term = function (options) {
 		is_ontology			: self.model === 'area_ontology'
 	})
 	.then(async (ts_object_instance)=>{
-		
+
 		await ts_object_instance.build()
 
 		const node_wrapper = await ts_object_instance.render()

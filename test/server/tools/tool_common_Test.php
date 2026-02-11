@@ -114,6 +114,60 @@ final class tool_common_test extends BaseTestCase {
 
 
 	/**
+	* TEST_GET_STRUCTURE_CONTEXT_SIMPLE
+	* @return void
+	*/
+	public function test_get_structure_context_simple() {
+
+		$this->tool	= new tool_lang(1, 'dd1324');
+		$context	= $this->tool->get_structure_context_simple();
+
+		$this->assertTrue(
+			gettype($context)==='object',
+			'expected type is object'
+		);
+
+		$this->assertTrue(
+			$context->typo==='ddo',
+			'expected typo is ddo'
+		);
+	}//end test_get_structure_context_simple
+
+
+
+	/**
+	* TEST_CREATE_TOOL_SIMPLE_CONTEXT
+	* @return void
+	*/
+	public function test_create_tool_simple_context() {
+
+		// Mock tool object
+		$tool_object = (object)[
+			'name' => 'tool_test',
+			'label' => [(object)['lang'=>DEDALO_APPLICATION_LANG, 'value'=>'Test Tool']],
+			'developer' => [],
+			'section_tipo' => 'dd123',
+			'properties' => (object)[],
+			'show_in_inspector' => true,
+			'show_in_component' => false
+		];
+
+		$context = tool_common::create_tool_simple_context($tool_object);
+
+		$this->assertTrue(
+			$context instanceof dd_object,
+			'expected instance of dd_object'
+		);
+
+		$this->assertTrue(
+			$context->name === 'tool_test',
+			'expected name tool_test'
+		);
+	}//end test_create_tool_simple_context
+
+
+
+	/**
 	* TEST_GET_ALL_REGISTERED_TOOLS
 	* @return void
 	*/

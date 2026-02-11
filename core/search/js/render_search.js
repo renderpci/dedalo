@@ -16,6 +16,8 @@
 		edit_user_search_preset,
 		save_preset,
 		load_user_search_presets,
+		delete_user_search_preset,
+		load_search_preset,
 		presets_section_tipo
 	} from './search_user_presets.js'
 
@@ -23,7 +25,9 @@
 
 /**
 * RENDER_SEARCH
-* Manages the component's logic and appearance in client side
+* Handles the rendering logic for the search interface.
+* @constructor
+* @return bool
 */
 export const render_search = function() {
 
@@ -34,8 +38,9 @@ export const render_search = function() {
 
 /**
 * LIST
-* Render whole search in list mode
-* @return HTMLElement wrapper
+* Renders the search interface in list mode.
+* Includes fields list, filter canvas, and buttons.
+* @return promise HTMLElement - The search wrapper element
 */
 render_search.prototype.list = async function() {
 
@@ -108,8 +113,8 @@ render_search.prototype.list = async function() {
 
 /**
 * RENDER_BASE
-* Render basic nodes
-* @return HTMLElement wrapper
+* Renders the basic DOM structure for the search interface.
+* @return HTMLElement - The search wrapper element
 */
 render_search.prototype.render_base = function() {
 
@@ -314,9 +319,13 @@ render_search.prototype.render_base = function() {
 
 /**
 * RENDER_FILTER
-* Create the central filter group (components selected, max records, show all, apply button)
+* Renders the current filter group (components selected, max records, etc.).
 * @param object options
-* @return DOM element search_group_container
+* @param object options.self - The search instance
+* @param object options.editing_preset - The filter preset to render
+* @param bool options.clean_q - (Optional) Whether to clear input values
+* @param bool options.allow_duplicates - (Optional) Whether to allow duplicate fields
+* @return HTMLElement - The search group container
 */
 export const render_filter = function(options) {
 
@@ -351,8 +360,8 @@ export const render_filter = function(options) {
 
 /**
 * RENDER_SEARCH_BUTTONS
-* Creates search buttons group: max, show all, apply
-* @return HTMLElement search_buttons_container
+* Renders the search action buttons (max, reload, show all, apply).
+* @return HTMLElement - The search buttons container
 */
 render_search.prototype.render_search_buttons = function(){
 
@@ -474,11 +483,12 @@ render_search.prototype.render_search_buttons = function(){
 
 /**
 * RENDER_SEARCH_GROUP
-* Create the basic search element node. Includes nodes:
-* 	operator, button add, search_component wrapper
-* @param HTMLElement parent_div
-* @param object options = {}
-* @return HTMLElement search_group
+* Renders a search group container ($and / $or) with operator selections.
+* @param HTMLElement parent_div - The parent element to append to
+* @param object options
+* @param string options.operator - The group operator ($and, $or)
+* @param bool options.is_root - Whether it's the root group
+* @return HTMLElement - The search group element
 */
 render_search.prototype.render_search_group = function(parent_div, options={}) {
 
@@ -587,10 +597,15 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 
 /**
 * BUILD_SEARCH_COMPONENT
-* Creates a instance of component and render it placing result in given parent_div
-* Add too, button close and optional label
+* Creates a component instance and renders it within a search group.
 * @param object options
-* @return promise bool true
+* @param HTMLElement options.parent_div - Parent element
+* @param string options.path_plain - JSON string of the field path
+* @param mixed options.entries - Current field values
+* @param string options.q_operator - Query operator
+* @param string options.q_lang - Query language
+* @param string options.section_id - Row ID
+* @return promise bool
 */
 render_search.prototype.build_search_component = async function(options) {
 
@@ -598,7 +613,7 @@ render_search.prototype.build_search_component = async function(options) {
 
 	const parent_div		= options.parent_div
 	const path_plain		= options.path_plain
-	const current_value		= options.current_value
+	const entries			= options.entries
 	const q_operator		= options.q_operator
 	const q_lang			= options.q_lang
 	const section_id		= options.section_id
@@ -627,7 +642,7 @@ render_search.prototype.build_search_component = async function(options) {
 				model					: last_item.model,
 				ar_target_section_tipo	: last_item.ar_target_section_tipo || null,
 				mode					: 'search',
-				value					: current_value || null, // value will be injected
+				entries					: entries || null, // entries will be injected to data.entries
 				q_operator				: q_operator || null,
 				q_lang					: q_lang || null,
 				path					: path
@@ -695,8 +710,11 @@ render_search.prototype.build_search_component = async function(options) {
 
 /**
 * RENDER_USER_PRESET_LIST
-* Auxiliary function to create DOM elements needed for build components presets list
-* @return bool
+* Builds the DOM list of saved search presets.
+* @param array ar_elements - List of preset records
+* @param int permissions - User permission level
+* @param string target_section_tipo - Target section type
+* @return promise array - Array of LI nodes
 */
 render_search.prototype.render_user_preset_list = async function(ar_elements, permissions, target_section_tipo) {
 
@@ -728,6 +746,9 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			// )
 			// console.log('>>>>>>>>>>>>>>>> render_user_preset_list:current_cookie_track:', current_cookie_track);
 
+	// current_cookie_track
+		const current_cookie_track = false
+
 	let is_default = false
 	const len = ar_elements.length
 	for (let i = 0; i < len; i++) {
@@ -746,15 +767,6 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 				// Default is defined by user selection (cookie)
 				if (current_cookie_track==element.section_id) {
 					is_default = true
-					// Load current preset
-						// self.parse_json_query_obj_to_dom(null, JSON.parse(element.json_preset))
-
-					// // Update state
-						// self.update_state({
-						// 	state					: 'unchanged',
-						// 	editing_section_id		: element.section_id,
-						// 	editing_save_arguments	: element.save_arguments
-						// })
 				}else{
 					is_default = false
 				}
@@ -776,10 +788,36 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 				parent			: li_element,
 				class_name		: 'icon_bs component_presets_button_load'
 			})
-			icon_load.addEventListener('click', function(e){
+			const load_handler = async (e) => {
 				e.stopPropagation()
-				self.load_search_preset(this)
-			})
+
+				// set selected class
+					const all_lis = li_element.parentNode.querySelectorAll('li')
+					all_lis.forEach(el => el.classList.remove('selected'))
+					li_element.classList.add('selected')
+
+				// load preset
+				// select_preset is not available here easily as it expects button_apply structure from table view
+				// so we duplicate the logic for list view
+					const json_filter = await load_search_preset({
+						section_id : element.section_id
+					})
+
+				// render_filter
+					render_filter({
+						self				: self,
+						editing_preset		: json_filter,
+						allow_duplicates	: true
+					})
+
+				// render buttons
+					self.render_search_buttons()
+
+				// set current
+					self.user_preset_section_id = element.section_id
+			}
+			icon_load.addEventListener('click', load_handler)
+
 
 			// Span label name
 			const span_name = ui.create_dom_element({
@@ -794,24 +832,56 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 				}
 			})
 			if (permissions>=2) {
-				span_name.addEventListener('click', function(e){
+				const edit_handler = async (e) => {
 					e.stopPropagation()
-					self.edit_preset(this)
-				})
+					// launch the editor
+					const section = await edit_user_search_preset(self, element.section_id)
+
+					// open modal to edit the preset
+					render_preset_modal({
+						caller		: section,
+						section_id	: element.section_id,
+						on_close	: async () => {
+							// force reload presets list
+							self.user_presets_section = null
+							const search_container_selection_presets = self.search_container_selection_presets
+							if (search_container_selection_presets) {
+								search_container_selection_presets.classList.add('display_none') // hide first
+								await toggle_presets(self) // this will reload because user_presets_section is null
+							}
+						}
+					})
+				}
+				span_name.addEventListener('click', edit_handler)
 			}
+
 
 			// Button delete preset
 			if (permissions>=2) {
-			const icon_delete = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'icon_bs component_presets_button_delete',
-				parent			: li_element
-			})
-			icon_delete.addEventListener('click', function(e){
-				e.stopPropagation()
-				self.delete_preset(this)
-			})
+				const icon_delete = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'icon_bs component_presets_button_delete',
+					parent			: li_element
+				})
+				const delete_handler = async (e) => {
+					e.stopPropagation()
+
+					if(!confirm(get_label.sure || 'Sure?')) return
+
+					const result = await delete_user_search_preset(element.section_id)
+
+					if (result) {
+						// remove li
+						li_element.remove()
+						// if was selected, unset
+						if(self.user_preset_section_id == element.section_id) {
+							self.user_preset_section_id = null
+						}
+					}
+				}
+				icon_delete.addEventListener('click', delete_handler)
 			}
+
 
 			// div_edit
 			ui.create_dom_element({
@@ -833,8 +903,8 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 /**
 * RENDER_SECTIONS_SELECTOR
-* Render and insert nodes into wrapper
-* @param object self
+* Renders the section selector (Thesaurus/Ontology typology selection).
+* @param object self - The search instance
 * @return DocumentFragment
 */
 const render_sections_selector = (self) => {
@@ -928,13 +998,13 @@ const render_sections_selector = (self) => {
 
 /**
 * BUILD_SECTIONS_CHECK_BOXES
-* Render the checkbox list of available sections in current type
-* For example, for type 2 (Toponymy) the list display your loaded countries
+* Renders the checkbox list of available sections for a typology.
+* For example, for type 2 (Toponymy) the list display your loaded countries.
 * This list is interactive and updates the 'Fields' list on every change to
 * preserve the list coherence
-* @param object self
-* @param int|string typology_id
-* @param HTMLElement parent
+* @param object self - The search instance
+* @param int|string typology_id - Selected typology ID
+* @param HTMLElement parent - The UL element to append to
 */
 const build_sections_check_boxes = (self, typology_id, parent) => {
 
@@ -1109,8 +1179,9 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_SEARCH_PANEL
-	* @param object self (search instance)
-	* @return void
+	* Shows or hides the main search panel and persists the state.
+	* @param object self - The search instance
+	* @return promise void
 	*/
 	export const toggle_search_panel = async (self) => {
 
@@ -1151,7 +1222,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_FIELDS
-	* @param object self
+	* Shows or hides the fields list panel.
+	* @param object self - The search instance
 	* @return bool
 	*/
 	export const toggle_fields = (self) => {
@@ -1191,10 +1263,9 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_PRESETS
-	* Show/hide user_presets_node
-	* If not already loaded, load the user_search_presets from API
-	* @param object self
-	* @return bool
+	* Shows or hides the search presets panel and loads presets if needed.
+	* @param object self - The search instance
+	* @return promise bool
 	*/
 	export const toggle_presets = async (self) => {
 
@@ -1244,6 +1315,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_OPERATOR_VALUE
+	* Toggles between AND/OR operators in a search group.
+	* @param HTMLElement element - The operator DOM element
 	* @return bool
 	*/
 	const toggle_operator_value = (element) => {
@@ -1280,7 +1353,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_TYPE
-	* @param object self
+	* Shows or hides the typology/type selector panel (Thesaurus/Ontology).
+	* @param object self - The search instance
 	* @return bool
 	*/
 	export const toggle_type = (self) => {
@@ -1325,7 +1399,9 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 /**
 * LOCALIZE_OPERATOR
-* @return string localized
+* Returns the localized version of a search operator ($and, $or).
+* @param string operator - The operator string
+* @return string localized - The localized text
 */
 const localize_operator = (operator) => {
 

@@ -1,4 +1,4 @@
-<?php declare(strict_types=1); // NOT IN UNIT TEST !
+<?php declare(strict_types=1);
 /**
 * CLASS BACKUP
 *
@@ -222,7 +222,7 @@ abstract class backup {
 	*/
 	public static function copy_from_file( string $table, string $path_file, ?string $tld=null ) : string {
 
-		$res='';
+		$ar_res = [];
 
 		// file exists check
 			if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
@@ -255,38 +255,52 @@ abstract class backup {
 		switch ($table) {
 
 			case 'dd_ontology':
+				// Duplicate table for safety
+				$command = $command_base . " -c \"CREATE TABLE \"dd_ontology_copy\" AS SELECT * FROM \"dd_ontology\"\" ";
+				$ar_res[] = shell_exec($command);
+				$command_history[] = $command;
+
 				# DELETE . Remove previous records
-				// $command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"dd_ontology\" WHERE \"terminoID\" LIKE 'dd%'"
 				$command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE tld = '{$tld}' \" ";
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
+				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(backup::$dd_ontology_columns).") from {$path_file}\" ";
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
+				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 				break;
 
 			case 'matrix_dd':
+				// Duplicate table for safety
+				$command = $command_base . " -c \"CREATE TABLE \"matrix_dd_copy\" AS SELECT * FROM \"matrix_dd\"\" ";
+				$ar_res[] = shell_exec($command);
+				$command_history[] = $command;
+
 				# DELETE . Remove previous records
-				$command = $command_base . " -c \"DELETE FROM \"$table\" \" "; # -c "DELETE FROM \"dd_ontology\" WHERE \"terminoID\" LIKE 'dd%'"
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
+				$command = $command_base . " -c \"DELETE FROM \"matrix_dd\"\" ";
+				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 
 				# COPY . Load data from file
 				$command = $command_base . " -c \"\copy matrix_dd from {$path_file}\" ";
-				$res .= shell_exec($command);
-				#$res .= exec( $command );
+				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 				break;
 		}
+
+		// debug
+		debug_log(__METHOD__
+		   .' command_history: '   . json_encode($command_history, JSON_PRETTY_PRINT) . PHP_EOL
+		   .' command responses: ' . json_encode($ar_res, JSON_PRETTY_PRINT)
+		   , logger::WARNING
+		);
+
+		$res = implode(' ', $ar_res);
 		$res = str_replace("\n",' ',$res);
 
 
-		return (string)$res;
+		return $res;
 	}//end copy_from_file
 
 

@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
  	import {dd_request_idle_callback,when_in_viewport} from '../../../../common/js/events.js'
- 	import {check_server_health,data_manager,get_api_health_url,get_api_url} from '../../../../common/js/data_manager.js'
+ 	import {check_server_health,data_manager} from '../../../../common/js/data_manager.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 
@@ -233,7 +233,7 @@ const render_health_list = function (self) {
 
 	const fragment = new DocumentFragment()
 
-	const api_health_url = get_api_health_url()
+	const api_health_url = new data_manager().health_url
 
 	// environment
 	const get_environment = async () => {

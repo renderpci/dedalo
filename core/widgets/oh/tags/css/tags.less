@@ -56,41 +56,41 @@
 					&.total_tc {
 						>.value {
 							.fn_build_tag_tc();
-							.tag_label;
+							.tag_label();
 						}
 					}
 
 					&.total_index {
 						>.value {
 							.fn_build_tag_indexation(@color_tag_indexation_normal, @color_white);
-							.tag_label;
+							.tag_label();
 						}
 					}
 
 					&.total_missing_tags {
 						>.value {
 							.fn_build_tag_indexation(@color_tag_indexation_removed, @color_white);
-							.tag_label;
+							.tag_label();
 						}
 					}
 					&.total_to_review_tags {
 						>.value {
 							.fn_build_tag_indexation(@color_tag_indexation_to_review, @color_white);
-							.tag_label;
+							.tag_label();
 						}
 					}
 
 					&.total_private_notes {
 						>.value {
 							.fn_build_tag_note(@color_tag_indexation_normal);
-							.tag_label;
+							.tag_label();
 						}
 					}
 
 					&.total_public_notes {
 						>.value {
 							.fn_build_tag_note(@color_green_success);
-							.tag_label;
+							.tag_label();
 						}
 					}
 				}

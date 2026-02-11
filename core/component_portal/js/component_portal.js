@@ -1591,13 +1591,37 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 	const tree_window = open_window({
 		url		: url,
 		name	: 'tree_window',
-		width	: 1000,
+		width	: 1025,
 		height	: 800
 	})
 
 
 	return tree_window
 }//end open_ontology_window
+
+
+
+/**
+* IS_EMPTY
+* Check if the instance data is empty.
+* Used in search mode for hilite the component wrapper when has value.
+* @return bool
+*/
+component_portal.prototype.is_empty = function() {
+
+	const entries = this.data?.entries || []
+
+	if(entries.length === 0) {
+		return true
+	}
+
+	// Double check first entry exists (safety)
+	if(entries[0]) {
+		return false
+	}
+
+	return true
+}//end is_empty
 
 
 

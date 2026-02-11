@@ -48,10 +48,10 @@ trait search_component_date {
     * Normalizes the search value (q) and parses string inputs into date objects.
     */
     protected static function extract_normalized_date_q(object $query_object) : object|null|false {
-        
+
         // Ensure q is a single value
         $q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-        
+
         if (empty($q) && empty($query_object->q_operator)) {
             return false;
         }
@@ -106,7 +106,7 @@ trait search_component_date {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_date_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -115,7 +115,7 @@ trait search_component_date {
         $component_tipo = end($query_object->path)->component_tipo;
         $ontology_node  = ontology_node::get_instance($component_tipo);
         $properties     = $ontology_node->get_properties();
-        
+
         $ctx = new stdClass();
         $ctx->component_tipo = $component_tipo;
         $ctx->column         = section_record_data::get_column_name(get_called_class());
@@ -136,6 +136,26 @@ trait search_component_date {
     * Routes the search resolution to the correct date mode handler.
     */
     protected static function dispatch_date_mode_sql(object $query_object, ?object $q_object, object $ctx) : object {
+
+        /**
+         * @TODO
+         * Work in progress
+         * Experimental case where column is 'timestamp' (Time machine table)
+         * ! NOT finished
+         */
+        // column 'timestamp' case (Time machine table)
+         if($ctx->table_alias==='dd15') {
+            dump($ctx, ' ctx +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+            dump($query_object, ' query_object +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+
+            [$dd_date, $time] = self::extract_time_from_q($q_object);
+            $Q1 = $dd_date->get_dd_timestamp("Y-m-d");
+            $query_object->params   = ['_Q1_' => $Q1];
+            $query_object->sentence = "DATE(\"timestamp\") $ctx->operator $1";
+
+            dump($query_object, ' query_object 2 +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
+            return $query_object;
+        }
 
         switch ($ctx->date_mode) {
             case 'date':
@@ -183,7 +203,7 @@ trait search_component_date {
 	* What it returns: Records where the provided date falls within the record's range or matches the record's date.
     */
     protected static function resolve_date_mode_date_range_sql(object $query_object, ?object $q_object, object $ctx) : object {
-        
+
         if ($res = self::resolve_common_date_operators($query_object, $ctx)) return $res;
 
         [$dd_date, $time] = self::extract_time_from_q($q_object);
@@ -205,7 +225,7 @@ trait search_component_date {
             case '=':
             default:
                 $final_range = self::get_final_search_range_seconds($dd_date);
-                $Q1  = "$.{$ctx->component_tipo}[*] ? (";    
+                $Q1  = "$.{$ctx->component_tipo}[*] ? (";
                 $Q1 .= "(@.start.time <= {$time} && @.end.time >= {$time}) || ";
                 $Q1 .= "(@.start.time >= {$time} && @.start.time <= {$final_range})";
                 $Q1 .= ")";
@@ -227,7 +247,7 @@ trait search_component_date {
 	* What it returns: Records whose period matches the query.
     */
     protected static function resolve_date_mode_period_sql(object $query_object, ?object $q_object, object $ctx) : object {
-        
+
         if ($res = self::resolve_common_date_operators($query_object, $ctx)) return $res;
 
         [$dd_date, $time] = self::extract_time_from_q($q_object, 'period');
@@ -253,7 +273,7 @@ trait search_component_date {
 	* What it returns: Records where the time matches or falls within the logic of the operator.
     */
     protected static function resolve_date_mode_time_sql(object $query_object, ?object $q_object, object $ctx) : object {
-        
+
         if ($res = self::resolve_common_date_operators($query_object, $ctx)) return $res;
 
         [$dd_date, $time] = self::extract_time_from_q($q_object);
@@ -284,7 +304,7 @@ trait search_component_date {
 	* What it returns: Records where the full date and time match the query pattern.
     */
     protected static function resolve_date_mode_date_time_sql(object $query_object, ?object $q_object, object $ctx) : object {
-        
+
         if ($res = self::resolve_common_date_operators($query_object, $ctx)) return $res;
 
         [$dd_date, $time] = self::extract_time_from_q($q_object);
@@ -319,7 +339,7 @@ trait search_component_date {
     * RESOLVE_DATE_MODE_UNKNOWN_SQL
     */
     protected static function resolve_date_mode_unknown_sql(object $query_object, ?object $q_object, object $ctx) : object {
-        
+
         if ($res = self::resolve_common_date_operators($query_object, $ctx)) return $res;
 
         debug_log(__METHOD__ . " Unable to resolve query for unknown date_mode: {$ctx->date_mode}", logger::ERROR);

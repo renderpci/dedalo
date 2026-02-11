@@ -144,7 +144,7 @@ class ontology_data_io {
 
 	/**
 	* UPDATE_ONTOLOGY_INFO
-	* get the current Dédalo version and the ontology information
+	* Gets the current Dédalo version and the ontology information
 	* to be saved into the info properties of the component.
 	* This information will be provided to control the ontology changes.
 	* @return bool
@@ -245,10 +245,13 @@ class ontology_data_io {
 		// get section_tipo
 			$section_tipo = ontology::map_tld_to_target_section_tipo( $tld );
 
+		// columns. Like ["section_id", "section_tipo", "data", "relation", ..]
+			$columns = matrix_db_manager::get_columns_name();
+
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_ontology\" WHERE section_tipo = '{$section_tipo}') TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
 			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
 			//   to process a complete file. This can help with the buffering/flushing issues.
@@ -313,10 +316,13 @@ class ontology_data_io {
 			}
 			$file_path = "{$ontology_io_path}/matrix_dd.copy.gz";
 
+		// columns. Like ["section_id", "section_tipo", "data", "relation", ..]
+			$columns = matrix_db_manager::get_columns_name();
+
 		// command
 			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			$command = $command_base
-				. " -c \"\copy (SELECT section_id, section_tipo, datos FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
+				. " -c \"\copy (SELECT ".implode(', ', $columns)." FROM \"matrix_dd\") TO PROGRAM 'gzip -c > {$file_path} && sync';\" ";
 			// Notes about the previous command:
 			// 1. The gzip -c flag ensures gzip writes compressed data immediately to stdout as it receives input, rather than waiting
 			//   to process a complete file. This can help with the buffering/flushing issues.
@@ -384,7 +390,7 @@ class ontology_data_io {
 			$import_response = backup::import_from_copy_file( $options );
 
 		// set the counter of import ontology to last section_id.
-			$matrix_table	= common::get_matrix_table_from_tipo( $section_tipo );
+			$matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 			counter::consolidate_counter(
 				$section_tipo,
 				$matrix_table,
@@ -482,7 +488,7 @@ class ontology_data_io {
 		// curl request
 			$curl_response = curl_request((object)[
 				'url'				=> $url,
-				// 'post'				=> true,
+				// 'post'			=> true,
 				'header'			=> false, // bool add header to result
 				'ssl_verifypeer'	=> false,
 				'timeout'			=> (60*10), // int seconds

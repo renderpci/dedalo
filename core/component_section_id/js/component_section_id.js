@@ -68,10 +68,50 @@ export const component_section_id = function(){
  */
 component_section_id.prototype.get_search_value = function() {
 
-	const entries	= data.entries || []
+	const data = this.data || {}
+	const entries = data.entries || []
 
 	return entries
 }//end get_search_value
+
+
+
+/**
+* IS_EMPTY
+* Check if the instance data is empty.
+* Used in search mode for hilite the component wrapper when has value.
+* @return bool
+*/
+component_section_id.prototype.is_empty = function() {
+
+	const entries = this.data?.entries || []
+
+	if(entries.length === 0) {
+		return true
+	}
+
+	// Double check first entry exists (safety)
+	if(entries[0]) {
+		return false
+	}
+
+	return true
+}//end is_empty
+
+
+
+/**
+* VALIDATE_INPUT
+* Constrain values to numerica values
+* @param string value
+* @return string
+*/
+component_section_id.prototype.validate_input = function( value ) {
+
+	value = value.replace(/[^\d]/g, '');
+
+	return value
+}//end validate_input
 
 
 

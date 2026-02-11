@@ -71,7 +71,7 @@ export const area_thesaurus = function() {
 
 	// search_tipos. Array of tipos to search in the request from URL
 	// Usually is added to the URL by Ontology node open in tree button
-	self.search_tipos
+	this.search_tipos
 }//end area_thesaurus
 
 
