@@ -110,10 +110,10 @@ menu.prototype.init = function(options) {
 /**
 * BUILD
 * @param bool autoload
-* @return true
+* @return bool
 */
 menu.prototype.build = async function(autoload=true) {
-	const t0 = performance.now()
+	const t0 = (SHOW_DEBUG === true) ? performance.now() : null
 
 	const self = this
 
@@ -124,24 +124,17 @@ menu.prototype.build = async function(autoload=true) {
 		if (autoload===true) {
 
 			// rqo build
-				// const rqo = {
-				// 	action			: 'get_menu',
-				// 	dd_api			: 'dd_utils_api',
-				// 	source			: create_source(self, null),
-				// 	prevent_lock	: true
-				// }
 				const rqo = {
-					action	: 'read',
-					source	: create_source(self, 'get_data')
+					action		: 'read',
+					source		: create_source(self, 'get_data'),
+					prevent_lock: true
 				}
 
 			// cache_handler. Cache API menu data by lang
-				const cache_handler = (self)
-					? {
-						handler	: 'localdb',
-						id		: self.build_cache_id()
-					  }
-					  : null;
+				const cache_handler = {
+					handler	: 'localdb',
+					id		: self.build_cache_id()
+				}
 
 			// load data. get context and data
 				const api_response = await data_manager.request({
@@ -154,7 +147,7 @@ menu.prototype.build = async function(autoload=true) {
 					return false
 				}
 				// server: bad build context
-				if(!api_response.result.context?.length){
+				if(!api_response.result?.context?.length){
 					console.error("Error!!!!, menu without context:", api_response);
 					return false
 				}
@@ -163,13 +156,18 @@ menu.prototype.build = async function(autoload=true) {
 				self.datum = api_response.result
 		}
 
+	// Safety check for datum before proceeding
+		if (!self.datum || !self.datum.context || !self.datum.data) {
+			console.warn("Build aborted: datum not available for", self.model);
+			return false;
+		}
+
 	// set context and data to current instance
 		self.context	= self.datum.context.find(element => element.model===self.model && element.tipo===self.tipo);
 		self.data		= self.datum.data.find(element => element.model===self.model &&  element.tipo===self.tipo)
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
 			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
 
@@ -272,17 +270,20 @@ menu.prototype.open_tool_user_admin_handler = function() {
 * It used one for each language as menu_dd85_lg-nep
 * @param string lang
 * 	Optional. Default page_globals.dedalo_application_lang fallback
-* @return void
+* @return string
 */
 menu.prototype.build_cache_id = function(lang) {
 
+	// globals safety
+	const globals = window.page_globals || {}
+
 	// user id. Logged user id
-	const user_id = window.page_globals?.user_id || ''
+	const user_id = globals.user_id || ''
 
 	// lang cascade fallback
-	lang = lang || window.page_globals?.dedalo_application_lang || ''
+	lang = lang || globals.dedalo_application_lang || ''
 
-	const version = window.page_globals.dedalo_version || 'unknown'
+	const version = globals.dedalo_version || 'unknown'
 
 	// id composition
 	const id = `menu_cache_${lang}_${version}_${user_id}`
