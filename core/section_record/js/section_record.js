@@ -380,7 +380,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 					if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
 						// check if the column of the component is already loaded, if exists, don't load it.
-							const found = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)							
+							const found = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
 							if(found) {
 								continue
 							}

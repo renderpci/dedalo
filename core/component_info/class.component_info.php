@@ -476,7 +476,7 @@ class component_info extends component_common {
 					$current_id	= $data_map->id;
 					// get the data of the widget to match with the column
 					$found = array_find($data ?? [], function($item) use($current_id){
-						return $item->id===$current_id;
+						return isset($item->id) && $item->id===$current_id;
 					});
 					$value = is_object( $found )
 						? $found->value
