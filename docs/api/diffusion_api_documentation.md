@@ -241,3 +241,59 @@ To ensure consistency between Dédalo's internal structure and the public diffus
 
 
 This allows Dédalo administrators to name a component "Project ID" internally while diffusing it as "Research Project" for the public.
+
+---
+
+## 7. Additional Actions
+
+The API supports other actions beyond `diffuse` for configuration and validation.
+
+### `validate`
+
+Validates the diffusion configuration for a specific node to identify broken chains or missing properties.
+
+- **Request**:
+  ```json
+  {
+      "dd_api": "diffusion_api",
+      "action": "validate",
+      "source": { "diffusion_node_tipo": "rsc264" }
+  }
+  ```
+
+- **Response**:
+  ```json
+  {
+    "result": true,
+    "msg": "Validation results",
+    "errors": [] 
+  }
+  ```
+
+### `get_ontology_map`
+
+Retrieves the raw ontology mapping and parser definitions for a diffusion node without processing any record data.
+
+- **Request**:
+  ```json
+  {
+      "dd_api": "diffusion_api",
+      "action": "get_ontology_map",
+      "source": { "diffusion_node_tipo": "rsc264" }
+  }
+  ```
+
+- **Response**:
+  ```json
+  {
+    "result": true,
+    "data": {
+       "process": {
+           "ddo_map": [ ... ],
+           "parser": { ... },
+           "pre_parser": { ... }
+       }
+    }
+  }
+  ```
+
