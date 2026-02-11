@@ -233,7 +233,7 @@ const render_health_list = function (self) {
 
 	const fragment = new DocumentFragment()
 
-	const api_health_url = new data_manager().health_url
+	const api_health_url = data_manager.health_url
 
 	// environment
 	const get_environment = async () => {

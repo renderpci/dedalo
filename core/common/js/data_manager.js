@@ -28,32 +28,45 @@ class HttpError extends Error {
 /**
 * DATA_MANAGER
 * Class to manage API requests and local storage (IndexedDB)
-*
-* @property {string} credentials - Fetch credentials default. Possible values: 'include', 'same-origin', 'omit'. (Default Dédalo: 'same-origin')
-* @property {string} mode - Fetch mode default. Possible values: 'no-cors', 'cors', 'same-origin'. (Default: 'cors')
-* @property {string} url - API URL default. Endpoint to make API requests.
-* @property {string} health_url - API Health URL default. Endpoint to check the network status of the connection.
 */
-export const data_manager = function() {
+export const data_manager = function() { }
 
-	// Fetch credentials default.
-	// include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
-	this.credentials = 'same-origin'
+// static properties
 
-	// Fetch mode default.
-	// no-cors, cors, *same-origin
-	this.mode = 'cors'
+/**
+* CREDENTIALS
+* Fetch credentials default.
+* include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
+*/
+data_manager.credentials = 'same-origin'
 
-	// API URL default
-	// Endpoint to make API requests.
-	this.url = typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+/**
+* MODE
+* Fetch mode default.
+* no-cors, cors, *same-origin
+*/
+data_manager.mode = 'cors'
 
-	// API Health URL default
-	// Endpoint to check the network status of the connection.
-	// It is used to check if the server is alive and responsive.
-	this.health_url = this.url + 'health/'
+/**
+* URL
+* API URL default. Endpoint to make API requests.
+*/
+Object.defineProperty(data_manager, 'url', {
+	get: function() {
+		return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+	}
+});
 
-}//end data_manager
+/**
+* HEALTH_URL
+* API Health URL default. Endpoint to check the network status of the connection.
+* It is used to check if the server is alive and responsive.
+*/
+Object.defineProperty(data_manager, 'health_url', {
+	get: function() {
+		return this.url + 'health/'
+	}
+});
 
 
 
@@ -64,7 +77,7 @@ export const data_manager = function() {
 */
 export const check_server_health = async () => {
 	try {
-		const health_url = new data_manager().health_url
+		const health_url = data_manager.health_url
 		const url = health_url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		const response = await fetch( url, {
 			method: 'GET',
@@ -88,7 +101,7 @@ export const check_server_health = async () => {
 */
 data_manager.request = async function(options) {
 
-	const self = new data_manager()
+	const self = this
 
 	const default_options = {
 		url			: options.url || self.url,
@@ -147,7 +160,7 @@ data_manager.request = async function(options) {
 	if (!url || !url.length) {
 		const msg = 'Error: empty or invalid API URL';
 		console.error(msg, { typeof: typeof url, value: url });
-		self._record_api_error(
+		this._record_api_error(
 			'data_manager', // error_type
 			msg, // message
 			'data_manager URL validation', // trace
@@ -186,7 +199,7 @@ data_manager.request = async function(options) {
 				response_text = `Failed to read response text: ${textError.message}`;
 			}
 			console.error(response_text);
-			self._record_api_error(
+			this._record_api_error(
 				'data_manager', // error_type
 				response_text, // message
 				'data_manager fetch handle_errors', // trace
@@ -269,7 +282,7 @@ data_manager.request = async function(options) {
 
 			// save error message. This is captured by page rendering to display the proper error
 			// api_errors. store api_errors. Used to render error page_globals
-			self._record_api_error(
+			this._record_api_error(
 				'data_manager', // error_type
 				json_response.msg || json_response.error, // message
 				'data_manager json_parsed', // trace
@@ -283,7 +296,7 @@ data_manager.request = async function(options) {
 		if (cache_handler?.handler==='localdb' && json_response?.result !== false) {
 			dd_request_idle_callback(
 				() => {
-					self.set_local_db_data(
+					this.set_local_db_data(
 						{
 							id		: cache_handler.id,
 							value	: json_response
@@ -303,7 +316,7 @@ data_manager.request = async function(options) {
 		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
 
 		// api_errors. store api_errors. Used to render error page_globals
-		self._record_api_error(
+		this._record_api_error(
 			'data_manager', // error_type
 			error.message || 'Network error or invalid JSON', // message
 			'data_manager catch error', // trace
@@ -647,7 +660,7 @@ data_manager._create_error_response = function(msg, error) {
 */
 data_manager.request_stream = async function(options) {
 
-	const self = new data_manager()
+	const self = this
 
 	// short vars
 	const url			= options.url || self.url
@@ -708,7 +721,7 @@ data_manager.request_stream = async function(options) {
  */
 data_manager.request_fetch_stream = async function(options) {
 
-	const self = new data_manager()
+	const self = this
 
 	const url			= options.url || self.url
 	const method		= options.method || 'POST'
@@ -988,11 +1001,10 @@ data_manager.get_ontology_info = async function(tipo) {
 * @param object options
 * @return promise api_response
 */
-data_manager.prototype.get_page_element = async function(options) {
+data_manager.get_page_element = async function(options) {
 
 	// api request
-		// const api_response = await this.request({
-		const api_response = await this.request({
+		const api_response = await data_manager.request({
 			body : {
 				action	: 'get_page_element',
 				options	: options
