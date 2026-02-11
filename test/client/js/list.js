@@ -4,6 +4,28 @@
 import {ui} from '../../../core/common/js/ui.js'
 import {elements} from './elements.js'
 
+// list. Definition of test to do. Every test has a file as 'test_key_instances' + '.js'
+export const list_of_test = [
+	'test_key_instances',
+	'test_get_instance',
+	'test_delete_instance',
+	'test_components_lifecycle',
+	'test_others_lifecycle',
+	'test_instances_lifecycle',
+	'test_event_manager',
+	'test_components_data_changes',
+	'test_components_activate',
+	'test_components_render',
+	'test_component_text_area',
+	'test_no_logged_error',
+	'test_unknown_error',
+	'test_page',
+	'test_diffusion',
+	'test_ts_object',
+	'test_ts_object_extended'
+	// 'test_component_portal_pagination'
+]
+
 
 // content: (!) Note that content value is automatically set by mocha selecting page HTMLElment #content
 if (typeof content!=='undefined') {
@@ -16,27 +38,6 @@ if (typeof content!=='undefined') {
 		})
 
 	// list : Test generic list (list_of_test)
-		// list. Definition of test to do. Every test has a file as 'test_key_instances' + '.js'
-		 const list_of_test = [
-			'test_key_instances',
-			'test_get_instance',
-			'test_delete_instance',
-			'test_components_lifecycle',
-			'test_others_lifecycle',
-			'test_instances_lifecycle',
-			'test_event_manager',
-			'test_components_data_changes',
-			'test_components_activate',
-			'test_components_render',
-			'test_component_text_area',
-			'test_no_logged_error',
-			'test_unknown_error',
-			'test_page',
-			'test_diffusion',
-			'test_ts_object',
-			'test_ts_object_extended'
-			// 'test_component_portal_pagination'
-		]
 		ui.create_dom_element({
 			element_type	: 'h1',
 			class_name		: '',
