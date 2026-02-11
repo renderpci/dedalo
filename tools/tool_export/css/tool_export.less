@@ -268,9 +268,22 @@
 					font-size: 1.2rem;
 					z-index: 1;
 
-					&:hover {
+					&:not(.loading):hover {
 						background-color: darken(@tool_color, -10%);
 					}
+
+					&.loading {
+						opacity: 0.4 !important;
+					}
+				}
+
+				// response_container
+				>.response_container {
+					padding: 0.3rem;
+					color: @tool_color;
+					text-align: center;
+					padding-top: 1rem;
+					padding-bottom: 0px;
 				}
 
 				// button activation
@@ -296,7 +309,6 @@
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					margin-bottom: 2rem;
 
 					&.hide {
 						display: none;

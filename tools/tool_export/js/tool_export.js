@@ -157,7 +157,7 @@ tool_export.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 
@@ -179,14 +179,14 @@ tool_export.prototype.get_section_id = function() {
 /**
  * GET_EXPORT_GRID
  * High-performance data fetcher using Fetch ReadableStreams and NDJSON.
- * 
- * Replaces the traditional monolithic JSON buffer with an incremental row-by-row 
- * delivery system. 
- * 
+ *
+ * Replaces the traditional monolithic JSON buffer with an incremental row-by-row
+ * delivery system.
+ *
  * Protocol: NDJSON (Newline Delimited JSON)
  * - First line: Header metadata (dd_grid configuration)
  * - Subsequent lines: Individual row data objects
- * 
+ *
  * @param {Object} options - Request options including data_format and filters
  * @returns {Promise<Object>} The dd_grid instance, resolved once the header arrives
  */
@@ -240,7 +240,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 	let first_chunk = true;
 	let rows_processed = 0;
 	if (self.progress_ui) {
-		self.progress_ui.container.classList.remove('hide');
+		self.progress_ui.container.classList.remove('no_visible');
 		self.progress_ui.bar.style.width = '0%';
 		const initial_text = `0 / ${self.total_records || '?'}`;
 		self.progress_ui.text_bg.innerText = initial_text;
@@ -253,16 +253,31 @@ tool_export.prototype.get_export_grid = async function(options) {
 		try {
 			while (true) {
 				const { value, done } = await reader.read();
+
 				if (done) {
 					if (SHOW_DEBUG) console.log("Stream: Finished reading");
 					if (self.progress_ui) {
 						// Small delay before hiding to show 100%
-						setTimeout(() => self.progress_ui.container.classList.add('hide'), 500);
+						setTimeout(() => {
+							self.progress_ui.container.classList.add('no_visible');
+							self.progress_ui.bar.style.width = '0%';
+							const initial_text = `0 / ${self.total_records || '?'}`;
+							self.progress_ui.text_bg.innerText = initial_text;
+							self.progress_ui.text_fg.innerText = initial_text;
+
+							// Activates the download buttons
+							if (self.export_buttons_options) {
+								self.export_buttons_options.classList.remove('loading');
+								self.export_buttons_options.scrollIntoView({ behavior: 'smooth', block: 'start' })
+							}
+						}, 500);
 					}
-					// Activates the download buttons
-					if (self.export_buttons_options) {
-						self.export_buttons_options.classList.remove('loading');
+
+					// Activates the button export
+					if (self.button_export) {
+						self.button_export.classList.remove('loading');
 					}
+					resolve(null);
 					break;
 				}
 
@@ -287,7 +302,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 						if (self.dd_grid) {
 							// Append row to data
 							self.dd_grid.data.push(chunk_data);
-							
+
 							rows_processed++;
 							if (self.progress_ui && self.total_records) {
 								const percent = Math.min(100, Math.round((rows_processed / self.total_records) * 100));
@@ -325,7 +340,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 */
 tool_export.prototype._init_grid_with_data = async function(data, view, show_tipo_in_label, fill_the_gaps, data_format) {
 	const self = this;
-	
+
 	const dd_grid = self.dd_grid || await get_instance({
 		model				: 'dd_grid',
 		section_tipo		: self.caller.section_tipo,
@@ -352,7 +367,7 @@ tool_export.prototype._init_grid_with_data = async function(data, view, show_tip
 	if (!self.ar_instances.includes(dd_grid)) {
 		self.ar_instances.push(dd_grid);
 	}
-	
+
 	return dd_grid;
 }
 
@@ -361,14 +376,14 @@ tool_export.prototype._init_grid_with_data = async function(data, view, show_tip
 /**
  * _APPEND_ROW_TO_GRID_UI
  * Progressive rendering engine for streamed data.
- * 
+ *
  * Implements a queuing and batching mechanism to ensure smooth UI performance:
  * - Row Queue: Ensures rows are rendered in strict arrival order.
  * - Batch Processing: Renders rows in chunks (e.g. 20) via requestAnimationFrame
  *   to maintain 60fps even during high-throughput transmission.
- * - DOM Sync: Automatically schedules retries if the parent table isn't fully 
+ * - DOM Sync: Automatically schedules retries if the parent table isn't fully
  *   mounted in the DOM yet.
- * 
+ *
  * @private
  * @param {Object} row_data - Data for a single grid row
  */
@@ -389,7 +404,7 @@ tool_export.prototype._append_row_to_grid_ui = function(row_data) {
 		// Check if the grid node is actually in the document body
 		// Note: dd_grid.node is set after dd_grid.render() completes
 		if (self.dd_grid && self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
-			
+
 			// Load the module once before processing the queue
 			if (!self._view_table_dd_grid) {
 				const module = await import('../../../core/dd_grid/js/view_table_dd_grid.js');
@@ -402,7 +417,7 @@ tool_export.prototype._append_row_to_grid_ui = function(row_data) {
 			while (self._row_queue.length > 0) {
 				// Take a batch of rows
 				const batch = self._row_queue.splice(0, BATCH_SIZE);
-				
+
 				// Apply batch to DOM in a single animation frame
 				await new Promise(resolve => {
 					requestAnimationFrame(async () => {
@@ -412,11 +427,11 @@ tool_export.prototype._append_row_to_grid_ui = function(row_data) {
 						resolve();
 					});
 				});
-				
+
 				// Brief yield to allow other async tasks (like stream reading) to run
 				await new Promise(resolve => setTimeout(resolve, 0));
 			}
-			
+
 			self._is_processing_queue = false;
 			if (SHOW_DEBUG) console.log("Stream: Finished processing row queue");
 		} else {
@@ -444,7 +459,9 @@ tool_export.prototype._do_append_row = async function(row_data) {
 	if (!table || table.tagName !== 'TABLE') return;
 
 	const header_row = self.dd_grid.data[0];
-	const ar_columns_obj = header_row.value.map(item => item.ar_columns_obj);
+	const ar_columns_obj = Array.isArray(header_row.value)
+		? header_row.value.map(item => item.ar_columns_obj)
+		: [];
 
 	const row_fragment = self._view_table_dd_grid.render_row(self.dd_grid, row_data, ar_columns_obj);
 	table.appendChild(row_fragment);
@@ -600,7 +617,9 @@ tool_export.prototype.update_local_db_data = async function() {
 	const self = this
 
 	// target_section_tipo. Used to create a object property key different for each section
-	const target_section_tipo = self.target_section_tipo[0]
+	const target_section_tipo = Array.isArray(self.target_section_tipo)
+		? self.target_section_tipo[0]
+		: self.target_section_tipo
 
 	// get_local_db_data
 	const id		= 'tool_export_config'
