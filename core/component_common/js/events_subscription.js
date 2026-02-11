@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {is_empty} from '../../component_common/js/component_common.js'
 
 
 
@@ -28,10 +29,16 @@ export const events_subscription = function(self) {
 						if (!instance.node) {
 							return
 						}
-						const hilite = (
-							(instance.data.value && instance.data.value.length>0) ||
-							(instance.data.q_operator && instance.data.q_operator.length>0)
-						)
+
+						// Check for first entry value
+						const is_empty_value = is_empty(instance)
+
+						// Check for operator
+						const is_empty_operator = !instance.data?.q_operator
+
+						// Highlight if either is present
+						const hilite = ( !is_empty_value || !is_empty_operator )
+
 						ui.hilite({
 							instance	: instance, // instance object
 							hilite		: hilite // bool

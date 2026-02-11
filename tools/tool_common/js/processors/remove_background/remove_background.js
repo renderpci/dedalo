@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global self */
 /*eslint no-undef: "error"*/
 
 
@@ -21,15 +21,24 @@ self.onmessage = async (e) => {
 	// const t1 = performance.now()
 
 	// options
-		const options	= e.data.options // object of options to sent to the function
+	const options = e.data.options // object of options to sent to the function
 
-	// fire function
+	try {
+		// fire function
 		const response = await self.background_removal( options )
 
-	self.postMessage({
-		status: 'end',
-		data: response
-	});
+		self.postMessage({
+			status: 'end',
+			data: response
+		});
+
+	} catch (error) {
+		console.error('Error in background_removal worker:', error);
+		self.postMessage({
+			status: 'error',
+			error: error.message || error
+		});
+	}
 
 }//end onmessage
 
@@ -45,29 +54,26 @@ self.onmessage = async (e) => {
 * 	image_file	: string | a image URL to be processed
 * 	device		: string | 'webgpu' or 'wasm' by default 'webgpu'
 * }
-* @return array data
+* @return object masked_data
 */
 self.background_removal = async function( options ) {
 
-		const model			= options.model || 'briaai/RMBG-1.4';
-		const image_file	= options.image_file;
-		const device 		= options.device || 'webgpu'; // 'wasm' or 'webgpu'
-
+	const model			= options.model || 'briaai/RMBG-1.4';
+	const image_file	= options.image_file;
+	const device 		= options.device || 'webgpu'; // 'wasm' or 'webgpu'
 
 	// Initialize the pipeline
-		const segmenter = await pipeline("background-removal", model,{
-			device: device,
-			dtype : 'fp32'
-		});
-
+	const segmenter = await pipeline("background-removal", model,{
+		device : device,
+		dtype  : 'fp32'
+	});
 
 	// remove background
 	const masked_data = await segmenter( image_file );
 
 
 	return masked_data
-}
-
+}//end background_removal
 
 
 

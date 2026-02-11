@@ -9,7 +9,7 @@
 // page general
 	html {
 		// global_font. Defined in fonts.less
-		.global_font;
+		.global_font();
 		color: @color_grey_4;
 		background-color: @color_white;
 
@@ -503,7 +503,7 @@
 
 		// on focus inputs, adds a soft shadow and outline
 		&:focus {
-			.hilite_mixin;
+			.hilite_mixin();
 		}
 	}
 
@@ -585,7 +585,7 @@
 		color: @color_white;
 	}
 	.error_alert {
-		.error;
+		.error();
 		// add icon :before
 		.fn_append_icon('alert.svg', @color_white, 1);
 		&:before {

@@ -27,32 +27,33 @@ class HttpError extends Error {
 
 /**
 * DATA_MANAGER
+* Class to manage API requests and local storage (IndexedDB)
+*
+* @property {string} credentials - Fetch credentials default. Possible values: 'include', 'same-origin', 'omit'. (Default Dédalo: 'same-origin')
+* @property {string} mode - Fetch mode default. Possible values: 'no-cors', 'cors', 'same-origin'. (Default: 'cors')
+* @property {string} url - API URL default. Endpoint to make API requests.
+* @property {string} health_url - API Health URL default. Endpoint to check the network status of the connection.
 */
 export const data_manager = function() {
 
+	// Fetch credentials default.
+	// include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
+	this.credentials = 'same-origin'
+
+	// Fetch mode default.
+	// no-cors, cors, *same-origin
+	this.mode = 'cors'
+
+	// API URL default
+	// Endpoint to make API requests.
+	this.url = typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+
+	// API Health URL default
+	// Endpoint to check the network status of the connection.
+	// It is used to check if the server is alive and responsive.
+	this.health_url = this.url + 'health/'
+
 }//end data_manager
-
-
-
-/**
-* GET_API_URL
-* Get API URL from environment with fallback to default value
-* @return string
-*/
-export const get_api_url = () => {
-	return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../../core/api/v1/json/'
-}//end get_api_url
-
-
-
-/**
-* GET_API_HEALTH_URL
-* Get API health endpoint URL
-* @return string
-*/
-export const get_api_health_url = () => {
-	return get_api_url() + 'health/'
-}//end get_api_health_url
 
 
 
@@ -63,7 +64,8 @@ export const get_api_health_url = () => {
 */
 export const check_server_health = async () => {
 	try {
-		const url = get_api_health_url() + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
+		const health_url = new data_manager().health_url
+		const url = health_url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
 		const response = await fetch( url, {
 			method: 'GET',
 			cache: 'no-cache'
@@ -77,171 +79,6 @@ export const check_server_health = async () => {
 
 
 /**
-* REQUEST_LEGACY
-* Make a fetch request to server API
-* Receives a JSON string to be parsed
-* @param object options
-* @return api_response
-* 	Promise
-*/
-data_manager.request_legacy = async function(options) {
-
-	const self = this
-
-	const default_options = {
-		url			: typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/',
-		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
-		mode		: 'cors', // no-cors, cors, *same-origin
-		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-		credentials	: 'include', // include, *same-origin, omit
-		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
-		redirect	: 'follow', // manual, *follow, error
-		referrer	: 'no-referrer', // no-referrer, *client
-		body		: null, // body data type must match "Content-Type" header
-		use_worker	: false
-	};
-
-	const merged_options = { ...default_options, ...options };
-
-	// vars from options applying defaults
-	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker } = merged_options;
-
-	// Debug request
-	if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
-		const action		= body?.action || 'load';
-		const worker_label	= use_worker ? '[wk] ' : ''
-		console.warn(`> data_manager request ${worker_label}${method}:`, action.toUpperCase(), merged_options);
-	}
-
-	// recovery mode. Auto add if environment recovery_mode is true
-	// On set to true, it is passed across all API request calls preserving the mode
-	if (page_globals.recovery_mode && body) {
-		body.recovery_mode = true
-	}
-
-	 // Reset page_globals.api_errors at the beginning of each request
-	page_globals.api_errors = [];
-	page_globals.request_message = null; // Reset request message
-
-	// Check URL
-	if (!url || !url.length) {
-		const msg = 'Error: empty or invalid API URL';
-		console.error(msg, { typeof: typeof url, value: url });
-		self._record_api_error(
-			'data_manager', // error_type
-			msg, // message
-			'data_manager URL validation', // trace
-			null // details
-		)
-		return {
-			result	: false,
-			msg		: msg,
-			error	: 'URL is not valid',
-			errors	: ['URL is not valid']
-		};
-	}
-
-	// using worker cases.
-	// Note that execution is slower, but it is useful for low priority
-	// calls like 'update_lock_components_state'
-	// (!) Deactivated 22-05-2025 temporally to simplify network issues debug
-	// if (use_worker === true) {
-	// 	return this._handle_worker_request(url, body);
-	// }
-
-	// handle_errors
-	const handle_errors = async (response) => {
-		if (!response.ok) {
-			console.warn("-> HANDLE_ERRORS response:", response);
-			// extract response text to console
-			const response_text = await response.text();
-			console.error(response_text);
-			self._record_api_error(
-				'data_manager', // error_type
-				response_text, // message
-				'data_manager fetch handle_errors', // trace
-				null // details
-			)
-			throw new Error(response.statusText || `HTTP error! status: ${response.status}`);
-		}
-		return response;
-	}
-
-	try {
-		const fetch_response = await fetch(url, {
-			method		: method,
-			mode		: mode,
-			cache		: cache,
-			credentials	: credentials,
-			headers		: headers,
-			redirect	: redirect,
-			referrer	: referrer,
-			body		: body ? (typeof body === 'string' ? body : JSON.stringify(body)) : null
-		})
-
-		const json_response = await (await handle_errors(fetch_response)).json();
-
-		// error occurred. Catch and alert
-			if (json_response?.error) {
-
-				// debug console message
-				console.error("data_manager request api_response:", json_response);
-
-				// update_lock_components_state fails. Do not send alert here
-				const action = body?.action;
-				if (action !== 'update_lock_components_state') {
-					// alert msg to user
-					const msg = json_response.msg || json_response.error;
-					if (!page_globals.request_message || page_globals.request_message !== msg) {
-						alert(`An error has occurred in the API connection\n[data_manager.request]\n\n${msg}`);
-					}
-					// request_message. Store request message temporally
-					page_globals.request_message = msg;
-					setTimeout(() => {
-						page_globals.request_message = null;
-					}, 3000);
-				}
-
-				// save error message. This is captured by page rendering to display the proper error
-				// api_errors. store api_errors. Used to render error page_globals
-				self._record_api_error(
-					'data_manager', // error_type
-					json_response.msg || json_response.error, // message
-					'data_manager json_parsed', // trace
-					json_response.errors?.length ? json_response.errors.join(' | ') : '' // details
-				)
-
-				return json_response;
-			}
-
-		return json_response;
-
-	} catch (error) {
-
-		console.warn('request url:', typeof url, url);
-		console.warn("request options:", options);
-		console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid or network error. See your server log for details. catch ERROR:\n", error);
-
-		// api_errors. store api_errors. Used to render error page_globals
-		self._record_api_error(
-			'data_manager', // error_type
-			error.message || 'Network error or invalid JSON', // message
-			'data_manager catch error', // trace
-			error // details
-		)
-
-		return {
-			result	: false,
-			msg		: error.message || 'Network error',
-			error	: error,
-			errors	: [error.message || 'Network error'],
-		};
-	}
-}//end request_legacy
-
-
-
-/**
 * REQUEST
 * Make a fetch request to server API
 * Receives a JSON string to be parsed
@@ -251,14 +88,14 @@ data_manager.request_legacy = async function(options) {
 */
 data_manager.request = async function(options) {
 
-	const self = this
+	const self = new data_manager()
 
 	const default_options = {
-		url			: get_api_url(),
+		url			: options.url || self.url,
 		method		: 'POST', // *GET, POST, PUT, DELETE, etc.
-		mode		: 'cors', // no-cors, cors, *same-origin
 		cache		: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-		credentials	: 'include', // include, *same-origin, omit
+		mode		: self.mode, // no-cors, cors, *same-origin
+		credentials	: self.credentials, // include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
 		headers		: {'Content-Type': 'application/json'}, // 'Content-Type': 'application/x-www-form-urlencoded'
 		redirect	: 'follow', // manual, *follow, error
 		referrer	: 'no-referrer', // no-referrer, *client
@@ -277,7 +114,7 @@ data_manager.request = async function(options) {
 	// cache_handler
 	const cache_handler = options.cache_handler || null
 	if (cache_handler?.handler==='localdb') {
-		const cached_data = await self.get_local_db_data(
+		const cached_data = await this.get_local_db_data(
 			cache_handler.id,
 			'data' // string table
 		);
@@ -761,6 +598,14 @@ data_manager._handle_worker_request = function(url, body) {
 
 
 
+/**
+* _RECORD_API_ERROR
+* Internal method to record API errors in page_globals
+* @param string error_type
+* @param string message
+* @param string trace
+* @param mixed details
+*/
 data_manager._record_api_error = function(error_type, message, trace, details = null) {
 	page_globals.api_errors.push({
 		error	: error_type,
@@ -772,6 +617,13 @@ data_manager._record_api_error = function(error_type, message, trace, details = 
 
 
 
+/**
+* _CREATE_ERROR_RESPONSE
+* Helper to create a standardized error response object
+* @param string msg
+* @param mixed error
+* @return object
+*/
 data_manager._create_error_response = function(msg, error) {
 	return {
 		result	: false,
@@ -795,12 +647,14 @@ data_manager._create_error_response = function(msg, error) {
 */
 data_manager.request_stream = async function(options) {
 
+	const self = new data_manager()
+
 	// short vars
-	const url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
+	const url			= options.url || self.url
 	const method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
-	const mode			= options.mode || 'cors' // no-cors, cors, *same-origin
 	const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
-	const credentials	= options.credentials || 'include' // include, *same-origin, omit
+	const mode			= options.mode || self.mode // no-cors, cors, *same-origin
+	const credentials	= options.credentials || self.credentials // include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
 	const headers		= options.headers || {
 		'Content-Type'		: 'application/json',
 		'Accept'			: 'text/event-stream',
@@ -847,13 +701,16 @@ data_manager.request_stream = async function(options) {
  * REQUEST_FETCH_STREAM
  * Generic fetch stream request using ReadableStreams.
  * Unlike request_stream (SSE), this target is agnostic and suitable for NDJSON or other binary streams.
- * It's primarilly used to bypass the overhead of EventSource for long-running row-by-row exports.
+ * It's primarily used to bypass the overhead of EventSource for long-running row-by-row exports.
  *
  * @param {object} options - Request options (url, method, headers, body)
  * @returns {Promise<ReadableStream>} The response body stream
  */
 data_manager.request_fetch_stream = async function(options) {
-	const url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
+
+	const self = new data_manager()
+
+	const url			= options.url || self.url
 	const method		= options.method || 'POST'
 	const headers		= options.headers || {
 		'Content-Type'	: 'application/json',
@@ -1135,7 +992,7 @@ data_manager.prototype.get_page_element = async function(options) {
 
 	// api request
 		// const api_response = await this.request({
-		const api_response = this.request({
+		const api_response = await this.request({
 			body : {
 				action	: 'get_page_element',
 				options	: options
@@ -1488,8 +1345,6 @@ data_manager.delete_local_db_data_by_prefix = async function(table, prefix) {
 */
 data_manager.delete_whole_local_db = async function() {
 
-	const self = this
-
 	return new Promise(function(resolve, reject) {
 
 		const db = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
@@ -1521,8 +1376,6 @@ data_manager.delete_whole_local_db = async function() {
 */
 data_manager.clear_local_db_table = async function(table) {
 
-	const self = this
-
 	return new Promise(function(resolve, reject) {
 
 		// Let us open our database
@@ -1543,7 +1396,7 @@ data_manager.clear_local_db_table = async function(table) {
 				console.error(`[clear_local_db_table] Transaction not opened due to error: ${transaction.error}`);
 				reject(false)
 			};
-			const objectStore = transaction.objectStore("sqo");
+			const objectStore = transaction.objectStore(table);
 			const objectStoreRequest = objectStore.clear();
 			objectStoreRequest.onsuccess = (event) => {
 				console.log('[clear_local_db_table] Request clear successful');
@@ -1562,15 +1415,14 @@ data_manager.clear_local_db_table = async function(table) {
 * Download url blob data and create a temporal auto-fired link
 */
 export function download_url(url, filename) {
-	fetch(url).then(function(t) {
-		return t.blob().then((b)=>{
-			var a = document.createElement("a");
-			a.href = URL.createObjectURL(b);
+	fetch(url).then(function(response) {
+		return response.blob().then((blob)=>{
+			const a = document.createElement("a");
+			a.href = URL.createObjectURL(blob);
 			a.setAttribute("download", filename);
 			a.click();
 			a.remove();
-		}
-		);
+		});
 	});
 }//end download_url
 

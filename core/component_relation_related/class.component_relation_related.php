@@ -274,6 +274,7 @@ class component_relation_related extends component_relation_common {
 
 		// search_query_object
 		$search_query_object = new search_query_object();
+			$search_query_object->set_select([]);
 			$search_query_object->set_id('temp');
 			$search_query_object->set_section_tipo([$this->section_tipo]);
 			$search_query_object->set_filter($filter);

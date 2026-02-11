@@ -41,11 +41,6 @@ trait where {
 			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . ')';
 		}
 
-		// Time machine section case (dd15)
-		if($ar_section_tipo[0]==='dd15'){
-			$this->sql_obj->main_where= [];
-		}
-
 		// avoid root user to be include in the results for section users.
 		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO) {
 			$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id > 0';

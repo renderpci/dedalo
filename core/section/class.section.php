@@ -191,6 +191,7 @@ class section extends common {
 	// }//end get_instance
 
 
+
 	/**
 	* GET_INSTANCE
 	* Cache section instances (singleton pattern)
@@ -198,22 +199,28 @@ class section extends common {
 	* @param string|null $mode = 'list'
 	* @param bool $cache = true
 	* @param object|null $caller_dataframe = null
-	* @return object $section
+	* @return object|false $section
+	* Returns false if the section cannot be created
 	*/
-	public static function get_instance( string $tipo, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section {
+	public static function get_instance( string $tipo, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section|false {
 
 		// tipo check model (only section is expected)
 			$model = ontology_node::get_model_by_tipo( $tipo, true );
+			if(empty($model)) {
+				$msg = " Error. model is empty for tipo: '$tipo'. Unable to create a section";
+				debug_log(__METHOD__
+					. $msg
+					, logger::ERROR
+				);
+				return false;
+			}else
 			if ($model!=='section') {
 				debug_log(__METHOD__
 					. ' Expected model of tipo '.$tipo.' is section, but received is ' . PHP_EOL
 					. ' model: ' . to_string($model)
 					, logger::ERROR
 				);
-				// if(SHOW_DEBUG===true) {
-				// 	$bt = debug_backtrace();
-				// 	dump($bt, ' bt ++ '.to_string());
-				// }
+				return false;
 			}
 
 		// cache

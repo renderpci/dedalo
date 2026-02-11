@@ -129,7 +129,7 @@ const get_content_data = function(self) {
 		form.addEventListener('submit', submit_handler)
 
 	// login_items
-		const login_items = self.context.properties.login_items
+		const login_items = self.context?.properties?.login_items
 
 	// check login_items. If there were problems with type resolution, maybe the Ontology tables are not reachable
 		if (!login_items || !login_items.find(el => el.tipo==='dd255')) {

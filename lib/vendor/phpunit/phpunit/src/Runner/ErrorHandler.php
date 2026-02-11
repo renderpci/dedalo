@@ -40,10 +40,10 @@ use PHPUnit\Event\Code\NoTestCaseObjectOnCallStackException;
 use PHPUnit\Event\Code\TestMethod;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Metadata\IgnoreDeprecations;
+use PHPUnit\Metadata\Parser\Registry as MetadataParserRegistry;
 use PHPUnit\Runner\Baseline\Baseline;
 use PHPUnit\Runner\Baseline\Issue;
-use PHPUnit\TextUI\Configuration\Registry;
-use PHPUnit\TextUI\Configuration\Source;
+use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
 use PHPUnit\TextUI\Configuration\SourceFilter;
 use PHPUnit\Util\ExcludeList;
 
@@ -60,7 +60,7 @@ final class ErrorHandler
     private ?Baseline $baseline               = null;
     private bool $enabled                     = false;
     private ?int $originalErrorReportingLevel = null;
-    private readonly Source $source;
+    private readonly bool $identifyIssueTrigger;
 
     /**
      * @var list<array{int, string, string, int}>
@@ -80,12 +80,24 @@ final class ErrorHandler
 
     public static function instance(): self
     {
-        return self::$instance ?? self::$instance = new self(Registry::get()->source());
+        $source = ConfigurationRegistry::get()->source();
+
+        $identifyIssueTrigger = true;
+
+        if (!$source->identifyIssueTrigger()) {
+            $identifyIssueTrigger = false;
+        }
+
+        if (!$source->notEmpty()) {
+            $identifyIssueTrigger = false;
+        }
+
+        return self::$instance ?? self::$instance = new self($identifyIssueTrigger);
     }
 
-    private function __construct(Source $source)
+    private function __construct(bool $identifyIssueTrigger)
     {
-        $this->source = $source;
+        $this->identifyIssueTrigger = $identifyIssueTrigger;
     }
 
     /**
@@ -311,7 +323,7 @@ final class ErrorHandler
 
     private function trigger(TestMethod $test, bool $filterTrigger): IssueTrigger
     {
-        if (!$this->source->notEmpty()) {
+        if (!$this->identifyIssueTrigger) {
             return IssueTrigger::unknown();
         }
 
@@ -494,7 +506,7 @@ final class ErrorHandler
 
     private function deprecationIgnoredByTest(TestMethod $test, string $message): bool
     {
-        $metadata = \PHPUnit\Metadata\Parser\Registry::parser()->forClassAndMethod($test->className(), $test->methodName())->isIgnoreDeprecations()->asArray();
+        $metadata = MetadataParserRegistry::parser()->forClassAndMethod($test->className(), $test->methodName())->isIgnoreDeprecations()->asArray();
 
         foreach ($metadata as $metadatum) {
             assert($metadatum instanceof IgnoreDeprecations);

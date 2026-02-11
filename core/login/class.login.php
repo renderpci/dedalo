@@ -1415,7 +1415,10 @@ class login extends common {
 			$properties->info[] = [
 				'type'	=> 'version',
 				'label'	=> 'Ontology version',
-				'value'	=> [$dd1_properties->version, $dd1_properties->date]
+				'value'	=> [
+					$dd1_properties->version ?? null,
+					$dd1_properties->date ?? null
+				]
 			];
 
 		// development server only

@@ -33,7 +33,8 @@ if (typeof content!=='undefined') {
 			'test_unknown_error',
 			'test_page',
 			'test_diffusion',
-			'test_ts_object'
+			'test_ts_object',
+			'test_ts_object_extended'
 			// 'test_component_portal_pagination'
 		]
 		ui.create_dom_element({

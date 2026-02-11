@@ -910,7 +910,12 @@ const render_header = function(self) {
 				)
 				const current_component_value = current_component_data && current_component_data.value
 					? current_component_data.value.map(item => item.value).join(' | ')
-					: ''
+					: null
+
+				// Skip empty values
+				if( !current_component_value || current_component_value.length === 0) {
+					continue;
+				}
 
 				const component_container = ui.create_dom_element({
 					element_type	: 'div',

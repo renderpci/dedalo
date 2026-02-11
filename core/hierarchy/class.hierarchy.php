@@ -1,8 +1,21 @@
 <?php declare(strict_types=1);
 /**
-* HIERARCHY
-* Centralized hierarchy methods
-*/
+ * HIERARCHY
+ *
+ * Centralized hierarchy methods for managing thesaurus-like structures in Dédalo.
+ *
+ * The hierarchy class extends ontology and provides specialized methods for:
+ * - Managing virtual sections used for descriptors and typologies (e.g., 'es1', 'es2').
+ * - High-speed retrieval of hierarchy-related configuration (section maps, main languages).
+ * - Exporting and importing hierarchy data.
+ * - Comparing and tracking schema changes in the ontology sections.
+ * - Creating root terms for thesaurus display.
+ *
+ * It uses a main table 'matrix_hierarchy_main' and follows the ontology-driven
+ * design pattern common in Dédalo v7.
+ *
+ * @package core\hierarchy
+ */
 class hierarchy extends ontology {
 
 
@@ -536,7 +549,7 @@ class hierarchy extends ontology {
 				return 'lg-eng';
 			}
 
-		// cache			
+		// cache
 			if(isset(self::$cache_main_lang_cache[$section_tipo])) {
 				return self::$cache_main_lang_cache[$section_tipo];
 			}
@@ -568,7 +581,7 @@ class hierarchy extends ontology {
 
 		// search
 			$result	= matrix_db_manager::exec_search($sql, $params);
-			while ($row = pg_fetch_assoc($result)) {			
+			while ($row = pg_fetch_assoc($result)) {
 
 				$main_lang_column = $row['main_lang'];
 				// JSON decode DB column
@@ -589,7 +602,7 @@ class hierarchy extends ontology {
 						true // bool add_prefix
 					);
 				}
-				
+
 				break; // only one result is expected
 			}
 
@@ -759,16 +772,16 @@ class hierarchy extends ontology {
 	* GET_HIERARCHY_SECTION
 	* Search hierarchy sections by target section_tipo and
 	* get result section_id
-	* @param $section_tipo
+	* @param string $section_tipo
 	*	Source section_tipo
-	* @param $hierarchy_component_tipo
+	* @param string $hierarchy_component_tipo
 	*	Target component tipo where search section_tipo
 	* @return int|null $section_id
 	*/
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
 		// cache
-		
+
 		if (isset(self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
 			return self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
 		}
@@ -815,7 +828,7 @@ class hierarchy extends ontology {
 	* GET_HIERARCHY_BY_TLD
 	* Search hierarchy sections by tld and
 	* gets result as locator object
-	* @param $tld
+	* @param string $tld
 	*	tld like 'es'
 	* @return object|null $row
 	* Sample:
@@ -1009,9 +1022,7 @@ class hierarchy extends ontology {
 			$ar_children = ontology_node::get_ar_recursive_children(
 				$real_section,
 				false,
-				null,
-				null,
-				false //use cache false
+				null
 			);
 			$simple_schema_of_sections[$current_section] = $ar_children;
 		}
@@ -1090,9 +1101,9 @@ class hierarchy extends ontology {
 	* parents is a array of objects
 	* children is a array of objects
 	* [{
-	* 	"section 	: {"tipo":"oh1","label":"Oral History"},
-	* 	"parents"	: [{"tipo":"dd323","lqbel":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
-	* 	"children"	: [{"tipo":"oh2","lqbel":"Identification"},{"tipo":"oh14","label":"Code"}]
+	* 	"section" 	: {"tipo":"oh1","label":"Oral History"},
+	* 	"parents"	: [{"tipo":"dd323","label":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
+	* 	"children"	: [{"tipo":"oh2","label":"Identification"},{"tipo":"oh14","label":"Code"}]
 	* "}]
 	* @param string $filename
 	* @return array $data
@@ -1310,7 +1321,7 @@ class hierarchy extends ontology {
 	* @test true
 	*/
 	public static function get_active_elements() : array {
-		
+
 		// cache
 		if (isset(self::$active_hierarchy_elements_cache)) {
 			return self::$active_hierarchy_elements_cache;
@@ -1342,6 +1353,10 @@ class hierarchy extends ontology {
 		$section_tipo = hierarchy::$main_section_tipo;
 
 		$sqo = new search_query_object();
+			$sqo->set_select([
+				(object)['column' => 'section_tipo'],
+				(object)['column' => 'section_id']
+			]);
 			$sqo->set_section_tipo( [$section_tipo] );
 			$sqo->set_limit( 0 );
 			$sqo->set_offset( 0 );

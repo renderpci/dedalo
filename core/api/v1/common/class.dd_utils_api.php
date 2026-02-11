@@ -800,14 +800,9 @@ final class dd_utils_api {
 					$target_path	= $tmp_dir . '/' . $name;
 					$moved			= move_uploaded_file($file_tmp_name, $target_path);
 					// verify move file is successful
-					if ($moved!==true) {
-						debug_log(__METHOD__.PHP_EOL
-							.'Error on get/move temp file to target_path '.PHP_EOL
-							.'source: '.$file_tmp_name.PHP_EOL
-							.'target: '.$target_path
-							, logger::ERROR
-						);
-						$response->msg .= 'Uploaded file Error on get/move to target_path.';
+					if ($moved !== true) {
+						$response->msg .= 'Error moving uploaded file.';
+						debug_log(__METHOD__ . ' Error moving file to target path.', logger::ERROR);
 						return $response;
 					}else{
 						debug_log(__METHOD__
