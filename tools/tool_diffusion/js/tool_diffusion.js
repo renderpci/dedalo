@@ -129,8 +129,8 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
+			dd_api	: 'diffusion_api',
+			action	: 'get_diffusion_info',
 			source	: source,
 			options : {
 				section_tipo : section_tipo
