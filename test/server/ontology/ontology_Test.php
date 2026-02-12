@@ -321,8 +321,6 @@ final class ontology_test extends BaseTestCase {
 			// Call the method under test
 			$result = ontology::create_dd_ontology_ontology_section_node($file_item);
 
-			return;
-
 			$expected = 'string';
 			$this->assertTrue(
 				gettype($result)===$expected ,
@@ -1198,6 +1196,9 @@ final class ontology_test extends BaseTestCase {
 			];
 			$section_id = ontology::add_main_section($file_item);
 
+		// create dd_ontology node for the section type (needed for section::get_instance)
+			ontology::create_dd_ontology_ontology_section_node($file_item);
+
 		// set permissions. Allow current user access to created default sections
 			$set_permissions_result = component_security_access::set_section_permissions((object)[
 				'ar_section_tipo'	=> [$section_tipo],
@@ -1320,40 +1321,15 @@ final class ontology_test extends BaseTestCase {
 	*/
 	public function test_dd_ontology_version_is_valid() {
 
-		// $min_date = '2025-11-01';
-
-		// $result = ontology::dd_ontology_version_is_valid(
-		// 	$min_date
-		// );
-
-		// $this->assertTrue(
-		// 	gettype($result)==='boolean',
-		// 	'expected boolean ' . PHP_EOL
-		// 		. gettype($result)
-		// );
-
-		// $expected = false;
-		// $this->assertTrue(
-		// 	$result===$expected,
-		// 	'expected: ' . to_string($expected) .  PHP_EOL
-		// 		. 'result: ' . to_string($result) . PHP_EOL
-		// 		. 'min_date: ' . to_string($min_date)
-		// );
-
+		// Valid case: min_date is in the past relative to dd1 version
 		$min_date = '2024-12-15';
+		$result = ontology::dd_ontology_version_is_valid($min_date);
+		$this->assertTrue($result, 'expected true for min_date: ' . $min_date);
 
-		$result = ontology::dd_ontology_version_is_valid(
-			$min_date
-		);
-
-		$expected = true;
-		$this->assertTrue(
-			$result===$expected,
-			'expected: ' . to_string($expected) . PHP_EOL
-				. 'result: ' . to_string($result) . PHP_EOL
-				. 'min_date: ' . to_string($min_date)
-		);
-
+		// Invalid case: min_date is in the future
+		$future_date = (new DateTime('+10 years'))->format('Y-m-d');
+		$result_future = ontology::dd_ontology_version_is_valid($future_date);
+		$this->assertFalse($result_future, 'expected false for future min_date: ' . $future_date);
 	}//end test_dd_ontology_version_is_valid
 
 
@@ -1432,6 +1408,61 @@ final class ontology_test extends BaseTestCase {
 		// 	*/
 		// }//end test_compare_dd_ontology_to_matrix
 
+
+
+	/**
+	* TEST_GET_OVERWRITE
+	* Verifies that get_overwrite correctly identifies local ontology overrides.
+	* @return void
+	*/
+	public function test_get_overwrite() {
+
+		$this->user_login();
+
+		$section_tipo = 'dd0';
+		$section_id   = 1; // root node
+		$local_section_tipo = 'localontology0';
+
+		// search if exists
+		$result = ontology::get_overwrite($section_tipo, $section_id);
+
+		// It depends on the current database state, but we can verify it returns null for localontology0 itself
+		$result_local = ontology::get_overwrite($local_section_tipo, $section_id);
+		$this->assertNull($result_local, 'get_overwrite should return null if input section_tipo is already localontology0');
+
+		// To fully test it, we would need to create a relationship.
+		// Since we are in a testing environment, let's assume if it returns something, it should be a locator.
+		if ($result !== null) {
+			$this->assertInstanceOf(locator::class, $result);
+			$this->assertEquals($local_section_tipo, $result->section_tipo);
+		}
+	}
+
+
+	/**
+	* TEST_GET_MAIN_ORDER
+	* @return void
+	*/
+	public function test_get_main_order() {
+
+		// existing record (dd)
+		$tld = 'dd';
+		$result = ontology::get_main_order($tld);
+
+		$this->assertIsInt($result, 'expected integer for tld: ' . $tld);
+		// Root order is usually 1, but could be 0 depending on the environment setup
+		$this->assertTrue($result >= 0, 'expected order 0 or more for dd tld (root)');
+
+		// existing record (oh)
+		$tld_oh = 'oh';
+		$result_oh = ontology::get_main_order($tld_oh);
+		$this->assertIsInt($result_oh, 'expected integer for tld: ' . $tld_oh);
+
+		// non existing record
+		$tld_invalid = 'non_existing_tld_xyz';
+		$result_invalid = ontology::get_main_order($tld_invalid);
+		$this->assertNull($result_invalid, 'expected null for invalid tld');
+	}
 
 
 }//end class
