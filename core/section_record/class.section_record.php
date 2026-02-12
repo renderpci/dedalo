@@ -382,6 +382,7 @@ class section_record {
 	* query preparation fails, or execution fails.
 	*/
 	public function save_key_data( array $save_path ) : bool {
+		if(SHOW_DEBUG) $start_time = start_time();
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;
@@ -485,6 +486,16 @@ class section_record {
 
 		// save event
 		$this->save_event();
+
+		// debug
+		if(SHOW_DEBUG) {
+			debug_log(__METHOD__
+				. ' Saved component data' . PHP_EOL
+				. ' result: ' . json_encode($result, JSON_PRETTY_PRINT) . PHP_EOL
+				. ' time: ' . exec_time_unit($start_time,'ms').' ms'
+				, logger::WARNING
+			);
+		}
 
 		return $result;
 	}//end save_key_data
@@ -1724,7 +1735,7 @@ class section_record {
 		$local_value = isset($data_col->modified_by_user)
 			? $data_col->modified_by_user
 			: null;
-		
+
 		return $local_value;
 	}//end get_modified_by_user_id
 

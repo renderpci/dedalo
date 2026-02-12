@@ -215,7 +215,7 @@ class tm_record {
 		if ( !empty($previous_data) ) {
 
 			$tm_values = new stdClass();
-				$tm_values->section_id 		= $values->section_id; // string|int section_id (component parent)
+				$tm_values->section_id 		= (int)$values->section_id; // string|int section_id (component parent)
 				$tm_values->section_tipo 	= $values->section_tipo; // string section_tipo
 				$tm_values->tipo 			= $values->tipo; // string $tipo (component_tipo)
 				$tm_values->lang			= $values->lang; // string $lang
@@ -492,6 +492,7 @@ class tm_record {
 
 			// 1. search notes with current matrix_id
 				$sqo = new search_query_object();
+					$sqo->select		= [];
 					$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
 					$sqo->filter		= json_decode('{
 						"$and": [
