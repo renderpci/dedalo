@@ -955,7 +955,7 @@ WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
   (oh1.datos#>>'{components,oh16,dato,lg-spa}' IS NOT NULL) OR
   (oh1.datos#>>'{components,oh16,dato,lg-eng}' IS NOT NULL) OR
   (oh1.datos#>>'{components,oh16,dato,lg-fra}' IS NOT NULL) OR
-  (oh1.datos#>>'{components,oh16,dato,lg-cat}' IS NOT NULL) 
+  (oh1.datos#>>'{components,oh16,dato,lg-cat}' IS NOT NULL)
 )
 ORDER BY oh1.section_id ASC
 LIMIT 10

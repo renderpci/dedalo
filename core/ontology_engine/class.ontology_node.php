@@ -55,21 +55,21 @@ class ontology_node {
 	// in those cases, the table will be `dd_ontology_recovery` for safe running.
 	public static $table = 'dd_ontology';
 
-	// array of ontology_node instances
-	public static $instances = [];
-	public static $label_by_tipo_cache = [];
-	public static $model_by_tipo_cache = [];
-	public static $ar_children_of_this_stat_data = [];
-	public static $ar_parents_of_this_data = [];
-	public static $ar_siblings_of_this_data = [];
-	public static $ar_tipo_by_model_name_and_relation_data = [];
+	// static cache
+	public static $instances = []; // array of ontology_node instances
+	public static $label_by_tipo_cache = []; // array of ontology_node labels
+	public static $model_by_tipo_cache = []; // array of ontology_node models
+	public static $ar_children_of_this_stat_data = []; // array of ontology_node children
+	public static $ar_parents_of_this_data = []; // array of ontology_node parents
+	public static $ar_siblings_of_this_data = []; // array of ontology_node siblings
+	public static $ar_tipo_by_model_name_and_relation_data = []; // array of ontology_node tipo by model name and relation
 
 
 
 	/**
 	 * GET_INSTANCE
 	 * Create the ontology node instance with the ontology identification; tipo
-	 * @param ?string $tipo = null
+	 * @param string $tipo
 	 * 	E.g. 'dd156'
 	 * @return self
 	 */
@@ -93,10 +93,10 @@ class ontology_node {
 
 		if( !empty($tipo) ) {
 
-			//remove any other things than tld and section_id in the tipo string
+			// Checks and removes any other things than tld and section_id in the tipo string
 			$safe_tipo = safe_tipo($tipo);
 
-			if( $safe_tipo !== $tipo ){
+			if( !$safe_tipo || $safe_tipo !== $tipo ){
 				debug_log(__METHOD__
 					." Error creating a new ontology node, tipo is not a valid tipo: ". PHP_EOL
 					.' tipo: ' . $tipo .PHP_EOL
