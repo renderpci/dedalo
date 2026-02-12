@@ -320,6 +320,15 @@ class tool_export extends tool_common {
 			$column_labels		= [];
 			$column_tipos_len	= sizeof($column_tipos)-1;
 			foreach ($column_tipos as $column_key => $column_tipo) {
+				if(safe_tipo($column_tipo)===false) {
+					debug_log(__METHOD__
+					  .' Ignored invalid tipo'
+					  .' column_key: ' . to_string($column_key)
+					  .' column_tipo: ' . to_string($column_tipo)
+					  , logger::ERROR
+					);
+					continue;
+				}
 				if($this->data_format==='dedalo_raw'){
 					$model_name = ontology_node::get_model_by_tipo($column_tipo);
 					$column_labels[] = ($model_name === 'component_section_id') ? 'section_id' : $column_tipo;
