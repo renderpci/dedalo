@@ -27,7 +27,7 @@ class search_related extends search {
 		$start_time=start_time();
 
 		// tables where to search
-			$ar_tables_to_search = common::get_matrix_tables_with_relations();
+			$ar_tables_to_search = $this->sqo->tables ?? common::get_matrix_tables_with_relations();
 
 		// pagination
 			$limit	= $this->sqo->limit ?? 10;

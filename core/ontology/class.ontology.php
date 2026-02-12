@@ -2709,6 +2709,11 @@ class ontology {
 				$sqo->set_mode('related');
 				$sqo->set_filter_by_locators([$locator]);
 				$sqo->set_limit( 1 );
+				$sqo->set_full_count(false);
+				$sqo->set_tables([
+					'matrix_ontology_main',
+					'matrix_ontology'
+				]);
 
 		// search the overwrite section
 			$search = search::get_instance( $sqo );
