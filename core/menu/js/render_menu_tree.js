@@ -14,10 +14,19 @@
 
 
 /**
-* RENDER_TREE
-* @param object options
-* @return bool
-*/
+ * RENDER_TREE
+ * Main entry point for rendering the menu tree.
+ * Initializes the data structures and sets up global event listeners.
+ *
+ * @param {Object} options - Configuration options
+ * @param {Object} options.self - The menu instance object
+ * @param {Array} options.self.data.tree_datalist - The list of menu items from the server
+ * @param {Array} options.self.li_nodes - Registry for all created LI elements
+ * @param {Array} options.self.ul_nodes - Registry for all created UL elements
+ * @param {HTMLElement} options.container - The root DOM element where the menu will be rendered
+ * @param {string} options.tipo - The ID/tipo of the menu root
+ * @return {boolean} Returns true on success
+ */
 export const render_tree = (options) => {
 
 	// options
@@ -28,6 +37,16 @@ export const render_tree = (options) => {
 	// datalist
 		const data		= self.data || []
 		const datalist	= data.tree_datalist || []
+
+	// pre-process datalist for O(1) lookup
+		const items_by_parent = new Map()
+		datalist.forEach(item => {
+			if (!items_by_parent.has(item.parent)) {
+				items_by_parent.set(item.parent, [])
+			}
+			items_by_parent.get(item.parent).push(item)
+		})
+		self.items_by_parent = items_by_parent
 
 	// render
 		render_level_hierarchy({
@@ -116,10 +135,17 @@ export const render_tree = (options) => {
 
 
 /**
-* RENDER_LEVEL_HIERARCHY
-* @param object options
-* @return bool
-*/
+ * RENDER_LEVEL_HIERARCHY
+ * Recursively renders a single level of the horizontal/vertical menu hierarchy.
+ * Creates a UL container and populates it with LI items.
+ *
+ * @param {Object} options - Configuration options
+ * @param {Object} options.self - The menu instance object
+ * @param {Array} options.datalist - The full list of menu items
+ * @param {HTMLElement} options.root_ul - The root container (used for offset calculations)
+ * @param {string} options.current_tipo - The ID/tipo of the parent item to render children for
+ * @return {boolean} Returns true on success
+ */
 const render_level_hierarchy = (options) => {
 
 	// options
@@ -139,7 +165,7 @@ const render_level_hierarchy = (options) => {
 		self.ul_nodes.push(ul)
 
 	// values (li nodes dependents of the ul)
-		const root_areas		= datalist.filter(item => item.parent===current_tipo)
+		const root_areas		= self.items_by_parent.get(current_tipo) || []
 		const root_areas_length	= root_areas.length
 		for (let i = 0; i < root_areas_length; i++) {
 			// create the li and a nodes inside the current ul
@@ -159,11 +185,19 @@ const render_level_hierarchy = (options) => {
 
 
 /**
-* RENDER_ITEM_HIERARCHY
-* Render li hierarchy node
-* @param object options
-* @return HTMLElement li
-*/
+ * RENDER_ITEM_HIERARCHY
+ * Renders a single menu item (LI) and its associated link (A).
+ * Sets up interaction events (hover, click) for navigation and submenu display.
+ *
+ * @param {Object} options - Configuration options
+ * @param {Object} options.self - The menu instance object
+ * @param {Array} options.datalist - The full list of menu items
+ * @param {HTMLElement} options.ul_container - The immediate UL parent for this item
+ * @param {HTMLElement} options.root_ul - The menu root container of the level
+ * @param {Object} options.item - The data object for this specific menu item
+ * @param {string} options.current_tipo - The ID/tipo of the parent container
+ * @return {HTMLElement} The created LI element
+ */
 const render_item_hierarchy = (options) => {
 
 	// options
@@ -197,72 +231,69 @@ const render_item_hierarchy = (options) => {
 					return false
 				}
 
-				// get current node mouse is over
-				const active_li = e.target.nodeName==='A' ? e.target.parentNode : e.target
-				// get all nodes inside ul
-				const nodes_li	= ul_container.getElementsByTagName('li')
-				const len		= nodes_li.length
-				for (let i = len - 1; i >= 0; i--) {
+				// get current node mouse is over (the li itself)
+				const active_li = e.currentTarget
+				// get immediate siblings inside ul
+				const siblings	= Array.from(ul_container.children)
 
-					// inactive all nodes
-					nodes_li[i].classList.add('menu_li_inactive')
-					nodes_li[i].classList.remove('menu_li_active')
+				siblings.forEach(node_li => {
 
-					// close all ul nodes dependent of the current li
-					const close_id = nodes_li[i].dataset.children
-					if (close_id) {
-						close_all_children(close_id)
-					}
-
-					// check if the active li is the current loop node.
-					if(nodes_li[i]===active_li){
-
+					if (node_li === active_li) {
 						// active the current li
-						nodes_li[i].classList.add('menu_li_active');
-						nodes_li[i].classList.remove('menu_li_inactive');
+						node_li.classList.add('menu_li_active')
+						node_li.classList.remove('menu_li_inactive')
+
 						// if the active li has children
-						const open_id = active_li.dataset.children
+						const open_id = node_li.dataset.children
 						if(open_id) {
 
 							//get the ul node and active it
 							const open_ul = document.getElementById(open_id)
+							if (open_ul) {
+								open_ul.classList.remove('menu_ul_hidden')
+								open_ul.classList.add('menu_ul_displayed')
 
-							open_ul.classList.remove('menu_ul_hidden');
-							open_ul.classList.add('menu_ul_displayed');
+								const active_rect = node_li.getBoundingClientRect()
 
-							//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
-							if(active_li.parentNode.id === 'dd1'){
+								//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
+								if(node_li.parentNode.id === 'dd1'){
 
-								open_ul.style.left = (active_li.getBoundingClientRect().left -1 ) + 'px'
+									open_ul.style.left = (active_rect.left - 1) + 'px'
 
-							}else{
+								}else{
+									const root_rect = root_ul.getBoundingClientRect()
+									const top_position = Math.ceil(active_rect.top - root_rect.top)
 
-								const top_position = Math.ceil(
-									active_li.getBoundingClientRect().top
-									- root_ul.getBoundingClientRect().top // offset (maintenance messages, etc.)
-								)
-								// console.log("active_li.getBoundingClientRect().top:",active_li.getBoundingClientRect().top);
-								// console.log("root_ul.getBoundingClientRect().top:",root_ul.getBoundingClientRect().top);
-								// console.log("top_position:",top_position);
+									// the node is totally visible and don't need move to the top
+									open_ul.style.top = top_position + 'px'
 
-								// the node is totally visible and don't need move to the top
-								open_ul.style.top = top_position + 'px'
-								// normal calculation for the hierarchy menus
-								// get the bottom position of the ul and remove the height of the window
-								const ul_bottom_dif = open_ul.getBoundingClientRect().bottom - window.innerHeight//document.documentElement.clientHeight
-								// if the position is outside of the window (>0)
-								if (ul_bottom_dif>0) {
-									// get the top of the current li and remove the oversize outsize of the window
-									const total_top		= top_position - ul_bottom_dif
-									open_ul.style.top	= total_top + 'px'
+									// normal calculation for the hierarchy menus
+									const ul_rect = open_ul.getBoundingClientRect()
+									// get the bottom position of the ul and remove the height of the window
+									const ul_bottom_dif = ul_rect.bottom - window.innerHeight
+									// if the position is outside of the window (>0)
+									if (ul_bottom_dif>0) {
+										// get the top of the current li and remove the oversize outsize of the window
+										const total_top		= top_position - ul_bottom_dif
+										open_ul.style.top	= total_top + 'px'
+									}
+									// move the node to the right position of the selected li
+									open_ul.style.left = active_rect.right + 'px'
 								}
-								// move the node to the right position of the selected li
-								open_ul.style.left = active_li.getBoundingClientRect().right + 'px'
-							}//end if(active_li.parentNode.id === 'dd1')
-						}//end if(open_id)
+							}
+						}
+					} else {
+						// inactive sibling nodes
+						node_li.classList.add('menu_li_inactive')
+						node_li.classList.remove('menu_li_active')
 
-					}//end if(nodes_li[i] == active_li)
-				}//end for
+						// close all ul nodes dependent of this sibling li
+						const close_id = node_li.dataset.children
+						if (close_id) {
+							close_all_children(close_id)
+						}
+					}
+				})
 			}
 			li.addEventListener('mouseenter', mouseenter_handler)
 
@@ -341,8 +372,8 @@ const render_item_hierarchy = (options) => {
 			link.addEventListener('click', click_handler)
 
 	// children_item. recursive generation of children nodes of the current li node.
-		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)
-		if (children_item) {
+		const has_children = self.items_by_parent.has(item.tipo)
+		if (has_children) {
 
 			li.classList.add ('has-sub')
 			li.dataset.children	= item.tipo
@@ -353,7 +384,7 @@ const render_item_hierarchy = (options) => {
 				current_tipo	: item.tipo,
 				parent_tipo		: current_tipo
 			})
-		}//end children_item
+		}//end has_children
 
 
 	return li
@@ -362,11 +393,15 @@ const render_item_hierarchy = (options) => {
 
 
 /**
-* CLOSE_ALL_DROP_MENU
-* Select all nodes in the menu instance and set the css to remove the visualization
-* @para object self
-* @return void
-*/
+ * CLOSE_ALL_DROP_MENU
+ * Resets the entire menu tree to its inactive state.
+ * Hides all UL containers and removes active classes from all LI nodes.
+ *
+ * @param {Object} self - The menu instance object
+ * @param {Array} self.ul_nodes - Registry of all UL nodes to hide
+ * @param {Array} self.li_nodes - Registry of all LI nodes to deactivate
+ * @return {void}
+ */
 const close_all_drop_menu = function(self) {
 
 	self.menu_active = false
@@ -396,11 +431,12 @@ const close_all_drop_menu = function(self) {
 
 
 /**
-* CLOSE_ALL_CHILDREN
-* Get all nodes children of the tipo set to them the css to remove the visualization
-* @param string tipo
-* @return void
-*/
+ * CLOSE_ALL_CHILDREN
+ * Recursively hides all descendant submenus of a given menu item.
+ *
+ * @param {string} tipo - The ID/tipo of the parent whose children should be closed
+ * @return {void}
+ */
 const close_all_children = function(tipo) {
 
 	// get the children nodes of the sent tipo and add/remove the css
@@ -409,16 +445,15 @@ const close_all_children = function(tipo) {
 		  close_ul.classList.add('menu_ul_hidden');
 
 	// get the child nodes of the current ul
-	const ar_children_nodes	= close_ul.childNodes
-	const child_len			= ar_children_nodes.length
-	for (let i = child_len - 1; i >= 0; i--) {
+	const ar_children_nodes	= Array.from(close_ul.children)
+	ar_children_nodes.forEach(child => {
 		// get the children link node of the current li
-		const new_tipo = ar_children_nodes[i].dataset.children
+		const new_tipo = child.dataset.children
 		// recursive action of the current children ul tipo
 		if (new_tipo) {
 			close_all_children(new_tipo)
 		}
-	}
+	})
 }//end close_all_children
 
 

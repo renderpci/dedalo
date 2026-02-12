@@ -208,21 +208,26 @@ section.prototype.init = async function(options) {
 				}
 				page_globals.creating_section = true
 
-				const new_section_id = await self.create_section()
+				try {
+					const new_section_id = await self.create_section()
 
-				// navigate to the new record
-				if (new_section_id) {
-					self.navigate_to_new_section(new_section_id)
+					// navigate to the new record
+					if (new_section_id) {
+						await self.navigate_to_new_section(new_section_id)
+					}
+				} catch (error) {
+					console.error('Error in new_section_handler:', error);
+				} finally {
+					// unlock new section creation. Set a timeout to prevent accidental double clicks
+					setTimeout(function(){
+						page_globals.creating_section = false
+					}, 1500)
 				}
-
-				// unlock new section creation
-				setTimeout(function(){
-					page_globals.creating_section = false
-				}, 1500)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('new_section_' + self.id, new_section_handler)
 			)
+
 			if(SHOW_DEBUG===true) {
 				console.warn('))))) added section event subscription new_section_:', self.id, self.status, performance.now());
 			}
@@ -245,17 +250,21 @@ section.prototype.init = async function(options) {
 				}
 				page_globals.creating_section = true
 
-				const new_section_id = await self.duplicate_section(section_id)
+				try {
+					const new_section_id = await self.duplicate_section(section_id)
 
-				// navigate to the new record
-				if (new_section_id) {
-					self.navigate_to_new_section(new_section_id)
+					// navigate to the new record
+					if (new_section_id) {
+						await self.navigate_to_new_section(new_section_id)
+					}
+				} catch (error) {
+					console.error('Error in duplicate_section_handler:', error);
+				} finally {
+					// unlock new section creation. Set a timeout to prevent accidental double clicks
+					setTimeout(function(){
+						page_globals.creating_section = false
+					}, 1500)
 				}
-
-				// unlock new section creation
-				setTimeout(function(){
-					page_globals.creating_section = false
-				}, 1500)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('duplicate_section_' + self.id, duplicate_section_handler)
@@ -293,7 +302,7 @@ section.prototype.init = async function(options) {
 		// toggle_search_panel event. Triggered by button 'search' placed into section inspector buttons
 			const toggle_search_panel_handler = async () => {
 				if (!self.search_container || !self.filter) {
-					console.log('stop event no filter 1:', this);
+
 					return
 				}
 				if (self.search_container.children.length===0) {
@@ -523,21 +532,19 @@ section.prototype.build = async function(autoload=false) {
 	// filter search
 		if (self.filter===null && self.mode!=='tm') {
 			self.filter = new search()
-			self.filter.init({
+			await self.filter.init({
 				caller	: self,
 				mode	: self.mode
 			})
-			.then(function(){
-				// preload search (experimental disable now)
-				const pre_built_search = false
-				if (pre_built_search && self.mode==='list') {
-					dd_request_idle_callback(
-						() => {
-							self.filter.build()
-						}
-					)
-				}
-			})
+			// preload search (experimental disable now)
+			const pre_built_search = false
+			if (pre_built_search && self.mode==='list') {
+				dd_request_idle_callback(
+					() => {
+						self.filter.build()
+					}
+				)
+			}
 		}
 
 	// load from DDBB
@@ -770,7 +777,7 @@ section.prototype.build = async function(autoload=false) {
 
 	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
-		const searchParams = new URLSearchParams(window.location.href);
+		const searchParams = new URLSearchParams(window.location.search);
 		const initiator = searchParams.has('initiator')
 			? searchParams.get('initiator')
 			: self.caller!==null
@@ -884,10 +891,10 @@ section.prototype.render = async function(options={}) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
-			console.log('get_all_instances:', get_all_instances().length);
-			console.log('event_manager.get_events():', event_manager.get_events().length);
-			console.log('self.datum.context.length:', self.datum.context.length);
-			console.log('self.datum.data.length:', self.datum.data.length);
+			// console.log('get_all_instances:', get_all_instances().length);
+			// console.log('event_manager.get_events():', event_manager.get_events().length);
+			// console.log('self.datum.context.length:', self.datum.context.length);
+			// console.log('self.datum.data.length:', self.datum.data.length);
 		}
 
 
@@ -972,21 +979,15 @@ export const get_section_records = async function(options) {
 				}
 
 			// promise add and continue init and build
-				ar_promises.push(new Promise(function(resolve){
-					get_instance(instance_options)
-					.then(function(current_section_record){
-						current_section_record.build()
-						.then(function(){
-							resolve(current_section_record)
-						})
-					})
-				}))
+				ar_promises.push((async () => {
+					const current_section_record = await get_instance(instance_options)
+					await current_section_record.build()
+					return current_section_record
+				})())
 		}//end for (let i = 0; i < value_length; i++)
 
 	// ar_instances. When all section_record instances are built, set them
-		const section_records = await Promise.all(ar_promises).then((ready_instances) => {
-			return ready_instances
-		});
+		const section_records = await Promise.all(ar_promises)
 
 
 	return section_records

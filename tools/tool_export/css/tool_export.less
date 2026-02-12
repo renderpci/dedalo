@@ -268,9 +268,22 @@
 					font-size: 1.2rem;
 					z-index: 1;
 
-					&:hover {
+					&:not(.loading):hover {
 						background-color: darken(@tool_color, -10%);
 					}
+
+					&.loading {
+						opacity: 0.4 !important;
+					}
+				}
+
+				// response_container
+				>.response_container {
+					padding: 0.3rem;
+					color: @tool_color;
+					text-align: center;
+					padding-top: 1rem;
+					padding-bottom: 0px;
 				}
 
 				// button activation
@@ -286,6 +299,7 @@
 
 				// Progress Bar
 				.export_progress_container {
+					font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 					width: 100%;
 					background-color: @color_grey_14;
 					border-radius: 4px;
@@ -296,7 +310,6 @@
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					margin-bottom: 2rem;
 
 					&.hide {
 						display: none;
@@ -322,7 +335,7 @@
 						display: flex;
 						align-items: center;
 						justify-content: center;
-						font-size: 0.85rem;
+						font-size: 0.90rem;
 						font-weight: 600;
 						pointer-events: none;
 

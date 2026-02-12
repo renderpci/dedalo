@@ -78,6 +78,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
 - **remove_distinct** : `bool` (true || false) remove duplicates records when the SQL query has a sub select with multiple criteria that can get duplicate records. Default : false **optional**
 - **skip_projects_filter** : `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
 - **breakdown** : `bool` (true || false) Split the data in the section(DDBB row) that match with the query in a row for every match. Used to locate specific locators and count the values than match the locator to be searched. Applied in `related` mode to search the indexations than call to specific interviews, person, etc. Default false  **optional**
+- **tables** : `array` list of tables to search. Used in search related to limit the tables to search. Overwrites the default value 'common::get_matrix_tables_with_relations()'. **optional**
 - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
 - **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
 
@@ -126,6 +127,7 @@ children_recursive      : (true || false) // default false
 remove_distinct         : (true || false) // default false
 skip_projects_filter    : (true || false) // default false
 breakdown               : (true || false) // default false
+tables                  : (array) // default null
 parsed                  : (true || false) // boolean, state of the sqo | default false
 select                  : [{    //DEPRECATED | array of objects optional
                             section_tipo
@@ -953,7 +955,7 @@ WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
   (oh1.datos#>>'{components,oh16,dato,lg-spa}' IS NOT NULL) OR
   (oh1.datos#>>'{components,oh16,dato,lg-eng}' IS NOT NULL) OR
   (oh1.datos#>>'{components,oh16,dato,lg-fra}' IS NOT NULL) OR
-  (oh1.datos#>>'{components,oh16,dato,lg-cat}' IS NOT NULL) 
+  (oh1.datos#>>'{components,oh16,dato,lg-cat}' IS NOT NULL)
 )
 ORDER BY oh1.section_id ASC
 LIMIT 10
@@ -1688,6 +1690,12 @@ The result will be two rows, with each locator calling the person 7 in this mann
 | 1 | rsc167 | `{"type":"dd96","tag_id":"3","section_id":"7","section_tipo":"rsc197","tag_component_tipo":"rsc36","from_component_tipo":"rsc860"}` |
 
 The result can be counted or used to be paginated directly in a simple way.
+
+### tables
+
+List of tables to search. Used in search related to limit the tables to search. Overwrites the default value 'common::get_matrix_tables_with_relations()'.
+
+Definition: `array` list of tables to search. **optional**
 
 ### parsed
 

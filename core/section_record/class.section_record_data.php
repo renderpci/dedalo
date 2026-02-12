@@ -92,10 +92,6 @@ class section_record_data {
 	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
 	protected bool $is_loaded_data = false;
 
-	// array instances. @var array<string, \WeakReference<self>>
-	// Cache instances list added by the 'get_instance' calls based on section_tipo and $section_id key
-	private static array $instances = [];
-
 	// string section_tipo
 	// A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
 	protected readonly string $section_tipo;

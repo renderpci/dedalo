@@ -157,25 +157,12 @@ const get_content_data = async function(self, ar_section_record) {
 			const row_item = no_records_node()
 			fragment.appendChild(row_item)
 		}else{
-			// rows
-
-			// sequential mode
-				// for (let i = 0; i < ar_section_record_length; i++) {
-				// 	const row_item = await ar_section_record[i].render()
-				// 	fragment.appendChild(row_item)
-				// }
-
 			// parallel mode
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
+				const ar_promises = ar_section_record.map(el => el.render())
+				const values = await Promise.all(ar_promises)
+				for (let i = 0; i < values.length; i++) {
+					fragment.appendChild(values[i])
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	fragment.appendChild(values[i])
-				  }
-				});
 		}
 
 	// content_data
