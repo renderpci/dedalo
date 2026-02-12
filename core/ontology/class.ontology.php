@@ -11,7 +11,7 @@ class ontology {
 	public static $main_table			= 'matrix_ontology_main';
 	public static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
-	// children_tipo
+	// children_tipo (component_relation_children)
 	public static $children_tipo = 'ontology14';
 
 	// cache
@@ -21,7 +21,8 @@ class ontology {
 
 	/**
 	* CREATE_ONTOLOGY_RECORDS
-	* Iterate all given $dd_ontology_rows and creates a section row for each one
+	* Iterate all given $dd_ontology_rows and creates a section matrix row for each one.
+	* This is used to recover editable data from parsed table 'dd_ontology' former 'jer_dd'.
 	* @see transform_data::generate_all_main_ontology_sections
 	* @param array $dd_ontology_rows
 	* @return bool
@@ -60,7 +61,7 @@ class ontology {
 
 	/**
 	* ADD_SECTION_RECORD_FROM_DD_ONTOLOGY
-	* Transforms dd_ontology row (from DDBB) into matrix ontology row (section record).
+	* Transforms dd_ontology row (former 'jer_dd') from DDBB into matrix ontology row (section record).
 	* @param object $dd_ontology_row
 	* Sample:
 		* {
@@ -348,7 +349,7 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FROM_TLD
-	* Find the matrix record of ontology main from a given tld
+	* Find the matrix record ('matrix_ontology_main' table) of ontology main from a given tld
 	* sample: dd --> section_tipo: ontology35, section_id: 1
 	* @param string $tld
 	* @return object|null $row
@@ -359,6 +360,15 @@ class ontology {
 		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
 		$tld 		= trim(strtolower($tld));
 		$safe_tld 	= safe_tld( $tld );
+
+		if(empty($safe_tld)) {
+			debug_log(__METHOD__
+			   .' Ignored invalid tld' . PHP_EOL
+			   .' tld: ' . to_string($tld)
+			   , logger::ERROR
+			);
+			return null;
+		}
 
 		// params
 		$params = [
@@ -388,7 +398,7 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
-	* Find the matrix row of the ontology main from a given target section tipo as ontology matrix row
+	* Find the matrix row of the ontology main ('matrix_ontology_main' table) from a given target section tipo as ontology matrix row
 	* sample: ontology45 --> section_tipo: ontology35, section_id: 4
 	* @param string $target_section_tipo
 	* @return object|null $row
@@ -399,6 +409,15 @@ class ontology {
 		// set a safe tipo to avoid SQL injection attacks (only alphanumeric and hyphen)
 		$target_section_tipo = trim(strtolower($target_section_tipo));
 		$safe_tipo = safe_tipo( $target_section_tipo );
+
+		if(empty($safe_tipo)) {
+			debug_log(__METHOD__
+			   .' Ignored invalid target section tipo' . PHP_EOL
+			   .' target_section_tipo: ' . to_string($target_section_tipo)
+			   , logger::ERROR
+			);
+			return null;
+		}
 
 		// params
 		$params = [
@@ -435,13 +454,34 @@ class ontology {
 	* @return bool
 	* @test true
 	*/
-	public static function assign_relations_from_dd_ontology( string $tld) : bool {
+	public static function assign_relations_from_dd_ontology( string $tld ) : bool {
+
+		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
+		$tld 		= trim(strtolower($tld));
+		$safe_tld 	= safe_tld( $tld );
+
+		if(empty($safe_tld)) {
+			debug_log(__METHOD__
+			   .' Ignored invalid tld' . PHP_EOL
+			   .' tld: ' . to_string($tld)
+			   , logger::ERROR
+			);
+			return false;
+		}
 
 		// target_section_tipo
-		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
+		$target_section_tipo = self::map_tld_to_target_section_tipo( $safe_tld );
 
 		// get all section instances rows
 		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
+		if (!$all_section_instances) {
+			debug_log(__METHOD__
+			   .' Error on get resource_all_section_records' . PHP_EOL
+			   .' target_section_tipo: ' . to_string($target_section_tipo)
+			   , logger::ERROR
+			);
+			return false;
+		}
 
 		while ($row = pg_fetch_assoc($all_section_instances)) {
 
@@ -451,7 +491,7 @@ class ontology {
 			$relations = ontology_node::get_relation_nodes( $node_tipo, true, true );
 
 			// Relations
-			$relations_tipo			= 'ontology10';
+			$relations_tipo			= DEDALO_ONTOLOGY_CONNECTED_TO_TIPO; // 'ontology10' component_autocomplete_hi;
 			$relations_model		= ontology_node::get_model_by_tipo( $relations_tipo  );
 			$relations_component	= component_common::get_instance(
 				$relations_model,
@@ -498,11 +538,33 @@ class ontology {
 	*/
 	public static function reorder_nodes_from_dd_ontology( string $tld ) : bool {
 
+		// set a safe tld to avoid SQL injection attacks (only alphanumeric and hyphen)
+		$tld 		= trim(strtolower($tld));
+		$safe_tld 	= safe_tld( $tld );
+
+		if(empty($safe_tld)) {
+			debug_log(__METHOD__
+			   .' Ignored invalid tld' . PHP_EOL
+			   .' tld: ' . to_string($tld)
+			   , logger::ERROR
+			);
+			return false;
+		}
+
 		// vars
-		$target_section_tipo = self::map_tld_to_target_section_tipo( $tld );
+		$target_section_tipo = self::map_tld_to_target_section_tipo( $safe_tld );
 
 		// get all section
 		$all_section_instances = section::get_resource_all_section_records_unfiltered( $target_section_tipo );
+		if (!$all_section_instances) {
+			debug_log(__METHOD__
+			   .' Error on get resource_all_section_records' . PHP_EOL
+			   .' tld: ' . to_string($tld) . PHP_EOL
+			   .' target_section_tipo: ' . to_string($target_section_tipo)
+			   , logger::ERROR
+			);
+			return false;
+		}
 
 		while ($row = pg_fetch_assoc($all_section_instances)) {
 
@@ -524,7 +586,7 @@ class ontology {
 				$children_data[] = $child_locator;
 			}
 
-			$children_tipo		= ontology::$children_tipo; // 'ontology14';
+			$children_tipo		= ontology::$children_tipo; // 'ontology14' component_relation_children;
 			$children_model		= ontology_node::get_model_by_tipo( $children_tipo );
 			$children_component	= component_common::get_instance(
 				$children_model,
@@ -547,7 +609,7 @@ class ontology {
 
 	/**
 	* ADD_MAIN_SECTION
-	* Creates a new section in the main ontology sections if not already exists.
+	* Creates a new section in the main ontology sections (table 'matrix_ontology_main') if not already exists.
 	* The main section could be the official tlds as dd, rsc, hierarchy, etc.
 	* or local ontology defined by every institution as es, qdp, mupreva, etc
 	* @param object $file_item
@@ -577,7 +639,6 @@ class ontology {
 				$typology_locator = hierarchy::get_typology_locator_from_tld( $tld );
 				if( !empty($typology_locator) ){
 					$typology_id = (int)$typology_locator->section_id;
-					$file_item->typology_id = $typology_id;
 				}
 			}
 
@@ -588,11 +649,7 @@ class ontology {
 					"lang" 	=> DEDALO_STRUCTURE_LANG,
 					"value" => $tld
 				]];
-				$file_item->name_data = $name_data;
 			}
-
-		// target_section_tipo fallback
-			$file_item->target_section_tipo = $target_section_tipo;
 
 		// check if the main tld already exists
 			$row_ontology_main = self::get_ontology_main_from_tld( $tld );
@@ -618,8 +675,8 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd675' );
-				$component_data->set_section_tipo( 'dd153' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_FILTER ); // dd675
+				$component_data->set_section_tipo( DEDALO_SECTION_PROJECTS_TIPO ); // dd153
 				$component_data->set_section_id( '1' );
 				$component_data->set_from_component_tipo( $tipo );
 
@@ -631,10 +688,10 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$ts_active_data = new locator();
 				$ts_active_data->set_id( 1 );
-				$ts_active_data->set_type( 'dd151' );
-				$ts_active_data->set_section_tipo( 'dd64' );
+				$ts_active_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$ts_active_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
 				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
-				$ts_is_active = ($tld === 'dd') ? '1' : '2'; // only dd terms will be active by default, any other tld wil be no active, user can change it manually.
+				$ts_is_active = ($tld === 'dd') ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO; // only dd terms will be active by default, any other tld wil be no active, user can change it manually.
 				$ts_active_data->set_section_id( $ts_is_active );
 				$ts_active_data->set_from_component_tipo( $tipo );
 
@@ -646,7 +703,7 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
 				$component_data->set_section_tipo( 'lg1' );
 				$component_data->set_section_id( '17344' ); // lg-spa, Spanish!
 				$component_data->set_from_component_tipo( $tipo );
@@ -659,9 +716,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd64' );
-				$component_data->set_section_id( '1' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
+				$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES ); // 1
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -720,7 +777,7 @@ class ontology {
 				$column = section_record_data::get_column_name( $model );
 
 				$typology_data = new locator();
-					$typology_data->set_type( 'dd151' );
+					$typology_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
 					$typology_data->set_section_tipo( DEDALO_HIERARCHY_TYPES_SECTION_TIPO );
 					$typology_data->set_section_id( $typology_id );
 					$typology_data->set_from_component_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
@@ -737,23 +794,29 @@ class ontology {
 
 				// general term
 				$general_term = new locator();
-					$general_term->set_type( 'dd48' );
+					$general_term->set_type( DEDALO_RELATION_TYPE_CHILDREN_TIPO ); // dd48
 					$general_term->set_section_tipo( $target_section_tipo );
 					$general_term->set_section_id( '1' );
 					$general_term->set_from_component_tipo( $tipo );
 
 				// model term
 				$model_term = new locator();
-					$model_term->set_type('dd48');
+					$model_term->set_type( DEDALO_RELATION_TYPE_CHILDREN_TIPO ); // dd48
 					$model_term->set_section_tipo( $target_section_tipo );
-					$model_term->set_section_id('2');
-					$model_term->set_from_component_tipo('hierarchy45');
+					$model_term->set_section_id( '2' );
+					$model_term->set_from_component_tipo( $tipo );
 
 				$section_record->set_component_data($tipo, $column, [$general_term, $model_term]);
 			}
 
 		// Save the section record
-			$section_record->save();
+			if( !$section_record->save() ) {
+				debug_log(__METHOD__
+					. " Error saving section record " . PHP_EOL
+					. ' main_section_id: ' . to_string($main_section_id)
+					, logger::ERROR
+				);
+			}
 
 
 		return $main_section_id;
@@ -766,7 +829,7 @@ class ontology {
 	* Creates/Updates a dd_ontology row with ontologytype tld for the local tlds
 	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
 	* A dd_ontology row is needed to represent it.
-	* Note that action 'ontology_node->insert()' delete the existing record in dd_ontology, and creates a new one
+	* Note that action 'ontology_node->insert()' UPSERT the existing record in dd_ontology.
 	* @param object $file_item
 	* {
 	* 	tld: string
@@ -781,16 +844,32 @@ class ontology {
 
 		// file item properties
 			$tld					= $file_item->tld;
-			$typology_id			= $file_item->typology_id ?? 15;
+			$typology_id			= $file_item->typology_id ?? null;
 			$name_data				= $file_item->name_data ?? null;
 			$parent_grouper_tipo	= $file_item->parent_grouper_tipo ?? null;
+
+		// Typology fallback
+			if( empty($typology_id) ){
+				$typology_locator = hierarchy::get_typology_locator_from_tld( $tld );
+				$typology_id = !empty($typology_locator) ? (int)$typology_locator->section_id : 15;
+			} else {
+				$typology_id = (int)$typology_id;
+			}
+
+		// Name fallback
+			if( empty($name_data) ){
+				$name_data = [(object)[
+					"lang" 	=> DEDALO_STRUCTURE_LANG,
+					"value" => $tld
+				]];
+			}
 
 		// create the parent group node
 		// if parent group is given, will use it, else create the parent_gruper to build the nodes.
 			if( empty($parent_grouper_tipo) ){
 				// parent group is set with his typology
 				// if typology is not set it will assign to typology 15 `others`
-				$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', (int)$typology_id);
+				$parent_grouper_tipo = ontology::create_parent_grouper( 'ontology40', 'ontologytype', $typology_id );
 			}
 
 		// Ontology section for the given tld
@@ -800,12 +879,15 @@ class ontology {
 
 			$ontology_node = ontology_node::get_instance($tipo);
 				$ontology_node->set_parent($parent_grouper_tipo);
-				$ontology_node->set_model_tipo('dd6');
+				$ontology_node->set_model_tipo(SECTION_MODEL); // Use constant 'dd6'
 				$ontology_node->set_model('section');
 				$ontology_node->set_is_model(false);
 				$ontology_node->set_tld($tld);
 				$ontology_node->set_is_translatable(false);
-				$ontology_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+				$ontology_node->set_relations([
+					(object)['tipo' => 'ontology1'],
+					(object)['tipo' => 'dd1201']
+				]);
 
 				// Properties, add main_tld as official tld definitions
 				// and local section color
@@ -832,7 +914,10 @@ class ontology {
 					$ontology_node->set_term_data( $term );
 				}
 
-			$ontology_node->insert();
+			if (!$ontology_node->insert()) {
+				debug_log(__METHOD__ . " Error inserting ontology node: $tipo", logger::ERROR);
+				return false;
+			}
 
 
 		return $tipo;
@@ -852,10 +937,10 @@ class ontology {
 	* @param string $parent_group
 	* @param string $tld
 	* @param int $typology_id
-	* @return string $parent_grouper_tipo
+	* @return string|false $parent_grouper_tipo
 	* @test true
 	*/
-	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string {
+	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string|false {
 
 		// Ontology main section for the given tld
 		// ontology section is the main or root node used to create the ontology nodes.
@@ -939,12 +1024,15 @@ class ontology {
 					// set parent nodes
 					// $ontology_node = ontology_node::get_instance($parent_node_tipo);
 					$parent_node->set_parent($parent_group);
-					$parent_node->set_model_tipo('dd6');
+					$parent_node->set_model_tipo(SECTION_MODEL); // dd6
 					$parent_node->set_model('section');
 					$parent_node->set_is_model(false);
 					$parent_node->set_tld($parent_tld);
 					$parent_node->set_is_translatable(false);
-					$parent_node->set_relations( json_decode('[{"tipo":"ontology1"},{"tipo":"dd1201"}]') );
+					$parent_node->set_relations([
+						(object)['tipo' => 'ontology1'],
+						(object)['tipo' => 'dd1201']
+					]);
 
 					// Properties, add main_tld as official tld definitions
 					// and local section color
@@ -954,7 +1042,10 @@ class ontology {
 						$parent_node->set_properties($properties);
 
 					// insert dd_ontology record
-					$parent_node->insert();
+					if (!$parent_node->insert()) {
+						debug_log(__METHOD__ . " Error inserting parent group node in dd_ontology: $parent_node_tipo", logger::ERROR);
+						return false;
+					}
 				}
 
 			// matrix. Check if the parent already exists in matrix
@@ -968,9 +1059,13 @@ class ontology {
 			if( $found===false ){
 				// create a section record in matrix
 				$section = section::get_instance( $parent_node_tipo );
-				$section->create_record( (object)[
+				$parent_section_id_created = $section->create_record( (object)[
 					'section_id' => $parent_section_id ? (int)$parent_section_id : null
 				]);
+				if (!$parent_section_id_created) {
+					debug_log(__METHOD__ . " Error creating parent group section record in matrix: $parent_node_tipo", logger::ERROR);
+					return false;
+				}
 			}
 
 		// matrix section of the typology node
@@ -980,6 +1075,10 @@ class ontology {
 				$typology_section = section::get_instance( $section_tipo );
 				// create the record in matrix_ontology table.
 				$typology_id = $typology_section->create_record();
+				if (!$typology_id) {
+					debug_log(__METHOD__ . " Error creating typology section record in matrix: $section_tipo", logger::ERROR);
+					return false;
+				}
 			}
 
 			$section_record = section_record::get_instance( $section_tipo, (int)$typology_id);
@@ -990,9 +1089,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd64' );
-				$component_data->set_section_id( '1' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
+				$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES ); // 1
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -1003,9 +1102,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd64' );
-				$component_data->set_section_id( '1' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
+				$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_YES ); // 1
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -1016,9 +1115,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd0' );
-				$component_data->set_section_id( '4' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( 'dd0' ); // DEDALO_ROOT_TIPO equivalent for section
+				$component_data->set_section_id( '4' ); // area model root
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -1029,9 +1128,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd64' );
-				$component_data->set_section_id( '2' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
+				$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_NO ); // 2
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -1042,9 +1141,9 @@ class ontology {
 			$column = section_record_data::get_column_name( $model );
 			$component_data = new locator();
 				$component_data->set_id( 1 );
-				$component_data->set_type( 'dd151' );
-				$component_data->set_section_tipo( 'dd64' );
-				$component_data->set_section_id( '2' );
+				$component_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
+				$component_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
+				$component_data->set_section_id( NUMERICAL_MATRIX_VALUE_NO ); // 2
 				$component_data->set_from_component_tipo( $tipo );
 
 			$section_record->set_component_data($tipo, $column, [$component_data]);
@@ -1093,10 +1192,16 @@ class ontology {
 			$section_record->set_component_data($tipo, $column, [$node_locator]);
 
 		// save section record
-			$section_record->save();
+			if (!$section_record->save()) {
+				debug_log(__METHOD__ . " Error saving section record for parent grouper: $section_tipo id: $typology_id", logger::ERROR);
+				return false;
+			}
 
 		// create the dd_ontology node
-			ontology::insert_dd_ontology_record( $section_tipo, $typology_id );
+			if (!ontology::insert_dd_ontology_record( $section_tipo, $typology_id )) {
+				debug_log(__METHOD__ . " Error inserting parent group node in dd_ontology: $parent_node_tipo", logger::ERROR);
+				return false;
+			}
 
 		// return the parent grouper as `ontologytype14
 			$parent_grouper_tipo = $tld.$typology_id;
@@ -1142,10 +1247,10 @@ class ontology {
 	* get the tld from a given target section tipo
 	* dd0 --> dd
 	* @param string $target_section_tipo
-	* @return string|null $tld
+	* @return string|false $tld
 	* @test true
 	*/
-	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : ?string {
+	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : string|false {
 
 		$tld = get_tld_from_tipo( $target_section_tipo );
 
@@ -1158,50 +1263,48 @@ class ontology {
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
 	* Calculates ontology sections (target section tipo) like dd0, ontologytype3, ...
-	* Stored in matrix_ontology_main table.
-	* @return array $ontology_sections
-	* 	Array of ontology sections tipo
+	* stored in 'matrix_ontology_main' table.
+	* @return array $ontology_sections Array of ontology sections tipo
 	* @test true
 	*/
 	public static function get_all_ontology_sections() : array {
 
 		// cache
-
-			$use_cache = true;
-			if ($use_cache===true && isset(self::$cache_ontology_sections)) {
-				return self::$cache_ontology_sections;
-			}
+		if ( isset(self::$cache_ontology_sections) ) {
+			return self::$cache_ontology_sections;
+		}
 
 		// records. Get all records from main ontology executing a search
-			$db_result = ontology::get_all_main_ontology_records();
+		$db_result = self::get_all_main_ontology_records();
+		if ( !$db_result ) {
+			return [];
+		}
 
 		// iterate rows
-			$ontology_sections = [];
-			foreach ($db_result as $row) {
+		$ontology_sections = [];
+		foreach ($db_result as $row) {
 
-				$hierarchy_target_section_data = $row->string->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO} ?? [];
-				$target_section_tipo = $hierarchy_target_section_data[0]->value ?? null;
+			$hierarchy_target_section_data = $row->string->{DEDALO_HIERARCHY_TARGET_SECTION_TIPO} ?? [];
+			$target_section_tipo = $hierarchy_target_section_data[0]->value ?? null;
 
-				// target section tipo check
-				if (empty($target_section_tipo)) {
-					debug_log(__METHOD__
-						." Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id ". PHP_EOL
-						.' hierarchy_target_section_data: '. to_string($hierarchy_target_section_data)
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				// add section tipo
-				$ontology_sections[] = $target_section_tipo;
-
-			}//end foreach ($db_result as $row)
-
-		// cache
-			if ($use_cache===true && !empty($ontology_sections)) {
-				self::$cache_ontology_sections = $ontology_sections;
+			// target section tipo check
+			if ( empty($target_section_tipo) ) {
+				debug_log(__METHOD__
+					. " Skipped hierarchy without target section tipo: $row->section_tipo, $row->section_id " . PHP_EOL
+					. ' hierarchy_target_section_data: ' . to_string($hierarchy_target_section_data)
+					, logger::ERROR
+				);
+				continue;
 			}
 
+			// add section tipo
+			$ontology_sections[] = $target_section_tipo;
+		}
+
+		// cache
+		if ( !empty($ontology_sections) ) {
+			self::$cache_ontology_sections = $ontology_sections;
+		}
 
 		return $ontology_sections;
 	}//end get_all_ontology_sections
@@ -1212,10 +1315,10 @@ class ontology {
 	* GET_ALL_MAIN_ONTOLOGY_RECORDS
 	* Exec a search against matrix_ontology_main filtering
 	* for main_section_tipo without limit and return all resulting records
-	* @return db_result $db_result
+	* @return db_result|false $db_result
 	* @test true
 	*/
-	public static function get_all_main_ontology_records() : db_result {
+	public static function get_all_main_ontology_records() : db_result|false {
 
 		$main_section_tipo = self::$main_section_tipo;
 
@@ -1246,34 +1349,33 @@ class ontology {
 
 	/**
 	* GET_ACTIVE_ELEMENTS
-	* Execs a real SQL search and
-	* returns an array of current active ontologies or hierarchies
-	* @return array $active_hierarchies
+	* Performs a search and returns an array of current active ontologies or hierarchies.
+	* @return array $active_elements
 	* @test true
 	*/
 	public static function get_active_elements() : array {
 
 		// cache
-		if (isset(self::$active_ontology_elements_cache)) {
+		if ( isset(self::$active_ontology_elements_cache) ) {
 			return self::$active_ontology_elements_cache;
 		}
 
-		// main filter
+		// main filter: only 'Active' records (hierarchy4 = 1)
 		$filter = (object)[
 			'$and' => [
 				(object)[
 					'q' => (object)[
-						'section_id'			=> '1',
-						'section_tipo'			=> 'dd64',
-						'from_component_tipo'	=> 'hierarchy4'
+						'section_id'			=> (string)NUMERICAL_MATRIX_VALUE_YES, // '1'
+						'section_tipo'			=> 'dd64', // component_radio_button model
+						'from_component_tipo'	=> DEDALO_HIERARCHY_ACTIVE_TIPO // 'hierarchy4'
 					],
 					'q_operator' => null,
 					'path' => [
 						(object)[
 							'name'				=> 'Active',
 							'model'				=> 'component_radio_button',
-							'section_tipo'		=> 'hierarchy1',
-							'component_tipo'	=> 'hierarchy4'
+							'section_tipo'		=> self::$main_section_tipo,
+							'component_tipo'	=> DEDALO_HIERARCHY_ACTIVE_TIPO
 						]
 					],
 					'type' => 'jsonb'
@@ -1282,7 +1384,7 @@ class ontology {
 		];
 
 		// section tipo depends on the current class (hierarchy, ontology)
-		$section_tipo = ontology::$main_section_tipo;
+		$section_tipo = self::$main_section_tipo;
 
 		$sqo = new search_query_object();
 			$sqo->set_select([
@@ -1294,20 +1396,19 @@ class ontology {
 			$sqo->set_offset( 0 );
 			$sqo->set_filter( $filter );
 
-		$search = search::get_instance(
-			$sqo // object sqo
-		);
+		$search = search::get_instance( $sqo );
 		$db_result = $search->search();
 
 		// active_elements
 		$active_elements = [];
-		foreach ($db_result as $row) {
-			$active_elements[] = ontology::row_to_element($row);
+		if ( $db_result ) {
+			foreach ($db_result as $row) {
+				$active_elements[] = self::row_to_element($row);
+			}
 		}
 
 		// cache
 		self::$active_ontology_elements_cache = $active_elements;
-
 
 		return $active_elements;
 	}//end get_active_elements
@@ -1316,11 +1417,24 @@ class ontology {
 
 	/**
 	* ROW_TO_ELEMENT
-	* Normalized conversion from matrix_ontology_main row to
-	* a element object with more important properties
-	* @param object $row
-	* 	matrix_ontology_main database row
-	* @return object $element
+	* Converts a raw database row from 'matrix_ontology_main' into a normalized element object
+	* containing core ontology section properties (name, tld, target_section, typology, etc.).
+	*
+	* @param object $row raw database row object from 'matrix_ontology_main' (must contain section_id and section_tipo)
+	* @return object $element {
+	*	"section_id": int|string,
+	*	"section_tipo": string,
+	*	"name": string,
+	*	"name_data": array|null,
+	*	"tld": string|null,
+	*	"target_section_tipo": string|null,
+	*	"target_section_model_tipo": string|null,
+	*	"main_lang": string|null (e.g., 'lg-spa'),
+	*	"typology_id": int|null,
+	*	"typology_name": string|null,
+	*	"order": int,
+	*	"active_in_thesaurus": bool
+	* }
 	* @test true
 	*/
 	public static function row_to_element( object $row ) : object {
@@ -1328,131 +1442,69 @@ class ontology {
 		$section_id		= $row->section_id;
 		$section_tipo	= $row->section_tipo;
 
+		/**
+		 * Local helper to get component instances concisely
+		 */
+		$get_component = function( string $tipo, string $lang=DEDALO_DATA_LANG ) use ($section_id, $section_tipo) {
+			$model = ontology_node::get_model_by_tipo( $tipo, true );
+			return component_common::get_instance( $model, $tipo, $section_id, 'list', $lang, $section_tipo );
+		};
+
 		// name
-			$tipo		= DEDALO_HIERARCHY_TERM_TIPO; // 'hierarchy5'
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
-			);
-			$name		= $component->get_value();
-			$name_data	= $component->get_data();
+			$name_comp	= $get_component( DEDALO_HIERARCHY_TERM_TIPO );
+			$name		= $name_comp ? $name_comp->get_value() : null;
+			$name_data	= $name_comp ? $name_comp->get_data() : null;
 
 		// tld
-			$tipo		= DEDALO_HIERARCHY_TLD2_TIPO; // 'hierarchy6'
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
-			);
-			$tld = $component->get_value();
+			$tld_comp	= $get_component( DEDALO_HIERARCHY_TLD2_TIPO );
+			$tld		= $tld_comp ? $tld_comp->get_value() : null;
 
 		// target_section_tipo
-			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // 'hierarchy53'
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
-			);
-			$target_section_tipo = $component->get_value();
+			$target_section_tipo_comp	= $get_component( DEDALO_HIERARCHY_TARGET_SECTION_TIPO );
+			$target_section_tipo		= $target_section_tipo_comp ? $target_section_tipo_comp->get_value() : null;
 
 		// target_section_model_tipo
-			$tipo		= DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO; // 'hierarchy58'
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
-			);
-			$target_section_model_tipo = $component->get_value();
+			$target_section_model_tipo_comp	= $get_component( DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO );
+			$target_section_model_tipo		= $target_section_model_tipo_comp ? $target_section_model_tipo_comp->get_value() : null;
 
 		// main_lang
-			$tipo		= DEDALO_HIERARCHY_LANG_TIPO; // 'hierarchy8'
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
-				$section_tipo // string section_tipo
-			);
-			$main_lang = $component->get_value_code();
+			$lang_comp	= $get_component( DEDALO_HIERARCHY_LANG_TIPO );
+			$main_lang	= $lang_comp ? $lang_comp->get_value_code() : null;
 
 		// Typology (typology_id | typology_name)
-			$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
-			$typology_component = component_common::get_instance(
-				$model, // string model
-				DEDALO_HIERARCHY_TYPOLOGY_TIPO, // string tipo
-				$section_id, // string section_id
-				'list', // string mode
-				DEDALO_DATA_NOLAN, // string lang
-				$section_tipo // string section_tipo
-			);
-			$typology_data	= $typology_component->get_data();
+			$typology_comp	= $get_component( DEDALO_HIERARCHY_TYPOLOGY_TIPO, DEDALO_DATA_NOLAN );
+			$typology_data	= $typology_comp ? $typology_comp->get_data() : null;
 			$typology_id	= $typology_data[0]->section_id ?? null;
-			$typology_name	= $typology_component->get_value();
+			$typology_name	= $typology_comp ? $typology_comp->get_value() : null;
 
 		// hierarchy order
-			$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_ORDER_TIPO );
-			$component_order = component_common::get_instance(
-				$model,
-				DEDALO_HIERARCHY_ORDER_TIPO,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$order_data		= $component_order->get_data();
-			$order_value	= $order_data[0]->value ?? 0;
+			$component_order	= $get_component( DEDALO_HIERARCHY_ORDER_TIPO, DEDALO_DATA_NOLAN );
+			$order_data			= $component_order ? $component_order->get_data() : null;
+			$order_value		= $order_data[0]->value ?? 0;
 
-		// active_in_thesaurus get the status of the component active
+		// active_in_thesaurus status
 		// it will use to discard into tree view the hierarchy in client
 		// in the JSON controller will check to remove his typology if the hierarchy is not active
-			$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO );
-			$component_active_in_thesaurus = component_common::get_instance(
-				$model,
-				DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$active_in_thesaurus_data = $component_active_in_thesaurus->get_data();
-			$active_section_id = $active_in_thesaurus_data[0]->section_id ?? null;
-			$active_in_thesaurus = (int)$active_section_id === NUMERICAL_MATRIX_VALUE_YES
-				? true
-				: false;
+			$component_active_in_thesaurus	= $get_component( DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO, DEDALO_DATA_NOLAN );
+			$active_in_thesaurus_data		= $component_active_in_thesaurus ? $component_active_in_thesaurus->get_data() : null;
+			$active_section_id				= $active_in_thesaurus_data[0]->section_id ?? null;
+			$active_in_thesaurus			= (int)$active_section_id === NUMERICAL_MATRIX_VALUE_YES;
 
 		// Build element
-		$element = new stdclass();
-		$element->section_id = $section_id;
-		$element->section_tipo = $section_tipo;
-		$element->name = $name;
-		$element->name_data = $name_data;
-		$element->tld = $tld;
-		$element->target_section_tipo = $target_section_tipo;
-		$element->target_section_model_tipo = $target_section_model_tipo;
-		$element->main_lang = $main_lang;
-		$element->typology_id = $typology_id;
-		$element->typology_name = $typology_name;
-		$element->order = $order_value;
-		$element->active_in_thesaurus = $active_in_thesaurus;
+		$element = (object)[
+			"section_id"				=> $section_id,
+			"section_tipo"				=> $section_tipo,
+			"name"						=> $name,
+			"name_data"					=> $name_data,
+			"tld"						=> $tld,
+			"target_section_tipo"		=> $target_section_tipo,
+			"target_section_model_tipo"	=> $target_section_model_tipo,
+			"main_lang"					=> $main_lang,
+			"typology_id"				=> $typology_id,
+			"typology_name"				=> $typology_name,
+			"order"						=> $order_value,
+			"active_in_thesaurus"		=> $active_in_thesaurus
+		];
 
 
 		return $element;
@@ -1471,14 +1523,26 @@ class ontology {
 	* @test true
 	*/
 	public static function parse_section_record_to_ontology_node( string $section_tipo, string|int $section_id ) : ?ontology_node {
-		$start_time=start_time();
+		$start_time = start_time();
 
-		// overwrite locator
-		// It check if exist any definition in local installation that overwrite the main node.
+		// Definitions
+			$tld_tipo			= DEDALO_ONTOLOGY_TLD_TIPO; // ontology7
+			$parent_tipo		= DEDALO_ONTOLOGY_PARENT_TIPO; // ontology15
+			$is_model_tipo		= DEDALO_ONTOLOGY_IS_MODEL_TIPO; // ontology30
+			$model_tipo_comp	= DEDALO_ONTOLOGY_MODEL_TIPO; // ontology6
+			$order_tipo			= DEDALO_ONTOLOGY_ORDER_TIPO; // ontology41
+			$translatable_tipo	= DEDALO_ONTOLOGY_TRANSLATABLE_TIPO; // ontology8
+			$relations_tipo		= DEDALO_ONTOLOGY_CONNECTED_TO_TIPO; // ontology10
+			$term_tipo			= DEDALO_ONTOLOGY_TERM_TIPO; // ontology5
+			$properties_tipo	= 'ontology18';
+			$properties_css_tipo = 'ontology16';
+			$properties_rqo_tipo = 'ontology17';
+			$properties_v5_tipo	= 'ontology19';
+
+		// Overwrite locator check
 		// Local ontology nodes can overwrite the main definitions with specific properties, names, etc.
-		// Local ontology nodes are defined into the `localontology0` section and are not part of the shared ontology.
-		// $overwrite_locator point to the local definition and is used to create the dd_ontology node with the overwrite data.
-		// if the main node has not any overwrite node the $overwrite_locator is null and the main node is used (default behavior)
+		// $overwrite_locator points to the local definition and is used to create the dd_ontology node with the overwrite data.
+		// If the main node has not any overwrite node, the $overwrite_locator is null and the main node is used (default behavior)
 			$overwrite_locator = self::get_overwrite( $section_tipo, $section_id );
 
 		// node locator (main node)
@@ -1486,274 +1550,97 @@ class ontology {
 				$locator->set_section_tipo($section_tipo);
 				$locator->set_section_id($section_id);
 
-		// tld
-			// get the tld component first, is necessary to create the ontology_node (use term_id as tld +  section_id)
-			$tld_tipo = 'ontology7';
-			$tld_data = null;
-
-			// 1 get the tld data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$tld_data = self::get_node_component_data( $overwrite_locator, $tld_tipo );
+		/**
+		 * Local helper to resolve data favoring overwrite locator if present
+		 */
+		$get_resolved_data = function(string $tipo) use ($locator, $overwrite_locator) {
+			$data = null;
+			if ($overwrite_locator) {
+				$data = self::get_node_component_data($overwrite_locator, $tipo);
 			}
-			// 2 if the tld data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the tld data with the main node definition.
-			$tld_data = $tld_data ?? self::get_node_component_data( $locator, $tld_tipo );
+			return $data ?? self::get_node_component_data($locator, $tipo);
+		};
 
-			// tld is mandatory! if tld_data is empty stop the process
-			if(empty($tld_data)){
-				debug_log(__METHOD__
-					. " Ignored record because tld value ('component_input_text [ontology7] value) is empty. (TLD is mandatory) " . PHP_EOL
-					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-					. ' section_id: ' . to_string($section_id)
-					, logger::ERROR
-				);
+		// TLD (Mandatory)
+			$tld_data = $get_resolved_data($tld_tipo);
+			if (empty($tld_data)) {
+				debug_log(__METHOD__ . " Ignored record because tld value ([$tld_tipo]) is empty. TLD is mandatory. section_tipo: $section_tipo section_id: $section_id", logger::ERROR);
 				return null;
 			}
-			// create the term_id
 			$tld	= $tld_data[0]->value;
 			$tipo	= $tld . $section_id;
 
-		// tipo
-			// create the ontology_node with the term_id and set the tld
+		// Ontology Node instantiation
 			$ontology_node = ontology_node::get_instance( $tipo );
-			// $ontology_node->load_data();
+			$ontology_node->set_tld($tld);
 
-		// parent
-		// parent needs to know the parent tld of the locator to build the term_id
-			$parent_tipo = 'ontology15';
-			$parent_data = null;
-
-			// 1 get the parent data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$parent_data = self::get_node_component_data( $overwrite_locator, $parent_tipo );
-			}
-			// 2 if the parent data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the parent data with the main node definition.
-			$parent_data = $parent_data ?? self::get_node_component_data( $locator, $parent_tipo );
-
-			if( empty($parent_data) || empty($parent_data[0]) ){
+		// Parent
+			$parent_data = $get_resolved_data($parent_tipo);
+			if (empty($parent_data) || empty($parent_data[0])) {
 				// main dd nodes exception
-				if( $tipo==='dd1' || $tipo==='dd2' || get_section_id_from_tipo($section_tipo)==='0' ){
-					debug_log(__METHOD__
-						. " Record without parent data [1] " . PHP_EOL
-						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
-						. 'parent_data	: ' . to_string($parent_data)
-						, logger::WARNING
-					);
-				}else{
-					debug_log(__METHOD__
-						. " Record without parent data [2] " . PHP_EOL
-						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'parent_tipo	: ' . to_string($parent_tipo). PHP_EOL
-						. 'parent_data	: ' . to_string($parent_data)
-						, logger::ERROR
-					);
-				}
-
-			}else{
-
-				// get the parent data
-				// use the locator
+				$log_level = ($tipo === 'dd1' || $tipo === 'dd2' || get_section_id_from_tipo($section_tipo) === '0') ? logger::WARNING : logger::ERROR;
+				debug_log(__METHOD__ . " Record without parent data. tipo: $tipo section_tipo: $section_tipo id: $section_id", $log_level);
+			} else {
 				$parent_locator	= $parent_data[0];
-				$parent = ( $parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO )
-					? ontology::get_term_id_from_locator($parent_locator)
+				$parent = ($parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO)
+					? self::get_term_id_from_locator($parent_locator)
 					: null; // main root nodes of the ontology dd1 and dd2
 				$ontology_node->set_parent( $parent );
 			}
 
-		// is model
-			// IMPORTANT
-			// NOT overwrite it!, needs to be coherent with the main definition.
-			// Models are defined and can't be created locally.
-			// overwrites creates a incoherent situation in the ontology that can not be resolved.
-			// Models can be overwritten, but NOT if the term is a model or not!
+		// Is Model
+			// IMPORTANT: NOT overwrite it!, needs to be coherent with the main definition.
+			$is_model_data = self::get_node_component_data($locator, $is_model_tipo);
+			$is_model = !empty($is_model_data) && (int)$is_model_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES;
+			$ontology_node->set_is_model($is_model);
 
-			$is_model_tipo = 'ontology30';
-			// get the component data
-			$is_model_data = self::get_node_component_data( $locator, $is_model_tipo );
+		// Model
+			$model_data = $get_resolved_data($model_tipo_comp);
+			$model_tipo_res = null;
+			$model_res		= null;
 
-			if(empty($is_model_data)){
-
-				debug_log(__METHOD__
-					. " Record without is_model_data " . PHP_EOL
-					. ' section_tipo  : ' . to_string($section_tipo). PHP_EOL
-					. ' section_id    : ' . to_string($section_id). PHP_EOL
-					. ' is_model_tipo : ' . to_string($is_model_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-
-				$is_model_locator = reset($is_model_data);
-				$is_model = (int)$is_model_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? true : false;
-			}
-
-			$is_model = $is_model ?? false; // default value
-			$ontology_node->set_is_model( $is_model );
-
-		// model. Get the model tld and id
-			$model_tipo	= 'ontology6';
-			$model_data	= null;
-
-			// 1 get the model data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$model_data = self::get_node_component_data( $overwrite_locator, $model_tipo );
-			}
-			// 2 if the model data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the model data with the main node definition.
-			$model_data = $model_data ?? self::get_node_component_data( $locator, $model_tipo );
-
-			$model_tipo_resolution	= null; // if node is a model it has not model tipo
-			$model_resolution		= null; // if node is a model it has not model resolution
-
-			if( empty($model_data) ){
-
-				if ( $is_model === false ) {
-					debug_log(__METHOD__
-						. " Record without model " . PHP_EOL
-						. 'section_tipo	: ' . to_string($section_tipo). PHP_EOL
-						. 'section_id	: ' . to_string($section_id). PHP_EOL
-						. 'component storing model tipo	: ' . to_string($model_tipo). PHP_EOL
-						. 'is_model	: ' . to_string($is_model)
-						, logger::ERROR
-					);
+			if (empty($model_data)) {
+				if ($is_model === false) {
+					debug_log(__METHOD__ . " Record without model. tipo: $tipo section_tipo: $section_tipo id: $section_id", logger::ERROR);
 				}
-			}else{
-
-				// set the model tipo as (dd6, dd3, etd.)
-				// using the locator of the component
-				// model will be the term_id (section_tipo & section_id)
-				$model_locator = $model_data[0];
-				$model_tipo_resolution = ontology::get_term_id_from_locator($model_locator);
-
-				// set the model resolution (section, component_input_text, etc)
-				$model_resolution = ontology_node::get_term_by_tipo(
-					$model_tipo_resolution,
-					DEDALO_STRUCTURE_LANG,
-					true,
-					false
-				);
+			} else {
+				$model_locator	= $model_data[0];
+				$model_tipo_res = self::get_term_id_from_locator($model_locator);
+				$model_res		= ontology_node::get_term_by_tipo($model_tipo_res, DEDALO_STRUCTURE_LANG, true, false);
 			}
-
-			// set the model columns with the data resolution
-			// it could be the model of node when the node is not a model with its resolution
-			// or null when the node is a model (as `component_imput_text`)
-			$ontology_node->set_model_tipo( $model_tipo_resolution );
-			$ontology_node->set_model( $model_resolution );
+			$ontology_node->set_model_tipo($model_tipo_res);
+			$ontology_node->set_model($model_res);
 
 		// Order
-			$order_tipo		= DEDALO_ONTOLOGY_ORDER_TIPO; // 'ontology41'
-			$order_model	= ontology_node::get_model_by_tipo( $order_tipo  );
+			$order_model = ontology_node::get_model_by_tipo($order_tipo);
 			if (empty($order_model)) {
-
-				debug_log(__METHOD__
-					. ' Section without order component ('.DEDALO_ONTOLOGY_ORDER_TIPO.'). Ignored set order action.' . PHP_EOL
-					. ' section_tipo : ' . to_string($section_tipo). PHP_EOL
-					. ' section_id   : ' . to_string($section_id). PHP_EOL
-					. ' order_tipo   : ' . to_string($order_tipo)
-					, logger::DEBUG
-				);
-
-			}else{
-
-				$order_component = component_common::get_instance(
-					$order_model,
-					$order_tipo ,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-
+				debug_log(__METHOD__ . " Section without order component ([$order_tipo]). section_tipo: $section_tipo id: $section_id", logger::DEBUG);
+			} else {
+				$order_component = component_common::get_instance($order_model, $order_tipo, $section_id, 'list', DEDALO_DATA_NOLAN, $section_tipo);
 				$order_data = $order_component->get_data();
-
-				if(empty($order_data)){
-
-					debug_log(__METHOD__
-						. ' Record without order_data ' . PHP_EOL
-						. ' section_tipo : ' . to_string($section_tipo). PHP_EOL
-						. ' section_id   : ' . to_string($section_id). PHP_EOL
-						. ' order_tipo   : ' . to_string($order_tipo)
-						, logger::DEBUG
-					);
-
-				}else{
-
-					$order_value = $order_data[0]->value;
-					$ontology_node->set_order_number( (int)$order_value );
+				if (!empty($order_data)) {
+					$ontology_node->set_order_number((int)$order_data[0]->value);
 				}
 			}
 
-		// is_translatable
-			$translatable = null;
+		// Translatable
+			$translatable = $overwrite_locator ? self::resolve_translatable($overwrite_locator) : null;
+			$translatable = $translatable ?? self::resolve_translatable($locator);
+			$ontology_node->set_is_translatable($translatable);
 
-			// 1 get the translatable value data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$translatable = self::resolve_translatable( $overwrite_locator );
-			}
-			// 2 if the translatable value has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the translatable value with the main node definition.
-			$translatable = $translatable ?? self::resolve_translatable( $locator );
-
-			$ontology_node->set_is_translatable( $translatable );
-
-		// relations
-			$relations = null;
-
-			// 1 get the relations data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$relations = self::resolve_relations( $overwrite_locator );
-			}
-			// 2 if the relations has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the relations with the main node definition.
-			$relations = $relations ?? self::resolve_relations( $locator );
-
-			$ontology_node->set_relations( $relations );
+		// Relations
+			$relations = $overwrite_locator ? self::resolve_relations($overwrite_locator) : null;
+			$relations = $relations ?? self::resolve_relations($locator);
+			$ontology_node->set_relations($relations);
 
 		// Properties V5
-			$properties_v5_tipo	= 'ontology19';
-			$properties_v5_data	= null;
-
-			// 1 get v5 properties data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$properties_v5_data = self::get_node_component_data( $overwrite_locator, $properties_v5_tipo );
-			}
-			// 2 if the v5 properties data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the v5 properties data with the main node definition.
-			$properties_v5_data = $properties_v5_data ?? self::get_node_component_data( $locator, $properties_v5_tipo );
-
-			$properties_v5 = !is_empty($properties_v5_data) && !empty($properties_v5_data[0]->value)
-				? json_encode($properties_v5_data[0]->value, JSON_PRETTY_PRINT)
-				: null;
-
-			$ontology_node->set_propiedades( $properties_v5 );
+			$prop_v5_data = $get_resolved_data($properties_v5_tipo);
+			$properties_v5 = !is_empty($prop_v5_data) && !empty($prop_v5_data[0]->value) ? json_encode($prop_v5_data[0]->value, JSON_PRETTY_PRINT) : null;
+			$ontology_node->set_propiedades($properties_v5);
 
 		// Properties
-			$properties_tipo = 'ontology18';
-			$properties_data = null;
-
-			// 1 get properties data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$properties_data = self::get_node_component_data( $overwrite_locator, $properties_tipo );
-			}
-			// 2 if properties data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get properties data with the main node definition.
-			$properties_data = $properties_data ?? self::get_node_component_data( $locator, $properties_tipo );
-
-			// Create the properties object with the data or create new empty object to collect CSS or RQO data
-			$properties = !empty($properties_data)
-				? ($properties_data[0]->value ?? new stdClass())
-				: new stdClass();
+			$prop_data = $get_resolved_data($properties_tipo);
+			$properties = !empty($prop_data) ? ($prop_data[0]->value ?? new stdClass()) : new stdClass();
 
 			if (!is_object($properties)) {
 				debug_log(__METHOD__
@@ -1767,66 +1654,31 @@ class ontology {
 				$properties = new stdClass();
 			}
 
-		// Properties CSS
-			$properties_css_tipo = 'ontology16';
-			$properties_css_data = null;
-
-			// 1 get the CSS properties data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$properties_css_data = self::get_node_component_data( $overwrite_locator, $properties_css_tipo );
-			}
-			// 2 if the CSS properties data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the CSS properties data with the main node definition.
-			$properties_css_data = $properties_css_data ?? self::get_node_component_data( $locator, $properties_css_tipo );
-
-			// Properties set the CSS properties as css in properties
-			if( !empty($properties_css_data) ){
-				$properties->css = $properties_css_data[0]->value;
+			// Properties CSS
+			$prop_css_data = $get_resolved_data($properties_css_tipo);
+			if (!empty($prop_css_data)) {
+				$properties->css = $prop_css_data[0]->value;
 			}
 
-		// Properties RQO
-			$properties_rqo_tipo = 'ontology17';
-			$properties_rqo_data = null;
-
-			// 1 get the RQO properties data from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$properties_rqo_data = self::get_node_component_data( $overwrite_locator, $properties_rqo_tipo );
-			}
-			// 2 if the RQO properties data has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the RQO properties data with the main node definition.
-			$properties_rqo_data = $properties_rqo_data ?? self::get_node_component_data( $locator, $properties_rqo_tipo );
-
-			// Properties set the RQO properties as source in properties
-			if( !empty($properties_rqo_data) ){
-				$properties->source = $properties_rqo_data[0]->value;
+			// Properties RQO
+			$prop_rqo_data = $get_resolved_data($properties_rqo_tipo);
+			if (!empty($prop_rqo_data)) {
+				$properties->source = $prop_rqo_data[0]->value;
 			}
 
 		// Properties mix
 			// Reset the properties if they are empty.
-			if( empty(get_object_vars($properties)) ){
+			if (empty(get_object_vars($properties))) {
 				$properties = null;
 			}
 
 			// set the term into jet_dd_record
 			$ontology_node->set_properties( $properties );
 
-		// term
-			$term = null;
-
-			// 1 get the term value from local overwrite node if exist overwrite node as local definition.
-			if ( $overwrite_locator ) {
-				$term = self::resolve_term( $overwrite_locator );
-			}
-			// 2 if the term has not defined, because it has not any overwrite (default behavior),
-			// or the overwrite has not value defined (partial definition in overwrite node),
-			// get the term with the main node definition.
-			$term = $term ?? self::resolve_term( $locator );
-
-			// set the term into jet_dd_record
-			$ontology_node->set_term_data( $term );
-
+		// Term
+			$term = $overwrite_locator ? self::resolve_term($overwrite_locator) : null;
+			$term = $term ?? self::resolve_term($locator);
+			$ontology_node->set_term_data($term);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1837,7 +1689,6 @@ class ontology {
 					, logger::DEBUG
 				);
 			}
-
 
 		return $ontology_node;
 	}//end parse_section_record_to_ontology_node
@@ -1876,35 +1727,33 @@ class ontology {
 	/**
 	* RESOLVE_TRANSLATABLE
 	* Get the translatable value of the node.
-	* the translatable value is defined as true or false based with the section_id of the locator:
-	* section_id = 1 -> true
-	* section_id = 2 -> false
+	* The translatable value is defined as true or false based on the section_id of the locator:
+	* section_id = 1 -> true (NUMERICAL_MATRIX_VALUE_YES)
+	* section_id = 2 -> false (NUMERICAL_MATRIX_VALUE_NO)
 	* @param locator $locator
-	* @return string $translatable
+	* @return bool $translatable
 	*/
 	private static function resolve_translatable( locator $locator ) : bool {
 
-		$translatable_tipo = 'ontology8';
+		$translatable_tipo = DEDALO_ONTOLOGY_TRANSLATABLE_TIPO; // 'ontology8' component_radio_button
 
 		// get the translatable data of the node.
-		$translatable_data =  self::get_node_component_data( $locator, $translatable_tipo );
+		$translatable_data = self::get_node_component_data( $locator, $translatable_tipo );
 
-		$translatable = true; // default value when is not set.
-
-		if(empty($translatable_data)){
+		if ( empty($translatable_data) || !isset($translatable_data[0]) ) {
 
 			debug_log(__METHOD__
-				. " Record without translatable_data " . PHP_EOL
-				. ' section_tipo      : ' . to_string($locator->section_tipo). PHP_EOL
-				. ' section_id        : ' . to_string($locator->section_id). PHP_EOL
+				. " Record without translatable_data (using default true) " . PHP_EOL
+				. ' section_tipo      : ' . to_string($locator->section_tipo) . PHP_EOL
+				. ' section_id        : ' . to_string($locator->section_id) . PHP_EOL
 				. ' translatable_tipo : ' . to_string($translatable_tipo)
 				, logger::DEBUG
 			);
-
-		}else{
-			$translatable_data_locator = $translatable_data[0];
-			$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES ? true : false;
+			return true; // default value
 		}
+
+		$translatable_data_locator = $translatable_data[0];
+		$translatable = (int)$translatable_data_locator->section_id === NUMERICAL_MATRIX_VALUE_YES;
 
 		return $translatable;
 	}//end resolve_translatable
@@ -1914,36 +1763,37 @@ class ontology {
 	/**
 	* RESOLVE_RELATIONS
 	* Get the relations data of the node.
-	* the relations data are all locators pointed to other nodes.
+	* The relations data is composed of locators pointing to other nodes.
 	* @param locator $locator
 	* @return array|null $relations
 	*/
 	private static function resolve_relations( locator $locator ) : ?array {
 
-		$relations_tipo = 'ontology10';
+		$relations_tipo = DEDALO_ONTOLOGY_CONNECTED_TO_TIPO; // ontology10 component_autocomplete_hi
 
 		// get the relations data of the node.
-		$relations_data =  self::get_node_component_data( $locator, $relations_tipo );
+		$relations_data = self::get_node_component_data( $locator, $relations_tipo );
 
-		if( !empty($relations_data) ){
-
-			$relations = [];
-			foreach ($relations_data as $current_relation) {
-				// get the relation data
-				// use the locator
-				$relation_term_id = ontology::get_term_id_from_locator( $current_relation );
-
-				$relation = new stdClass();
-					$relation->tipo = $relation_term_id;
-				$relations[] = $relation;
-
-			}
-		}else{
-
-			$relations = null;
+		if ( empty($relations_data) ) {
+			return null;
 		}
 
-		return $relations;
+		$relations = [];
+		foreach ($relations_data as $current_relation) {
+
+			// get the relation data as term_id (e.g. 'dd55')
+			$relation_term_id = self::get_term_id_from_locator( $current_relation );
+
+			if ( empty($relation_term_id) ) {
+				continue;
+			}
+
+			$relations[] = (object)[
+				'tipo' => $relation_term_id
+			];
+		}
+
+		return !empty($relations) ? $relations : null;
 	}//end resolve_relations
 
 
@@ -1951,34 +1801,43 @@ class ontology {
 	/**
 	* RESOLVE_TERM
 	* Get the term / label data of the node.
-	* the term includes all languages translations.
+	* The term includes all languages translations.
 	* @param locator $locator
 	* @return object|null $term
-	* {"lg-eng": "Denmark", "lg-spa": "Dinamarca"}
+	* Sample: {"lg-eng": "Denmark", "lg-spa": "Dinamarca"}
 	*/
 	private static function resolve_term( locator $locator ) : ?object {
 
-		$term_tipo		= 'ontology5';
-		$term_model		= ontology_node::get_model_by_tipo( $term_tipo );
-		$term_component	= component_common::get_instance(
+		$term_tipo  = DEDALO_ONTOLOGY_TERM_TIPO; // ontology5
+		$term_model = ontology_node::get_model_by_tipo( $term_tipo );
+
+		if ( empty($term_model) ) {
+			return null;
+		}
+
+		$term_component = component_common::get_instance(
 			$term_model,
-			$term_tipo ,
+			$term_tipo,
 			$locator->section_id,
 			'list',
 			DEDALO_DATA_LANG,
 			$locator->section_tipo
 		);
 
+		if ( !$term_component ) {
+			return null;
+		}
+
 		$term_data = $term_component->get_data();
 
-		if( !is_empty($term_data) ) {
-			$term = new stdClass();
-			foreach ($term_data as $item){
-				$lang = $item->lang;
-				$term->$lang = $item->value;
-			}
-		}else{
-			$term = null;
+		if ( is_empty($term_data) ) {
+			return null;
+		}
+
+		$term = new stdClass();
+		foreach ($term_data as $item) {
+			$lang = $item->lang;
+			$term->$lang = $item->value;
 		}
 
 		return $term;
@@ -1988,57 +1847,59 @@ class ontology {
 
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
-	* Get the component with the tld data with a given locator
-	* and build the term_id as tld.section_id (dd55)
-	* @param object $locator
+	* Build the term_id as tld.section_id (e.g. 'dd55') from a given locator.
+	* It first attempts to map the section_tipo to a TLD via the main ontology.
+	* If not found, it tries to retrieve the TLD from the node record itself.
+	* @param object $locator Must contain section_tipo and section_id
 	* @return string|null $term_id
 	* @test true
 	*/
 	public static function get_term_id_from_locator( object $locator ) : ?string {
 
-		// get the tld from main ontology of the locator section_tipo
-		$tld = ontology::map_target_section_tipo_to_tld( $locator->section_tipo );
+		// get the tld from main ontology mapping of the locator section_tipo
+		$tld = self::map_target_section_tipo_to_tld( (string)$locator->section_tipo );
 
 		// check if the node exist and it get data to resolve the tld
 		// if not, try to get the tld from the main ontology definition.
-		if( empty($tld) ){
+		if ( empty($tld) ) {
 
 			debug_log(__METHOD__
-				. " Empty tld from locator " . PHP_EOL
+				. " TLD mapping not found for section_tipo. (Fallback to record resolution) " . PHP_EOL
 				. ' locator: ' . to_string( $locator )
-				. ' The section_tipo needs to exist in the main ontology!'
 				, logger::WARNING
 			);
 
-			// get the component data
-			// using the locator
-			$tld_tipo		= 'ontology7';
-			$tld_model		= ontology_node::get_model_by_tipo( $tld_tipo );
-			$tld_component	= component_common::get_instance(
+			// get the component data using the locator
+			$tld_tipo  = DEDALO_ONTOLOGY_TLD_TIPO; // ontology7 component_input_text
+			$tld_model = ontology_node::get_model_by_tipo( $tld_tipo );
+
+			if ( empty($tld_model) ) {
+				return null;
+			}
+
+			$tld_component = component_common::get_instance(
 				$tld_model,
-				$tld_tipo ,
+				$tld_tipo,
 				$locator->section_id,
 				'list',
 				DEDALO_DATA_NOLAN,
 				$locator->section_tipo
 			);
 
-			$tld = $tld_component->get_data()[0]->value ?? null;
+			if ( !$tld_component ) {
+				return null;
+			}
 
-			if( empty($tld) ){
+			$tld_data = $tld_component->get_data();
+			$tld = $tld_data[0]->value ?? null;
 
-				debug_log(__METHOD__
-					. " Empty tld from locator " . PHP_EOL
-					. ' locator: ' . to_string($locator )
-					, logger::ERROR
-				);
-
+			if ( empty($tld) ) {
+				debug_log(__METHOD__ . " Unable to resolve TLD from record data for: " . to_string($locator), logger::ERROR);
 				return null;
 			}
 		}
 
 		$term_id = $tld . $locator->section_id;
-
 
 		return $term_id;
 	}//end get_term_id_from_locator
@@ -2047,27 +1908,28 @@ class ontology {
 
 	/**
 	* GET_ORDER_FROM_LOCATOR
-	* Use the array of siblings to locate the given locator
-	* order will be the position of the locator into the siblings array + 1
+	* Use the array of siblings to locate the given locator.
+	* Order will be the position of the locator in the siblings array + 1.
 	* @param object $locator
+	* @param array $siblings Array of locator-like objects
 	* @return int $order
 	* @test true
 	*/
 	public static function get_order_from_locator( object $locator, array $siblings ) : int {
 
-		$data_len = count( $siblings );
-		$order = 1;
-		for ($i=0; $i < $data_len; $i++) {
+		// Ensure the array is a pure array
+		$siblings = array_values($siblings);
+		foreach ($siblings as $index => $sibling) {
 
-			if($siblings[$i]->section_tipo === $locator->section_tipo
-				&& (int)$siblings[$i]->section_id === (int)$locator->section_id){
-				$order = $i+1;
-				break;
+			if ( $sibling->section_tipo === $locator->section_tipo &&
+				 (int)$sibling->section_id === (int)$locator->section_id
+			) {
+				return $index + 1;
 			}
 		}
 
-
-		return $order;
+		// Default to 1 if not found in the array (fallback)
+		return 1;
 	}//end get_order_from_locator
 
 
@@ -2081,24 +1943,29 @@ class ontology {
 	*/
 	public static function get_siblings( object $parent_locator ) : array {
 
-		// get the component data
-		// using the locator
-		$children_tipo		= ontology::$children_tipo; // 'ontology14';
-		$children_model		= ontology_node::get_model_by_tipo( $children_tipo  );
-		$children_component	= component_common::get_instance(
+		// get the component data using the locator
+		$children_tipo  = self::$children_tipo; // 'ontology14'
+		$children_model = ontology_node::get_model_by_tipo( $children_tipo );
+
+		if ( empty($children_model) ) {
+			return [];
+		}
+
+		$children_component = component_common::get_instance(
 			$children_model,
-			$children_tipo ,
+			$children_tipo,
 			$parent_locator->section_id,
 			'list',
 			DEDALO_DATA_NOLAN,
 			$parent_locator->section_tipo
 		);
 
+		if ( !$children_component ) {
+			return [];
+		}
+
 		// siblings will be the children component data.
-		$siblings_data = $children_component->get_data() ?? [];
-
-
-		return $siblings_data;
+		return $children_component->get_data() ?? [];
 	}//end get_siblings
 
 
@@ -2114,24 +1981,32 @@ class ontology {
 	* @test true
 	*/
 	public static function insert_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?string {
-		$start_time=start_time();
+		$start_time = start_time();
 
-		$ontology_node = ontology::parse_section_record_to_ontology_node( $section_tipo, $section_id );
-		if (empty($ontology_node)) {
+		$ontology_node = self::parse_section_record_to_ontology_node( $section_tipo, $section_id );
+		if ( empty($ontology_node) ) {
 			debug_log(__METHOD__
-				. " Error on get ontology_node  " . PHP_EOL
+				. " Error: Unable to parse section record to ontology node " . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-				. ' section_id: ' . to_string($section_id) . PHP_EOL
+				. ' section_id: ' . to_string($section_id)
 				, logger::ERROR
 			);
 			return null;
 		}
 
-		$ontology_node->insert();
-
-		if(SHOW_DEBUG===true) {
+		if ( !$ontology_node->insert() ) {
 			debug_log(__METHOD__
-				. " Total time insert_dd_ontology_record: " . exec_time_unit($start_time,'ms').' ms'
+				. " Error inserting ontology node into database " . PHP_EOL
+				. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+				. ' section_id: ' . to_string($section_id)
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		if ( SHOW_DEBUG === true ) {
+			debug_log(__METHOD__
+				. " Total time insert_dd_ontology_record: " . exec_time_unit($start_time, 'ms') . ' ms'
 				, logger::DEBUG
 			);
 		}
@@ -2156,38 +2031,36 @@ class ontology {
 	* @test true
 	*/
 	public static function set_records_in_dd_ontology( object $sqo ) : object {
-		$start_time=start_time();
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
+			$response->total	= 0;
 
 		// Validate input
-		if (!isset($sqo->section_tipo)) {
+		if ( !isset($sqo->section_tipo) ) {
 			$response->errors[] = 'Missing section_tipo in sqo';
 			return $response;
 		}
 
-		$search = search::get_instance(
-			$sqo // object sqo
-		);
+		$search = search::get_instance( $sqo );
 		$db_result	= $search->search();
-		$total		= $db_result->row_count();
+		$total		= $db_result ? $db_result->row_count() : 0;
 
 		// Check if we have records to process
-		if ($total===0) {
+		if ( $total === 0 ) {
 			$response->result	= true;
-			$response->msg		= 'OK. No records found to process [set_records_in_dd_ontology] ' . to_string($sqo->section_tipo);
-			$response->msg		.= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
-			$response->total	= 0;
+			$response->msg		= "OK. No records found to process for " . to_string($sqo->section_tipo);
+			$response->msg	   .= ' | ' . exec_time_unit($start_time, 'ms') . ' ms';
 			return $response;
 		}
 
 		// active_elements: current active main sections
-		$active_tld = array_map(function($el){
+		$active_tld = array_map( function($el) {
 			return $el->tld;
-		}, ontology::get_active_elements());
+		}, self::get_active_elements() );
 
 		$processed_count = 0;
 		foreach ($db_result as $current_record) {
@@ -2196,41 +2069,40 @@ class ontology {
 			$section_id		= $current_record->section_id;
 			$term_id		= null;
 
-			if ($section_tipo===self::$main_section_tipo) {
+			if ( $section_tipo === self::$main_section_tipo ) {
 
 				// main_ontology records (ontology35)
-				$tld = ontology::get_main_tld($section_id, $section_tipo);
+				$tld = self::get_main_tld($section_id, $section_tipo);
 
 				// if current ontology is not active (is not in the active tld list)
 				// all tld records must be deleted from 'dd_ontology' table
-				if (!in_array($tld, $active_tld)) {
-
-					// remove. To delete all dd_ontologyd records for this tld
-
-					// Inactive main ontology TLD nodes must be deleted to prevent inconsistent resolutions
-					// in request config, SQO etc.
+				if ( !in_array($tld, $active_tld) ) {
 
 					// remove any other things than tld.
-						$safe_tld = safe_tld( $tld );
+						$safe_tld = safe_tld( (string)$tld );
+
+						if ( $safe_tld === false ) {
+							$response->errors[] = "Invalid TLD for deletion: " . to_string($tld);
+							continue;
+						}
 
 					// Delete the dd_ontology nodes
+					// Inactive main ontology TLD nodes must be deleted to prevent inconsistent resolutions
 						$deleted_dd_ontology_nodes = ontology_utils::delete_tld_nodes( $safe_tld );
 
-						if ( $deleted_dd_ontology_nodes===false ) {
-							$response->errors[] = 'unable to delete tld';
-							$response->msg .= 'Error deleting dd_ontology [1] for the tld: '.$tld;
-							return $response;
+						if ( $deleted_dd_ontology_nodes === false ) {
+							$response->errors[] = "Unable to delete TLD nodes for: $tld";
+							continue;
 						}
 
 					$term_id = $safe_tld . '0';
 
-				}else{
+				} else {
 
 					// add / update
-
-					$typology_id	= ontology::get_main_typology_id($tld);
-					$name_data		= ontology::get_main_name_data($tld);
-					$term_id		= ontology::create_dd_ontology_ontology_section_node((object)[
+					$typology_id	= self::get_main_typology_id($tld);
+					$name_data		= self::get_main_name_data($tld);
+					$term_id		= self::create_dd_ontology_ontology_section_node((object)[
 						'tld'					=> $tld,
 						'typology_id'			=> $typology_id,
 						'name_data'				=> $name_data,
@@ -2238,36 +2110,38 @@ class ontology {
 					]);
 				}
 
-			}else{
+			} else {
 
 				// regular matrix_ontology_records
-
-				$term_id = ontology::insert_dd_ontology_record( $section_tipo, $section_id );
+				$term_id = self::insert_dd_ontology_record( $section_tipo, $section_id );
 			}
 
-			if( empty($term_id ) ){
-				$response->errors[] = 'Failed insert into dd_ontology with section_tipo: ' . $section_tipo .' section_id: '. $section_id;
-			}else{
+			if ( empty($term_id) ) {
+				$response->errors[] = "Failed to process dd_ontology record for section_tipo: $section_tipo, section_id: $section_id";
+			} else {
 				$processed_count++;
 			}
 		}
 
-		if( empty($response->errors) ){
+		// Final response construction
+		if ( empty($response->errors) ) {
 			$response->result			= true;
-			$response->msg				= 'OK. Request done successfully [set_records_in_dd_ontology] ' .to_string($sqo->section_tipo);
-			$response->msg				.= ' | '. exec_time_unit($start_time,'ms').' ms';
+			$response->msg				= "OK. Request completed successfully for " . to_string($sqo->section_tipo);
+			$response->msg			   .= ' | ' . exec_time_unit($start_time, 'ms') . ' ms';
 			$response->total			= $total;
 			$response->processed_count	= $processed_count;
-		}else{
-			// Partial success case
-			if($processed_count > 0){
+		} else {
+			// Partial success or failure
+			$response->processed_count	= $processed_count;
+			$response->total			= $total;
+
+			if ( $processed_count > 0 ) {
 				$response->result	= true; // Consider partial success as success
-				$response->msg		= 'Partial success. Some records processed [set_records_in_dd_ontology] ' .$sqo->section_tipo;
-				$response->msg	   .= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
-				$response->total	= $processed_count;
-			}else{
-				$response->msg .= ' | '. round((microtime(true) - $start_time) * 1000, 2).' ms';
+				$response->msg		= "Partial success. Some records processed for " . to_string($sqo->section_tipo);
+			} else {
+				$response->msg		= "Request failed for " . to_string($sqo->section_tipo);
 			}
+			$response->msg .= ' | ' . exec_time_unit($start_time, 'ms') . ' ms';
 		}
 
 
@@ -2287,21 +2161,22 @@ class ontology {
 	public static function regenerate_records_in_dd_ontology( array $tld ) : object {
 
 		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-			$response->errors	= [];
+			$response->result		= false;
+			$response->msg			= 'Error. Request failed';
+			$response->errors		= [];
+			$response->total_insert = 0;
 
 		// create a copy of the $tld
 			$backup = ontology_utils::create_bk_table( $tld );
 
-			if($backup===false){
-				$response->errors[] ='Impossible to create the dd_ontology backup previous to regenerate the tlds: '.to_string( $tld );
+			if ( $backup === false ) {
+				$response->errors[] = "Impossible to create the dd_ontology backup previous to regenerate the TLDs: " . to_string($tld);
 				return $response;
 			}
 
 		// get all section_tipo from tld
 			$section_tipo = array_map( function($el) {
-				return ontology::map_tld_to_target_section_tipo($el);
+				return self::map_tld_to_target_section_tipo($el);
 			}, $tld );
 
 		// 1 search all nodes as matrix records
@@ -2309,32 +2184,25 @@ class ontology {
 				$sqo->set_section_tipo( $section_tipo );
 				$sqo->limit = 0;
 
-			$search = search::get_instance(
-				$sqo, // object sqo
-			);
+			$search = search::get_instance( $sqo );
 			$db_result	= $search->search();
-			$total		= $db_result->row_count();
+			$total		= $db_result ? $db_result->row_count() : 0;
 
 		// 2 create the dd_ontology nodes of all matrix records
 			$ontology_nodes = [];
-			if($total>0){
+			if ( $total > 0 ) {
 				foreach ($db_result as $current_record) {
 
 					$current_section_tipo	= $current_record->section_tipo;
 					$current_section_id		= $current_record->section_id;
 
 					// ontology_node item
-					$ontology_node = ontology::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
+					$ontology_node = self::parse_section_record_to_ontology_node( $current_section_tipo, $current_section_id );
 
-					if( empty($ontology_node ) ){
+					if ( empty($ontology_node) ) {
 						ontology_utils::delete_bk_table();
-						$response->errors[] = 'Failed regenerate dd_ontology with section_tipo: ' . $current_section_tipo .' section_id: '. $current_section_id;
-						debug_log(__METHOD__
-							. " Error generating dd_ontology with section_tipo " . PHP_EOL
-							. ' current_section_tipo: ' . to_string($current_section_tipo) . PHP_EOL
-							. ' current_section_id: ' . to_string($current_section_id)
-							, logger::ERROR
-						);
+						$response->errors[] = "Failed regenerate dd_ontology node for section_tipo: $current_section_tipo, section_id: $current_section_id";
+						debug_log(__METHOD__ . " Error generating dd_ontology for $current_section_tipo-$current_section_id", logger::ERROR);
 						return $response;
 					}
 
@@ -2352,17 +2220,15 @@ class ontology {
 			foreach ($ontology_nodes as $ontology_node) {
 
 				$insert_result = $ontology_node->insert();
-				// $ontology_node->get_tld(); // force to load
-				// $insert_result = $ontology_node->update();
 
 				// error inserting
 				// recovery al tld from bk table.
-				if( empty($insert_result) ){
+				if ( empty($insert_result) ) {
 					// restore the backup table
 					ontology_utils::restore_from_bk_table($tld);
 					// delete bk table
 					ontology_utils::delete_bk_table();
-					$response->errors[] = 'Failed inserting dd_ontology restoring previous data in dd_ontology';
+					$response->errors[] = "Failed inserting dd_ontology. Restored previous data from backup.";
 					return $response;
 				}
 
@@ -2373,8 +2239,8 @@ class ontology {
 			foreach ($tld as $current_tld) {
 
 				// get the information to create the main section
-				$typology_id	= ontology::get_main_typology_id( $current_tld );
-				$name_data		= ontology::get_main_name_data( $current_tld );
+				$typology_id	= self::get_main_typology_id( $current_tld );
+				$name_data		= self::get_main_name_data( $current_tld );
 
 				$file_item = new stdClass();
 					$file_item->tld			= $current_tld;
@@ -2382,8 +2248,8 @@ class ontology {
 					$file_item->name_data	= $name_data ?? null;
 
 				// add main section and records
-				$add_result = ontology::add_main_section( $file_item );
-				if (empty($add_result)) {
+				$add_result = self::add_main_section( $file_item );
+				if ( empty($add_result) ) {
 					// restore the backup table
 					ontology_utils::restore_from_bk_table($tld);
 					// delete bk table
@@ -2399,11 +2265,11 @@ class ontology {
 				}
 
 				// create dd_ontology node for the main section
-				ontology::create_dd_ontology_ontology_section_node( $file_item );
+				self::create_dd_ontology_ontology_section_node( $file_item );
 			}
 
 		// response
-			if( empty($response->errors) ){
+			if ( empty($response->errors) ) {
 				$response->result	= true;
 				$response->msg		= 'OK. The regenerate records request has been completed successfully.';
 			}
@@ -2465,48 +2331,43 @@ class ontology {
 
 	/**
 	* GET_MAIN_TLD
-	* Get the tld, in lowercase, of the hierarchy main section (ontology35 | hierarchy1)
-	* @param int|string $section_id
+	* Get the TLD, in lowercase, of the main ontology/hierarchy section (ontology35 | hierarchy1).
+	* @param string|int $section_id
 	* @param string $section_tipo
-	* @return string $tld
+	* @return string|null $tld
 	* @test true
 	*/
-	public static function get_main_tld(string|int $section_id, string $section_tipo) : ?string {
+	public static function get_main_tld( string|int $section_id, string $section_tipo ) : ?string {
 
-		// tld
-			$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
-			$model_name	= ontology_node::get_model_by_tipo($tld_tipo, true);
-			$component	= component_common::get_instance(
-				$model_name,
-				$tld_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			$data		= $component->get_data();
-			$first_data	= $data[0]->value ?? null;
+		$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
+		$model_name	= ontology_node::get_model_by_tipo( $tld_tipo, true );
 
-			// empty case
-			if (empty($first_data)) {
-				return null;
-			}
+		$component = component_common::get_instance(
+			$model_name,
+			$tld_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
 
-		// always in lowercase
-			$tld = strtolower( $first_data );
+		if ( !$component ) {
+			return null;
+		}
 
+		$data = $component->get_data();
+		$tld  = $data[0]->value ?? null;
 
-		return $tld;
+		return $tld ? strtolower((string)$tld) : null;
 	}//end get_main_tld
 
 
 
 	/**
 	* GET_MAIN_TYPOLOGY_ID
-	* get the main section from the given tld
-	* create the typology component and get his data
-	* with his data get the `section_id` as `typology_id`
-	* if typology component has not data use the 15 ( others ) as `typology_id`
+	* Retrieves the typology ID for a given TLD from its main section record.
+	* Defaults to 15 (others) if no specific typology is defined.
+	* If typology component has not data, use 15 (others) as `typology_id`
 	* @param string $tld
 	* @return int|null $typology_id
 	* @test true
@@ -2516,83 +2377,69 @@ class ontology {
 		$default_typology = 15; // others typology
 
 		// get main record
-			$main_record = ontology::get_ontology_main_from_tld( $tld );
-			if (empty($main_record)) {
-				debug_log(__METHOD__
-					. " Empty main record for tld " . PHP_EOL
-					. ' tld: ' . to_string($tld)
-					, logger::ERROR
-				);
-				return null;
-			}
+		$main_record = self::get_ontology_main_from_tld( $tld );
+		if ( empty($main_record) ) {
+			debug_log(__METHOD__ . " Empty main record for tld: $tld", logger::ERROR);
+			return null;
+		}
 
 		// Typology component
-			$tipo		= DEDALO_HIERARCHY_TYPOLOGY_TIPO;
-			$model		= ontology_node::get_model_by_tipo($tipo, true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$main_record->section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$main_record->section_tipo
-			);
-			$typology_data = $component->get_data();
+		$tipo  = DEDALO_HIERARCHY_TYPOLOGY_TIPO;
+		$model = ontology_node::get_model_by_tipo( $tipo, true );
 
-		// use section_id as typology_id if empty data use 15 as default (others)
-		$typology_id = isset($typology_data[0])
+		$component = component_common::get_instance(
+			$model,
+			$tipo,
+			$main_record->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$main_record->section_tipo
+		);
+
+		if ( !$component ) {
+			return $default_typology;
+		}
+
+		$typology_data = $component->get_data();
+
+		// Use section_id as typology_id. If empty data, use 15 as default (others)
+		return isset($typology_data[0]->section_id)
 			? (int)$typology_data[0]->section_id
 			: $default_typology;
-
-
-		return $typology_id;
 	}//end get_main_typology_id
 
 
 
 	/**
 	* GET_MAIN_NAME_DATA
-	* Get the main section from the given tld
-	* create the name component and get his full data (all languages)
-	* return his full data as `name_data`
-	* name_data is used to insert has name / term of other nodes that clone his values.
+	* Retrieves the full name/term data (translations) for a given TLD's main section.
 	* @param string $tld
-	* @return ?array $name_data
-	* sample:
-	* [
-	* 	{"lang": "lg-spa", "value": "Prueba"},
-	* 	{"lang": "lg-eng", "value": "Test"}
-	* ]
+	* @return array|null $name_data Sample: [{"lang": "lg-spa", "value": "Prueba"}, ...]
 	* @test true
 	*/
 	public static function get_main_name_data( string $tld ) : ?array {
 
 		// get main record
-			$main_record = ontology::get_ontology_main_from_tld( $tld );
-			if (empty($main_record)) {
-				debug_log(__METHOD__
-					. " Empty main record for tld " . PHP_EOL
-					. ' tld: ' . to_string($tld)
-					, logger::ERROR
-				);
-				return null;
-			}
+		$main_record = self::get_ontology_main_from_tld( $tld );
+		if ( empty($main_record) ) {
+			debug_log(__METHOD__ . " Empty main record for tld: $tld", logger::ERROR);
+			return null;
+		}
 
 		// Name component
-			$tipo		= DEDALO_HIERARCHY_TERM_TIPO;
-			$model		= ontology_node::get_model_by_tipo($tipo, true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$main_record->section_id,
-				'list',
-				DEDALO_DATA_LANG,
-				$main_record->section_tipo
-			);
-			$data = $component->get_data();
+		$tipo  = DEDALO_HIERARCHY_TERM_TIPO;
+		$model = ontology_node::get_model_by_tipo( $tipo, true );
 
+		$component = component_common::get_instance(
+			$model,
+			$tipo,
+			$main_record->section_id,
+			'list',
+			DEDALO_DATA_LANG,
+			$main_record->section_tipo
+		);
 
-		return $data;
+		return $component ? $component->get_data() : null;
 	}//end get_main_name_data
 
 
@@ -2600,8 +2447,8 @@ class ontology {
 	/**
 	* DELETE_ONTOLOGY
 	* Delete all ontology references with `tld` given.
-	* Remove the `matrix_ontology` and `dd_ontology` nodes of given `tld`
-	* It also delete the main ontology section.
+	* Remove the `matrix_ontology` and `dd_ontology` nodes of given `tld`.
+	* It also deletes the main ontology section definition.
 	* @param string $tld
 	* @return object $response
 	* {
@@ -2614,32 +2461,37 @@ class ontology {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed. ';
+			$response->msg		= 'Error. Request failed ' . __METHOD__;
 			$response->errors	= [];
 
 		// remove any other things than tld.
 			$safe_tld = safe_tld( $tld );
 
+			if ( $safe_tld === false ) {
+				$response->errors[] = "Invalid TLD provided for deletion: " . to_string($tld);
+				return $response;
+			}
+
 		// 1 Delete the dd_ontology nodes
 			$deleted_dd_ontology = ontology_utils::delete_tld_nodes( $safe_tld );
 
-			if ( $deleted_dd_ontology===false ) {
-				$response->errors[] = 'unable to delete tld';
-				$response->msg .= 'Error deleting dd_ontology [1] for the tld: '.$tld;
+			if ( $deleted_dd_ontology === false ) {
+				$response->errors[] = 'Unable to delete dd_ontology records for TLD: ' . $safe_tld;
+				$response->msg .= 'Error deleting dd_ontology [1] for the TLD: ' . $safe_tld;
 				return $response;
 			}
 
 		// 2 Delete main section
 			// get main section for this tld
-			$main_section = ontology::get_ontology_main_from_tld( $safe_tld );
+			$main_section = self::get_ontology_main_from_tld( $safe_tld );
 
 			if ( empty($main_section) ) {
-				$response->errors[] = 'unable to get main_section from tld';
-				$response->msg .= 'Error deleting dd_ontology [2] for the tld: '.$tld;
+				$response->errors[] = 'Unable to find main_section for TLD: ' . $safe_tld;
+				$response->msg .= 'Error deleting dd_ontology [2] for the TLD: ' . $safe_tld;
 				return $response;
 			}
 
-			$main_sections = sections::get_instance( null, null );
+			$main_sections_instance = sections::get_instance( null, null );
 
 			$options = new stdClass();
 				$options->delete_mode				= 'delete_record';
@@ -2648,38 +2500,38 @@ class ontology {
 				$options->delete_diffusion_records	= true;
 				$options->delete_with_children		= true;
 				$options->prevent_delete_main		= true; // prevent infinite loop
-			$delete_main_response = $main_sections->delete( $options );
+			$delete_main_response = $main_sections_instance->delete( $options );
 
-			if ( $delete_main_response->result===false ) {
+			if ( $delete_main_response->result === false ) {
 				return $delete_main_response;
 			}
 
 		// 3 Delete all ontology nodes (records) in matrix_ontology
-			$nodes_section_tipo = ontology::map_tld_to_target_section_tipo( $safe_tld );
+			$nodes_section_tipo = self::map_tld_to_target_section_tipo( $safe_tld );
 
 			$nodes_sqo = new search_query_object();
 				$nodes_sqo->set_section_tipo( [$nodes_section_tipo] );
 				$nodes_sqo->set_limit( 0 );
 
 			// Delete all nodes of the section
-			$nodes_sections = sections::get_instance( null, null );
+			$nodes_sections_instance = sections::get_instance( null, null );
 
-			$options = new stdClass();
-				$options->delete_mode				= 'delete_record';
-				$options->section_tipo				= $nodes_section_tipo;
-				$options->sqo						= $nodes_sqo;
-				$options->delete_diffusion_records	= true;
-				$options->delete_with_children		= true;
-				$options->prevent_delete_main		= true; // prevent infinite loop
-			$delete_nodes_response = $nodes_sections->delete( $options );
+			$options_nodes = new stdClass();
+				$options_nodes->delete_mode				= 'delete_record';
+				$options_nodes->section_tipo			= $nodes_section_tipo;
+				$options_nodes->sqo						= $nodes_sqo;
+				$options_nodes->delete_diffusion_records= true;
+				$options_nodes->delete_with_children	= true;
+				$options_nodes->prevent_delete_main		= true; // prevents infinite loop
+			$delete_nodes_response = $nodes_sections_instance->delete( $options_nodes );
 
-			if ( $delete_nodes_response->result===false ) {
+			if ( $delete_nodes_response->result === false ) {
 				return $delete_nodes_response;
 			}
 
 		// 4 delete counter
 			counter::modify_counter(
-				$safe_tld.'0',
+				$safe_tld . '0',
 				'reset'
 			);
 
@@ -2687,9 +2539,9 @@ class ontology {
 			$response->result		= true;
 			$response->delete_main	= $delete_main_response;
 			$response->delete_nodes	= $delete_nodes_response;
-			$response->msg			= count($response->errors)===0
-				? 'OK. Request done successfully'
-				: 'Warning. Request done with errors';
+			$response->msg			= empty($response->errors)
+				? 'OK. Request completed successfully'
+				: 'Warning. Request completed with errors';
 
 
 		return $response;
@@ -2699,62 +2551,52 @@ class ontology {
 
 	/**
 	* DD_ONTOLOGY_VERSION_IS_VALID
-	* This method is a temporal check for legacy ontologies.
-	* It is used by updates.php to discriminate when display
-	* update Ontology warning.
-	* Uses date from term info like 'Dédalo 2024-12-31T00:00:00+01:00 Benimamet'
-	* @param string $min_date
-	* 	sample: '2025-12-31'
+	* Temporal check for legacy ontologies to determine if an update is required.
+	* Disciminates if the 'dd1' (root) node meets the minimum required date.
+	* @param string $min_date Sample: '2025-12-31'
 	* @return bool
 	*/
 	public static function dd_ontology_version_is_valid( string $min_date ) : bool {
 
-		// Ontology version. Check if is valid version
-		$ontology_node	= ontology_node::get_instance('dd1');
-		$term			= $ontology_node->get_term_data();
-		$term_value		= $term->{DEDALO_STRUCTURE_LANG} ?? null;
-		if (empty($term_value)) {
-			debug_log(__METHOD__
-				. " Unable to get date from dd1 term (1) " . PHP_EOL
-				. ' term: ' . to_string($term)
-				, logger::ERROR
-			);
+		$ontology_node = ontology_node::get_instance('dd1');
+		if (!$ontology_node) {
 			return false;
 		}
 
-		// check properties (new way to declare date)
-		$properties = $ontology_node->get_properties() ?? new stdClass();
-		if (isset($properties->date)) {
+		$date = null;
 
-			// >=6.4 model
-			$date = $properties->date;
+		// 1. Check properties (Dédalo >= 6.4 way)
+		$properties = $ontology_node->get_properties();
+		if ( isset($properties->date) && !empty($properties->date) ) {
+			$date = (string)$properties->date;
+		} else {
+			// 2. Fallback: Get date from term info (Legacy versions)
+			// Sample: 'Dédalo 2024-12-31T00:00:00+01:00'
+			$term       = $ontology_node->get_term_data();
+			$term_value = $term->{DEDALO_STRUCTURE_LANG} ?? null;
 
-		}else{
-
-			// Get date from term info (previous 6.4 versions)
-			// sample: 'Dédalo 2024-12-31T00:00:00+01:00 Benimamet'
-			preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', $term_value, $output_array);
-
-			$date = $output_array[0] ?? ''; // as 2024-11-24
-			if (empty($date)) {
-				debug_log(__METHOD__
-					. " Unable to get date from dd1 term (2) " . PHP_EOL
-					. ' term_value: ' . to_string($term_value)
-					, logger::ERROR
-				);
-				return false;
+			if ( !empty($term_value) ) {
+				if ( preg_match('/[0-9]{4}-[0-9]{2}-[0-9]{2}/', (string)$term_value, $matches) ) {
+					$date = $matches[0];
+				}
 			}
 		}
 
-		$ontology_date	= new DateTime($date);
-		$min_datetime	= new DateTime($min_date);
-
-		if ($ontology_date < $min_datetime) {
+		if ( empty($date) ) {
+			debug_log(__METHOD__ . " Unable to resolve version date from dd1 node (properties or term)", logger::ERROR);
 			return false;
 		}
 
+		try {
+			$ontology_datetime = new DateTime($date);
+			$min_datetime      = new DateTime($min_date);
 
-		return true;
+			return $ontology_datetime >= $min_datetime;
+
+		} catch (Exception $e) {
+			debug_log(__METHOD__ . " Date parsing error: " . $e->getMessage() . " | date: $date | min_date: $min_date", logger::ERROR);
+			return false;
+		}
 	}//end dd_ontology_version_is_valid
 
 
@@ -2793,10 +2635,8 @@ class ontology {
 
 	/**
 	* GET_MAIN_ORDER
-	* Get the main section from the given tld
-	* create the order component and get his full data
-	* return his data as an int `order` (the first value of the component).
-	* `order is used to show the root nodes in the tree.
+	* Retrieves the display order for a given TLD's main section.
+	* This order is used to organize root nodes in tree views.
 	* @param string $tld
 	* @return int|null $order
 	* @test true
@@ -2804,75 +2644,85 @@ class ontology {
 	public static function get_main_order( string $tld ) : ?int {
 
 		// get main record
-			$main_record = ontology::get_ontology_main_from_tld( $tld );
-			if (empty($main_record)) {
-				debug_log(__METHOD__
-					. " Empty main record for tld " . PHP_EOL
-					. ' tld: ' . to_string($tld)
-					, logger::ERROR
-				);
-				return null;
-			}
+		$main_record = self::get_ontology_main_from_tld( $tld );
+		if ( empty($main_record) ) {
+			debug_log(__METHOD__ . " Empty main record for tld: $tld", logger::ERROR);
+			return null;
+		}
 
-		// Name component
-			$tipo		= DEDALO_HIERARCHY_ORDER_TIPO;
-			$model		= ontology_node::get_model_by_tipo($tipo, true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$main_record->section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$main_record->section_tipo
-			);
-			$order_data = $component->get_data();
-			$order = $order_data[0] ?? null;
-			if(!empty($order)){
-				$order = (int)$order;
-			}
+		// Order component
+		$tipo  = DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48 component_number
+		$model = ontology_node::get_model_by_tipo( $tipo, true );
 
-		return $order;
+		$component = component_common::get_instance(
+			$model,
+			$tipo,
+			$main_record->section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$main_record->section_tipo
+		);
+
+		if ( !$component ) {
+			return 0; // Default order
+		}
+
+		$order_data = $component->get_data();
+
+		// Access the 'value' property of the first data record
+		return isset($order_data[0]->value)
+			? (int)$order_data[0]->value
+			: 0;
 	}//end get_main_order
 
 
 
 	/**
 	* GET_OVERWRITE
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return locator|null $locator
+	* Checks if a specified ontology node has a corresponding local override definition.
+	* This is used to resolve project-specific customizations (localontology) of
+	* common ontology elements.
+	* @param string $section_tipo The TIPO of the section to check.
+	* @param string|int $section_id The ID of the section to check.
+	* @return locator|null Returns a locator to the overwrite node if found, otherwise null.
+	* @test true
 	*/
 	public static function get_overwrite( string $section_tipo, string|int $section_id ) : ?locator {
 
-		//search if the node has a overwrite node in local
+		// search if the node has a overwrite node in local ontology
 			$local_section_tipo = 'localontology0';
+
+		// If the current section is already a local ontology, skip overwrite search
+			if ( $section_tipo === $local_section_tipo ) {
+				return null;
+			}
 
 		// node locator
 			$locator = new locator();
 				$locator->set_section_tipo( $section_tipo );
 				$locator->set_section_id( $section_id );
 
-		// create a sqo to count all the references
+		// create a sqo to find references in local ontology
 			$sqo = new search_query_object();
+				$sqo->set_select([]); // Prevents to load all columns
 				$sqo->set_section_tipo( [$local_section_tipo] );
 				$sqo->set_mode('related');
 				$sqo->set_filter_by_locators([$locator]);
 				$sqo->set_limit( 1 );
 
 		// search the overwrite section
-			$search = search::get_instance(
-				$sqo // object sqo
-			);
-			$db_result	= $search->search();
-			$total		= $db_result->row_count();
+			$search = search::get_instance( $sqo );
+			$db_result = $search->search();
 
-		// If the node has not any overwrite node return null
-			if( $total===0 ){
+			if ( !$db_result || $db_result->row_count() === 0 ) {
 				return null;
 			}
 
 		// set the overwrite node locator with the row
 			$overwrite_row = $db_result->fetch_one();
+			if ( empty($overwrite_row) ) {
+				return null;
+			}
 
 			$overwrite_locator = new locator();
 				$overwrite_locator->set_section_tipo( $overwrite_row->section_tipo );
