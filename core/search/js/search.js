@@ -1019,8 +1019,8 @@ search.prototype.update_state = async function(options) {
 			json_query_obj.limit = self.caller.tipo==='dd542' ? 30 : 10;
 			json_query_obj.offset = 0
 
-			// max_input
-			const max_input = self.search_group_container.querySelector("input.max_input")
+			// max_input update if available
+			const max_input = self.search_group_container?.querySelector("input.max_input")
 			if(max_input) {
 				max_input.value = json_query_obj.limit
 			}

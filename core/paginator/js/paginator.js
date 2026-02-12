@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global, Promise, SHOW_DEBUG */
+/* global Promise, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -258,15 +258,26 @@ paginator.prototype._update_pagination_props = function(total) {
 	const self = this
 
 	// short vars
-	const limit		= self.get_limit()
-	const offset	= self.get_offset()
+	let limit		= self.get_limit()
+	let offset		= self.get_offset()
 
 	// pages fix vars
 
-	// Ensure values are non-negative to prevent unexpected calculations (e.g., NaN).
-	self.total	= Math.max(0, total)
-	self.limit	= Math.max(0, limit);
-	self.offset	= Math.max(0, offset);
+	// Normalize to numbers and ensure values are non-negative to prevent unexpected calculations (e.g., NaN).
+	self.total	= Math.max(0, Number(total) || 0)
+
+	limit		= Number(limit)
+	offset		= Number(offset)
+
+	if (Number.isNaN(limit)) {
+		limit = 0
+	}
+	if (Number.isNaN(offset)) {
+		offset = 0
+	}
+
+	self.limit	= Math.max(0, limit)
+	self.offset	= Math.max(0, offset)
 
 	// Calculate total pages. Handle 'limit' being zero to avoid division by zero.
 	// If total > 0 but limit is 0, it implies one "page" of all items.
@@ -386,6 +397,11 @@ paginator.prototype.paginate = async function(offset) {
 * @return int page_number
 */
 paginator.prototype.get_page_number = function(item_per_page, offset) {
+
+	// protect against invalid or zero item_per_page to avoid division by zero or Infinity
+	if (item_per_page<=0) {
+		return 1
+	}
 
 	if (offset>0) {
 		const page_number = Math.ceil(offset/item_per_page)+1 ;

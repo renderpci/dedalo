@@ -348,4 +348,10 @@ if (SHOW_DEBUG && defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' - ' . dd_memory_usage();
 	$line = 'API END POINT FINISHED 2: ' . PHP_EOL . $text . PHP_EOL;
 	debug_log($line, logger::DEBUG);
+
+	// Show response in debug log
+	$show_response = false;
+	if($show_response) {
+		debug_log( json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
+	}
 }

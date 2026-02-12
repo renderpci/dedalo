@@ -847,7 +847,7 @@ const do_delete_dependencies = async function (self) {
 					)
 
 					if (SHOW_DEBUG === true) {
-						console.log('instance_to_destroy:', current_instance_id)
+						// console.log('instance_to_destroy:', current_instance_id)
 					}
 
 				} catch (err) {

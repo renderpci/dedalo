@@ -58,6 +58,7 @@
 	skip_projects_filter	: (true || false)
 	parsed					: (true || false) // boolean, state of the sqo
 	breakdown				: (true || false)
+	tables					: array // Used in search mode related to limit the tables to search
 */
 class search_query_object extends stdClass {
 
@@ -86,6 +87,7 @@ class search_query_object extends stdClass {
 		public $skip_projects_filter;
 		public $parsed;
 		public $breakdown;
+		public $tables;
 		public $select;
 		// generated_time
 		public $generated_time;
@@ -470,6 +472,23 @@ class search_query_object extends stdClass {
 
 		return true;
 	}//end set_breakdown
+
+
+
+	/**
+	* SET_TABLES
+	* List of tables to search.
+	* Used in search related to limit the tables to search.
+	* Overwrites the default value 'common::get_matrix_tables_with_relations()'
+	* @param array $value
+	* @return bool true
+	*/
+	public function set_tables(array $value) : true {
+
+		$this->tables = $value;
+
+		return true;
+	}//end set_tables
 
 
 
