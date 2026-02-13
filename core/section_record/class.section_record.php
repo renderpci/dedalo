@@ -25,7 +25,7 @@ class section_record {
 	// int permissions
 	protected int $permissions;
 
-	// string data_handler
+	// string data_handler. Default is 'matrix_db_manager'. Others: 'matrix_activity_db_manager'
 	public string $data_handler = 'matrix_db_manager';
 
 	// string table.
@@ -101,10 +101,12 @@ class section_record {
 			);
 
 		// set table
-			$this->table		= common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
+			$this->table = common::get_matrix_table_from_tipo($this->section_tipo) ?? 'invalid_table';
 
 		// set default data handler
-			$this->data_handler = 'matrix_db_manager';
+			$this->data_handler = $this->table === 'matrix_activity'
+				? 'matrix_activity_db_manager'
+				: 'matrix_db_manager';
 
 		// metrics
 		self::$section_record_total++;
@@ -1277,7 +1279,9 @@ class section_record {
 		}
 
 		// insert a new record in the database
-		$data_handler = 'matrix_db_manager';
+		$data_handler = $table === 'matrix_activity'
+			? 'matrix_activity_db_manager'
+			: 'matrix_db_manager';
 		$section_id = $data_handler::create(
 			$table,
 			$section_tipo,

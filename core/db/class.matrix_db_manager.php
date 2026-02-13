@@ -104,12 +104,12 @@ class matrix_db_manager {
 	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
 		// Validate table
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(
 				__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$tables)
+				. ' allowed_tables: ' . json_encode(array_keys(static::$tables))
 				, logger::ERROR
 			);
 			return false;
@@ -276,11 +276,11 @@ class matrix_db_manager {
 	public static function read(string $table, string $section_tipo, int $section_id): object|false	{
 
 		// check matrix table
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$tables)
+				. ' allowed_tables: ' . json_encode(array_keys(static::$tables))
 				, logger::ERROR
 			);
 			return false;
@@ -350,12 +350,12 @@ class matrix_db_manager {
 	public static function update(string $table, string $section_tipo, int $section_id, object $values): bool {
 
 		// Validate table name against allowed list (Security/Guardrail)
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(
 				__METHOD__
 					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 					. ' table: ' . $table . PHP_EOL
-					. ' allowed_tables: ' . json_encode(self::$tables),
+					. ' allowed_tables: ' . json_encode(array_keys(static::$tables)),
 				logger::ERROR
 			);
 			return false;
@@ -388,18 +388,18 @@ class matrix_db_manager {
 		$columns = ['section_id', 'section_tipo'];
 		foreach ($values as $column => $value) {
 			// Validate column name (Security/Guardrail)
-			if (!isset(self::$columns[$column])) {
+			if (!isset(static::$columns[$column])) {
 				debug_log(
 					__METHOD__
 						. " Ignored invalid column name: $column" . PHP_EOL
-						. ' allowed_columns: ' . json_encode(self::$columns),
+						. ' allowed_columns: ' . json_encode(static::$columns),
 					logger::ERROR
 				);
 				continue;
 			}
 
 			// Prepare value: JSON encode if it's a designated JSON column and not null
-			$safe_value = ($value !== null && isset(self::$json_columns[$column]))
+			$safe_value = ($value !== null && isset(static::$json_columns[$column]))
 				? json_handler::encode($value)
 				: $value;
 
@@ -496,11 +496,11 @@ class matrix_db_manager {
 	// 		// WHERE section_tipo = 'numisdata224' AND section_id = 1;
 
 	// 	// check matrix table
-	// 	if (!isset(self::$tables[$table])) {
+	// 	if (!isset(static::$tables[$table])) {
 	// 		debug_log(__METHOD__
 	// 			. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 	// 			. ' table: ' . $table . PHP_EOL
-	// 			. ' allowed_tables: ' . json_encode(self::$tables)
+	// 			. ' allowed_tables: ' . json_encode(array_keys(static::$tables))
 	// 			, logger::ERROR
 	// 		);
 	// 		return false;
@@ -656,12 +656,12 @@ class matrix_db_manager {
 		): bool {
 
 		// check matrix table
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(
 				__METHOD__
 					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 					. ' table: ' . $table . PHP_EOL
-					. ' allowed_tables: ' . json_encode(self::$tables),
+					. ' allowed_tables: ' . json_encode(array_keys(static::$tables)),
 				logger::ERROR
 			);
 			return false;
@@ -847,11 +847,11 @@ class matrix_db_manager {
 	public static function delete( string $table, string $section_tipo, int $section_id ) : bool {
 
 		// check matrix table
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(__METHOD__
 				. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 				. ' table: ' . $table . PHP_EOL
-				. ' allowed_tables: ' . json_encode(self::$tables)
+				. ' allowed_tables: ' . json_encode(array_keys(static::$tables))
 				, logger::ERROR
 			);
 			return false;
@@ -925,12 +925,12 @@ class matrix_db_manager {
 	public static function search(string $table, array $filter, ?string $order = null, ?int $limit = null): array|false	{
 
 		// Validate table
-		if (!isset(self::$tables[$table])) {
+		if (!isset(static::$tables[$table])) {
 			debug_log(
 				__METHOD__
 					. " Invalid table. This table is not allowed to load matrix data." . PHP_EOL
 					. ' table: ' . $table . PHP_EOL
-					. ' allowed_tables: ' . json_encode(self::$tables),
+					. ' allowed_tables: ' . json_encode(array_keys(static::$tables)),
 				logger::ERROR
 			);
 			return false;
@@ -972,11 +972,11 @@ class matrix_db_manager {
 		foreach ($filter as $item) {
 
 			$column = $item['column'];
-			if (!isset(self::$columns[$column])) {
+			if (!isset(static::$columns[$column])) {
 				debug_log(__METHOD__
 					. " Invalid column. This column is not allowed to load matrix data." . PHP_EOL
 					. ' column: ' . $column . PHP_EOL
-					. ' allowed_columns: ' . json_encode(self::$columns)
+					. ' allowed_columns: ' . json_encode(static::$columns)
 					, logger::ERROR
 				);
 				return false;
@@ -1005,7 +1005,7 @@ class matrix_db_manager {
 			[$col, $dir] = explode(' ', $order, 2) + [null, null];
 			$col = trim($col);
 			$dir = strtoupper(trim($dir ?? 'ASC'));
-			if (isset(self::$columns[$col]) && in_array($dir, ['ASC', 'DESC'], true)) {
+			if (isset(static::$columns[$col]) && in_array($dir, ['ASC', 'DESC'], true)) {
 				$order_clause = ' ORDER BY ' . pg_escape_identifier($conn, $col) . ' ' . $dir;
 			}
 		}
@@ -1175,7 +1175,7 @@ class matrix_db_manager {
 	* @return array
 	*/
 	public static function get_columns_name() : array {
-		return array_keys(self::$columns);
+		return array_keys(static::$columns);
 	}//end get_columns_name
 
 
