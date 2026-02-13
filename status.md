@@ -9,11 +9,12 @@ Information regarding project tasks and migration progress.
 1. **Installation**: Refactor for clean installation and v6 migration compatibility.
 2. **Ontology Update**: Export from version 6 and import into master v7.
 3. **Time Machine**: Fix broken section (dd15) and search functionality.
+    *   Review latest changes inspector and fix
+    *   Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
 4. **Data Migration**: Transform legacy Time Machine table data to the new model.
 5. **Autocomplete**: Migrate functionality away from the legacy `relation` table.
 6. **Ontology Documentation**: Add Markdown output capability to allow AI tools to read the Ontology.
 7. **Refactor `ontology_node`**:
-    *   Evaluate nullability; force it to be non-nullable where appropriate (consistent with `section_record`).
     *   Implement a static `create` method for instantiating new nodes.
 8. **Data Update (v7)**: Remove the `is_portal` property from activity data (dependent on `TOP_TIPO`).
 9. **Database Optimization**: Implement PostgreSQL table partitioning for the Time Machine. [Reference](https://chat.deepseek.com/share/8i2lyrdx3m24pcbkz2)
