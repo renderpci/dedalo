@@ -1,33 +1,34 @@
 <?php declare(strict_types=1);
 /**
-* CLASS MENU
-* Handles menu logic
-*/
+ * MENU
+ * Handles application menu generation and user area authorization
+ *
+ * Key features:
+ * - Builds hierarchical menu tree based on user permissions
+ * - Filters areas by security access and special tipos
+ * - Handles section_tool and thesaurus area special cases
+ * - Provides system information for debugging
+ *
+ * @package Dedalo
+ * @subpackage Core
+ */
 class menu extends common {
 
 
 
 	/**
-	* CLASS VARS
+	* CONSTRUCT
+	* @param string $mode Menu mode (default: 'edit')
 	*/
-		// id
-		protected $id;
+	public function __construct(string $mode = 'edit') {
 
-
-
-	/**
-	* __CONSTRUCT
-	*/
-	public function __construct( string $mode='edit' ) {
-
-		$this->id			= null;
 		$this->tipo			= 'dd85'; // string class menu (dd85)
 		$this->lang			= DEDALO_APPLICATION_LANG;
 		$this->mode			= $mode;
 		$this->section_tipo	= DEDALO_ROOT_TIPO; // 'dd1';
 
 		parent::load_structure_data();
-	}//end __construct
+	}
 
 
 
@@ -35,7 +36,7 @@ class menu extends common {
 	* GET_TREE_DATALIST
 	* Get the authorized areas for current user, datalist will be used for build menu tree.
 	* $data->datalist = [{ontology_items}]
-	* @return array $ar_areas
+	* @return array $ar_areas Array of authorized areas for menu tree
 	*/
 	public function get_tree_datalist() : array {
 		$start_time = start_time();
@@ -68,24 +69,24 @@ class menu extends common {
 				// get authorized areas for the current user with the data of component_security_access
 				$ar_permissions_areas = security::get_ar_authorized_areas_for_user();
 
-				// filter areas excluding by permissions and special tipos
-				$ar_full_areas_length = sizeof($ar_full_areas);
+			// filter areas excluding by permissions and special tipos
+			$ar_full_areas_length = count($ar_full_areas);
 				for ($i=0; $i < $ar_full_areas_length ; $i++) {
 
 					$area_item = $ar_full_areas[$i];
 
 					// maintenance area is only accessible by root, global admin or developer,
-					if ($area_item->tipo===DEDALO_AREA_MAINTENANCE_TIPO && ($is_global_admin===false && $is_developer===false)) {
+					if ($area_item->tipo === DEDALO_AREA_MAINTENANCE_TIPO && !$is_global_admin && !$is_developer) {
 						// skip menu maintenance to non maintenance user, even if they have permissions
 						continue;
 					}
 
-					if ($area_item->tipo===DEDALO_AREA_DEVELOPMENT_TIPO && $is_developer===false) {
+					if ($area_item->tipo === DEDALO_AREA_DEVELOPMENT_TIPO && !$is_developer) {
 						// skip menu developer to non developers, even if they have permissions
 						continue;
 					}
 
-					$found = array_find($ar_permissions_areas, function($permissions_item) use($area_item){
+					$found = array_find($ar_permissions_areas, function($permissions_item) use($area_item) {
 						return $permissions_item->tipo===$area_item->tipo;
 					});
 					if (!is_null($found)) {
@@ -111,7 +112,7 @@ class menu extends common {
 			// rearrange the array to remunerate the arrays
 			$skip_parents		= array_values($skip_parents);
 			$access_areas		= array_values($access_areas);
-			$ar_areas_length	= sizeof($access_areas);
+			$ar_areas_length	= count($access_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
 
 				$current_area = $access_areas[$i];
@@ -135,7 +136,7 @@ class menu extends common {
 
 							// tool_context
 							$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
-								? array_key_first(get_object_vars($properties->tool_config)) // ? key($properties->tool_config) // deprecated PHP>=8.1
+								? array_key_first(get_object_vars($properties->tool_config))
 								: false;
 
 							if ($tool_name!==false) {
@@ -158,7 +159,7 @@ class menu extends common {
 									// overwrite current_area (!)
 									$datalist_item->model	= 'section';
 									$datalist_item->tipo	= $properties->config->target_section_tipo ?? $current_area->tipo;
-									$datalist_item->config	= $properties->config ?? new StdClass();
+									$datalist_item->config	= $properties->config ?? new stdClass();
 									$datalist_item->config->tool_context = $tool_context;
 								}
 							}
@@ -225,12 +226,11 @@ class menu extends common {
 		});
 		// if my parent is in skip recursion to search if his parent is in skip parents
 		// else the parent is the current area->parent, the last parent in the chain
-		if(!empty($current_parent)){
+		if (!empty($current_parent)) {
 			return self::get_my_parent($current_parent, $skip_parents);
 		}
 
 		$parent = $area->parent ?? null;
-
 
 		return $parent;
 	}//end get_my_parent
@@ -239,38 +239,40 @@ class menu extends common {
 
 	/**
 	* GET_INFO_DATA
-	* get the global information of the current installation.
-	* @return object $info_data
+	* Get the global information of the current installation.
+	* @return object $info_data System information object
 	*/
 	public function get_info_data() : object {
 
 		$info_data = new stdClass();
-			// vars already included in environment
-			$info_data->dedalo_version		= DEDALO_VERSION;
-			$info_data->dedalo_build		= DEDALO_BUILD;
-			$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
-			$info_data->pg_version			= (function() {
-				try {
-					$conn = DBi::_getConnection() ?? false;
-					if ($conn) {
-						return pg_version(DBi::_getConnection())['server'];
-					}
-					return 'Failed!';
-				}catch(Exception $e){
-					return 'Failed with Exception! ' . $e->getMessage();
-				}
-			})();
-			$info_data->php_version			= PHP_VERSION;
-			$info_data->php_version			.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
-			$info_data->memory				= to_string(ini_get('memory_limit'));
-			$info_data->php_sapi_name		= php_sapi_name();
-			// other vars
-			$info_data->entity				= DEDALO_ENTITY;
-			$info_data->php_user			= get_current_user();
-			$info_data->php_session_handler	= ini_get('session.save_handler');
-			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
-			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
-			$info_data->ip_server			= $_SERVER['SERVER_ADDR'] ?? 'unknown';
+		// vars already included in environment
+		$info_data->dedalo_version		= DEDALO_VERSION;
+		$info_data->dedalo_build		= DEDALO_BUILD;
+		$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
+		
+		// Get PostgreSQL version once to avoid duplicate queries
+		$pg_version = null;
+		try {
+			$conn = DBi::_getConnection() ?? false;
+			if ($conn) {
+				$pg_version = pg_version($conn)['server'];
+			}
+		} catch(Exception $e) {
+			$pg_version = 'Failed with Exception! ' . $e->getMessage();
+		}
+		
+		$info_data->pg_version			= $pg_version ?? 'Failed!';
+		$info_data->php_version			= PHP_VERSION;
+		$info_data->php_version			.= ' jit: ' . (int)(opcache_get_status()['jit']['enabled'] ?? false);
+		$info_data->memory				= to_string(ini_get('memory_limit'));
+		$info_data->php_sapi_name		= php_sapi_name();
+		// other vars
+		$info_data->entity				= DEDALO_ENTITY;
+		$info_data->php_user			= get_current_user();
+		$info_data->php_session_handler	= ini_get('session.save_handler');
+		$info_data->pg_db				= $pg_version ?? 'Failed!';
+		$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
+		$info_data->ip_server			= $_SERVER['SERVER_ADDR'] ?? 'unknown';
 
 
 		return $info_data;
@@ -281,13 +283,13 @@ class menu extends common {
 	/**
 	* GET_STRUCTURE_CONTEXT
 	* Resolve menu context dd_object
-	* @param int $permissions = 1
-	* @param bool $add_request_config = false
-	* @return dd_object $dd_object
+	* @param int $permissions Permission level (default: 1)
+	* @param bool $add_request_config Whether to add request config (default: false)
+	* @return dd_object $dd_object Menu context object
 	*/
 	public function get_structure_context( int $permissions=1, bool $add_request_config=false ) : dd_object {
 
-		if(SHOW_DEBUG===true) {
+		if (SHOW_DEBUG === true) {
 			$start_time = start_time();
 		}
 
@@ -332,11 +334,11 @@ class menu extends common {
 			]);
 
 		// Debug
-			if(SHOW_DEBUG===true) {
-				$time = exec_time_unit($start_time,'ms');
+			if (SHOW_DEBUG === true) {
+				$time = exec_time_unit($start_time, 'ms');
 
 				$debug = new stdClass();
-					$debug->exec_time = $time.' ms';
+				$debug->exec_time = $time . ' ms';
 
 				$dd_object->debug = $debug;
 			}
