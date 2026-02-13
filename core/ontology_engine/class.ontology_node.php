@@ -94,7 +94,7 @@ class ontology_node {
 	 *
 	 * @param string $tipo Raw ontology identifier
 	 */
-	function __construct( string $tipo ) {
+	private function __construct( string $tipo ) {
 
 		if( !empty($tipo) ) {
 
@@ -112,7 +112,7 @@ class ontology_node {
 			}
 
 			// Set tipo
-			$this->tipo = $safe_tipo;
+				$this->tipo = $safe_tipo;
 
 			// set data
 			$this->data = new stdClass();
@@ -547,7 +547,7 @@ class ontology_node {
 		}
 
 		$safe_parent = safe_tipo($parent);
-		
+
 		if (!$safe_parent) {
 			$this->data->parent = null;
 			return;
