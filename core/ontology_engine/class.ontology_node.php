@@ -1,29 +1,34 @@
 <?php declare(strict_types=1);
 /**
- * ONTOLOGY_NODE
- * Manages the active and functional ontology node,
- * ontology node is using to interpreted data, schemas, behaviors, etc. in execution time.
- * It manages every node of active ontologies.
- * It uses `dd_ontology` table in DDBB.
- * It's a read only object.
+ * CLASS ONTOLOGY_NODE
+ * Runtime wrapper around a single ontology node (identified by its `tipo`).
  *
- * Note: ontology nodes are not editable nodes.
- * For doing changes into ontology use ../core/ontology/class.ontology.php
+ * Responsibilities:
+ * - Read-only access to ontology node metadata stored in `dd_ontology`
+ * - Resolution helpers (labels, models, parents, children, relations, etc.)
+ * - Small write helpers used by ontology maintenance tools (insert/delete)
+ *
+ * Notes:
+ * - Regular application code should treat ontology nodes as read-only.
+ * - Structural changes to ontology must be done via `class.ontology.php`.
+ *
+ * @package Dedalo
+ * @subpackage Core
  */
 class ontology_node {
 
 	// tipo
-	// Ontology identification of the node
-	// tipo : Typology of Indirect Programing Objects
-	// every node in the ontology has a unique identification.
-	// It allows to define the node properties
-	// tipo use the TLD and one unique id for this TLD as oh1
-	// oh = TLD, top level domain, to identify the name space of the ontology, oh = Oral History
-	// 1 = unique and sequential id.
-	public string $tipo; // string
+	// Ontology identifier of the node.
+	// 'tipo' : Typology of Indirect Programming Objects.
+	// Every node in the ontology has a unique identifier.
+	// It allows to define the node properties.
+	// 'tipo' uses a TLD plus a unique id for this TLD, e.g. 'oh1':
+	//  - 'oh' = TLD (Top Level Domain) / ontology namespace, e.g. Oral History
+	//  - '1'  = unique and sequential id within that TLD
+	public string $tipo;
 
 	// data
-	// An object with the all properties of the ontology node
+	// An object with all properties of the ontology node:
 	//	{
 	//		parent			: "tch188"				string | null
 	//		term			: {"lg-eng": "Object"}	object | null
@@ -37,22 +42,21 @@ class ontology_node {
 	//		is_translatable	: false					boolean
 	//		propiedades		: "{}"					string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
 	//	}
-	// every property has its own column in the `dd_ontology` table
+	// Every property has its own column in the `dd_ontology` table.
 	protected $data;
 
 	// is_loaded_data
-	// A boolean property to identify if the node was loaded from database
+	// Marks if the node data has already been loaded from database.
 	protected bool $is_loaded_data = false;
 
 	// ar_recursive_children_of_this
-	// cache for expensive calculation of recursive children.
+	// Internal cache for expensive recursive-children calculations.
 	protected array $ar_recursive_children_of_this = [];
 
 	// default table
-	// Table used for storage the ontology nodes
-	// This table is used as read only table.
-	// It can be changed on the fly base when DEDALO_RECOVERY_MODE is active
-	// in those cases, the table will be `dd_ontology_recovery` for safe running.
+	// Physical table used to store ontology nodes.
+	// It is treated as read-only during normal application execution.
+	// When DEDALO_RECOVERY_MODE is active, operations may target `dd_ontology_recovery`.
 	public static $table = 'dd_ontology';
 
 	// static cache
@@ -68,9 +72,9 @@ class ontology_node {
 
 	/**
 	 * GET_INSTANCE
-	 * Create the ontology node instance with the ontology identification; tipo
-	 * @param string $tipo
-	 * 	E.g. 'dd156'
+	 * Factory + static cache for ontology nodes.
+	 *
+	 * @param string $tipo Ontology identifier (e.g. 'dd156')
 	 * @return self
 	 */
 	public static function get_instance( string $tipo ) : self {
@@ -86,14 +90,15 @@ class ontology_node {
 
 	/**
 	 * __CONSTRUCT
-	 * Check the ontology identification; tipo
-	 * to ensure that it is a valid and safe before construct the ontology node object
+	 * Validates and normalizes the ontology identifier (`tipo`) before building the node.
+	 *
+	 * @param string $tipo Raw ontology identifier
 	 */
 	function __construct( string $tipo ) {
 
 		if( !empty($tipo) ) {
 
-			// Checks and removes any other things than tld and section_id in the tipo string
+			// Checks and removes any characters other than TLD and section_id in the tipo string
 			$safe_tipo = safe_tipo($tipo);
 
 			if( !$safe_tipo || $safe_tipo !== $tipo ){
@@ -118,8 +123,9 @@ class ontology_node {
 
 	/**
 	 * LOAD_DATA
-	 * Get the row data of the node from table
-	 * @return bool
+	 * Loads the node row from database into `$this->data`.
+	 *
+	 * @return bool True on success, false when tipo is empty or a low-level error occurred.
 	 */
 	public function load_data() : bool {
 
@@ -154,8 +160,9 @@ class ontology_node {
 
 	/**
 	 * GET_DATA
-	 * Get all node data
-	 * @return object|null
+	 * Returns the full ontology node payload as an stdClass.
+	 *
+	 * @return object|null Node data or null when not present in database
 	 */
 	public function get_data() : ?object {
 		$this->load_data();
@@ -167,7 +174,8 @@ class ontology_node {
 
 	/**
 	 * GET_TIPO
-	 * Get the ontology identification; tipo of the instance
+	 * Returns the ontology identifier (`tipo`) for this instance.
+	 *
 	 * @return string|null
 	 */
 	public function get_tipo() : ?string{
@@ -178,8 +186,9 @@ class ontology_node {
 
 	/**
 	 * GET_PARENT
-	 * Get the ontology identification for parent (as parent tipo) of the instance
-	 * @return string|null
+	 * Returns the ontology identifier (`tipo`) of the parent node.
+	 *
+	 * @return string|null Parent tipo or null when this is a root node
 	 */
 	public function get_parent() : ?string {
 		$this->load_data();
@@ -190,7 +199,8 @@ class ontology_node {
 
 	/**
 	 * GET_TERM_DATA
-	 * Get ontology node terms (concept names) in all languages
+	 * Returns the raw `term` object (labels in all languages).
+	 *
 	 * @return object|null
 	 */
 	public function get_term_data() : ?object {
@@ -202,9 +212,15 @@ class ontology_node {
 
 	/**
 	 * GET_TERM
-	 * Get specific term in one language given
-	 * If the calls specify a land that not exist, the resolution fallback to DEDALO_STRUCTURE_LANG
-	 * @return string
+	 * Returns the label (term) for the given language.
+	 *
+	 * If the requested language does not exist and `$fallback` is true:
+	 * - First tries DEDALO_STRUCTURE_LANG
+	 * - Then falls back to the first non-empty available term
+	 *
+	 * @param string $lang     Requested language code
+	 * @param bool   $fallback Enable label fallback strategy
+	 * @return string|null     Term in the resolved language, or null when none available
 	 */
 	public function get_term( string $lang, $fallback=true ) : ?string {
 
@@ -249,13 +265,20 @@ class ontology_node {
 
 	/**
 	 * GET_MODEL
+	 * Resolves the model name for this ontology node.
 	 * Model is an ontology node typology term, it uses a unique term in ontology lang.
 	 * Models are not translatable, they are used to create instances of sections, components, etc.
 	 * Therefore, models are unique names that point to specific code scripts in Dédalo.
-	 * section          ---> class.section.php / section.js / section.css
-	 * component_portal ---> class.component_portal.php / component_portal.js / component_portal.css
+	 * - E.g.
+	 *   - section          ---> class.section.php / section.js / section.css
+	 *   - component_portal ---> class.component_portal.php / component_portal.js / component_portal.css
 	 *
-	 * @return string|null The model name or null if not found.
+	 * Resolution strategy:
+	 * - Directly from column `model` when present
+	 * - Fallback via `model_tipo` + `get_term_by_tipo` when missing
+	 * - Applies legacy model name replacements at the end
+	 *
+	 * @return string|null The model name or null if it cannot be resolved
 	 */
 	public function get_model() : ?string {
 
@@ -345,7 +368,8 @@ class ontology_node {
 
 	/**
 	 * GET_ORDER_NUMBER
-	 * The position of the ontology node with respect to its siblings.
+	 * Returns the position of the ontology node with respect to its siblings.
+	 *
 	 * @return int|null
 	 */
 	public function get_order_number() : ?int {
@@ -357,11 +381,14 @@ class ontology_node {
 
 	/**
 	 * GET_RELATIONS
-	 * Ontology node relations are the connection between nodes in unidirectional way.
-	 * node1 point to node4 and node5;
-	 * "oh1" -> [{"tipo": "tch7"},{"tipo": "numisdata8"}]
-	 * relations are stored as JSONB in table column 'relations'
-	 * @return array|null
+	 * Returns raw relations for this node.
+	 *
+	 * - Relations are unidirectional connections between nodes.
+	 * - Example: node "oh1" points to "tch7" and "numisdata8"
+	 *   - "oh1" -> [{"tipo": "tch7"},{"tipo": "numisdata8"}]
+	 * - Stored as JSONB in column `relations`.
+	 *
+	 * @return array|null Array of relation objects or null when none present
 	 */
 	public function get_relations() : ?array {
 		$this->load_data();
@@ -372,13 +399,16 @@ class ontology_node {
 
 	/**
 	 * GET_TLD
-	 * TLD, Top Level Domain. Ontology name space.
+	 * Returns the TLD (Top Level Domain) / ontology namespace.
 	 * It defines a field of heritage or common parts of the ontology.
-	 * oh = Oral History
-	 * tch = Tangible Cultural Heritage
-	 * ich = Intangible Cultural Heritage
-	 * dd = Dédalo core, defines users, profiles, menu, login, etc.
-	 * rsc = Resources as People, Media (av, image, pdf), etc.
+	 *
+	 * Examples:
+	 * - oh  = Oral History
+	 * - tch = Tangible Cultural Heritage
+	 * - ich = Intangible Cultural Heritage
+	 * - dd  = Dédalo core (users, profiles, menu, login, etc.)
+	 * - rsc = Resources (people, media, images, pdf, etc.)
+	 *
 	 * @return string|null
 	 */
 	public function get_tld() : ?string {
@@ -390,13 +420,15 @@ class ontology_node {
 
 	/**
 	 * GET_PROPERTIES
-	 * Properties are the configuration of the ontology node
-	 * Properties defines:
-	 * 	Behavior : how the node will process its data, how resolve relations (how is connected to other nodes) and represent itself
-	 * 	Options  : properties that can be specifically set in the instances of the nodes.
-	 * 	Layout 	 : How the node will be render
-	 * Return the value of property 'properties', stored as JSONB in table column 'properties'
-	 * Properties value is an object.
+	 * Returns the configuration object for this ontology node.
+	 *
+	 * Properties define:
+	 * - Behavior: how the node processes its data, resolves relations and represents itself
+	 * - Options : per-instance configuration options
+	 * - Layout  : how the node will be rendered
+	 *
+	 * It is stored as JSONB in column `properties` and exposed as an object.
+	 *
 	 * @return object|null
 	 */
 	public function get_properties() : ?object {
@@ -408,11 +440,15 @@ class ontology_node {
 
 	/**
 	 * GET_MODEL_TIPO
-	 * Model tipo is the ontology node identification for the model (the node typology).
-	 * dd6 	---> section
-	 * dd592 ---> component_portal
-	 * The ontology node has a model to identify its own typology, and the model is defined as an ontology node by itself
-	 * Model nodes are identify in ontology with the property: is_model as true
+	 * Returns the ontology identifier (`tipo`) of the model node.
+	 *
+	 * Examples:
+	 * - dd6   ---> section
+	 * - dd592 ---> component_portal
+	 *
+	 * The model itself is represented as a regular ontology node
+	 * and is flagged with the property `is_model = true`.
+	 *
 	 * @return string|null
 	 */
 	public function get_model_tipo() : ?string {
@@ -424,6 +460,7 @@ class ontology_node {
 
 	/**
 	 * GET_IS_MODEL
+	 * Returns whether this ontology node is a model node.
 	 * Identify if the ontology node is a model or not
 	 * The ontology has to main types of nodes, descriptors and models
 	 * both are defined in the same way. Both has an ontology node identification; tipo
@@ -435,16 +472,17 @@ class ontology_node {
 	 */
 	public function get_is_model() : bool {
 		$this->load_data();
-		return $this->data->is_model;
+		return (bool)($this->data->is_model ?? false);
 	}//end get_is_model
 
 
 
 	/**
 	 * GET_IS_TRANSLATABLE
-	 * Identify in the ontology node data is translatable
+	 * Returns whether the node data is translatable.
+	 * Identify if the ontology node data is translatable.
 	 * Used by strings components to store its data with specific language.
-	 * Retrieve from DDBB the column is_translatable
+	 * Retrieves from DDBB the column is_translatable
 	 * @return bool
 	 */
 	public function get_is_translatable() : bool {
@@ -456,9 +494,9 @@ class ontology_node {
 
 	/**
 	 * GET_TRANSLATABLE
-	 * Get current if given tipo is translatable as boolean value
-	 * based on column 'translatable' value
-	 * @param string $tipo
+	 * Helper that answers if a given tipo is translatable.
+	 *
+	 * @param string $tipo Ontology identifier
 	 * @return bool
 	 */
 	public static function get_translatable( string $tipo ) : bool {
@@ -473,7 +511,7 @@ class ontology_node {
 
 	/**
 	 * GET_PROPIEDADES
-	 * Return the value of property 'properties', stored as plain text in table column 'properties'
+	 * Returns the value of property 'properties', stored as plain text in table column 'properties'
 	 * Values expected in 'propiedades' are always JSON. You can obtain raw value (default) or JSON decoded (called with argument 'true')
 	 * @param bool $json_decode = false
 	 * @return mixed $propiedades
@@ -496,13 +534,25 @@ class ontology_node {
 
 
 	/**
-	 * set_parent
-	 * Set given $parent value. e.g. 'oh1'
-	 * @param string|null $parent
+	 * SET_PARENT
+	 * Sets the parent tipo for this node, e.g. 'oh1'.
+	 *
+	 * @param string|null $parent Parent tipo or null for root
 	 */
 	public function set_parent( ?string $parent ) {
 
+		if ($parent === null) {
+			$this->data->parent = null;
+			return;
+		}
+
 		$safe_parent = safe_tipo($parent);
+		
+		if (!$safe_parent) {
+			$this->data->parent = null;
+			return;
+		}
+
 		$this->data->parent = $safe_parent;
 	}//end set_parent
 
@@ -510,7 +560,8 @@ class ontology_node {
 
 	/**
 	 * SET_TERM_DATA
-	 * Set given $term value. e.g. {"lg-eng": "Activity"}
+	 * Sets the `term` object for this node, e.g. {"lg-eng": "Activity"}.
+	 *
 	 * @param object|null $term
 	 */
 	public function set_term_data( ?object $term ) {
@@ -522,7 +573,8 @@ class ontology_node {
 
 	/**
 	 * SET_MODEL
-	 * Set given $model value. e.g. "component_input_text"
+	 * Sets the model name, e.g. "component_input_text".
+	 *
 	 * @param string|null $model
 	 */
 	public function set_model( ?string $model ) {
@@ -534,7 +586,8 @@ class ontology_node {
 
 	/**
 	 * SET_ORDER_NUMBER
-	 * Set given $order_number value. e.g. 5
+	 * Sets the `order_number` value, e.g. 5.
+	 *
 	 * @param int|null $order_number
 	 */
 	public function set_order_number( ?int $order_number ) {
@@ -546,8 +599,9 @@ class ontology_node {
 
 	/**
 	 * SET_RELATIONS
-	 * Set 'relations' e.g. [{"tipo": "actv1"}]
-	 * @param array|null $ar_relations
+	 * Sets the `relations` array, e.g. [{"tipo": "actv1"}].
+	 *
+	 * @param array|null $relations
 	 */
 	public function set_relations( ?array $relations) {
 
@@ -558,7 +612,8 @@ class ontology_node {
 
 	/**
 	 * SET_TLD
-	 * Set given $tld value. e.g. 'tch'
+	 * Sets the TLD value, e.g. 'tch'.
+	 *
 	 * @param string|null $tld
 	 */
 	public function set_tld( ?string $tld ) {
@@ -570,7 +625,8 @@ class ontology_node {
 
 	/**
 	 * SET_PROPERTIES
-	 * Set the value of property 'properties' e.g. {"css": {".wrapper_component": {"grid-column": "span 2"}}}
+	 * Sets the `properties` object, e.g. {"css": {".wrapper_component": {"grid-column": "span 2"}}}.
+	 *
 	 * @param object|null $properties
 	 */
 	public function set_properties( ?object $properties) {
@@ -582,8 +638,9 @@ class ontology_node {
 
 	/**
 	 * SET_MODEL_TIPO
-	 * Set given $model_tipo value. e.g. 'dd6'
-	 * @param string|null $tld
+	 * Sets the `model_tipo` value, e.g. 'dd6'.
+	 *
+	 * @param string|null $model_tipo
 	 */
 	public function set_model_tipo( ?string $model_tipo ) {
 
@@ -594,7 +651,8 @@ class ontology_node {
 
 	/**
 	 * SET_IS_MODEL
-	 * Set given $is_model value e.g. true
+	 * Sets the `is_model` flag, e.g. true.
+	 *
 	 * @param bool $is_model
 	 */
 	public function set_is_model( bool $is_model) {
@@ -606,8 +664,9 @@ class ontology_node {
 
 	/**
 	 * SET_IS_TRANSLATABLE
-	 * Set given $is_translatable value e.g. true
-	 * @param bool $is_model
+	 * Sets the `is_translatable` flag, e.g. true.
+	 *
+	 * @param bool $is_translatable
 	 */
 	public function set_is_translatable( bool $is_translatable ) {
 
@@ -618,8 +677,12 @@ class ontology_node {
 
 	/**
 	 * SET_PROPIEDADES
-	 * Set given $is_translatable value e.g. {"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}
-	 * @param ?string $propiedades
+	 * Sets the legacy `propiedades` column value.
+	 *
+	 * Example:
+	 * {"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}
+	 *
+	 * @param ?string $propiedades JSON-encoded string
 	 */
 	public function set_propiedades( ?string $propiedades ) {
 
@@ -630,11 +693,15 @@ class ontology_node {
 
 	/**
 	 * INSERT
-	 * Create/Update a row into dd_ontology table with ontology data
-	 * The insert will search if tipo exists previously,
-	 * if the tipo was found, delete it and insert as new one
-	 * else insert new one
-	 * @return string|false|null $tipo(tipo)
+	 *
+	 * Persists the current ontology node data to the 'dd_ontology' table.
+	 *
+	 * This method creates or updates the record in the database.
+	 * If 'tipo' is empty or TLD cannot be resolved, the operation returns false.
+	 *
+	 * @return bool True if the record was successfully created or updated, false otherwise.
+	 *
+	 * @see ontology::create_dd_ontology_ontology_section_node
 	 */
 	public function insert() : bool {
 
@@ -652,13 +719,6 @@ class ontology_node {
 			return false;
 		}
 
-		// Attempt delete - don't fail if record doesn't exist
-		// $delete_result = dd_ontology_db_manager::delete($tipo);
-		// if($delete_result===false) {
-		// 	error_log("Warning: Failed to delete existing ontology record for tipo: $tipo");
-		// 	return false;
-		// }
-
 		// Create new record
 		$result = dd_ontology_db_manager::create( $tipo, $values );
 		if($result===false) {
@@ -673,8 +733,10 @@ class ontology_node {
 
 	/**
 	 * DELETE
-	 * Deletes a row from 'dd_ontology' table based on current tipo.
-	 * @return string|false|null $tipo(tipo)
+	 *
+	 * Deletes the record associated with the current 'tipo' from the 'dd_ontology' table.
+	 *
+	 * @return bool True if the record was successfully deleted, false otherwise.
 	 */
 	public function delete() : bool {
 
@@ -699,7 +761,7 @@ class ontology_node {
 	 * @param string $lang = null
 	 * @param bool $from_cache = true
 	 * @param bool $fallback = true
-	 * @return string|null $result
+	 * @return string|null $label
 	 */
 	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
@@ -738,10 +800,11 @@ class ontology_node {
 
 	/**
 	 * GET_MODEL_BY_TIPO
-	 * Get model of the given tipo (ontology node)
-	 * @param string $tipo
-	 * @param bool $from_cache = true
-	 * @return string|null $model
+	 * Returns the model name of the given tipo (ontology node).
+	 *
+	 * @param string $tipo       Ontology identifier
+	 * @param bool   $from_cache Use in-memory cache when true
+	 * @return string|null       Model name or null when not found
 	 */
 	public static function get_model_by_tipo( string $tipo, bool $from_cache=true ) : ?string {
 
@@ -765,8 +828,10 @@ class ontology_node {
 
 	/**
 	 * GET_LEGACY_MODEL_BY_TIPO
-	 * Temporal function to manage transitional models
-	 * Get the model for given tipo (ontology node) without match/change it to v6 valid models.
+	 * Temporal helper to manage transitional models.
+	 *
+	 * Returns the model name for the given tipo without applying v6/v7 replacements.
+	 *
 	 * @param string $tipo
 	 * @return string|null $model_name
 	 */
@@ -782,8 +847,10 @@ class ontology_node {
 
 	/**
 	 * GET_LEGACY_MODEL
-	 * Temporal function to manage transitional models
-	 * Get the model without match/change it to v6 valid models.
+	 * Temporal helper to manage transitional models.
+	 *
+	 * Returns the model name without applying v6/v7 replacements.
+	 *
 	 * @return string|null $model_name
 	 */
 	public function get_legacy_model() : ?string {
@@ -802,10 +869,13 @@ class ontology_node {
 
 	/**
 	 * GET_TIPO_FROM_MODEL
-	 * Resolves tipo searching node model names
-	 * Only one node exist by model name (models are unique)
-	 * @param string $model
-	 * @return string|null $tipo
+	 * Resolves a model name back to its ontology tipo.
+	 *
+	 * - Model names are unique within TLD 'dd'.
+	 * - Searches on model terms (is_model = true).
+	 *
+	 * @param string $model Model name (e.g. 'section')
+	 * @return string|null  Resolved tipo or null when not found
 	 */
 	public static function get_tipo_from_model( string $model ) : ?string {
 
@@ -836,9 +906,9 @@ class ontology_node {
 
 	/**
 	 * GET_AR_CHILDREN_OF_THIS
-	 * Get array of terms (tipo) with parent = $this->tipo
-	 * Its mean that only direct children (first level) will be returned
-	 * @return array $ar_children_of_this
+	 * Returns direct children tipos for this node (first level only).
+	 *
+	 * @return array Array of child tipos
 	 */
 	public function get_ar_children_of_this() : array {
 
@@ -872,10 +942,11 @@ class ontology_node {
 
 	/**
 	 * GET_AR_CHILDREN
-	 * Resolves all terms that have given tipo as parent
-	 * Not discriminates descriptors or models, result includes all children
+	 * Resolves all terms (tipos) that have the given tipo as parent.
+	 *
+	 * Does not distinguish between descriptors and models.
+	 *
 	 * @param string $tipo
-	 * @param string $order_by = 'order_number'
 	 * @return array $ar_children
 	 */
 	public static function get_ar_children( string $tipo ) : array {
@@ -922,14 +993,16 @@ class ontology_node {
 
 	/**
 	 * GET_AR_RECURSIVE_CHILDREN
-	 * Static version of get_ar_recursive_children_of_this.
-	 * Optimized to avoid repetitive array_merge by using a collector array passed by reference.
+	 * Static version of `get_ar_recursive_children_of_this`.
 	 *
-	 * @param string $tipo Starting tipo
-	 * @param bool $is_recursion INTERNAL use
+	 * - Optimized by using a collector array passed by reference.
+	 * - Supports model-based exclusion (skips nodes whose model is in `$ar_exclude_models`).
+	 *
+	 * @param string     $tipo             Starting tipo
+	 * @param bool       $is_recursion     INTERNAL flag
 	 * @param array|null $ar_exclude_models Models to skip (and their children)
-	 * @param array &$ar_resolved Collector array for recursion
-	 * @return array The complete list of recursive children
+	 * @param array|null &$ar_resolved     INTERNAL collector array for recursion
+	 * @return array                       Complete list of recursive children tipos
 	 */
 	public static function get_ar_recursive_children( string $tipo, bool $is_recursion=false, ?array $ar_exclude_models=null, ?array &$ar_resolved=null ) : array {
 
@@ -962,10 +1035,13 @@ class ontology_node {
 
 	/**
 	 * GET_AR_PARENTS_OF_THIS
-	 * Resolves the current term's parents recursively
-	 * @param bool $ksort = true
+	 * Resolves the current term's parents recursively.
+	 *
+	 * Example result (Associative array):
+	 * ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
+	 *
+	 * @param bool $ksort When true, reverses keys order
 	 * @return array $ar_parents_of_this
-	 * Assoc array sample: ["4": "dd1", "3": "dd14", "2": "rsc1", "1": "rsc75", "0": "rsc76"]
 	 */
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
@@ -1009,8 +1085,10 @@ class ontology_node {
 
 	/**
 	 * GET_AR_SIBLINGS_OF_THIS
-	 * Resolves all siblings descriptors of current term
-	 * searching same parent that term parent
+	 * Resolves all sibling descriptors of the current term.
+	 *
+	 * Siblings are nodes that share the same parent.
+	 *
 	 * @return array $ar_siblings_of_this
 	 */
 	public function get_ar_siblings_of_this() : array {
@@ -1038,12 +1116,12 @@ class ontology_node {
 
 	/**
 	 * GET_RELATION_NODES
-	 * @param string $tipo
-	 * @param bool $cache = false
-	 * @param bool $simple = false
-	 * @return array $ar_relations
-	 * JSON_VERSION
-	 * In 'simple' mode it returns only an array with 'tipo'.
+	 * Returns relation nodes for a given tipo.
+	 *
+	 * @param string $tipo   Source ontology identifier
+	 * @param bool   $cache  (Unused, kept for BC)
+	 * @param bool   $simple When true, returns only an array of relation tipos
+	 * @return array         Array of relation objects or tipos (simple mode)
 	 */
 	public static function get_relation_nodes( string $tipo, bool $cache=false, bool $simple=false ) : array {
 
@@ -1087,13 +1165,17 @@ class ontology_node {
 
 	/**
 	 * GET_AR_TIPO_BY_MODEL_AND_RELATION
-	 * Returns the termID of the related term (specify relation) of given model name
-	 * e.g. to know the related terms of model 'filter'.
-	 * @param string $tipo like 'dd20'
-	 * @param string $model_name like 'component_input_text'
-	 * @param string $relation_type like 'related'
-	 * @param bool $search_exact = false
-	 * @return array $result
+	 * Returns tipos of related terms filtered by model name and relation type.
+	 *
+	 * Examples:
+	 * - Find children with a given model
+	 * - Find recursively related terms with a given model
+	 *
+	 * @param string $tipo           Base tipo (e.g. 'dd20')
+	 * @param string $model_name     Model name to match (e.g. 'component_input_text')
+	 * @param string $relation_type  One of: 'children', 'children_recursive', 'related', 'parent'
+	 * @param bool   $search_exact   When true, require exact model name match (no substring)
+	 * @return array                 Array of resolved tipos
 	 */
 	public static function get_ar_tipo_by_model_and_relation( string $tipo, string $model_name, string $relation_type, bool $search_exact=false ) : array {
 
@@ -1166,12 +1248,11 @@ class ontology_node {
 
 	/**
 	 * GET_COLOR
-	 * Get the color defined in properties
-	 * if it's not defined return default gray
+	 * Returns the color defined in node properties or a default gray.
 	 * It is used to set custom styles to component_section_id in some sections
-	 * @param string $section_tiop
-	 * @return string $color
-	 * 	like '#b9b9b9'
+	 *
+	 * @param string $section_tipo
+	 * @return string Color string like '#b9b9b9'
 	 */
 	public static function get_color( string $section_tipo ) : string {
 
