@@ -1,123 +1,129 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DD_OBJECT (ddo)
-* Defines object with normalized properties and checks
+* Normalized definition for Dédalo runtime objects (DDO)
 *
+* Responsibilities:
+* - Hold a standardized set of properties for sections, components, tools, buttons, etc.
+* - Validate and normalize key fields (tipo, section_tipo, parent, lang, type, ...)
+* - Provide a small helper API (getters/setters, comparison utilities)
+*
+* DDOs are intentionally flexible and behave as enriched stdClass objects:
+* - Unknown properties are ignored on construction (and registered as errors)
+* - All known properties are accessible both directly ($ddo->model) and via accessors ($ddo->get_model())
+*
+* Core identity
+* - @property string|null       $type           Logical type: 'section' | 'component' | 'grouper' | 'button' | 'tool' | ...
+* - @property string|null       $tipo           Ontology tipo (e.g. 'oh14')
+* - @property string|array|null $section_tipo   Section tipo or list of tipos (e.g. 'oh1')
+* - @property string|null       $parent         Parent section/portal tipo (e.g. 'oh2')
+* - @property string|null       $parent_grouper Ontology parent tipo
+* - @property string|null       $lang           Data language (e.g. 'lg-eng')
+* - @property string|null       $mode           UI and data mode: 'list', 'edit', 'search', 'choose', ...
+* - @property string|null       $model          Element model name (e.g. 'component_input_text', 'section')
+* - @property string|null       $id             Optional local identifier. Used to identify the DDO inside a DDO_MAP chain.
+* - @property string|null       $info           Optional short information about the DDO. e.g. 'Find(spot) - component_portal'
+* - @property object|array|null $properties     Custom, ontology‑driven configuration. Used to sent or overwrite the Ontology properties.
+* - @property int|null          $permissions    Permission level. 0 = read only, 1 = read and write, 2 = read and write and delete, 3 = read and write and delete and create
+*
+* Labels & translation
+* - @property string|null $label               Main label. e.g. 'Title'
+* - @property array|null  $labels              Alternative labels. e.g. ['Title']
+* - @property bool|null   $translatable        Whether the element is translatable. e.g. component_portal is false, but component_input_text probably is true
+*
+* Composition / context
+* - @property array|null  $tools               Array of tool DDOs (minimal context of the tool)
+* - @property array|null  $buttons             Array of button DDOs (minimal context of the button)
+* - @property object|null $css                 Arbitrary CSS options
+* - @property array|null  $target_sections     Target section definitions (e.g. [{'tipo':'dd125','label':'Projects']
+* - @property array|null  $request_config      Request configuration metadata (e.g. [{'show': {'ddo_map': [...]}}]
+* - @property array|null  $columns_map         Column definitions for tabular views
+* - @property string|null $fields_separator    Fields separator. e.g. ", "
+* - @property string|null $records_separator   Records separator. e.g. " | "
+* - @property string|null $legacy_model        Legacy model. e.g. "component_autocomplete_hi"
+* - @property bool|null   $autoload            Autoload. e.g. true
+* - @property string|null $role                Role. e.g. "main_component" (used by tools)
+* - @property object|null $section_map         Section map. (used by tools) e.g. {"thesaurus": {"term": "hierarchy25", "model": "hierarchy27", "order": "hierarchy48", "parent": "hierarchy36", "is_indexable": "hierarchy24", "is_descriptor": "hierarchy23"}}
+* - @property string|null $color               Color. e.g. "#f1f1f1" (used by sections)
+* - @property string|null $matrix_table        Matrix table. e.g. "matrix_list"
+* - @property string|null $data_fn             Data function. e.g. "get_calculation_data" (It is used in "mdcat2431" for the function that retrieves DDO data.)
+*
+* Execution and parsing
+* - @property string|null $fn                  Generic function name to be invoked in the execution context (e.g. custom callbacks)
+* - @property string|null $diffusion_node_tipo Diffusion node tipo used to bind the DDO to a specific diffusion configuration/node
+* - @property object|null $options			   Generic object options container tu pass custom vars across DDOs
+* - @property object|null $parser_args		   Diffusion parser arguments (used by diffusion)
+*
+* Runtime
+* - @property array|null  $errors              Collected error messages
 */
 class dd_object extends stdClass {
 
-
-
-	// properties
-		// typo : "ddo"
-		public $typo = 'ddo';
-		/*
-		// type					: string|null // e.g. "component"  (section | component | grouper | button | tool ..)
-		// tipo					: string|null // e.g. 'oh14',
-		// section_tipo			: string|null // e.g. 'oh1',
-		// parent				: string|null // e.g. 'oh2', // caller section / portal  tipo
-		// parent_grouper		: string|null // e.g. 'oh7', // structure parent
-		// lang					: string|null // e.g. 'lg-eng',
-		// mode					: string|null // e.g. "list",
-		// model				: string|null // e.g. 'component_input_text',
-		// id 					: string|null // optional parameter in order to identify current DDO inside a DDO_MAP chain. It is used to referent it in process as parser or widgets data.
-		// info 				: string|null // optional short information about the ddo. e.g. 'Find(spot) - component_portal'
-		// properties			: object // generic object to define custom properties of the DDO. Used to sent or overwrites the Ontology properties.
-		// permissions			: int // e.g. 1
-		// label				: string|null // e.g. 'Title'
-		// labels				: array // e.g. ['Title']
-		// translatable			: bool
-		// tools				: array // array of tools dd_objects (context)
-		// buttons				: array // array of buttons dd_objects (context)
-		// css					: object
-		// target_sections		: array // e.g. [{'tipo':'dd125','label':'Projects']
-		// request_config		: array
-		// columns_map			: array // array of objects as [{"id": "e", "label": "numisdata1530","width": "5rem"}]
-		// column_id 			: string // id value that point to its column inside columns_map items e.g. 'e'
-		// view					: string|null like 'table'
-		// children_view		: string like "text"
-		// name					: string like 'tool_lang' // Used by tools
-		// description			: string like 'Description of tool x' // Used by tools
-		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
-		// developer			: string like 'Dédalo team' // Used by tools
-		// show_in_inspector	: bool // Used by tools
-		// show_in_component	: bool // Used by tools
-		// config				: object // Used by tools and services
-		// sortable				: bool // Used by components (columns)
-		// fields_separator		: string|null // e.g. ", " // used by portal to join different fields
-		// records_separator	: string|null // e.g. " | " // used by portal to join different records (rows)
-		// legacy_model			: string|null // e.g. "component_autocomplete_hi"
-		// autoload 			: bool // Used by tools
-		// role 				: string|null // 'main_component' // Used by tools
-		// section_map 			: object // e.g. {
-										"thesaurus": {
-											"term": "hierarchy25",
-											"model": "hierarchy27",
-											"order": "hierarchy48",
-											"parent": "hierarchy36",
-											"is_indexable": "hierarchy24",
-											"is_descriptor": "hierarchy23"
-										}
-									} Used by tools
-		// color 				: string|null // e.g. "#f1f1f1"
-		// matrix_table 		: string|null // e.g. 'matrix_dd'
-		// data_fn 				: string|null // e.g. 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
-
-
-		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
-		// array toolbar_buttons
-		// bool value_with_parents
-		// array search_operators_info
-		// string search_options_title
-		// string target_section_tipo
-
-		// debug				: object
-		*/
+	/**
+	 * Identifies this structure as a DDO.
+	 * @var string
+	 */
+	public $typo = 'ddo';
 
 
 
-	// ar_type_allowed
-		public static $ar_type_allowed = [
-			'area',
-			'section',
-			'relation_list',
-			'component',
-			'grouper',
-			'button',
-			'tm',
-			'widget',
-			'install',
-			'login',
-			'menu',
-			'tool',
-			'detail', // used by time_machine_list, relation_list, component_history_list
-			'dd_grid'
-		];
+	/**
+	 * Allowed values for the logical DDO type.
+	 * This list is enforced by set_type() and is the canonical set of types
+	 * used across Dédalo (areas, sections, components, tools, etc.).
+	 *
+	 * @var array<int,string>
+	 */
+	public static $ar_type_allowed = [
+		'area',
+		'section',
+		'relation_list',
+		'component',
+		'grouper',
+		'button',
+		'tm',
+		'widget',
+		'install',
+		'login',
+		'menu',
+		'tool',
+		'detail', // used by time_machine_list, relation_list, component_history_list
+		'dd_grid'
+	];
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object|null $data = null
+	* Build a new DDO from an optional stdClass‑like data object.
+	*
+	* Behavior:
+	* - When $data is null, an empty DDO is created.
+	* - When $data is not an object, an error is logged and stored in $this->errors.
+	* - Known properties are assigned through their corresponding set_* methods.
+	* - Unknown properties are ignored and registered as errors.
+	* - If a model is present, the logical type is inferred via resolve_type_from_model() and set_type().
+	*
+	* @param object|null $data Raw DDO data (typically decoded JSON/stdClass) or null for an empty DDO
 	* @return void
 	*/
 	public function __construct( ?object $data=null ) {
 
-		// null case
-			if (is_null($data)) {
+		// null case: allow empty DDO construction
+			if ($data === null) {
 				return;
 			}
 
-		// Nothing to do on construct (for now)
+		// enforce object input
 			if (!is_object($data)) {
 
 				$msg = " wrong data format. object expected. Given type: ".gettype($data);
-				debug_log(__METHOD__
-					. $msg
-					.' data: ' . to_string($data)
-					, logger::ERROR
+				debug_log(
+					__METHOD__ . $msg . ' data: ' . to_string($data),
+					logger::ERROR
 				);
-				if(SHOW_DEBUG===true) {
+
+				if (SHOW_DEBUG === true) {
 					dump(debug_backtrace()[0], $msg);
 				}
 
@@ -125,81 +131,36 @@ class dd_object extends stdClass {
 				return;
 			}
 
-		// set properties
-
-		// set typo always
-			// $this->typo = 'ddo';
-
-		// set model in first time
-			if(isset($data->model)) {
+		// set model first (some setters may rely on it)
+			if (isset($data->model)) {
 				$this->set_model($data->model);
 			}
 
-		// set all properties
+		// set all known properties via their setters
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
-				if (method_exists($this, $method)) {
 
+				if (method_exists($this, $method)) {
 					$set_value = $this->{$method}($value);
-					if($set_value===false && empty($this->errors)) {
+					if ($set_value === false && empty($this->errors)) {
 						$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
 					}
-
 				}else{
-
-					debug_log(__METHOD__
+					debug_log(
+						__METHOD__
 						.' Ignored received property: '.$key.' not defined as set method.'. PHP_EOL
-						.' data: ' . to_string($data)
-						, logger::ERROR
+						.' data: ' . to_string($data),
+						logger::ERROR
 					);
 					$this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
 				}
 			}
 
-		// resolve and set type
-			$model = $this->model ?? '';
-			switch (true) {
-				case strpos($model, 'component_')===0 || strpos($model, 'field_')===0 :
-					$type = 'component';
-					break;
-				case $model==='section' :
-					$type = 'section';
-					break;
-				case $model==='relation_list' :
-					$type = 'relation_list';
-					break;
-				case in_array($model, section::get_ar_grouper_models()) :
-					$type = 'grouper';
-					break;
-				case strpos($model, 'button')===0 :
-					$type = 'button';
-					break;
-				case strpos($model, 'area')===0 :
-					$type = 'area';
-					break;
-				case $model==='login' :
-					$type = 'login';
-					break;
-				case $model==='menu' :
-					$type = 'menu';
-					break;
-				case $model==='install' :
-					$type = 'install';
-					break;
-				case $model==='dd_grid' :
-					$type = 'dd_grid';
-					break;
-				case strpos($model, 'tool_')===0 :
-					$type = 'tool';
-					break;
-				default:
-					debug_log(__METHOD__
-						. " Error. Undefined type from model: " . PHP_EOL
-						. ' model: ' . to_string($model)
-						, logger::ERROR
-					);
-					return;
-					break;
+		// resolve and set type from model
+			$type = $this->resolve_type_from_model($this->model ?? null);
+			if ($type === null) {
+				// type could not be inferred from model, constructor stops here
+				return;
 			}
 			$this->set_type($type);
 	}//end __construct
@@ -240,7 +201,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_TYPE
 	* Return property value
-	* @return int|null $this->type
+	* @return string|null $this->type
 	*/
 	public function get_type() : ?string {
 
@@ -285,7 +246,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_TIPO
 	* Return property value
-	* @return int|null $this->tipo
+	* @return string|null $this->tipo
 	*/
 	public function get_tipo() : ?string {
 
@@ -404,8 +365,8 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_LANG
-	* @param string $value
-	* @return bool|null
+	* @param string|null $value
+	* @return bool
 	*/
 	public function set_lang(?string $value) : bool {
 
@@ -511,7 +472,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_ID
 	* Return property value
-	* @return string|null $this->model
+	* @return string|null $this->id
 	*/
 	public function get_id() : ?string {
 
@@ -537,7 +498,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_INFO
 	* Return property value
-	* @return string|null $this->model
+	* @return string|null $this->info
 	*/
 	public function get_info() : ?string {
 
@@ -1354,7 +1315,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_COLOR
 	* Return property value
-	* @return string|null $this->label
+	* @return string|null $this->color
 	*/
 	public function get_color() : ?string {
 
@@ -1380,7 +1341,7 @@ class dd_object extends stdClass {
 	/**
 	* GET_MATRIX_TABLE
 	* Return property value
-	* @return string|null $this->label
+	* @return string|null $this->matrix_table
 	*/
 	public function get_matrix_table() : ?string {
 
@@ -1519,14 +1480,91 @@ class dd_object extends stdClass {
 
 
 
+	/**
+	* HAS_ERRORS
+	* Helper to know if constructor or setters have registered any error.
+	* @return bool
+	*/
+	public function has_errors() : bool {
+
+		return !empty($this->errors);
+	}//end has_errors
+
+
+
+	/**
+	* GET_ERRORS
+	* Returns collected error messages (if any) as a flat array of strings
+	* @return array
+	*/
+	public function get_errors() : array {
+
+		return $this->errors ?? [];
+	}//end get_errors
+
+
+
+	/**
+	* RESOLVE_TYPE_FROM_MODEL
+	* Internal helper to infer "type" from "model"
+	* @param string|null $model
+	* @return string|null
+	*/
+	private function resolve_type_from_model(?string $model) : ?string {
+
+		$model = $model ?? '';
+
+		switch (true) {
+			case strpos($model, 'component_')===0 || strpos($model, 'field_')===0 :
+				return 'component';
+			case $model==='section' :
+				return 'section';
+			case $model==='relation_list' :
+				return 'relation_list';
+			case in_array($model, section::get_ar_grouper_models()) :
+				return 'grouper';
+			case strpos($model, 'button')===0 :
+				return 'button';
+			case strpos($model, 'area')===0 :
+				return 'area';
+			case $model==='login' :
+				return 'login';
+			case $model==='menu' :
+				return 'menu';
+			case $model==='install' :
+				return 'install';
+			case $model==='dd_grid' :
+				return 'dd_grid';
+			case strpos($model, 'tool_')===0 :
+				return 'tool';
+			default:
+				debug_log(
+					__METHOD__
+					. " Error. Undefined type from model: " . PHP_EOL
+					. ' model: ' . to_string($model),
+					logger::ERROR
+				);
+
+				return null;
+		}
+	}//end resolve_type_from_model
+
+
+
 
 	/**
 	* COMPARE_DDO
-	* @param object $ddo1
-	* @param object $ddo2
-	* @param array $ar_properties = ['model','typo','type','tipo','section_tipo','mode','lang','parent']
-	* @param array $ar_exclude_properties = []
-	* @return bool $equal
+	* Compare two DDO‑like objects property by property.
+	*
+	* When $ar_properties is empty, the method builds the comparison set automatically
+	* from all properties present in either DDO, excluding any listed in $ar_exclude_properties.
+	* For the special case 'section_id' comparison uses loose comparison (==), the rest uses strict (===).
+	*
+	* @param object $ddo1                 First DDO to compare
+	* @param object $ddo2                 Second DDO to compare
+	* @param array  $ar_properties        List of properties to compare (empty = auto‑detect)
+	* @param array  $ar_exclude_properties Properties to exclude when auto‑detecting
+	* @return bool                        TRUE when all compared properties match, FALSE otherwise
 	*/
 	public static function compare_ddo(object $ddo1, object $ddo2, array $ar_properties=['model','typo','type','tipo','section_tipo','mode','lang','parent'], array $ar_exclude_properties=[]) : bool {
 
@@ -1598,10 +1636,12 @@ class dd_object extends stdClass {
 
 	/**
 	* IN_ARRAY_DDO
-	* @param object $ddo
-	* @param array $ar_ddo
-	* @param array $ar_properties = ['model','typo','type','tipo','section_tipo','mode','lang','parent']
-	* @return bool $found
+	* Search a DDO‑like object inside an array of DDOs using compare_ddo().
+	*
+	* @param object $ddo           DDO instance to search
+	* @param array  $ar_ddo        Array of DDOs to inspect
+	* @param array  $ar_properties Properties to use for comparison (passed to compare_ddo())
+	* @return bool                 TRUE if a matching DDO is found, FALSE otherwise
 	*/
 	public static function in_array_ddo(object $ddo, array $ar_ddo, array $ar_properties=['model','typo','type','tipo','section_tipo','mode','lang','parent']) : bool {
 
@@ -1623,10 +1663,13 @@ class dd_object extends stdClass {
 
 	/**
 	* GET METHODS
-	* By accessors. When property exits, return property value,
-	* else return null
-	* @param string $name
-	* @return mixed
+	* Magic accessor used as a safe fallback for dynamic properties.
+	*
+	* When the requested property exists, its value is returned; otherwise null is returned.
+	* This keeps DDO usage ergonomic even when properties are added dynamically.
+	*
+	* @param string $name Property name
+	* @return mixed       Property value or null when undefined
 	*/
 	final public function __get(string $name) {
 
