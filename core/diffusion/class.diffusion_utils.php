@@ -448,7 +448,7 @@ class diffusion_utils {
 
 			if($current_name===$diffusion_domain_name) {
 
-				// NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
+				// New mode (faster): By 'class_name' property. Avoids the need to use the model when it is not a standard Dédalo model
 				$ar_children = ontology_node::get_ar_children($current_tipo);
 				foreach ($ar_children as $current_children) {
 
