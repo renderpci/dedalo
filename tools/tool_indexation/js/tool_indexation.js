@@ -46,7 +46,7 @@ export const tool_indexation = function () {
 	this.title_instance
 
 	return true
-}//end page
+}//end tool_indexation
 
 
 
@@ -137,9 +137,7 @@ tool_indexation.prototype.init = async function(options) {
 					}
 
 				// indexation_note_container . Clean
-					while (self.indexation_note.lastChild) {
-						self.indexation_note.removeChild(self.indexation_note.lastChild)
-					}
+					self.indexation_note.replaceChildren()
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
@@ -182,9 +180,7 @@ tool_indexation.prototype.init = async function(options) {
 						if (tag_note_node) {
 							// container. Get and clean
 							const container	= self.indexation_note
-							while (container.lastChild) {
-								container.removeChild(container.lastChild)
-							}
+							container.replaceChildren()
 							container.appendChild(tag_note_node)
 						}
 					})
@@ -215,7 +211,17 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 		// transcription_component. fix transcription_component for convenience
 			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='transcription_component')
+			if (!transcription_component_ddo) {
+				self.error = "Invalid transcription_component_ddo"
+				console.warn(self.error, 'options:', options);
+				return false
+			}
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+			if (!self.transcription_component) {
+				self.error = "transcription_component not found"
+				console.warn(self.error);
+				return false
+			}
 			// force change lang if related_component_lang is defined (original lang)
 			if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
 				if (self.transcription_component.lang !== self.transcription_component.context.options.related_component_lang) {
@@ -230,36 +236,65 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 		// indexing_component. fix indexing_component for convenience
 			const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='indexing_component')
+			if (!indexing_component_ddo) {
+				self.error = "Invalid indexing_component_ddo"
+				console.warn(self.error);
+				return false
+			}
 			self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
+			if (!self.indexing_component) {
+				self.error = "indexing_component not found"
+				console.warn(self.error);
+				return false
+			}
 			// show_interface
 			self.indexing_component.show_interface.tools = false
 
 		// media_component. fix media_component for convenience
 			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='media_component')
-			self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+			if (!media_component_ddo) {
+				self.error = "Invalid media_component_ddo"
+				console.warn(self.error);
+				return false
+			}
+			self.media_component			= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+			if (!self.media_component) {
+				self.error = "media_component not found"
+				console.warn(self.error);
+				return false
+			}
 			// show_interface
 			self.media_component.show_interface.tools = false
 
 		// people_section. fix people_section for convenience
 			const people_section_ddo = self.tool_config.ddo_map.find(el => el.role==='people_section')
-			if (people_section_ddo) {
-				self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
-				// set instance in thesaurus mode 'relation'
-				self.people_section.linker = self.indexing_component
-			}else{
-				console.error('people_section_ddo is not defined')
-				if(SHOW_DEBUG===true) {
-					event_manager.publish('notification', {
-						msg			: 'Warning: people_section_ddo is not defined',
-						type		: 'error',
-						remove_time	: 10000
-					})
-				}
+			if (!people_section_ddo) {
+				self.error = "Invalid people_section_ddo"
+				console.warn(self.error);
+				return false
 			}
+			self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
+			if (!self.people_section) {
+				self.error = "people_section not found"
+				console.warn(self.error);
+				return false
+			}
+			// set instance in thesaurus mode 'relation'
+			self.people_section.linker = self.indexing_component
 
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus');
+			if (!area_thesaurus_ddo) {
+				self.error = "Invalid area_thesaurus_ddo"
+				console.warn(self.error);
+				return false
+			}
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo);
+			if (!self.area_thesaurus) {
+				self.error = "area_thesaurus not found"
+				console.warn(self.error);
+				return false
+			}
 			// set instance in thesaurus mode 'relation'
 			self.area_thesaurus.context.thesaurus_mode	= 'relation';
 			self.area_thesaurus.caller					= self;
@@ -483,81 +518,79 @@ tool_indexation.prototype.update_active_values = function(values) {
 * @param object button_obj
 * @return promise
 */
-tool_indexation.prototype.delete_tag = function(tag_id) {
+tool_indexation.prototype.delete_tag = async function(tag_id) {
 
 	const self = this
 
 	// Confirm action
 		if( !confirm( `${self.get_tool_label('delete_tag') || 'Delete tag?'}\nID: ${tag_id}`) ) {
-			return Promise.resolve(false)
+			return false
 		}
 		if( !confirm(
 			`${get_label.warning || 'Warning!'} !! ${self.get_tool_label('warning_delete_tag') || 'It will delete the selected tag in all languages and all the relationships and indexing associated with it'}`)
 			) {
-			return Promise.resolve(false)
+			return false
 		}
 
-	// call to the API, fetch data and get response
-	return new Promise(async function(resolve){
-
-		// delete tag in all langs (component_text_area)
-			const api_response_delete_tag = self.transcription_component.delete_tag(
-				tag_id,
-				'index'
+	// delete tag in all langs (component_text_area)
+		const api_response_delete_tag = await self.transcription_component.delete_tag(
+			tag_id,
+			'index'
+		)
+		.catch(error => {
+			console.error('ERROR: delete_tag found errors')
+			console.error(error.message)
+			return {result: false, msg: [error.message]}
+		});
+		// transcription_component response
+		if (api_response_delete_tag.result===false) {
+			// error case
+			const msg = api_response_delete_tag.msg
+				? api_response_delete_tag.msg.join('\n')
+				: 'Unknown error'
+			alert(
+				(self.get_tool_label('error_delete_tag') || 'Error on delete tag') + '\n' + msg
 			)
-			.catch(error => {
-				console.error('ERROR: delete_tag found errors')
-				console.error(error.message)
-			});
-			// transcription_component response
-			if (api_response_delete_tag.result===false) {
-				// error case
-				const msg = api_response_delete_tag.msg
-					? api_response_delete_tag.msg.join('\n')
-					: 'Unknown error'
-				alert(
-					(self.get_tool_label('error_delete_tag') || 'Error on delete tag') + '\n' + msg
-				)
-			}
+		}
 
-		// delete_locator (component_portal)
-			const api_response_delete_locator = self.indexing_component.delete_locator(
-				// object locator
-				{
-					tag_id	: tag_id,
-					type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
-				},
-				// array ar_properties
-				['tag_id','type']
+	// delete_locator (component_portal)
+		const api_response_delete_locator = await self.indexing_component.delete_locator(
+			// object locator
+			{
+				tag_id	: tag_id,
+				type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
+			},
+			// array ar_properties
+			['tag_id','type']
+		)
+		.catch(error => {
+			console.error('ERROR: delete_locator found errors')
+			console.error(error.message)
+			return {result: false, msg: [error.message]}
+		});
+		// indexing_component response
+		if (api_response_delete_locator.result===false) {
+			// error case
+			const msg = api_response_delete_locator.msg
+				? api_response_delete_locator.msg.join('\n')
+				: 'Unknown error'
+			alert(
+				(self.get_tool_label('error_delete_locator') || 'Error on delete locator') + '\n' + msg
 			)
-			.catch(error => {
-				console.error('ERROR: delete_locator found errors')
-				console.error(error.message)
-			});
-			// indexing_component response
-			if (api_response_delete_locator.result===false) {
-				// error case
-				const msg = api_response_delete_locator.msg
-					? api_response_delete_locator.msg.join('\n')
-					: 'Unknown error'
-				alert(
-					(self.get_tool_label('error_delete_locator') || 'Error on delete locator') + '\n' + msg
-				)
-			}else{
-				// indexing_component. Remember force clean full data and datum before refresh
-				self.indexing_component.data	= null
-				self.indexing_component.datum	= null
-				self.indexing_component.refresh()
-			}
+		}else{
+			// indexing_component. Remember force clean full data and datum before refresh
+			self.indexing_component.data	= null
+			self.indexing_component.datum	= null
+			self.indexing_component.refresh()
+		}
 
-		// response
-			const response = {
-				'delete_tag'		: api_response_delete_tag,
-				'delete_locator'	: api_response_delete_locator
-			}
+	// response
+		const response = {
+			'delete_tag'		: api_response_delete_tag,
+			'delete_locator'	: api_response_delete_locator
+		}
 
-		resolve(response)
-	})
+	return response
 }//end delete_tag
 
 
