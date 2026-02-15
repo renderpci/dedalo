@@ -49,38 +49,41 @@
 		define('DEDALO_LIB',	'lib');
 
 	// config
-		define('DEDALO_CONFIG_PATH',	DEDALO_ROOT_PATH .'/'. DEDALO_CONFIG );
+		define('DEDALO_CONFIG_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_CONFIG );
 
 	// core
-		define('DEDALO_CORE_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_CORE);
-		define('DEDALO_CORE_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_CORE );
+		define('DEDALO_CORE_PATH',			DEDALO_ROOT_PATH .'/'. DEDALO_CORE);
+		define('DEDALO_CORE_URL',			DEDALO_ROOT_WEB .'/'. DEDALO_CORE );
 
 	// shared
-		define('DEDALO_SHARED_PATH',	DEDALO_ROOT_PATH .'/'. DEDALO_SHARED);
-		define('DEDALO_SHARED_URL',		DEDALO_ROOT_WEB  .'/'. DEDALO_SHARED );
+		define('DEDALO_SHARED_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_SHARED);
+		define('DEDALO_SHARED_URL',			DEDALO_ROOT_WEB  .'/'. DEDALO_SHARED );
 
 	// tools
-		define('DEDALO_TOOLS_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_TOOLS);
-		define('DEDALO_TOOLS_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_TOOLS );
+		define('DEDALO_TOOLS_PATH',			DEDALO_ROOT_PATH .'/'. DEDALO_TOOLS);
+		define('DEDALO_TOOLS_URL',			DEDALO_ROOT_WEB .'/'. DEDALO_TOOLS );
 
 	// lib
-		define('DEDALO_LIB_PATH',		DEDALO_ROOT_PATH .'/'. DEDALO_LIB);
-		define('DEDALO_LIB_URL',		DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
+		define('DEDALO_LIB_PATH',			DEDALO_ROOT_PATH .'/'. DEDALO_LIB);
+		define('DEDALO_LIB_URL',			DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
 
 	// widgets
-		define('DEDALO_WIDGETS_PATH',	DEDALO_CORE_PATH . '/widgets');
-		define('DEDALO_WIDGETS_URL',	DEDALO_CORE_URL . '/widgets');
+		define('DEDALO_WIDGETS_PATH',		DEDALO_CORE_PATH . '/widgets');
+		define('DEDALO_WIDGETS_URL',		DEDALO_CORE_URL . '/widgets');
 
 	// extras
-		define('DEDALO_EXTRAS_PATH',	DEDALO_CORE_PATH . '/extras');
-		define('DEDALO_EXTRAS_URL',		DEDALO_CORE_URL . '/extras');
+		define('DEDALO_EXTRAS_PATH',		DEDALO_CORE_PATH . '/extras');
+		define('DEDALO_EXTRAS_URL',			DEDALO_CORE_URL . '/extras');
 
 	// install
-		define('DEDALO_INSTALL_PATH',	DEDALO_ROOT_PATH . '/install');
-		define('DEDALO_INSTALL_URL',	DEDALO_ROOT_WEB . '/install');
+		define('DEDALO_INSTALL_PATH',		DEDALO_ROOT_PATH . '/install');
+		define('DEDALO_INSTALL_URL',		DEDALO_ROOT_WEB . '/install');
 
 	// Work API
-		define('DEDALO_API_URL',		DEDALO_CORE_URL . '/api/v1/json/');
+		define('DEDALO_API_URL',			DEDALO_CORE_URL . '/api/v1/json/');
+
+	// Diffusion engine API
+		define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
 
 // Dedalo information
 	// string to use in Dédalo cryptography

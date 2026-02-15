@@ -11,7 +11,7 @@
 *	{
 *		"diffusion":{
 *			"parser":[
-*				"/core/diffusion/parser/class.parser_text.php"
+*				"/diffusion/parser/class.parser_text.php"
 *			]
 *		}
 *	}

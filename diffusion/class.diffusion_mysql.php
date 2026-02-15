@@ -1,9 +1,9 @@
 <?php
 // Loads parent class diffusion_sql
-include_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_sql.php');
+include_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_sql.php');
 /**
 * CLASS DIFFUSION_MYSQL
-* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
+* @deprecated 6.0.0 Use dd_diffusion_api and diffusion_utils instead.
 * Specific MySQL commands to the publication and the transfer of data from Dédalo
 * to diffusion databases based on conventional MYSQL models
 */
