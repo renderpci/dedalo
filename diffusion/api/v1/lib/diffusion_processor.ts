@@ -375,6 +375,8 @@ function sanitize_column_name(term: string): string {
 		.replace(/^_|_$/g, '');
 }
 
+
+
 /**
  * APPLY_PARSER_CHAIN
  * Applies a sequence of parsers to the data.
