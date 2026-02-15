@@ -165,13 +165,16 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 						continue;
 					}
 
-					// Count records in this chunk and update actual_total
-					const chunk_records = tables.reduce((sum, t) => sum + t.records.length, 0);
-					actual_total += chunk_records;
+					// Count MAIN source records in this chunk (including deletions)
+					// We assume the first datum group corresponds to the main section
+					const main_chunk_count = (php_response.datum && php_response.datum.length > 0)
+						? php_response.datum[0].data.length
+						: 0;
+					
+					global_counter += main_chunk_count;
 
-					// Update progress store total if we now know more
-					if (actual_total > estimated_total) {
-						// Re-create with better total estimate (store overwrite)
+					// Update progress store total if we exceed estimate
+					if (global_counter > estimated_total) {
 						update_progress(process_id, {
 							counter: global_counter,
 							msg:     'Processing records',
@@ -185,8 +188,7 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 
 						try {
 							const affected = await insert_table_data(table);
-							global_counter += table.records.length;
-
+							
 							// Accumulate per-table results
 							const prev = table_results_map.get(table.table_name) ?? 0;
 							table_results_map.set(table.table_name, prev + affected);
@@ -212,7 +214,6 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 							const err_msg = error instanceof Error ? error.message : String(error);
 							console.error(`[diffuse] Error inserting into "${table.table_name}":`, error);
 
-							global_counter += table.records.length;
 							errors.push(`Table "${table.table_name}": ${err_msg}`);
 
 							const prev = table_results_map.get(table.table_name) ?? 0;
