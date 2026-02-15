@@ -41,38 +41,6 @@ class tool_diffusion extends tool_common {
 
 
 	/**
-	 * GET_DIFFUSION_INFO
-	 * Collects basic tool info needed to create user options
-	 * Called on tool build by client to retrieve available diffusion targets
-	 *
-	 * This method:
-	 * - Retrieves diffusion map from ontology
-	 * - Filters excluded diffusion elements
-	 * - Validates diffusion groups and elements
-	 * - Collects table/field information for each target
-	 * - Returns configuration for UI rendering
-	 *
-	 * @param object $options Configuration object with:
-	 *   - section_tipo: string Section type identifier - REQUIRED
-	 *
-	 * @return object Response object with:
-	 *   - result: object|false Diffusion info object or false on error:
-	 *     - resolve_levels: int Number of reference resolution levels
-	 *     - skip_publication_state_check: int Whether to skip publication state check
-	 *     - diffusion_map: array Filtered diffusion map
-	 *     - ar_data: array Table and field information for each diffusion target
-	 *   - msg: string Status message
-	 *   - errors: array Error messages if any
-	 *
-	 * @throws Exception If diffusion map retrieval fails
-	 */
-	public static function get_diffusion_info(object $options) : object {
-		return diffusion_utils::get_diffusion_info($options);
-	}//end get_diffusion_info
-
-
-
-	/**
 	 * EXPORT
 	 * Redirects to export_list method for processing diffusion
 	 * Main entry point for diffusion operations from the client
@@ -224,7 +192,7 @@ class tool_diffusion extends tool_common {
 			$diffusion_class_name = $obj_diffusion_element->class_name;
 
 			// include class file once
-			require_once DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php';
+			require_once DEDALO_DIFFUSION_PATH . '/class.'.$diffusion_class_name.'.php';
 
 		// export_record
 			try{

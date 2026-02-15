@@ -1394,28 +1394,28 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_DIFFUSION_NODE_TIPO
+	* SET_DIFFUSION_TIPO
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_diffusion_node_tipo(?string $value) : bool {
+	public function set_diffusion_tipo(?string $value) : bool {
 
-		$this->diffusion_node_tipo = $value;
+		$this->diffusion_tipo = $value;
 
 		return true;
-	}//end set_diffusion_node_tipo
+	}//end set_diffusion_tipo
 
 
 
 	/**
-	* GET_DIFFUSION_NODE_TIPO
+	* GET_DIFFUSION_TIPO
 	* Return property value
-	* @return string|null $this->diffusion_node_tipo
+	* @return string|null $this->diffusion_tipo
 	*/
-	public function get_diffusion_node_tipo() : ?string {
+	public function get_diffusion_tipo() : ?string {
 
-		return $this->diffusion_node_tipo ?? null;
-	}//end get_diffusion_node_tipo
+		return $this->diffusion_tipo ?? null;
+	}//end get_diffusion_tipo
 
 
 

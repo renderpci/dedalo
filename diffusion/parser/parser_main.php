@@ -8,7 +8,7 @@
 * {
 * 	"diffusion":{
 * 		"parser":[
-* 			"/core/diffusion/parser/parser_main.php"
+* 			"/diffusion/parser/parser_main.php"
 * 		]
 * 	}
 * }
@@ -19,6 +19,6 @@
 * text parser, utilities to join, split, merge, cut, etc texts
 */
 
-include_once DEDALO_CORE_PATH . '/diffusion/parser/class.pattern_replacer.php';
-include_once DEDALO_CORE_PATH . '/diffusion/parser/class.parser_text.php';
-include_once DEDALO_CORE_PATH . '/diffusion/parser/class.parser_date.php';
+include_once DEDALO_DIFFUSION_PATH . '/parser/class.pattern_replacer.php';
+include_once DEDALO_DIFFUSION_PATH . '/parser/class.parser_text.php';
+include_once DEDALO_DIFFUSION_PATH . '/parser/class.parser_date.php';

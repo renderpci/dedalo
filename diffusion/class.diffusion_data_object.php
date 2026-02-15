@@ -14,6 +14,7 @@ class diffusion_data_object extends stdClass {
 		// lang		: string e.g. 'lg-spa'
 		// value	: mixed e.g. 'Raspa' | [{"title": "Dédalo web", "uri":"https://dedalo.dev"}]
 		// id		: string e.g. 'a'
+		// diffusion_tipo : string e.g. 'rsc636'
 		
 
 
@@ -97,28 +98,28 @@ class diffusion_data_object extends stdClass {
 
 
 	/**
-	* SET_NODE_TIPO
+	* SET_DIFFUSION_TIPO
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_node_tipo( ?string $value ) : bool  {
+	public function set_diffusion_tipo( ?string $value ) : bool  {
 
-		$this->node_tipo = $value;
+		$this->diffusion_tipo = $value;
 
 		return true;
-	}//end set_node_tipo
+	}//end set_diffusion_tipo
 
 
 
 	/**
-	* GET_NODE_TIPO
+	* GET_DIFFUSION_TIPO
 	* Return property value
-	* @return string|null $this->node_tipo
+	* @return string|null $this->diffusion_tipo
 	*/
-	public function get_node_tipo() : ?string {
+	public function get_diffusion_tipo() : ?string {
 
-		return $this->node_tipo ?? null;
-	}//end get_node_tipo
+		return $this->diffusion_tipo ?? null;
+	}//end get_diffusion_tipo
 
 
 

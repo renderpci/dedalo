@@ -10,7 +10,7 @@ if (defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) {
 }
 /**
 * CLASS DIFUSSION
-* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
+* @deprecated 6.0.0 Use dd_diffusion_api and diffusion_utils instead.
 * Handles the diffusion main tasks
 */
 abstract class diffusion  {
@@ -516,7 +516,7 @@ abstract class diffusion  {
 
 		try {
 
-			$file_path = DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+			$file_path = DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php';
 			include_once $file_path;
 
 			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {
@@ -1323,7 +1323,7 @@ abstract class diffusion  {
 
 					// delete
 						if ($table_name!==false) {
-							include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
+							include_once(DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php');
 							$result = (bool)diffusion_sql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
 							if ($result===true) {
 								$response->result		= true;

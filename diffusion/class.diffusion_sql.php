@@ -6,7 +6,7 @@
 */
 /**
 * CLASS DIFFUSION_SQL
-* @deprecated 6.0.0 Use diffusion_api and diffusion_utils instead.
+* @deprecated 6.0.0 Use dd_diffusion_api and diffusion_utils instead.
 * Manage the publication in SQL DDBB
 * The specific SQL commands are into the MySQL class
 */
@@ -3264,7 +3264,7 @@ class diffusion_sql extends diffusion  {
 	*/
 	public static function generate_rdf($options, $dato) {
 
-		include_once DEDALO_CORE_PATH . '/diffusion/class.diffusion_rdf.php';
+		include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_rdf.php';
 
 		$section_tipo			= $options->section_tipo;
 		$section_id				= $dato;

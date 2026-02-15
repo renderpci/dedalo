@@ -96,8 +96,86 @@ class diffusion_utils {
         return null;
     }
 
-  
     
+
+    /**
+     * GET_DIFFUSION_ELEMENT
+     * Recursively searches for the diffusion element in the ontology tree.
+     * @param string $ontology_node_tipo
+     * @return string|null
+     */
+	public static function get_diffusion_element(string $ontology_node_tipo): ?string {
+
+		$node = ontology_node::get_instance($ontology_node_tipo);
+		if (!$node) return null;
+		
+		$parent = $node->get_parent();
+		if (empty($parent)) return null;
+
+		$model = ontology_node::get_model_by_tipo($parent);
+		if ($model === 'diffusion_element') {
+			return $parent;
+		}else if ($model === 'diffusion_domain') {
+			return null;
+		} else{
+			return self::get_diffusion_element($parent);
+		}
+		
+
+	}// end get_diffusion_element
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 	/**
 	* HAVE_SECTION_DIFFUSION
@@ -427,44 +505,6 @@ class diffusion_utils {
 
 
 
-	/**
-	* GET_MY_DIFFUSION_DOMAIN
-	* Get only one diffusion domain by tipo
-	* Note: Define 'class_name' in properties of current desired diffusion element like {"class_name":"diffusion_index_ts"}
-	* @param string $diffusion_domain_name
-	* 	like 'dedalo'
-	* @param string $caller_class_name
-	* 	like 'diffusion_sql'
-	* @return string|null $current_children
-	* 	like 'dd15'
-	*/
-	public static function get_my_diffusion_domain(string $diffusion_domain_name, string $caller_class_name) : ?string {
-
-		// Array of all diffusion domains
-		$diffusion_domains = (array)self::get_diffusion_domains();
-		foreach ($diffusion_domains as $current_tipo) {
-
-			$current_name = ontology_node::get_term_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);
-
-			if($current_name===$diffusion_domain_name) {
-
-				// NUEVO MODO (más rápido) : Por propiedad 'class_name' . Evita la necesidad de utilizar el modelo cuando no es un modelo estándar de Dédalo
-				$ar_children = ontology_node::get_ar_children($current_tipo);
-				foreach ($ar_children as $current_children) {
-
-					$ontology_node	= ontology_node::get_instance($current_children);
-					$properties		= $ontology_node->get_propiedades(true);
-					if (!empty($properties) && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
-						return (string)$current_children;
-					}
-				}
-			}
-		}
-
-		return null;
-	}//end get_my_diffusion_domain
-
-
 
 	/**
 	* GET_DIFFUSION_MAP
@@ -660,6 +700,7 @@ class diffusion_utils {
 
 
 
+
 	/**
 	* GET_CONNECTION_STATUS
 	* Check the status of the connection for the given $item->class_name
@@ -768,8 +809,6 @@ class diffusion_utils {
 
 
 
-
-
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @param string $diffusion_element_tipo
@@ -786,7 +825,7 @@ class diffusion_utils {
 
 		try {
 
-			$file_path = DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+			$file_path = DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php';
 			include_once $file_path;
 
 			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {

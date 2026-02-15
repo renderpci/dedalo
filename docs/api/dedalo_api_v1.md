@@ -337,7 +337,7 @@ Below is a concise index of the v1 API classes (files in `core/api/v1/common`) w
   - Example: diffuse records
 
     ```json
-    { "dd_api": "dd_diffusion_api", "action": "diffuse", "source": { "diffusion_node_tipo": "rsc636" }, "sqo": { "section_tipo": ["oh1"] } }
+    { "dd_api": "dd_diffusion_api", "action": "diffuse", "source": { "diffusion_tipo": "rsc636" }, "sqo": { "section_tipo": ["oh1"] } }
     ```
 
 - `dd_component_portal_api`, `dd_component_text_area_api`, `dd_component_av_api`, `dd_component_3d_api`, `dd_component_info` — component-specific helpers used by front-end components and section tools (see respective `core/component_*` folders for how components construct RQO payloads).
