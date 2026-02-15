@@ -147,7 +147,7 @@ if (empty($rqo)) {
 // Default dd_api apply
 $action = $rqo->action ?? null;
 if (in_array($action, ['diffuse', 'validate', 'get_ontology_map'])) {
-	$rqo->dd_api = 'diffusion_api';
+	$rqo->dd_api = 'dd_diffusion_api';
 }
 $rqo->dd_api = $rqo->dd_api ?? 'dd_core_api';
 
