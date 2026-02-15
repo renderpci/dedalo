@@ -1,19 +1,20 @@
 <?php declare(strict_types=1);
 
 
-require_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_activity_logger.php');
+require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 
 /**
  * DIFFUSION_API
  * Main entry point for the new diffusion system.
  * Handles SQO-based requests and returns standardized JSON data.
  */
-class diffusion_api {
+class dd_diffusion_api {
 
 
 	public static $datum = [];
 
 	public static $datum_unresolved = [];
+
 
 	/**
 	 * DIFFUSE
@@ -21,7 +22,7 @@ class diffusion_api {
 	 * 
 	 * @param object $rqo Request Query Object {
 	 *   action: "diffuse",
-	 *   source: { diffusion_node_tipo: "rsc..." },
+	 *   source: { diffusion_tipo: "rsc..." },
 	 *   sqo: { ... },
 	 *   options: { levels: int, ... }
 	 * }
@@ -35,8 +36,8 @@ class diffusion_api {
 			$response->errors = [];
 
 		// Validate basic input
-		if (empty($rqo->source->diffusion_node_tipo)) {
-			$response->errors[] = 'Missing source->diffusion_node_tipo';
+		if (empty($rqo->source->diffusion_tipo)) {
+			$response->errors[] = 'Missing source->diffusion_tipo';
 			return $response;
 		}
 		if (empty($rqo->sqo)) {
@@ -44,7 +45,7 @@ class diffusion_api {
 			return $response;
 		}
 
-		$source_tipo   = $rqo->source->diffusion_node_tipo;
+		$source_tipo   = $rqo->source->diffusion_tipo;
 		$sqo_data      = $rqo->sqo;
 		$options       = $rqo->options ?? new stdClass();
 		// deep resolution of linked secitons
@@ -57,22 +58,11 @@ class diffusion_api {
 			self::$datum = [];
 			self::$datum_unresolved = [];
 
-			// 1. Get ontology context
-			$source_node = ontology_node::get_instance($source_tipo);
-			if (!$source_node) {
-				throw new Exception("Ontology node not found for tipo: $source_tipo");
-			}
-			$parent = $source_node ? $source_node->get_parent() : null;
-			
-			// Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
-			// @TODO: review diffusion_element resolution in ontology, use recursive parent to locate it.
-			$model_name = ontology_node::get_model_by_tipo($source_tipo);
-			if ($model_name === 'diffusion_element') {
+			// 1. Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
+			$diffusion_element_tipo = diffusion_utils::get_diffusion_element($source_tipo);
+			if ($diffusion_element_tipo !== false) {
 				$diffusion_element_tipo = $source_tipo;
-			} else {
-				// Find parent diffusion_element
-				$diffusion_element_tipo = $source_node->get_parent();
-			}
+			} 
 			
 			// Set the diffusion element scope for cross-section resolution
 			if ($diffusion_element_tipo) {
@@ -103,10 +93,10 @@ class diffusion_api {
 			$search    = search::get_instance(new search_query_object($sqo_data));
 			$db_result = $search->search();
 
-			self::process_datum($source_tipo, $db_result, $levels);
+			self::process_datum($source_tipo, $db_result, $levels, $options);
 
-			while (!empty(diffusion_api::$datum_unresolved)) {
-				foreach ( diffusion_api::$datum_unresolved as $diffusion_node_tipo => $locators ) {
+			while (!empty(self::$datum_unresolved)) {
+				foreach ( self::$datum_unresolved as $diffusion_tipo => $locators ) {
 
 					$unique_locators=[];
 					foreach ($locators as $locator) {
@@ -115,18 +105,19 @@ class diffusion_api {
 						}
 					}
 
-					self::process_datum($diffusion_node_tipo, $unique_locators, $levels);
+					self::process_datum($diffusion_tipo, $unique_locators, $levels, $options);
 
-					unset(diffusion_api::$datum_unresolved[$diffusion_node_tipo]);
+					unset(self::$datum_unresolved[$diffusion_tipo]);
 				}
 			}
 
 			// 6. Final response
-			$response->result = true;
-			$response->msg    = 'OK. Request done';
-			$response->langs  = $langs;
-			$response->main   = $main;
-			$response->datum  = self::$datum;
+			$response->result 		= true;
+			$response->msg    		= 'OK. Request done';
+			$response->langs  		= $langs;
+			$response->main_lang  	= DEDALO_DATA_LANG;
+			$response->main   		= $main;
+			$response->datum  		= self::$datum;
 
 
 		} catch (Exception $e) {
@@ -137,6 +128,7 @@ class diffusion_api {
 
 		return $response;
 	}
+
 
 	/**
 	 * GET_DIFFUSION_INFO
@@ -178,6 +170,7 @@ class diffusion_api {
 		return $response;
 	}
 
+
 	/**
 	 * VALIDATE
 	 * Validates the diffusion configuration for a given node.
@@ -190,6 +183,7 @@ class diffusion_api {
 		return $response;
 	}
 
+
 	/**
 	 * GET_ONTOLOGY_MAP
 	 * Returns the raw ddo_map and parser definitions from ontology.
@@ -197,10 +191,10 @@ class diffusion_api {
 	public static function get_ontology_map(object $rqo): object {
 		$response = new stdClass();
 		
-		$source_tipo = $rqo->source->diffusion_node_tipo ?? null;
+		$source_tipo = $rqo->source->diffusion_tipo ?? null;
 		if (!$source_tipo) {
 			$response->result = false;
-			$response->errors[] = 'Missing diffusion_node_tipo';
+			$response->errors[] = 'Missing diffusion_tipo';
 			return $response;
 		}
 
@@ -212,6 +206,7 @@ class diffusion_api {
 		
 		return $response;
 	}
+
 
 	/**
 	 * BUILD_LANGS
@@ -231,9 +226,11 @@ class diffusion_api {
 			$lang_name = lang::get_name_from_code($lang_code);
 			$langs[$lang_code] = $lang_name;
 		}
+
 		
-		return [$langs];
+		return $langs;
 	}
+
 
 	/**
 	 * BUILD_MAIN_HIERARCHY
@@ -260,7 +257,7 @@ class diffusion_api {
 			$properties = $node->get_properties();
 			
 			$item = (object)[
-				'diffusion_node' => $current_tipo,
+				'diffusion_tipo' => $current_tipo,
 				'term'           => $term,
 				'model'          => $model_name
 			];
@@ -290,6 +287,7 @@ class diffusion_api {
 		return $main;
 	}
 
+
 	/**
 	 * PROCESS_DATUM
 	 * Resolves data for each record in db_result according to source_tipo config.
@@ -299,7 +297,7 @@ class diffusion_api {
 	 * @param int $levels
 	 * @return diffusion_datum
 	 */
-	private static function process_datum(string $source_tipo, $iterable_data, int $levels): diffusion_datum {
+	private static function process_datum(string $source_tipo, $iterable_data, int $levels, object $options): diffusion_datum {
 		
 		$source_node = ontology_node::get_instance($source_tipo);
 		if (!$source_node) {
@@ -325,7 +323,7 @@ class diffusion_api {
 		}			
 
 		$datum_object = new diffusion_datum();
-			$datum_object->set_diffusion_node($source_tipo);
+			$datum_object->set_diffusion_tipo($source_tipo);
 			$datum_object->set_section_tipo($main_section_tipo);
 			$datum_object->set_term($source_node->get_term(DEDALO_STRUCTURE_LANG));
 			$datum_object->set_model($source_node->get_model());
@@ -336,7 +334,7 @@ class diffusion_api {
 		// Process each record and group by section
 		foreach ($iterable_data as $locator) {			
 			
-			// Build entries keyed by diffusion_node
+			// Build entries keyed by diffusion_tipo
 			$entries = new stdClass();
 			
 			foreach ($combined_ddo_map as $node_tipo => $ddo_map) {
@@ -377,41 +375,42 @@ class diffusion_api {
 		$datum_object->set_data($data);
 
 		// ad. to static container
-		diffusion_api::$datum[] = $datum_object;
+		self::$datum[] = $datum_object;
 		
 		return $datum_object;
 	}
 
+
 	/**
 	 * BUILD_DATUM_CONTEXT
 	 * Builds context array (column definitions) for a datum group.
-	 * @param string $diffusion_node_tipo
+	 * @param string $diffusion_tipo
 	 * @param array $ddo_map
 	 * @return array
 	 */
-	private static function build_datum_context(string $diffusion_node_tipo, array $ddo_map): array {
+	private static function build_datum_context(string $diffusion_tipo, array $ddo_map): array {
 		
 		$context = [];
 		
 		// Get the diffusion node info
-		$diffusion_node = ontology_node::get_instance($diffusion_node_tipo);
-		if (!$diffusion_node) {
+		$diffusion_node_instance = ontology_node::get_instance($diffusion_tipo);
+		if (!$diffusion_node_instance) {
 			return $context;
 		}
 		
-		$properties = $diffusion_node->get_properties();
+		$properties = $diffusion_node_instance->get_properties();
 		
 		// tipo and term come from the diffusion node, not from the component
-		$term = $diffusion_node->get_term(DEDALO_STRUCTURE_LANG);
+		$term = $diffusion_node_instance->get_term(DEDALO_STRUCTURE_LANG);
 		
 		// Model comes from diffusion ontology node
-		$field_model = ontology_node::get_model_by_tipo($diffusion_node_tipo);
+		$field_model = ontology_node::get_model_by_tipo($diffusion_tipo);
 		
 		$context[] = (object)[
 			'term'   		=> $term,
-			'tipo'   		=> $diffusion_node_tipo,
+			'tipo'   		=> $diffusion_tipo,
 			'model'  		=> $field_model,
-			'parent' 		=> $diffusion_node->get_parent(),
+			'parent' 		=> $diffusion_node_instance->get_parent(),
 			'parser' 		=> $properties->process->parser ?? new stdClass(),
 			'pre_parser'	 => $properties->process->pre_parser ?? new stdClass()
 		];
