@@ -52,6 +52,7 @@ Sent after each table chunk is processed and inserted.
 data:
 {"is_running":true,"data":{"msg":"Processing records","counter":100,"total":5400,"section_label":"images","current":{"section_id":"42","time":150},"total_ms":3200}}
 ```
+> **Note**: `counter` represents source records handled, including those that were deleted.
 
 #### c) Final Chunk
 Contains the summary of results.

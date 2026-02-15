@@ -24,7 +24,7 @@ The browser-side tool that initiates diffusion.
 A Bun-based service that acts as the primary entry point and orchestrator.
 - **Streaming**: Returns an NDJSON/SSE stream to the client immediately.
 - **Chunking**: Splits large requests into paginated PHP calls (default 100 records) to protect PHP memory.
-- **Persistence**: Receives resolved data from PHP and writes it to MariaDB.
+- **Persistence**: Receives resolved data from PHP and writes it to MariaDB. It handles both **Upserts** (insert/update) and **Deletions** (removing stale/unpublishable records).
 - **Progress Store**: Tracks active processes in-memory for polling/reconnection.
 
 ### 3. PHP API (Resolution Engine)
