@@ -176,3 +176,63 @@ function stringify_value(val: unknown): string {
 	}
 	return '';
 }
+
+
+
+/**
+ * MAP_VALUE
+ * Maps values based on a provided dictionary.
+ *
+ * @param data    - Array of data items
+ * @param options - { map: [{ [id]: { [key]: value } }] }
+ * @returns Mapped data item values or null
+ */
+export function map_value(data: data_item[] | null, options: parser_options): any {
+
+	if (!data || data.length === 0) return null;
+
+	const map_options = options.map as Record<string, Record<string, string>>[] | undefined;
+	
+	if (!map_options || !Array.isArray(map_options)) {
+		return default_join(data, options);
+	}
+	
+	// Flatten the map array into a single lookup object for easier access
+	// The structure in options is usually: "map": [{"a": {"1": "yes", "2": "no"}}]
+	
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const original_val = stringify_value(item.value);
+		let mapped_val: string | null = null;
+
+		// Try to find a map that applies
+		for (const m of map_options) {
+			// Check if map set key matches item.id (if item.id is present)
+			if (item.id && m[item.id]) {
+				const mapping = m[item.id];
+				if (mapping[original_val] !== undefined) {
+					mapped_val = mapping[original_val];
+					break;
+				}
+			}
+			
+			// Just use the first map found if generic or item.id is missing/unmatched
+			for (const map_key in m) {
+				const mapping = m[map_key];
+				if (mapping[original_val] !== undefined) {
+					mapped_val = mapping[original_val];
+					break;
+				}
+			}
+			if (mapped_val !== null) break;
+		}
+
+		result.push({
+			...item,
+			value: mapped_val !== null ? mapped_val : original_val
+		});
+	}
+
+	return result.length > 0 ? result : null;
+}
