@@ -62,6 +62,7 @@ class dd_object extends stdClass {
 		// color 				: string|null // e.g. "#f1f1f1"
 		// matrix_table 		: string|null // e.g. 'matrix_dd'
 		// data_fn 				: string|null // e.g. 'get_calculation_data' used in 'mdcat2431' set the function to be used to get data of the ddo
+		// diffusion_tipo 	: string|null // e.g. 'rsc265'
 
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
@@ -1433,28 +1434,28 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_DIFFUSION_NODE_TIPO
+	* SET_DIFFUSION_TIPO
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_diffusion_node_tipo(?string $value) : bool {
+	public function set_diffusion_tipo(?string $value) : bool {
 
-		$this->diffusion_node_tipo = $value;
+		$this->diffusion_tipo = $value;
 
 		return true;
-	}//end set_diffusion_node_tipo
+	}//end set_diffusion_tipo
 
 
 
 	/**
-	* GET_DIFFUSION_NODE_TIPO
+	* GET_DIFFUSION_TIPO
 	* Return property value
-	* @return string|null $this->diffusion_node_tipo
+	* @return string|null $this->diffusion_tipo
 	*/
-	public function get_diffusion_node_tipo() : ?string {
+	public function get_diffusion_tipo() : ?string {
 
-		return $this->diffusion_node_tipo ?? null;
-	}//end get_diffusion_node_tipo
+		return $this->diffusion_tipo ?? null;
+	}//end get_diffusion_tipo
 
 
 
