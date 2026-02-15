@@ -131,3 +131,25 @@ export interface engine_response {
 	errors?:  string[];
 	tables?:  { table_name: string; records_affected: number }[];
 }
+
+
+// =====================================================
+// Progress tracking (streaming + polling)
+// =====================================================
+
+export interface progress_data {
+	process_id:  string;
+	is_running:  boolean;
+	started_at:  number;
+	data: {
+		msg:            string;
+		counter:        number;
+		total:          number;
+		section_label?: string;
+		current?:       { section_id?: string | number; time?: number };
+		total_ms?:      number;
+	};
+	total_time:  string;
+	errors:      string[];
+	result?:     engine_response;
+}
