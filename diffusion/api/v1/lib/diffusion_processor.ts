@@ -14,7 +14,7 @@
  *   5. null                        → no data exists at all
  */
 
-import { apply_parser, default_join } from './parsers/index';
+import { apply_parser, default_join, join_items_to_string } from './parsers/index';
 import type {
 	php_api_response,
 	datum_group,
@@ -202,7 +202,6 @@ function process_record(
 		}
 
 		// Check parsers
-		const pre_parser = ctx.pre_parser as parser_definition;
 		const parser     = ctx.parser as parser_definition;
 
 		// Group entries by lang
@@ -211,36 +210,46 @@ function process_record(
 		for (const [lang, lang_entries] of entries_by_lang) {
 
 			// Build data items for the parser
-			let data_items = lang_entries.map(e => ({
+			const data_items = lang_entries.map(e => ({
 				id:    e.id,
 				value: e.value,
 				tipo:  e.tipo,
 				lang:  e.lang,
 			}));
 
-			// Apply pre_parser if defined
-			if (pre_parser && pre_parser.fn) {
-				const pre_result = apply_parser(
-					pre_parser.fn,
-					data_items,
-					pre_parser.options ?? {}
-				);
-				if (pre_result !== null) {
-					data_items = [{ id: null, value: pre_result, tipo, lang }];
-				}
-			}
-
 			// Apply parser if defined
-			let column_value: string | null;
-			if (parser && parser.fn) {
-				column_value = apply_parser(
-					parser.fn,
-					data_items,
-					parser.options ?? {}
-				);
+			let column_value: string | null = null;
+			
+			// Check if parser definition exists (object, array, etc)
+			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
+
+			if (has_parser) {
+				const parser_result = apply_parser_chain(parser, data_items);
+
+				if (parser_result !== null) {
+					// Final result should be data_item[], but apply_parser_chain returns any
+					// We convert the final result to a string for column value
+					if (Array.isArray(parser_result)) {
+						if (parser_result.length > 0) {
+							// Use the first item's value
+							const val = parser_result[0].value;
+							// Stringify objects/arrays (JSON style as requested for arrays) or use string value
+							if (typeof val === 'object' && val !== null) {
+								column_value = JSON.stringify(val);
+							} else {
+								column_value = String(val);
+							}
+						} else {
+							column_value = null;
+						}
+					} else {
+						// Fallback if somehow a parser returns a primitive string (unlikely with standardized parsers)
+						column_value = String(parser_result);
+					}
+				}
 			} else {
-				// No parser — use default_join
-				column_value = default_join(data_items, {});
+				// No parser — use join_items_to_string (default behavior)
+				column_value = join_items_to_string(data_items, {});
 			}
 
 			// Normalize lang key: null and "lg-nolan" → "nolan"
