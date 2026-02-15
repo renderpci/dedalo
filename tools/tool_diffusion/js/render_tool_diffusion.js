@@ -679,6 +679,7 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 				response_message		: response_message,
 				publication_button		: publication_button,
 				diffusion_element_tipo	: current_diffusion_element_tipo,
+				diffusion_tipo			: data_item.table_tipo,
 				local_db_id				: local_db_id
 			})
 		}
@@ -780,6 +781,7 @@ const publish_content = async (self, options) => {
 		const response_message			= options.response_message
 		const publication_button		= options.publication_button
 		const diffusion_element_tipo	= options.diffusion_element_tipo
+		const diffusion_tipo			= options.diffusion_tipo
 		const local_db_id				= options.local_db_id
 
 	// clean previous messages
@@ -788,7 +790,8 @@ const publish_content = async (self, options) => {
 
 	// export API call
 		const api_response = await self.export({
-			diffusion_element_tipo	: diffusion_element_tipo
+			diffusion_element_tipo	: diffusion_element_tipo,
+			diffusion_tipo			: diffusion_tipo
 		})
 
 	// debug
