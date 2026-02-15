@@ -62,10 +62,15 @@ function encode_sse_chunk(data: progress_data): Uint8Array {
 /**
  * HANDLE_DIFFUSE_STREAM
  * Main diffusion endpoint — returns a streaming response.
- * Receives client RQO → calls PHP API → parses → inserts into MariaDB
- * → streams per-record progress to the client.
+ * Receives client RQO → splits into chunks → calls PHP API per chunk
+ * → parses → inserts into MariaDB → streams per-record progress.
+ *
+ * When options.total is provided and exceeds chunk_size, the SQO is
+ * paginated with limit/offset so PHP can release memory between batches.
  */
 function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): Response {
+
+	const DEFAULT_CHUNK_SIZE = 100;
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -74,56 +79,16 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 			let process_id = '';
 
 			try {
-				// 1. Call PHP diffusion_api
-				const php_response = await call_dd_diffusion_api(request_rqo, cookie_header ?? undefined);
+				// Read chunking options
+				const options     = request_rqo.options ?? {};
+				const total       = (options as any).total       ?? 0;
+				const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
+				const use_chunks  = total > 0 && total > chunk_size;
+				const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
-				if (!php_response.result) {
-					// Send error as a single chunk and close
-					const error_result: engine_response = {
-						result: false,
-						msg:    `PHP API error: ${php_response.msg}`,
-						errors: php_response.errors,
-					};
-					const error_progress: progress_data = {
-						process_id: '',
-						is_running: false,
-						started_at: start_time,
-						data:       { msg: error_result.msg, counter: 0, total: 0 },
-						total_time: '0 sec',
-						errors:     php_response.errors ?? [],
-						result:     error_result,
-					};
-					controller.enqueue(encode_sse_chunk(error_progress));
-					controller.close();
-					return;
-				}
-
-				// 2. Process the response: apply parsers, transform to SQL-ready data
-				const tables = process_response(php_response);
-
-				if (tables.length === 0) {
-					const empty_result: engine_response = {
-						result: true,
-						msg:    'No data to process (empty datum)',
-						tables: [],
-					};
-					const empty_progress: progress_data = {
-						process_id: '',
-						is_running: false,
-						started_at: start_time,
-						data:       { msg: empty_result.msg, counter: 0, total: 0 },
-						total_time: '0 sec',
-						errors:     [],
-						result:     empty_result,
-					};
-					controller.enqueue(encode_sse_chunk(empty_progress));
-					controller.close();
-					return;
-				}
-
-				// 3. Count total records and create progress entry
-				const total_records = tables.reduce((sum, t) => sum + t.records.length, 0);
-				process_id = create_process(total_records);
+				// Create progress entry with estimated total
+				const estimated_total = total > 0 ? total : 0;
+				process_id = create_process(estimated_total);
 
 				// Send initial chunk with process_id
 				const initial = get_progress(process_id);
@@ -131,71 +96,154 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 					controller.enqueue(encode_sse_chunk(initial));
 				}
 
-				// 4. Insert into MariaDB with per-table progress
-				const table_results: { table_name: string; records_affected: number }[] = [];
+				// Accumulators across all chunks
+				const table_results_map = new Map<string, number>();
 				const errors: string[] = [];
 				let global_counter = 0;
+				let actual_total   = 0; // updated as we discover real record counts
 
-				for (const table of tables) {
+				// =====================================================
+				// CHUNK LOOP
+				// =====================================================
+				for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
 
-					const record_start = Date.now();
+					const chunk_offset = chunk_idx * chunk_size;
 
-					try {
-						const affected = await insert_table_data(table);
-						global_counter += table.records.length;
-
-						table_results.push({
-							table_name:       table.table_name,
-							records_affected: affected,
-						});
-
-						// Update progress store and stream
-						const elapsed = Date.now() - start_time;
-						const record_time = Date.now() - record_start;
-
-						update_progress(process_id, {
-							counter:       global_counter,
-							msg:           'Processing records',
-							section_label: table.table_name,
-							time_ms:       record_time,
-							total_ms:      elapsed,
-						});
-
-						const snapshot = get_progress(process_id);
-						if (snapshot) {
-							controller.enqueue(encode_sse_chunk(snapshot));
+					// Build RQO for this chunk
+					const chunk_rqo: rqo = use_chunks
+						? {
+							...request_rqo,
+							sqo: {
+								...(request_rqo.sqo ?? {}),
+								limit:  chunk_size,
+								offset: chunk_offset,
+							},
 						}
+						: request_rqo;
 
-					} catch (error: unknown) {
-						const err_msg = error instanceof Error ? error.message : String(error);
-						console.error(`[diffuse] Error inserting into "${table.table_name}":`, error);
+					// Stream "fetching" progress
+					update_progress(process_id, {
+						counter: global_counter,
+						msg:     use_chunks
+							? `Fetching chunk ${chunk_idx + 1} of ${chunk_count} from PHP...`
+							: 'Fetching data from PHP...',
+						total_ms: Date.now() - start_time,
+					});
+					const fetch_snapshot = get_progress(process_id);
+					if (fetch_snapshot) {
+						controller.enqueue(encode_sse_chunk(fetch_snapshot));
+					}
 
-						global_counter += table.records.length;
-						errors.push(`Table "${table.table_name}": ${err_msg}`);
+					// 1. Call PHP diffusion_api for this chunk
+					const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
 
-						table_results.push({
-							table_name:       table.table_name,
-							records_affected: 0,
-						});
+					if (!php_response.result) {
+						const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
+						errors.push(err_msg);
+						console.error(`[diffuse] ${err_msg}`);
 
 						update_progress(process_id, {
 							counter: global_counter,
-							msg:     'Processing records',
-							error:   `Table "${table.table_name}": ${err_msg}`,
+							msg:     err_msg,
+							error:   err_msg,
+							total_ms: Date.now() - start_time,
 						});
+						const err_snap = get_progress(process_id);
+						if (err_snap) {
+							controller.enqueue(encode_sse_chunk(err_snap));
+						}
 
-						const snapshot = get_progress(process_id);
-						if (snapshot) {
-							controller.enqueue(encode_sse_chunk(snapshot));
+						// Continue to next chunk — don't abort entire process
+						continue;
+					}
+
+					// 2. Process the response: apply parsers, transform to SQL-ready data
+					const tables = process_response(php_response);
+
+					if (tables.length === 0) {
+						// Empty chunk — continue
+						continue;
+					}
+
+					// Count records in this chunk and update actual_total
+					const chunk_records = tables.reduce((sum, t) => sum + t.records.length, 0);
+					actual_total += chunk_records;
+
+					// Update progress store total if we now know more
+					if (actual_total > estimated_total) {
+						// Re-create with better total estimate (store overwrite)
+						update_progress(process_id, {
+							counter: global_counter,
+							msg:     'Processing records',
+						});
+					}
+
+					// 3. Insert into MariaDB with per-table progress
+					for (const table of tables) {
+
+						const record_start = Date.now();
+
+						try {
+							const affected = await insert_table_data(table);
+							global_counter += table.records.length;
+
+							// Accumulate per-table results
+							const prev = table_results_map.get(table.table_name) ?? 0;
+							table_results_map.set(table.table_name, prev + affected);
+
+							// Update progress store and stream
+							const elapsed     = Date.now() - start_time;
+							const record_time = Date.now() - record_start;
+
+							update_progress(process_id, {
+								counter:       global_counter,
+								msg:           'Processing records',
+								section_label: table.table_name,
+								time_ms:       record_time,
+								total_ms:      elapsed,
+							});
+
+							const snapshot = get_progress(process_id);
+							if (snapshot) {
+								controller.enqueue(encode_sse_chunk(snapshot));
+							}
+
+						} catch (error: unknown) {
+							const err_msg = error instanceof Error ? error.message : String(error);
+							console.error(`[diffuse] Error inserting into "${table.table_name}":`, error);
+
+							global_counter += table.records.length;
+							errors.push(`Table "${table.table_name}": ${err_msg}`);
+
+							const prev = table_results_map.get(table.table_name) ?? 0;
+							table_results_map.set(table.table_name, prev); // keep previous count
+
+							update_progress(process_id, {
+								counter: global_counter,
+								msg:     'Processing records',
+								error:   `Table "${table.table_name}": ${err_msg}`,
+							});
+
+							const snapshot = get_progress(process_id);
+							if (snapshot) {
+								controller.enqueue(encode_sse_chunk(snapshot));
+							}
 						}
 					}
-				}
+				} // end chunk loop
 
-				// 5. Final result
+				// =====================================================
+				// FINAL RESULT
+				// =====================================================
+				const table_results = Array.from(table_results_map.entries()).map(
+					([table_name, records_affected]) => ({ table_name, records_affected })
+				);
+
 				const final_result: engine_response = {
 					result: errors.length === 0,
 					msg:    errors.length === 0
-						? `OK. Processed ${table_results.length} table(s)`
+						? `OK. Processed ${table_results.length} table(s), ${global_counter} record(s)` +
+						  (use_chunks ? ` in ${chunk_count} chunk(s)` : '')
 						: `Partial success. ${errors.length} error(s)`,
 					tables: table_results,
 					errors: errors.length > 0 ? errors : undefined,
