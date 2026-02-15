@@ -374,3 +374,83 @@ function sanitize_column_name(term: string): string {
 		.replace(/_+/g, '_')
 		.replace(/^_|_$/g, '');
 }
+
+/**
+ * APPLY_PARSER_CHAIN
+ * Applies a sequence of parsers to the data.
+ * The output of each parser becomes the input for the next.
+ *
+ * @param parsers - Single parser definition or array of definitions
+ * @param data    - Initial data items
+ * @returns Final result (array or primitive) or null
+ */
+function apply_parser_chain(
+	parsers: parser_definition | parser_definition[] | Record<string, never>,
+	data: any[]
+): any {
+
+	if (!parsers || (typeof parsers === 'object' && Object.keys(parsers).length === 0)) {
+		return null;
+	}
+
+	// Normalize to array
+	const chain = Array.isArray(parsers) ? parsers : [parsers as parser_definition];
+
+	let current_data: any = data;
+
+	for (const parser_def of chain) {
+		if (!parser_def.fn) continue;
+
+		// Ensure current_data is in a format suitable for apply_parser (array)
+		// If previous parser returned a primitive, wrap it as a data item value
+		let valid_data: any[] | null;
+
+		if (Array.isArray(current_data)) {
+			valid_data = current_data;
+		} else if (current_data !== null && current_data !== undefined) {
+			// Wrap primitive in a structure preserving metadata from original data if possible
+			// We try to grab metadata from the initial data if available
+			const meta = (Array.isArray(data) && data.length > 0) ? data[0] : {};
+			valid_data = [{
+				id:    null,
+				value: current_data,
+				tipo:  meta.tipo,
+				lang:  meta.lang
+			}];
+		} else {
+			// Current data is null/undefined
+			valid_data = null;
+		}
+
+		// Apply the parser
+		let result = apply_parser(parser_def.fn, valid_data, parser_def.options ?? {});
+
+		// If a parser returns null explicitly, it usually breaks the chain
+		if (result === null) return null;
+
+		// If parser definition has an ID, assign it to the result items
+		if (parser_def.id) {
+			if (Array.isArray(result)) {
+				// Assign ID to each item in the array
+				for (const item of result) {
+					if (typeof item === 'object' && item !== null) {
+						item.id = parser_def.id;
+					}
+				}
+			} else {
+				// Wrap primitive result to attach ID
+				// Metadata (tipo, lang) preserved from input if possible
+				const meta = (Array.isArray(valid_data) && valid_data.length > 0) ? valid_data[0] : {};
+				result = [{
+					id:    parser_def.id,
+					value: result,
+					tipo:  meta.tipo,
+					lang:  meta.lang
+				}];
+			}
+		}
+		current_data = result;
+	}
+
+	return current_data;
+}
