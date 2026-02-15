@@ -52,4 +52,4 @@ A common bug in Dédalo is the failure of nested components (like portal childre
 ## Essential Tools
 - **JS**: `console.log('label', value)`, `clone(obj)` for safe logging.
 - **PHP**: `dump($data)`, `ontology_node::get_term_by_tipo($tipo)`.
-- **Ontology**: Refer to `core/ontology/ontology.json` to verify component relations.
+- **Ontology**: Refer to the class `ontology_node` in `core/ontology/class.ontology_node.php` to verify sections, component relations, diffusion nodes, ...

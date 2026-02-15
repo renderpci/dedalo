@@ -292,7 +292,7 @@ core/component_{type}/
 - **Runtime construction**: Objects built from ontology definitions
 - **Descriptors**: Use thesaurus for indexation and relationships
 - **Locators**: Implement universal locator pattern for references
-- **Sample ontology definition**: Use `core/ontology/ontology.json` as reference
+- **Sample ontology definition**: Use a SQL query to get the ontology definition
 
 ## Configuration
 

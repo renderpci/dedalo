@@ -5,7 +5,8 @@ description: Navigating and interpreting Dédalo's ontology-driven configuration
 
 # Dédalo Ontology Mapping Skill
 
-Dédalo uses a massive `ontology.json` to define almost all application behavior. Understanding how to navigate this mapping is crucial for AI agents.
+Dédalo uses a massive ontology to define almost all application behavior. Understanding how to navigate this mapping is crucial for AI agents.
+The ontology is stored in a postgresql database and can be queried using SQL. Ontology table is `dd_ontology`.
 
 ## Key Ontology Elements
 
@@ -29,7 +30,7 @@ The `properties` object controls specific component behavior:
 ### Finding a Component Definition
 To find where a component is configured:
 ```bash
-grep -C 5 "\"tipo\": \"dd578\"" core/ontology/ontology.json
+SELECT * FROM dd_ontology WHERE tipo = 'dd578';
 ```
 
 ### Tracing Hierarchy
