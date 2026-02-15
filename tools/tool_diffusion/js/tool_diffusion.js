@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_DIFFUSION_API_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -129,7 +129,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 
 	// rqo
 		const rqo = {
-			dd_api	: 'diffusion_api',
+			dd_api	: 'dd_diffusion_api',
 			action	: 'get_diffusion_info',
 			source	: source,
 			options : {
@@ -173,28 +173,31 @@ tool_diffusion.prototype.export = function(options) {
 		const resolve_levels			= options.resolve_levels || self.resolve_levels
 
 	// sort vars
-		const mode							= self.caller.mode
 		const section_tipo					= self.caller.section_tipo
 		const section_id					= self.caller.section_id || null
+		const sqo 							= self.caller.rqo.sqo || {}
 		const skip_publication_state_check	= self.skip_publication_state_check
 		const additions_options				= self.additions_options || {}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'export')
+		const source = create_source(self, 'diffuse')
+			source.diffusion_element_tipo 	= diffusion_element_tipo
+			source.diffusion_tipo 			= options.diffusion_tipo
 
 	// rqo
 		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
+			dd_api	: 'dd_diffusion_api',
+			action	: 'diffuse',
 			source	: source,
+			sqo 	: sqo
+				? sqo
+				: {
+					section_tipo 		: [section_tipo],
+					filter_by_locators 	: section_id ? [{ section_tipo : section_tipo, section_id : section_id }] : null
+				},
 			options : {
-				background_running				: true, // set run in background CLI
-				section_tipo					: section_tipo,
-				section_id						: section_id,
-				mode							: mode,
-				diffusion_element_tipo			: diffusion_element_tipo,
-				resolve_levels					: resolve_levels,
+				levels							: resolve_levels,
 				skip_publication_state_check	: skip_publication_state_check,
 				additions_options				: additions_options
 			}
@@ -204,6 +207,7 @@ tool_diffusion.prototype.export = function(options) {
 		return new Promise(function(resolve){
 			// request
 			data_manager.request({
+				url			: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
 				use_worker	: true,
 				body		: rqo,
 				retries : 1, // one try only
