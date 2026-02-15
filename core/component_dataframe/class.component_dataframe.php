@@ -34,9 +34,9 @@ class component_dataframe extends component_portal {
 			return $data;
 		}
 
-		// filtered data		
+		// filtered data
 		// iterate relations filtering match values
-		$filtered_data = [];		
+		$filtered_data = [];
 		if (!empty($data)) {
 			foreach ($data as $locator) {
 
@@ -172,7 +172,7 @@ class component_dataframe extends component_portal {
 		if( empty($main_component_tipo) ){
 
 			// default
-			$ontology_node			= new ontology_node( $this->get_tipo() );
+			$ontology_node			= ontology_node::get_instance( $this->get_tipo() );
 			$main_component_tipo	= $ontology_node->get_parent();
 
 		}else{
@@ -180,7 +180,7 @@ class component_dataframe extends component_portal {
 			// Check valid main_component_tipo
 			$model = ontology_node::get_model_by_tipo( $main_component_tipo );
 			if ($model!=='component_iri') {
-				$ontology_node				= new ontology_node( $this->get_tipo() );
+				$ontology_node				= ontology_node::get_instance( $this->get_tipo() );
 				$test_main_component_tipo	= $ontology_node->get_parent();
 				if ($test_main_component_tipo!==$main_component_tipo) {
 					debug_log(__METHOD__

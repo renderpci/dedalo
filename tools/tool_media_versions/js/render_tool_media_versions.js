@@ -462,6 +462,10 @@ const render_file = function(quality, self) {
 		const files_info = (quality==='thumb')
 			? self.files_info_disk // thumb is not in files_info_safe (different extension case)
 			: self.files_info_safe
+		if(!files_info) {
+			console.error('render_file: files_info not found')
+			return file_info_node
+		}
 		const file_info = files_info.find(el => el.quality===quality)
 		if (file_info && file_info.file_exist===true) {
 			if (file_info.file_path) {

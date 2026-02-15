@@ -157,7 +157,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
-				.'load_cache: ' . to_string($load_cache)
+				.'load_cache: is not empty as expected, sizeof: ' . sizeof($load_cache)
 		);
 	}//end test_vars
 

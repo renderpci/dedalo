@@ -27,14 +27,14 @@ class v6_to_v7 {
 			$response->msg		= 'Pre update has failed';
 			$response->errors	= [];
 
-		// 1.  add new columns to jer_dd
+		// 1. Add new columns to jer_dd
 		$result = v6_to_v7::expand_jer_dd_with_new_schema();
 
 		if($result== false){
 			return $response;
 		}
 
-		// 2. fill the new columns with the compatible data
+		// 2. Fill the new columns with the compatible data
 		$result = v6_to_v7::fill_new_columns_in_jer_dd();
 
 		if($result== false){
@@ -123,7 +123,7 @@ class v6_to_v7 {
 					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END;
 		');
 
-		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+		$result = pg_query(DBi::_getConnection(), $sql_query);
 
 		if($result===false) {
 			$msg = "Failed add new data into the new schema of jer_dd ";

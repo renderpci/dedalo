@@ -168,7 +168,7 @@ class media_icons extends widget_common {
 									$value = null;
 									//get the section_tool of the $data_map
 									$section_tool_tipo	= $data_map->process_section_tipo;
-									$section_tool		= new ontology_node($section_tool_tipo);
+									$section_tool		= ontology_node::get_instance($section_tool_tipo);
 									// and get the tool_name, it need to be the same that the tool_name in the section_tool (see ontology)
 									$tool_name			= $data_map->label ?? false;
 									// get the config for this tool, and get the ddo_map
