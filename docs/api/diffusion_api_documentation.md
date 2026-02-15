@@ -1,6 +1,6 @@
 # Dédalo Diffusion API Documentation
 
-This document describes the Request and Response formats for the Dédalo Diffusion API (`diffusion_api::diffuse`).
+This document describes the Request and Response formats for the Dédalo Diffusion API (`dd_diffusion_api::diffuse`).
 
 ## 1. API Request Format
 
@@ -14,10 +14,10 @@ The API is typically accessed via the main Dédalo JSON endpoint:
 
 ```json
 {
-  "dd_api": "diffusion_api",
+  "dd_api": "dd_diffusion_api",
   "action": "diffuse",
   "source": {
-    "diffusion_node_tipo": "rsc264"
+    "diffusion_tipo": "rsc264"
 
   },
   "sqo": {
@@ -38,7 +38,7 @@ The API is typically accessed via the main Dédalo JSON endpoint:
 ### Parameters
 
 #### 1. `dd_api` (String, Required)
-Must be set to `"diffusion_api"`.
+Must be set to `"dd_diffusion_api"`.
 
 #### 2. `action` (String, Required)
 The operation to perform.
@@ -50,7 +50,7 @@ The operation to perform.
 
 #### 3. `source` (Object, Required)
 Contains metadata about the context of the request.
-- **`diffusion_node_tipo`** (String, Required): The ID of the Diffusion Node (e.g., [`rsc264`](https://dedalo.dev/ontology/rsc264)) configuration to use. This determines the output format (DDO map) and resolution logic.
+- **`diffusion_tipo`** (String, Required): The ID of the Diffusion Node (e.g., [`rsc264`](https://dedalo.dev/ontology/rsc264)) configuration to use. This determines the output format (DDO map) and resolution logic.
 
 - **`lang`** (String, Optional): The preferred language for the response (e.g., `lg-eng`).
 
@@ -255,9 +255,9 @@ Validates the diffusion configuration for a specific node to identify broken cha
 - **Request**:
   ```json
   {
-      "dd_api": "diffusion_api",
+      "dd_api": "dd_diffusion_api",
       "action": "validate",
-      "source": { "diffusion_node_tipo": "rsc264" }
+      "source": { "diffusion_tipo": "rsc264" }
   }
   ```
 
@@ -277,9 +277,9 @@ Retrieves the raw ontology mapping and parser definitions for a diffusion node w
 - **Request**:
   ```json
   {
-      "dd_api": "diffusion_api",
+      "dd_api": "dd_diffusion_api",
       "action": "get_ontology_map",
-      "source": { "diffusion_node_tipo": "rsc264" }
+      "source": { "diffusion_tipo": "rsc264" }
   }
   ```
 
