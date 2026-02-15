@@ -57,6 +57,12 @@ export function default_join(data: data_item[] | null, options: parser_options):
 	}];
 }
 
+
+/**
+ * JOIN_ITEMS_TO_STRING
+ * Helper to join data items into a single string.
+ */
+export function join_items_to_string(data: data_item[] | null, options: parser_options): string | null {
 	if (!data || data.length === 0) return null;
 
 	const records_separator = options.records_separator ?? ' | ';
