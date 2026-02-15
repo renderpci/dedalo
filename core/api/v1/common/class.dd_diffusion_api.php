@@ -411,8 +411,7 @@ class dd_diffusion_api {
 			'tipo'   		=> $diffusion_tipo,
 			'model'  		=> $field_model,
 			'parent' 		=> $diffusion_node_instance->get_parent(),
-			'parser' 		=> $properties->process->parser ?? new stdClass(),
-			'pre_parser'	 => $properties->process->pre_parser ?? new stdClass()
+			'parser' 		=> $properties->process->parser ?? new stdClass()
 		];
 		
 		return $context;
