@@ -14,9 +14,10 @@ import type { parser_options }                  from '../types';
 
 /**
  * Parser function signature.
- * Matches the PHP convention: fn(data, options) → string|null
+ * Matches the PHP convention: fn(data, options) → string|null|data_item[]
+ * Can return intermediate data structures (like arrays) or final strings.
  */
-type parser_fn = (data: any[] | null, options: parser_options) => string | null;
+type parser_fn = (data: any[] | null, options: parser_options) => any;
 
 
 
@@ -24,9 +25,12 @@ type parser_fn = (data: any[] | null, options: parser_options) => string | null;
  * Registry mapping "class::method" strings to JS functions.
  */
 const parser_registry: Record<string, parser_fn> = {
-	'parser_text::default_join':  default_join,
-	'parser_text::text_format':   text_format,
-	'parser_date::string_date':   string_date,
+	'parser_text::default_join':    default_join,
+	'parser_text::text_format':     text_format,
+	'parser_text::map_value':       map_value,
+	'parser_date::string_date':     string_date,
+	'parser_locator::get_section_id': get_section_id,
+	'parser_locator::get_first':    get_first,
 };
 
 
@@ -51,9 +55,9 @@ export function resolve_parser(fn_string: string): parser_fn | null {
  * @param fn_string - e.g., "parser_text::text_format"
  * @param data      - Data items array
  * @param options   - Parser options
- * @returns Parsed string or null
+ * @returns Parsed string or intermediate data or null
  */
-export function apply_parser(fn_string: string, data: any[] | null, options: parser_options): string | null {
+export function apply_parser(fn_string: string, data: any[] | null, options: parser_options): any {
 
 	const fn = resolve_parser(fn_string);
 	if (!fn) {
@@ -67,6 +71,7 @@ export function apply_parser(fn_string: string, data: any[] | null, options: par
 
 
 // Re-export individual parsers for direct use
-export { default_join, text_format } from './parser_text';
-export { string_date }              from './parser_date';
-export { replace as replace_pattern } from './pattern_replacer';
+export { default_join, join_items_to_string, text_format, map_value } from './parser_text';
+export { string_date }                          from './parser_date';
+export { get_section_id, get_first }            from './parser_locator';
+export { replace as replace_pattern }           from './pattern_replacer';

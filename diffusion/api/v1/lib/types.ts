@@ -71,14 +71,14 @@ export interface context_field {
 	tipo:        string;
 	model:       string;
 	parent:      string;
-	parser:      parser_definition | Record<string, never>;
-	pre_parser:  parser_definition | Record<string, never>;
+	parser:      parser_definition | parser_definition[] | Record<string, never>;
 }
 
 export interface parser_definition {
 	fn:       string;
 	options?: parser_options;
 	tipo?:    string;
+	id?:      string;
 }
 
 export interface parser_options {
