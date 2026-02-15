@@ -101,7 +101,7 @@ export function join_items_to_string(data: data_item[] | null, options: parser_o
  *
  * @param data    - Array of data items with `id` and `value`
  * @param options - { pattern: string }
- * @returns Formatted string or null
+ * @returns Formatted string wrapped in data_item or null
  *
  * @example
  *   const data = [
@@ -111,9 +111,9 @@ export function join_items_to_string(data: data_item[] | null, options: parser_o
  *   ];
  *   const options = { pattern: '${firstName} ${lastName} from ${city}' };
  *   text_format(data, options);
- *   // Returns: "John Doe from London"
+ *   // Returns: [{ value: "John Doe from London", ... }]
  */
-export function text_format(data: data_item[] | null, options: parser_options): string | null {
+export function text_format(data: data_item[] | null, options: parser_options): any {
 
 	if (!data || data.length === 0) return null;
 
@@ -145,10 +145,18 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 
 	const values = placeholder_names.map(name => id_map.get(name) ?? null);
 
-	const result = replace(pattern, values);
+	const result_str = replace(pattern, values);
 
-	return result || null;
+	if (!result_str) return null;
+
+	return [{
+		id:    null,
+		value: result_str,
+		tipo:  data[0].tipo,
+		lang:  data[0].lang
+	}];
 }
+
 
 
 
