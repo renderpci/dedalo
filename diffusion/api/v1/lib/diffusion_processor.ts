@@ -137,16 +137,28 @@ function process_datum_group(
 
 	const table_name = resolve_table_name(datum, main);
 	const records:    processed_record[] = [];
+	const deletions:  (string | number)[] = [];
 
 	for (const record of datum.data) {
+		// Records marked for deletion by PHP (unpublishable)
+		if (record.entries === 'delete') {
+			deletions.push(record.section_id);
+			continue;
+		}
 		const processed = process_record(record, datum.context, all_langs, main_lang);
 		records.push(...processed);
+	}
+
+	// Return null only if there's nothing to do at all
+	if (records.length === 0 && deletions.length === 0) {
+		return null;
 	}
 
 	return {
 		database_name,
 		table_name,
 		records,
+		deletions,
 	};
 }
 
@@ -189,7 +201,7 @@ function process_record(
 	for (const ctx of context) {
 
 		const tipo    = ctx.tipo;
-		const entries = record.entries[tipo];
+		const entries = (record.entries as Record<string, entry_value[]>)[tipo];
 		const column_name = sanitize_column_name(ctx.term);
 
 		// Initialize the lang→value map for this column

@@ -6,7 +6,7 @@
 
 import mysql from 'mysql2/promise';
 import type { processed_table } from './types';
-import { generate_batch_upsert, generate_create_table, generate_add_column_sql } from './sql_generator';
+import { generate_batch_upsert, generate_create_table, generate_add_column_sql, generate_delete } from './sql_generator';
 
 
 
@@ -126,18 +126,20 @@ async function ensure_columns(
 
 /**
  * INSERT_TABLE_DATA
- * Inserts all records of a processed_table into MariaDB.
+ * Inserts (upserts) records and executes deletions for a processed_table.
  * Uses a transaction for atomicity.
- * - Creates the table if it doesn't exist (CREATE TABLE IF NOT EXISTS).
- * - Adds any missing columns (ALTER TABLE ADD COLUMN).
- * - Upserts all records (INSERT ... ON DUPLICATE KEY UPDATE).
+ * - Upserts: Creates table/cols if needed, then INSERT ... ON DUPLICATE KEY UPDATE
+ * - Deletions: DELETE FROM table WHERE section_id IN (...)
  *
- * @param table - Processed table with database_name, table_name, and records
- * @returns Number of affected rows
+ * @param table - Processed table with database_name, table_name, records, and deletions
+ * @returns Number of affected rows (inserted/updated + deleted)
  */
 export async function insert_table_data(table: processed_table): Promise<number> {
 
-	if (table.records.length === 0) return 0;
+	const has_records   = table.records.length > 0;
+	const has_deletions = table.deletions && table.deletions.length > 0;
+
+	if (!has_records && !has_deletions) return 0;
 
 	const pool       = get_pool(table.database_name);
 	const connection = await pool.getConnection();
@@ -147,18 +149,35 @@ export async function insert_table_data(table: processed_table): Promise<number>
 	try {
 		await connection.beginTransaction();
 
-		// 1. Ensure table exists
-		const create_sql = generate_create_table(table);
-		await connection.execute(create_sql);
+		// 1. Process Records (Upsert)
+		if (has_records) {
+			// Ensure table exists
+			const create_sql = generate_create_table(table);
+			await connection.execute(create_sql);
 
-		// 2. Ensure all required columns exist
-		await ensure_columns(connection, table.database_name, table.table_name, table);
+			// Ensure all required columns exist
+			await ensure_columns(connection, table.database_name, table.table_name, table);
 
-		// 3. Insert/update all records
-		const statements = generate_batch_upsert(table);
-		for (const stmt of statements) {
-			const [result] = await connection.execute(stmt.sql, stmt.params) as any;
-			affected_rows += result.affectedRows ?? 0;
+			// Insert/update all records
+			const statements = generate_batch_upsert(table);
+			for (const stmt of statements) {
+				const [result] = await connection.execute(stmt.sql, stmt.params) as any;
+				affected_rows += result.affectedRows ?? 0;
+			}
+		}
+
+		// 2. Process Deletions
+		if (has_deletions) {
+			const del_stmt = generate_delete(table.table_name, table.deletions);
+			try {
+				const [result] = await connection.execute(del_stmt.sql, del_stmt.params) as any;
+				affected_rows += result.affectedRows ?? 0;
+			} catch (err: any) {
+				// Ignore "Table doesn't exist" error (code 1146) — if table is missing, nothing to delete
+				if (err.errno !== 1146) {
+					throw err;
+				}
+			}
 		}
 
 		await connection.commit();
