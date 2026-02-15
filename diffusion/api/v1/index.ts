@@ -37,7 +37,7 @@ async function handle_diffuse(request_rqo: rqo, cookie_header: string | null): P
 
 	// 1. Call PHP diffusion_api
 	const php_response = await call_dd_diffusion_api(request_rqo, cookie_header ?? undefined);
-console.error('php_response------------------->>', php_response)
+
 	if (!php_response.result) {
 		return {
 			result: false,
