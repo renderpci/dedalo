@@ -139,6 +139,29 @@ export function generate_add_column_sql(table_name: string, missing_columns: str
 
 
 /**
+ * GENERATE_DELETE
+ * Generates a DELETE statement to remove all rows for specific section_ids.
+ * This removes all language variants since the key is (section_id, lang).
+ *
+ * @param table_name   - Target table name
+ * @param section_ids  - Section IDs to delete
+ * @returns SQL statement with parameterized values
+ */
+export function generate_delete(
+	table_name:  string,
+	section_ids: (string | number)[]
+): sql_statement {
+	const safe_table   = escape_identifier(table_name);
+	const placeholders = section_ids.map(() => '?').join(', ');
+	return {
+		sql:    `DELETE FROM ${safe_table} WHERE section_id IN (${placeholders})`,
+		params: section_ids.map(id => String(id)),
+	};
+}
+
+
+
+/**
  * ESCAPE_IDENTIFIER
  * Escapes a SQL identifier (table or column name) with backticks.
  */
