@@ -95,7 +95,7 @@ export interface parser_options {
 
 export interface datum_record {
 	section_id: string | number;
-	entries:    Record<string, entry_value[]>;
+	entries:    Record<string, entry_value[]> | 'delete';
 }
 
 export interface entry_value {
@@ -114,6 +114,7 @@ export interface processed_table {
 	database_name: string;
 	table_name:    string;
 	records:       processed_record[];
+	deletions:     (string | number)[];   // section_ids to DELETE
 }
 
 export interface processed_record {
