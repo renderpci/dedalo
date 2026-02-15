@@ -60,8 +60,9 @@ class dd_diffusion_api {
 
 			// 1. Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
 			$diffusion_element_tipo = diffusion_utils::get_diffusion_element($source_tipo);
-			if ($diffusion_element_tipo !== false) {
-				$diffusion_element_tipo = $source_tipo;
+
+			if ($diffusion_element_tipo === false) {
+				throw new Exception("No diffusion element related to $source_tipo");
 			} 
 			
 			// Set the diffusion element scope for cross-section resolution
@@ -330,9 +331,14 @@ class dd_diffusion_api {
 			$datum_object->set_parent($parent);
 			$datum_object->set_context($context);
 
+		$properties = $source_node->get_properties();
+		$publishable = $properties->publishable ?? null;
+
 		$data = [];
 		// Process each record and group by section
-		foreach ($iterable_data as $locator) {			
+		foreach ($iterable_data as $locator) {		
+
+			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 			
 			// Build entries keyed by diffusion_tipo
 			$entries = new stdClass();
@@ -342,11 +348,12 @@ class dd_diffusion_api {
 				
 				// Resolve the chain for this ddo_map
 				$resolved_results = $processor->resolve_chain((object)[
-					'ddo_map'      => $ddo_map,
-					'parent'       => $locator->section_tipo,
-					'section_tipo' => $locator->section_tipo,
-					'section_id'   => $locator->section_id,
-					'level'        => $levels
+					'ddo_map'      		=> $ddo_map,
+					'parent'       		=> $locator->section_tipo,
+					'section_tipo' 		=> $locator->section_tipo,
+					'section_id'   		=> $locator->section_id,
+					'level'        		=> $levels,
+					'is_publishable' 	=> $is_publishable
 				]);
 				
 				// Get the value directly from get_diffusion_data() result
@@ -366,7 +373,7 @@ class dd_diffusion_api {
 			// Structure record output
 			$record_output = (object)[
 				'section_id' => $locator->section_id,
-				'entries'    => $entries
+				'entries'    => (!$is_publishable) ? 'delete' : $entries
 			];
 			
 			$data[] = $record_output;

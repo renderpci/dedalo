@@ -70,6 +70,7 @@ class diffusion_chain_processor {
 		$section_tipo 		= $options->section_tipo;
 		$section_id   		= $options->section_id;
 		$level        		= $options->level ?? 0;
+		$is_publishable 	= $options->is_publishable;
 
 		// Find children of this parent node that belong to the current section_tipo
 		$children = array_filter($ddo_map, function($item) use($parent, $section_tipo) {
@@ -78,7 +79,7 @@ class diffusion_chain_processor {
 
 		$ar_results = [];
 		foreach ($children as $ddo) {
-			$ddo_results = $this->resolve_ddo_value($ddo, $ddo_map, $section_tipo, $section_id, $level);
+			$ddo_results = $this->resolve_ddo_value($ddo, $ddo_map, $section_tipo, $section_id, $level, $is_publishable);
 			$ar_results = array_merge($ar_results, $ddo_results);
 		}
 
@@ -97,9 +98,10 @@ class diffusion_chain_processor {
 	 * @param string $section_tipo
 	 * @param string|int $section_id
 	 * @param int $level
+	 * @param bool $is_publishable
 	 * @return array
 	 */
-	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level): array {
+	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level, bool $is_publishable): array {
 		
 		$current_tipo = $ddo->tipo;
 		$model_name   = ontology_node::get_model_by_tipo($current_tipo);
@@ -131,7 +133,7 @@ class diffusion_chain_processor {
 		// 1. RELATION COMPONENT BRANCH: Handles both queuing and recursion
 		$is_relation_component = in_array($model_name, component_relation_common::get_components_with_relations());
 		if ($is_relation_component) {
-			return $this->process_relation_component($ddo, $element, $ddo_map, $children, $level);
+			return $this->process_relation_component($ddo, $element, $ddo_map, $children, $level, $is_publishable);
 		}
 
 		// 2. TERMINAL CASE: Standard components are always terminal
@@ -149,9 +151,11 @@ class diffusion_chain_processor {
 	 * @param object $element Component instance providing the relational data
 	 * @param array $ddo_map The full DDO mapping array for the current chain
 	 * @param array $children Pre-filtered list of child mappings from the ddo_map belonging to this parent
+	 * @param int $level
+	 * @param bool $is_publishable
 	 * @return array Array containing a single diffusion_data_object wrapping all resolved relational values
 	 */
-	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level): array {
+	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level,bool $is_publishable): array {
 		
 		$current_tipo 	= $ddo->tipo;
 		$diffusion_data = $element->get_diffusion_data($ddo);
@@ -174,9 +178,9 @@ class diffusion_chain_processor {
 
 		foreach ($ar_locators as $locator) {
 
-			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
+			$current_is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 
-			if($is_publishable !== true){
+			if($is_publishable === false && $current_is_publishable === true){
 				continue;
 			}
 
@@ -185,16 +189,20 @@ class diffusion_chain_processor {
 			if ($level > 0 && !empty($target_diffusion_tipo)) {
 				dd_diffusion_api::$datum_unresolved[$target_diffusion_tipo][] = $locator;
 			}
+			if($is_publishable === false && $current_is_publishable === false){
+				continue;
+			}
 
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
 			$child_results = [];
 			if (in_array($locator->section_tipo, $valid_sections_tipo)) {
 				$child_results = $this->resolve_chain((object)[
-					'ddo_map'      => $ddo_map,
-					'parent'       => $current_tipo,
-					'section_tipo' => $locator->section_tipo,
-					'section_id'   => $locator->section_id,
-					'level'        => $level - 1
+					'ddo_map'      		=> $ddo_map,
+					'parent'       		=> $current_tipo,
+					'section_tipo' 		=> $locator->section_tipo,
+					'section_id'   		=> $locator->section_id,
+					'level'        		=> $level - 1,
+					'is_publishable' 	=> $current_is_publishable
 				]);
 			}
 
