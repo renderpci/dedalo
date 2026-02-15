@@ -25,6 +25,8 @@ export interface rqo_options {
 	include_debug?: boolean;
 	include_empty?: boolean;
 	levels?:        number;
+	total?:         number;       // client-provided total records (main section)
+	chunk_size?:    number;       // records per PHP call (default: 100)
 }
 
 
