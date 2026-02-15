@@ -77,7 +77,7 @@ final class component_section_id_Search_Test extends BaseTestCase {
             ],
             '2. Between' => [
                 ["q" => "100...200", "q_operator" => null, "path" => [["name" => "section_id", "model" => "component_section_id", "section_tipo" => "test3", "component_tipo" => "test102"]], "table_alias" => "te3", "table" => "matrix_test"],
-                ["$and" => [
+                ["\$and" => [
                     ["sentence" => "te3.section_id::integer >= _Q1_", "params" => ["_Q1_" => 100]],
                     ["sentence" => "te3.section_id::integer <= _Q1_", "params" => ["_Q1_" => 200]]
                 ]],
