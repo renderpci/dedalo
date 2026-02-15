@@ -33,7 +33,29 @@ interface data_item {
  * @param options - { records_separator?: string, fields_separator?: string }
  * @returns Concatenated string or null if no data
  */
-export function default_join(data: data_item[] | null, options: parser_options): string | null {
+/**
+ * DEFAULT_JOIN
+ * Creates a generic separator-concatenated string with all values.
+ * Used as the default parser when no parser is configured in the ontology.
+ *
+ * @param data    - Array of data items from the PHP response entries
+ * @param options - { records_separator?: string, fields_separator?: string }
+ * @returns Concatenated string wrapped in a data_item
+ */
+export function default_join(data: data_item[] | null, options: parser_options): any {
+
+	if (!data || data.length === 0) return null;
+
+	const str = join_items_to_string(data, options);
+	if (str === null) return null;
+
+	return [{
+		id:    null,
+		value: str,
+		tipo:  data[0].tipo,
+		lang:  data[0].lang
+	}];
+}
 
 	if (!data || data.length === 0) return null;
 
