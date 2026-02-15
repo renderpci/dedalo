@@ -66,28 +66,28 @@ class diffusion_datum extends stdClass {
 
 
 	/**
-	* SET_DIFFUSION_NODE
+	* SET_DIFFUSION_TIPO
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_diffusion_node( ?string $value ) : bool  {
+	public function set_diffusion_tipo( ?string $value ) : bool  {
 
-		$this->diffusion_node = $value;
+		$this->diffusion_tipo = $value;
 
 		return true;
-	}//end set_diffusion_node
+	}//end set_diffusion_tipo
 
 
 
 	/**
-	* GET_DIFFUSION_NODE
+	* GET_DIFFUSION_TIPO
 	* Return property value
-	* @return string|null $this->diffusion_node
+	* @return string|null $this->diffusion_tipo
 	*/
-	public function get_diffusion_node() : ?string {
+	public function get_diffusion_tipo() : ?string {
 
-		return $this->diffusion_node ?? null;
-	}//end get_diffusion_node
+		return $this->diffusion_tipo ?? null;
+	}//end get_diffusion_tipo
 
 
 

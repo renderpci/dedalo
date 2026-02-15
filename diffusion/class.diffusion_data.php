@@ -9,16 +9,16 @@ class diffusion_data {
 
 	/**
 	* GET_DDO_MAP
-	* @param string $diffusion_node_tipo
+	* @param string $diffusion_tipo
 	* @param string $section_tipo
 	* @return array $ddo_map
 	*/
-	public static function get_ddo_map( string $diffusion_node_tipo, string $section_tipo ) : array {
+	public static function get_ddo_map( string $diffusion_tipo, string $section_tipo ) : array {
 
 		// ddo_map create or get from properties
 		$ddo_map = [];
 
-		$ontology_node	= ontology_node::get_instance($diffusion_node_tipo);
+		$ontology_node	= ontology_node::get_instance($diffusion_tipo);
 		$properties		= $ontology_node->get_properties();
 
 		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
@@ -31,8 +31,8 @@ class diffusion_data {
 				$ddo->section_tipo	= (empty($ddo->section_tipo) || $ddo->section_tipo === 'self') ? $section_tipo : $ddo->section_tipo;
 				$ddo->parent		= (empty($ddo->parent) || $ddo->parent === 'self') ? $section_tipo : $ddo->parent;
 
-				// set diffusion_node_tipo to be used as final entry key
-				$ddo->diffusion_node_tipo = $diffusion_node_tipo;
+				// set diffusion_tipo to be used as final entry key
+				$ddo->diffusion_tipo = $diffusion_tipo;
 
 				// add a new safe ddo
 				$ddo_map[] = new dd_object($ddo);
@@ -41,7 +41,7 @@ class diffusion_data {
 		}else{
 
 			$ar_related_dd_tipo	= ontology_node::get_relation_nodes(
-				$diffusion_node_tipo,
+				$diffusion_tipo,
 				true,
 				true
 			);
@@ -52,7 +52,7 @@ class diffusion_data {
 					'tipo'					=> $current_tipo,
 					'section_tipo'			=> $section_tipo,
 					'parent'				=> $section_tipo,
-					'diffusion_node_tipo'	=> $diffusion_node_tipo
+					'diffusion_tipo'	=> $diffusion_tipo
 				]);
 
 				$ddo_map[] = $ddo;
@@ -98,11 +98,11 @@ class diffusion_data {
 
 	/**
 	* GET_SECTIONS_WITH_DIFFUSION
-	* Returns a map of section_tipo => diffusion_node_tipo for all sections
+	* Returns a map of section_tipo => diffusion_tipo for all sections
 	* that have diffusion nodes defined under the given diffusion_element.
 	* 
 	* @param string $diffusion_element_tipo
-	* @return array Map of section_tipo => diffusion_node_tipo
+	* @return array Map of section_tipo => diffusion_tipo
 	*/
 	public static function get_sections_with_diffusion( string $diffusion_element_tipo ) : array {
 
@@ -116,10 +116,10 @@ class diffusion_data {
 			true
 		);
 		
-		foreach ($ar_diffusion_nodes as $diffusion_node_tipo) {
+		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
 			// Get the related sections for this diffusion_node
 			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
-				$diffusion_node_tipo,
+				$diffusion_tipo,
 				'section',
 				'related',
 				true
@@ -127,7 +127,7 @@ class diffusion_data {
 			
 			foreach ($ar_sections as $section_tipo) {
 				if (!isset($map[$section_tipo])) {
-					$map[$section_tipo] = $diffusion_node_tipo;
+					$map[$section_tipo] = $diffusion_tipo;
 				}
 			}
 		}
