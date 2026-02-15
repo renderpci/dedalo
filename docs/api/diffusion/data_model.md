@@ -40,7 +40,25 @@ The diffusion process generates tables based on the ontology configuration.
 - Every record has a `section_id` (PostgreSQL Matrix ID).
 - Column names correspond to the `tipo` or `label` defined in the ontology.
 
-## 3. Parsers
+## 3. Record Deletion Handling
+
+When a record is no longer "publishable" (e.g., deleted in the Matrix or visibility changed), the PHP Resolution Engine returns a special deletion marker instead of the record data.
+
+### Deletion Format (PHP → Bun)
+```json
+{
+  "section_id": "12345",
+  "entries": "delete"
+}
+```
+
+### Deletion Logic
+When Bun encounters `entries: "delete"`, it stops parsing for that record and prepares a `DELETE` statement:
+- **Scope**: Deletes **all language rows** for that `section_id` from the target table.
+- **Transaction**: Deletions are executed within the same transaction as record upserts per chunk.
+- **Impact**: Ensures that stale data is removed from the MariaDB diffusion tables in real-time.
+
+## 4. Parsers
 
 Bun applies a series of parsers to the raw data received from PHP before inserting it into MariaDB:
 
