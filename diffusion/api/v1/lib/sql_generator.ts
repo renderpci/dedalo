@@ -162,6 +162,9 @@ function get_column_definition(col_name: string, table: processed_table): string
 		case 'field_date':
 			type = 'DATE';
 			break;
+		case 'field_datetime':
+			type = 'DATETIME';
+			break;
 		case 'field_int':
 			type = `INT(${ctx.length || 8})`;
 			break;
@@ -169,6 +172,24 @@ function get_column_definition(col_name: string, table: processed_table): string
 			type = `VARCHAR(${ctx.varchar || 255})`;
 			break;
 		case 'field_text':
+			type = 'TEXT';
+			break;
+		case 'field_mediumtext':
+			type = 'MEDIUMTEXT';
+			break;
+		case 'field_year':
+			type = 'YEAR';
+			break;
+		case 'field_boolean':
+			type = 'TINYINT(1)';
+			break;
+		case 'field_decimal':
+			type = 'DECIMAL(19,4)';
+			break;
+		case 'field_point':
+			type = 'POINT';
+			break;
+		case 'field_enum':
 			type = 'TEXT';
 			break;
 	}
