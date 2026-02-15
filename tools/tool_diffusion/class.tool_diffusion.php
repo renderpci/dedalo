@@ -192,7 +192,7 @@ class tool_diffusion extends tool_common {
 			$diffusion_class_name = $obj_diffusion_element->class_name;
 
 			// include class file once
-			require_once DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php';
+			require_once DEDALO_DIFFUSION_PATH . '/class.'.$diffusion_class_name.'.php';
 
 		// export_record
 			try{
