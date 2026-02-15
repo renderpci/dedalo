@@ -5,9 +5,10 @@
  * to their JS implementations.
  */
 
-import { default_join, text_format } from './parser_text';
-import { string_date }              from './parser_date';
-import type { parser_options }       from '../types';
+import { default_join, text_format, map_value } from './parser_text';
+import { string_date }                          from './parser_date';
+import { get_section_id, get_first }            from './parser_locator';
+import type { parser_options }                  from '../types';
 
 
 
