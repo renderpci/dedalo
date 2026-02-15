@@ -114,7 +114,7 @@ async function ensure_columns(
 
 	// Add missing columns
 	if (missing.length > 0) {
-		const alter_statements = generate_add_column_sql(table_name, missing);
+		const alter_statements = generate_add_column_sql(table, missing);
 		for (const sql of alter_statements) {
 			await connection.execute(sql);
 		}

@@ -77,10 +77,9 @@ export function generate_batch_upsert(table: processed_table): sql_statement[] {
 /**
  * GENERATE_CREATE_TABLE
  * Generates a CREATE TABLE IF NOT EXISTS statement based on the
- * column names found in the first record. Uses TEXT type for all
- * data columns since diffusion data is always text-based.
+ * column names found in the records and metadata in columns_context.
  *
- * @param table - Processed table
+ * @param table - Processed table with metadata
  * @returns SQL CREATE TABLE statement
  */
 export function generate_create_table(table: processed_table): string {
@@ -96,13 +95,12 @@ export function generate_create_table(table: processed_table): string {
 	}
 
 	const column_defs = [
-		'section_id VARCHAR(32) NOT NULL',
-		'lang VARCHAR(16) DEFAULT NULL',
+		get_column_definition('section_id', table),
+		get_column_definition('lang', table),
 	];
 
 	for (const col_name of all_columns) {
-		const safe_col = escape_identifier(col_name);
-		column_defs.push(`${safe_col} TEXT DEFAULT NULL`);
+		column_defs.push(get_column_definition(col_name, table));
 	}
 
 	// Composite primary key
@@ -120,20 +118,63 @@ export function generate_create_table(table: processed_table): string {
 /**
  * GENERATE_ADD_COLUMN_SQL
  * Generates ALTER TABLE ADD COLUMN statements for columns that
- * don't yet exist in the table. Uses TEXT DEFAULT NULL for all new columns.
+ * don't yet exist in the table. Uses metadata in columns_context for typing.
  *
- * @param table_name      - Target table name
+ * @param table           - Full processed table object
  * @param missing_columns - Column names that need to be added
  * @returns Array of ALTER TABLE SQL strings
  */
-export function generate_add_column_sql(table_name: string, missing_columns: string[]): string[] {
+export function generate_add_column_sql(table: processed_table, missing_columns: string[]): string[] {
 
-	const safe_table = escape_identifier(table_name);
+	const safe_table = escape_identifier(table.table_name);
 
 	return missing_columns.map(col_name => {
-		const safe_col = escape_identifier(col_name);
-		return `ALTER TABLE ${safe_table} ADD COLUMN ${safe_col} TEXT DEFAULT NULL;`;
+		const def = get_column_definition(col_name, table);
+		return `ALTER TABLE ${safe_table} ADD COLUMN ${def};`;
 	});
+}
+
+
+
+/**
+ * GET_COLUMN_DEFINITION
+ * Maps a column name to its SQL definition (type + constraints + comment).
+ */
+function get_column_definition(col_name: string, table: processed_table): string {
+
+	const safe_col = escape_identifier(col_name);
+
+	if (col_name === 'section_id') {
+		return `${safe_col} INT(12) NOT NULL`;
+	}
+	if (col_name === 'lang') {
+		return `${safe_col} VARCHAR(16) DEFAULT NULL`;
+	}
+
+	const ctx = table.columns_context[col_name];
+	if (!ctx) {
+		// Fallback for columns found in data but missing from context (unlikely)
+		return `${safe_col} TEXT DEFAULT NULL`;
+	}
+
+	let type = 'TEXT';
+	switch (ctx.model) {
+		case 'field_date':
+			type = 'DATE';
+			break;
+		case 'field_int':
+			type = `INT(${ctx.length || 8})`;
+			break;
+		case 'field_varchar':
+			type = `VARCHAR(${ctx.varchar || 255})`;
+			break;
+		case 'field_text':
+			type = 'TEXT';
+			break;
+	}
+
+	const comment = `${ctx.term} - ${ctx.tipo}`.replace(/'/g, "''");
+	return `${safe_col} ${type} DEFAULT NULL COMMENT '${comment}'`;
 }
 
 

@@ -129,6 +129,13 @@ function process_datum_group(
 	const records:    processed_record[] = [];
 	const deletions:  (string | number)[] = [];
 
+	// Map context fields by sanitized name for SQL generator metadata
+	const columns_context: Record<string, context_field> = {};
+	for (const ctx of datum.context) {
+		const col_name = sanitize_column_name(ctx.term);
+		columns_context[col_name] = ctx;
+	}
+
 	for (const record of datum.data) {
 		// Records marked for deletion by PHP (unpublishable)
 		if (record.entries === 'delete') {
@@ -149,6 +156,7 @@ function process_datum_group(
 		table_name,
 		records,
 		deletions,
+		columns_context,
 	};
 }
 

@@ -74,6 +74,8 @@ export interface context_field {
 	model:       string;
 	parent:      string;
 	parser:      parser_definition | parser_definition[] | Record<string, never>;
+	varchar?:    number;
+	length?:     number;
 }
 
 export interface parser_definition {
@@ -111,10 +113,11 @@ export interface entry_value {
 // =====================================================
 
 export interface processed_table {
-	database_name: string;
-	table_name:    string;
-	records:       processed_record[];
-	deletions:     (string | number)[];   // section_ids to DELETE
+	database_name:   string;
+	table_name:      string;
+	records:         processed_record[];
+	deletions:       (string | number)[];   // section_ids to DELETE
+	columns_context: Record<string, context_field>; // Map: sanitized_name -> context
 }
 
 export interface processed_record {
