@@ -166,6 +166,9 @@ class diffusion_chain_processor {
 		$properties = $diffusion_node->get_properties();
 		$publishable = $properties->publishable ?? null;
 
+		$new_diffusion_data = $diffusion_data;
+		$new_diffusion_data[0]->set_value([]);
+
 		$relation_values     = [];
 		$valid_sections_tipo = array_map(fn($child) => $child->section_tipo, $children);
 
@@ -207,7 +210,8 @@ class diffusion_chain_processor {
 				}
 			} else {
 				// Fallback: Always return at least the raw locator if no children resolved
-				$relation_values[] = $locator;
+				$new_diffusion_data[0]->value[] = $locator;
+				$relation_values = $new_diffusion_data;
 			}
 		}
 
@@ -256,12 +260,12 @@ class diffusion_chain_processor {
 		$model_name     = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG);
 
 		$res = new diffusion_data_object();
-		$res->set_diffusion_tipo($meta_tipo);
-		$res->set_id($ddo->id ?? $meta_tipo);
-		$res->set_label($label);
-		$res->set_term($term);
-		$res->set_model($model_name);
-		$res->set_value($value);
+			$res->set_diffusion_tipo($meta_tipo);
+			$res->set_id($ddo->id ?? $meta_tipo);
+			$res->set_label($label);
+			$res->set_term($term);
+			$res->set_model($model_name);
+			$res->set_value($value);
 
 		return $res;
 	}
