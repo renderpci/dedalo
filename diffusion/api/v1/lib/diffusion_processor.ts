@@ -53,7 +53,7 @@ export function process_response(response: php_api_response): processed_table[] 
 	const tables: processed_table[] = [];
 
 	for (const datum of response.datum) {
-		const table = process_datum_group(datum, database_name, response.main, all_langs, main_lang);
+		const table = process_datum_group(datum, database_name, all_langs, main_lang);
 		if (table) {
 			tables.push(table);
 		}
@@ -92,18 +92,10 @@ function resolve_database_name(main: main_node[]): string {
  * Looks for the node with model: "table".
  *
  * @param datum - A datum group from the PHP response
- * @param main  - Main hierarchy nodes
  * @returns Table name string
  */
-function resolve_table_name(datum: datum_group, main: main_node[]): string {
-
-	// Look for table definition in the hierarchy (model: "table")
-	for (const node of main) {
-		if (node.model === 'table' && node.term) {
-			return node.term;
-		}
-	}
-	// Fallback: use datum term
+function resolve_table_name(datum: datum_group): string {
+	// The table name is defined in the datum object itself
 	return datum.term || datum.diffusion_tipo;
 }
 
@@ -118,7 +110,6 @@ function resolve_table_name(datum: datum_group, main: main_node[]): string {
  *
  * @param datum         - The datum group
  * @param database_name - Target database name
- * @param main          - Main hierarchy nodes
  * @param all_langs     - All available languages from the response
  * @param main_lang     - The main/default language for fallback
  * @returns A processed_table or null if no data
@@ -126,7 +117,6 @@ function resolve_table_name(datum: datum_group, main: main_node[]): string {
 function process_datum_group(
 	datum:         datum_group,
 	database_name: string,
-	main:          main_node[],
 	all_langs:     string[],
 	main_lang:     string | null
 ): processed_table | null {
@@ -135,7 +125,7 @@ function process_datum_group(
 		return null;
 	}
 
-	const table_name = resolve_table_name(datum, main);
+	const table_name = resolve_table_name(datum);
 	const records:    processed_record[] = [];
 	const deletions:  (string | number)[] = [];
 
