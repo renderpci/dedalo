@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 
-require_once(DEDALO_CORE_PATH . '/diffusion/class.diffusion_activity_logger.php');
+require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 
 /**
  * DIFFUSION_CHAIN_PROCESSOR
@@ -27,7 +27,7 @@ class diffusion_chain_processor {
 	private static array $resolved_sections_cache = [];
 
 	/**
-	 * @var array $section_diffusion_map Map of section_tipo => diffusion_node_tipo within scope
+	 * @var array $section_diffusion_map Map of section_tipo => diffusion_tipo within scope
 	 */
 	private static array $section_diffusion_map = [];
 
@@ -142,7 +142,7 @@ class diffusion_chain_processor {
 	 * PROCESS_RELATION_COMPONENT
 	 * Handles components that establish relationships with other sections (Portals, Relations, etc.).
 	 * This method performs two primary functions:
-	 * 1. Queues the target sections in diffusion_api::$datum_unresolved for top-level asynchronous resolution.
+	 * 1. Queues the target sections in dd_diffusion_api::$datum_unresolved for top-level asynchronous resolution.
 	 * 2. Optionally recurses into specific target fields if children are defined for that section_tipo in the ddo_map.
 	 * 
 	 * @param object $ddo Original DDO configuration for this component
@@ -161,8 +161,8 @@ class diffusion_chain_processor {
 			$ar_locators = [$ar_locators];
 		}
 
-		$diffusion_node_tipo = $ddo->diffusion_node_tipo;
-		$diffusion_node = ontology_node::get_instance($diffusion_node_tipo);
+		$diffusion_tipo = $ddo->diffusion_tipo;
+		$diffusion_node = ontology_node::get_instance($diffusion_tipo);
 		$properties = $diffusion_node->get_properties();
 		$publishable = $properties->publishable ?? null;
 
@@ -178,9 +178,9 @@ class diffusion_chain_processor {
 			}
 
 			// A. QUEUE: Store in datum_unresolved for later resolution
-			$target_diffusion_node_tipo = self::get_section_diffusion_node($locator->section_tipo);
-			if ($level > 0 && !empty($target_diffusion_node_tipo)) {
-				diffusion_api::$datum_unresolved[$target_diffusion_node_tipo][] = $locator;
+			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
+			if ($level > 0 && !empty($target_diffusion_tipo)) {
+				dd_diffusion_api::$datum_unresolved[$target_diffusion_tipo][] = $locator;
 			}
 
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
@@ -244,7 +244,7 @@ class diffusion_chain_processor {
 	 */
 	private function wrap_into_diffusion_data_object(object $ddo, string $current_tipo, mixed $value): diffusion_data_object {
 		
-		$meta_tipo      = $ddo->diffusion_node_tipo ?? $current_tipo;
+		$meta_tipo      = $ddo->diffusion_tipo ?? $current_tipo;
 		
 		$component_node = ontology_node::get_instance($current_tipo);
 		$label          = $component_node->get_term(DEDALO_DATA_LANG);
@@ -256,7 +256,7 @@ class diffusion_chain_processor {
 		$model_name     = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG);
 
 		$res = new diffusion_data_object();
-		$res->set_node_tipo($meta_tipo);
+		$res->set_diffusion_tipo($meta_tipo);
 		$res->set_id($ddo->id ?? $meta_tipo);
 		$res->set_label($label);
 		$res->set_term($term);
@@ -405,7 +405,7 @@ class diffusion_chain_processor {
 	 * Finds all diffusion nodes under a diffusion_element and maps their target sections.
 	 * 
 	 * @param string $diffusion_element_tipo
-	 * @return array Map of section_tipo => diffusion_node_tipo
+	 * @return array Map of section_tipo => diffusion_tipo
 	 */
 	private static function build_section_diffusion_map(string $diffusion_element_tipo): array {
 		
@@ -416,10 +416,10 @@ class diffusion_chain_processor {
 			$diffusion_element_tipo			
 		);
 		
-		foreach ($ar_diffusion_nodes as $diffusion_node_tipo) {
+		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
 			// Get the section_tipo this diffusion_node targets
 			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
-				$diffusion_node_tipo,
+				$diffusion_tipo,
 				'section',
 				'related',
 				true
@@ -428,7 +428,7 @@ class diffusion_chain_processor {
 			foreach ($ar_sections as $section_tipo) {
 				// Store the mapping (first diffusion_node wins if multiple)
 				if (!isset($map[$section_tipo])) {
-					$map[$section_tipo] = $diffusion_node_tipo;
+					$map[$section_tipo] = $diffusion_tipo;
 				}
 			}
 		}
@@ -439,10 +439,10 @@ class diffusion_chain_processor {
 
 	/**
 	 * GET_SECTION_DIFFUSION_NODE
-	 * Returns the diffusion_node_tipo for a section within current scope.
+	 * Returns the diffusion_tipo for a section within current scope.
 	 * 
 	 * @param string $section_tipo
-	 * @return string|null diffusion_node_tipo or null if not in scope
+	 * @return string|null diffusion_tipo or null if not in scope
 	 */
 	public static function get_section_diffusion_node(string $section_tipo): ?string {
 		// 1. Check internal map scope
@@ -526,8 +526,8 @@ class diffusion_chain_processor {
 		$section_id   = $locator->section_id;
 
 		// Check if target section has a diffusion node in scope
-		$diffusion_node_tipo = self::get_section_diffusion_node($section_tipo);
-		if (!$diffusion_node_tipo) {
+		$diffusion_tipo = self::get_section_diffusion_node($section_tipo);
+		if (!$diffusion_tipo) {
 			// Section not in scope, return null (caller should use raw locator data)
 			return null;
 		}
@@ -539,7 +539,7 @@ class diffusion_chain_processor {
 		}
 
 		// Get the ddo_map for this diffusion node
-		$ddo_map = diffusion_data::get_ddo_map($diffusion_node_tipo, $section_tipo);
+		$ddo_map = diffusion_data::get_ddo_map($diffusion_tipo, $section_tipo);
 		if (empty($ddo_map)) {
 			return null;
 		}
