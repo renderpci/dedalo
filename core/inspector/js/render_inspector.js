@@ -1462,11 +1462,12 @@ export const load_time_machine_list = async function(self) {
 
 /**
 * RENDER_COMPONENT_HISTORY
-* Note that self.element_info_containe is fixed to allow inspector init event
-* to locate the target node when is invoked
-* @param object self
-* 	inspector instance
-* @return HTMLElement component_history_wrap
+* Renders the structure for the component history section in the inspector.
+* This container will hold the time machine service list for the active component.
+* Note that self.element_info_container is fixed to allow inspector init event
+* to locate the target node when is invoked.
+* @param {Object} self - Inspector instance.
+* @returns {HTMLElement} component_history_wrap - The rendered history structure.
 */
 const render_component_history = function(self) {
 
@@ -1484,7 +1485,7 @@ const render_component_history = function(self) {
 		const component_history_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_history_head icon_arrow',
-			inner_html		: get_label.component_history || 'Component history',
+			text_content	: get_label.component_history || 'Component history',
 			parent			: component_history_wrap
 		})
 
@@ -1526,12 +1527,11 @@ const render_component_history = function(self) {
 
 /**
 * LOAD_COMPONENT_HISTORY
-* Get selected component time_machine history records and notes
-* @param object self
-* 	inspector instance
-* @param object|null component
-* 	component instance
-* @return HTMLElement|null component_history_wrap
+* Asynchronously initializes and renders the time machine history and notes for a specific component.
+* Manages the loading state and replaces the existing content in the history container.
+* @param {Object} self - Inspector instance.
+* @param {Object} component - Component instance to fetch history for.
+* @returns {Promise<HTMLElement|null>} The history container or null if loading was skipped.
 */
 export const load_component_history = async function(self, component) {
 
@@ -1541,8 +1541,9 @@ export const load_component_history = async function(self, component) {
 	// prevent load the component data when component is not selected
 		if(!component) {
 			// remove previous node if exists pointer
-			if (container && container.component_history_wrap) {
-				container.component_history_wrap.remove()
+			if (container) {
+				container.replaceChildren()
+				delete container.component_history_wrap
 			}
 			return null
 		}
@@ -1561,10 +1562,9 @@ export const load_component_history = async function(self, component) {
 	// set as loading
 		container.classList.add('loading')
 
+	// create and render a component_history instance (service_time_machine)
 	// (!) Note that load_component_history is called on each section pagination, whereby must be generated
 	// even if user close and re-open the component_history inspector tab
-
-	// create and render a component_history instance
 		const service_time_machine	= await get_instance({
 			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
@@ -1575,14 +1575,14 @@ export const load_component_history = async function(self, component) {
 			caller_tipo		: component.tipo,
 			config			: {
 				id					: 'component_history_' + component.tipo,
-				model				: component.model, // used to create the filter
-				tipo				: component.tipo, // used to create the filter
-				lang				: component.lang, // used to create the filter
+				model				: component.model,
+				tipo				: component.tipo,
+				lang				: component.lang,
 				// template_columns	: '1fr 1fr 2fr 2fr',
 				ignore_columns		: [
-					'bulk_process_id', // bulk_process_id 88
-					'matrix_id', // matrix_id dd1573
-					'where' // where dd546
+					'bulk_process_id',
+					'matrix_id',
+					'where'
 				],
 				ddo_map				: [
 					{ 	// selected component
@@ -1620,20 +1620,16 @@ export const load_component_history = async function(self, component) {
 		}
 
 		await service_time_machine.build(true)
-		const component_history_wrap = await service_time_machine.render()
+		const history_node = await service_time_machine.render()
 
-	// remove previous node if exists pointer
-		if (container.component_history_wrap) {
-			container.component_history_wrap.remove()
+	// Replace previous content with the new node
+		if (container) {
+			container.replaceChildren(history_node)
+			// set pointer
+			container.component_history_wrap = history_node
+			// set as loaded
+			container.classList.remove('loading')
 		}
-
-	// append node
-		container.appendChild(component_history_wrap)
-		// set pointers
-		container.component_history_wrap = component_history_wrap
-
-	// set as loaded
-		container.classList.remove('loading')
 
 
 	return container
