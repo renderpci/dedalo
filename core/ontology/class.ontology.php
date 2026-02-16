@@ -914,6 +914,7 @@ class ontology {
 					$ontology_node->set_term_data( $term );
 				}
 
+			// Insert into DDBB
 			if (!$ontology_node->insert()) {
 				debug_log(__METHOD__ . " Error inserting ontology node: $tipo", logger::ERROR);
 				return false;

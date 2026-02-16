@@ -2,21 +2,41 @@
 /**
 * LOGGER BACKEND CLASS
 *
+* Abstract base class for logger backend implementations.
+* Provides common interface for different logging mechanisms.
+*
+* @package Dedalo
+* @subpackage Logger
 */
 abstract class logger_backend {
 
 
 
-	protected $url_data;
+	/**
+	* URL_DATA
+	* @var array|null
+	*/
+	protected ?array $url_data;
 
 
 
 	/**
 	* __CONSTRUCT
-	* Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
-	* @param array $url_data
+	* Requires url_data connector.
+	* @param array|null $url_data
+	* Assoc array with url data
+	* E.g.
+	* [
+	*	"scheme" => "activity",
+	*	"host" => "auto",
+	*	"port" => 5432,
+	*	"user" => "auto",
+	*	"pass" => "auto",
+	*	"path" => "/log_data",
+	*	"query" => "table=matrix_activity"
+	* ]
 	*/
-	public function __construct(array $url_data) {
+	public function __construct( ?array $url_data ) {
 		$this->url_data = $url_data;
 	}
 
@@ -24,14 +44,15 @@ abstract class logger_backend {
 
 	/**
 	* LOG_MESSAGE
+	* Abstract method for logging messages with context data
 	*/
 	abstract function log_message(
 		string $message,
 		int $log_level=logger::INFO,
 		?string $tipo_where=null,
 		?string $operations=null,
-		?array $datos=null
-	);
+		?array $log_data=null
+	) : void;
 
 
 
