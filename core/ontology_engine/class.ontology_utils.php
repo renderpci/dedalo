@@ -102,10 +102,14 @@ class ontology_utils {
 	 * Checks if a given tipo is usable by attempting to resolve its model.
 	 * If the model is empty, the tipo is considered invalid (ontology damage or missing TLD).
 	 *
-	 * @param string $tipo The tipo to validate (section, component, etc.).
+	 * @param string|null $tipo The tipo to validate (section, component, etc.).
 	 * @return bool True if valid, false otherwise.
 	 */
-	public static function check_tipo_is_valid( string $tipo ) : bool {
+	public static function check_tipo_is_valid( ?string $tipo ) : bool {
+
+		if($tipo===null) {
+			return false;
+		}
 
 		// check tipo is safe. Exclude bad formed tipos
 		if (!safe_tipo($tipo)) {
