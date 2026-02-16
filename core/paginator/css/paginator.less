@@ -59,6 +59,7 @@
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
+			contain: content;
 			display: flex;
 			align-items: center;
 
@@ -94,6 +95,7 @@
 
 		// text
 		>.paginator_info {
+			contain: content;
 			min-height: 1.5rem;
 			min-width: 7rem;
 			margin-top: 0px;
@@ -156,6 +158,7 @@
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
+			contain: content;
 			height: 0.8rem;
 			padding: 0px;
 
@@ -167,9 +170,10 @@
 
 		// text
 		>.paginator_info {
+			contain: content;
 			min-height: unset;
 			min-width: 5rem;
-		}//end .paginator_info
+		}
 	}//end .content_data
 
 	&.micro >.content_data {
@@ -178,6 +182,7 @@
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
+			contain: content;
 			height: 0.8rem;
 			padding: 0px;
 
@@ -195,10 +200,10 @@
 
 		// text as '3-11'
 		>.paginator_info {
-			// min-width: 2.75rem;
+			contain: content;
 			min-width: fit-content;
 			min-height: unset;
-		}//end .paginator_info
+		}
 
 		.page_info {
 			padding-left: 0.1rem;
