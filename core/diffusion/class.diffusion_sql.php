@@ -1647,7 +1647,9 @@ class diffusion_sql extends diffusion  {
 				}else{
 					$dato = ($model_name==='relation_list')
 						? $current_component->get_diffusion_dato() // use 'properties->process_dato_arguments' to filter by section or component
-						: $current_component->get_dato();
+						: ($model_name==='component_relation_parent'
+							? $current_component->get_diffusion_safe_dato()
+							: $current_component->get_dato());
 				}
 
 				// diffusion_model_name. like 'field_text'
