@@ -337,14 +337,14 @@ class search_query_object extends stdClass {
 	/**
 	* SET_FILTER_BY_LOCATORS
 	* Allow to search directly with one or more locator values(section_tipo, section_id, etc.)
-	* @param array $value like
+	* @param array|null $value like
 	* [{
 	*		"section_tipo" : "rsc35"
 	*		"section_id" : "4"
 	*  }]
 	* @return bool true
 	*/
-	public function set_filter_by_locators(array $value) : true {
+	public function set_filter_by_locators( ?array $value ) : true {
 
 		$this->filter_by_locators = $value;
 

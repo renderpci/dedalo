@@ -33,8 +33,36 @@ interface data_item {
  * @param options - { records_separator?: string, fields_separator?: string }
  * @returns Concatenated string or null if no data
  */
-export function default_join(data: data_item[] | null, options: parser_options): string | null {
+/**
+ * DEFAULT_JOIN
+ * Creates a generic separator-concatenated string with all values.
+ * Used as the default parser when no parser is configured in the ontology.
+ *
+ * @param data    - Array of data items from the PHP response entries
+ * @param options - { records_separator?: string, fields_separator?: string }
+ * @returns Concatenated string wrapped in a data_item
+ */
+export function default_join(data: data_item[] | null, options: parser_options): any {
 
+	if (!data || data.length === 0) return null;
+
+	const str = join_items_to_string(data, options);
+	if (str === null) return null;
+
+	return [{
+		id:    null,
+		value: str,
+		tipo:  data[0].tipo,
+		lang:  data[0].lang
+	}];
+}
+
+
+/**
+ * JOIN_ITEMS_TO_STRING
+ * Helper to join data items into a single string.
+ */
+export function join_items_to_string(data: data_item[] | null, options: parser_options): string | null {
 	if (!data || data.length === 0) return null;
 
 	const records_separator = options.records_separator ?? ' | ';
@@ -73,7 +101,7 @@ export function default_join(data: data_item[] | null, options: parser_options):
  *
  * @param data    - Array of data items with `id` and `value`
  * @param options - { pattern: string }
- * @returns Formatted string or null
+ * @returns Formatted string wrapped in data_item or null
  *
  * @example
  *   const data = [
@@ -83,9 +111,9 @@ export function default_join(data: data_item[] | null, options: parser_options):
  *   ];
  *   const options = { pattern: '${firstName} ${lastName} from ${city}' };
  *   text_format(data, options);
- *   // Returns: "John Doe from London"
+ *   // Returns: [{ value: "John Doe from London", ... }]
  */
-export function text_format(data: data_item[] | null, options: parser_options): string | null {
+export function text_format(data: data_item[] | null, options: parser_options): any {
 
 	if (!data || data.length === 0) return null;
 
@@ -117,10 +145,18 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 
 	const values = placeholder_names.map(name => id_map.get(name) ?? null);
 
-	const result = replace(pattern, values);
+	const result_str = replace(pattern, values);
 
-	return result || null;
+	if (!result_str) return null;
+
+	return [{
+		id:    null,
+		value: result_str,
+		tipo:  data[0].tipo,
+		lang:  data[0].lang
+	}];
 }
+
 
 
 
@@ -139,4 +175,64 @@ function stringify_value(val: unknown): string {
 		return JSON.stringify(val);
 	}
 	return '';
+}
+
+
+
+/**
+ * MAP_VALUE
+ * Maps values based on a provided dictionary.
+ *
+ * @param data    - Array of data items
+ * @param options - { map: [{ [id]: { [key]: value } }] }
+ * @returns Mapped data item values or null
+ */
+export function map_value(data: data_item[] | null, options: parser_options): any {
+
+	if (!data || data.length === 0) return null;
+
+	const map_options = options.map as Record<string, Record<string, string>>[] | undefined;
+	
+	if (!map_options || !Array.isArray(map_options)) {
+		return default_join(data, options);
+	}
+	
+	// Flatten the map array into a single lookup object for easier access
+	// The structure in options is usually: "map": [{"a": {"1": "yes", "2": "no"}}]
+	
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const original_val = stringify_value(item.value);
+		let mapped_val: string | null = null;
+
+		// Try to find a map that applies
+		for (const m of map_options) {
+			// Check if map set key matches item.id (if item.id is present)
+			if (item.id && m[item.id]) {
+				const mapping = m[item.id];
+				if (mapping[original_val] !== undefined) {
+					mapped_val = mapping[original_val];
+					break;
+				}
+			}
+			
+			// Just use the first map found if generic or item.id is missing/unmatched
+			for (const map_key in m) {
+				const mapping = m[map_key];
+				if (mapping[original_val] !== undefined) {
+					mapped_val = mapping[original_val];
+					break;
+				}
+			}
+			if (mapped_val !== null) break;
+		}
+
+		result.push({
+			...item,
+			value: mapped_val !== null ? mapped_val : original_val
+		});
+	}
+
+	return result.length > 0 ? result : null;
 }

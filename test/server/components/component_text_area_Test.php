@@ -415,6 +415,17 @@ final class component_text_area_test extends BaseTestCase {
 				'expected "'.$expected_value.'" value:' . PHP_EOL
 				.'value: '.to_string($data[0]->value)
 		);
+		// 4 check spanish value
+		$this->assertTrue(
+			$data[1]->value === $expected_lang_value,
+				'expected "'.$expected_lang_value.'" value:' . Pu
+				
+				HP_EOL
+				HP_EOL
+				1 HP_EOL
+				.'value: '.to_string($data[1]->value)
+		);
+
 	}//end test_delete_tag_from_all_langs
 
 
