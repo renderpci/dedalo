@@ -41,7 +41,20 @@ export const inspector = function() {
 	inspector.prototype.edit	= render_inspector.prototype.edit
 	inspector.prototype.render	= common.prototype.render
 	inspector.prototype.refresh	= common.prototype.refresh
-	inspector.prototype.destroy	= common.prototype.destroy
+
+	/**
+	* DESTROY
+	* Overrides common.destroy to clean up active component value update events
+	*/
+	inspector.prototype.destroy	= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		// clean up active component value update event if exists
+		if (self.element_info_container?.update_value_event_token) {
+			event_manager.unsubscribe(self.element_info_container.update_value_event_token)
+			delete self.element_info_container.update_value_event_token
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 
 
 

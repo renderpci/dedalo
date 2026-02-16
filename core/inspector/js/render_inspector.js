@@ -505,9 +505,10 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_SELECTION_INFO
-* Display current selected element name like 'Description'
-* @param object self
-* @return HTMLElement selection_info_node
+* Displays the name of the currently selected element (e.g., 'Description' or 'Section Name') in the inspector header.
+* Adds a 'List' navigation button when a section is selected.
+* @param {Object} self - Inspector instance.
+* @returns {HTMLElement} selection_info_node - The rendered selection info container.
 */
 const render_selection_info = function(self) {
 
@@ -516,50 +517,64 @@ const render_selection_info = function(self) {
 			element_type	: 'div',
 			class_name		: 'selection_info'
 		})
-		// update_label function called form event caller (section) render and activate_componentº
+
+		/**
+		 * update_label
+		 * Updates the label display and optional actions based on the new selection.
+		 * Triggered on activation or rendering of sections/components.
+		 * @param {Object} caller - The section or component instance selected.
+		 */
 		selection_info_node.update_label = function(caller) {
 
-			// fix caller
+			if (!caller) return
+
+			// Store reference
 			self.selection_info_node.caller = caller
 
-			// clean container
-			while (selection_info_node.firstChild) {
-				selection_info_node.removeChild(selection_info_node.firstChild)
-			}
+			const fragment = new DocumentFragment()
 
 			// add label text
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'selection_info_label',
-				inner_html		: caller.label || '',
-				parent			: selection_info_node
+				text_content	: caller.label || '',
+				parent			: fragment
 			})
 
 			// add button list when info is about section
-			add_list_button(caller)
+			add_list_button(caller, fragment)
+
+			// Update container content efficiently
+			selection_info_node.replaceChildren(fragment)
 		}
+
 		// fix pointer
 		self.selection_info_node = selection_info_node
 
-	// add_list_button to go to section list
-		const add_list_button = function(caller) {
-			if (caller && caller.model==='section' && caller.session_save===true) {
+		/**
+		 * add_list_button
+		 * Appends a 'Go to list' button if the caller is a section.
+		 * @param {Object} caller
+		 * @param {DocumentFragment|HTMLElement} parent
+		 */
+		const add_list_button = function(caller, parent) {
+			if (caller && caller.model === 'section' && caller.session_save === true) {
 				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button light list',
 					title			: get_label.list || 'List',
-					parent			: selection_info_node
+					parent			: parent
 				})
 				button_list.addEventListener('mousedown', (e) => {
 					e.stopPropagation()
-					// go to section in list mode (useful when no menu is available)
+					// go to section in list mode
 					self.caller.goto_list()
 				})
 			}
 		}
 
 	// exec once
-		add_list_button(self.caller)
+		selection_info_node.update_label(self.caller)
 
 
 	return selection_info_node
@@ -569,75 +584,61 @@ const render_selection_info = function(self) {
 
 /**
 * RENDER_SECTION_INFO
-* Called from info.js throw event manager: render_' + self.caller.id
-* @param object self
-* 	inspector instance
-* @return DOM DocumentFragment
+* Renders the technical and administrative metadata of the current section into the inspector.
+* This includes typology, model, database table, record ID, and audit trail (creation, modification, publication).
+* Triggered via event manager subscription 'render_' + self.caller.id.
+* @param {Object} self - Inspector instance.
+* @param {Object} self.caller - Section instance providing the data.
+* @param {HTMLElement} self.element_info_container - Target container for the rendered info.
+* @returns {DocumentFragment} fragment - The rendered metadata structure.
 */
 export const render_section_info = function(self) {
 
 	// short vars
 		const container		= self.element_info_container
 		const section		= self.caller
-		const section_data	= section.data.value && section.data.value[0]
-			? section.data.value[0]
+		const section_data	= section.data?.entries && section.data?.entries[0]
+			? section.data.entries[0]
 			: {}
+
+	// unsubscribe previous component value update event if exists
+		if (container.update_value_event_token) {
+			event_manager.unsubscribe(container.update_value_event_token)
+			delete container.update_value_event_token
+		}
 
 	// values from caller (section)
 		const section_tipo				= section.section_tipo
 		const label						= section.label
 		const mode						= section.mode
 		const view						= section.view || 'default'
-		const created_date				= section_data.created_date
-		const modified_date				= section_data.modified_date
-		const created_by_user_name		= section_data.created_by_user_name
-		const modified_by_user_name		= section_data.modified_by_user_name
-		const publication_first_date	= section_data.publication_first_date
-		const publication_last_date		= section_data.publication_last_date
-		const publication_first_user	= section_data.publication_first_user
-		const publication_last_user		= section_data.publication_last_user
 		const matrix_table				= section.context.matrix_table
-
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
 
-	// section name
-		// // label
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'key',
-		// 	inner_html		: get_label.section || 'Section',
-		// 	parent			: fragment
-		// })
-		// // value
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'value',
-		// 	inner_html		: label,
-		// 	parent			: fragment
-		// })
+	// Helper for safe multiline strings (omits undefined/null values)
+		const format_info = (...args) => args.filter(Boolean).join('<br>') || '-'
 
 	// tipo
 		// label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.tipo || 'tipo',
+				text_content	: get_label.tipo || 'tipo',
 				parent			: fragment
 			})
 		// value
 			const tipo_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value bold',
-				inner_html		: section_tipo,
+				text_content	: section_tipo,
 				title			: 'Click to copy',
 				parent			: fragment
 			})
 			tipo_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
+				if (navigator?.clipboard) {
 					navigator.clipboard.writeText( section_tipo )
 				}
 			})
@@ -647,7 +648,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'info',
+				text_content	: 'info',
 				parent			: fragment
 			})
 		// value
@@ -665,21 +666,20 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.model || 'Model',
+				text_content	: get_label.model || 'Model',
 				parent			: fragment
 			})
 		// value
 			const model_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: section.model,
+				text_content	: section.model,
 				title			: 'Click to copy',
 				parent			: fragment
 			})
 			model_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
+				if (navigator?.clipboard) {
 					navigator.clipboard.writeText( section.model )
 				}
 			})
@@ -689,21 +689,20 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.table || 'table',
+				text_content	: get_label.table || 'table',
 				parent			: fragment
 			})
 		// value
 			const matrix_table_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: matrix_table,
+				text_content	: matrix_table,
 				title			: 'Click to copy',
 				parent			: fragment
 			})
 			matrix_table_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
+				if (navigator?.clipboard) {
 					navigator.clipboard.writeText( matrix_table )
 				}
 			})
@@ -713,14 +712,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: 'section_id',
+			text_content	: 'section_id',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: section.section_id,
+			text_content	: section.section_id,
 			parent			: fragment
 		})
 
@@ -729,14 +728,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: 'View',
+			text_content	: 'View',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: view + ' - ' + mode,
+			text_content	: view + ' - ' + mode,
 			parent			: fragment
 		})
 
@@ -745,14 +744,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.created || 'Created',
+			text_content	: get_label.created || 'Created',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: created_date + '<br>' + created_by_user_name,
+			inner_html		: format_info(section_data.created_date, section_data.created_by_user_name),
 			parent			: fragment
 		})
 
@@ -761,14 +760,14 @@ export const render_section_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: get_label.modified || 'Modified',
+			text_content	: get_label.modified || 'Modified',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: modified_date + '<br>' + modified_by_user_name,
+			inner_html		: format_info(section_data.modified_date, section_data.modified_by_user_name),
 			parent			: fragment
 		})
 
@@ -781,21 +780,22 @@ export const render_section_info = function(self) {
 			parent			: fragment
 		})
 		// value
-		const publication_value = publication_first_date
-			? publication_first_date + '<br>' + publication_first_user + '<br>' + publication_last_date + '<br>' + publication_last_user
-			: get_label.nunca || 'Never'
+		const pub_data = [
+			section_data.publication_first_date,
+			section_data.publication_first_user,
+			section_data.publication_last_date,
+			section_data.publication_last_user
+		].filter(Boolean)
+
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: publication_value,
+			inner_html		: pub_data.length > 0 ? pub_data.join('<br>') : (get_label.nunca || 'Never'),
 			parent			: fragment
 		})
 
 	// clean and set container
-		while (container.firstChild) {
-			container.removeChild(container.firstChild);
-		}
-		container.appendChild(fragment)
+		container.replaceChildren(fragment)
 
 	// re-activate tooltips
 	ui.activate_tooltips(container)
@@ -807,12 +807,11 @@ export const render_section_info = function(self) {
 
 /**
 * RENDER_COMPONENT_INFO
-* Show selected component main info and value
-* @param object self
-* 	inspector instance
-* @param object component
-* 	component instance
-* @return DOM DocumentFragment
+* Renders detailed metadata and current data of a selected component into the inspector.
+* Handles data parsing asynchronously and subscribes to value updates.
+* @param {Object} self - Inspector instance.
+* @param {Object} component - Component instance to display.
+* @returns {DocumentFragment} fragment - The rendered component info structure.
 */
 export const render_component_info = function(self, component) {
 
@@ -826,52 +825,29 @@ export const render_component_info = function(self, component) {
 		const translatable	= component.context?.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
-		// const ontology_info = component.context.ontology_info || ''
-		// const value		= component.data && component.data.value
-		// 	? JSON.stringify(component.data.value, null, 1)
-		// 	: ''
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
-
-	// container
-
-	// component label
-		// // label
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'key',
-		// 	inner_html		: get_label.component || 'Component',
-		// 	parent			: fragment
-		// })
-		// // value
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'value',
-		// 	inner_html		: label,
-		// 	parent			: fragment
-		// })
 
 	// tipo
 		// label
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'tipo',
+				text_content	: 'tipo',
 				parent			: fragment
 			})
 		// value
 			const tipo_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value bold',
-				inner_html		: tipo,
+				text_content	: tipo,
 				title			: 'Click to copy',
 				parent			: fragment
 			})
 			tipo_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
+				if (navigator?.clipboard) {
 					navigator.clipboard.writeText( tipo )
 				}
 			})
@@ -881,7 +857,7 @@ export const render_component_info = function(self, component) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'info',
+				text_content	: 'info',
 				parent			: fragment
 			})
 		// value
@@ -899,21 +875,20 @@ export const render_component_info = function(self, component) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.model || 'Model',
+				text_content	: get_label.model || 'Model',
 				parent			: fragment
 			})
 		// value
 			const model_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: model,
+				text_content	: model,
 				title			: 'Click to copy',
 				parent			: fragment
 			})
 			model_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
+				if (navigator?.clipboard) {
 					navigator.clipboard.writeText( model )
 				}
 			})
@@ -923,14 +898,14 @@ export const render_component_info = function(self, component) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: get_label.translatable || 'Translatable',
+				text_content	: get_label.translatable || 'Translatable',
 				parent			: fragment
 			})
 		// value
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: translatable,
+				text_content	: translatable,
 				parent			: fragment
 			})
 
@@ -939,14 +914,14 @@ export const render_component_info = function(self, component) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key',
-			inner_html		: 'View',
+			text_content	: 'View',
 			parent			: fragment
 		})
 		// value
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: view + ' - ' + mode,
+			text_content	: view + ' - ' + mode,
 			parent			: fragment
 		})
 
@@ -955,70 +930,86 @@ export const render_component_info = function(self, component) {
 		const value_label_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'key wide icon_arrow',
-			inner_html		: get_label.data || 'Data',
+			text_content	: get_label.data || 'Data',
 			parent			: fragment
 		})
-		// value
+		// value container
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value wide code hide',
-			text_content	: 'Parsing data..',
 			parent			: fragment
 		})
+		// value text
+		const value_text_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value_text',
+			text_content	: 'Parsing data..',
+			parent			: value_node
+		})
+
 		// dblclick event
 		value_node.addEventListener('dblclick', (e) => {
 			e.stopPropagation()
 			// toggle value container max-height from default to none
 			container.classList.toggle('auto_height')
 		})
+
+		// button copy value (created once)
+		const button_value_copy_node = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_value_copy warning hide',
+			inner_html		: get_label.copy || 'Copy',
+			parent			: value_node
+		})
+		// click event
+		button_value_copy_node.addEventListener('click', (e) => {
+			e.stopPropagation()
+			if (navigator?.clipboard) {
+				const entries = component.data?.entries || []
+				navigator.clipboard.writeText( JSON.stringify(entries) )
+			}
+		})
+
 		// parse data. This time out prevents lock component selection
 		const callback = () => {
 
+			const entries = component.data?.entries || []
+
 			// Limit data size to display (data.value is an array of values)
 			// e.g. component_security_access case. Do not try to parse the big array of the data.
-				if (component.data?.value?.length > 25) {
-					value_node.textContent = 'Data is too big for display'
-					value_node.classList.add('loading')
+				if (entries.length > 25) {
+					value_text_node.textContent = 'Data is too big for display'
+					value_text_node.classList.add('loading')
+					button_value_copy_node.classList.add('hide')
 					return
 				}
 
 			// set value
-				const value = component.data?.value
-					? JSON.stringify(component.data.value, null, 1)
+				const value = entries.length>0
+					? JSON.stringify(entries, null, 1)
 					: ''
-				value_node.textContent = value
+				value_text_node.textContent = value
+
+			// show/hide copy button
+				button_value_copy_node.classList.toggle('hide', value==='')
 
 			// monospace for JSON data
 				// Note that this node is rendered again on each user component selection
 				if (value.indexOf('[\n {')===0) {
 					value_node.classList.add('monospace')
+				} else {
+					value_node.classList.remove('monospace')
 				}
-
-			// button copy value
-				const button_value_copy_node = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'button_value_copy warning',
-					inner_html		: get_label.copy || 'Copy',
-					parent			: value_node
-				})
-				// click event
-				button_value_copy_node.addEventListener('click', (e) => {
-					e.stopPropagation()
-					// only available in https context for security reasons
-					if (navigator && navigator.clipboard) {
-						navigator.clipboard.writeText( JSON.stringify(component.data.value) )
-					}
-				})
 		}
 		const exec_idle_callback = ()=>{ dd_request_idle_callback(callback) }
-		exec_idle_callback(callback)
+		exec_idle_callback()
 
 		// event subscribe
 		if (container.update_value_event_token) {
 			// unsubscribe previous component subscription
 			event_manager.unsubscribe(container.update_value_event_token)
 		}
-		// store subscription token to prevent duplicates
+		// store subscription token on container to allow clean it when section info is rendered or new component selected
 		container.update_value_event_token = event_manager.subscribe('update_value_'+ component.id_base, exec_idle_callback)
 
 	// track collapse toggle state of content
@@ -1037,12 +1028,8 @@ export const render_component_info = function(self, component) {
 			value_label_node.classList.add('up')
 		}
 
-	// clean container
-		while (container.firstChild) {
-			container.removeChild(container.firstChild);
-		}
-
-	container.appendChild(fragment)
+	// clean and set container
+		container.replaceChildren(fragment)
 
 	// re-activate tooltips
 	ui.activate_tooltips(container)
@@ -1050,6 +1037,7 @@ export const render_component_info = function(self, component) {
 
 	return fragment
 }//end render_component_info
+
 
 
 
@@ -1168,20 +1156,21 @@ const render_project_block = function(self) {
 
 /**
 * UPDATE_PROJECT_CONTAINER_BODY
-* Clean project_container_body and add init event what fixed node: 'self.component_filter_node'
-* @param object self
-* @return bool true
+* Updates the project filter container by replacing its content with the current filter node.
+* This is typically called after the component filter has been initialized or updated.
+* @param {Object} self - Inspector instance.
+* @param {HTMLElement} self.project_container_body - Target body container for the project filter.
+* @param {HTMLElement} self.component_filter_node - The filter DOM node to display.
+* @returns {boolean} Success status.
 */
 export const update_project_container_body = function(self) {
 
-	// clean self.project_container_body
-		while (self.project_container_body.firstChild) {
-			self.project_container_body.removeChild(self.project_container_body.firstChild);
-		}
+	if (!self.project_container_body || !self.component_filter_node) {
+		return false
+	}
 
-	// add the new component_filter_node
-		self.project_container_body.appendChild(self.component_filter_node)
-
+	// Replace all children with the new filter node (modern and efficient)
+	self.project_container_body.replaceChildren(self.component_filter_node)
 
 	return true
 }//end update_project_container_body
@@ -1190,8 +1179,10 @@ export const update_project_container_body = function(self) {
 
 /**
 * RENDER_RELATION_LIST
-* @param object self
-* @return HTMLElement relation_list_container
+* Builds the relations section for the inspector.
+* Handles lazy loading and collapsing of the relation list.
+* @param {Object} self - Inspector instance.
+* @returns {HTMLElement} relation_list_container - The rendered relation list structure.
 */
 const render_relation_list = function(self) {
 
@@ -1205,7 +1196,7 @@ const render_relation_list = function(self) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relations || "Relations",
+			text_content	: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
 
@@ -1217,6 +1208,10 @@ const render_relation_list = function(self) {
 		})
 
 	// relation_list events
+		/**
+		 * fn_relation_list_paginator
+		 * Callback for relation list pagination events.
+		 */
 		const fn_relation_list_paginator = function(relation_list) {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
@@ -1228,8 +1223,11 @@ const render_relation_list = function(self) {
 			event_manager.subscribe('relation_list_paginator_'+self.section_tipo, fn_relation_list_paginator)
 		)
 
+		/**
+		 * fn_updated_section
+		 * Triggered after section pagination to force relation list update if open.
+		 */
 		const fn_updated_section = function() {
-			// triggered after section pagination, it forces relation list update
 			const is_open = !relation_list_body.classList.contains('hide')
 			if (is_open) {
 				load_relation_list()
@@ -1240,52 +1238,58 @@ const render_relation_list = function(self) {
 		)
 
 	// track collapse toggle state of content
+		/**
+		 * load_relation_list
+		 * Asynchronously loads and renders the list of relations.
+		 * @param {Object} [instance] - Existing relation_list instance (pagination case).
+		 */
 		const load_relation_list = async function(instance) {
 
 			relation_list_head.classList.add('up')
 
-			const relation_list_tipo = self.caller.context.config.relation_list_tipo
+			const relation_list_tipo = self.caller.context?.config?.relation_list_tipo
 
 			const relation_list	= (instance && instance.model==='relation_list')
-				? instance // pagination case do not need to init relation_list
+				? instance // pagination case: reuse existing instance
 				: await get_instance({
 					model			: 'relation_list',
-					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
+					tipo			: relation_list_tipo,
 					section_tipo	: self.caller.section_tipo,
 					section_id		: self.caller.section_id,
 					mode			: self.mode
 				})
 
 			await relation_list.build()
-			const relation_list_container = await relation_list.render()
-			while (relation_list_body.firstChild) {
-				relation_list_body.removeChild(relation_list_body.firstChild)
-			}
-			relation_list_body.appendChild(relation_list_container)
+			const rendered_node = await relation_list.render()
+
+			// Replace all children with the new list (modern and efficient)
+			relation_list_body.replaceChildren(rendered_node)
 		}
+
+		/**
+		 * unload_relation_list
+		 * Clears the relation list container.
+		 */
 		const unload_relation_list = function() {
-			while (relation_list_body.firstChild) {
-				relation_list_body.removeChild(relation_list_body.firstChild);
-			}
+			relation_list_body.replaceChildren()
 			relation_list_head.classList.remove('up')
 		}
+
 		ui.collapse_toggle_track({
 			toggler				: relation_list_head,
 			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
 			collapse_callback	: unload_relation_list,
-			expose_callback		: expose, // load_relation_list
+			expose_callback		: expose,
 			default_state		: 'closed'
 		})
-		function expose() {
-			dd_request_idle_callback(
-				() => {
-					load_relation_list(self)
-					relation_list_head.classList.add('up')
-				}
-			)
-		}
 
+		function expose() {
+			dd_request_idle_callback(() => {
+				load_relation_list()
+				relation_list_head.classList.add('up')
+			})
+		}
 
 	return relation_list_container
 }//end render_relation_list
