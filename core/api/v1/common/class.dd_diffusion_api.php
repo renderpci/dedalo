@@ -420,6 +420,14 @@ class dd_diffusion_api {
 			'parent' 		=> $diffusion_node_instance->get_parent(),
 			'parser' 		=> $properties->process->parser ?? new stdClass()
 		];
+
+		if(isset($properties->varchar)){
+			$context[0]->varchar = $properties->varchar;
+		}
+
+		if(isset($properties->length)){
+			$context[0]->length = $properties->length;
+		}
 		
 		return $context;
 	}
