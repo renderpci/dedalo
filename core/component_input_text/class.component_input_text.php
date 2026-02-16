@@ -78,6 +78,30 @@ class component_input_text extends component_string_common {
 
 
 	/**
+	* GET_LIST_VALUE
+	* Overwrites the component_common method adding a special case
+	* resolution for time machine mode ('tm') and user Root (-1)
+	* @return array
+	*/
+	public function get_list_value() : ?array {
+
+		$value = parent::get_list_value();
+
+		// Root user special resolution in 'tm' mode.
+		// In inspector's 'Component history' the root user is not displayed if not force hard resolution.
+		if($this->mode=='tm' && empty($value) && $this->section_tipo===DEDALO_SECTION_USERS_TIPO && $this->section_id==-1) {
+			$value = [(object)[
+				'value' => 'Root',
+				'lang' => $this->lang
+			]];
+		}
+
+		return $value;
+	}//end get_list_value
+
+
+
+	/**
 	* UPDATE_DATA_VERSION
 	* @param object $request_options
 	* @return object $response
