@@ -187,12 +187,35 @@ component_common.prototype.init = async function(options) {
 * @return bool
 */
 component_common.prototype.build = async function(autoload=false) {
-	// const t0 = performance.now()
 
 	const self = this
 
-	// status update
+	// check status
+		switch (self.status) {
+			case 'building':
+				return self._build_waiter;
+			case 'built':
+				return true;
+		}
+
 		self.status = 'building'
+		self._build_waiter = new Promise(async (resolve) => {
+			const result = await do_build(self, autoload)
+			// status update
+			self.status = 'built'
+			event_manager.publish('built_' + self.id, self)
+			resolve(result)
+		})
+
+	return self._build_waiter
+}//end component_common.prototype.build
+
+
+/**
+* DO_BUILD
+* Internal build logic to be executed once
+*/
+const do_build = async (self, autoload) => {
 
 	// self.datum. On building, if datum is not created, creation is needed
 		// if (!self.datum) self.datum = {data:[]}
@@ -300,7 +323,7 @@ component_common.prototype.build = async function(autoload=false) {
 
 
 	return true
-}//end component_common.prototype.build
+}//end do_build
 
 
 
@@ -363,7 +386,7 @@ export const init_events_subscription = function(self) {
 
 					// debug
 						if(SHOW_DEBUG===true) {
-							console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
+							// console.log('SUBSCRIBE [init_events_subscription] event:', event_name +'_'+ id_base);
 							// console.log("SUBSCRIBE info ",
 							// 	'self.id:', self.id,
 							// 	'id_base:', id_base,
