@@ -17,12 +17,14 @@ class component_dataframe extends component_portal {
 
 	/**
 	* GET_DATA
+	* GET_DATA
 	* Returns data from container 'relations', not for component data container
 	* @return ?array $all_data
 	*	$data is always an array of locators or an empty array
 	*/
 	public function get_data() : ?array {
 
+		$data				= parent::get_data();
 		$data				= parent::get_data();
 		$caller_dataframe	= $this->get_caller_dataframe();
 
@@ -31,6 +33,7 @@ class component_dataframe extends component_portal {
 				." empty caller dataframe getting all component data "
 				, logger::WARNING
 			);
+			return $data;
 			return $data;
 		}
 
