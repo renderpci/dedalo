@@ -25,6 +25,8 @@ export interface rqo_options {
 	include_debug?: boolean;
 	include_empty?: boolean;
 	levels?:        number;
+	total?:         number;       // client-provided total records (main section)
+	chunk_size?:    number;       // records per PHP call (default: 100)
 }
 
 
@@ -71,14 +73,16 @@ export interface context_field {
 	tipo:        string;
 	model:       string;
 	parent:      string;
-	parser:      parser_definition | Record<string, never>;
-	pre_parser:  parser_definition | Record<string, never>;
+	parser:      parser_definition | parser_definition[] | Record<string, never>;
+	varchar?:    number;
+	length?:     number;
 }
 
 export interface parser_definition {
 	fn:       string;
 	options?: parser_options;
 	tipo?:    string;
+	id?:      string;
 }
 
 export interface parser_options {
@@ -93,7 +97,7 @@ export interface parser_options {
 
 export interface datum_record {
 	section_id: string | number;
-	entries:    Record<string, entry_value[]>;
+	entries:    Record<string, entry_value[]> | 'delete';
 }
 
 export interface entry_value {
@@ -109,9 +113,11 @@ export interface entry_value {
 // =====================================================
 
 export interface processed_table {
-	database_name: string;
-	table_name:    string;
-	records:       processed_record[];
+	database_name:   string;
+	table_name:      string;
+	records:         processed_record[];
+	deletions:       (string | number)[];   // section_ids to DELETE
+	columns_context: Record<string, context_field>; // Map: sanitized_name -> context
 }
 
 export interface processed_record {
@@ -130,4 +136,26 @@ export interface engine_response {
 	msg:      string;
 	errors?:  string[];
 	tables?:  { table_name: string; records_affected: number }[];
+}
+
+
+// =====================================================
+// Progress tracking (streaming + polling)
+// =====================================================
+
+export interface progress_data {
+	process_id:  string;
+	is_running:  boolean;
+	started_at:  number;
+	data: {
+		msg:            string;
+		counter:        number;
+		total:          number;
+		section_label?: string;
+		current?:       { section_id?: string | number; time?: number };
+		total_ms?:      number;
+	};
+	total_time:  string;
+	errors:      string[];
+	result?:     engine_response;
 }

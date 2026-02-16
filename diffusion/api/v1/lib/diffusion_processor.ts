@@ -14,7 +14,7 @@
  *   5. null                        → no data exists at all
  */
 
-import { apply_parser, default_join } from './parsers/index';
+import { apply_parser, default_join, join_items_to_string } from './parsers/index';
 import type {
 	php_api_response,
 	datum_group,
@@ -53,7 +53,7 @@ export function process_response(response: php_api_response): processed_table[] 
 	const tables: processed_table[] = [];
 
 	for (const datum of response.datum) {
-		const table = process_datum_group(datum, database_name, response.main, all_langs, main_lang);
+		const table = process_datum_group(datum, database_name, all_langs, main_lang);
 		if (table) {
 			tables.push(table);
 		}
@@ -92,18 +92,10 @@ function resolve_database_name(main: main_node[]): string {
  * Looks for the node with model: "table".
  *
  * @param datum - A datum group from the PHP response
- * @param main  - Main hierarchy nodes
  * @returns Table name string
  */
-function resolve_table_name(datum: datum_group, main: main_node[]): string {
-
-	// Look for table definition in the hierarchy (model: "table")
-	for (const node of main) {
-		if (node.model === 'table' && node.term) {
-			return node.term;
-		}
-	}
-	// Fallback: use datum term
+function resolve_table_name(datum: datum_group): string {
+	// The table name is defined in the datum object itself
 	return datum.term || datum.diffusion_tipo;
 }
 
@@ -118,7 +110,6 @@ function resolve_table_name(datum: datum_group, main: main_node[]): string {
  *
  * @param datum         - The datum group
  * @param database_name - Target database name
- * @param main          - Main hierarchy nodes
  * @param all_langs     - All available languages from the response
  * @param main_lang     - The main/default language for fallback
  * @returns A processed_table or null if no data
@@ -126,7 +117,6 @@ function resolve_table_name(datum: datum_group, main: main_node[]): string {
 function process_datum_group(
 	datum:         datum_group,
 	database_name: string,
-	main:          main_node[],
 	all_langs:     string[],
 	main_lang:     string | null
 ): processed_table | null {
@@ -135,18 +125,38 @@ function process_datum_group(
 		return null;
 	}
 
-	const table_name = resolve_table_name(datum, main);
+	const table_name = resolve_table_name(datum);
 	const records:    processed_record[] = [];
+	const deletions:  (string | number)[] = [];
+
+	// Map context fields by sanitized name for SQL generator metadata
+	const columns_context: Record<string, context_field> = {};
+	for (const ctx of datum.context) {
+		const col_name = sanitize_column_name(ctx.term);
+		columns_context[col_name] = ctx;
+	}
 
 	for (const record of datum.data) {
+		// Records marked for deletion by PHP (unpublishable)
+		if (record.entries === 'delete') {
+			deletions.push(record.section_id);
+			continue;
+		}
 		const processed = process_record(record, datum.context, all_langs, main_lang);
 		records.push(...processed);
+	}
+
+	// Return null only if there's nothing to do at all
+	if (records.length === 0 && deletions.length === 0) {
+		return null;
 	}
 
 	return {
 		database_name,
 		table_name,
 		records,
+		deletions,
+		columns_context,
 	};
 }
 
@@ -189,7 +199,7 @@ function process_record(
 	for (const ctx of context) {
 
 		const tipo    = ctx.tipo;
-		const entries = record.entries[tipo];
+		const entries = (record.entries as Record<string, entry_value[]>)[tipo];
 		const column_name = sanitize_column_name(ctx.term);
 
 		// Initialize the lang→value map for this column
@@ -202,7 +212,6 @@ function process_record(
 		}
 
 		// Check parsers
-		const pre_parser = ctx.pre_parser as parser_definition;
 		const parser     = ctx.parser as parser_definition;
 
 		// Group entries by lang
@@ -211,36 +220,46 @@ function process_record(
 		for (const [lang, lang_entries] of entries_by_lang) {
 
 			// Build data items for the parser
-			let data_items = lang_entries.map(e => ({
+			const data_items = lang_entries.map(e => ({
 				id:    e.id,
 				value: e.value,
 				tipo:  e.tipo,
 				lang:  e.lang,
 			}));
 
-			// Apply pre_parser if defined
-			if (pre_parser && pre_parser.fn) {
-				const pre_result = apply_parser(
-					pre_parser.fn,
-					data_items,
-					pre_parser.options ?? {}
-				);
-				if (pre_result !== null) {
-					data_items = [{ id: null, value: pre_result, tipo, lang }];
-				}
-			}
-
 			// Apply parser if defined
-			let column_value: string | null;
-			if (parser && parser.fn) {
-				column_value = apply_parser(
-					parser.fn,
-					data_items,
-					parser.options ?? {}
-				);
+			let column_value: string | null = null;
+			
+			// Check if parser definition exists (object, array, etc)
+			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
+
+			if (has_parser) {
+				const parser_result = apply_parser_chain(parser, data_items);
+
+				if (parser_result !== null) {
+					// Final result should be data_item[], but apply_parser_chain returns any
+					// We convert the final result to a string for column value
+					if (Array.isArray(parser_result)) {
+						if (parser_result.length > 0) {
+							// Use the first item's value
+							const val = parser_result[0].value;
+							// Stringify objects/arrays (JSON style as requested for arrays) or use string value
+							if (typeof val === 'object' && val !== null) {
+								column_value = JSON.stringify(val);
+							} else {
+								column_value = String(val);
+							}
+						} else {
+							column_value = null;
+						}
+					} else {
+						// Fallback if somehow a parser returns a primitive string (unlikely with standardized parsers)
+						column_value = String(parser_result);
+					}
+				}
 			} else {
-				// No parser — use default_join
-				column_value = default_join(data_items, {});
+				// No parser — use join_items_to_string (default behavior)
+				column_value = join_items_to_string(data_items, {});
 			}
 
 			// Normalize lang key: null and "lg-nolan" → "nolan"
@@ -364,4 +383,86 @@ function sanitize_column_name(term: string): string {
 		.replace(/[^a-z0-9_]/g, '_')
 		.replace(/_+/g, '_')
 		.replace(/^_|_$/g, '');
+}
+
+
+
+/**
+ * APPLY_PARSER_CHAIN
+ * Applies a sequence of parsers to the data.
+ * The output of each parser becomes the input for the next.
+ *
+ * @param parsers - Single parser definition or array of definitions
+ * @param data    - Initial data items
+ * @returns Final result (array or primitive) or null
+ */
+function apply_parser_chain(
+	parsers: parser_definition | parser_definition[] | Record<string, never>,
+	data: any[]
+): any {
+
+	if (!parsers || (typeof parsers === 'object' && Object.keys(parsers).length === 0)) {
+		return null;
+	}
+
+	// Normalize to array
+	const chain = Array.isArray(parsers) ? parsers : [parsers as parser_definition];
+
+	let current_data: any = data;
+
+	for (const parser_def of chain) {
+		if (!parser_def.fn) continue;
+
+		// Ensure current_data is in a format suitable for apply_parser (array)
+		// If previous parser returned a primitive, wrap it as a data item value
+		let valid_data: any[] | null;
+
+		if (Array.isArray(current_data)) {
+			valid_data = current_data;
+		} else if (current_data !== null && current_data !== undefined) {
+			// Wrap primitive in a structure preserving metadata from original data if possible
+			// We try to grab metadata from the initial data if available
+			const meta = (Array.isArray(data) && data.length > 0) ? data[0] : {};
+			valid_data = [{
+				id:    null,
+				value: current_data,
+				tipo:  meta.tipo,
+				lang:  meta.lang
+			}];
+		} else {
+			// Current data is null/undefined
+			valid_data = null;
+		}
+
+		// Apply the parser
+		let result = apply_parser(parser_def.fn, valid_data, parser_def.options ?? {});
+
+		// If a parser returns null explicitly, it usually breaks the chain
+		if (result === null) return null;
+
+		// If parser definition has an ID, assign it to the result items
+		if (parser_def.id) {
+			if (Array.isArray(result)) {
+				// Assign ID to each item in the array
+				for (const item of result) {
+					if (typeof item === 'object' && item !== null) {
+						item.id = parser_def.id;
+					}
+				}
+			} else {
+				// Wrap primitive result to attach ID
+				// Metadata (tipo, lang) preserved from input if possible
+				const meta = (Array.isArray(valid_data) && valid_data.length > 0) ? valid_data[0] : {};
+				result = [{
+					id:    parser_def.id,
+					value: result,
+					tipo:  meta.tipo,
+					lang:  meta.lang
+				}];
+			}
+		}
+		current_data = result;
+	}
+
+	return current_data;
 }

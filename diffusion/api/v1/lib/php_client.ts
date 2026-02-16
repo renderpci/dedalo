@@ -10,7 +10,7 @@ import type { rqo, php_api_response } from './types';
 
 
 const DEDALO_API_URL = process.env.DEDALO_API_URL || 'http://localhost/dedalo/core/api/v1/json/';
-const REQUEST_TIMEOUT_MS = 60_000; // 60 seconds
+const REQUEST_TIMEOUT_MS = 120_000; // 2 minutes per chunk call
 
 
 

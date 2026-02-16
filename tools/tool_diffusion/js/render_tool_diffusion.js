@@ -697,17 +697,16 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 			})
 		}
 
-	// check process status always
+	// check process status always (reconnection after page reload)
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
 				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
-				if (local_data && local_data.value) {
+				if (local_data && local_data.value && local_data.value.process_id) {
 					update_process_status({
-						pid			: local_data.value.pid,
-						pfile		: local_data.value.pfile,
+						process_id	: local_data.value.process_id,
 						local_db_id	: local_db_id,
 						container	: response_message,
 						lock_items	: lock_items
@@ -771,7 +770,8 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 
 /**
 * PUBLISH_CONTENT
-* Trigger the publish records action against the API
+* Trigger the publish records action against the API.
+* The export() call now returns a ReadableStream with per-record progress.
 * @param object self
 * @param object options
 */
@@ -788,47 +788,170 @@ const publish_content = async (self, options) => {
 		response_message.classList.remove('error')
 		publication_button.classList.add('loading')
 
-	// export API call
-		const api_response = await self.export({
+	// lock items
+		const lock_items = [publication_button]
+
+	// blur button
+		document.activeElement.blur()
+
+	// export API call — now returns a ReadableStream
+		const stream = await self.export({
 			diffusion_element_tipo	: diffusion_element_tipo,
 			diffusion_tipo			: diffusion_tipo
 		})
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			console.log('export api_response:', api_response);
-		}
-
-	// main response msg print
-		ui.update_node_content(response_message, (api_response.msg || 'Unknown error') )
-		if (api_response.result===false) {
+	// check stream
+		if (!stream) {
+			ui.update_node_content(response_message, 'Error: no stream received from server')
 			response_message.classList.add('error')
 			publication_button.classList.remove('loading')
+			console.error('Error: data_manager.request_stream did not return a valid stream.');
 			return
 		}
 
-	// fire update_process_status
-		update_process_status({
-			pid			: api_response.pid,
-			pfile		: api_response.pfile,
-			local_db_id	: local_db_id,
+	// clean container
+		while (response_message.firstChild) {
+			response_message.removeChild(response_message.firstChild);
+		}
+
+	// render base nodes for stream display
+		const render_response = render_stream({
 			container	: response_message,
-			lock_items	: [publication_button]
+			id			: local_db_id
 		})
+
+	// average process time for record
+		const ar_samples = []
+		const get_average = (arr) => {
+			let sum = 0;
+			const arr_length = arr.length;
+			for (let i = 0; i < arr_length; i++) {
+				sum += arr[i];
+			}
+			return Math.ceil( sum / arr_length );
+		}
+
+	// last_sse_response
+		let last_sse_response
+
+	// on_read event (called on every chunk from stream reader)
+		const on_read = (sse_response) => {
+
+			// Save process_id to IndexedDB for reconnection on page reload
+			if (sse_response.process_id && sse_response.is_running) {
+				data_manager.set_local_db_data(
+					{
+						id		: local_db_id,
+						value	: { process_id: sse_response.process_id }
+					},
+					'status'
+				)
+			}
+
+			// fire update_info_node on every reader read chunk
+			render_response.update_info_node(
+				sse_response,
+				(info_node) => { // callback
+
+					const is_running = sse_response?.is_running ?? true
+
+					const compound_msg = (sse_response) => {
+						const data = sse_response.data
+						const parts = []
+						parts.push(data.msg)
+						if (data.counter) {
+							parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+						}
+						if (data.section_label) {
+							parts.push(data.section_label)
+						}
+						if (data.current) {
+							if (data.current.section_id) {
+								parts.push('id: ' + data.current.section_id)
+							}
+						}
+						if (data.total_ms) {
+							parts.push( time_unit_auto(data.total_ms) )
+						}else if(sse_response.total_time) {
+							parts.push(sse_response.total_time)
+						}
+						if (data.current && data.current.time) {
+							// save in samples array to make average
+							if (ar_samples.length>50) {
+								ar_samples.shift() // remove older element
+							}
+							ar_samples.push(data.current.time)
+
+							const average			= get_average(ar_samples)
+							const remaining_ms		= ((data.total - data.counter) * average)
+							const remaining_time	= time_unit_auto(remaining_ms)
+							parts.push('Time remaining: ' + remaining_time)
+						}
+
+						return parts.join(' | ')
+					}
+
+					const msg = sse_response
+								&& sse_response.data
+								&& sse_response.data.msg
+								&& sse_response.data.msg.length>5
+						? compound_msg(sse_response)
+						: is_running
+							? 'Process running... please wait'
+							: 'Process completed in ' + sse_response.total_time
+
+					if(!info_node.msg_node) {
+						info_node.msg_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
+							parent			: info_node
+						})
+					}
+					ui.update_node_content(info_node.msg_node, msg)
+				}
+			)
+
+			last_sse_response = sse_response
+		}
+
+	// on_done event (called once at finish or cancel the stream read)
+		const on_done = () => {
+			// is triggered at the reader's closing
+			render_response.done()
+			// unlock lock_items
+			lock_items.map(el =>{
+				el.classList.remove('loading')
+			})
+			// remove process_id from IndexedDB
+			data_manager.delete_local_db_data(
+				local_db_id,
+				'status'
+			)
+			// render_process_report
+			render_process_report({
+				last_sse_response,
+				container: response_message
+			})
+		}
+
+	// read stream
+		data_manager.read_stream(stream, on_read, on_done)
 }//end publish_content
 
 
 
 /**
 * UPDATE_PROCESS_STATUS
-* Call API get_process_status and render the info nodes
+* Polling reconnection handler.
+* Called from check_process_data when the page loads and finds
+* a process_id in IndexedDB from a previous session.
+* Connects to the Bun diffusion API's get_process_status endpoint.
 * @param object options
 * @return void
 */
 const update_process_status = (options) => {
 
-	const pid			= options.pid
-	const pfile			= options.pfile
+	const process_id	= options.process_id
 	const local_db_id	= options.local_db_id
 	const container		= options.container
 	const lock_items	= options.lock_items
@@ -846,27 +969,31 @@ const update_process_status = (options) => {
 		container.removeChild(container.firstChild);
 	}
 
-	// get_process_status from API and returns a SEE stream
+	// get_process_status from diffusion API — polling reconnection
 	data_manager.request_stream({
+		url : typeof DEDALO_DIFFUSION_API_URL !== 'undefined'
+			? DEDALO_DIFFUSION_API_URL
+			: data_manager.url,
 		body : {
-			dd_api		: 'dd_utils_api',
+			dd_api		: 'dd_diffusion_api',
 			action		: 'get_process_status',
 			update_rate	: 1000, // int milliseconds
-			options		: {
-				pid		: pid,
-				pfile	: pfile
-			}
+			process_id	: process_id
 		}
 	})
 	.then(function(stream){
+
+		if (!stream) {
+			console.error('Error: request_stream did not return a valid stream for process:', process_id);
+			lock_items.map(el => el.classList.remove('loading'))
+			return
+		}
 
 		// render base nodes and set functions to manage
 		// the stream reader events
 		const render_response = render_stream({
 			container	: container,
-			id			: local_db_id,
-			pid			: pid,
-			pfile		: pfile
+			id			: local_db_id
 		})
 
 		// average process time for record
@@ -960,6 +1087,11 @@ const update_process_status = (options) => {
 			lock_items.map(el =>{
 				el.classList.remove('loading')
 			})
+			// remove process_id from IndexedDB
+			data_manager.delete_local_db_data(
+				local_db_id,
+				'status'
+			)
 			// render_process_report
 			render_process_report({
 				last_sse_response,
@@ -967,9 +1099,7 @@ const update_process_status = (options) => {
 			})
 		}
 
-		// read stream. Creates ReadableStream that fire
-		// 'on_read' function on each stream chunk at update_rate
-		// (1 second default) until stream is done (PID is no longer running)
+		// read stream
 		data_manager.read_stream(stream, on_read, on_done)
 	})
 }//end update_process_status

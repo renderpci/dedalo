@@ -53,9 +53,9 @@ interface dd_date_part {
  *   - records_separator: Separator between records (default ' | ')
  *   - fields_separator:  Separator between fields (default ', ')
  *   - date_mode:         One of 'date', 'range', 'time_range', 'period' (default 'date')
- * @returns Formatted date string or null
+ * @returns Formatted date string wrapped in data_item or null
  */
-export function string_date(data: date_data_item[] | null, options: parser_options): string | null {
+export function string_date(data: date_data_item[] | null, options: parser_options): any {
 
 	if (!data || data.length === 0) return null;
 
@@ -119,7 +119,14 @@ export function string_date(data: date_data_item[] | null, options: parser_optio
 
 	if (ar_values.length === 0) return null;
 
-	return ar_values.join(records_separator);
+	const result_str = ar_values.join(records_separator);
+
+	return [{
+		id:    null,
+		value: result_str,
+		tipo:  data[0].tipo,
+		lang:  data[0].lang
+	}];
 }
 
 
