@@ -360,6 +360,237 @@ final class dd_utils_api_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_INSTALL
+	* @return void
+	*/
+	public function test_install(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "install",
+			    "options" : {
+				  "action": "invalid_action"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertFalse(
+			$response->result,
+			'expected result false for invalid action'
+		);
+	}//end test_install
+
+
+
+	/**
+	* TEST_LIST_UPLOADED_FILES
+	* @return void
+	*/
+	public function test_list_uploaded_files(): void {
+
+		$this->user_login();
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "list_uploaded_files",
+			    "options" : {
+				  "key_dir": "test_dir"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertTrue(
+			is_array($response->result),
+			'expected result is array'
+		);
+	}//end test_list_uploaded_files
+
+
+
+	/**
+	* TEST_DELETE_UPLOADED_FILE
+	* @return void
+	*/
+	public function test_delete_uploaded_file(): void {
+
+		$this->user_login();
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "delete_uploaded_file",
+			    "options" : {
+				  "file_name": "non_existent_file.txt",
+				  "key_dir": "test_dir"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertTrue(
+			$response->result,
+			'expected result true (even if file doesn\'t exist, it currently returns true after loop)'
+		);
+	}//end test_delete_uploaded_file
+
+
+
+	/**
+	* TEST_GET_SERVER_READY_STATUS
+	* @return void
+	*/
+	public function test_get_server_ready_status(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_server_ready_status",
+			    "options" : {
+				  "check": "ontology_server"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertIsBool(
+			$response->result,
+			'expected result is boolean'
+		);
+	}//end test_get_server_ready_status
+
+
+
+	/**
+	* TEST_GET_ONTOLOGY_UPDATE_INFO
+	* @return void
+	*/
+	public function test_get_ontology_update_info(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_ontology_update_info",
+			    "options" : {
+				  "version": "1.0",
+				  "code": "test_code"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertIsObject(
+			$response,
+			'expected response is object'
+		);
+	}//end test_get_ontology_update_info
+
+
+
+	/**
+	* TEST_GET_CODE_UPDATE_INFO
+	* @return void
+	*/
+	public function test_get_code_update_info(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_code_update_info",
+			    "options" : {
+				  "version": "1.0.0",
+				  "code": "test_code"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertIsObject(
+			$response,
+			'expected response is object'
+		);
+	}//end test_get_code_update_info
+
+
+
+	/**
+	* TEST_STOP_PROCESS
+	* @return void
+	*/
+	public function test_stop_process(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "stop_process",
+			    "options" : {
+				  "pid": 999999
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+				.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertIsBool(
+			$response->result,
+			'expected result is boolean'
+		);
+	}//end test_stop_process
+
+
+
+	/**
 	* TEST_UPDATE_LOCK_COMPONENTS_STATE
 	* @return void
 	*/
@@ -437,6 +668,168 @@ final class dd_utils_api_Test extends BaseTestCase {
 			'expected result more than 0 ' . count($response->result)
 		);
 	}//end test_get_dedalo_files
+
+
+
+	/**
+	* TEST_convert_search_object_to_sql_query_unauthorized
+	* @return void
+	*/
+	public function test_convert_search_object_to_sql_query_unauthorized(): void {
+
+		// logout first to be sure
+		login_test::logout(TEST_USER_ID);
+
+		// login as a likely non-admin user (id 999999)
+		login_test::force_login(999999);
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "convert_search_object_to_sql_query",
+			    "options" : {
+				  "section_tipo": ["test3"]
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertFalse(
+			$response->result,
+			'expected result false for non-admin user'
+		);
+		$this->assertStringContainsString(
+			'Invalid user',
+			$response->msg,
+			'expected error message about invalid user'
+		);
+
+		// Revert to admin user for subsequent tests
+		login_test::logout(999999);
+		$this->user_login();
+	}
+
+
+
+	/**
+	* TEST_CHANGE_LANG_EMPTY_OPTIONS
+	* @return void
+	*/
+	public function test_change_lang_empty_options(): void {
+
+		$this->user_login();
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "change_lang",
+			    "options": {}
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			$response->result,
+			'expected result true even with empty options'
+		);
+	}
+
+
+
+	/**
+	* TEST_GET_SERVER_READY_STATUS_INVALID
+	* @return void
+	*/
+	public function test_get_server_ready_status_invalid(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_server_ready_status",
+			    "options" : {
+				  "check": "invalid_check"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertFalse(
+			$response->result,
+			'expected result false for invalid check'
+		);
+	}
+
+
+
+	/**
+	* TEST_GET_ONTOLOGY_UPDATE_INFO_INVALID_VERSION
+	* @return void
+	*/
+	public function test_get_ontology_update_info_invalid_version(): void {
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_ontology_update_info",
+			    "options" : {
+				  "version": "bad_version",
+				  "code": "test_code"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertFalse(
+			$response->result,
+			'expected result false'
+		);
+
+		if (!defined('IS_AN_ONTOLOGY_SERVER') || IS_AN_ONTOLOGY_SERVER === false) {
+			$this->assertStringContainsString('Server is not an ontology server', $response->msg);
+		} else {
+			$this->assertStringContainsString('Invalid version number', $response->msg);
+		}
+	}
+
+
+
+	/**
+	* TEST_JOIN_CHUNKED_FILES_UPLOADED_MISSING
+	* @return void
+	*/
+	public function test_join_chunked_files_uploaded_missing(): void {
+
+		$this->user_login();
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "join_chunked_files_uploaded",
+			    "options" : {
+				  "file_data": {
+				  	"name": "test.txt",
+				  	"key_dir": "test_join"
+				  },
+				  "files_chunked": [
+				  	"non_existent_chunk.blob"
+				  ]
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+
+		// Use error suppression because dd_utils_api calls file_get_contents on non-existent file
+		$response = @$rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertFalse(
+			$response->result,
+			'expected result false for missing chunks'
+		);
+	}
 
 
 
