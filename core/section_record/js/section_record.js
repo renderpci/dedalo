@@ -190,7 +190,8 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// id_variant . Propagate a custom instance id to children
-			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}` +'_'+ Math.random()
+			// Remove Math.random() to allow stable caching and DOM "move" behavior
+			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
 			instance_options.id_variant = self.id_variant
 				? self.id_variant + '_' + section_record_id_variant
 				: section_record_id_variant
@@ -328,195 +329,214 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 
 	const self = this
 
+	// waiter. Prevent concurrent calls to populate ar_instances
+		if (self._instances_waiter) {
+			return self._instances_waiter
+		}
+
 	// already calculated case
 		if (self.ar_instances && self.ar_instances.length>0) {
 			return self.ar_instances
 		}
 
-	// matrix_id. Time machine case only
-		const matrix_id	= self.matrix_id
+	self._instances_waiter = (async () => {
+		// nested check to prevent race after waiter release
+		if (self.ar_instances && self.ar_instances.length>0) {
+			self._instances_waiter = null
+			return self.ar_instances
+		}
 
-	// columns_map. Build from ddo_map
-	// @see common.get_columns_map for a better overview
-		const columns_map = self.columns_map || []
+		// matrix_id. Time machine case only
+			const matrix_id	= self.matrix_id
 
-	// request config
-	// get the request_config with all ddo, it will be use to create the instances
-		const request_config		= self.context.request_config || []
-		const request_config_length	= request_config.length
+		// columns_map. Build from ddo_map
+		// @see common.get_columns_map for a better overview
+			const columns_map = self.columns_map || []
 
-	// instances
-	// get the columns of the component and match it with the ddo
-		const columns_map_length = columns_map.length
-		for (let i = 0; i < columns_map_length; i++) {
+		// request config
+		// get the request_config with all ddo, it will be use to create the instances
+			const request_config		= self.context.request_config || []
+			const request_config_length	= request_config.length
 
-			const current_column = columns_map[i]
+		// instances
+		// get the columns of the component and match it with the ddo
+			const columns_map_length = columns_map.length
+			for (let i = 0; i < columns_map_length; i++) {
 
-			// request_config could be multiple (Dédalo, Zenon, etc)
-			const ar_column_ddo = []
-			for (let j = 0; j < request_config_length; j++) {
+				const current_column = columns_map[i]
 
-				const request_config_item = request_config[j]
+				// request_config could be multiple (Dédalo, Zenon, etc)
+				const ar_column_ddo = []
+				for (let j = 0; j < request_config_length; j++) {
 
-				// ddo_map. Get the ddo map to be used
-				const ddo_map = (self.mode === 'search')
-					? (
-						request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
-							? request_config_item.search.ddo_map
-							: request_config_item.show.ddo_map
-					  )
-					: request_config_item.show.ddo_map
+					const request_config_item = request_config[j]
 
-				// get the direct components of the caller (component or section)
-				const ar_first_level_ddo = ddo_map.filter(item => item.parent === self.tipo)
+					// ddo_map. Get the ddo map to be used
+					const ddo_map = (self.mode === 'search')
+						? (
+							request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+								? request_config_item.search.ddo_map
+								: request_config_item.show.ddo_map
+						)
+						: request_config_item.show.ddo_map
 
-				// with every child, match it with the column and assign to it.
-				const ar_first_level_ddo_len = ar_first_level_ddo.length
-				for (let k = 0; k < ar_first_level_ddo_len; k++) {
+					// get the direct components of the caller (component or section)
+					const ar_first_level_ddo = ddo_map.filter(item => item.parent === self.tipo)
 
-					const current_ddo = ar_first_level_ddo[k]
+					// with every child, match it with the column and assign to it.
+					const ar_first_level_ddo_len = ar_first_level_ddo.length
+					for (let k = 0; k < ar_first_level_ddo_len; k++) {
 
-					// if the ddo has column_id (normally all component have it, you can see it in common.js get_columns() method)
-					if(current_ddo.column_id && current_ddo.column_id===current_column.id){
+						const current_ddo = ar_first_level_ddo[k]
 
-						// check if the column of the component is already loaded, if exists, don't load it.
-							const found = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
-							if(found) {
-								continue
-							}
+						// if the ddo has column_id (normally all component have it, you can see it in common.js get_columns() method)
+						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
-						// add to the ddo to the column
-							ar_column_ddo.push(current_ddo)
+							// check if the column of the component is already loaded, if exists, don't load it.
+								const found = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
+								if(found) {
+									continue
+								}
 
-							// NOTE: about component_dataframe:
-							// By default section_tipo will be the section_tipo of the locator
-							// but when ddo is a componet_dataframe (subsection to use as data_frame)
-							// the section_tipo need to be the section_tipo of the ddo
-							// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
-							// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
-							// the locator that conform the section_record
-							const section_tipo		= (current_ddo.model==='component_dataframe')
-								? current_ddo.section_tipo
-								: self.section_tipo
-							const section_id		= (current_ddo.model==='component_dataframe')
-								? self.caller.section_id
-								: self.section_id
+							// add to the ddo to the column
+								ar_column_ddo.push(current_ddo)
 
-						// current_data. get the component data to assign to it and create the instance
-							const current_data = self.get_component_data({
-								ddo				: current_ddo,
-								section_tipo	: section_tipo,
-								section_id		: section_id,
-								matrix_id		: matrix_id
-							})
+								// NOTE: about component_dataframe:
+								// By default section_tipo will be the section_tipo of the locator
+								// but when ddo is a componet_dataframe (subsection to use as data_frame)
+								// the section_tipo need to be the section_tipo of the ddo
+								// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
+								// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
+								// the locator that conform the section_record
+								const section_tipo		= (current_ddo.model==='component_dataframe')
+									? current_ddo.section_tipo
+									: self.section_tipo
+								const section_id		= (current_ddo.model==='component_dataframe')
+									? self.caller.section_id
+									: self.section_id
 
-						// unify section_tipo as array, to get context when component is inside a virtual section
-						// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
-						// sometimes the component is only for current ddo section (as publication component of media,
-						// rsc20 could be in rsc170, rsc167, ... but the context is not shared)
-							const current_ddo_section_tipo = Array.isArray(current_ddo.section_tipo)
-								? current_ddo.section_tipo
-								: [current_ddo.section_tipo]
+							// current_data. get the component data to assign to it and create the instance
+								const current_data = self.get_component_data({
+									ddo				: current_ddo,
+									section_tipo	: section_tipo,
+									section_id		: section_id,
+									matrix_id		: matrix_id
+								})
 
-						// current_context. check if the section_tipo is multiple to use it or not to match component
-							const current_context = current_ddo_section_tipo.length > 1
-								? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-								: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo_section_tipo[0])
+							// unify section_tipo as array, to get context when component is inside a virtual section
+							// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
+							// sometimes the component is only for current ddo section (as publication component of media,
+							// rsc20 could be in rsc170, rsc167, ... but the context is not shared)
+								const current_ddo_section_tipo = Array.isArray(current_ddo.section_tipo)
+									? current_ddo.section_tipo
+									: [current_ddo.section_tipo]
 
-								// check is valid context
-								if (!current_context) {
+							// current_context. check if the section_tipo is multiple to use it or not to match component
+								const current_context = current_ddo_section_tipo.length > 1
+									? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
+									: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo_section_tipo[0])
 
-									if(SHOW_DEBUG===true) {
-										// Note that this message is not an error, but a warning when some columns
-										// are defined and not used (like Zenon columns in Bibliography if no Zenon data is added)
-										// Remember that subcontext is only calculated when subdata exists !
-											// console.groupCollapsed(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
-											// console.warn('Check your hierarchy definitions to make sure it is defined (Remember that subcontext is only calculated when subdata exists)', current_ddo.tipo);
-											// console.log('ddo:', current_ddo);
-											// console.log("self.datum.context:", self.datum.context);
-											// console.log('current_data:', current_data);
-											// console.log("self:", self);
-											// console.groupEnd()
+									// check is valid context
+									if (!current_context) {
+
+										if(SHOW_DEBUG===true) {
+											// Note that this message is not an error, but a warning when some columns
+											// are defined and not used (like Zenon columns in Bibliography if no Zenon data is added)
+											// Remember that subcontext is only calculated when subdata exists !
+												// console.groupCollapsed(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
+												// console.warn('Check your hierarchy definitions to make sure it is defined (Remember that subcontext is only calculated when subdata exists)', current_ddo.tipo);
+												// console.log('ddo:', current_ddo);
+												// console.log("self.datum.context:", self.datum.context);
+												// console.log('current_data:', current_data);
+												// console.log("self:", self);
+												// console.groupEnd()
+										}
+
+										// ignore unused context
+										continue;
 									}
 
-									// ignore unused context
-									continue;
+							// new_context. clone the current_context to prevent changes in the original.
+								const new_context = clone(current_context)
+								new_context.properties = new_context.properties || {}
+								new_context.columns_map = (current_column.columns_map)
+									? current_column.columns_map
+									: false
+								// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
+								// if not, the ddo will get the mode from current section_record
+								if(current_ddo.fixed_mode){
+									new_context.fixed_mode		= current_ddo.fixed_mode
+									new_context.properties.mode	= current_ddo.fixed_mode
+								}
+								if(current_ddo.mode){
+									new_context.mode			= current_ddo.mode
+									new_context.properties.mode	= current_ddo.mode
+								}
+								// set the view of the column when is defined in ddo, view could be defined in properties of the portals
+								// sometimes it need to be changed to adapt ddo view of the parent (mosaic case for images)
+								if(current_ddo.view){
+									new_context.view			= current_ddo.view
+									new_context.properties.view	= current_ddo.view
+								}
+								// set the children_view when the ddo has defined it, this param will be used to be render the children of the portals
+								if(current_ddo.children_view){
+									new_context.children_view = current_ddo.children_view
+								}
+								// set the fields_separator to be assigned to join the components inside the component_portal
+								if(current_ddo.fields_separator){
+									new_context.fields_separator = current_ddo.fields_separator
+								}
+								// set the records_separator to be assigned to join the every record(row) inside the component_portal
+								if(current_ddo.records_separator){
+									new_context.records_separator = current_ddo.records_separator
+								}
+								// set the hover of the column when is defined in ddo, hover could be defined in properties of the portals
+								// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)
+								if(current_ddo.hover){
+									new_context.hover = current_ddo.hover
+								}
+								// set the view and mode when with_value property has set
+								// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
+								// take a different mode and view with data.
+								if(current_ddo.with_value){
+									new_context.properties.with_value = current_ddo.with_value
+
+									if(current_data.entries && current_data.entries.length > 0){
+										new_context.view = current_ddo.with_value.view
+										new_context.mode = current_ddo.with_value.mode
+									}
 								}
 
-						// new_context. clone the current_context to prevent changes in the original.
-							const new_context = clone(current_context)
-							new_context.properties = new_context.properties || {}
-							new_context.columns_map = (current_column.columns_map)
-								? current_column.columns_map
-								: false
-							// set the fixed_mode when is set by preferences, properties or tools, to maintain the mode defined
-							// if not, the ddo will get the mode from current section_record
-							if(current_ddo.fixed_mode){
-								new_context.fixed_mode		= current_ddo.fixed_mode
-								new_context.properties.mode	= current_ddo.fixed_mode
-							}
-							if(current_ddo.mode){
-								new_context.mode			= current_ddo.mode
-								new_context.properties.mode	= current_ddo.mode
-							}
-							// set the view of the column when is defined in ddo, view could be defined in properties of the portals
-							// sometimes it need to be changed to adapt ddo view of the parent (mosaic case for images)
-							if(current_ddo.view){
-								new_context.view			= current_ddo.view
-								new_context.properties.view	= current_ddo.view
-							}
-							// set the children_view when the ddo has defined it, this param will be used to be render the children of the portals
-							if(current_ddo.children_view){
-								new_context.children_view = current_ddo.children_view
-							}
-							// set the fields_separator to be assigned to join the components inside the component_portal
-							if(current_ddo.fields_separator){
-								new_context.fields_separator = current_ddo.fields_separator
-							}
-							// set the records_separator to be assigned to join the every record(row) inside the component_portal
-							if(current_ddo.records_separator){
-								new_context.records_separator = current_ddo.records_separator
-							}
-							// set the hover of the column when is defined in ddo, hover could be defined in properties of the portals
-							// hover define the instance not be render as normal only when the mouse will hover of normal nodes (information hover mosaic views)
-							if(current_ddo.hover){
-								new_context.hover = current_ddo.hover
-							}
-							// set the view and mode when with_value property has set
-							// it change the view and the mode to edit component in lists, if the component has data will render with the definition instead the default
-							// take a different mode and view with data.
-							if(current_ddo.with_value){
-								new_context.properties.with_value = current_ddo.with_value
+							// instance create and set
+								const instance_data = current_ddo.model==='dd_grid'
+									? [current_data.entries]
+									: current_data;
 
-								if(current_data.entries && current_data.entries.length > 0){
-									new_context.view = current_ddo.with_value.view
-									new_context.mode = current_ddo.with_value.mode
+								const current_instance = await build_instance(
+									self, // current section_record instance
+									new_context, // edit context
+									section_id, // current section_id
+									instance_data, // already calculated instance data
+									current_column.id, // column id
+									false // build autoload
+								)
+
+								// add built instance
+								if (current_instance) {
+									self.ar_instances.push(current_instance)
 								}
-							}
+						}//end if(current_ddo.column_id..
+					}//end for (let k = 0; k < ar_first_level_ddo_len; k++)
+				}//end for (let j = 0; j < request_config_length; j++)
+			}//end for (let i = 0; i < columns_map_length; i++)
 
-						// instance create and set
-							const instance_data = current_ddo.model==='dd_grid'
-								? [current_data.entries]
-								: current_data;
-
-							const current_instance = await build_instance(
-								self, // current section_record instance
-								new_context, // edit context
-								section_id, // current section_id
-								instance_data, // already calculated instance data
-								current_column.id, // column id
-								false // build autoload
-							)
-
-							// add built instance
-							self.ar_instances.push(current_instance)
-					}//end if(current_ddo.column_id..
-				}//end for (let k = 0; k < ar_first_level_ddo_len; k++)
-			}//end for (let j = 0; j < request_config_length; j++)
-		}//end for (let i = 0; i < columns_map_length; i++)
+		// waiter. reset and return result
+		self._instances_waiter = null
+		return self.ar_instances
+	})()
 
 
-	return self.ar_instances
+	return self._instances_waiter
 }//end get_ar_columns_instances_list
 
 

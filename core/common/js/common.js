@@ -1317,16 +1317,19 @@ export const get_columns_map = function(options) {
 						// by default every component will create the own column if the column is not defined,
 						// this behavior is used by sections.
 						default:
-							columns_map.push(
-								{
-									id		: dd_object.tipo,
-									label	: dd_object.tipo,
-									model	: dd_object.model,
-									tipo	: dd_object.tipo
-								}
-							)
+							// deduplicate. check if the column already exists
+							if (!columns_map.find(el => el.id === dd_object.tipo)) {
 
-							dd_object.column_id = dd_object.tipo
+								columns_map.push(
+									{
+										id		: dd_object.tipo,
+										label	: dd_object.tipo,
+										model	: dd_object.model,
+										tipo	: dd_object.tipo
+									}
+								)
+								dd_object.column_id = dd_object.tipo
+							}
 							break;
 					}//end switch
 				}//end if (dd_object.column_id && source_columns_map.length > 0)
