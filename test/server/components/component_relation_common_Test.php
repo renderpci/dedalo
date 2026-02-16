@@ -127,7 +127,6 @@ final class component_relation_common_test extends BaseTestCase {
 				. gettype($value->value)
 		);
 	}//end test_get_grid_value
-
 	
 
 
