@@ -114,15 +114,26 @@ common.prototype.build = async function(autoload=false) {
 
 	const self = this
 
-	// status update
+	// check status
+		switch (self.status) {
+			case 'building':
+				return self._build_waiter;
+			case 'built':
+				return true;
+		}
+
 		self.status = 'building'
+		self._build_waiter = new Promise(async (resolve) => {
 
-	// status update
-		self.status = 'built'
+			// status update
+			self.status = 'built'
+			event_manager.publish('built_' + self.id, self)
+			resolve(true)
+		})
 
-
-	return true
-}//end common.prototype.build
+	return self._build_waiter
+}
+//end common.prototype.build
 
 
 
@@ -282,6 +293,11 @@ common.prototype.render = async function (options={}) {
 		const render_mode	= options.render_mode || self.mode
 		const render_level	= options.render_level || 'full' // full|content
 
+	// render mode. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
+		const current_render_mode = (typeof self[render_mode]==='function')
+			? render_mode
+			: 'list'
+
 	// api_errors case
 		if (page_globals.api_errors.length) {
 
@@ -321,23 +337,64 @@ common.prototype.render = async function (options={}) {
 			return node
 		}
 
+	// previous status
+		const previous_status = clone(self.status)
+
 	// status check to prevent duplicated actions
 		switch(self.status) {
+
+			case 'building':
+				// Wait for build to finish before rendering
+				return new Promise(resolve => {
+					event_manager.subscribe_once('built_' + self.id, () => {
+						resolve(self.render(options))
+					})
+				})
 
 			case 'built':
 				// all is as expected. Continue executing normally
 				break;
 
 			case 'rendering':
-				console.warn(`Render in progress ignored for ${self.model}. Status: rendering.`);
-				return false;
+				// Ensure we have a waiter promise for this in-progress render
+				if (!self._render_waiter) {
+					self._render_waiter = new Promise(resolve => {
+						event_manager.subscribe_once('render_' + self.id, (result_node) => {
+							self._render_waiter = null;
+
+							const pending_options = self._pending_render_options;
+							self._pending_render_options = null;
+
+							if (pending_options) {
+								// Trigger next queued render using previous_status to avoid 'rendered' status issues
+								self.status = previous_status;
+								resolve(self.render(pending_options));
+							} else {
+								resolve(result_node);
+							}
+						});
+					});
+				}
+
+				// Smart Concurrency logic to avoid race conditions and redundant renders
+				// 1. Identical request joining: If the new request matches the active one, join the existing waiter
+				if (self._rendering_params &&
+					self._rendering_params.render_level === render_level &&
+					self._rendering_params.current_render_mode === current_render_mode) {
+					return self._render_waiter;
+				}
+
+				// 2. Different request queuing (LWW): Store latest options and wait for current render to finish
+				self._pending_render_options = options;
+
+				return self._render_waiter;
 
 			case 'rendered':
 				// if render mode is equal than current already rendered node, return node
 				if (self.render_level===render_level) {
 					if (self.node) {
 						if (self.model!=='component_filter') {
-							console.warn(`Render unexpected status. Returning already rendered node (${self.model}).
+							console.warn(`Render unexpected status (rendered). Returning already rendered node (${self.model}).
 							Expected status is 'built' but current is: '${clone(self.status)}'`, render_level, self.model, self.id);
 						}
 						return self.node
@@ -359,6 +416,7 @@ common.prototype.render = async function (options={}) {
 
 	// status update
 		self.status = 'rendering'
+		self._rendering_params = { render_level, current_render_mode }
 
 	// fix current render level
 		self.render_level = render_level
@@ -372,14 +430,11 @@ common.prototype.render = async function (options={}) {
 		//}
 		//console.log("typeof self[render_mode]:",typeof self[render_mode], self.model);
 
-	// render mode. Method name is element node like 'edit' or 'list'. If not exists, fallback to 'list'
-		const current_render_mode = (typeof self[render_mode]==='function')
-			? render_mode
-			: 'list'
-
 		// warning when fallback render mode
 			if (current_render_mode!==render_mode) {
-				console.warn(`Invalid render_mode '${render_mode}', falling back to 'list'.`);
+				if(render_mode !== 'tm') {
+					console.warn(`Invalid render_mode '${render_mode}', falling back to 'list'.`);
+				}
 			}
 
 		// render options
@@ -391,6 +446,8 @@ common.prototype.render = async function (options={}) {
 		// render function handler check
 			if (typeof self[current_render_mode]!=='function') {
 				console.warn(`Render function not defined: ${current_render_mode}`);
+				self.status = previous_status // Reset status on error
+				self._rendering_params = null
 				return false;
 			}
 
@@ -485,6 +542,7 @@ common.prototype.render = async function (options={}) {
 
 	// status update
 		self.status = 'rendered'
+		self._rendering_params = null
 
 	// event publish
 		event_manager.publish('render_'+self.id, result_node)
