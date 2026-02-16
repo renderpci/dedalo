@@ -1458,6 +1458,13 @@ class section_record {
 
 		$table = $this->get_table();
 
+		// Special case for time machine table
+		// The data is injected by tm_record, so we don't need to read from DB (and matrix_db_manager doesn't support it)
+		if ($table === 'matrix_time_machine') {
+			$this->is_loaded_data = true;
+			return $this->data_instance->get_data();
+		}
+
 		$section_tipo = $this->section_tipo;
 		$section_id	= $this->section_id;
 
