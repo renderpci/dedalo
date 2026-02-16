@@ -90,6 +90,7 @@
 		}
 
 		>.widget_container {
+			contain: content;
 			margin: 0.35em;
 			flex: 1 1 49%;
 			display: flex;
@@ -97,7 +98,9 @@
 			overflow: auto;
 			background-color: @color_hilite;
 
+			// label
 			>.widget_label {
+				contain: content;
 				background-color: @color_hilite;
 				transition: background-color 1000ms ease-in-out;
 			}
@@ -184,6 +187,7 @@
 
 			// body
 			>.widget_body {
+				contain: content;
 				padding: 1rem;
 				background-color: @color_hilite;
 				min-height: 9.5rem;
