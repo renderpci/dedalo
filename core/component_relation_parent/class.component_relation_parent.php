@@ -68,6 +68,62 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
+	* GET_POSSIBLE_ROOT_HIERARCHY
+	* @return object|null
+	*/
+	public function get_possible_root_hierarchy() : ?object {
+
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+		$tipo			= $this->tipo;
+		$relation_type	= $this->default_relation_type;
+
+		$component_target_section_tipo = 'hierarchy53';
+
+		$hierarchy_section_id = hierarchy::get_hierarchy_section(
+			$section_tipo,
+			$component_target_section_tipo // hierarchy53
+		);
+		if (empty($hierarchy_section_id)) {
+			return null;
+		}
+
+		// Component portal
+		$component_portal_tipo	= 'hierarchy45';
+		$current_model			= RecordObj_dd::get_modelo_name_by_tipo($component_portal_tipo,true);
+		$current_component		= component_common::get_instance(
+			$current_model, // string model
+			$component_portal_tipo, // string tipo
+			$hierarchy_section_id, // string section_id
+			'list', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			'hierarchy1' // string section_tipo
+		);
+		if (empty($current_component)) {
+			return null;
+		}
+
+		$current_dato = $current_component->get_dato() ?? [];
+
+		foreach ($current_dato as $current_locator) {
+
+			if (is_object($current_locator) && isset($current_locator->section_tipo) && $current_locator->section_tipo === $section_tipo && (int)$current_locator->section_id === (int)$section_id) {
+
+				return (object)[
+					'section_tipo' => 'hierarchy1',
+					'section_id' => $hierarchy_section_id,
+					'from_component_tipo' => $tipo,
+					'type' => $relation_type
+				];
+			}
+		}
+
+		return null;
+	}//end get_possible_root_hierarchy
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)
@@ -110,6 +166,10 @@ class component_relation_parent extends component_relation_common {
 						$lang,
 						$section_tipo
 					);
+					if (empty($component)) {
+						continue;
+					}
+
 					// process_dato_arguments
 						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
 					// valor
@@ -158,9 +218,22 @@ class component_relation_parent extends component_relation_common {
 					$this->tipo
 				);
 
+				if (empty($parents)) {
+					// Try hierarchy1 resolution
+					$hierarchy_parent = $this->get_possible_root_hierarchy();
+					if (!empty($hierarchy_parent)) {
+						$parents[] = $hierarchy_parent;
+					}
+				}
+
 			// new_dato
 			$new_dato = [];
 			foreach ($parents as $locator) {
+
+				// check valid locator
+				if (!is_object($locator) || !isset($locator->section_id)) {
+					continue;
+				}
 
 				// non resolve case (only section_id from current locator)
 					if ($resolve_value!==true) {
@@ -173,30 +246,32 @@ class component_relation_parent extends component_relation_common {
 
 					// term is autocomplete cases
 					$term_dato = ts_object::get_term_dato_by_locator($locator);
-					foreach ($term_dato as $term_locator) {
+					if (!empty($term_dato)) {
+						foreach ($term_dato as $term_locator) {
 
-						// check valid locator section_tipo
-							if (!isset($term_locator->section_tipo)) {
-								debug_log(__METHOD__
-									. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
-									. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
-									. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
-									, logger::DEBUG
-								);
-								continue;
+							// check valid locator section_tipo
+								if (!isset($term_locator->section_tipo)) {
+									debug_log(__METHOD__
+										. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
+										. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
+										. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
+										, logger::DEBUG
+									);
+									continue;
+								}
+
+							if($parent_section_tipo===$term_locator->section_tipo){
+
+								// value custom calculate
+									$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+								// new dato add
+									$new_dato[] = !empty($value)
+										? strip_tags($value)
+										: $value;
 							}
-
-						if($parent_section_tipo===$term_locator->section_tipo){
-
-							// value custom calculate
-								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-							// new dato add
-								$new_dato[] = !empty($value)
-									? strip_tags($value)
-									: $value;
-						}
-					}//end foreach ($term_dato as $term_locator)
+						}//end foreach ($term_dato as $term_locator)
+					}
 
 				}else{
 
@@ -212,7 +287,15 @@ class component_relation_parent extends component_relation_common {
 
 		}else{
 
-			$dato = $this->get_dato();
+			$dato = $this->get_dato() ?? [];
+
+			if (empty($dato)) {
+				// Try hierarchy1 resolution
+				$hierarchy_parent = $this->get_possible_root_hierarchy();
+				if (!empty($hierarchy_parent)) {
+					$dato[] = $hierarchy_parent;
+				}
+			}
 
 			if ($resolve_value===true) {
 				$new_dato = [];
@@ -222,8 +305,14 @@ class component_relation_parent extends component_relation_common {
 					// 	$lang,
 					// 	true // bool from_cache
 					// );
+
+					// check valid locator
+					if (!is_object($current_locator) || !isset($current_locator->section_tipo)) {
+						continue;
+					}
+
 					$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
-					$new_dato[] = strip_tags($value);
+					$new_dato[] = !empty($value) ? strip_tags($value) : $value;
 				}
 			}else{
 				// default (untouched component dato)
@@ -238,6 +327,31 @@ class component_relation_parent extends component_relation_common {
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_DIFFUSION_SAFE_DATO
+	* It gets the parent data by default, but if no value is found, it tries to get the data from the main hierarchy (hierarchy1).
+	* This mimics the previous thesaurus parent root resolution, such as "hierarchy1_245."
+	* @return array $dato
+	*	$dato is always an array of locators or an empty array
+	*/
+	public function get_diffusion_safe_dato() : array {
+
+		// common get_dato from relation_common
+		$dato = parent::get_dato();
+
+		if (empty($dato)) {
+			// Try hierarchy1 resolution as parent for compatibility with old diffusion thesaurus
+			$hierarchy_parent = $this->get_possible_root_hierarchy();
+			if (!empty($hierarchy_parent)) {
+				$dato = [$hierarchy_parent];
+			}
+		}
+
+		return $dato ?? [];
+	}//end get_diffusion_safe_dato
 
 
 
