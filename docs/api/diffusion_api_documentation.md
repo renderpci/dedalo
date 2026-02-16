@@ -154,7 +154,8 @@ The `context` provides metadata for each field (`entry`) in the records. Context
     "model": "field_text",
     "parent": "rsc264",
     "parser": { ... },
-    "pre_parser": { ... }
+    "varchar": 255,
+    "length": 11
   }
 ]
 ```
@@ -165,7 +166,9 @@ The `context` provides metadata for each field (`entry`) in the records. Context
 - **`term`**: Human-readable label for the column.
 - **`tipo`**: The diffusion node ID that acts as a key in the record entries.
 - **`model`**: The data model of the field.
-- **`parser`/`pre_parser`**: Configuration for external formatting tools.
+- **`parser`**: Configuration for external formatting tools.
+- **`varchar`**: (Integer, Optional) Specified character length for VARCHAR fields.
+- **`length`**: (Integer, Optional) Specified numeric length/limit for INT fields.
 
 ### Data (Records)
 The `data` array contains the actual records resolved.
@@ -290,8 +293,7 @@ Retrieves the raw ontology mapping and parser definitions for a diffusion node w
     "data": {
        "process": {
            "ddo_map": [ ... ],
-           "parser": { ... },
-           "pre_parser": { ... }
+           "parser": { ... }
        }
     }
   }
