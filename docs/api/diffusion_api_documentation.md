@@ -297,3 +297,49 @@ Retrieves the raw ontology mapping and parser definitions for a diffusion node w
   }
   ```
 
+## 8. Diffusion Lifecycle: Insert and Drop Rules
+
+The Diffusion API manages how records are synchronized with external systems, defining when records should be created/updated (Inserted) or removed (Dropped) based on their status and relationships.
+
+### 8.1 Main Section and Cross Sections
+- **Main Section**: The primary record being processed (e.g., an Interview). These are the records explicitly targeted by the `sqo`.
+- **Cross Sections**: Related data resolved through "deep levels" (e.g., People, Places, or Documents linked to the Main Section). The resolution depth is controlled by the `levels` parameter in the request options.
+
+### 8.2 Publishable States Logic
+The system applies specific logic to determine which related records (cross sections) should be processed for update or deletion based on the state of the Main Section:
+
+#### Visualization: Resolution Flow
+
+```mermaid
+flowchart TD
+    Start[Process Record] --> CheckMain{Main Section<br/>Publishable?}
+    
+    CheckMain -- No --> MarkDelete[Mark Main Section as 'delete']
+    MarkDelete --> ReviewCrossNeg[Review ONLY Non-Publishable<br/>Cross Sections for removal]
+    ReviewCrossNeg --> End[Emit Results]
+    
+    CheckMain -- Yes --> ProcessMain[Process Main Section Data]
+    ProcessMain --> ReviewCrossAll[Review ALL Cross Sections<br/>Publishable & Non-Publishable]
+    ReviewCrossAll --> End
+```
+
+#### Summary Table
+
+| Main Section State | Main Record Action | Cross Section Review Scope | Rationale |
+|:---|:---|:---|:---|
+| **NOT Publishable** | Mark as `delete` | **Non-Publishable only** | Prevents deleting shared data (like a Person) that is still referenced by other valid records. |
+| **Publishable** | Update / Insert | **All (All types)** | Ensures full synchronization of the main record and its entire relationship graph. |
+
+#### Case 1: Main Section is NOT Publishable
+If the main section fails the "publishable" check (e.g., it is set to private or marked for deletion):
+- The record itself is marked for deletion in the diffusion stream.
+- **Review Rule**: Only **non-publishable** cross sections are reviewed for potential removal.
+- **Rationale**: Publishable cross sections are skipped because they may be shared by other publishable main sections (for example, a "Person" record linked to multiple "Interviews"). Deleting the non-publishable main section must not accidentally remove data that is still required by other valid records.
+
+#### Case 2: Main Section IS Publishable
+If the main section is authorized for diffusion:
+- The full record data is processed and returned.
+- **Review Rule**: **All** related cross sections are reviewed (both publishable and non-publishable) to ensure the local dataset and the destination are fully synchronized.
+
+### 8.3 Dropping Records
+When a record needs to be removed from the destination, the API returns a signal (e.g., `"entries": "delete"`) for the specific `section_id`. This ensures that the destination database can purge all language variants for that specific record while maintaining referential integrity for shared entities.
