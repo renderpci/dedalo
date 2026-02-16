@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.5.11/phpunit.xsd"
          executionOrder="default"
          cacheResult="false"
          bootstrap="bootstrap.php"
@@ -11,54 +11,84 @@
     <extensions>
         <extension class="TestTimeExtension" file="TestTimeExtension.php"/>
     </extensions>
+    <source>
+        <exclude>
+            <directory>*/acc</directory>
+            <directory>*/files</directory>
+        </exclude>
+    </source>
     <testsuites>
+        <testsuite name="API">
+            <directory>api</directory>
+        </testsuite>
+
+        <testsuite name="area">
+            <directory>area</directory>
+        </testsuite>
+
+        <testsuite name="base">
+            <directory>base</directory>
+        </testsuite>
+
+        <testsuite name="common">
+            <directory>common</directory>
+        </testsuite>
+
+        <testsuite name="core">
+            <directory>core</directory>
+        </testsuite>
+
         <testsuite name="db">
-            <directory>../test/db</directory>
+            <directory>db</directory>
+            <exclude>db/acc</exclude>
         </testsuite>
 
-        <testsuite name="unit API">
-            <directory>../test/api</directory>
+        <testsuite name="dd_grid">
+            <directory>dd_grid</directory>
         </testsuite>
 
-        <testsuite name="unit login">
-            <directory>../test/login</directory>
+        <testsuite name="hierarchy">
+            <directory>hierarchy</directory>
         </testsuite>
 
-        <testsuite name="unit search">
-            <directory>../test/search</directory>
+        <testsuite name="login">
+            <directory>login</directory>
         </testsuite>
 
-        <testsuite name="unit common">
-            <directory>../test/common</directory>
+        <testsuite name="ontology">
+            <directory>ontology</directory>
         </testsuite>
 
-        <testsuite name="unit section">
-            <directory>../test/section</directory>
+        <testsuite name="search">
+            <directory>search</directory>
         </testsuite>
 
-        <testsuite name="unit areas">
-            <directory>../test/area</directory>
+        <testsuite name="section">
+            <directory>section</directory>
         </testsuite>
 
-        <testsuite name="unit components">
-            <directory>../test/components</directory>
+        <testsuite name="section_record">
+            <directory>section_record</directory>
         </testsuite>
 
-         <testsuite name="unit ts_object">
-            <directory>../test/ts_object</directory>
+        <testsuite name="security">
+            <directory>security</directory>
         </testsuite>
 
-        <testsuite name="unit hierarchy">
-            <directory>../test/hierarchy</directory>
+        <testsuite name="shared">
+            <directory>shared</directory>
         </testsuite>
 
-        <testsuite name="unit dd_grid">
-            <directory>../test/dd_grid</directory>
+        <testsuite name="tm_record">
+            <directory>tm_record</directory>
         </testsuite>
 
-         <testsuite name="tools">
-            <directory>../test/tools</directory>
+        <testsuite name="tools">
+            <directory>tools</directory>
         </testsuite>
 
+        <testsuite name="ts_object">
+            <directory>ts_object</directory>
+        </testsuite>
     </testsuites>
 </phpunit>
