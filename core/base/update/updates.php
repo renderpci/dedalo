@@ -392,6 +392,6 @@ $updates->$v = new stdClass();
 
 		// Create matrix_activity_diffusion table
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(
-				file_get_contents(DEDALO_ROOT . '/install/db/matrix_activity_diffusion.sql')
+				file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql')
 			);
 
