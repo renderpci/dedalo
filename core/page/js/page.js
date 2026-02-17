@@ -216,9 +216,9 @@ page.prototype.init = async function(options) {
 			)
 
 		// event notifications. Render inspector bubbles into the activity container.
-		// Mainly used to inform users that a network error has occurred.
-		// @see data_manager render_msg_to_inspector for other uses.
-		// @see common.build_autoload case use
+			// Mainly used to inform users that a network error has occurred.
+			// @see data_manager render_msg_to_inspector for other uses.
+			// @see common.build_autoload case use
 			const notifications_handler = (options) => {
 				dd_request_idle_callback(
 					() => {
@@ -241,7 +241,7 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('notification', notifications_handler)
 			)
 
-		// quit event
+		// event quit
 			const quit_handler = () => {
 				self.delete_cache()
 			}
@@ -249,7 +249,7 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('quit', quit_handler)
 			)
 
-		// change_lang event
+		// event change_lang
 			const change_lang_handler = () => {
 				self.delete_cache()
 			}

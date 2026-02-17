@@ -31,9 +31,7 @@ export const view_default_time_machine_list = function() {
 */
 view_default_time_machine_list.render = async function(self, options) {
 
-	const wrapper = common_render(self, options)
-
-	return wrapper
+	return common_render(self, options)
 }//end render
 
 
