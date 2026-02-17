@@ -44,7 +44,7 @@ class component_input_text extends component_string_common {
 			$fallback_value	= $this->get_component_data_fallback(
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
-			);			
+			);
 
 		// flat_fallback_value (array of one value full resolved)
 			$flat_fallback_value = empty($fallback_value)

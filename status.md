@@ -11,6 +11,7 @@ Information regarding project tasks and migration progress.
 3. **Time Machine**: Fix broken section (dd15) and search functionality.
     *   Review latest changes inspector and fix
     *   Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
+    * Permissions for non root users do not work in time machine. Profile do not display the time machine section to set permissions.
 4. **Data Migration**: Transform legacy Time Machine table data to the new model.
 5. **Autocomplete**: Migrate functionality away from the legacy `relation` table.
 6. **Ontology Documentation**: Add Markdown output capability to allow AI tools to read the Ontology.
