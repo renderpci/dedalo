@@ -3134,48 +3134,94 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO
-	* Search in diffusion structure the table that point to the same section of current dato
-	* @param string $element_tipo
-	* @param array $dato;
-	* 	Contains one value like 'ts1' (is target section tipo data from component in hierarchy record)
+	* Search in the diffusion structure for the table that corresponds to the same section as the given data.
+	* Useful to resolve target table names for components like portal or hierarchy.
+	*
+	* @param object $options
+	*   Contains context info like diffusion_element_tipo.
+	* @param array|null $dato
+	*   Contains the value to map, typically an array with one element like 'ts1' (the target section tipo).
 	* @return string|null $table_name
-	*	Return table name usable for mysql like 'themes'
+	*   The resolved table name (e.g., 'themes') or null if not found.
 	*/
 	public static function map_target_section_tipo(object $options, ?array $dato) : ?string {
 
 		$table_name = null;
 
-		$element_tipo = $options->tipo;
-
 		$target_section_tipo = is_array($dato)
-			? reset($dato)
+			? ($dato[0] ?? null)
 			: null;
-		if (!empty($target_section_tipo)) {
 
-			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-				$element_tipo,
-				$model_name='database',
-				$relation_type='parent',
-				$search_exact=true
-			);
+		if (empty($target_section_tipo)) {
+			return null;
+		}
 
-			$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-				$database_element_tipo[0],
-				$model_name='table',
-				$relation_type='children',
-				$search_exact=false // allow both: table|table_alias
-			);
+		// Get children database of current diffusion element from diffusion tree
+		$diffusion_element_tipo = $options->diffusion_element_tipo ?? null;
+		if (empty($diffusion_element_tipo)) {
+			return null;
+		}
+		$database_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$diffusion_element_tipo,
+			$model_name='database',
+			$relation_type='children',
+			$search_exact=true
+		);
+		if(empty($database_element_tipo)) {
+			return null;
+		}
 
-			foreach ($database_element_tables as $table_tipo) {
+		// Get tables from diffusion tree into the current database
+		$database_element_tables = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+			$database_element_tipo[0],
+			$model_name='table',
+			$relation_type='children',
+			$search_exact=false // allow both: table|table_alias
+		);
+		if(empty($database_element_tables)) {
+			return null;
+		}
 
-				$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
-				if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$target_section_tipo ) {
+		// Get candidate tables	(more than one table can point to the same section)
+		$candidates = [];
+		foreach ($database_element_tables as $table_tipo) {
 
-					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-					break;
-				}
+			// Get pointed (related) section tipo from table
+			$ar_section_tipo = common::get_ar_related_by_model('section', $table_tipo);
+
+			// Filter tables that point to the current section
+			if (isset($ar_section_tipo[0]) && $ar_section_tipo[0]===$target_section_tipo ) {
+
+				$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+				$table_model = RecordObj_dd::get_modelo_name_by_tipo($table_tipo); // table | table_alias
+
+				$candidate = [
+					'table_name' => $table_name,
+					'model' 	 => $table_model
+				];
+
+				$candidates[] = $candidate;
 			}
 		}
+
+		// priorize table alias over table model
+		if(!empty($candidates)) {
+			usort($candidates, function($a, $b) {
+				// First, compare by model (table_alias vs table)
+				$typeOrder = ['table_alias' => 0, 'table' => 1];
+				$typeA = $typeOrder[$a['model']] ?? 2;
+				$typeB = $typeOrder[$b['model']] ?? 2;
+
+				if ($typeA !== $typeB) {
+					return $typeA <=> $typeB;
+				}
+
+				// If same model type, compare by name
+				return strcmp($a['table_name'], $b['table_name']);
+			});
+		}
+
+		$table_name = $candidates[0]['table_name'] ?? null;
 
 		return $table_name;
 	}//end map_target_section_tipo
@@ -3445,7 +3491,7 @@ class diffusion_sql extends diffusion  {
 		$value = [];
 		foreach ($dato as $current_locator) {
 
-			$value[] = (string)$current_locator->section_id;;
+			$value[] = (string)$current_locator->section_id;
 
 			// parents recursive
 			// add parents option
