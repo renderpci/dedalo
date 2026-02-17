@@ -303,7 +303,9 @@ final class tool_common_test extends BaseTestCase {
 	*/
 	public function test_get_user_tools() {
 
-		$user_tools = tool_common::get_user_tools(1);
+		// 1. Test Superuser (ID 1)
+		$user_id = 1;
+		$user_tools = tool_common::get_user_tools($user_id);
 
 		$this->assertTrue(
 			gettype($user_tools)==='array',
@@ -311,13 +313,52 @@ final class tool_common_test extends BaseTestCase {
 				.' and is : '.gettype($user_tools)
 		);
 
+		$this->assertTrue(
+			!empty($user_tools),
+			'expected superuser tools not empty'
+		);
+
 		if (isset($user_tools[0])) {
+			$tool = $user_tools[0];
+
+			// Check basic properties
 			$this->assertTrue(
-				!empty($user_tools[0]),
-				'expected not empty'
-					.' file: : '. to_string($user_tools[0])
+				property_exists($tool, 'name'),
+				'expected tool to have name property'
+			);
+			$this->assertTrue(
+				property_exists($tool, 'section_id'),
+				'expected tool to have section_id property'
+			);
+
+			// Check tool_config resolution (added in get_user_tools)
+			$this->assertTrue(
+				property_exists($tool, 'tool_config'),
+				'expected tool to have tool_config property'
 			);
 		}
+
+
+		// 2. Test Non-existent User case (ID 999999)
+		// Should return only "always_active" tools, or empty if none.
+		$dummy_user_id = 999999;
+		$dummy_user_tools = tool_common::get_user_tools($dummy_user_id);
+
+		$this->assertTrue(
+			is_array($dummy_user_tools),
+			'expected dummy user tools to be array'
+		);
+
+		// If there are tools returned, they must be "always_active"
+		if (!empty($dummy_user_tools)) {
+			foreach ($dummy_user_tools as $tool) {
+				$this->assertTrue(
+					isset($tool->always_active) && $tool->always_active === true,
+					'expected tool for dummy user to be always_active. Tool: ' . ($tool->name ?? 'unknown')
+				);
+			}
+		}
+
 	}//end test_get_user_tools
 
 

@@ -937,9 +937,28 @@ class tool_common {
 	/**
 	* GET_USER_TOOLS
 	* Get filtered user authorized tools
-	* (Filtered by profiles security_tools data)
+	* Filtered by profiles security_tools data (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+	*
+	* Logic:
+	* 1. Check Static Cache (InMemory)
+	* 2. Check File Cache (Persistent). Uses user-specific prefix to strictly isolate user data.
+	* 3. Logic:
+	*    - Superuser: All registered tools
+	*    - Normal User:
+	*      - Tools flagged as 'always_active'
+	*      - Tools explicitly assigned in user profile
+	* 4. Resolve Configuration:
+	*    - Appends 'tool_config' property to each tool object
+	* 5. Save Cache (if calculated)
+	*
+	* Sample:
+	* $user_tools = tool_common::get_user_tools($user_id);
+	* foreach ($user_tools as $tool) {
+	*    print $tool->name;
+	* }
+	*
 	* @param int $user_id
-	* @return array $user_tools
+	* @return array $user_tools List of simple_tool_objects
 	*/
 	public static function get_user_tools(int $user_id) : array {
 
@@ -951,89 +970,105 @@ class tool_common {
 				return $user_tools;
 			}
 
-		// cache
-			$use_cache = true;
-			if ($use_cache===true) {
+		// cache key
+			$cache_key = $user_id;
 
-				// static cache
-				$cache_key = $user_id;
-				if (isset(self::$user_tools_cache[$cache_key])) {
-					return self::$user_tools_cache[$cache_key];
-				}
+		// 1. Static Cache (InMemory)
+			if (isset(self::$user_tools_cache[$cache_key])) {
+				return self::$user_tools_cache[$cache_key];
+			}
 
-				// cache file
-				$cache_file_name = tools_register::get_cache_user_tools_file_name(); //	like 'dev_1_cache_user_tools.php'
+		// 2. File Cache (Persistent)
+			$use_file_cache = true;
+			if ($use_file_cache===true) {
+
+				$cache_file_name = tools_register::get_cache_user_tools_file_name(); // 'cache_user_tools.php'
+
+				// Critical: Use specific prefix for the target user_id to avoid cache poisoning
+				// when an admin views another user's tools, or when switching users.
+				// Default prefix uses logged_user_id(), which might not match $user_id.
+				$cache_prefix = DEDALO_ENTITY . '_' . $user_id . '_';
+
 				$file_cache = dd_cache::cache_from_file((object)[
-					'file_name'	=> $cache_file_name
+					'file_name'	=> $cache_file_name,
+					'prefix'    => $cache_prefix
 				]);
 				if (!empty($file_cache)) {
 					// read from file data
 					$user_tools = $file_cache;
 
-					// static cache
+					// static cache update
 					self::$user_tools_cache[$cache_key] = $user_tools;
 
 					return $user_tools;
 				}
 			}
 
-		// all unfiltered tools
-			$registered_tools = tool_common::get_all_registered_tools();
+		// 3. Logic: Calculate tools
 
-		// user_tools
-			if ($user_id==DEDALO_SUPERUSER) {
+			// all unfiltered tools
+				$registered_tools = tool_common::get_all_registered_tools();
 
-				$user_tools = $registered_tools;
+			// filter process
+				if ($user_id==DEDALO_SUPERUSER) {
+					// Superuser has all tools
+					$user_tools = $registered_tools;
 
-			}else{
+				}else{
 
-				// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-					$security_tools_data = (function() use($user_id) {
-
+					// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
+						$security_tools_data = [];
 						$user_profile = security::get_user_profile($user_id);
-						if (empty($user_profile)) {
-							return []; // empty array
+
+						if (!empty($user_profile)) {
+							$user_profile_id = (int)$user_profile->section_id;
+
+							// Get allowed tool IDs from security profile
+							$security_tools_model	= ontology_node::get_model_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
+							$component				= component_common::get_instance(
+								$security_tools_model,
+								DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
+								$user_profile_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								DEDALO_SECTION_PROFILES_TIPO
+							);
+							// data
+							$security_tools_data = $component->get_data();
 						}
-						$user_profile_id		= (int)$user_profile->section_id;
-						$security_tools_model	= ontology_node::get_model_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO, true);
-						$component				= component_common::get_instance(
-							$security_tools_model,
-							DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
-							$user_profile_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							DEDALO_SECTION_PROFILES_TIPO
-						);
-						// data
-						return $component->get_data();
-					})();
 
-				// allowed tools
-					$ar_allowed_id = array_map(function($el){
-						return $el->section_id;
-					}, $security_tools_data);
-
-				// filter user authorized tools
-					foreach ($registered_tools as $tool) {
-
-						if( (isset($tool->always_active) && $tool->always_active===true) ||
-							 in_array($tool->section_id, $ar_allowed_id)
-							) {
-							$user_tools[] = $tool;
+					// Optimization: Create a lookup map for faster checking O(1)
+					// instead of linear search in_array O(N)
+						$allowed_ids_map = [];
+						if(is_array($security_tools_data)) {
+							foreach($security_tools_data as $el) {
+								if(isset($el->section_id)) {
+									$allowed_ids_map[$el->section_id] = true;
+								}
+							}
 						}
-					}
-			}
 
-		// tool_config
+					// filter user authorized tools
+						foreach ($registered_tools as $tool) {
+							// Tool is active if "always_active" flag is true OR if it's in the allowed list
+							$is_always_active = (isset($tool->always_active) && $tool->always_active===true);
+
+							if ($is_always_active || isset($allowed_ids_map[$tool->section_id])) {
+								$user_tools[] = $tool;
+							}
+						}
+				}
+
+		// 4. Resolve Configuration
 		// Add resolved tool_config property to cached file
 		// Will be used later to get resolved user tools config from cache
 		// for example in get_structure_context or get_buttons_context
-			array_map(function($tool){
+			foreach ($user_tools as $tool) {
 				$tool->tool_config = tool_common::get_config($tool->name);
-			}, $user_tools);
+			}
 
-		// cache
-			if ($use_cache===true) {
+		// 5. Save Cache
+			if ($use_file_cache===true) {
 
 				// static cache
 				self::$user_tools_cache[$cache_key] = $user_tools;
@@ -1041,7 +1076,8 @@ class tool_common {
 				// cache file write
 				dd_cache::cache_to_file((object)[
 					'data'		=> $user_tools,
-					'file_name'	=> $cache_file_name
+					'file_name'	=> $cache_file_name,
+					'prefix'    => $cache_prefix // Same prefix as reading
 				]);
 			}
 
