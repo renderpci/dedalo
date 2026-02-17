@@ -21,6 +21,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
+	import {render_relogin} from '../../login/js/render_login.js'
 	import {prune_rules,get_inserted_rules} from '../../page/js/css.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
@@ -256,6 +257,17 @@ page.prototype.init = async function(options) {
 				event_manager.subscribe('change_lang', change_lang_handler)
 			)
 
+		// event API response errors
+			// Check API response events from data_manager.request
+			const api_response_errors_handler = (errors) => {
+				if(errors.includes('not_logged')) {
+					// Show login modal
+					render_relogin()
+				}
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('api_response_errors', api_response_errors_handler)
+			)
 
 	// events listeners. Add window/document general events
 		self.add_events()
