@@ -1,4 +1,4 @@
-# Diffusion Ontology
+# Diffusion Ontology v6
 
 ## Overview
 The Diffusion Ontology is grounded on the root node **`dd1190`** (Diffusion). It defines the structure and rules for publishing data from the Dédalo system to external formats (SQL, XML, RDF, etc.).
