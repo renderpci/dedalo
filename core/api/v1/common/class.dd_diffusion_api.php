@@ -332,7 +332,7 @@ class dd_diffusion_api {
 			$datum_object->set_context($context);
 
 		$properties = $source_node->get_properties();
-		$publishable = $properties->publishable ?? null;
+		$publishable = $properties->is_publishable ?? null;
 
 		$data = [];
 		// Process each record and group by section
