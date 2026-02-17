@@ -13,7 +13,6 @@
 	import { set_context_vars, create_source } from '../../common/js/common.js'
 	import { events_subscription } from './events_subscription.js'
 	import { ui } from '../../common/js/ui.js'
-	import { render_relogin } from '../../login/js/render_login.js'
 	import { set_element_css } from '../../page/js/css.js'
 
 
@@ -422,15 +421,19 @@ export const init_events_subscription = function(self) {
 
 /**
 * SAVE
-* Exec a save action calling the API
-* Returns the updated data after save (useful to re-assign data entries array keys)
-* @param array new_changed_data
+* Executes a save action by calling the API.
+* Handles UI state (loading, error, success classes), prevents concurrent saves,
+* and updates the local data model upon success.
+*
+* @async
+* @param {Array} new_changed_data - Array of changes to save. If not provided, uses `self.data.changed_data`.
+* @example
 * [{
-* 	action : "update",
-* 	key : 0,
-* 	value : "XXX"
+* 	action : "update", // "update", "set_data", etc.
+* 	key : 0,           // Array index or null
+* 	value : "My new value"
 * }]
-* @return object|bool api_response
+* @returns {Promise<Object>} api_response - The raw API response object.
 */
 component_common.prototype.save = async function(new_changed_data) {
 
@@ -438,7 +441,7 @@ component_common.prototype.save = async function(new_changed_data) {
 
 	// set save status to prevent save orders overlapping
 	if (self.saving) {
-		console.error(`${self.model} is already saving data. Stop saving to prevent double action.`);
+		console.warn(`${self.model} is already saving data. Stop saving to prevent double action.`);
 		return false
 	}
 	self.saving = true
@@ -447,17 +450,14 @@ component_common.prototype.save = async function(new_changed_data) {
 		const changed_data = new_changed_data || self.data.changed_data
 
 	// check changed_data format
-		if (typeof changed_data==='undefined' || !Array.isArray(changed_data) || changed_data.length<1) {
+		if (!changed_data || !Array.isArray(changed_data) || changed_data.length < 1) {
 			if(SHOW_DEBUG===true) {
 				console.warn("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
-				console.log('save self:', self);
 			}
 			const msg = "Ignored save. changed_data is undefined or empty!"
-			// console.error('msg:', msg);
-			// alert("Error on save. changed_data is undefined or empty!")
 
-			// dispatch event save
+			// dispatch event save (with error msg to notify observers)
 				event_manager.publish('save', {
 					instance		: self,
 					api_response	: null,
@@ -470,63 +470,36 @@ component_common.prototype.save = async function(new_changed_data) {
 			return false
 		}
 
-	// check if data is actually changed (only action=update items)
-		const update_items			= changed_data.filter(el => el.action==='update')
-		const update_items_length	= update_items.length
-		if (update_items_length>0) {
-			const ar_equals = []
-			for (let i = 0; i < update_items_length; i++) {
+	// Optimization: check if data has actually changed (only for action='update' items)
+		const update_items = changed_data.filter(el => el.action === 'update')
+		if (update_items.length > 0) {
 
-				const changed_data_item = update_items[i]
+			const all_items_unchanged = update_items.every(item => {
+				const original_value = self.db_data.entries?.[item.key];
+				return is_equal(item.value, original_value);
+			});
 
-				const original_value	= self.db_data.entries && self.db_data.entries[changed_data_item.key]
-					? self.db_data.entries[changed_data_item.key]
-					: undefined
-				const new_value			= changed_data_item.value
-
-				if (is_equal(new_value, original_value)) {
-					ar_equals.push(changed_data_item)
+			if (all_items_unchanged) {
+				if(SHOW_DEBUG===true) {
+					console.warn(get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled');
 				}
-			}
-			if (ar_equals.length===update_items_length) {
-				// dispatch event save
-					// event_manager.publish('save', {
-					// 	instance		: self,
-					// 	api_response	: null,
-					// 	msg				: get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled'
-					// })
+				// reset page unload warning
+				set_before_unload(false)
 
-				// debug
-					if(SHOW_DEBUG===true) {
-						console.warn(get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled');
-					}
-
-				// page unload event
-					// set_before_unload (bool)
-					set_before_unload(false)
-
-				// update save status
 				self.saving = false
-
 				return false
 			}
 		}
 
-	// remove the previous success/error CSS class if it exists
+	// UI: remove previous status classes and add 'saving'
 		if (self.node) {
-			if (self.node.classList.contains('error')) {
-				self.node.classList.remove('error')
-			}
-			if (self.node.classList.contains('save_success')) {
-				self.node.classList.remove('save_success')
-			}
+			self.node.classList.remove('error', 'save_success')
 			self.node.classList.add('saving')
 		}
 
-	// send_data function
+	// Internal helper: send_data
 		const send_data = async () => {
 			try {
-
 				// data. isolated cloned var and set received changed_data
 					const data = clone(self.data)
 					data.changed_data = changed_data
@@ -542,36 +515,24 @@ component_common.prototype.save = async function(new_changed_data) {
 					}
 
 				// data_manager API request
-				// Using worker increments about 22%. Sample in master: from 208 to 255 ms
 					const api_response = await data_manager.request({
 						use_worker	: false,
 						body		: rqo
 					})
+
 					// debug
 					if(SHOW_DEBUG===true) {
 						dd_console(`[component_common.save] api_response ${self.model} ${self.tipo}`, 'DEBUG', api_response)
-						if (api_response.result) {
-							// const changed_data_value = typeof changed_data.value!=="undefined" ? changed_data.value : 'Value not available'
-							// const api_response_data_value = typeof api_response.result.data[0]!=="undefined" ? api_response.result.data[0] : 'Value not available'
-							const changed_data_length = changed_data.length
-							for (let i = 0; i < changed_data_length; i++) {
-								const item = changed_data[i]
-								// console.log(`[component_common.save] action:'${item.action}' lang:'${self.context.lang}', key:'${item.key}, i:'${item.i}'`);
-							}
-							// console.log('[component_common.save] api_response:', api_response);
-						}else{
-							console.error('[component_common.save] api_response ERROR:',api_response);
+						if (!api_response.result) {
+							console.error('[component_common.save] api_response ERROR:', api_response);
 						}
 					}
 
-				// Update the new data into the instance and the general datum
-					// if (api_response.result) self.update_datum(api_response) // (!) Use build to update_datum, NOT here
-
 				return api_response
 
-			}catch(error) {
-
+			} catch(error) {
 				console.error("+++++++ COMPONENT SAVE ERROR:", error);
+				// Consistent error return structure matches API response format
 				return {
 					result	: false,
 					msg		: error.message,
@@ -580,126 +541,104 @@ component_common.prototype.save = async function(new_changed_data) {
 			}
 		}
 
-		// lock component events setting 'loading' class
+		// lock component events setting 'loading' class (for UI feedback)
 			if (self.node) {
 				self.node.classList.add('loading')
 			}
 
-		const response = await send_data()
+		// Execute API call
+		const api_response = await send_data()
 
-		// remove saving class on finish
+
+	// Process Result
+		const result = api_response.result
+
+		if (result === false) {
+
+			// ERROR CASE
 			if (self.node) {
-				self.node.classList.remove('saving')
-				self.node.classList.remove('loading')
+				self.node.classList.remove('saving', 'loading')
+				self.node.classList.add('error')
 			}
 
+			// Determine exact error
+			const error = api_response.error || (api_response.errors ? api_response.errors[0] : null) || 'Unknown error';
 
-	// check result for errors
-	// result expected is current section_id. False is returned if a problem found
-		const result = response.result
-		if (result===false) {
+			switch (error) {
+				case 'not_logged': {
+					// Handle session expiration: wait for login and retry
+					let token
+					const login_successful_handler = async () => {
+						if (token) event_manager.unsubscribe(token);
 
-			// error case
+						// restore styles
+						self.node?.classList.remove('error')
 
-			self.node.classList.add('error')
-
-			switch (response.error) {
-				case 'not_logged':
-
-					// display login window
-					await render_relogin({
-						on_success : function(){
-
-							// login success actions
-
-							// restore styles
-							self.node.classList.remove('error')
-
-							// force save again this component
-							self.save(changed_data)
-						}
-					})
+						// retry save
+						self.save(changed_data)
+					}
+					token = event_manager.subscribe('login_successful', login_successful_handler)
 					break;
+				}
 
 				default:
-					// write message to the console
-					console.error('component save response.error', response.error)
+					console.error('component save error:', api_response?.error || error)
 					break;
 			}
-			// console.error('ERROR response:',response);
 
-		}else{
+		} else {
 
-			// success case
+			// SUCCESS CASE
+			if (self.node) {
+				self.node.classList.remove('saving', 'loading')
+			}
 
-			// data
+			// Update Data Model
 				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
 				if(!data){
 					if(SHOW_DEBUG===true) {
-						console.log(`Warn: data not found for ${self.tipo} in API result. Could be an error or just an empty data case. API result:`, result);
+						console.warn(`Warn: data not found for ${self.tipo} in API result.`, result);
 					}
 				}
 				self.data = data || {}
 
-			// db_data. Updates db_data
-				if (self.model!=='component_password') {
-					self.db_data = self.db_data
-						? self.db_data
-						: {}
-
-					self.db_data.entries = self.db_data.entries
-						? self.db_data.entries
-						: [null]
-
-					// self.db_data.entries[changed_data.key] = clone(changed_data.value)
-					self.db_data = clone(response.result.data)
-					// console.log('response:.result', response.result);
+			// Update DB Data snapshot (for future change detection)
+				if (self.model !== 'component_password') {
+					self.db_data = clone(self.data)
 				}
 
-			// ui. Add save_success class to component wrappers (green line animation)
-				if (self.mode==='edit') {
+			// UI: Success Animation
+				if (self.mode === 'edit') {
 					ui.component.exec_save_successfully_animation(self)
 				}
 
-			// page unload event set as false (reset)
+			// Reset page unload warning
 				set_before_unload(false)
 
-			// remove style modified to wrapper node
-				if (self.node && self.node.classList.contains('modified')) {
+			// Remove 'modified' visual state
+				if (self.node?.classList.contains('modified')) {
 					self.node.classList.remove('modified')
 				}
 
 		}//end else
 
-		// event save. Dispatch save event general
-			event_manager.publish(
-				'save',
-				{
-					instance		: self,
-					api_response	: response
-				}
-			)
+		// Dispatch Events
+			// General save event
+			event_manager.publish('save', {
+				instance		: self,
+				api_response	: api_response
+			})
 
-		// event save_ . Dispatch event specific by id_base (usually observed by component properties 'observe' definition)
-			event_manager.publish(
-				'save_'+ self.id_base,
-				{
-					instance		: self,
-					api_response	: response
-				}
-			)
+			// Specific component save event
+			event_manager.publish('save_' + self.id_base, {
+				instance		: self,
+				api_response	: api_response
+			})
 
-		// update save status
+		// Reset internal saving flag
 		self.saving = false
 
-		// remove active
-			// ui.component.inactive(self)
-
-		// blur selection
-			// document.activeElement.blur()
-
-
-	return response
+	return api_response
 }//end save
 
 
