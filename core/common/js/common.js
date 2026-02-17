@@ -12,7 +12,6 @@
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_inserted_rules} from '../../page/js/css.js'
-	import {render_relogin} from '../../login/js/render_login.js'
 	import {render_server_response_error, render_stream} from '../../common/js/render_common.js'
 
 
@@ -2301,36 +2300,34 @@ export const build_autoload = async function(self) {
 
 			// custom behaviors
 				switch (error) {
-					case 'not_logged':
-						// display login window
-						await render_relogin({
-							on_success : async function(){
-
-								// login success actions
-
-								self.status = previous_status
-
-								const unsaved_data = typeof window.unsaved_data!=='undefined'
-									? window.unsaved_data
-									: false
-
-								// login success actions
-								if (unsaved_data===false) {
-									await self.build(true)
-									await self.render({
-										render_level	: 'full', // content|full
-										render_mode		: self.mode
-									})
-								}
+					case 'not_logged': {
+						// wait for login successful event
+						let token
+						const login_successful_handler = async () => {
+							// unsubscribe safely
+							if (token) {
+								event_manager.unsubscribe(token)
 							}
-						})
+							self.status = previous_status
+							const unsaved_data = window.unsaved_data ?? false
+							// login success actions
+							if (!unsaved_data) {
+								await self.build(true)
+								await self.render({
+									render_level	: 'full', // content|full
+									render_mode		: self.mode
+								})
+							}
+						}
+						token = event_manager.subscribe('login_successful', login_successful_handler)
 						break;
+					}
 
 					default:
 						// notification.
 						// Fires a notification event that is listened by page and rendered in bubbles_notification_container
 						event_manager.publish('notification', {
-							msg			: api_response.msg || error,
+							msg			: api_response?.msg || error,
 							type		: 'error',
 							remove_time	: 30000 // 30 secs
 						})
