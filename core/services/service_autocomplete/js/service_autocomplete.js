@@ -205,49 +205,58 @@ service_autocomplete.prototype.build = async function(options={}) {
 
 /**
 * SERVICE_AUTOCOMPLETE_KEYS
-* @param event e
-* @return bool true
+* Handles keyboard navigation (ArrowDown, ArrowUp, Enter) within the autocomplete datalist.
+* This method is called from the keydown event listener when the component is active.
+* @param {KeyboardEvent} e - The keyboard event object
+* @return {boolean} Returns true to indicate the event was handled
 */
 service_autocomplete.prototype.service_autocomplete_keys = function(e) {
-	e.stopPropagation()
 
 	const self = this
+	if (!self.datalist) {
+		return false
+	}
+
+	// Stop event propagation to avoid conflicts with other UI elements
+	e.stopPropagation()
+
+	const key = e.key || e.which
 
 	// down arrow
-	if(e.which === 40) {
+	if (key === 'ArrowDown' || key === 40) {
 		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
 			selected_node.classList.remove('selected')
-			if (selected_node.nextSibling) {
-				selected_node.nextSibling.classList.add('selected')
+			if (selected_node.nextElementSibling) {
+				selected_node.nextElementSibling.classList.add('selected')
 			}
-		}else{
-			// select the first one
-			if (self.datalist.firstChild) {
-				self.datalist.firstChild.classList.add('selected')
+		} else {
+			// select the first one if nothing is selected
+			const first_child = self.datalist.firstElementChild
+			if (first_child) {
+				first_child.classList.add('selected')
 			}
 		}
 	}
 	// up arrow
-	else if (e.which === 38) {
+	else if (key === 'ArrowUp' || key === 38) {
 		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
 			selected_node.classList.remove('selected')
-			if (selected_node.previousSibling) {
-				selected_node.previousSibling.classList.add('selected')
+			if (selected_node.previousElementSibling) {
+				selected_node.previousElementSibling.classList.add('selected')
 			}
 		}
 	}
 	// enter
-	else if (e.which === 13) {
-		e.preventDefault()
-
+	else if (key === 'Enter' || key === 13) {
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
+			e.preventDefault()
 			selected_node.click()
 		}
 	}
@@ -461,9 +470,9 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 	const self = this
 
 	// search_query_object base stored in wrapper dataset
-		const rqo_search	= await clone(self.rqo_search)
+		const rqo_search = await clone(self.rqo_search)
 
-		// const rqo_search			= clone(original_rqo_search)
+		// const rqo_search		= clone(original_rqo_search)
 		// self.rqo_search			= rqo_search
 		// self.sqo					= rqo_search.sqo
 
