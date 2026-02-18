@@ -127,91 +127,115 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 	if (!data || data.length === 0) return null;
 
+	// Options with defaults matching current behavior
+	const resolve_value: boolean     = (options.resolve_value as boolean) ?? true;
+	const records_separator: string  = (options.records_separator as string) ?? ', ';
+
 	const result: data_item[] = [];
 
 	for (const item of data) {
 
 		// item has value (array of objects) and parents (map)
-		const parents_map 	= (item as any).parents;
-		const val 			= item.value;
-		const values 		= Array.isArray(val) ? val : [val];
-		
+		const parents_map	= (item as any).parents;
+		const val			= item.value;
+		const values		= Array.isArray(val) ? val : [val];
+
 		// Map to collect strings by language: { 'lg-spa': ['Barcelona, Cataluña, España'], 'lg-eng': ['Barcelona, Catalonia, Spain'] }
 		const lang_values: Record<string, string[]> = {};
-		
+
 		for(const current_val of values) {
-			
+
 			// val is locator object
 			if(!current_val || typeof current_val !== 'object') continue;
-			
-			const section_tipo 	= (current_val as any).section_tipo;
-			const section_id 	= (current_val as any).section_id;
+
+			const section_tipo	= (current_val as any).section_tipo;
+			const section_id	= (current_val as any).section_id;
 
 			if(!section_tipo || !section_id) continue;
 
 			const key = section_tipo + '_' + section_id;
-			
+
 			// Get parent chain for this item
 			if(parents_map && parents_map[key]) {
 				const chain = parents_map[key]; // Array of hierarchy objects [child, parent, grandparent...]
-				
-				if(Array.isArray(chain) && chain.length > 0) {
-					
-					// Collect all unique languages across the entire chain
-					const all_langs = new Set<string>();
-					
-					for(const node of chain) {
-						if(Array.isArray(node.term)) {
-							for(const t of node.term) {
-								if(t.lang) all_langs.add(t.lang);
-							}
-						}
-					}
-					
-					if (all_langs.size === 0) continue;
 
-					// Generate string for each language
-					for (const lang of all_langs) {
-						
-						let final_str_parts: string[] = [];
-						
-						for (const node of chain) {
-							let term_str = '';
-							
-							// Try to find exact match
+				if(Array.isArray(chain) && chain.length > 0) {
+
+					if (resolve_value) {
+						// Use term values to build strings (default behavior)
+
+						// Collect all unique languages across the entire chain
+						const all_langs = new Set<string>();
+
+						for(const node of chain) {
 							if(Array.isArray(node.term)) {
-								const term_obj = node.term.find((t:any) => t.lang === lang);
-								if(term_obj) {
-									term_str = term_obj.value;
-								} else {
-									// Fallback: use first available (usually original language)
-									if(node.term.length > 0) {
-										term_str = node.term[0].value;
-									}
+								for(const t of node.term) {
+									if(t.lang) all_langs.add(t.lang);
 								}
 							}
-							
-							if(term_str) {
-								final_str_parts.push(term_str);
+						}
+
+						if (all_langs.size === 0) continue;
+
+						// Generate string for each language
+						for (const lang of all_langs) {
+
+							let final_str_parts: string[] = [];
+
+							for (const node of chain) {
+								let term_str = '';
+
+								// Try to find exact match
+								if(Array.isArray(node.term)) {
+									const term_obj = node.term.find((t:any) => t.lang === lang);
+									if(term_obj) {
+										term_str = term_obj.value;
+									} else {
+										// Fallback: use first available (usually original language)
+										if(node.term.length > 0) {
+											term_str = node.term[0].value;
+										}
+									}
+								}
+
+								if(term_str) {
+									final_str_parts.push(term_str);
+								}
+							}
+
+							if (final_str_parts.length > 0) {
+								const final_str = final_str_parts.join(records_separator);
+
+								if (!lang_values[lang]) lang_values[lang] = [];
+								lang_values[lang].push(final_str);
 							}
 						}
-						
-						if (final_str_parts.length > 0) {
-							const final_str = final_str_parts.join(', ');
-							
-							if (!lang_values[lang]) lang_values[lang] = [];
-							lang_values[lang].push(final_str);
+
+					} else {
+						// resolve_value = false: use section_id instead of term
+						const id_parts: string[] = [];
+
+						for (const node of chain) {
+							if (node.section_id !== undefined && node.section_id !== null) {
+								id_parts.push(String(node.section_id));
+							}
+						}
+
+						if (id_parts.length > 0) {
+							const nolan_key = '__nolan__';
+							if (!lang_values[nolan_key]) lang_values[nolan_key] = [];
+							lang_values[nolan_key].push(id_parts.join(records_separator));
 						}
 					}
 				}
 			}
 		}
-		
+
 		// Create result items from map
 		for (const [lang, strs] of Object.entries(lang_values)) {
 			result.push({
 				...item,
-				lang: lang,
+				lang:  lang === '__nolan__' ? null : lang,
 				value: strs.join('; ')
 			});
 		}
