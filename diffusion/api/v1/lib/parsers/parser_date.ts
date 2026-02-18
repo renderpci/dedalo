@@ -160,3 +160,25 @@ function format_dd_date(date_part: dd_date_part, pattern: string): string {
 
 	return result;
 }
+
+
+/**
+ * DD_DATE_TO_UNIX
+ * Converts a dd_date_part to Unix timestamp (seconds since 1970-01-01).
+ *
+ * @param date_part - The date components
+ * @returns Unix timestamp as integer
+ */
+function dd_date_to_unix(date_part: dd_date_part): number {
+
+	const year   = date_part.year   ?? 1970;
+	const month  = (date_part.month  ?? 1) - 1; // JS months are 0-indexed
+	const day    = date_part.day    ?? 1;
+	const hour   = date_part.hour   ?? 0;
+	const minute = date_part.minute ?? 0;
+	const second = date_part.second ?? 0;
+
+	const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+
+	return Math.floor(date.getTime() / 1000);
+}
