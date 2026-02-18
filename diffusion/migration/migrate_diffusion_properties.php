@@ -414,67 +414,68 @@ try {
 
 function save_node($node_info) {
 
-    $tld = get_tld_from_tipo($node_info['tipo']);
-    $section_tipo = $tld.'0';
-    $section_id = get_section_id_from_tipo($node_info['tipo']);
+	$tld = get_tld_from_tipo($node_info['tipo']);
+	$section_tipo = $tld.'0';
+	$section_id = get_section_id_from_tipo($node_info['tipo']);
 
-    $component_tipo = 'ontology18';
-    $model = ontology_node::get_model_by_tipo($component_tipo,true);
-    $properties_component = component_common::get_instance(
-        $model, 
-        $component_tipo, 
-        $section_id, 
-        'list', 
-        DEDALO_DATA_NOLAN, 
-        $section_tipo
-    );
+	$component_tipo = 'ontology18';
+	$model = ontology_node::get_model_by_tipo($component_tipo,true);
+	$properties_component = component_common::get_instance(
+		$model, 
+		$component_tipo, 
+		$section_id, 
+		'list', 
+		DEDALO_DATA_NOLAN, 
+		$section_tipo
+	);
 
-    // Check for empty object and convert to null
-    $val = $node_info['properties'];
-    if (is_object($val) && count((array)$val) === 0) {
-        $val = null;
-    }
+	// Check for empty object and convert to null
+	$val = $node_info['properties'];
+	if (is_object($val) && count((array)$val) === 0) {
+		$val = null;
+	}
 
-    $data = [(object)[
-        'value' => $val
-    ] ];
+	$data = [(object)[
+		'value' => $val
+	] ];
 
 
-    $properties_component->set_data($data);
-    $properties_component->save();
+	$properties_component->set_data($data);
+	$properties_component->save();
 
-    // Unit Test: Verify data was saved
-    $verify_component = component_common::get_instance(
-        $model, 
-        $component_tipo, 
-        $section_id, 
-        'list', 
-        DEDALO_DATA_NOLAN, 
-        $section_tipo
-    );
-    $saved_data = $verify_component->get_data();
-    
-    // Normalize for comparison (assuming set_data accepted array)
-    $input_data_json = json_encode($val);
-    $saved_data_json = is_string($saved_data) ? $saved_data : json_encode($saved_data);
-    
-    // Decode both to compare structures (ignoring white space diffs)
-    $input_obj = json_decode($input_data_json);
-    $saved_obj = json_decode($saved_data_json);
-    
-    // Handle case where saved data is wrapped in array (multi-value) and input is single object
-    if (is_array($saved_obj) && count($saved_obj) === 1 && isset($saved_obj[0]->value)) {
-        if ($input_obj == $saved_obj[0]->value) {
-             echo "  [TEST PASS] Data verified for $tld (ontology18) [Wrapped]\n";
-             return;
-        }
-    }
+	// Unit Test: Verify data was saved
+	$verify_component = component_common::get_instance(
+		$model, 
+		$component_tipo, 
+		$section_id, 
+		'list', 
+		DEDALO_DATA_NOLAN, 
+		$section_tipo
+	);
+	$saved_data = $verify_component->get_data();
+	
+	// Normalize for comparison (assuming set_data accepted array)
+	$input_data_json = json_encode($val);
+	$saved_data_json = is_string($saved_data) ? $saved_data : json_encode($saved_data);
+	
+	// Decode both to compare structures (ignoring white space diffs)
+	$input_obj = json_decode($input_data_json);
+	$saved_obj = json_decode($saved_data_json);
+	
+	// Handle case where saved data is wrapped in array (multi-value) and input is single object
+	if (is_array($saved_obj) && count($saved_obj) === 1 && isset($saved_obj[0]->value)) {
+		if ($input_obj == $saved_obj[0]->value) {
+			echo "  [TEST PASS] Data verified for $tld (ontology18) [Wrapped]\n";
+			return;
+		}
+	}
 
-    if ($input_obj == $saved_obj) {
-        echo "  [TEST PASS] Data verified for $tld (ontology18)\n";
-    } else {
-        echo "  [TEST FAIL] Data Mismatch for $tld\n";
-        echo "    Expected: $input_data_json\n";
-        echo "    Actual:   $saved_data_json\n";
-    }
+	if ($input_obj == $saved_obj) {
+		echo "  [TEST PASS] Data verified for $tld (ontology18)\n";
+	} else {
+		echo "  [TEST FAIL] Data Mismatch for $tld\n";
+		echo "    Expected: $input_data_json\n";
+		echo "    Actual:   $saved_data_json\n";
+	}
 }
+
