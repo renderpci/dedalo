@@ -168,6 +168,14 @@ service_autocomplete.prototype.build = async function(options={}) {
 
 		// operator.
 		// (!) To change the operator default value, edit the request_config adding "sqo_config" to "show":
+		// {
+		// 	"show": {
+		// 		"sqo_config": {
+		// 			"operator": "$or"
+		// 		},
+		// 		"ddo_map": [...]
+		// 	}
+		// }
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
 			? self.request_config_object.search.sqo_config.operator
 			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
