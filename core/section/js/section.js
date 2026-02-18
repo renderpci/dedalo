@@ -983,7 +983,7 @@ export const get_section_records = async function(options) {
 			// promise add and continue init and build
 				ar_promises.push((async () => {
 					const current_section_record = await get_instance(instance_options)
-					if (current_section_record && typeof current_section_record.build === 'function') {
+					if (current_section_record) {
 						await current_section_record.build()
 						return current_section_record
 					}
@@ -999,7 +999,7 @@ export const get_section_records = async function(options) {
 
 
 	return section_records
-}//end get_section_records//end get_section_records
+}//end get_section_records
 
 
 
