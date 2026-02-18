@@ -222,6 +222,39 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 
 /**
+ * SPLICE_CHAIN
+ * Apply Array.splice() on the parent chain.
+ * Accepts 1 or 2 arguments matching the legacy parents_splice format:
+ *   [start]         → chain.splice(start)
+ *   [start, count]  → chain.splice(start, count)
+ *
+ * @param options.parents_splice - Array of 1-2 numbers, e.g. [0, -1] or [2]
+ */
+export function splice_chain(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const splice_args = options.parents_splice as number[];
+	if (!splice_args || !Array.isArray(splice_args) || splice_args.length === 0) return data;
+
+	return map_chains(data, (chain) => {
+		const copy = [...chain];
+
+		if (splice_args.length === 1) {
+			// splice(start) — remove from index to end
+			copy.splice(splice_args[0]);
+		} else {
+			// splice(start, deleteCount)
+			copy.splice(splice_args[0], splice_args[1]);
+		}
+
+		return copy;
+	});
+}
+
+
+
+/**
  * FLAT_PARENTS
  * Global convenience parser that chains all filtering operations and then
  * builds the final string via add_parents.
