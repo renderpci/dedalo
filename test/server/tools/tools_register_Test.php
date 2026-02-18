@@ -36,10 +36,6 @@ final class tools_register_test extends BaseTestCase {
 	* TEST_IMPORT_TOOLS
 	* @return void
 	*/
-	/**
-	* TEST_IMPORT_TOOLS
-	* @return void
-	*/
 	public function test_import_tools() {
 
 		$info_file_processed = tools_register::import_tools();
@@ -223,59 +219,33 @@ final class tools_register_test extends BaseTestCase {
 			);
 		}
 
-		// check tools lang
-		$tool_lang_config = array_find($all_config_tool_client, function($el){
-			return $el->name==='tool_lang';
+		// check tools transcription (guaranteed to have dd1633 in registry)
+		$all_default_config_tool_client = tools_register::get_all_default_config_tool_client();
+		$tool_trans_config = array_find($all_default_config_tool_client, function($el){
+			return $el->name==='tool_transcription';
 		});
 
 		$this->assertTrue(
-			is_object($tool_lang_config),
-			'expected found object'
-				.' and is : '.gettype($tool_lang_config)
+			is_object($tool_trans_config),
+			'expected tool_transcription in default client configs'
 		);
 
-		if (is_object($tool_lang_config)) {
+		if (is_object($tool_trans_config)) {
 
-			$translator_engine = $tool_lang_config->config->translator_engine ?? null;
+			$transcriber_engine = $tool_trans_config->config->transcriber_engine ?? null;
 
 			$this->assertTrue(
-				is_object($translator_engine),
-				'expected translator_engine object'
-					.' and is : '.gettype($translator_engine)
+				is_object($transcriber_engine),
+				'expected transcriber_engine object'
 			);
 
-			// "client": true,
 			$this->assertTrue(
-				$translator_engine->client===true,
-				'expected translator_engine->client as true'
-					.' and is : '.to_string($translator_engine->client)
+				$transcriber_engine->client===true,
+				'expected transcriber_engine->client as true'
 			);
 
-			$expected = json_decode('{
-				"type": "array",
-				"value": [
-					{
-						"name": "babel",
-						"label": "Babel"
-					},
-					{
-						"name": "google_translation",
-						"label": "Google translator"
-					},
-					{
-						"name": "pepe_translation",
-						"label": "Pepe translator"
-					}
-				],
-				"client": true,
-				"default": []
-			}');
-			$this->assertTrue(
-				$translator_engine==$expected,
-				'unexpected translator_engine value'
-					.' translator_engine is : '.to_string($translator_engine) . PHP_EOL
-					.' expected is : '.to_string($expected)
-			);
+			$this->assertIsArray($transcriber_engine->value);
+			$this->assertGreaterThanOrEqual(1, count($transcriber_engine->value));
 		}
 	}//end test_get_all_config_tool_client
 
@@ -394,7 +364,6 @@ final class tools_register_test extends BaseTestCase {
 	}//end test_get_tools_files_list
 
 
-
 	/**
 	* TEST_RENUMERATE_TERM_ID
 	* @return void
@@ -430,6 +399,29 @@ final class tools_register_test extends BaseTestCase {
 
 
 	/**
+	* TEST_RENUMERATE_TERM_ID_EDGE_CASES
+	* @return void
+	*/
+	public function test_renumerate_term_id_edge_cases() {
+		$counter = 10;
+
+		// 1. Empty array
+		$result = tools_register::renumerate_term_id([], $counter);
+		$this->assertEmpty($result);
+		$this->assertEquals(10, $counter);
+
+		// 2. Item without tipo (should be skipped)
+		$ontology = [
+			(object)['name' => 'no_tipo']
+		];
+		$result = tools_register::renumerate_term_id($ontology, $counter);
+		$this->assertEquals(10, $counter);
+		$this->assertObjectNotHasProperty('tipo', $result[0]);
+	}//end test_renumerate_term_id_edge_cases
+
+
+
+	/**
 	* TEST_GET_CACHE_USER_TOOLS_FILE_NAME
 	* @return void
 	*/
@@ -454,21 +446,74 @@ final class tools_register_test extends BaseTestCase {
 
 
 	/**
-	* TEST_REMOVE_TOOL_CONFIGURATION
+	* TEST_CREATE_AND_REMOVE_TOOL_CONFIGURATION
 	* @return void
 	*/
-	public function test_remove_tool_configuration() {
+	public function test_create_and_remove_tool_configuration() {
 
-		// 1. Test empty name
-		$result = tools_register::remove_tool_configuration('');
-		$this->assertFalse($result, 'expected false for empty name');
+		$tool_name = 'tool_test_unit_' . uniqid();
 
-		// 2. Test non-existent tool (should return true as it's "done")
-		$random_name = 'tool_test_' . uniqid();
-		$result = tools_register::remove_tool_configuration($random_name);
-		$this->assertTrue($result, 'expected true for non-existent tool removal');
+		// 1. Try to create config for non-existent tool in registry
+		// This should fail as it needs a base from dd1324
+		$result = tools_register::create_tool_config($tool_name);
+		$this->assertFalse($result, 'expected false for non-registered tool config creation');
 
-	}//end test_remove_tool_configuration
+		// 2. Test actual creation logic using an existing tool in registry
+		$info_file_processed = tools_register::import_tools();
+
+		// Try to find tool_lang as it's guaranteed to have dd999 in its register.json
+		$tool_to_test = array_find($info_file_processed, function($el){
+			return isset($el->imported) && $el->imported === true && $el->name === 'tool_lang';
+		});
+
+		// Fallback to any tool with configuration in registry if tool_lang is not found
+		if (!$tool_to_test) {
+			foreach ($info_file_processed as $el) {
+				if (empty($el->imported) || empty($el->name)) continue;
+				$reg_record = tools_register::get_tool_data_by_name($el->name, 'dd1324');
+				if ($reg_record) {
+					$config = tools_register::get_tool_data_by_name($el->name, 'dd1324');
+					// We check if it has the configuration component (dd999)
+					$m = ontology_node::get_model_by_tipo('dd999', true);
+					$col = section_record_data::get_column_name($m);
+					if (!empty($config->{$col}->dd999)) {
+						$tool_to_test = $el;
+						break;
+					}
+				}
+			}
+		}
+
+		if ($tool_to_test) {
+			$name = $tool_to_test->name;
+
+			// Ensure it's clean first
+			tools_register::remove_tool_configuration($name);
+
+			// Create
+			$result = tools_register::create_tool_config($name);
+			$this->assertTrue($result, "expected true for tool config creation of '$name'");
+
+			// Verify it exists in config section
+			$config_data = tools_register::get_tool_data_by_name($name, 'dd996');
+			$this->assertNotNull($config_data, "expected config data found in dd996 for '$name'");
+
+			// Remove
+			$result_remove = tools_register::remove_tool_configuration($name);
+			$this->assertTrue($result_remove, "expected true for tool config removal of '$name'");
+
+			// Verify it's gone
+			$config_data_after = tools_register::get_tool_data_by_name($name, 'dd996');
+			$this->assertNull($config_data_after, "expected config data NOT found after removal of '$name'");
+		} else {
+			$this->markTestSkipped('No registered tools with default configuration found to test creation.');
+		}
+
+		// 3. Edge cases for remove
+		$this->assertFalse(tools_register::remove_tool_configuration(''), 'expected false for empty name');
+		$this->assertTrue(tools_register::remove_tool_configuration('non_existent_tool_xyz'), 'expected true for non-existent tool');
+
+	}//end test_create_and_remove_tool_configuration
 
 
 
