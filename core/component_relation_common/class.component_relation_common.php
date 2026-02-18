@@ -242,6 +242,16 @@ class component_relation_common extends component_common {
 
 		foreach($data as $current_key => $locator) {
 
+			if(empty($locator) || !isset($locator->section_tipo)) {
+				debug_log(__METHOD__
+					. ' Ignored empty or invalid locator' . PHP_EOL
+					. ' locator: ' . json_encode($locator) . PHP_EOL
+					. ' data:' . json_encode($data, JSON_PRETTY_PRINT)
+					, logger::ERROR
+				);
+				continue;
+			}
+
 			// check locator target section is valid
 			// Validates old data without active TLD
 				$tipo_is_valid = ontology_utils::check_tipo_is_valid($locator->section_tipo);

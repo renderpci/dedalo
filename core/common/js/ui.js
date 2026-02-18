@@ -130,185 +130,164 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
-		* Component wrapper unified builder.
-		* Constructs an edit node wrapper element for a given instance.
-		* @param object instance
-		* 	current component instance
-		* @param object options = {}
-		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return HTMLElement wrapper
+		* Unified builder for component wrappers in 'edit' or 'search' modes.
+		* Constructs the main DOM structure, applies CSS classes (including ontology-defined CSS),
+		* handles activation events, and appends sub-elements (label, buttons, paginators, etc.).
+		* @param {Object} instance - The component instance.
+		* @param {Object} [options={}] - Configuration options.
+		* @param {HTMLElement} [options.label] - Optional custom label node.
+		* @param {HTMLElement} [options.top] - Node to place at the top.
+		* @param {HTMLElement} [options.buttons] - Container for action buttons.
+		* @param {HTMLElement} [options.list_body] - Body node for list-type components.
+		* @param {HTMLElement} [options.content_data] - Main data container node.
+		* @param {string[]} [options.add_styles] - Array of extra CSS classes to add.
+		* @returns {HTMLElement} wrapper - The constructed wrapper element.
 		*/
 		build_wrapper_edit : (instance, options={}) => {
 
-			// short vars
-				const model					= instance.model // like 'component_input_text'
-				const type					= instance.type // like 'component'
-				const tipo					= instance.tipo // like 'rsc26'
-				const section_tipo			= instance.section_tipo // like 'rsc26'
-				const mode					= instance.mode // like 'edit'
-				const view					= instance.view || instance.context.view || 'default'
-				const label					= instance.label // instance.context.label
-				const ontology_css			= instance.context.css || null // Ontology CSS
-				const state_of_component	= instance.context.properties?.state_of_component || null
-				const show_label			= instance.show_interface.label
+			// Destructure instance properties for clarity
+			const {
+				model,
+				type,
+				tipo,
+				section_tipo,
+				mode,
+				label,
+				show_interface,
+				permissions,
+				context,
+				active,
+				filter,
+				paginator
+			} = instance
 
-			// options
-				const add_styles = options.add_styles || null
+			const view					= instance.view || context.view || 'default'
+			const ontology_css			= context.css || null
+			const state_of_component	= context.properties?.state_of_component || null
+			const show_label			= show_interface.label
+			const add_styles			= options.add_styles || null
 
-			// wrapper
+			// Main wrapper element
 				const wrapper = document.createElement('div')
 
-				// CSS
-					// base styles
+				// CSS Configuration
 					const ar_css = [
-						'wrapper_' + type,
+						`wrapper_${type}`,
 						model,
 						tipo,
-						section_tipo +'_'+ tipo,
+						`${section_tipo}_${tipo}`,
 						mode,
-						'view_' + view
+						`view_${view}`
 					]
-					// custom added styles
-					if (add_styles) {
-						ar_css.push(...add_styles)
-					}
-					// search styles
-					if (mode==='search') {
-						ar_css.push('tooltip_toggle')
-					}
-					// set wrapper direct styles
+
+					if (add_styles) ar_css.push(...add_styles)
+					if (mode === 'search') ar_css.push('tooltip_toggle')
+
 					wrapper.classList.add(...ar_css)
 
-					// Ontology CSS. Apply ontology CSS if available
-					// Get the ontology CSS defined into the ontology properties and insert the rules into CSS style set.
+					// Apply ontology CSS if available
 					if (ontology_css) {
 						const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
 						set_element_css(selector, ontology_css)
 					}
 
-				// read only. Add 'disabled_component' class if permissions are less than 2
-					if ( !instance.permissions || parseInt(instance.permissions)<2 ) {
+				// Read-only state
+					if (!permissions || parseInt(permissions) < 2) {
 						wrapper.classList.add('disabled_component')
 					}
 
-				// event click . Activate component on event
-					const mousedown_handler = (e)=> {
+				// Event Listeners
+					const mousedown_handler = (e) => {
 						e.stopPropagation()
 
 						if (!instance.active) {
 							ui.component.activate(instance)
 						}
 
-						if(SHOW_DEBUG===true) {
+						if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
 							if (e.metaKey && e.altKey) {
 								e.preventDefault()
 								console.log('/// refreshing instance (build_autoload=true, render_level=content):', instance);
-								instance.refresh({
-									build_autoload	: true,
-									render_level	: 'content'
-								})
+								instance.refresh({ build_autoload: true, render_level: 'content' })
 								return
 							}
 							if (e.altKey) {
 								e.preventDefault()
-								console.log(`/// selected instance ${instance.model}:`, instance);
+								console.log(`/// selected instance ${model}:`, instance);
 								return
 							}
 						}
-					}//end mousedown_handler
-					wrapper.addEventListener('click', (e)=>{
-						e.stopPropagation()
-					})
+					}
+
+					wrapper.addEventListener('click', (e) => e.stopPropagation())
 					wrapper.addEventListener('mousedown', mousedown_handler)
 
-			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (options.label===null || show_label===false) {
-					// no label add (line view cases for example)
-				}else if(options.label) {
-					// add custom label node
-					wrapper.appendChild(options.label)
-					// set pointer
-					wrapper.label = options.label
-				}else{
-					// default
+			// Use DocumentFragment to batch synchronous appends
+				const fragment = new DocumentFragment()
+
+				// Label handling
+				if (options.label === null || show_label === false) {
+					// Skip label
+				} else if (options.label) {
+					fragment.appendChild(options.label)
+					wrapper.label = options.label // Pointer reference
+				} else {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'label',
 						inner_html		: label
 					})
-					wrapper.appendChild(component_label)
-					// set pointer
+					fragment.appendChild(component_label)
 					wrapper.label = component_label
-					// state_of_component. sample:
-						// {
-						// "deprecated": {
-						// 	"msg": "component_deprecated",
-						// 	"target_component": "rsc44"
-						// }
+
+					// State indicators (e.g., deprecated)
 					if (state_of_component) {
 						for (const [key, value] of Object.entries(state_of_component)) {
 							const icon = ui.create_dom_element({
 								element_type	: 'span',
-								class_name		: 'button icon ' + (value.icon ?? key),
-								title			: (value.msg || key)
+								class_name		: `button icon ${value.icon ?? key}`,
+								title			: value.msg || key
 							})
 							component_label.prepend(icon)
 						}
 					}
 				}
 
-			// top
-				if (options.top) {
-					wrapper.appendChild(options.top)
-				}
+				// Synchronous sections
+				if (options.top) fragment.appendChild(options.top)
+				if (options.buttons && permissions > 1) fragment.appendChild(options.buttons)
 
-			// buttons
-				if (options.buttons && instance.permissions>1) {
-					wrapper.appendChild(options.buttons)
-				}
-
-			// filter. Is appended asynchronously after the wrapper is returned.
-				if (instance.filter) {
-					const filter = ui.create_dom_element({
+				// Async Sub-components (Filter/Paginator)
+				// Note: These append themselves to the wrapper once resolved.
+				if (filter) {
+					const filter_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'filter',
-						parent			: wrapper
+						parent			: wrapper // Append to wrapper directly as it's async
 					})
-					instance.filter.build()
-					.then(function(){
-						instance.filter.render()
-						.then(filter_wrapper =>{
-							filter.appendChild(filter_wrapper)
-						})
-						.catch(error => console.error("Error rendering filter:", error)); // Add error handling
-					})
-					.catch(error => console.error("Error building filter:", error)); // Add error handling
+					filter.build()
+						.then(() => filter.render())
+						.then(filter_node => filter_container.appendChild(filter_node))
+						.catch(err => console.error("Error with filter:", err))
 				}
 
-			// paginator. Is appended asynchronously after the wrapper is returned.
-				if (instance.paginator) {
-					const paginator = ui.create_dom_element({
+				if (paginator) {
+					const paginator_container = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'paginator_container',
-						parent			: wrapper
+						parent			: wrapper // Append to wrapper directly
 					})
-					instance.paginator.render()
-					.then(paginator_wrapper => {
-						paginator.appendChild(paginator_wrapper)
-					})
-					.catch(error => console.error("Error rendering paginator:", error)); // Add error handling
+					paginator.render()
+						.then(paginator_node => paginator_container.appendChild(paginator_node))
+						.catch(err => console.error("Error with paginator:", err))
 				}
 
-			// list_body
-				if (options.list_body) {
-					wrapper.appendChild(options.list_body)
-				}
+				// Final synchronous appends
+				if (options.list_body) fragment.appendChild(options.list_body)
+				if (options.content_data) fragment.appendChild(options.content_data)
 
-			// content_data
-				if (options.content_data) {
-					wrapper.appendChild(options.content_data)
-				}
-
+				// Commit fragment to wrapper
+				wrapper.appendChild(fragment)
 
 			return wrapper
 		},//end build_wrapper_edit
@@ -1065,67 +1044,56 @@ export const ui = {
 
 		/**
 		* EXEC_SAVE_SUCCESSFULLY_ANIMATION
-		* Used on component save successfully
-		* @param object self
-		* 	Element instance
-		* @return promise
-		* 	Resolve bool
+		* Triggers a visual feedback animation (usually a green glow/line) on a component's node after a successful save.
+		* Handles resets to allow consecutive executions and cleans up state after completion.
+		* @param {Object} self - The component instance.
+		* @param {HTMLElement} self.node - The DOM element to animate.
+		* @returns {Promise<boolean>} Resolves when the animation cycle is complete or skipped.
 		*/
-		exec_save_successfully_animation : (self) => {
+		exec_save_successfully_animation : async (self) => {
 
-			// save_animation from self.show_interface
-				if (self.show_interface.save_animation===false) {
-					return Promise.resolve(false)
-				}
+			const node = self.node
 
-			// no rendered node exists cases
-				if (!self.node) {
-					return Promise.resolve(false)
-				}
+			// Safety checks
+			if (self.show_interface?.save_animation === false || !node) {
+				return false
+			}
 
-			return new Promise(function(resolve){
+			// Reset previous state to allow restarting the animation
+			node.classList.remove('save_success')
+			node.style.animationPlayState = 'paused'
+			node.style.webkitAnimationPlayState = 'paused'
 
-				// remove previous save_success classes
-					if (self.node.classList.contains('save_success')) {
-
-						// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
-						self.node.style.animationPlayState			= 'paused';
-						self.node.style.webkitAnimationPlayState	= 'paused';
-
-						self.node.classList.remove('save_success')
+			// Restart logic using idle callback to avoid blocking
+			return new Promise((resolve) => {
+				dd_request_idle_callback(() => {
+					// Check if node still exists after idle delay
+					if (!self.node) {
+						return resolve(false)
 					}
 
-				dd_request_idle_callback(
-					() => {
-						// success. add save_success class to component wrappers (green line animation)
-							if (self.node) {
-								self.node.classList.add('save_success')
-								// animationPlayState sets
-								self.node.style.animationPlayState			= 'running';
-								self.node.style.webkitAnimationPlayState	= 'running';
-							}
+					const active_node = self.node
 
-						// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
-							setTimeout(()=>{
+					// Force a reflow to ensure the browser registers the class removal/addition as a new animation start
+					void active_node.offsetWidth
 
-								if (self.node) {
+					// Start success animation
+					active_node.classList.add('save_success')
+					active_node.style.animationPlayState = 'running'
+					active_node.style.webkitAnimationPlayState = 'running'
 
-									// animationPlayState. Allow restart animation. Not set state pause before animation ends (2 secs)
-									self.node.style.animationPlayState			= 'paused';
-									self.node.style.webkitAnimationPlayState	= 'paused';
-
-									// remove animation style
-									if (self.node.classList.contains('save_success')) {
-										self.node.classList.remove('save_success')
-									}
-								}
-
-								resolve(true)
-							}, 2000)
-					}
-				)//end dd_request_idle_callback
+					// Cleanup and resolve after animation duration (2s)
+					setTimeout(() => {
+						if (self.node) {
+							active_node.style.animationPlayState = 'paused'
+							active_node.style.webkitAnimationPlayState = 'paused'
+							active_node.classList.remove('save_success')
+						}
+						resolve(true)
+					}, 2000)
+				})
 			})
-		}//end exec_save_successfully_animation
+		},//end exec_save_successfully_animation
 
 
 
@@ -1317,7 +1285,7 @@ export const ui = {
 							})
 							component_label.prepend(icon)
 						}
-					}					
+					}
 
 					// description
 					if (description!==null) {
@@ -1684,16 +1652,19 @@ export const ui = {
 
 	/**
 	* UPDATE_NODE_CONTENT
-	* Clean node container and add the new content as HTML
-	* @param HTMLElement node
-	* @param string value
-	* @return void
+	* Clean node container and add the new content as HTML string
+	* @param {HTMLElement} node - Target DOM node
+	* @param {string|Number} value - HTML string or value to insert
+	* @return {void}
 	*/
 	update_node_content : function(node, value) {
-		while (node.firstChild) {
-			node.removeChild(node.firstChild);
+		if (!node) return
+		// Modern and efficient way to clear all children
+		node.replaceChildren()
+		// Insert new content
+		if (value !== null && value !== undefined) {
+			node.insertAdjacentHTML('afterbegin', String(value))
 		}
-		node.insertAdjacentHTML('afterbegin', value)
 	},//end update_node_content
 
 
@@ -3046,35 +3017,34 @@ export const ui = {
 
 	/**
 	* LOAD_ITEM_WITH_SPINNER
-	* Render a spinner item while callback function is calculating
-	* When is finished, spinner will be replaced by callback result node
-	* Usually, callback is a async function that builds and render a element
-	* like filter or section
-	* @param object options
-	* 	{
-	* 		container			: HTMLElement,
-	* 		preserve_content	: bool false,
-	* 		replace_container 	: bool false
-	* 		label				: string,
-	*    	model               : string,
-	* 		callback			: function,
-	* 		style 				: object
-	* 	}
-	* @return HTMLElement|DocumentFragment|null result_node
+	* Render a spinner item while callback function is calculating.
+	* When finished, the spinner/placeholder will be replaced by the callback's result node.
+	* Usually, the callback is an async function that builds and renders an element like a filter or section.
+	* @param {Object} options
+	* @param {HTMLElement} options.container - The target element to place the spinner in.
+	* @param {boolean} [options.preserve_content=false] - If true, existing content won't be cleared.
+	* @param {boolean} [options.replace_container=false] - If true, replaces the container itself with the result.
+	* @param {string} [options.label=''] - Text label to show next to "Loading".
+	* @param {string} [options.model] - Optional model name for specific CSS targeting.
+	* @param {Function} options.callback - Async function that must return an HTMLElement or DocumentFragment.
+	* @param {Object} [options.style] - Optional inline styles for the placeholder.
+	* @returns {Promise<HTMLElement|DocumentFragment|null>} result_node
 	*/
 	load_item_with_spinner : async function(options) {
 
 		// options
-		const container			= options.container
-		const preserve_content	= options.preserve_content || false
-		const replace_container	= options.replace_container || false
-		const label				= options.label || ''
-		const model				= options.model || null
-		const callback			= options.callback
-		const style				= options.style
+		const {
+			container,
+			preserve_content = false,
+			replace_container = false,
+			label = '',
+			model = null,
+			callback,
+			style
+		} = options
 
-		// Validate container
-		if (!container instanceof HTMLElement) {
+		// Validate container (Fixed precedence bug: !(a instanceof b))
+		if (!(container instanceof HTMLElement)) {
 			console.error('Container is not a valid HTMLElement.', container);
 			return null;
 		}
@@ -3087,9 +3057,7 @@ export const ui = {
 
 		// Clean container if content should not be preserved
 		if (!preserve_content) {
-			while (container.firstChild) {
-				container.removeChild(container.firstChild)
-			}
+			container.replaceChildren()
 		}
 
 		// Prepare placeholder classes
@@ -3105,7 +3073,7 @@ export const ui = {
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: placeholder_class_names.join(' '),
-				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
+				text_content	: (get_label.loading || 'Loading') + (label ? ' ' + label : ''),
 				parent			: container
 			})
 
@@ -3121,12 +3089,11 @@ export const ui = {
 			})
 
 		// Execute callback and handle the result.
-		// callback wait (expects promise resolving DOM node)
 			try {
 				const result_node = await callback();
 
 				if (!result_node) {
-					console.warn('Callback did not return node.', options);
+					console.warn('Callback did not return a node.', options);
 					container_placeholder.remove();
 					return null;
 				}
@@ -3138,22 +3105,21 @@ export const ui = {
 				}
 
 				// Replace container or placeholder with result_node
-				requestAnimationFrame(
-					() => {
-						if (replace_container) {
-							container.replaceWith(result_node);
-						} else {
-							// default
-							container_placeholder.replaceWith(result_node);
-						}
+				requestAnimationFrame(() => {
+					if (replace_container) {
+						container.replaceWith(result_node);
+					} else if (container_placeholder.parentNode) {
+						container_placeholder.replaceWith(result_node);
 					}
-				)
+				})
 
 				return result_node;
 
 			} catch (error) {
 				console.error('Error during callback execution:', error);
-				container_placeholder.remove();
+				if (container_placeholder.parentNode) {
+					container_placeholder.remove();
+				}
 				return null;
 			}
 	},//end load_item_with_spinner

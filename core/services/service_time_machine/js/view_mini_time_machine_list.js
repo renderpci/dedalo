@@ -35,9 +35,7 @@ view_mini_time_machine_list.render = async function(self, options) {
 	// fix f.config.ignore_columns
 	self.config.ignore_columns = ['matrix_id', 'bulk_process_id']
 
-	const wrapper = common_render(self, options)
-
-	return wrapper
+	return common_render(self, options)
 }//end render
 
 

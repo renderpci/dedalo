@@ -640,7 +640,7 @@ const render_export_to_translate = function (self, prefix_tipos) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: `Export Ontology records to translate`,
+			inner_html		: `Export Ontology records to translate. Creates an CSV file including selected langs and TLDs excluding selected models by regex`,
 			parent			: export_to_translate_container
 		})
 

@@ -6,6 +6,7 @@
 
 // inspector wrapper
 .inspector {
+	contain: content;
 	display: block;
 	margin: 0px;
 	margin-bottom: 0.5rem;
@@ -28,6 +29,7 @@
 		position: relative;
 
 		>div {
+			contain: content;
 			border-bottom: 1px solid @color_grey_13;
 		}
 
@@ -38,6 +40,7 @@
 
 		// paginator
 		>.paginator_container {
+			contain: content;
 			height: 73px;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -67,6 +70,7 @@
 
 		// selection_info
 		>.selection_info {
+			contain: content;
 			color: @color_orange_dedalo;
 			padding: 0.5rem;
 			font-size: 1.12rem;
@@ -94,6 +98,7 @@
 
 		// element_info
 		>.element_info_wrap	>.element_info {
+			contain: content;
 			display: grid;
 			grid-gap: 2px;
 			grid-template-columns: minmax(min-content, 35%) minmax(65%, 80%);
@@ -221,9 +226,8 @@
 
 		// relation_list
 		>.relation_list_container {
-
 			>.relation_list_body {
-
+				contain: content;
 			}
 		}
 
@@ -231,6 +235,7 @@
 		>.time_machine_list {
 
 			>.time_machine_list_body {
+				contain: content;
 				font-size: 0.78rem;
 			}
 		}
@@ -240,8 +245,15 @@
 
 		}
 
+		>.component_history {
+			.component_history_body {
+				contain: content;
+			}
+		}
+
 		// activity_info
 		.activity_info {
+			contain: content;
 
 			.activity_info_body {
 				max-height: 10rem;

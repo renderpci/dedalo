@@ -69,7 +69,7 @@ export const component_input_text = function(){
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
-	component_input_text.prototype.tm					= render_edit_component_input_text.prototype.list
+	component_input_text.prototype.tm					= render_list_component_input_text.prototype.list
 	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
 	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
 

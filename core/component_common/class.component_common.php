@@ -1060,6 +1060,7 @@ abstract class component_common extends common {
 	}//end set_data_item_counter
 
 
+
 	/**
 	* SET_COUNTER
 	* Component counter is saved into section data as object with the tipo and the value as int

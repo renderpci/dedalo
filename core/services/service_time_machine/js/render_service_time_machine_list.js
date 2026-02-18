@@ -84,7 +84,8 @@ export const common_render = async function(self, options) {
 			mode : 'tm',
 			view : 'line'
 		})
-		// store to allow destroy later
+		// store to allow destroy later. Clear first to avoid duplication on refresh
+		self.ar_instances = []
 		self.ar_instances.push(...ar_section_record)
 
 	// content_data
@@ -191,7 +192,9 @@ export const get_content_data = async function(ar_section_record, self) {
 
             // once rendered, append it preserving the order
             section_record_nodes.forEach(node => {
-                fragment.appendChild(node)
+				if(node) {
+					fragment.appendChild(node)
+				}
             })
 		}
 

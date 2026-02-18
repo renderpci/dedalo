@@ -47,7 +47,7 @@ export const component_inverse = function(){
 	// render
 	component_inverse.prototype.render		= common.prototype.render
 	component_inverse.prototype.list		= render_list_component_inverse.prototype.list
-	component_inverse.prototype.tm			= render_edit_component_inverse.prototype.list
+	component_inverse.prototype.tm			= render_list_component_inverse.prototype.list
 	component_inverse.prototype.edit		= render_edit_component_inverse.prototype.edit
 	component_inverse.prototype.search		= render_edit_component_inverse.prototype.edit
 

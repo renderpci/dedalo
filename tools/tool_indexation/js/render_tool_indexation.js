@@ -135,9 +135,7 @@ const get_content_data_edit = async function(self) {
 						component.render()
 						.then(function(node){
 							// remove previous node
-							while (transcription_component_container.lastChild && transcription_component_container.lastChild!==lang_selector) {
-								transcription_component_container.removeChild(transcription_component_container.lastChild)
-							}
+							transcription_component_container.replaceChildren(lang_selector)
 							// add the new component to the container
 							transcription_component_container.appendChild(node)
 							// console.log("self.transcription_component.is_data_changed:",self.transcription_component.is_data_changed);
@@ -194,8 +192,6 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'component_indexing_container tab active',
 					parent			: indexation_container
 				})
-				// self.indexing_component.context.view	= 'indexation' // set indexation as render view
-				// self.indexing_component.autocomplete	= false // prevent load autocomplete service
 				self.indexing_component.render()
 				.then(function(indexing_component_node){
 					component_indexing_container.appendChild(indexing_component_node)
@@ -209,10 +205,6 @@ const get_content_data_edit = async function(self) {
 			})
 			// fix
 			self.indexation_note = indexation_note
-			// self.indexing_component.render()
-			// .then(function(indexing_component_node){
-			// 	component_indexing_container.appendChild(indexing_component_node)
-			// })
 
 		// references component
 			const references_container = ui.create_dom_element({
@@ -364,22 +356,6 @@ const get_tag_info = function(self) {
 
 	// short vars
 		const tag_info_container = self.tag_info_container
-
-	// info container
-		// const info_container = self.info_container
-		// clean previous nodes
-		// while (info_container.lastChild) {
-		// 	info_container.removeChild(info_container.lastChild)
-		// }
-
-	// tag_info_container. line info about tag
-		// const tag_info_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'tag_info_container hide',
-		// 	parent			: info_container
-		// })
-		// // fix node
-		// self.tag_info_container = tag_info_container
 
 	// tag id info
 		const fragment_id_info = ui.create_dom_element({
@@ -549,7 +525,7 @@ const render_related_list = function(self){
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'container_label',
-			inner_html		: (get_label.approach || 'Aproch'),
+			inner_html		: (get_label.approach || 'Approach'),
 			parent			: related_list_container
 		})
 
@@ -574,7 +550,7 @@ const render_related_list = function(self){
 			parent			: related_list_container
 		})
 
-		const value			= sections.value
+		const value			= sections.value || []
 		const value_length	= value.length
 		for (let i = 0; i < value_length; i++) {
 
@@ -587,7 +563,7 @@ const render_related_list = function(self){
 					self.top_locator = current_locator
 				}
 
-			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label || ''
+			const section_label = context.find(el => el.section_tipo===current_locator.section_top_tipo)?.label || ''
 			const ar_component_data	= data.filter(el =>
 				el.section_tipo === current_locator.section_top_tipo &&
 				el.section_id === current_locator.section_top_id
@@ -726,7 +702,7 @@ const render_viewer_selector = function(self, wrapper){
 			const media_component_node	= left_container.media_component_node || null
 			const people_section_node	= left_container.people_section_node || null
 
-			const hidde_all = () => {
+			const hide_all = () => {
 
 				// hide area_thesaurus_node
 				if (area_thesaurus_node) {
@@ -741,7 +717,7 @@ const render_viewer_selector = function(self, wrapper){
 					people_section_node.classList.add('hide')
 				}
 			}
-			hidde_all();
+			hide_all();
 
 			switch (self.viewer) {
 				case 'media_component':
