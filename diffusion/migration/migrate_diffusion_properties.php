@@ -363,8 +363,25 @@ function process_node($node, $level) {
 						
 						echo "{$indent}- [$tipo] $model_name\n";
 						echo "{$indent}  [RULE APPLIED] component_autocomplete_hi relation (fn=add_parents) -> parser_locator::add_parents\n";
-						break;
-					}
+
+			// --- Rule: map_locator_to_terminoID_parent (parser_locator::get_parent_term_id) ---
+			// When process_dato is map_locator_to_terminoID_parent, resolve parent hierarchy
+			// and return first parent's term_id (section_tipo_section_id)
+			if ($new_props === null || !isset($new_props->process)) {
+				$is_map_parent = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_locator_to_terminoID_parent';
+
+				if ($is_map_parent) {
+					if (!$new_props) $new_props = new stdClass();
+					$new_props->process = new stdClass();
+					$new_props->process->fn = 'add_parents';
+					$new_props->process->parser = [
+						(object)['fn' => 'parser_locator::get_parent_term_id']
+					];
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID_parent -> parser_locator::get_parent_term_id\n";
+				}
+			}
 				}
 			}
 
