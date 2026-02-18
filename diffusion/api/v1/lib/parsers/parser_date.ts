@@ -69,64 +69,56 @@ export function string_date(data: date_data_item[] | null, options: parser_optio
 	for (const data_item of data) {
 		const item_values = data_item.value ?? [];
 
-		for (const date_val of item_values) {
-			switch (date_mode) {
 
-				case 'range':
-				case 'time_range': {
-					const ar_date: string[] = [];
-					if (date_val.start?.year !== undefined) {
-						ar_date.push(format_dd_date(date_val.start, pattern));
-					}
-					if (date_val.end?.year !== undefined) {
-						ar_date.push(format_dd_date(date_val.end, pattern));
-					}
-					if (ar_date.length > 0) {
-						ar_values.push(ar_date.join(fields_separator));
-					}
-					break;
-				}
 
-				case 'period': {
-					if (date_val.period) {
-						const ar_period: string[] = [];
-						if (date_val.period.year !== undefined) {
-							ar_period.push(`${date_val.period.year} years`);
-						}
-						if (date_val.period.month !== undefined) {
-							ar_period.push(`${date_val.period.month} months`);
-						}
-						if (date_val.period.day !== undefined) {
-							ar_period.push(`${date_val.period.day} days`);
-						}
-						if (ar_period.length > 0) {
-							ar_values.push(ar_period.join(fields_separator));
-						}
-					}
-					break;
-				}
+/**
+ * UNIX_TIMESTAMP
+ * Converts dd_date objects to Unix timestamp (seconds since epoch).
+ * Chains: select_properties → select_keys → convert to timestamp.
+ *
+ * Default: properties=["start"], keys=[0]
+ *
+ * @param data    - Array of data items containing date values
+ * @param options - { properties: string[], keys: number[] }
+ * @returns Array of data items with Unix timestamp (int) as value
+ */
+export function unix_timestamp(data: data_item[] | null, options: parser_options): data_item[] | null {
 
-				case 'date':
-				default: {
-					if (date_val.start?.year !== undefined) {
-						ar_values.push(format_dd_date(date_val.start, pattern));
-					}
-					break;
-				}
+	if (!data || data.length === 0) return null;
+
+	const merged_options: parser_options = {
+		properties: ['start'],
+		keys:       [0],
+		...options
+	};
+
+	// Step 1: select_properties
+	let result = select_properties(data, merged_options);
+
+	// Step 2: select_keys (also pads missing month/day with 0)
+	result = select_keys(result, merged_options);
+
+	if (!result || result.length === 0) return null;
+
+	// Step 3: convert to unix timestamp
+	const final_result: data_item[] = [];
+
+	for (const item of result) {
+		const val = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		for (const date_part of values) {
+			if (date_part && typeof date_part === 'object') {
+				const ts = dd_date_to_unix(date_part as dd_date_part);
+				final_result.push({
+					...item,
+					value: ts
+				});
 			}
 		}
 	}
 
-	if (ar_values.length === 0) return null;
-
-	const result_str = ar_values.join(records_separator);
-
-	return [{
-		id:    null,
-		value: result_str,
-		tipo:  data[0].tipo,
-		lang:  data[0].lang
-	}];
+	return final_result.length > 0 ? final_result : null;
 }
 
 
