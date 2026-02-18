@@ -222,6 +222,69 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 
 /**
+ * FLAT_PARENTS
+ * Global convenience parser that chains all filtering operations and then
+ * builds the final string via add_parents.
+ *
+ * Processing order (matches legacy PHP behavior):
+ * 1. truncate_by_term_id  (if parent_end_by_term_id present)
+ * 2. truncate_by_model    (if parent_end_by_model present)
+ * 3. filter_by_section_tipo (if parent_section_tipo present)
+ * 4. splice_chain          (if parents_splice present AND no truncation matched)
+ * 5. add_parents           (with resolve_value and records_separator)
+ *
+ * Per legacy behavior: "the parents_splice don't act if the previous
+ * truncation criteria are matched"
+ *
+ * @param options - Combined options for all sub-parsers
+ */
+export function flat_parents(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	let result: data_item[] | null = data;
+
+	// Track whether truncation was applied
+	let truncation_applied = false;
+
+	// 1. truncate_by_term_id
+	if (options.parent_end_by_term_id) {
+		const before_count = count_chain_nodes(result);
+		result = truncate_by_term_id(result, options);
+		if (!result) return null;
+		const after_count = count_chain_nodes(result);
+		if (after_count < before_count) truncation_applied = true;
+	}
+
+	// 2. truncate_by_model
+	if (options.parent_end_by_model) {
+		const before_count = count_chain_nodes(result);
+		result = truncate_by_model(result, options);
+		if (!result) return null;
+		const after_count = count_chain_nodes(result);
+		if (after_count < before_count) truncation_applied = true;
+	}
+
+	// 3. filter_by_section_tipo
+	if (options.parent_section_tipo) {
+		result = filter_by_section_tipo(result, options);
+		if (!result) return null;
+	}
+
+	// 4. splice_chain — only if no truncation was applied
+	if (options.parents_splice && !truncation_applied) {
+		result = splice_chain(result, options);
+		if (!result) return null;
+	}
+
+	// 5. add_parents (string building with resolve_value and records_separator)
+	result = add_parents(result, options);
+
+	return result;
+}
+
+
+/**
  * Helper: count total nodes across all chains in parents_map.
  */
 function count_chain_nodes(data: data_item[] | null): number {
