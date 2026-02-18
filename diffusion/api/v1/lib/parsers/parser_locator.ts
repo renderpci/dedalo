@@ -222,6 +222,26 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 
 /**
+ * FILTER_BY_SECTION_TIPO
+ * Keep only nodes in the chain whose section_tipo matches the specified value.
+ *
+ * @param options.parent_section_tipo - The section_tipo to keep, e.g. "cult1"
+ */
+export function filter_by_section_tipo(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const target_tipo = options.parent_section_tipo as string;
+	if (!target_tipo) return data;
+
+	return map_chains(data, (chain) => {
+		return chain.filter(node => node.section_tipo === target_tipo);
+	});
+}
+
+
+
+/**
  * SPLICE_CHAIN
  * Apply Array.splice() on the parent chain.
  * Accepts 1 or 2 arguments matching the legacy parents_splice format:
