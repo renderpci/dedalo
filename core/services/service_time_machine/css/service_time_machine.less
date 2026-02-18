@@ -20,7 +20,7 @@
 		.column_service_time_machine {
 			padding: 0.25rem;
 
-			>span {
+			> span {
 				word-break: break-word;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -43,58 +43,102 @@
 		}
 
 		.list_body {
+			display: grid;
+			grid-template-columns: 1fr 1.5fr 2fr !important;
+			align-items: end;
+
+			>.header_wrapper_list {
+
+				.head_column {
+					font-size: 0.85rem;
+					text-align: left;
+
+					// When column
+					&.dd559 {
+						display: none;
+					}
+
+					.name {
+					    margin-left: 0.1rem;
+					}
+				}
+			}
 
 			>.content_data {
 
 				>.section_record {
 					display: contents;
-				}
-			}
-		}
 
-		.head_column {
-			font-size: 0.85rem;
-			text-align: left;
+					.column_service_time_machine {
+						font-size: 0.82rem;
+						padding: 0.25rem;
+						overflow: hidden;
 
-			.name {
-			    margin-left: 0.1rem;
-			}
-		}
+						.span_value {
+							word-break: break-all;
+							overflow: hidden;
+							text-overflow: ellipsis;
+							display: -webkit-box;
+							-webkit-line-clamp: 10; /* number of lines to show */
+							line-clamp: 10;
+							-webkit-box-orient: vertical;
+							height: 100%;
+						}
 
-		.column_service_time_machine {
-			font-size: 0.85rem;
-			padding: 0.25rem;
-			overflow: hidden;
+						// When (date as 18/02/2026 09:40:42)
+						&.column_dd559 {
+							grid-column: 1;
+							grid-column-end: 4;
+							box-shadow: none;
+							// background-color: @color_grey_15;
+							padding: 0.33rem;
+							padding-bottom: 0px;
+							color: @color_orange_dedalo;
+						}
 
-			span {
-				word-break: break-word;
-				overflow: hidden;
-				text-overflow: ellipsis;
-				display: -webkit-box;
-				-webkit-line-clamp: 10; /* number of lines to show */
-				line-clamp: 10;
-				-webkit-box-orient: vertical;
-				word-break: break-all;
-			}
-		}
-		// value
-		.column:nth-child(4) {
-			img {
-				max-height: 3rem;
+						// Who (user name)
+						&.column_dd578 {
+							grid-column: 1;
+							.span_value();
 
-				&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
-					max-height: 1rem;
-				}
-				&.view_text {
-					max-height: 4rem;
-				}
-				&.svg {
-					min-height: 2rem;
-				}
-				&.draw{
-					max-height: 1.2rem;
-				}
-			}
+							span {
+								padding: 0px;
+							}
+						}
+
+						// What (value)
+						&.column_dd577 {
+							grid-column: 2;
+							.span_value();
+						}
+
+						// Value
+						&.column_dd1574 {
+							grid-column: 3;
+							.span_value();
+						}
+					}
+					// value
+					.column:nth-child(4) {
+						img {
+							max-height: 3rem;
+
+							&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
+								max-height: 1rem;
+							}
+							&.view_text {
+								max-height: 4rem;
+							}
+							&.svg {
+								min-height: 2rem;
+							}
+							&.draw {
+								max-height: 1.2rem;
+							}
+						}
+					}
+				}//end >.section_record
+			}//end >.content_data
 		}
 	}//end &.view_mini
 
@@ -110,7 +154,7 @@
 				&.svg {
 					min-height: 2rem;
 				}
-				&.draw{
+				&.draw {
 					max-height: 1.2rem;
 				}
 			}
@@ -125,7 +169,7 @@
 			.column_service_time_machine {
 				max-height: unset;
 
-				>span {
+				> span {
 					// default column item padding
 					// used for matrix_id, when, who, where, annotation
 					padding: 0.12rem;
@@ -216,4 +260,4 @@
 		}
 	}//end &.view_history
 
-}//end .wrapper_service_time_machine
+}//end .service_time_machine
