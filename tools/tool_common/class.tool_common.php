@@ -488,8 +488,8 @@ class tool_common {
 		// cache
 		// Currently, it is not necessary to use the cache because the main caller
 		// (get_user_tools) is already catching the result.
-		// Deactivated for memory efficiency.
-		$use_cache = false;
+		// Enabled for performance in hydrate_tools_info and user_tools lookups.
+		$use_cache = true;
 		if ($use_cache===true) {
 			// static cache
 			if (isset(self::$all_registered_tools_cache)) {
@@ -1138,6 +1138,61 @@ class tool_common {
 		return null;
 	}//end get_tool_config
 
+
+
+	/**
+	* HYDRATE_TOOLS_INFO
+	*
+	* Enriches a list of tool references with additional metadata (name, activation status).
+	* Typically used by security components (dd1353) rendered as 'view_tools'.
+	*
+	* @param array  $datalist Array of objects containing tool references ($item->value->section_id).
+	* @param string $lang     Application language.
+	* @return array The enriched list.
+	*/
+	public static function hydrate_tools_info( array $datalist, string $lang ) : array {
+
+		if (empty($datalist)) {
+			return $datalist;
+		}
+
+		// Use cache-enabled call to get all tool metadata O(N)
+		// Metadata includes section_id, name, always_active, etc.
+		$registered_tools = self::get_all_registered_tools();
+
+		// Create a lookup map by section_id for O(1) access
+		$tools_map = [];
+		foreach ($registered_tools as $tool) {
+			if (isset($tool->section_id)) {
+				$tools_map[$tool->section_id] = $tool;
+			}
+		}
+
+		// Enrich each item in the list
+		foreach ($datalist as &$item) {
+
+			// Extraction of section_id according to component_common::get_ar_list_of_values structure
+			$section_id = $item->value->section_id ?? null;
+			if (empty($section_id)) {
+				continue;
+			}
+
+			$tool_info = $tools_map[$section_id] ?? null;
+
+			if ($tool_info) {
+				// Tool name (e.g., 'tool_lang')
+				$item->tool_name     = $tool_info->name ?? '';
+				// Activation status (always_active flag)
+				$item->always_active = $tool_info->always_active ?? false;
+			} else {
+				// Fallback values for unknown or unregistered tools
+				$item->tool_name     = 'Unknown';
+				$item->always_active = false;
+			}
+		}
+
+		return $datalist;
+	}//end hydrate_tools_info
 
 
 }//end class tool_common
