@@ -222,6 +222,37 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 
 /**
+ * TRUNCATE_BY_MODEL
+ * Cut the parent chain before any node whose typology model
+ * (typology_section_tipo_typology_section_id) matches one of the specified values.
+ *
+ * @param options.parent_end_by_model - Array of model strings, e.g. ["es2_8871"]
+ */
+export function truncate_by_model(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const end_models = options.parent_end_by_model as string[];
+	if (!end_models || !Array.isArray(end_models) || end_models.length === 0) return data;
+
+	const end_set = new Set(end_models);
+
+	return map_chains(data, (chain) => {
+		const result: any[] = [];
+		for (const node of chain) {
+			if (node.typology_section_tipo && node.typology_section_id) {
+				const model_id = node.typology_section_tipo + '_' + node.typology_section_id;
+				if (end_set.has(model_id)) break;
+			}
+			result.push(node);
+		}
+		return result;
+	});
+}
+
+
+
+/**
  * FILTER_BY_SECTION_TIPO
  * Keep only nodes in the chain whose section_tipo matches the specified value.
  *
