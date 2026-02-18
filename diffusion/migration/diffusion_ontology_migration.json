@@ -1,0 +1,731 @@
+{
+"main_types": [
+	{
+	"from": { "diffusion": {"class_name": "diffusion_mysql"} },
+	"to"  : { "diffusion": {"type": "sql"}                   }
+	},
+	{
+	"from": { "diffusion": {"class_name": "diffusion_xml"} },
+	"to"  : { "diffusion": {"type": "xml"} }
+	},
+	{
+	"from": { "diffusion": {"class_name": "diffusion_rdf"} },
+	"to"  : { "diffusion": {"type": "rdf"} }
+	},
+	{
+	"from": { "diffusion": {"class_name": "diffusion_socrata"} },
+	"to"  : { "diffusion": {"type": "socrata"}                 }
+	}
+],
+"sql": [
+	{
+	"from": {
+		"diffusion": {"class_name": "diffusion_mysql"},
+		"publication_schema": {
+		"image": "image",
+		"arxius": "document",
+		"images": "image",
+		"afectat": "informant",
+		"enlaces": "enlaces",
+		"project": "project",
+		"condemna": "condemna",
+		"refugiat": "informant",
+		"informant": "informant",
+		"audiovisual": "audiovisual",
+		"fotografies": "image",
+		"dd_relations": {
+			"oh1"      : "interview",
+			"rsc205"   : "biblioteca",
+			"mdcat597" : "sra",
+			"mdcat681" : "privacio_llibertat",
+			"mdcat757" : "espais_memoria",
+			"mdcat813" : "cens_simbologia",
+			"mdcat1015": "deportats",
+			"mdcat1531": "mapa_fosses",
+			"mdcat2949": "cost_huma"
+		},
+		"document_pdf": "document",
+		"model_placa_id": "cens_simbologia_plaques",
+		"centre_privacio": "centre_privacio_llibertat",
+		"unitat_familiar": "informant",
+		"foto_identificativa": "image",
+		"imagen_identificativa": "image",
+		"exposiciones_virtuales": "exposiciones_virtuales_portal",
+		"tesauro_presentacion_logo": "tesauro_presentacion_logo"
+		},
+		"publication_schema_info": "Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map"
+	},
+	"to": {
+		"diffusion": {
+		"type": "sql",
+		"publication_schema": {
+			"image": "image",
+			"arxius": "document",
+			"images": "image",
+			"afectat": "informant",
+			"enlaces": "enlaces",
+			"project": "project",
+			"condemna": "condemna",
+			"refugiat": "informant",
+			"informant": "informant",
+			"audiovisual": "audiovisual",
+			"fotografies": "image",
+			"dd_relations": {
+			"oh1"      : "interview",
+			"rsc205"   : "biblioteca",
+			"mdcat597" : "sra",
+			"mdcat681" : "privacio_llibertat",
+			"mdcat757" : "espais_memoria",
+			"mdcat813" : "cens_simbologia",
+			"mdcat1015": "deportats",
+			"mdcat1531": "mapa_fosses",
+			"mdcat2949": "cost_huma"
+			},
+			"document_pdf": "document",
+			"model_placa_id": "cens_simbologia_plaques",
+			"centre_privacio": "centre_privacio_llibertat",
+			"unitat_familiar": "informant",
+			"foto_identificativa": "image",
+			"imagen_identificativa": "image",
+			"exposiciones_virtuales": "exposiciones_virtuales_portal",
+			"tesauro_presentacion_logo": "tesauro_presentacion_logo"
+		},
+		"publication_schema_info": "Use format {table_name.field_name:target_table} or {field_name:target_table} for multiple map"
+		}
+	}
+	},
+	{
+	"from": {
+		"propiedades": {
+		"enum": {
+			"1": "yes",
+			"2": "no"
+		},
+		"info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",
+		"data_to_be_used": "dato"
+		}
+	},
+	"to": {
+		"properties": {
+		{
+			"process": {
+				"parser": [
+				{
+					"fn": "parser_locator::get_section_id",
+					"id": "a"
+				},
+				{
+					"fn": "parser_locator::get_first",
+					"id": "a"
+				},
+				{
+					"fn": "parser_text::map_value",
+					"options": {
+					"map": [
+						{
+						"a": {
+							"1": "yes",
+							"2": "no"
+						}
+						}
+					]
+					}
+				}
+				]
+			}
+		}
+	}
+	},
+	{
+		"from": {
+			"propiedades": {
+				
+				"varchar": 255
+				
+			}
+		},
+		"to": {
+			"properties": {
+				"varchar": 255
+			}
+		}
+	},
+	{ "from": {"propiedades": {"exclude_column": true}}, "to": {"properties": {"exclude_column": true}}},
+	{
+	"from": {
+		"propiedades": {
+		"data_to_be_used": "dato"
+		}
+	},
+	"to": {
+		"properties": {
+		{
+			"process": {
+				"parser": [
+				{
+					"fn": "parser_locator::get_section_id"
+				}
+				]
+			}
+			}
+		}
+	}
+	},
+	{
+	"from": {
+		"propiedades": {
+		"process_dato": "diffusion_sql::map_quality_to_int"
+		}
+	},
+	"to": {
+		"properties": {
+		{
+			"process": {
+				"parser": [
+				{
+					"fn": "parser_locator::get_section_id",
+					"id": "a"
+				},
+				{
+					"fn": "parser_locator::get_first",
+					"id": "a"
+				}
+				]
+			}
+			}
+		}
+	}
+	},
+	{
+		"from": {
+			"propiedades": {
+				"is_publicable": true
+			}
+		},
+		"to": {
+			"properties": {
+				"is_publishable": true
+			}
+		}
+	},
+
+	{
+		"from": {
+			"propiedades": {
+				"length": 12
+			}
+		},
+		"to": {
+			"properties": {
+				"length": 12
+			}
+		}
+	},
+	{
+		"from": {
+			"propiedades": {				
+				"process_dato": "diffusion_sql::map_locator_to_terminoID"
+			}
+		},
+		"to": {
+			"propiedades": {
+				"process": {
+					"parser": [
+					{
+						"fn": "parser_locator::get_section_id",
+						"id": "a"
+					},
+					{
+						"fn": "parser_locator::get_section_tipo",
+						"id": "b"
+					},
+					{
+						"fn": "parser_text::text_format",
+						"options": {
+						"pattern": "${b}_${a}"
+						}
+					}	
+					]
+				}
+			}
+		}
+	},
+
+
+
+
+
+
+
+
+	{
+	"from": {
+		"tipo": "numisdata1284",
+		"propiedades": {
+		"varchar": 1024,
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_resolve_value",
+			"custom_arguments": [
+			{
+				"process_dato_arguments": {
+				"component_method": "get_diffusion_value",
+				"target_component_tipo": "rsc85"
+				}
+			}
+			],
+			"target_component_tipo": "rsc1039"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"varchar": 1024,
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "numisdata1281"
+			},
+			{
+				"tipo": "rsc1039",
+				"parent": "numisdata1281",
+				"section_tipo": "rsc1035"
+			},
+			{
+				"tipo": "rsc85",
+				"parent": "rsc1039",
+				"section_tipo": "rsc197"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "numisdata1010",
+		"propiedades": {
+		"varchar": 1024,
+		"separator": " ",
+		"process_dato": "diffusion_sql::resolve_multiple",
+		"process_dato_arguments": [
+			{
+			"process_dato": "diffusion_sql::resolve_value",
+			"process_dato_arguments": {
+				"component_method": "get_diffusion_resolve_value",
+				"custom_arguments": [
+				{
+					"process_dato_arguments": {
+					"component_method": "get_diffusion_value",
+					"target_component_tipo": "numisdata1007"
+					}
+				}
+				],
+				"target_component_tipo": "numisdata30"
+			}
+			},
+			{
+			"process_dato": "diffusion_sql::resolve_value",
+			"process_dato_arguments": {
+				"component_method": "get_diffusion_value",
+				"target_component_tipo": "numisdata1007"
+			}
+			}
+		]
+		}
+	},
+	"to": {
+		"properties": {
+		"varchar": 1024,
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "numisdata656",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "numisdata30",
+				"parent": "numisdata656",
+				"section_tipo": "numisdata3"
+			},
+			{
+				"id": "a",
+				"tipo": "numisdata1007",
+				"parent": "numisdata30",
+				"section_tipo": "numisdata6"
+			},
+			{
+				"id": "b",
+				"tipo": "numisdata1007",
+				"parent": "numisdata656",
+				"section_tipo": "numisdata6"
+			}
+			],
+			"parser": [
+			{
+				"fn": "parser_text::get_string",
+				"options": {
+				"data": {"$or":["${a}", "${b}"]},
+				"key": 0
+				}
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "numisdata1003",
+		"propiedades": {
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_resolve_value",
+			"custom_arguments": [
+			{
+				"process_dato_arguments": {
+				"component_method": "get_diffusion_value",
+				"target_component_tipo": "hierarchy25"
+				}
+			}
+			],
+			"target_component_tipo": "numisdata382"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "numisdata656",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "numisdata382",
+				"parent": "numisdata656",
+				"section_tipo": "numisdata3"
+			},
+			{
+				"tipo": "hierarchy25",
+				"parent": "numisdata382",
+				"section_tipo": "any"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "mdcat2241",
+		"propiedades": {
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_value",
+			"target_component_tipo": "rsc282"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "dmm1509",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "rsc282",
+				"parent": "dmm1509",
+				"section_tipo": "rsc197"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "mdcat2246",
+		"propiedades": {
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_value",
+			"target_component_tipo": "rsc99"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "dmm1509",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "rsc99",
+				"parent": "dmm1509",
+				"section_tipo": "rsc197"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "mdcat2357",
+		"propiedades": {
+		"varchar": 1024,
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_value",
+			"target_component_tipo": "dmm1607"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"varchar": 1024,
+		"process": {
+			"ddo_map": [
+			{
+				"tipo": "dmm1530",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "dmm1607",
+				"parent": "dmm1530",
+				"section_tipo": "dmm1606"
+			},
+			{
+				"tipo": "dmm1796",
+				"parent": "dmm1607",
+				"section_tipo": "dmm1793"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+	"from": {
+		"tipo": "mdcat2358",
+		"propiedades": {
+		"process_dato": "diffusion_sql::resolve_value",
+		"process_dato_arguments": {
+			"component_method": "get_diffusion_value",
+			"custom_arguments": [
+			{
+				"divisor": ", ",
+				"add_parents": true
+			}
+			],
+			"target_component_tipo": "dmm1608"
+		}
+		}
+	},
+	"to": {
+		"properties": {
+		"process": {
+			"parser": [
+			{
+				"fn": "parser_text::join",
+				"options": {
+				"fields_separator": ", "
+				}
+			}
+			],
+			"ddo_map": [
+			{
+				"tipo": "dmm1530",
+				"section_tipo": "self"
+			},
+			{
+				"tipo": "dmm1608",
+				"parent": "dmm1530",
+				"section_tipo": "dmm1606",
+				"add_parents": true
+			},
+			{
+				"tipo": "hierarchy25",
+				"parent": "dmm1608",
+				"section_tipo": "any"
+			}
+			]
+		}
+		}
+	}
+	},
+	{
+		"from": {
+			"tipo": "rsc1297",
+			"propiedades": {
+				"info": "this column, need to be at end, is not procesed at the resolution column, only when save the row. Default separator is ' ' a blank space",
+				"merge_columns": [
+					"rsc269",
+					"rsc270",
+					"rsc271",
+					"rsc272",
+					"rsc1052",
+					"rsc273",
+					"rsc274",
+					"rsc432",
+					"rsc458",
+					"rsc1053",
+					"rsc459",
+					"rsc383"
+				]
+			}
+		},
+		"to": {
+			"properties": {
+				"process": {
+					"parser": [
+						{
+							"info": "this column, need to be at end, is not procesed at the resolution column, only when save the row. Default separator is ' ' a blank space",
+							"fn": "parser_text::merge_columns",
+							"options": {
+								"columns": [
+									"rsc269",
+									"rsc270",
+									"rsc271",
+									"rsc272",
+									"rsc1052",
+									"rsc273",
+									"rsc274",
+									"rsc432",
+									"rsc458",
+									"rsc1053",
+									"rsc459",
+									"rsc383"
+								]
+							}
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"from": {
+			"tipo": "numisdata1091",
+			"propiedades": {
+				"data_to_be_used": "custom",
+				"process_dato_arguments": {
+					"custom_map": [
+						{
+							"table": "publications",
+							"title": {
+								"component_method": "get_diffusion_resolve_value",
+								"custom_arguments": {
+									"process_dato_arguments": {
+										"dato_splice": [
+											1
+										],
+										"component_method": "get_diffusion_value",
+										"target_component_tipo": "rsc140"
+									}
+								}
+							},
+							"author": {
+								"component_method": "get_diffusion_resolve_value",
+								"custom_arguments": {
+									"process_dato_arguments": {
+										"***dato_splice": [
+											1
+										],
+										"component_method": "get_diffusion_value",
+										"target_component_tipo": "rsc139"
+									}
+								}
+							},
+							"section_tipo": "rsc205"
+						}
+					]
+				}
+			}
+		},
+		"to": {
+			"properties": {
+				"process": {
+					"pre_parser": [
+						{
+							"info": "Join the surname and name in publications way",
+							"fn": "parser_text::text_format",
+							"pattern": "${b}, ${c}",
+							"id": "e",
+							"options": {
+								"separator": ", "
+							}
+						}
+					],
+					"parser": [
+						{
+							"info": "Create a json data with the result to be insert into the column",
+							"fn": "parser_json::json",
+							"options": {
+								"map": [
+									{
+										"section_id": "{$section_id}",
+										"section_tipo": "{$section_tipo}",
+										"table": "publications",
+										"title": "{$a}",
+										"author": "{$e}"
+									}
+								]
+							}
+						}
+					],
+					"ddo_map": [
+						{
+							"info": "a relation list node, used to obtain the locators that are calling to this section. As lots of sections can be linked here, but the next ddo in the chain will need to use a filter of the locators with specific section, so options->filter_section is apply to reduce the data",
+							"tipo": "hierarchy97",
+							"section_tipo": "self",
+							"options": {
+								"filter_section": [
+									"rsc205"
+								]
+							}
+						},
+						{
+							"id": "a",
+							"tipo": "rsc140",
+							"parent": "hierarchy97",
+							"section_tipo": "rsc205"
+						},
+						{
+							"tipo": "rsc139",
+							"parent": "hierarchy97",
+							"section_tipo": "rsc205"
+						},
+						{
+							"id": "b",
+							"tipo": "rsc86",
+							"parent": "hierarchy97",
+							"section_tipo": "rsc197"
+						},
+						{
+							"id": "c",
+							"tipo": "rsc85",
+							"parent": "hierarchy97",
+							"section_tipo": "rsc197"
+						}
+					]
+				},
+				"publishable": true
+			}
+		}
+	}
+],
+"rdf": [
+	{
+	"from": {
+		"diffusion": {"service": "nomisma", "class_name": "diffusion_rdf"}
+	},
+	"to": { "diffusion": {"service": "nomisma", "type": "rdf"} }
+	}
+]
+}
