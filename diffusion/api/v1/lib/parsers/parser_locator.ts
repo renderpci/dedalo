@@ -221,3 +221,20 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 }
 
 
+/**
+ * Helper: count total nodes across all chains in parents_map.
+ */
+function count_chain_nodes(data: data_item[] | null): number {
+	if (!data) return 0;
+	let count = 0;
+	for (const item of data) {
+		const parents_map = (item as any).parents;
+		if (parents_map) {
+			for (const chain of Object.values(parents_map)) {
+				if (Array.isArray(chain)) count += chain.length;
+			}
+		}
+	}
+	return count;
+}
+
