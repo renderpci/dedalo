@@ -220,6 +220,70 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 	return result.length > 0 ? result : null;
 }
 
+
+
+/**
+ * GET_PARENT_TERM_ID
+ * From the parents chain (populated by PHP `add_parents`), extracts the
+ * first parent (index 1 in chain, since index 0 is the item itself)
+ * and returns its term_id as `{section_tipo}_{section_id}`.
+ *
+ * @param data    - Array of data items with parents map
+ * @param options - Parser options
+ * @returns Array of data items with term_id string as value
+ */
+export function get_parent_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const result: data_item[] = [];
+
+	for (const item of data) {
+
+		const parents_map = (item as any).parents;
+		const val         = item.value;
+		const values      = Array.isArray(val) ? val : [val];
+
+		const term_ids: string[] = [];
+
+		for (const current_val of values) {
+
+			if (!current_val || typeof current_val !== 'object') continue;
+
+			const section_tipo = (current_val as any).section_tipo;
+			const section_id   = (current_val as any).section_id;
+
+			if (!section_tipo || !section_id) continue;
+
+			const key = section_tipo + '_' + section_id;
+
+			// Get parent chain for this item
+			if (parents_map && parents_map[key]) {
+				const chain = parents_map[key]; // [child, parent, grandparent...]
+
+				// First parent is at index 1 (index 0 is the item itself)
+				if (Array.isArray(chain) && chain.length > 1) {
+					const parent_node = chain[1];
+					const parent_term_id = parent_node.section_tipo + '_' + parent_node.section_id;
+					term_ids.push(parent_term_id);
+				}
+			}
+		}
+
+		if (term_ids.length > 0) {
+			result.push({
+				...item,
+				value: term_ids.join(', '),
+				lang:  null // term_id is language-independent
+			});
+		}
+	}
+
+	return result.length > 0 ? result : null;
+}
+
+
+
 // =====================================================================
 // Chain-filtering parsers (operate on parents_map before string building)
 // =====================================================================
