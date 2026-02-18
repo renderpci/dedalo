@@ -220,6 +220,36 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 	return result.length > 0 ? result : null;
 }
 
+// =====================================================================
+// Chain-filtering parsers (operate on parents_map before string building)
+// =====================================================================
+
+/**
+ * Helper: iterate all chain entries in parents_map and apply a transform function.
+ * Returns a new data array with modified parents_map.
+ */
+function map_chains(data: data_item[], transform: (chain: any[]) => any[]): data_item[] {
+
+	return data.map(item => {
+
+		const parents_map = (item as any).parents;
+		if (!parents_map) return item;
+
+		const new_map: Record<string, any[]> = {};
+		for (const [key, chain] of Object.entries(parents_map)) {
+			if (Array.isArray(chain)) {
+				new_map[key] = transform(chain);
+			} else {
+				new_map[key] = chain as any[];
+			}
+		}
+
+		return { ...item, parents: new_map };
+	});
+}
+
+
+
 /**
  * TRUNCATE_BY_TERM_ID
  * Cut the parent chain before any node whose term_id (section_tipo_section_id)
