@@ -454,16 +454,22 @@ function process_node($node, $level) {
             $props_functional = is_object($props) ? clone $props : (object)[];
             $non_functional_keys = [
                 'varchar', 'enum', 'length', // Schema
-                'exclude_column', 'info', 'is_publicable', 'orders', 'labels'
+                'exclude_column', 'info', 'is_publicable', 'orders', 'labels',
+                'option_obj' // Parent chain config (handled by autocomplete_hi/flat_parents rule)
             ];
             foreach ($non_functional_keys as $key) {
                 if (isset($props_functional->$key)) unset($props_functional->$key);
             }
             
-            // Allow 'resolve_value' to be replaced by this rule
-            if (isset($props_functional->process_dato) && $props_functional->process_dato === 'diffusion_sql::resolve_value') {
+            // Allow these process_dato values to be replaced by downstream rules
+            if (isset($props_functional->process_dato) && in_array($props_functional->process_dato, [
+                'diffusion_sql::resolve_value',
+                'diffusion_sql::split_date_range',
+                'diffusion::get_publication_unix_timestamp',
+                'diffusion_sql::map_locator_to_terminoID_parent'
+            ])) {
                 unset($props_functional->process_dato);
-                // Also ignore arguments associated with resolve_value if they exist
+                // Also ignore arguments associated with these if they exist
                 if (isset($props_functional->process_dato_arguments)) unset($props_functional->process_dato_arguments);
             }
             
