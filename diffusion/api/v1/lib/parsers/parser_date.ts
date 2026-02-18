@@ -40,6 +40,63 @@ interface dd_date_part {
 	second?: number;
 }
 
+/**
+ * FORMAT_STRING_DATE
+ * Formats dd_date_part objects to string using a pattern.
+ *
+ * Default pattern: "Y-m-d"
+ * Default records_separator: " | "
+ * Default fields_separator: ", "
+ *
+ * Supported tokens: Y (4-digit year), m (2-digit month), d (2-digit day),
+ *                   H (2-digit hour), i (2-digit minute), s (2-digit second)
+ *
+ * @param data    - Array of data items whose value is an array of dd_date_parts
+ * @param options - { pattern, records_separator, fields_separator }
+ * @returns Array of data items with formatted string as value
+ */
+export function format_string_date(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const pattern           = (options.pattern as string)           ?? 'Y-m-d';
+	const records_separator = (options.records_separator as string) ?? ' | ';
+	const fields_separator  = (options.fields_separator as string)  ?? ', ';
+
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const val = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		const formatted_parts: string[] = [];
+
+		for (const date_part of values) {
+			if (date_part && typeof date_part === 'object') {
+				formatted_parts.push(format_dd_date(date_part as dd_date_part, pattern));
+			}
+		}
+
+		if (formatted_parts.length > 0) {
+			result.push({
+				...item,
+				value: formatted_parts.join(fields_separator)
+			});
+		}
+	}
+
+	// If multiple records, join them
+	if (result.length > 1) {
+		const combined = result.map(r => r.value).join(records_separator);
+		return [{
+			...result[0],
+			value: combined
+		}];
+	}
+
+	return result.length > 0 ? result : null;
+}
+
 
 
 /**
