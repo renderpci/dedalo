@@ -400,6 +400,49 @@ function process_node($node, $level) {
 				}
 			}
 
+			// --- Rule: Component Date (parser_date::string_date) ---
+			// When related component is component_date and no functional properties,
+			// or when process_dato is split_date_range
+			if ($new_props === null || !isset($new_props->process)) {
+
+				$is_date_component = false;
+
+				// Check if related component is component_date
+				if (!empty($relations_info)) {
+					foreach ($relations_info as $rel_info) {
+						if ($rel_info['model'] === 'component_date') {
+							$is_date_component = true;
+							break;
+						}
+					}
+				}
+
+				// Check if process_dato is split_date_range
+				$is_split_date = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::split_date_range';
+
+				if ($is_date_component && ($clean_count === 0 || $is_split_date)) {
+					if (!$new_props) $new_props = new stdClass();
+					$new_props->process = new stdClass();
+
+					// Build parser definition
+					$parser_def = (object)['fn' => 'parser_date::string_date'];
+
+					// Preserve selected_date from legacy split_date_range arguments
+					// Default is "start", so only add options when it's different
+					if ($is_split_date
+						&& isset($props->process_dato_arguments->selected_date)
+						&& $props->process_dato_arguments->selected_date !== 'start'
+					) {
+						$parser_def->options = (object)[
+							'properties' => [$props->process_dato_arguments->selected_date]
+						];
+					}
+
+					$new_props->process->parser = [$parser_def];
+
+					$selected_info = isset($parser_def->options) ? ' (properties: [' . $props->process_dato_arguments->selected_date . '])' : '';
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] component_date -> parser_date::string_date{$selected_info}\n";
 				}
 			}
 
