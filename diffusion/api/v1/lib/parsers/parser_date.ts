@@ -11,24 +11,15 @@ import type { parser_options } from '../types';
 
 
 
-/**
- * Data item containing date values from the PHP response.
- */
-interface date_data_item {
+// =====================================================
+// Data item type
+// =====================================================
+
+interface data_item {
 	id?:    string | null;
-	value:  date_value[];
+	value:  any;
 	tipo?:  string;
 	lang?:  string | null;
-}
-
-interface date_value {
-	start?: dd_date_part;
-	end?:   dd_date_part;
-	period?: {
-		year?:  number;
-		month?: number;
-		day?:   number;
-	};
 }
 
 interface dd_date_part {
