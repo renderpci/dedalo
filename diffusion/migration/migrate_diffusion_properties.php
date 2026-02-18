@@ -479,3 +479,50 @@ function save_node($node_info) {
 	}
 }
 
+
+function get_ddo_map($current_tipo) {
+	if (!$current_tipo) return null;
+
+	$node = ontology_node::get_instance($current_tipo);
+	if (!$node) return null;
+
+	$ddo_map = [];
+
+	// 2. Process relations
+	$relations = $node->get_relations();
+	$rels = is_string($relations) ? json_decode($relations) : $relations;
+
+	if ($rels && is_array($rels) && count($rels) > 0) {
+		foreach ($rels as $rel) {
+			$rel_tipo = is_object($rel) ? $rel->tipo : $rel;
+
+			$rel_model = ontology_node::get_model_by_tipo($rel_tipo);
+			if(str_starts_with($rel_model, 'component_')) {						
+		
+				// 1. Add current node
+				$ddo_map[] = (object)[
+					'tipo' => $rel_tipo,
+					'section_tipo' => 'self'
+				];
+												
+				$section_tipo = ontology_node::get_ar_tipo_by_model_and_relation($rel_tipo, 'section', 'related')[0] ?? null;
+				
+				if(!empty($section_tipo)){
+					$ar_component_tipo = ontology_node::get_ar_tipo_by_model_and_relation($rel_tipo, 'component', 'related');
+					foreach ($ar_component_tipo as $component_tipo) {
+						
+						// 3. Add relation entry
+						$ddo_map[] = (object)[
+							'section_tipo' => $section_tipo,
+							'tipo'         => $component_tipo,
+							'parent'       => $rel_tipo
+						];
+					}
+				}
+				
+			}
+		}
+	}
+
+	return count($ddo_map) > 0 ? $ddo_map : null;
+}
