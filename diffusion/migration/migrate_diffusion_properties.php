@@ -382,6 +382,24 @@ function process_node($node, $level) {
 					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID_parent -> parser_locator::get_parent_term_id\n";
 				}
 			}
+
+			// --- Rule: Unix Timestamp (parser_date::unix_timestamp) ---
+			// When process_dato is get_publication_unix_timestamp
+			if ($new_props === null || !isset($new_props->process)) {
+				$is_unix_timestamp = isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp';
+
+				if ($is_unix_timestamp) {
+					if (!$new_props) $new_props = new stdClass();
+					$new_props->process = new stdClass();
+					$new_props->process->parser = [
+						(object)['fn' => 'parser_date::unix_timestamp']
+					];
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] get_publication_unix_timestamp -> parser_date::unix_timestamp\n";
+				}
+			}
+
 				}
 			}
 
