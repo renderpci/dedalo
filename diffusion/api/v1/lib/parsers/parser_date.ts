@@ -40,6 +40,61 @@ interface dd_date_part {
 	second?: number;
 }
 
+
+/**
+ * SELECT_KEYS
+ * Picks array elements by index. Pads missing month/day with 0 for SQL compatibility.
+ *
+ * Default keys: [0]
+ *
+ * @param data    - Array of data items whose value is an array of dd_date_parts
+ * @param options - { keys: number[] }  e.g. [0] or [0, 1]
+ * @returns Array of data items with selected elements
+ */
+export function select_keys(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const keys: number[] = (options.keys as number[]) ?? [0];
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const val = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		const selected: any[] = [];
+
+		for (const key_index of keys) {
+			if (key_index < values.length && values[key_index] !== undefined) {
+				const date_part = values[key_index];
+
+				// Pad missing date fields with 0 for SQL compatibility
+				if (date_part && typeof date_part === 'object') {
+					if (date_part.month === undefined || date_part.month === null) {
+						date_part.month = 0;
+					}
+					if (date_part.day === undefined || date_part.day === null) {
+						date_part.day = 0;
+					}
+				}
+
+				selected.push(date_part);
+			}
+		}
+
+		if (selected.length > 0) {
+			result.push({
+				...item,
+				value: selected
+			});
+		}
+	}
+
+	return result.length > 0 ? result : null;
+}
+
+
+
 /**
  * FORMAT_STRING_DATE
  * Formats dd_date_part objects to string using a pattern.
