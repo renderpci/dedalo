@@ -2,6 +2,24 @@
 
 All notable changes of the PHPUnit 12.5 release series are documented in this file using the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## [12.5.12] - 2026-02-16
+
+### Fixed
+
+* [#6511](https://github.com/sebastianbergmann/phpunit/issues/6511): TestDox variables out of order with named arguments
+* [#6514](https://github.com/sebastianbergmann/phpunit/issues/6514): `<ini />` can silently fail
+
+## [12.5.11] - 2026-02-10
+
+### Deprecated
+
+* [#6510](https://github.com/sebastianbergmann/phpunit/issues/6510): Deprecate using `with*()` on test stubs
+
+### Fixed
+
+* [#6503](https://github.com/sebastianbergmann/phpunit/issues/6503): Temporary file used by `SourceMapper` may be deleted prematurely when multiple PHPUnit processes run in parallel
+* [#6509](https://github.com/sebastianbergmann/phpunit/issues/6509): "No expectations were configured for the mock object ..." notice is emitted when `with()` is used without `expects()`
+
 ## [12.5.10] - 2026-02-08
 
 ### Fixed
@@ -92,6 +110,8 @@ All notable changes of the PHPUnit 12.5 release series are documented in this fi
 * [#6380](https://github.com/sebastianbergmann/phpunit/pull/6380): Allow `Throwable` in `expectExceptionObject()`
 * A PHPUnit notice is now emitted for test methods that create a mock object but do not configure an expectation for it
 
+[12.5.12]: https://github.com/sebastianbergmann/phpunit/compare/12.5.11...12.5.12
+[12.5.11]: https://github.com/sebastianbergmann/phpunit/compare/12.5.10...12.5.11
 [12.5.10]: https://github.com/sebastianbergmann/phpunit/compare/12.5.9...12.5.10
 [12.5.9]: https://github.com/sebastianbergmann/phpunit/compare/12.5.8...12.5.9
 [12.5.8]: https://github.com/sebastianbergmann/phpunit/compare/12.5.7...12.5.8
