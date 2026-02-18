@@ -137,75 +137,89 @@ service_autocomplete.prototype.build = async function(options={}) {
 
 	const self = this
 
-	// status update
-		self.status = 'building'
+	// check status to prevent concurrent builds
+	switch (self.status) {
+		case 'building':
+			return self._build_waiter;
+		case 'built':
+			return true;
+	}
 
-	// options vars
-		self.request_config_object =  (options.request_config_object)
+	self.status = 'building'
+	self._build_waiter = (async () => {
+
+		// options vars
+		self.request_config_object = (options.request_config_object)
 			? options.request_config_object
-			: self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+			: self.request_config.find(el => el.api_engine === 'dedalo' && el.type === 'main')
 
-	// reset search options
+		if (!self.request_config_object) {
+			console.error('Error: Unable to find main dedalo request_config_object', self.request_config);
+			self.status = 'initialized' // Reset status
+			return false
+		}
+
+		// reset search options
 		self.sqo				= {}
 		self.ar_filter_by_list	= []
 		self.ar_instances		= []
-		self.list_name			= 's_'+new Date().getUTCMilliseconds()
+		self.list_name			= 's_' + Date.now()
 		self.search_fired		= false
 
-	// operator.
+		// operator.
 		// (!) To change the operator default value, edit the request_config adding "sqo_config" to "show":
-		// {
-		// 	"show": {
-		// 		"sqo_config": {
-		// 			"operator": "$or"
-		// 		},
-		// 		"ddo_map": [...]
-		// 	}
-		// }
 		self.operator = self.request_config_object.search && self.request_config_object.search.sqo_config && self.request_config_object.search.sqo_config.operator
 			? self.request_config_object.search.sqo_config.operator
 			: self.request_config_object.show && self.request_config_object.show.sqo_config && self.request_config_object.show.sqo_config.operator
 				? self.request_config_object.show.sqo_config.operator
 				: '$and'
 
-	// engine. get the search_engine sent or set the default value
-		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
+		// engine. get the search_engine sent or set the default value
+		self.search_engine = self.request_config_object.api_engine || 'dedalo'
 
-	// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
-	// API get rqo to do the search as the caller.
-		self.rqo_search	= await self.caller.build_rqo_search(self.request_config_object, 'search')
+		// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
+		// API get rqo to do the search as the caller.
+		const rqo_search = await self.caller.build_rqo_search(self.request_config_object, 'search')
+		if (!rqo_search || !rqo_search.sqo) {
+			console.error('Error: Unable to build rqo_search from caller', self.caller);
+			self.status = 'initialized'
+			return false
+		}
+		self.rqo_search = rqo_search
 
-	// set the section_tipo to be searched
-		self.ar_search_section_tipo	= self.rqo_search.sqo.section_tipo
+		// set the section_tipo to be searched
+		self.ar_search_section_tipo = self.rqo_search.sqo.section_tipo
 
-	// columns_map
-	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
+		// columns_map
+		// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
 		self.columns_map = get_columns_map({
 			context				: self.context,
-			ddo_map_sequence	: ['choose','search','show'] // array ddo_map_source
-		})
+			ddo_map_sequence	: ['choose', 'search', 'show'] // array ddo_map_source
+		}) || []
 
-	// column component_info
+		// column component_info
 		const has_ddinfo = self.columns_map.find(el => el.id === 'ddinfo')
 		if (has_ddinfo) {
-			has_ddinfo.callback	= render_column_component_info
+			has_ddinfo.callback = render_column_component_info
 		}
 
-	// limit. Get from localStorage if exists
+		// limit. Get from localStorage if exists
 		const service_autocomplete_limit = localStorage.getItem('service_autocomplete_limit')
 		if (service_autocomplete_limit) {
 			const limit = parseInt(service_autocomplete_limit)
-			if (limit>0) {
+			if (limit > 0) {
 				self.limit = limit
 			}
 		}
 
-	// status update
+		// status update
 		self.status = 'built'
 
+		return true
+	})()
 
-	return true
-}//end build
+	return self._build_waiter
+}//end build//end build
 
 
 
