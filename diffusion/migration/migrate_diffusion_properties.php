@@ -351,18 +351,96 @@ function process_node($node, $level) {
 			}
 
             // --- Rule: Component Autocomplete Hierarchy (Relation) ---
-			if ($new_props === null && $clean_count === 0 && !empty($relations_info)) {
+			// Also handles option_obj configurations for parent chain customization
+			if (($new_props === null || !isset($new_props->process)) && !empty($relations_info)) {
+
+				// Check for option_obj in propiedades
+				$option_obj = isset($props->option_obj) ? $props->option_obj : null;
+
+				// Detect component_autocomplete_hi in relations
+				$is_autocomplete_hi = false;
 				foreach ($relations_info as $rel_info) {
 					if ($rel_info['model'] === 'component_autocomplete_hi') {
-						$new_props = new stdClass();
-						$new_props->process = new stdClass();
-						$new_props->process->fn = 'add_parents';
+						$is_autocomplete_hi = true;
+						break;
+					}
+				}
+
+				// When option_obj.add_parents is explicitly false, skip this rule
+				$add_parents_false = $option_obj && isset($option_obj->add_parents) && $option_obj->add_parents === false;
+
+				if (!$add_parents_false && ($is_autocomplete_hi || $option_obj)) {
+
+					if (!$new_props) $new_props = new stdClass();
+					$new_props->process = new stdClass();
+					$new_props->process->fn = 'add_parents';
+
+					if ($option_obj) {
+						// Build parser options from option_obj — only include present values
+						$parser_options = new stdClass();
+
+						// resolve_value
+						if (isset($option_obj->resolve_value)) {
+							$parser_options->resolve_value = $option_obj->resolve_value;
+						}
+
+						// parent_section_tipo
+						if (isset($option_obj->parent_section_tipo)) {
+							$parser_options->parent_section_tipo = $option_obj->parent_section_tipo;
+						}
+
+						// records_separator (unify divisor and records_separator)
+						if (isset($option_obj->divisor)) {
+							$parser_options->records_separator = $option_obj->divisor;
+						}
+						if (isset($option_obj->records_separator)) {
+							$parser_options->records_separator = $option_obj->records_separator;
+						}
+
+						// custom_parents — normalize from multiple possible locations
+						$custom_parents = null;
+						if (isset($option_obj->custom_parents)) {
+							// Direct: option_obj.custom_parents
+							$custom_parents = $option_obj->custom_parents;
+						} elseif (isset($option_obj->process_dato_arguments->custom_parents)) {
+							// Nested: option_obj.process_dato_arguments.custom_parents
+							$custom_parents = $option_obj->process_dato_arguments->custom_parents;
+						}
+
+						if ($custom_parents) {
+							if (isset($custom_parents->parents_splice)) {
+								$parser_options->parents_splice = $custom_parents->parents_splice;
+							}
+							if (isset($custom_parents->parent_end_by_term_id)) {
+								$parser_options->parent_end_by_term_id = $custom_parents->parent_end_by_term_id;
+							}
+							if (isset($custom_parents->parent_end_by_model)) {
+								$parser_options->parent_end_by_model = $custom_parents->parent_end_by_model;
+							}
+						}
+
+						// Build parser definition
+						$parser_def = (object)['fn' => 'parser_locator::flat_parents'];
+						if (count((array)$parser_options) > 0) {
+							$parser_def->options = $parser_options;
+						}
+						$new_props->process->parser = [$parser_def];
+
+						$options_str = count((array)$parser_options) > 0 ? ' options: ' . json_encode($parser_options) : '';
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] option_obj -> parser_locator::flat_parents{$options_str}\n";
+
+					} else {
+						// Default: no option_obj, simple add_parents
 						$new_props->process->parser = [
 							(object)['fn' => 'parser_locator::add_parents']
 						];
-						
+
 						echo "{$indent}- [$tipo] $model_name\n";
 						echo "{$indent}  [RULE APPLIED] component_autocomplete_hi relation (fn=add_parents) -> parser_locator::add_parents\n";
+					}
+				}
+			}
 
 			// --- Rule: map_locator_to_terminoID_parent (parser_locator::get_parent_term_id) ---
 			// When process_dato is map_locator_to_terminoID_parent, resolve parent hierarchy
