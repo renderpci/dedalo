@@ -41,6 +41,55 @@ interface dd_date_part {
 }
 
 
+
+/**
+ * SELECT_PROPERTIES
+ * Extracts specified properties (start, end, period) from date objects.
+ * Each date value is an object like { start: {...}, end: {...}, period: {...} }.
+ * This parser selects only the requested properties and flattens them.
+ *
+ * Default: ["start"]
+ *
+ * @param data    - Array of data items containing date values
+ * @param options - { properties: string[] }  e.g. ["start"] or ["start", "end"]
+ * @returns Array of data items with extracted date parts
+ */
+export function select_properties(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const properties: string[] = (options.properties as string[]) ?? ['start'];
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const val = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		const extracted: any[] = [];
+
+		for (const date_obj of values) {
+			if (!date_obj || typeof date_obj !== 'object') continue;
+
+			for (const prop of properties) {
+				if (date_obj[prop] !== undefined && date_obj[prop] !== null) {
+					extracted.push(date_obj[prop]);
+				}
+			}
+		}
+
+		if (extracted.length > 0) {
+			result.push({
+				...item,
+				value: extracted
+			});
+		}
+	}
+
+	return result.length > 0 ? result : null;
+}
+
+
+
 /**
  * SELECT_KEYS
  * Picks array elements by index. Pads missing month/day with 0 for SQL compatibility.
