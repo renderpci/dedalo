@@ -988,7 +988,7 @@ export const get_section_records = async function(options) {
 
 	// ar_instances. When all section_record instances are built, set them
 		const section_records = await Promise.all(ar_promises)
-
+console.log('----> get_section_records section_records', section_records);
 
 	return section_records
 }//end get_section_records
