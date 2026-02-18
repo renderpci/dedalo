@@ -42,6 +42,16 @@
 			}
 		}
 
+		.list_body {
+
+			>.content_data {
+
+				>.section_record {
+					display: contents;
+				}
+			}
+		}
+
 		.head_column {
 			font-size: 0.85rem;
 			text-align: left;
@@ -68,24 +78,24 @@
 			}
 		}
 		// value
-			.column:nth-child(4) {
-				img {
-					max-height: 3rem;
+		.column:nth-child(4) {
+			img {
+				max-height: 3rem;
 
-					&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
-						max-height: 1rem;
-					}
-					&.view_text {
-						max-height: 4rem;
-					}
-					&.svg {
-						min-height: 2rem;
-					}
-					&.draw{
-						max-height: 1.2rem;
-					}
+				&.tc, &.index, &.note, &.person, &.lang, &.geo, &.page {
+					max-height: 1rem;
+				}
+				&.view_text {
+					max-height: 4rem;
+				}
+				&.svg {
+					min-height: 2rem;
+				}
+				&.draw{
+					max-height: 1.2rem;
 				}
 			}
+		}
 	}//end &.view_mini
 
 	&.time_machine_list {

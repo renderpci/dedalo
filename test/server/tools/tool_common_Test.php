@@ -182,7 +182,7 @@ final class tool_common_test extends BaseTestCase {
 		);
 
 		if (empty($all_registered_tools)) {
-			$this->markTestSkipped('No tools found');
+			$this->markTestSkipped('No tools found in database');
 			return;
 		}
 
