@@ -7,7 +7,7 @@
 
 import { default_join, text_format, map_value } from './parser_text';
 import { string_date }                          from './parser_date';
-import { get_section_id, get_first }            from './parser_locator';
+import { get_section_id, get_first, add_parents } from './parser_locator';
 import type { parser_options }                  from '../types';
 
 
@@ -31,6 +31,7 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_date::string_date':     string_date,
 	'parser_locator::get_section_id': get_section_id,
 	'parser_locator::get_first':    get_first,
+	'parser_locator::add_parents':  add_parents,
 };
 
 
@@ -73,5 +74,5 @@ export function apply_parser(fn_string: string, data: any[] | null, options: par
 // Re-export individual parsers for direct use
 export { default_join, join_items_to_string, text_format, map_value } from './parser_text';
 export { string_date }                          from './parser_date';
-export { get_section_id, get_first }            from './parser_locator';
+export { get_section_id, get_first, add_parents } from './parser_locator';
 export { replace as replace_pattern }           from './pattern_replacer';
