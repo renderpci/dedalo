@@ -168,7 +168,7 @@ class diffusion_chain_processor {
 		$diffusion_tipo = $ddo->diffusion_tipo;
 		$diffusion_node = ontology_node::get_instance($diffusion_tipo);
 		$properties = $diffusion_node->get_properties();
-		$publishable = $properties->publishable ?? null;
+		$publishable = $properties->is_publishable ?? null;
 
 		$new_diffusion_data = $diffusion_data;
 		$new_diffusion_data[0]->set_value([]);

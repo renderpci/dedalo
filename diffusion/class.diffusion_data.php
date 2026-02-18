@@ -40,6 +40,8 @@ class diffusion_data {
 
 		}else{
 
+			// check if the node has defined any general funtion
+			$fn = $properties->process->fn ?? null;
 			$ar_related_dd_tipo	= ontology_node::get_relation_nodes(
 				$diffusion_tipo,
 				true,
@@ -49,11 +51,15 @@ class diffusion_data {
 			foreach ($ar_related_dd_tipo as $current_tipo) {
 
 				$ddo = new dd_object((object)[
-					'tipo'					=> $current_tipo,
-					'section_tipo'			=> $section_tipo,
-					'parent'				=> $section_tipo,
+					'tipo'				=> $current_tipo,
+					'section_tipo'		=> $section_tipo,
+					'parent'			=> $section_tipo,
 					'diffusion_tipo'	=> $diffusion_tipo
 				]);
+
+				if ($fn) {
+					$ddo->fn = $fn;
+				}
 
 				$ddo_map[] = $ddo;
 			}

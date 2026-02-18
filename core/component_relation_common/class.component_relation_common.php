@@ -1063,7 +1063,7 @@ class component_relation_common extends component_common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !function_exists($this->$fn) ){
+				if( !method_exists($this, $fn) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
@@ -1077,6 +1077,13 @@ class component_relation_common extends component_common {
 				// in the function is allowed get its value and return
 				// if the function is NOT allowed (default) return a diffusion value as null
 				switch ($fn) {
+					// add parents
+					case 'add_parents':		
+						$data = $this->get_data();
+						$diffusion_data_object->set_value( $data );
+						$diffusion_data_object = $this->add_parents( $diffusion_data_object );
+						return $diffusion_data;
+						break;	
 					// functions allowed for diffusion environment
 					case 'get_custom_parents':
 						break;
@@ -1446,6 +1453,172 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* ADD_PARENTS
+	* Resolve hierarchy for component values (term + parents)
+	* @param object $diffusion_data_object
+	* @return object $diffusion_data_object
+	*/
+	protected function add_parents( object $diffusion_data_object ) : object {
+		
+		$start_time = start_time();
+
+		$data 		= $diffusion_data_object->get_value(); // Array of locators
+
+		$parents_map 	= [];
+		$parents_chain 	= [];
+		
+		if (empty($data)) return $diffusion_data_object;
+
+		foreach($data as $locator) {
+			
+			// 1. Resolve current item
+			$section_tipo 	= $locator->section_tipo;
+			$section_id 	= $locator->section_id;
+
+			// key for parents map "es1_967"
+			$parents_key = $section_tipo . '_' . $section_id;
+
+			// get map
+			$section_map = section::get_section_map( $section_tipo );
+				#dump($section_map, "section_map $section_tipo");
+		
+			if (empty($section_map)) {
+				debug_log(__METHOD__." section_map not found for section_tipo: $section_tipo", logger::WARNING);
+				continue;
+			}
+			
+			// Resolve Item Data
+			$current_item_data = $this->resolve_map_node_data($section_map, $section_id, $section_tipo);
+			if($current_item_data) {
+				$parents_chain[] = $current_item_data;
+			}
+
+			// 2. Resolve Parents Chain
+			// Resolve parent data			
+			$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
+
+			if (!empty($parents_locators)) {
+				// We might have multiple parents. For standard hierarchy usually one valid parent per tree branch.
+				// We iterate all found parents that match the expected `parent_section_tipo`
+				foreach($parents_locators as $parent_locator) {
+				
+					$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
+						
+					// Correct parent found
+					$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
+					
+					if($parent_data) {
+						$parents_chain[] = $parent_data;
+					}
+	
+				}
+			} else {
+				// No parent instance found, break chain
+				break;
+			}
+		}
+			
+		$parents_map[$parents_key] = $parents_chain;
+		
+		// Set parents to DDO
+		$diffusion_data_object->parents = $parents_map;
+		if(SHOW_DEBUG===true) {
+			$exec_time = exec_time_unit($start_time);
+			// debug_log(__METHOD__." Time: $exec_time", logger::DEBUG);
+		}
+
+		return $diffusion_data_object;
+	}
+
+	/**
+	* RESOLVE_MAP_NODE_DATA
+	* Helper to resolve term and typology given a map node and instance info
+	* @param object $map_node
+	* @param int $section_id
+	* @param string $section_tipo
+	* @return array|null
+	*/
+	protected function resolve_map_node_data( $map_node, $section_id, $section_tipo ) : ?array {
+		
+		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)) return null;
+
+		$term_tipo 	= $map_node->thesaurus->term;
+		$model_tipo = $map_node->thesaurus->model;
+
+		// 1. Resolve Term (String)
+		$term_value = null;
+		$term_model = ontology_node::get_model_by_tipo($term_tipo, true);
+		if($term_model) {
+			$term_component = component_common::get_instance(
+				$term_model,
+				$term_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG, // Current lang
+				$section_tipo
+			);
+			$term_value = $term_component->get_data();
+		}
+
+		// 2. Resolve Typology (Relation -> value)
+		// The model_tipo (e.g. hierarchy27) is usually a relation (component_relation) pointing to a Term.
+		// We need to get the relation data, then resolve THAT target's term.		
+		$typology_value			= null;
+		$typology_section_id	= null;
+		$typology_section_tipo	= null;
+
+		$model_model_name = ontology_node::get_model_by_tipo($model_tipo, true);
+		if($model_model_name) {
+			$typology_component = component_common::get_instance(
+				$model_model_name,
+				$model_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			
+			// Typology component is a relation, get its data (locators)
+			$typology_data = $typology_component->get_data();
+			
+			if(!empty($typology_data) && is_array($typology_data) && isset($typology_data[0])) {
+				$typology_locator 		= $typology_data[0];
+				$typology_section_id 	= $typology_locator->section_id;
+				$typology_section_tipo 	= $typology_locator->section_tipo;
+
+				// Resolve the Term of this Typology
+				// The typology points to another section (e.g. 'es2'). We need to find the 'term' field of that section.
+				$typology_map = section::get_section_map($typology_section_tipo);
+				if($typology_map && isset($typology_map->thesaurus->term)) {
+					$typology_term_tipo = $typology_map->thesaurus->term;
+					$typology_term_model= ontology_node::get_model_by_tipo($typology_term_tipo, true);
+					
+					$typology_term_component = component_common::get_instance(
+						$typology_term_model,
+						$typology_term_tipo,
+						$typology_section_id,
+						'list',
+						DEDALO_DATA_LANG,
+						$typology_section_tipo
+					);
+					$typology_value = $typology_term_component->get_data();
+				}
+			}
+		}
+
+		return [
+			"typology_section_id"  	=> $typology_section_id,
+			"typology_section_tipo"	=> $typology_section_tipo,
+			"typology"             	=> $typology_value,
+			"term"                 	=> $term_value,
+			"section_id"           	=> $section_id,
+			"section_tipo"         	=> $section_tipo
+		];
+	}
+
+	
+	
+	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* Resolve component search values (parent recursive) to easy search.
 	* @return array|null $relations_search_value
@@ -1453,7 +1626,6 @@ class component_relation_common extends component_common {
 	* 	Array of locators calculated with thesaurus parents of current section ascendant. Used only for search.
 	*/
 	public function get_relations_search_value() : ?array {
-
 		// only for component_autocomplete_hi
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 			if ($legacy_model!=='component_autocomplete_hi') {

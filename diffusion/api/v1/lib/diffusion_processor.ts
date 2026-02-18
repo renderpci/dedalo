@@ -220,15 +220,23 @@ function process_record(
 		for (const [lang, lang_entries] of entries_by_lang) {
 
 			// Build data items for the parser
-			const data_items = lang_entries.map(e => ({
-				id:    e.id,
-				value: e.value,
-				tipo:  e.tipo,
-				lang:  e.lang,
-			}));
+			const data_items = lang_entries.map(e => {
+				const item = {
+					id:    e.id,
+					value: e.value,
+					tipo:  e.tipo,
+					lang:  e.lang,
+				};
+				if(e.parents){
+					item.parents = e.parents;
+				}
+				return item;
+			});
+
 
 			// Apply parser if defined
 			let column_value: string | null = null;
+			let handled_by_parser = false;
 			
 			// Check if parser definition exists (object, array, etc)
 			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
@@ -241,14 +249,22 @@ function process_record(
 					// We convert the final result to a string for column value
 					if (Array.isArray(parser_result)) {
 						if (parser_result.length > 0) {
-							// Use the first item's value
-							const val = parser_result[0].value;
-							// Stringify objects/arrays (JSON style as requested for arrays) or use string value
-							if (typeof val === 'object' && val !== null) {
-								column_value = JSON.stringify(val);
-							} else {
-								column_value = String(val);
+							
+							for (const item of parser_result) {
+								let val_str: string;
+								if (typeof item.value === 'object' && item.value !== null) {
+									val_str = JSON.stringify(item.value);
+								} else {
+									val_str = String(item.value);
+								}
+								
+								// Determine language key
+								const item_lang = item.lang || lang;
+								const key = (!item_lang || item_lang === 'lg-nolan') ? 'nolan' : item_lang;
+
+								lang_values.set(key, val_str);
 							}
+							handled_by_parser = true;
 						} else {
 							column_value = null;
 						}
@@ -262,9 +278,11 @@ function process_record(
 				column_value = join_items_to_string(data_items, {});
 			}
 
-			// Normalize lang key: null and "lg-nolan" → "nolan"
-			const lang_key = (!lang || lang === 'lg-nolan') ? 'nolan' : lang;
-			lang_values.set(lang_key, column_value);
+			if (!handled_by_parser) {
+				// Normalize lang key: null and "lg-nolan" → "nolan"
+				const lang_key = (!lang || lang === 'lg-nolan') ? 'nolan' : lang;
+				lang_values.set(lang_key, column_value);
+			}
 		}
 	}
 
