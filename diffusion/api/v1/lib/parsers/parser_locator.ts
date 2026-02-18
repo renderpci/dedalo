@@ -220,6 +220,34 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 	return result.length > 0 ? result : null;
 }
 
+/**
+ * TRUNCATE_BY_TERM_ID
+ * Cut the parent chain before any node whose term_id (section_tipo_section_id)
+ * matches one of the specified values.
+ *
+ * @param options.parent_end_by_term_id - Array of term_id strings, e.g. ["on1_2705", "on1_2748"]
+ */
+export function truncate_by_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const end_ids = options.parent_end_by_term_id as string[];
+	if (!end_ids || !Array.isArray(end_ids) || end_ids.length === 0) return data;
+
+	const end_set = new Set(end_ids);
+
+	return map_chains(data, (chain) => {
+		const result: any[] = [];
+		for (const node of chain) {
+			const term_id = node.section_tipo + '_' + node.section_id;
+			if (end_set.has(term_id)) break;
+			result.push(node);
+		}
+		return result;
+	});
+}
+
+
 
 /**
  * TRUNCATE_BY_MODEL
