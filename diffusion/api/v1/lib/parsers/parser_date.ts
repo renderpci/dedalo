@@ -131,11 +131,13 @@ export function string_date(data: date_data_item[] | null, options: parser_optio
 
 
 
+// =====================================================
+// Helpers
+// =====================================================
+
 /**
  * FORMAT_DD_DATE
  * Converts a dd_date_part object to a formatted string using PHP-style format tokens.
- * Supports: Y (4-digit year), m (2-digit month), d (2-digit day),
- *           H (2-digit hour), i (2-digit minute), s (2-digit second)
  *
  * @param date_part - The date components
  * @param pattern   - Format pattern (e.g., 'Y-m-d H:i:s')
@@ -144,8 +146,8 @@ export function string_date(data: date_data_item[] | null, options: parser_optio
 function format_dd_date(date_part: dd_date_part, pattern: string): string {
 
 	const year   = date_part.year   ?? 0;
-	const month  = date_part.month  ?? 1;
-	const day    = date_part.day    ?? 1;
+	const month  = date_part.month  ?? 0;
+	const day    = date_part.day    ?? 0;
 	const hour   = date_part.hour   ?? 0;
 	const minute = date_part.minute ?? 0;
 	const second = date_part.second ?? 0;
@@ -160,6 +162,7 @@ function format_dd_date(date_part: dd_date_part, pattern: string): string {
 
 	return result;
 }
+
 
 
 /**
