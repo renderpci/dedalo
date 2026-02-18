@@ -260,7 +260,7 @@ class tm_record {
 			}
 		}//end if (!empty($previous_data))
 
-
+		// Create the TM record in DB
 		$id = tm_db_manager::create(
 			$values
 		);
@@ -494,22 +494,22 @@ class tm_record {
 				$sqo = new search_query_object();
 					$sqo->select		= [];
 					$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
-					$sqo->filter		= json_decode('{
-						"$and": [
-							{
-								"q": "'.$id.'",
-								"q_operator": null,
-								"path": [
-									{
-										"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
-										"component_tipo": "rsc835",
-										"model": "component_number",
-										"name": "Code"
-									}
+					$sqo->filter = (object)[
+						'$and' => [
+							(object)[
+								'q'				=> (string)$id,
+								'q_operator'	=> null,
+								'path'			=> [
+									(object)[
+										'section_tipo'		=> DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO,
+										'component_tipo'	=> 'rsc835',
+										'model'				=> 'component_number',
+										'name'				=> 'Code'
+									]
 								]
-							}
+							]
 						]
-					}');
+					];
 				$search = search::get_instance($sqo);
 				$db_result = $search->search();
 
