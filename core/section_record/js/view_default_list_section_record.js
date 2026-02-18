@@ -196,7 +196,7 @@ const get_content_data = async function(self) {
 
 					// Validate the returned node
 					if (!instance_node) {
-						console.error('Invalid instance_node at index', index, instance);
+						console.error('Invalid instance_node at index', index, 'model:', instance.model, 'tipo:', instance.tipo, 'node pointer:', instance.node);
 						return { success: false, index, error: 'Invalid instance node' };
 					}
 

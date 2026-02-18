@@ -100,7 +100,7 @@ class diffusion_section_stats extends diffusion {
 					$section_tipo
 				);
 				$data = $component->get_data();
-				$current_date = $data[0] ?? null;				
+				$current_date = $data[0] ?? null;
 
 				if (empty($current_date)) {
 					debug_log(__METHOD__
@@ -138,7 +138,7 @@ class diffusion_section_stats extends diffusion {
 			$sql_query .= 'ORDER BY id ASC' . PHP_EOL;
 			$sql_query .= 'LIMIT 1';
 
-			$result = matrix_db_manager::exec_search($sql_query, $params);			
+			$result = matrix_db_manager::exec_search($sql_query, $params);
 
 			if ($result===false) {
 				debug_log(__METHOD__." Error on db execution: ".pg_last_error(), logger::ERROR);
@@ -461,11 +461,11 @@ class diffusion_section_stats extends diffusion {
 	*   "section_tipo": "dd42",
 	*   "from_component_tipo": "dd545"
 	* }
-	* @param array $data
+	* @param array|null $data
 	* @param object &$what_obj
 	* @return object $what_obj
 	*/
-	public static function build_what( array $data, object &$what_obj ) : object {
+	public static function build_what( ?array $data, object &$what_obj ) : object {
 
 		$what_tipo = logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// expected dd545
 

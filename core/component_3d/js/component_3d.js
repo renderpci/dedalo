@@ -73,7 +73,7 @@ export const component_3d = function(){
 
 	// render
 	component_3d.prototype.list					= render_list_component_3d.prototype.list
-	component_3d.prototype.tm					= render_edit_component_3d.prototype.list
+	component_3d.prototype.tm					= render_list_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
 	component_3d.prototype.search				= render_search_component_3d.prototype.search
 

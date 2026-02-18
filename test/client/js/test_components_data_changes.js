@@ -154,10 +154,6 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								delete read_value.paginated_key
 							}
 
-							// console.log('+++ new_value:', new_value);
-							// console.log('+++ read_value:', read_value);
-							// console.log('--- new_instance:', new_instance);
-
 						// destroy instances
 							// await new_instance.destroy()
 
@@ -171,12 +167,14 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						`new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.data)}, \n ${typeof new_instance.datum.data}\n`
 					)
 
+					const compare_value = element.new_value_action==='set_data' ? entries : read_value
+					
 					if (element.new_value_action!=='set_data') {
 						// compare values
 						assert.deepEqual(
 							new_value,
-							element.new_value_action==='set_data' ? entries : read_value,
-							`Not equal values 3 (new_value, read_value): \n ${JSON.stringify(new_value)}, \n\n ${JSON.stringify(read_value)}\n`
+							compare_value,
+							`Not equal values 3 (new_value, read_value)\n new_value:\n ${JSON.stringify(new_value)}, \n read_value:\n ${JSON.stringify(compare_value)}\n\n`
 						)
 					}
 

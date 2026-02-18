@@ -1,8 +1,19 @@
 <?php declare(strict_types=1);
 /**
 * CLASS LOGIN
+* Handles user authentication, session management, and login security for Dédalo
 *
+* Key features:
+* - User authentication with username/password validation
+* - SAML authentication support for external identity providers
+* - Session management and security token handling
+* - Login activity logging and security monitoring
+* - Maintenance mode access control
+* - Cookie-based media file protection
+* - User profile and project validation
 *
+* @package Dedalo
+* @subpackage Core
 */
 class login extends common {
 
@@ -10,6 +21,12 @@ class login extends common {
 
 	/**
 	* CLASS VARS
+	* 
+	* @var int|null $id Unique identifier for the login instance
+	* @var string $tipo_active_account Ontology tipo for active account status component
+	* @var string $tipo_button_login Ontology tipo for login button component  
+	* @var string $login_matrix_table Matrix table name for login operations
+	* @var string $SU_DEFAULT_PASSWORD Default password for super user (root)
 	*/
 		protected $id;
 		protected $tipo_active_account			= 'dd131';
@@ -21,7 +38,13 @@ class login extends common {
 
 	/**
 	* __CONSTRUCT
-	* @param string $mode = 'edit'
+	* Initialize login instance with specified mode
+	* 
+	* Note: Removed is_logged verification to allow login context retrieval
+	* in test environments like unit tests
+	*
+	* @param string $mode Operation mode (default: 'edit')
+	* @return void
 	*/
 	public function __construct(string $mode='edit') {
 
@@ -44,15 +67,34 @@ class login extends common {
 
 	/**
 	* LOGIN
-	* Exec user login action comparing received values with database encrypted values
-	* @param object $options
+	* Execute user login action by validating credentials against database
+	* 
+	* Performs comprehensive validation including:
+	* - Username and password format validation
+	* - Maintenance mode access control
+	* - Database user existence and uniqueness checks
+	* - Password encryption and verification
+	* - Account status validation
+	* - User profile and project permissions
+	* - Login session initialization
+	*
+	* @param object $options Login credentials object
 	* {
-	* 	username: string,
-	* 	password: string
+	* 	username: string User login name
+	* 	password: string User password (min 8 characters)
 	* }
 	* @see Mandatory vars: 'username','password'
 	*
-	* @return object $response
+	* @return object $response Login result with status and messages
+	* {
+	* 	result: bool Login success status
+	* 	msg: string Status message
+	* 	errors: array Error messages array
+	* 	result_options: object Additional response data
+	* 	default_section: string User's default section tipo
+	* }
+	*
+	* @throws Exception When database operations fail
 	*/
 	public static function Login( object $options ) : object {
 
@@ -329,11 +371,28 @@ class login extends common {
 
 	/**
 	* LOGIN_SAML
-	* @param object $options
+	* Execute SAML-based authentication using external identity provider
+	* 
+	* Performs SAML authentication including:
+	* - Client IP validation against allowed IdP IPs
+	* - User code lookup and validation
+	* - Account status verification
+	* - User profile and project permissions check
+	* - Session initialization for SAML users
+	*
+	* @param object $options SAML authentication data
 	* {
-	* 	code: string
+	* 	code: string User identifier from SAML provider (DNI, etc.)
 	* }
-	* @return object $response
+	* 
+	* @return object $response Authentication result
+	* {
+	* 	result: bool Authentication success status
+	* 	msg: string Status message
+	* 	errors: array Error messages array
+	* }
+	*
+	* @throws Exception When SAML configuration is invalid or database operations fail
 	*/
 	public static function Login_SAML(object $options) : object {
 
@@ -502,8 +561,13 @@ class login extends common {
 
 	/**
 	* GET_USERNAME
-	* @param string|int $section_id (is user section id)
-	* @return string $username
+	* Retrieve the username for a given user section ID
+	* 
+	* Fetches the user's login name from the DEDALO_USER_NAME_TIPO component
+	* and concatenates all values (for multi-language scenarios)
+	*
+	* @param string|int $section_id User section identifier
+	* @return string $username Concatenated username values
 	*/
 	public static function logged_user_username( string|int $section_id ) : string {
 
@@ -531,10 +595,15 @@ class login extends common {
 
 	/**
 	* GET_FULL_USERNAME
-	* @param string|int $section_id (is user section id)
-	* @return string $full_username
+	* Retrieve the full display name for a given user section_id
+	* 
+	* Fetches the user's full name from the DEDALO_FULL_USER_NAME_TIPO component
+	* and concatenates all values (for multi-language scenarios)
+	*
+	* @param string|int $section_id User section identifier
+	* @return string $full_username Concatenated full name values
 	*/
-	public static function get_full_username( string|int$section_id ) : string {
+	public static function get_full_username( string|int $section_id ) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -625,14 +694,22 @@ class login extends common {
 
 	/**
 	* ACTIVE_ACCOUNT_CHECK
-	* @param string|int $section_id
-	* @return bool
+	* Verify if user account is active and allowed to login
+	* 
+	* Checks the DEDALO_ACTIVE_ACCOUNT_TIPO component for the user's
+	* account status. Returns true only if the account is explicitly
+	* marked as active (value equals NUMERICAL_MATRIX_VALUE_YES).
+	* 
+	* Special case: root user (-1) is always considered active
+	*
+	* @param string|int $section_id User section identifier
+	* @return bool True if account is active, false otherwise
 	*/
 	public static function active_account_check( string|int $section_id ) : bool {
 
 		$active_account = false; // Default false
 
-		//root case
+		// root case
 		if( (int)$section_id===-1 ){
 			return true;
 		}
@@ -1079,9 +1156,13 @@ class login extends common {
 
 	/**
 	* IS_LOGGED
-	* Test if current user is logged (alias of verify_login)
+	* Test if current user is logged in (alias of verify_login)
+	* 
+	* Public interface for login verification. Delegates to verify_login()
+	* for the actual authentication check.
+	*
 	* @see login::verify_login
-	* @return bool
+	* @return bool True if user is authenticated, false otherwise
 	*/
 	public static function is_logged() : bool {
 
@@ -1092,11 +1173,16 @@ class login extends common {
 
 	/**
 	* VERIFY_LOGIN
-	* Check that the user is authenticated
-	* based in session existing properties.
-	* Note that if the system is under maintenance,
-	* only the root user is authorized
-	* @return bool
+	* Verify user authentication status based on session data
+	* 
+	* Checks session variables to confirm user authentication:
+	* - user_id must be set and valid
+	* - is_logged flag must equal 1
+	* - salt_secure token must be present
+	* 
+	* Special handling for maintenance mode: only root user allowed
+	* 
+	* @return bool True if user is properly authenticated, false otherwise
 	*/
 	private static function verify_login() : bool {
 
@@ -1162,9 +1248,26 @@ class login extends common {
 
 	/**
 	* QUIT
-	* Made logout
-	* @param object $options
-	* @return bool
+	* Perform user logout and session cleanup
+	* 
+	* Comprehensive logout process including:
+	* - Component lock cleanup
+	* - User activity statistics update
+	* - Cache file deletion
+	* - Login activity logging
+	* - Cookie cleanup (including media protection cookies)
+	* - Session destruction
+	* - SAML logout handling (if configured)
+	*
+	* @param object $options Logout options
+	* {
+	* 	mode: string Logout mode (optional)
+	* 	cause: string Logout reason (default: 'called quit method')
+	* }
+	* 
+	* @return bool True if logout completed successfully
+	*
+	* @throws Exception When session cleanup fails
 	*/
 	public static function Quit(object $options) : bool {
 
@@ -1498,13 +1601,18 @@ class login extends common {
 
 	/**
 	* GET_USERS_WITH_NAME
-	* Search into `matrix_users` table the records matching the given name
-	* in the component DEDALO_USER_NAME_TIPO and with section tipo DEDALO_SECTION_USERS_TIPO.
-	* @param string $username
-	* User name introduced into the login form by the user as 'Pepe'
-	* @return array $ar_section_id
-	* List of `section_id` from the found users.
-	* Here we expect only one user, but could exists more than one with the the same name potentially.
+	* Search for users by username in matrix_users table
+	* 
+	* Queries the matrix_users table to find records matching the given username
+	* in the DEDALO_USER_NAME_TIPO component with section tipo DEDALO_SECTION_USERS_TIPO.
+	* Uses direct SQL query with JSONB operations for efficient searching.
+	* 
+	* Security note: Username is escaped using pg_escape_string() to prevent SQL injection
+	*
+	* @param string $username User login name from login form (e.g., 'Pepe')
+	* @return array $ar_section_id List of matching user section IDs
+	* 
+	* @throws Exception When database query fails
 	*/
 	public static function get_users_with_name( string $username ) : array {
 
@@ -1546,6 +1654,13 @@ class login extends common {
 			// 	$ar_section_id[] = (int)$row->section_id;
 			// }
 
+		$conn = DBi::_getConnection();
+		$username = pg_escape_string($conn, $username);
+
+		$params = [
+			'{"'.DEDALO_USER_NAME_TIPO.'":[{"value": "'.$username.'"}]}'
+		];
+
 		// direct way. Note that this search do not has the restrictions of the SQO way (section_id > 0)
 			$sql  = 'SELECT section_id' . PHP_EOL;
 			$sql .= 'FROM matrix_users' . PHP_EOL;
@@ -1554,9 +1669,7 @@ class login extends common {
 			$sql .= 'ORDER BY section_id ASC'  . PHP_EOL;
 			$sql .= 'LIMIT 1';
 
-			$result = matrix_db_manager::exec_search($sql, [
-				'{"'.DEDALO_USER_NAME_TIPO.'":[{"value": "'.$username.'"}]}'
-			]);
+			$result = matrix_db_manager::exec_search($sql, $params);
 
 			if (!$result) {
 				return [];
@@ -1576,17 +1689,30 @@ class login extends common {
 
 	/**
 	* GET_USERS_WITH_CODE
-	* Search into `matrix_users` table the records matching the given code
-	* in the component 'dd1053' and with section tipo DEDALO_SECTION_USERS_TIPO.
-	* @param string $code
-	* Code received by the the login form the SAML login as '25748925G'
-	* @return array $ar_section_id
-	* List of `section_id` from the found users.
-	* Here we expect only one user, but could exists more than one with the the same code potentially.
+	* Search for users by code identifier (SAML authentication)
+	* 
+	* Queries the matrix_users table to find records matching the given code
+	* in the 'dd1053' component with section tipo DEDALO_SECTION_USERS_TIPO.
+	* Used primarily for SAML authentication where users are identified by
+	* codes like DNI, passport numbers, etc.
+	* 
+	* Security note: Code is escaped using pg_escape_string() to prevent SQL injection
+	*
+	* @param string $code User identifier from SAML provider (e.g., '25748925G')
+	* @return array|false $ar_section_id List of matching user section IDs, or false if not found
+	* 
+	* @throws Exception When database query fails
 	*/
 	public static function get_users_with_code( string $code ) : array|false {
 
 		$code_component_tipo = 'dd1053';
+
+		$conn = DBi::_getConnection();
+		$code = pg_escape_string($conn, $code);
+
+		$params = [
+			'{"'.$code_component_tipo.'":[{"lang": "lg-nolan", "value": "'.$code.'"}]}'
+		];
 
 		// direct data way
 			$sql  = 'SELECT section_id' . PHP_EOL;
@@ -1596,9 +1722,7 @@ class login extends common {
 			$sql .= 'ORDER BY section_id ASC' . PHP_EOL;
 			$sql .= 'LIMIT 1';
 
-			$result = matrix_db_manager::exec_search($sql, [
-				'{"'.$code_component_tipo.'":[{"lang": "lg-nolan", "value": "'.$code.'"}]}'
-			]);
+			$result = matrix_db_manager::exec_search($sql, $params);
 
 			if (!$result) {
 				return [];

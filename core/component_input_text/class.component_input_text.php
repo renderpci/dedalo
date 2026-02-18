@@ -44,7 +44,7 @@ class component_input_text extends component_string_common {
 			$fallback_value	= $this->get_component_data_fallback(
 				$this->get_lang(), // string lang
 				DEDALO_DATA_LANG_DEFAULT // string main_lang
-			);			
+			);
 
 		// flat_fallback_value (array of one value full resolved)
 			$flat_fallback_value = empty($fallback_value)
@@ -74,6 +74,30 @@ class component_input_text extends component_string_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
+
+
+	/**
+	* GET_LIST_VALUE
+	* Overwrites the component_common method adding a special case
+	* resolution for time machine mode ('tm') and user Root (-1)
+	* @return array
+	*/
+	public function get_list_value() : ?array {
+
+		$value = parent::get_list_value();
+
+		// Root user special resolution in 'tm' mode.
+		// In inspector's 'Component history' the root user is not displayed if not force hard resolution.
+		if($this->mode=='tm' && empty($value) && $this->section_tipo===DEDALO_SECTION_USERS_TIPO && $this->section_id==-1) {
+			$value = [(object)[
+				'value' => 'Root',
+				'lang' => $this->lang
+			]];
+		}
+
+		return $value;
+	}//end get_list_value
 
 
 

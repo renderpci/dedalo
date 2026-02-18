@@ -83,7 +83,10 @@
 		define('DEDALO_API_URL',			DEDALO_CORE_URL . '/api/v1/json/');
 
 	// Diffusion engine API
+		define('DEDALO_DIFFUSION_PATH', 	DEDALO_ROOT_PATH.'/diffusion');
 		define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
+
+
 
 // Dedalo information
 	// string to use in Dédalo cryptography

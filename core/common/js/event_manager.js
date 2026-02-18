@@ -78,6 +78,22 @@ class event_manager_class {
 	}
 
 	/**
+	 * Subscribes a callback to an event that will be triggered only once.
+	 * The subscription is automatically removed after the first publication.
+	 *
+	 * @param {string} event_name - The name of the event to subscribe to
+	 * @param {Function} callback - The callback function to execute
+	 * @returns {string} Subscription token
+	 */
+	subscribe_once(event_name, callback) {
+		const token = this.subscribe(event_name, (data) => {
+			this.unsubscribe(token);
+			return callback(data);
+		});
+		return token;
+	}
+
+	/**
 	 * Unsubscribes a callback using its subscription token
 	 *
 	 * Removes the subscription associated with the provided token. Automatically

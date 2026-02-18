@@ -35,11 +35,9 @@ view_history_time_machine_list.render = async function(self, options) {
 	// fix f.config.ignore_columns
 	self.config.ignore_columns = ['matrix_id', 'where', 'bulk_process_id']
 
-	const wrapper = common_render(self, {
+	return common_render(self, {
 		no_header : true
 	})
-
-	return wrapper
 }//end render
 
 

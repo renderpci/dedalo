@@ -255,7 +255,7 @@ data_manager.request = async function(options) {
 			console.log(`_*_Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
 		}
 
-		// Error occurred. Catch and alert
+		// Fetch error occurred. Catch and alert
 		if (json_response?.error) {
 
 			// debug console message
@@ -290,6 +290,11 @@ data_manager.request = async function(options) {
 			)
 
 			return json_response;
+		}
+
+		// Response errors (not fetch errors) from server API
+		if (json_response?.errors?.length) {
+			event_manager.publish('api_response_errors', json_response?.errors);
 		}
 
 		// cache_handler. Only cache api response if result is not false
