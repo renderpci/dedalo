@@ -208,6 +208,11 @@ service_time_machine.prototype.build = async function(autoload=false) {
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
 				self.context	= self.datum.context.find(el => el.type==='section')
 
+			// debug
+				if(SHOW_DEBUG===true) {
+					console.log('service_time_machine build api_response.result:', api_response.result);
+				}
+
 			// count rows
 				if (!self.total) {
 					self.get_total()
@@ -477,6 +482,11 @@ service_time_machine.prototype.build_request_config = function() {
 					ddo_map.push(item)
 				}
 			}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('service_time_machine build_request_config ddo_map:', ddo_map);
+		}
 
 	// request_config
 		const request_config = [{
