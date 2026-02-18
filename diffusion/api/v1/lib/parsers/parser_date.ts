@@ -44,30 +44,43 @@ interface dd_date_part {
 
 /**
  * STRING_DATE
- * Generic date as string parser.
- * Converts dd_date objects to formatted strings based on configurable pattern and mode.
+ * Global parser that chains: select_properties → select_keys → format_string_date.
+ * All options are optional with sensible defaults.
  *
  * @param data    - Array of data items containing date values
- * @param options - Configuration:
- *   - pattern:           Date format pattern (default 'Y-m-d')
- *   - records_separator: Separator between records (default ' | ')
- *   - fields_separator:  Separator between fields (default ', ')
- *   - date_mode:         One of 'date', 'range', 'time_range', 'period' (default 'date')
- * @returns Formatted date string wrapped in data_item or null
+ * @param options - Combined options for all three sub-parsers:
+ *   - properties:         string[] (default: ["start"])
+ *   - keys:               number[] (default: [0])
+ *   - pattern:            string   (default: "Y-m-d")
+ *   - records_separator:  string   (default: " | ")
+ *   - fields_separator:   string   (default: ", ")
+ * @returns Array of data items with formatted date string
  */
-export function string_date(data: date_data_item[] | null, options: parser_options): any {
+export function string_date(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const pattern            = (options.pattern as string)           ?? 'Y-m-d';
-	const records_separator  = (options.records_separator as string) ?? ' | ';
-	const fields_separator   = (options.fields_separator as string)  ?? ', ';
-	const date_mode          = (options.date_mode as string)         ?? 'date';
+	// Merge defaults
+	const merged_options: parser_options = {
+		properties:        ['start'],
+		keys:              [0],
+		pattern:           'Y-m-d',
+		records_separator: ' | ',
+		fields_separator:  ', ',
+		...options
+	};
 
-	const ar_values: string[] = [];
+	// Step 1: select_properties
+	let result = select_properties(data, merged_options);
 
-	for (const data_item of data) {
-		const item_values = data_item.value ?? [];
+	// Step 2: select_keys
+	result = select_keys(result, merged_options);
+
+	// Step 3: format_string_date
+	result = format_string_date(result, merged_options);
+
+	return result;
+}
 
 
 
