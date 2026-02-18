@@ -166,6 +166,9 @@ define('DEDALO_VALUE_TYPE_IRI',							'dd1562');
 define('DEDALO_VALUE_TYPE_GEO',							'dd1564');
 define('DEDALO_VALUE_TYPE_MISC',						'dd1474');
 
+// Time machine
+define('DEDALO_TIME_MACHINE_SECTION_TIPO', 				'dd15');
+
 // Notes
 define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
 define('DEDALO_NOTES_TEXT_TIPO',						'rsc329');
