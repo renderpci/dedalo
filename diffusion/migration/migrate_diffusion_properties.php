@@ -369,7 +369,17 @@ function process_node($node, $level) {
 				// When option_obj.add_parents is explicitly false, skip this rule
 				$add_parents_false = $option_obj && isset($option_obj->add_parents) && $option_obj->add_parents === false;
 
-				if (!$add_parents_false && ($is_autocomplete_hi || $option_obj)) {
+				// When process_dato is resolve_component_value, data returns as-is — clear any old properties
+				$is_resolve_component = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::resolve_component_value';
+				if ($is_resolve_component) {
+					// Force save empty props to clear any previously migrated incorrect data
+					if (!$new_props) $new_props = new stdClass();
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
+				}
+
+				if (!$add_parents_false && !$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
 
 					if (!$new_props) $new_props = new stdClass();
 					$new_props->process = new stdClass();
