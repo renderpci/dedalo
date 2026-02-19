@@ -158,6 +158,7 @@ function process_node($node, $level) {
 		case 'field_boolean':
 		case 'field_decimal':
 		case 'field_point':
+		case 'field_mediumtext':
 			$diffusion_type = 'field';
 			
 			// Calculate effective count ignoring behavioral properties (info, exclude_column, is_publicable)
@@ -287,6 +288,137 @@ function process_node($node, $level) {
 
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first\n";
+				}
+			}
+
+			// --- Case: process_dato: "diffusion_sql::map_locator_to_value" (Relation) ---
+			// Maps section_id to a value using a provided map (similar to enum logic)
+			if (
+				$new_props === null
+				&& isset($props->process_dato)
+				&& $props->process_dato === 'diffusion_sql::map_locator_to_value'
+				&& isset($props->process_dato_arguments->map)
+			) {
+				$new_props = new stdClass();
+
+				$map_data = $props->process_dato_arguments->map;
+
+				$parser_process = [
+					(object)[
+						'fn' => 'parser_locator::get_section_id',
+						'id' => 'a'
+					],
+					(object)[
+						'fn' => 'parser_locator::get_first',
+						'id' => 'a'
+					],
+					(object)[
+						'fn' => 'parser_text::map_value',
+						'options' => (object)[
+							'map' => [
+								(object)[
+									'a' => $map_data
+								]
+							]
+						]
+					]
+				];
+
+				$new_props->process = new stdClass();
+				$new_props->process->parser = $parser_process;
+
+				echo "{$indent}- [$tipo] $model_name\n";
+				echo "{$indent}  [RULE APPLIED] map_locator_to_value -> get_section_id + get_first + map_value\n";
+			}
+
+			// --- Case: component_autocomplete_hi + map_locator_to_terminoID (combined) ---
+			// When autocomplete_hi has map_locator_to_terminoID with add_parents:false in custom_arguments,
+			// output only term_id parsers (no parent resolution).
+			// When add_parents is true/default, skip and let the existing autocomplete_hi rule handle it.
+			if (
+				$new_props === null
+				&& isset($props->process_dato)
+				&& (
+					$props->process_dato === 'diffusion_sql::map_locator_to_terminoID'
+					|| $props->process_dato === 'diffusion_sql::map_locator_to_term_id'
+				)
+				&& !empty($relations_info)
+			) {
+				// Detect component_autocomplete_hi in relations
+				$is_autocomplete_hi_combined = false;
+				foreach ($relations_info as $rel_info) {
+					if ($rel_info['model'] === 'component_autocomplete_hi') {
+						$is_autocomplete_hi_combined = true;
+						break;
+					}
+				}
+
+				if ($is_autocomplete_hi_combined) {
+					// Check add_parents flag in process_dato_arguments.custom_arguments
+					$add_parents_flag = true; // default: resolve parents
+					if (
+						isset($props->process_dato_arguments->custom_arguments->add_parents)
+						&& $props->process_dato_arguments->custom_arguments->add_parents === false
+					) {
+						$add_parents_flag = false;
+					}
+					// Also check if custom_arguments is an array (alternative format)
+					if (
+						isset($props->process_dato_arguments->custom_arguments)
+						&& is_array($props->process_dato_arguments->custom_arguments)
+					) {
+						foreach ($props->process_dato_arguments->custom_arguments as $arg) {
+							if (is_object($arg) && isset($arg->add_parents) && $arg->add_parents === false) {
+								$add_parents_flag = false;
+								break;
+							}
+						}
+					}
+
+					if (!$add_parents_flag) {
+						// add_parents: false → only term_id, no parent resolution
+						$new_props = new stdClass();
+
+						$parser_process = [
+							(object)[
+								'fn' => 'parser_locator::get_section_id',
+								'id' => 'a'
+							],
+							(object)[
+								'fn' => 'parser_locator::get_section_tipo',
+								'id' => 'b'
+							],
+							(object)[
+								'fn' => 'parser_text::text_format',
+								'options' => (object)[
+									'pattern' => '${b}_${a}'
+								]
+							]
+						];
+
+						$new_props->process = new stdClass();
+						$new_props->process->parser = $parser_process;
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:false) -> term_id only\n";
+					} else {
+						// add_parents: true/default → resolve parents + output as term_id
+						$new_props = new stdClass();
+
+						$new_props->process = new stdClass();
+						$new_props->process->fn = 'add_parents';
+						$new_props->process->parser = [
+							(object)[
+								'fn' => 'parser_locator::get_parent_term_id',
+								'options' => (object)[
+									'include_self' => true
+								]
+							]
+						];
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:true) -> add_parents + term_id\n";
+					}
 				}
 			}
 
