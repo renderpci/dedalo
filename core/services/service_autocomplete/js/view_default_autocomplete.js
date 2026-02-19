@@ -1078,7 +1078,7 @@ const render_datalist = async function(self, result) {
 			mode				: 'list',
 			view				: 'text',
 			datum				: result,
-			value				: value,
+			entries				: value,
 			request_config		: [self.rqo_search],
 			columns_map			: self.columns_map,
 			fields_separator	: fields_separator,

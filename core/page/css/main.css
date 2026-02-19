@@ -8678,23 +8678,31 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .service_time_machine.view_mini > .paginator_container > .wrapper_paginator > .content_data {
   height: 2rem;
 }
-.service_time_machine.view_mini .list_body > .content_data > .section_record {
-  display: contents;
+.service_time_machine.view_mini .list_body {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 2fr !important;
+  align-items: end;
 }
-.service_time_machine.view_mini .head_column {
+.service_time_machine.view_mini .list_body > .header_wrapper_list .head_column {
   font-size: 0.85rem;
   text-align: left;
 }
-.service_time_machine.view_mini .head_column .name {
+.service_time_machine.view_mini .list_body > .header_wrapper_list .head_column.dd559 {
+  display: none;
+}
+.service_time_machine.view_mini .list_body > .header_wrapper_list .head_column .name {
   margin-left: 0.1rem;
 }
-.service_time_machine.view_mini .column_service_time_machine {
-  font-size: 0.85rem;
+.service_time_machine.view_mini .list_body > .content_data > .section_record {
+  display: contents;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine {
+  font-size: 0.82rem;
   padding: 0.25rem;
   overflow: hidden;
 }
-.service_time_machine.view_mini .column_service_time_machine span {
-  word-break: break-word;
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine .span_value {
+  word-break: break-all;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -8702,27 +8710,74 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   /* number of lines to show */
   line-clamp: 10;
   -webkit-box-orient: vertical;
-  word-break: break-all;
+  height: 100%;
 }
-.service_time_machine.view_mini .column:nth-child(4) img {
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd559 {
+  grid-column: 1;
+  grid-column-end: 4;
+  box-shadow: none;
+  padding: 0.33rem;
+  padding-bottom: 0px;
+  color: #f78a1c;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd578 {
+  grid-column: 1;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 10;
+  /* number of lines to show */
+  line-clamp: 10;
+  -webkit-box-orient: vertical;
+  height: 100%;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd578 span {
+  padding: 0px;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd577 {
+  grid-column: 2;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 10;
+  /* number of lines to show */
+  line-clamp: 10;
+  -webkit-box-orient: vertical;
+  height: 100%;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd1574 {
+  grid-column: 3;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 10;
+  /* number of lines to show */
+  line-clamp: 10;
+  -webkit-box-orient: vertical;
+  height: 100%;
+}
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img {
   max-height: 3rem;
 }
-.service_time_machine.view_mini .column:nth-child(4) img.tc,
-.service_time_machine.view_mini .column:nth-child(4) img.index,
-.service_time_machine.view_mini .column:nth-child(4) img.note,
-.service_time_machine.view_mini .column:nth-child(4) img.person,
-.service_time_machine.view_mini .column:nth-child(4) img.lang,
-.service_time_machine.view_mini .column:nth-child(4) img.geo,
-.service_time_machine.view_mini .column:nth-child(4) img.page {
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.tc,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.index,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.note,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.person,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.lang,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.geo,
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.page {
   max-height: 1rem;
 }
-.service_time_machine.view_mini .column:nth-child(4) img.view_text {
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.view_text {
   max-height: 4rem;
 }
-.service_time_machine.view_mini .column:nth-child(4) img.svg {
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.svg {
   min-height: 2rem;
 }
-.service_time_machine.view_mini .column:nth-child(4) img.draw {
+.service_time_machine.view_mini .list_body > .content_data > .section_record .column:nth-child(4) img.draw {
   max-height: 1.2rem;
 }
 .service_time_machine.time_machine_list .column:nth-child(4) img {
@@ -12509,6 +12564,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_check_box.view_tools > .content_data > .content_value > .developer_info {
   margin-left: 0.33rem;
+  flex: 1 1;
 }
 .component_check_box.search > .content_data > .q_operator {
   width: 3rem;
