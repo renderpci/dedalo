@@ -25,6 +25,8 @@ if (!class_exists('dd_ontology_db_manager')) {
 	die("Error: class 'dd_ontology_db_manager' not found.\n");
 }
 
+force_login(-1);
+
 $root_tipo = DEDALO_DIFFUSION_TIPO; // Diffusion Root
 echo "Starting migration analysis from root: $root_tipo\n";
 
@@ -978,3 +980,81 @@ function get_ddo_map($current_tipo) {
 
 	return count($ddo_map) > 0 ? $ddo_map : null;
 }
+
+
+
+	/**
+	* FORCE_LOGIN
+	* @param int $user_id
+	* @return void
+	*/
+	function force_login($user_id) : void {
+
+		// check is development server. if not, throw to prevent malicious access
+			if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
+				throw new Exception("Error. Only development servers can use this method", 1);
+				die();
+			}
+
+		// user
+			$username		= 'test ' . $user_id;
+			$full_username	= 'test user ' . $user_id;
+
+		// dd_init_test
+			$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
+			if ($init_response->result===false) {
+				debug_log(__METHOD__
+					." Init test error (dd_init_test): ". PHP_EOL
+					.' init_response: ' . $init_response->msg
+					, logger::ERROR
+				);
+			}
+
+		// is_global_admin (before set user session vars)
+			$is_global_admin = (bool)security::is_global_admin($user_id);
+			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
+
+		// is_developer (before set user session vars)
+			$is_developer = (bool)security::is_developer($user_id);
+			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
+
+		// session : If backup is OK, fix session data
+			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
+			$_SESSION['dedalo']['auth']['username']			= $username;
+			$_SESSION['dedalo']['auth']['full_username']	= $full_username;
+			$_SESSION['dedalo']['auth']['is_logged']		= 1;
+
+		// config key
+			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+
+		// login_type
+			$_SESSION['dedalo']['auth']['login_type'] = 'default';
+
+		// dedalo_lock_components unlock
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
+
+		// precalculate profiles datalist security access in background
+		// This file is generated on every user login, launching the process in background
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
+				dd_cache::process_and_cache_to_file((object)[
+					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+					'data'			=> (object)[
+						'session_id'	=> session_id(),
+						'user_id'		=> $user_id,
+						'lang'			=> DEDALO_APPLICATION_LANG
+					],
+					'file_name'		=> $cache_file_name,
+					'wait'			=> false
+				]);
+			}
+
+		// login activity report
+			login::login_activity_report(
+				"User $user_id is logged. Hello $username",
+				'LOG IN',
+				null
+			);
+	}//end force_login
