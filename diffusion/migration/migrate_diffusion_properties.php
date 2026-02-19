@@ -461,6 +461,34 @@ function process_node($node, $level) {
 				}
 			}
 
+			// --- Rule: Geolocation (get_geojson_data) ---
+			// When process_dato is build_geolocation_data_geojson and relation is component_text_area
+			if ($new_props === null || !isset($new_props->process)) {
+				$is_geojson = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::build_geolocation_data_geojson';
+
+				if ($is_geojson) {
+					// Verify relation is component_text_area
+					$is_text_area = false;
+					if (!empty($relations_info)) {
+						foreach ($relations_info as $rel_info) {
+							if ($rel_info['model'] === 'component_text_area') {
+								$is_text_area = true;
+								break;
+							}
+						}
+					}
+
+					if ($is_text_area) {
+						if (!$new_props) $new_props = new stdClass();
+						$new_props->process = new stdClass();
+						$new_props->process->fn = 'get_geojson_data';
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] build_geolocation_data_geojson -> fn: get_geojson_data\n";
+					}
+				}
+			}
+
 			// --- Rule: Unix Timestamp (parser_date::unix_timestamp) ---
 			// When process_dato is get_publication_unix_timestamp
 			if ($new_props === null || !isset($new_props->process)) {
