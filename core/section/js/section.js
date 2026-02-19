@@ -905,40 +905,48 @@ section.prototype.render = async function(options={}) {
 
 /**
 * GET_SECTION_RECORDS
-* Generate a section_record instance for each data value
-* Create (init and build) a section_record for each component value
-* Used by portals to get all rows for render
-* @param object options
-* @return array section_records
+* Generate an array of section_record instances based on the provided data entries.
+* Each entry (locator) is used to initialize and build a section_record instance.
+* @param {Object} options - Configuration options
+* @param {Object} options.caller - The component/instance calling this function
+* @param {Array<Object>} [options.entries] - Array of locators to process
+* @param {string} [options.tipo] - Component typology ID
+* @param {string} [options.mode='list'] - View mode
+* @param {Object} [options.datum] - Data object
+* @return {Promise<Array<Object>>} A promise resolving to an array of section_record instances
 */
 export const get_section_records = async function(options) {
 
 	// options
 		const self				= options.caller
-		const tipo				= options.tipo || self.tipo || {}
+		if (!self) {
+			console.error('Error: get_section_records requires a caller');
+			return []
+		}
+
+		const tipo				= options.tipo || self.tipo || null
 		const mode				= options.mode || self.mode || 'list'
-		const columns_map		= options.columns_map || self.columns_map
+		const columns_map		= options.columns_map || self.columns_map || []
 		const id_variant		= options.id_variant || self.id_variant || null
 		const view				= options.view || 'default'
 		const column_id			= options.column_id || self.column_id || null
-		const datum				= options.datum || self.datum || {}
+		const datum				= options.datum || self.datum || {data:[], context:[]}
 		const context			= self.context || {}
 		const request_config	= (options.request_config)
 			? clone(options.request_config)
 			: clone(context.request_config)
-		const fields_separator	= options.fields_separator || context.fields_separator || {}
+		const fields_separator	= options.fields_separator || context.fields_separator || ' '
 		const lang				= options.lang || self.section_lang || self.lang
 		const entries			= options.entries || ((self.data && self.data.entries)
 			? self.data.entries
 			: [])
-		const section_record_mode = mode
 
 	// iterate records
 		const ar_promises		= []
 		const entries_length	= entries.length
 		for (let i = 0; i < entries_length; i++) {
 
-			const locator				= entries[i];
+			const locator				= entries[i]
 			const current_section_id	= locator.section_id
 			const current_section_tipo	= locator.section_tipo
 
@@ -947,14 +955,13 @@ export const get_section_records = async function(options) {
 				tipo			: tipo,
 				section_tipo	: current_section_tipo,
 				section_id		: current_section_id,
-				mode			: section_record_mode,
+				mode			: mode,
 				lang			: lang,
 				context			: {
 					view				: view,
 					request_config		: request_config,
 					fields_separator	: fields_separator
 				},
-				// data			: current_data,
 				datum			: datum,
 				row_key 		: i,
 				caller			: self,
@@ -964,11 +971,6 @@ export const get_section_records = async function(options) {
 				locator			: locator,
 				id_variant		: id_variant
 			}
-
-			// id_variant . Propagate a custom instance id to children
-				if (id_variant) {
-					instance_options.id_variant = id_variant
-				}
 
 			// locator tag_id modifies id_variant when is present
 				if (locator.tag_id) {
@@ -981,13 +983,19 @@ export const get_section_records = async function(options) {
 			// promise add and continue init and build
 				ar_promises.push((async () => {
 					const current_section_record = await get_instance(instance_options)
-					await current_section_record.build()
-					return current_section_record
+					if (current_section_record) {
+						await current_section_record.build()
+						return current_section_record
+					}
+					return null
 				})())
-		}//end for (let i = 0; i < value_length; i++)
+		}//end for (let i = 0; i < entries_length; i++)
 
 	// ar_instances. When all section_record instances are built, set them
-		const section_records = await Promise.all(ar_promises)
+		const section_records_all = await Promise.all(ar_promises)
+
+		// filter out null results from failed get_instance
+		const section_records = section_records_all.filter(el => el !== null)
 
 
 	return section_records

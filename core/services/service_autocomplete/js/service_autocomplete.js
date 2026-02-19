@@ -53,8 +53,17 @@ export const service_autocomplete = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Mandatory initial life-cycle function. Sets the service basic properties and state.
+* @param {Object} options - Initialization options
+* @param {Object} options.caller - The component/instance calling the service
+* @param {string} [options.view='text'] - The view mode for rendering
+* @param {Object} [options.properties={}] - Component properties from ontology
+* @param {string} options.tipo - Component typology ID
+* @param {string} options.section_tipo - Section typology ID
+* @param {Array} options.request_config - Array of request configurations
+* @param {string} [options.lang] - The language code for the service
+* @param {string} [options.id_variant] - A custom variant ID for the instance
+* @return {Promise<boolean>} Resolves to true on success
 */
 service_autocomplete.prototype.init = async function(options) {
 
@@ -81,15 +90,17 @@ service_autocomplete.prototype.init = async function(options) {
 		self.tipo			= options.tipo
 		self.section_tipo	= options.section_tipo
 		self.request_config	= clone(options.request_config)
-		self.id_variant		= options.id_variant || self.model
+		self.lang			= options.lang || page_globals.dedalo_data_lang
 
 	// set properties
 		self.model			= 'service_autocomplete'
 		self.mode			= 'search'
+		self.id_variant		= options.id_variant || self.model
 		self.context		= {
 			tipo			: self.tipo,
 			section_tipo	: self.section_tipo,
 			model			: self.model,
+			lang			: self.lang,
 			view			: self.view,
 			children_view	: self.children_view,
 			request_config	: self.request_config,
@@ -98,19 +109,11 @@ service_autocomplete.prototype.init = async function(options) {
 		}
 		self.filter_free_nodes = []
 
-	self.node			= null
-	self.ar_instances	= [];
+	// DOM and instances
+		self.node			= null
+		self.ar_instances	= []
 
-	// event keys
-		// document.addEventListener('keydown', fn_service_autocomplete_keys, false)
-		// function fn_service_autocomplete_keys(e) {
-		// 	self.service_autocomplete_keys(e)
-		// }
-		// event_manager.subscribe('destroy_'+self.id, ()=>{
-		// 	document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
-		// })
-
-	// fix service instance as global
+	// Set service instance as global (for debug only)
 		window.page_globals.service_autocomplete = self
 
 	// status update
@@ -124,29 +127,46 @@ service_autocomplete.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param object options = {}
-* @return bool
+* Main build life-cycle function. Prepares the service search configurations,
+* filters, operators, and columns mapping based on request_config.
+* @param {Object} [options={}] - Build options
+* @param {Object} [options.request_config_object] - Force a specific request configuration object
+* @return {Promise<boolean>} Resolves to true on success
 */
 service_autocomplete.prototype.build = async function(options={}) {
 
 	const self = this
 
-	// status update
-		self.status = 'building'
+	// check status to prevent concurrent builds
+	switch (self.status) {
+		case 'building':
+			return self._build_waiter;
+		case 'built':
+			return true;
+	}
 
-	// options vars
-		self.request_config_object =  (options.request_config_object)
+	self.status = 'building'
+	self._build_waiter = (async () => {
+
+		// options vars
+		self.request_config_object = (options.request_config_object)
 			? options.request_config_object
-			: self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+			: self.request_config.find(el => el.api_engine === 'dedalo' && el.type === 'main')
 
-	// reset search options
+		if (!self.request_config_object) {
+			console.error('Error: Unable to find main dedalo request_config_object', self.request_config);
+			self.status = 'initialized' // Reset status
+			return false
+		}
+
+		// reset search options
 		self.sqo				= {}
 		self.ar_filter_by_list	= []
 		self.ar_instances		= []
-		self.list_name			= 's_'+new Date().getUTCMilliseconds()
+		self.list_name			= 's_' + Date.now()
 		self.search_fired		= false
 
-	// operator.
+		// operator.
 		// (!) To change the operator default value, edit the request_config adding "sqo_config" to "show":
 		// {
 		// 	"show": {
@@ -162,92 +182,109 @@ service_autocomplete.prototype.build = async function(options={}) {
 				? self.request_config_object.show.sqo_config.operator
 				: '$and'
 
-	// engine. get the search_engine sent or set the default value
-		self.search_engine = (self.request_config_object) ? self.request_config_object.api_engine : 'dedalo';
+		// engine. get the search_engine sent or set the default value
+		self.search_engine = self.request_config_object.api_engine || 'dedalo'
 
-	// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
-	// API get rqo to do the search as the caller.
-		self.rqo_search	= await self.caller.build_rqo_search(self.request_config_object, 'search')
+		// rqo_search, it's necessary do it by caller, because rqo is dependent of the source.
+		// API get rqo to do the search as the caller.
+		const rqo_search = await self.caller.build_rqo_search(self.request_config_object, 'search')
+		if (!rqo_search || !rqo_search.sqo) {
+			console.error('Error: Unable to build rqo_search from caller', self.caller);
+			self.status = 'initialized'
+			return false
+		}
+		self.rqo_search = rqo_search
 
-	// set the section_tipo to be searched
-		self.ar_search_section_tipo	= self.rqo_search.sqo.section_tipo
+		// set the section_tipo to be searched
+		self.ar_search_section_tipo = self.rqo_search.sqo.section_tipo
 
-	// columns_map
-	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
+		// columns_map
+		// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
 		self.columns_map = get_columns_map({
 			context				: self.context,
-			ddo_map_sequence	: ['choose','search','show'] // array ddo_map_source
-		})
+			ddo_map_sequence	: ['choose', 'search', 'show'] // array ddo_map_source
+		}) || []
 
-	// column component_info
+		// column component_info
 		const has_ddinfo = self.columns_map.find(el => el.id === 'ddinfo')
 		if (has_ddinfo) {
-			has_ddinfo.callback	= render_column_component_info
+			has_ddinfo.callback = render_column_component_info
 		}
 
-	// limit. Get from localStorage if exists
+		// limit. Get from localStorage if exists
 		const service_autocomplete_limit = localStorage.getItem('service_autocomplete_limit')
 		if (service_autocomplete_limit) {
 			const limit = parseInt(service_autocomplete_limit)
-			if (limit>0) {
+			if (limit > 0) {
 				self.limit = limit
 			}
 		}
 
-	// status update
+		// status update
 		self.status = 'built'
 
+		return true
+	})()
 
-	return true
-}//end build
+	return self._build_waiter
+}//end build//end build
 
 
 
 /**
 * SERVICE_AUTOCOMPLETE_KEYS
-* @param event e
-* @return bool true
+* Handles keyboard navigation (ArrowDown, ArrowUp, Enter) within the autocomplete datalist.
+* This method is called from the keydown event listener when the component is active.
+* @param {KeyboardEvent} e - The keyboard event object
+* @return {boolean} Returns true to indicate the event was handled
 */
 service_autocomplete.prototype.service_autocomplete_keys = function(e) {
-	e.stopPropagation()
 
 	const self = this
+	if (!self.datalist) {
+		return false
+	}
+
+	// Stop event propagation to avoid conflicts with other UI elements
+	e.stopPropagation()
+
+	const key = e.key || e.which
 
 	// down arrow
-	if(e.which === 40) {
+	if (key === 'ArrowDown' || key === 40) {
 		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
 			selected_node.classList.remove('selected')
-			if (selected_node.nextSibling) {
-				selected_node.nextSibling.classList.add('selected')
+			if (selected_node.nextElementSibling) {
+				selected_node.nextElementSibling.classList.add('selected')
 			}
-		}else{
-			// select the first one
-			if (self.datalist.firstChild) {
-				self.datalist.firstChild.classList.add('selected')
+		} else {
+			// select the first one if nothing is selected
+			const first_child = self.datalist.firstElementChild
+			if (first_child) {
+				first_child.classList.add('selected')
 			}
 		}
 	}
 	// up arrow
-	else if (e.which === 38) {
+	else if (key === 'ArrowUp' || key === 38) {
 		e.preventDefault()
 
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
 			selected_node.classList.remove('selected')
-			if (selected_node.previousSibling) {
-				selected_node.previousSibling.classList.add('selected')
+			if (selected_node.previousElementSibling) {
+				selected_node.previousElementSibling.classList.add('selected')
 			}
 		}
 	}
 	// enter
-	else if (e.which === 13) {
-		e.preventDefault()
-
+	else if (key === 'Enter' || key === 13) {
 		const selected_node = self.datalist.querySelector('.selected')
 		if (selected_node) {
+			e.preventDefault()
 			selected_node.click()
 		}
 	}
@@ -279,13 +316,11 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 
 /**
 * RENDER
-* Chose the view render module to generate DOM nodes
-* based on self.context.view value
-* @param object options
-* {
-* 	render_level : string full|autocomplete_wrapper
-* }
-* @return HTMLElement wrapper
+* Delegates the DOM generation to the view render module (view_default_autocomplete)
+* based on the current service.view value.
+* @param {Object} [options={}] - Render options
+* @param {string} [options.render_level='full'] - Level of deep that is rendered (full | content)
+* @return {Promise<HTMLElement>} Returns the generated wrapper node
 */
 service_autocomplete.prototype.render = async function(options={}) {
 
@@ -309,8 +344,9 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 /**
 * AUTOCOMPLETE_SEARCH
-* @return object
-* 	promise js_promise
+* Orchestrates the autocomplete search process by calling the appropriate
+* engine (dedalo_engine, zenon_engine, etc.) defined in the component configuration.
+* @return {Promise<Object>} A promise resolving to the API response object
 */
 service_autocomplete.prototype.autocomplete_search = async function() {
 
@@ -353,9 +389,13 @@ service_autocomplete.prototype.autocomplete_search = async function() {
 
 /**
 * REBUILD_SEARCH_QUERY_OBJECT
-* Re-combines filter by fields and by sections in one search_query_object
-* @param object options
-* @return object rqo_search
+* Re-combines filter fields and section filters into a single search_query_object (SQO).
+* This method processes user inputs and applies fixed filters and list-based filters.
+* @param {Object} options - Configuration options
+* @param {Object} options.rqo_search - The base Request Query Object
+* @param {Array} options.search_sections - List of sections to search in
+* @param {Array} [options.filter_by_list] - List of specific filters to apply
+* @return {Promise<Object|null>} Returns the updated Request Query Object or null if filters are empty
 */
 service_autocomplete.prototype.rebuild_search_query_object = async function(options) {
 
@@ -454,18 +494,20 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 
 /**
 * DEDALO_ENGINE
-* @return promise api_response
+* Implementation of the search using the Dédalo internal API engine.
+* Handles request preparation, section filtering, and list optimization.
+* @return {Promise<Object>} A promise resolving to the API response
 */
 service_autocomplete.prototype.dedalo_engine = async function() {
 
 	const self = this
 
 	// search_query_object base stored in wrapper dataset
-		const rqo_search	= await clone(self.rqo_search)
+		const rqo_search = await clone(self.rqo_search)
 
-		// const rqo_search			= clone(original_rqo_search)
-		// self.rqo_search			= rqo_search
-		// self.sqo					= rqo_search.sqo
+		// const rqo_search		= clone(original_rqo_search)
+		// self.rqo_search		= rqo_search
+		// self.sqo				= rqo_search.sqo
 
 	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
 		const search_sections = self.ar_search_section_tipo
@@ -566,8 +608,9 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 /**
 * SPLIT_Q
-* @return string q
-* @return object result
+* Splits a search string based on the pipe (|) divisor to support multi-field search inputs.
+* @param {string} q - The search string to split
+* @return {Object} An object containing the array of split terms and the divisor used
 */
 service_autocomplete.prototype.split_q = function(q) {
 
@@ -604,8 +647,10 @@ service_autocomplete.prototype.split_q = function(q) {
 
 /**
 * ZENON_ENGINE
-* @param object|null options
-* @return promise
+* Implementation of the search using the Zenon external API engine.
+* Handles request preparation, data fetching from Zenon, and response formatting for Dédalo.
+* @param {Object|null} options - Optional configuration overrides
+* @return {Promise<Object>} A promise resolving to the formatted API response
 */
 service_autocomplete.prototype.zenon_engine = async function(options) {
 
