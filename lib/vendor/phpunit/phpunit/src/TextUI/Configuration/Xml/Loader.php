@@ -910,6 +910,12 @@ final readonly class Loader
             $requireCoverageMetadata = $this->parseBooleanAttribute($document->documentElement, 'requireCoverageMetadata', false);
         }
 
+        $requireSealedMockObjects = false;
+
+        if ($document->documentElement->hasAttribute('requireSealedMockObjects')) {
+            $requireSealedMockObjects = $this->parseBooleanAttribute($document->documentElement, 'requireSealedMockObjects', false);
+        }
+
         $beStrictAboutCoverageMetadata = false;
 
         if ($document->documentElement->hasAttribute('beStrictAboutCoverageMetadata')) {
@@ -939,6 +945,7 @@ final readonly class Loader
             $this->parseBooleanAttribute($document->documentElement, 'displayDetailsOnTestsThatTriggerWarnings', false),
             $this->parseBooleanAttribute($document->documentElement, 'reverseDefectList', false),
             $requireCoverageMetadata,
+            $requireSealedMockObjects,
             $bootstrap,
             $this->bootstrapForTestSuite($filename, $xpath),
             $this->parseBooleanAttribute($document->documentElement, 'processIsolation', false),
