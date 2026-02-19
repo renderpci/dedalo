@@ -158,7 +158,7 @@ class get_archive_weights extends widget_common {
 					$data_weights_data 	= $data_weights->get_data();
 
 					if(!empty($data_weights_data)){
-						$weights[] = array_sum($data_weights_data) / count($data_weights_data);
+						$weights[] = array_sum(array_map(function($item) { return $item->value ?? 0; }, $data_weights_data)) / count($data_weights_data);
 					}
 
 					//diameter
@@ -175,7 +175,7 @@ class get_archive_weights extends widget_common {
 					$data_diameter_data = $data_diameter->get_data();
 
 					if(!empty($data_diameter_data)){
-						$diameter[] = array_sum($data_diameter_data) / count($data_diameter_data);
+						$diameter[] = array_sum(array_map(function($item) { return $item->value ?? 0; }, $data_diameter_data)) / count($data_diameter_data);
 					}
 				}
 
