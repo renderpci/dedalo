@@ -17,6 +17,7 @@ class ontology_utils {
 	// cache
 	public static $ar_tipo_by_model_name_cache;
 	public static $active_tlds_cache;
+	public static $active_tlds_cache_file_name = 'cache_active_tlds.php';
 
 
 
@@ -141,6 +142,18 @@ class ontology_utils {
 			return self::$active_tlds_cache;
 		}
 
+		// cache file read
+		$cache_data	= dd_cache::cache_from_file((object)[
+			'file_name' => self::$active_tlds_cache_file_name
+		]);
+		if (!empty($cache_data)) {
+
+			// static cache
+			self::$active_tlds_cache = $cache_data;
+
+			return $cache_data;
+		}
+
 		$table      = ontology_node::$table;
 		$sql_query  = "SELECT \"tld\" FROM \"{$table}\" GROUP BY \"tld\"";
 		$result     = matrix_db_manager::exec_search($sql_query);
@@ -152,8 +165,14 @@ class ontology_utils {
 			}
 		}
 
+		// static cache
 		self::$active_tlds_cache = $active_tlds;
 
+		// cache file write
+		dd_cache::cache_to_file((object)[
+			'file_name' => self::$active_tlds_cache_file_name,
+			'data'      => $active_tlds
+		]);
 
 		return $active_tlds;
 	}//end get_active_tlds
