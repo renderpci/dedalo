@@ -77,106 +77,11 @@ $updates->$v = new stdClass();
 					AND column_name = \'date\'
 					AND data_type != \'jsonb\'
 				) THEN
-					EXECUTE \'ALTER TABLE matrix_activity RENAME COLUMN date TO timestamp\';
+					EXECUTE \'ALTER TABLE matrix_activity RENAME COLUMN date TO "timestamp"\';
 				END IF;
 			END;
 			$$;
 		');
-
-
-		// @TODO : ADD TO DB_PG_DEFINTIONS !
-			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				DROP INDEX IF EXISTS "idx_matrix_langs_hierarchy41_value";
-				CREATE INDEX IF NOT EXISTS idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
-					(string->\'hierarchy41\'->0->>\'value\')
-				);
-				ANALYZE matrix_langs;
-			');
-
-			// create index for matrix_time_machine. The default search is performed using the following: section_id, section_tipo, tipo, lang, timestamp DESC.
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				DROP INDEX IF EXISTS "idx_matrix_time_machine_search_default";
-				CREATE INDEX IF NOT EXISTS idx_matrix_time_machine_search_default ON "matrix_time_machine" (
-					section_id, section_tipo, tipo, lang, timestamp DESC
-				);
-				ANALYZE matrix_time_machine;
-			');
-
-			// create index for matrix_activity. The diffusion_section_stats:update_user_activity_stats uses this index (ORDER BY id ASC).
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				DROP INDEX IF EXISTS "matrix_activity_id_asc_idx";
-				CREATE INDEX IF NOT EXISTS matrix_activity_id_asc_idx ON "matrix_activity" USING btree (id ASC);
-				ANALYZE matrix_activity;
-			');
-
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
-
-				BEGIN;
-
-				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
-				ALTER TABLE matrix_counter
-				DROP CONSTRAINT IF EXISTS matrix_counter_tipo_key;
-
-				-- Add the constraint
-				ALTER TABLE matrix_counter
-				ADD CONSTRAINT matrix_counter_tipo_key UNIQUE (tipo);
-
-				COMMIT;
-			');
-
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				DROP INDEX IF EXISTS "matrix_counter_dd_tipo_idx";
-
-				BEGIN;
-
-				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
-				ALTER TABLE matrix_counter_dd
-				DROP CONSTRAINT IF EXISTS matrix_counter_dd_tipo_key;
-
-				-- Add the constraint
-				ALTER TABLE matrix_counter_dd
-				ADD CONSTRAINT matrix_counter_dd_tipo_key UNIQUE (tipo);
-
-				COMMIT;
-			');
-
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				-- Rename the Original Table
-				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter;
-				-- Create a New Table
-				CREATE TABLE matrix_counter (
-				 "tipo" character varying(128) NOT NULL,
-				 "value" integer,
-				 "ref" text,
-				 CONSTRAINT matrix_counter_tipo_pkey PRIMARY KEY ("tipo")
-				);
-				-- Copy Data from the temporary table to the new table
-				INSERT INTO matrix_counter (tipo, value, ref)
-				SELECT tipo, dato, ref
-				FROM temp_matrix_counter;
-				-- Drop the Temporary Table
-				DROP TABLE temp_matrix_counter;
-			');
-
-			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-				-- Rename the Original Table
-				ALTER TABLE matrix_counter_dd RENAME TO temp_matrix_counter_dd;
-				-- Create a New Table
-				CREATE TABLE matrix_counter_dd (
-				 "tipo" character varying(128) NOT NULL,
-				 "value" integer,
-				 "ref" text,
-				 CONSTRAINT matrix_counter_dd_tipo_pkey PRIMARY KEY ("tipo")
-				);
-				-- Copy Data from the temporary table to the new table
-				INSERT INTO matrix_counter_dd (tipo, value, ref)
-				SELECT tipo, dato, ref
-				FROM temp_matrix_counter_dd;
-				-- Drop the Temporary Table
-				DROP TABLE temp_matrix_counter_dd;
-			');
 
 		// Rename matrix_notifications column datos to data
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
@@ -264,14 +169,26 @@ $updates->$v = new stdClass();
 		$comments = [];
 		// other kind of tables
 		$other_tables = [
-			'matrix_notifications',
 			'matrix_updates'
 		];
 		foreach ($other_tables as $current_table) {
-			$columns [] = '
-				ALTER TABLE "'.$current_table.'"
-					RENAME COLUMN datos TO data;
-			';
+			// $columns [] = '
+			// 	ALTER TABLE "'.$current_table.'"
+			// 		RENAME COLUMN datos TO data;
+			// ';
+			$columns [] = "
+			DO $$
+			BEGIN
+				IF EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_name = '$current_table'
+					AND column_name = 'datos'
+				) THEN
+					ALTER TABLE \"$current_table\" RENAME COLUMN datos TO data;
+				END IF;
+			END $$;
+			";
 			$comments[] = "
 				COMMENT ON COLUMN ".$current_table.".data IS 'Table data as a general JSON data';
 			";
@@ -394,4 +311,100 @@ $updates->$v = new stdClass();
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(
 				file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql')
 			);
+
+
+
+		// @TODO : ADD TO DB_PG_DEFINITIONS ! ///////////////////////////////////////////////////////////////////////////////////////////////
+			// create index for matrix_langs hierarchy41 value (lang code as 'eng')
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "idx_matrix_langs_hierarchy41_value";
+				CREATE INDEX IF NOT EXISTS idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
+					(string->\'hierarchy41\'->0->>\'value\')
+				);
+				ANALYZE matrix_langs;
+			');
+
+			// create index for matrix_time_machine. The default search is performed using the following: section_id, section_tipo, tipo, lang, timestamp DESC.
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "idx_matrix_time_machine_search_default";
+				CREATE INDEX IF NOT EXISTS idx_matrix_time_machine_search_default ON "matrix_time_machine" (
+					section_id, section_tipo, tipo, lang, timestamp DESC
+				);
+				ANALYZE matrix_time_machine;
+			');
+
+			// create index for matrix_activity. The diffusion_section_stats:update_user_activity_stats uses this index (ORDER BY id ASC).
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_activity_id_asc_idx";
+				CREATE INDEX IF NOT EXISTS matrix_activity_id_asc_idx ON "matrix_activity" USING btree (id ASC);
+				ANALYZE matrix_activity;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
+
+				BEGIN;
+
+				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
+				ALTER TABLE matrix_counter
+				DROP CONSTRAINT IF EXISTS matrix_counter_tipo_key;
+
+				-- Add the constraint
+				ALTER TABLE matrix_counter
+				ADD CONSTRAINT matrix_counter_tipo_key UNIQUE (tipo);
+
+				COMMIT;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS "matrix_counter_dd_tipo_idx";
+
+				BEGIN;
+
+				-- Drop the constraint if it exists (safe operation in recent PostgreSQL versions)
+				ALTER TABLE matrix_counter_dd
+				DROP CONSTRAINT IF EXISTS matrix_counter_dd_tipo_key;
+
+				-- Add the constraint
+				ALTER TABLE matrix_counter_dd
+				ADD CONSTRAINT matrix_counter_dd_tipo_key UNIQUE (tipo);
+
+				COMMIT;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				-- Rename the Original Table
+				ALTER TABLE matrix_counter RENAME TO temp_matrix_counter;
+				-- Create a New Table
+				CREATE TABLE matrix_counter (
+				 "tipo" character varying(128) NOT NULL,
+				 "value" integer,
+				 "ref" text,
+				 CONSTRAINT matrix_counter_tipo_pkey PRIMARY KEY ("tipo")
+				);
+				-- Copy Data from the temporary table to the new table
+				INSERT INTO matrix_counter (tipo, value, ref)
+				SELECT tipo, dato, ref
+				FROM temp_matrix_counter;
+				-- Drop the Temporary Table
+				DROP TABLE temp_matrix_counter;
+			');
+
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+				-- Rename the Original Table
+				ALTER TABLE matrix_counter_dd RENAME TO temp_matrix_counter_dd;
+				-- Create a New Table
+				CREATE TABLE matrix_counter_dd (
+				 "tipo" character varying(128) NOT NULL,
+				 "value" integer,
+				 "ref" text,
+				 CONSTRAINT matrix_counter_dd_tipo_pkey PRIMARY KEY ("tipo")
+				);
+				-- Copy Data from the temporary table to the new table
+				INSERT INTO matrix_counter_dd (tipo, value, ref)
+				SELECT tipo, dato, ref
+				FROM temp_matrix_counter_dd;
+				-- Drop the Temporary Table
+				DROP TABLE temp_matrix_counter_dd;
+			');
 

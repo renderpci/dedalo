@@ -1156,15 +1156,11 @@ class update {
 				, logger::WARNING
 			);
 
-			// CLI process data
+			// CLI process data (table started)
 				if ( running_in_cli()===true ) {
-					common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator'
+					common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator started'
 						. ' | table: ' . $table;
 					common::$pdata->table = $table;
-					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-						? dd_memory_usage() // update memory information once every 5000 items
-						: common::$pdata->memory;
-					common::$pdata->counter++;
 					// send to output
 					print_cli(common::$pdata);
 				}
@@ -1172,20 +1168,36 @@ class update {
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 			$result 	= matrix_db_manager::exec_search($strQuery, []);
+			if(!$result) {
+				debug_log(__METHOD__
+				   .' ERROR: No result from query: ' . $strQuery
+				   , logger::ERROR
+				);
+				continue;
+			}
 			$rows 		= pg_fetch_assoc($result);
+			pg_free_result($result);
 			if (!$rows) {
 				continue;
 			}
-			$max = $rows['id'];
+			$max = (int)$rows['id'];
 
 			// Get first id in the table
 			$min_strQuery	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
 			$min_result		= matrix_db_manager::exec_search($min_strQuery, []);
-			$min_rows		= pg_fetch_assoc($min_result);
+			if(!$min_result) {
+				debug_log(__METHOD__
+				   .' ERROR: No result from query: ' . $min_strQuery
+				   , logger::ERROR
+				);
+				continue;
+			}
+			$min_rows = pg_fetch_assoc($min_result);
+			pg_free_result($min_result);
 			if (!$min_rows) {
 				continue;
 			}
-			$min = $min_rows['id'];
+			$min = (int)$min_rows['id'];
 
 			//$min = 1;
 
@@ -1207,7 +1219,10 @@ class update {
 				}
 				$n_rows = pg_num_rows($result);
 
-				if ($n_rows<1) continue;
+				if ($n_rows<1) {
+					pg_free_result($result);
+					continue;
+				}
 
 				while($row = pg_fetch_assoc($result)) {
 
@@ -1216,24 +1231,36 @@ class update {
 
 				}// end while
 
-				// log info each 1000
-					if ($i_ref===0) {
+				// release result to prevent memory leak
+				pg_free_result($result);
+
+				// log info each 5000
+					if ($i_ref===0 && isset($id)) {
 						debug_log(__METHOD__
 							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
-						// clean vars
-						// unset($result);
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator'
+								. ' | table: ' . $table . ' (' . $id . '/' . $max . ')';
+							common::$pdata->memory = dd_memory_usage();
+							print_cli(common::$pdata);
+						}
+
 						// let GC do the memory job
 						time_nanosleep(0, 5000); // Slept for 5000 nanoseconds
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
 					}
 
-				// reset counter
+				// update and reset counter
+					if ( running_in_cli()===true ) {
+						common::$pdata->counter++;
+					}
+
 					$i_ref++;
-					if ($i_ref > 5001) {
+					if ($i_ref >= 5000) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)
