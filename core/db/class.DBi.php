@@ -526,7 +526,8 @@ abstract class DBi {
 		$sql = "
 			SELECT
 				n.nspname as schemaname,
-				p.proname as functionname
+				p.proname as functionname,
+				pg_get_function_identity_arguments(p.oid) as arguments
 			FROM
 				pg_proc p
 				LEFT JOIN pg_namespace n ON p.pronamespace = n.oid
@@ -559,7 +560,8 @@ abstract class DBi {
 
 			$list[] = (object)[
 				'schemaname'	=> $schemaname,
-				'functionname'	=> $functionname
+				'functionname'	=> $functionname,
+				'arguments'		=> $row['arguments']
 			];
 		}
 
