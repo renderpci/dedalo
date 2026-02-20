@@ -7,18 +7,23 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\Framework\Attributes;
-
-use Attribute;
+namespace PHPUnit\Framework\Constraint;
 
 /**
- * @immutable
- *
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
- *
- * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6284
  */
-#[Attribute(Attribute::TARGET_CLASS)]
-final readonly class RunClassInSeparateProcess
+final class ArraysAreIdentical extends ArrayComparison
 {
+    protected function compareArrays(mixed $expected, mixed $actual): bool
+    {
+        return $expected === $actual;
+    }
+
+    /**
+     * @return 'identical'
+     */
+    protected function comparisonType(): string
+    {
+        return 'identical';
+    }
 }

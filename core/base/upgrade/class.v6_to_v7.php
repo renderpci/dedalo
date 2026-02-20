@@ -6,20 +6,36 @@
 */
 class v6_to_v7 {
 
+	public static string $table_jer_dd = 'jer_dd';
+	public static string $table_dd_ontology = 'dd_ontology';
+	public static string $table_matrix_time_machine = 'matrix_time_machine';
+
 
 
 	/**
-	* PRE_UPDATE
-	* This is a pre-update, running after install new code but before Dédalo log_out of the session to go data, ontology and tools updates.
-	* Update process flow:
-	* 	Update code --> pre update --> log out --> log in --> update ontology --> update data --> update tools --> log out
-	* The change move data from current jer_dd to new dd_ontology table.
-	* Is not possible to run this update as normal data update because it change the active ontology
-	* The new code only call to `dd_ontology` table, therefore is necessary to run it before the update log-out
-	* The login process needs a valid ontology nodes in `dd_ontology` at least with the `dd` tld
-	* If this process fails, Dédalo will not work!
-	* @return bool
-	*/
+	 * PRE_UPDATE
+	 *
+	 * Executes the pre-update process, which runs after installing new code but BEFORE Dédalo logs out
+	 * of the session to proceed with data, ontology, and tools updates.
+	 *
+	 * Update process flow:
+	 * 1. Update code
+	 * 2. Run pre_update (this method)
+	 * 3. Log out
+	 * 4. Log in
+	 * 5. Update ontology
+	 * 6. Update data
+	 * 7. Update tools
+	 * 8. Log out
+	 *
+	 * This process moves data from the legacy `jer_dd` table to the new `dd_ontology` table.
+	 * It must run before log-out because the new code depends on the `dd_ontology` table,
+	 * and the login process requires valid ontology nodes (at least the `dd` TLD).
+	 *
+	 * CRITICAL: If this process fails, Dédalo will stop working!
+	 *
+	 * @return object Standard response object with 'result' (bool), 'msg' (string), and 'errors' (array).
+	 */
 	public static function pre_update() : object {
 
 		$response = new stdClass();
@@ -27,31 +43,45 @@ class v6_to_v7 {
 			$response->msg		= 'Pre update has failed';
 			$response->errors	= [];
 
-		// 1. Add new columns to jer_dd
+		// 0. Change notifications table column name (datos -> data).
+		// This must be done before because the update process uses the notifications table
+		// to store the PID of the process updated data.
+		$result = v6_to_v7::change_notifications_table_column_name();
+
+		if($result== false){
+			$response->errors[] = 'Failed to change notifications table column name';
+			return $response;
+		}
+
+		// 1. Add new columns to 'jer_dd'
 		$result = v6_to_v7::expand_jer_dd_with_new_schema();
 
 		if($result== false){
+			$response->errors[] = 'Failed to expand jer_dd with new schema';
 			return $response;
 		}
 
-		// 2. Fill the new columns with the compatible data
+		// 2. Fill the 'jer_dd' new columns with the compatible data
 		$result = v6_to_v7::fill_new_columns_in_jer_dd();
 
 		if($result== false){
+			$response->errors[] = 'Failed to fill new columns in jer_dd';
 			return $response;
 		}
 
-		// 3. Change the relations data of jer_dd, to be coherent
+		// 3. Change the 'jer_dd' relations data to be coherent
 		$result = v6_to_v7::refactor_jer_dd_relations();
 
 		if($result== false){
+			$response->errors[] = 'Failed to refactor jer_dd relations';
 			return $response;
 		}
 
-		// 4. Create the new `dd_ontology` table and set the columns with correct data
+		// 4. Create the new 'dd_ontology' table and set the columns with correct data
 		$result = v6_to_v7::create_dd_ontology_table();
 
 		if($result== false){
+			$response->errors[] = 'Failed to create dd_ontology table';
 			return $response;
 		}
 
@@ -65,22 +95,24 @@ class v6_to_v7 {
 
 
 	/**
-	* EXPAND_JER_DD_WITH_NEW_SCHEMA
-	* Change the jer_dd structure in DDBB adding new columns with different names and data type
-	* new map:
-	* 	'terminoID'			=> 'tipo',
-	* 	'modelo'			=> 'model_tipo',
-	* 	'esmodelo'			=> 'is_model',
-	* 	'esdescriptor'		=> 'is_descriptor',
-	* 	'traducible'		=> 'translatable',
-	* 	'norden'			=> 'order',
-	* 	'relaciones'		=> 'relations'
-	* @return bool
-	*/
+	 * EXPAND_JER_DD_WITH_NEW_SCHEMA
+	 *
+	 * Modifies the `jer_dd` table structure by adding new columns aligned with the v7 schema.
+	 *
+	 * Mapping summary:
+	 * - 'terminoID'    => 'tipo'
+	 * - 'modelo'       => 'model_tipo'
+	 * - 'esmodelo'     => 'is_model'
+	 * - 'traducible'   => 'is_translatable'
+	 * - 'norden'       => 'order_number'
+	 * - 'relaciones'   => 'relations'
+	 *
+	 * @return bool True if the schema was successfully expanded, false otherwise.
+	 */
 	public static function expand_jer_dd_with_new_schema() : bool {
 
 		$sql_query = sanitize_query ('
-			ALTER TABLE "jer_dd"
+			ALTER TABLE "' . static::$table_jer_dd . '"
 				ADD COLUMN IF NOT EXISTS "tipo" character varying(32) NULL,
 				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
@@ -89,10 +121,10 @@ class v6_to_v7 {
 				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL;
 		');
 
-		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
-			$msg = "Failed Update jer_dd with a new schema ";
+			$msg = "Failed to expand jer_dd with a new schema";
 			debug_log(__METHOD__
 				." ERROR: $msg "
 				, logger::ERROR
@@ -106,16 +138,17 @@ class v6_to_v7 {
 
 
 	/**
-	* FILL_NEW_COLUMNS_IN_JER_DD
-	* Collect data and transform from existing columns and fill the new schema with new data.
-	* 'si' -> true
-	* 'no' -> false
-	* @return bool
-	*/
-	public static function fill_new_columns_in_jer_dd() {
+	 * FILL_NEW_COLUMNS_IN_JER_DD
+	 *
+	 * Populates the newly created columns in `jer_dd` with transformed data from existing v6 columns.
+	 * Converts legacy 'si'/'no' strings to boolean values.
+	 *
+	 * @return bool True if data was successfully filled, false otherwise.
+	 */
+	public static function fill_new_columns_in_jer_dd() : bool {
 
 		$sql_query = sanitize_query ('
-			UPDATE "jer_dd"
+			UPDATE "' . static::$table_jer_dd . '"
 				SET tipo 			= "terminoID",
 					model_tipo 		= modelo,
 					order_number	= norden,
@@ -123,10 +156,10 @@ class v6_to_v7 {
 					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END;
 		');
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
-			$msg = "Failed add new data into the new schema of jer_dd ";
+			$msg = "Failed to fill new columns in jer_dd ";
 			debug_log(__METHOD__
 				." ERROR: $msg "
 				, logger::ERROR
@@ -140,22 +173,28 @@ class v6_to_v7 {
 
 
 	/**
-	* REFACTOR_JER_DD_relations
-	* 'relaciones' => 'relations'
-	* Unification of relations data. In some rows, relations is an object with the model as key, in other the key is the string 'tipo'
-	* As model will not use anymore, all data will change to a object with 'tipo' string as key.
-	* [{
-	* 	"tipo": "dd64"
-	* }]
-	* @return bool
-	*/
+	 * REFACTOR_JER_DD_RELATIONS
+	 *
+	 * Standardizes the relationship data in `jer_dd`. Legacy relations could be stored as objects
+	 * keyed by model. This refactors them into a consistent array of objects with a 'tipo' key.
+	 *
+	 * Example transformation:
+	 * From: [{"model_x": "dd64"}]
+	 * To:   [{"tipo": "dd64"}]
+	 *
+	 * @return bool True if relations were successfully refactorized, false otherwise.
+	 */
 	public static function refactor_jer_dd_relations() : bool {
 
 		// jer_dd. delete terms (jer_dd)
-			$sql_query = '
-				SELECT * FROM "jer_dd";
-			';
-			$jer_dd_result 	= pg_query(DBi::_getConnection(), $sql_query);
+			$sql_query = "
+				SELECT id, relaciones FROM \"" . static::$table_jer_dd . "\";
+			";
+			$jer_dd_result = matrix_db_manager::exec_search($sql_query, [], false);
+
+		if (!$jer_dd_result) {
+			return false;
+		}
 
 		// iterate jer_dd_result row
 		while($row = pg_fetch_assoc($jer_dd_result)) {
@@ -163,25 +202,31 @@ class v6_to_v7 {
 			$relaciones	= $row['relaciones'];
 			$id			= $row['id'];
 
-			$relations = json_decode($relaciones) ?? [];
+			if (empty($relaciones)) {
+				continue;
+			}
+
+			$relations = json_handler::decode($relaciones) ?? [];
 
 			$ar_relations = [];
 			foreach ($relations as $item) {
-				foreach ($item as $value) {
-					$relation = new stdClass();
-						$relation->tipo = $value;
-					$ar_relations[] = $relation;
+				if (is_array($item) || $item instanceof stdClass) {
+					foreach ($item as $value) {
+						$relation = new stdClass();
+							$relation->tipo = $value;
+						$ar_relations[] = $relation;
+					}
 				}
 			};
 
 			$new_relation = ( empty($ar_relations) ) ? null : $ar_relations;
 
-			$string_relation_object = json_encode($new_relation) ?? '';
+			$string_relation_object = json_handler::encode($new_relation);
 
-			$strQuery	= "UPDATE \"jer_dd\" SET relations = $1 WHERE id = $2 ";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_relation_object, $id ));
+			$strQuery = "UPDATE \"" . static::$table_jer_dd . "\" SET relations = $1 WHERE id = $2 ";
+			$result   = matrix_db_manager::exec_search($strQuery, [$string_relation_object, $id], false);
 			if($result===false) {
-				$msg = "Failed Update section_data (jer_dd) $id";
+				$msg = "Failed to update relations in section_data (jer_dd) for ID $id";
 				debug_log(__METHOD__
 					." ERROR: $msg "
 					, logger::ERROR
@@ -195,52 +240,59 @@ class v6_to_v7 {
 
 
 	/**
-	* CREATE_DD_ONTOLOGY_TABLE
-	* @return bool
-	*/
+	 * CREATE_DD_ONTOLOGY_TABLE
+	 *
+	 * Creates the `dd_ontology` table by selecting data from the upgraded `jer_dd` table.
+	 * Configures the sequence, primary key, and adds comments to the new schema.
+	 *
+	 * @return bool True if the table was successfully created and configured, false otherwise.
+	 */
 	public static function create_dd_ontology_table() : bool {
 
 		$sql_query = sanitize_query ('
-			CREATE TABLE IF NOT EXISTS dd_ontology AS
+			CREATE TABLE IF NOT EXISTS "' . static::$table_dd_ontology . '" AS
 				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
-			FROM jer_dd;
+			FROM "' . static::$table_jer_dd . '";
 
-			COMMENT ON TABLE "dd_ontology" IS  \'Active ontology\';
+			COMMENT ON TABLE "' . static::$table_dd_ontology . '" IS  \'Active ontology\';
 
-			CREATE SEQUENCE IF NOT EXISTS "dd_ontology_id_seq" OWNED BY "dd_ontology"."id";
+			CREATE SEQUENCE IF NOT EXISTS "' . static::$table_dd_ontology . '_id_seq" OWNED BY "' . static::$table_dd_ontology . '"."id";
 
-			ALTER TABLE "dd_ontology"
+			ALTER TABLE "' . static::$table_dd_ontology . '"
 			ALTER "id" TYPE integer,
-			ALTER "id" SET DEFAULT nextval(\'dd_ontology_id_seq\'),
+			ALTER "id" SET DEFAULT nextval(\'' . static::$table_dd_ontology . '_id_seq\'),
 			ALTER "id" SET NOT NULL;
 
-			ALTER TABLE "dd_ontology"
-			ADD CONSTRAINT dd_ontology_id_pkey
+			ALTER TABLE "' . static::$table_dd_ontology . '"
+			DROP CONSTRAINT IF EXISTS ' . static::$table_dd_ontology . '_id_pkey;
+
+			ALTER TABLE "' . static::$table_dd_ontology . '"
+			ADD CONSTRAINT ' . static::$table_dd_ontology . '_id_pkey
 			PRIMARY KEY ( id );
 
-			COMMENT ON COLUMN dd_ontology.id IS \'Unique table identifier\';
-			COMMENT ON COLUMN dd_ontology.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
-			COMMENT ON COLUMN dd_ontology.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
-			COMMENT ON COLUMN dd_ontology.term IS \'Ontology node names in multiple languages\';
-			COMMENT ON COLUMN dd_ontology.model IS \'Ontology model name as section, componnet_portal, etc.\';
-			COMMENT ON COLUMN dd_ontology.order_number IS \'Ontology node position order\';
-			COMMENT ON COLUMN dd_ontology.relations IS \'Direct connections between nodes, unidirectional\';
-			COMMENT ON COLUMN dd_ontology.tld IS \'Ontology name space\';
-			COMMENT ON COLUMN dd_ontology.properties IS \'Ontology node definition\';
-			COMMENT ON COLUMN dd_ontology.model_tipo IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
-			COMMENT ON COLUMN dd_ontology.is_model IS \'Boolean to identify if the node is a type of nodes\';
-			COMMENT ON COLUMN dd_ontology.is_translatable IS \'Boolean to identify if the node is a multilingual node\';
-			COMMENT ON COLUMN dd_ontology.propiedades IS \'V5 properties, DEPRECATED\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.id IS \'Unique table identifier\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.term IS \'Ontology node names in multiple languages\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.model IS \'Ontology model name as section, componnet_portal, etc.\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.order_number IS \'Ontology node position order\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.relations IS \'Direct connections between nodes, unidirectional\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.tld IS \'Ontology name space\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.properties IS \'Ontology node definition\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.model_tipo IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.is_model IS \'Boolean to identify if the node is a type of nodes\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.is_translatable IS \'Boolean to identify if the node is a multilingual node\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.propiedades IS \'V5 properties, DEPRECATED\';
 
 			-- Optionally drop the old one and rename
-			-- DROP TABLE IF EXISTS "jer_dd" CASCADE;
-			-- DROP SEQUENCE IF EXISTS jer_dd_id_seq;
+			-- DROP TABLE IF EXISTS "' . static::$table_jer_dd . '" CASCADE;
+			-- DROP SEQUENCE IF EXISTS ' . static::$table_jer_dd . '_id_seq;
 		');
 
-		$result 	= pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
-			$msg = "Failed add new data into the new schema of jer_dd ";
+			$msg = "Failed to create dd_ontology table from jer_dd";
 			debug_log(__METHOD__
 				." ERROR: $msg "
 				, logger::ERROR
@@ -296,15 +348,24 @@ class v6_to_v7 {
 
 
 	/**
-	* REFORMAT_MATRIX_DATA
-	* Converts v6 data to v7 data format
-	* @param array $ar_tables
-	* @param bool $save. On false, only data review is made.
-	* @return object $response
-	*/
+	 * REFORMAT_MATRIX_DATA
+	 *
+	 * Converts legacy v6 data format (single 'datos' JSON blob) to the new v7 columnar data format.
+	 * Distributes data from the v6 'datos' field into specialized columns like 'data', 'relation',
+	 * 'string', 'date', etc., based on component typology.
+	 *
+	 * Example usage:
+	 * ```php
+	 * $ar_tables = ['matrix', 'matrix_activities'];
+	 * $save = true; // Set to false for a dry-run check
+	 * $response = v6_to_v7::reformat_matrix_data($ar_tables, $save);
+	 * ```
+	 *
+	 * @param array $ar_tables List of database tables to process.
+	 * @param bool $save If true, saves changes to DB. If false, only performs a data review.
+	 * @return object Standard response object.
+	 */
 	public static function reformat_matrix_data( array $ar_tables, bool $save ) : object {
-
-		// ALTER TABLE "matrix" ADD "data" jsonb NULL;
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -312,53 +373,56 @@ class v6_to_v7 {
 			$response->errors	= [];
 
 		debug_log(__METHOD__ . PHP_EOL
-			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-			. " CONVERTING ... " . PHP_EOL
-			. " reformat_matrix_data - tables: " . json_encode($ar_tables) . PHP_EOL
-			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			. ' CONVERTING ... ' . PHP_EOL
+			. ' reformat_matrix_data - tables: ' . json_handler::encode($ar_tables) . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
 			, logger::WARNING
 		);
 
-		// CLI process data
-			if ( running_in_cli()===true ) {
-				if (!isset(common::$pdata)) {
-					common::$pdata = new stdClass();
-				}
-				common::$pdata->table = '';
-				common::$pdata->memory = '';
-				common::$pdata->counter = 0;
+		// Pre-fetch value type map once
+		$value_type_map = v6_to_v7::get_value_type_map();
+
+		// CLI process data initialization
+		if ( running_in_cli()===true ) {
+			if (!isset(common::$pdata)) {
+				common::$pdata = new stdClass();
 			}
+			common::$pdata->table = '';
+			common::$pdata->memory = '';
+			common::$pdata->counter = 0;
+		}
 
 		$conn = DBi::_getConnection();
+		$ar_escaped_tables = [];
 
 		// iterate tables
 		update::tables_rows_iterator(
-			$ar_tables, // array of tables to iterate
-			function($row, $table, $max) use ($response, $save, $conn) { // callback function
+			$ar_tables,
+			function($row, $table, $max) use ($response, $save, $conn, $value_type_map, &$ar_escaped_tables) {
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
 				$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
-				$section_id		=  $row['section_id'] ?? '';
+				$section_id		= $row['section_id'] ?? '';
 
-				// CLI process data
-					if ( running_in_cli()===true ) {
-						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': reformat_matrix_data'
-							. ' | table: '			. $table
-							. ' | id: '				. $id .' - ' . $max
-							. ' | section_tipo: '	. $section_tipo
-							. ' | section_id: '		. ($row['section_id'] ?? '');
-						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-							? dd_memory_usage() // update memory information once every 5000 items
-							: common::$pdata->memory;
-						common::$pdata->table = $table;
-						common::$pdata->section_tipo = $section_tipo;
-						common::$pdata->counter++;
-						// send to output
-						print_cli(common::$pdata);
-					}
+				// CLI process data status
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': reformat_matrix_data'
+						. ' | table: '			. $table
+						. ' | id: '				. $id .' - ' . $max
+						. ' | section_tipo: '	. $section_tipo
+						. ' | section_id: '		. ($row['section_id'] ?? '');
+					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+						? dd_memory_usage()
+						: common::$pdata->memory;
+					common::$pdata->table = $table;
+					common::$pdata->section_tipo = $section_tipo;
+					common::$pdata->counter++;
+					print_cli(common::$pdata);
+				}
 
-				// datos. Common matrix tables
+				// datos properties
 				if( isset($datos) ){
 
 					$processed_data = self::process_matrix_row_data(
@@ -366,26 +430,37 @@ class v6_to_v7 {
 						$table,
 						$section_tipo,
 						$section_id,
-						v6_to_v7::get_value_type_map(),
+						$value_type_map,
 						$response
 					);
 
-					$section_data_encoded				= ( empty(get_object_vars($processed_data->data)) ) ? null : json_encode($processed_data->data);
-					$section_relation_encoded			= ( empty(get_object_vars($processed_data->relation)) ) ? null : json_encode($processed_data->relation);
-					$section_string_encoded				= ( empty(get_object_vars($processed_data->string)) ) ? null : json_encode($processed_data->string);
-					$section_date_encoded				= ( empty(get_object_vars($processed_data->date)) ) ? null : json_encode($processed_data->date);
-					$section_iri_encoded				= ( empty(get_object_vars($processed_data->iri)) ) ? null : json_encode($processed_data->iri);
-					$section_geo_encoded				= ( empty(get_object_vars($processed_data->geo)) ) ? null : json_encode($processed_data->geo);
-					$section_number_encoded				= ( empty(get_object_vars($processed_data->number)) ) ? null : json_encode($processed_data->number);
-					$section_media_encoded				= ( empty(get_object_vars($processed_data->media)) ) ? null : json_encode($processed_data->media);
-					$section_misc_encoded				= ( empty(get_object_vars($processed_data->misc)) ) ? null : json_encode($processed_data->misc);
-					$section_relation_search_encoded	= ( empty(get_object_vars($processed_data->relation_search)) ) ? null : json_encode($processed_data->relation_search);
-					$section_meta_encoded				= ( empty(get_object_vars($processed_data->meta)) ) ? null : json_encode($processed_data->meta);
+					$data_cols = [
+						'data'            => $processed_data->data,
+						'relation'        => $processed_data->relation,
+						'string'          => $processed_data->string,
+						'date'            => $processed_data->date,
+						'iri'             => $processed_data->iri,
+						'geo'             => $processed_data->geo,
+						'number'          => $processed_data->number,
+						'media'           => $processed_data->media,
+						'misc'            => $processed_data->misc,
+						'relation_search' => $processed_data->relation_search,
+						'meta'            => $processed_data->meta,
+					];
 
-					$escaped_table = pg_escape_identifier($conn, $table);
+					$params = [];
+					foreach ($data_cols as $col_name => $col_obj) {
+						$params[] = ( empty(get_object_vars($col_obj)) ) ? null : json_handler::encode($col_obj);
+					}
+					$params[] = $id;
 
-					$strQuery = "
-						UPDATE {$escaped_table}
+					if (!isset($ar_escaped_tables[$table])) {
+						$ar_escaped_tables[$table] = pg_escape_identifier($conn, $table);
+					}
+					$escaped_table = $ar_escaped_tables[$table];
+
+					$strQuery = '
+						UPDATE ' . $escaped_table . '
 						SET data = $1,
 							relation = $2,
 							string = $3,
@@ -398,68 +473,12 @@ class v6_to_v7 {
 							relation_search = $10,
 							meta = $11
 						WHERE id = $12
-					";
+					';
 
 					if ($save) {
-
-						// With prepared statement
-						// Prepared statement name is unique per table
-						$stmt_name = __METHOD__ . $table;
-						if (!isset(DBi::$prepared_statements[$stmt_name])) {
-							pg_prepare(
-								$conn,
-								$stmt_name,
-								$strQuery
-							);
-							// Set the statement as existing.
-							DBi::$prepared_statements[$stmt_name] = true;
-						}
-						$result = pg_execute(
-							$conn,
-							$stmt_name,
-							[
-								$section_data_encoded,
-								$section_relation_encoded,
-								$section_string_encoded,
-								$section_date_encoded,
-								$section_iri_encoded,
-								$section_geo_encoded,
-								$section_number_encoded,
-								$section_media_encoded,
-								$section_misc_encoded,
-								$section_relation_search_encoded,
-								$section_meta_encoded,
-								$id
-							]
-						);
-
-					}else{
-
-						// 1. Start a transaction
-						pg_query($conn, "BEGIN");
-
-						// 2. Perform the update (in the transaction)
-						$result	= pg_query_params(
-							$conn,
-							$strQuery,
-							[
-								$section_data_encoded,
-								$section_relation_encoded,
-								$section_string_encoded,
-								$section_date_encoded,
-								$section_iri_encoded,
-								$section_geo_encoded,
-								$section_number_encoded,
-								$section_media_encoded,
-								$section_misc_encoded,
-								$section_relation_search_encoded,
-								$section_meta_encoded,
-								$id
-							]
-						);
-
-						// 3. Rollback (undo changes)
-						pg_query($conn, "ROLLBACK");
+						$result = matrix_db_manager::exec_search($strQuery, $params, false);
+					} else {
+						$result = true;
 					}
 
 					if($result===false) {
@@ -468,20 +487,17 @@ class v6_to_v7 {
 							." ERROR: $msg "
 							, logger::ERROR
 						);
-						$response->errors[] = "Error on SQL execution. strQuery: '$strQuery'";
-
-						$response->msg = 'Error on SQL execution. Stop function execution';
-						return $response;
+						$response->errors[] = "Error on SQL execution for ID $id. Table: $table";
+						return; // Return from closure
 					}
-				}//end if( isset($datos) )
-			}//end anonymous function
-		);//end update::tables_rows_iterator
+				}
+			}
+		);
 
 		$response->result	= empty($response->errors);
 		$response->msg		= empty($response->errors)
 			? 'Request done successfully'
-			: 'Request done with errors';
-
+			: 'Request done with errors (' . count($response->errors) . ')';
 
 		return $response;
 	}//end reformat_matrix_data
@@ -489,17 +505,23 @@ class v6_to_v7 {
 
 
 	/**
-	* DELETE_V6_DB_INDEXES
-	* Remove database indexes to create new ones.
-	* @return
-	*/
+	 * DELETE_V6_DB_INDEXES
+	 *
+	 * Removes existing database indexes and user-defined functions to prepare for v7 schema updates.
+	 * Preserves unique indexes that are not explicitly listed for deletion.
+	 *
+	 * @return bool True if all indexes and functions were successfully processed, false otherwise.
+	 */
 	public static function delete_v6_db_indexes() : bool {
 
 		$all_indexes = DBi::get_indexes();
+		$conn = DBi::_getConnection();
+
+		if (!$all_indexes || !$conn) {
+			return false;
+		}
 
 		$unique_indexes_to_delete = [
-			// 'terminoID_unique',
-			// 'tld',
 			'matrix_section_id_section_tipo',
 			'matrix_activities_section_id_section_tipo',
 			'matrix_activity_section_id_section_tipo',
@@ -527,56 +549,89 @@ class v6_to_v7 {
 			'matrix_tools_section_id_section_tipo_key',
 			'matrix_users_section_id_section_tipo'
 		];
+
 		foreach ($all_indexes as $index_object) {
 
-			$to_search = "create unique index";
-			$found_unique = stripos( $index_object->indexdef, $to_search);
-			$found_fixed = in_array($index_object->indexname, $unique_indexes_to_delete);
+			$indexname = $index_object->indexname;
 
-			if( $found_unique !== false && $found_fixed === false ){
+			$to_search		= "create unique index";
+			$is_unique		= stripos($index_object->indexdef, $to_search) !== false;
+			$is_to_delete	= in_array($indexname, $unique_indexes_to_delete);
+
+			// Preserve unique indexes not in our explicit deletion list
+			if ($is_unique && !$is_to_delete) {
 				continue;
 			}
 
-			if( $found_fixed === true ){
-				$constraints = DBi::get_constraint_name_from_index( $index_object->indexname );
+			// CLI feedback
+			if (running_in_cli()) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->msg = " Dropping index: $indexname";
+				print_cli(common::$pdata);
+			}
 
-				if( !empty($constraints) ){
-
+			// If explicitly listed, try to drop associated constraints first
+			if ($is_to_delete) {
+				$constraints = DBi::get_constraint_name_from_index($indexname);
+				if (!empty($constraints)) {
 					foreach ($constraints as $constraint_item) {
+						$escaped_table		= pg_escape_identifier($conn, $constraint_item->table_name);
+						$escaped_constraint	= pg_escape_identifier($conn, $constraint_item->constraint_name);
 
-						$sql_query	= "ALTER TABLE {$constraint_item->table_name} DROP CONSTRAINT IF EXISTS {$constraint_item->constraint_name};";
-						$result		= pg_query(DBi::_getConnection(), $sql_query);
+						$sql_query = "ALTER TABLE {$escaped_table} DROP CONSTRAINT IF EXISTS {$escaped_constraint};";
+						matrix_db_manager::exec_sql($sql_query);
 					}
 				}
 			}
 
-			$sql_query	= "DROP INDEX IF EXISTS {$index_object->schemaname}.\"{$index_object->indexname}\" CASCADE;";
-			$result		= pg_query(DBi::_getConnection(), $sql_query);
+			$escaped_schema	= pg_escape_identifier($conn, $index_object->schemaname);
+			$escaped_index	= pg_escape_identifier($conn, $indexname);
 
-			if($result===false) {
-				die();
-				$msg = "Failed to delete indexes in PostgreSQL!";
+			$sql_query = "DROP INDEX IF EXISTS {$escaped_schema}.{$escaped_index} CASCADE;";
+			$result = matrix_db_manager::exec_sql($sql_query);
+
+			if ($result === false) {
+				$msg = "Failed to drop index '$indexname' in PostgreSQL!";
 				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					." Index failed: $sql_query "
+					. " ERROR: $msg " . PHP_EOL
+					. " Query: $sql_query "
 					, logger::ERROR
 				);
 				return false;
 			}
 		}
 
-
 		$all_functions = DBi::get_functions();
+		if ($all_functions === false) {
+			return false;
+		}
 
 		foreach ($all_functions as $function_object) {
-			$sql_query 	= "DROP FUNCTION IF EXISTS {$function_object->schemaname}.\"{$function_object->functionname}\" CASCADE;";
-			$result		= pg_query(DBi::_getConnection(), $sql_query);
+			$func_name = $function_object->functionname;
 
-			if($result===false) {
-				$msg = "Failed to delete functions in PostgreSQL!";
+			// CLI feedback
+			if (running_in_cli()) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->msg = " Dropping function: $func_name";
+				print_cli(common::$pdata);
+			}
+
+			$escaped_schema	= pg_escape_identifier($conn, $function_object->schemaname);
+			$escaped_func	= pg_escape_identifier($conn, $func_name);
+			$arguments		= $function_object->arguments;
+
+			$sql_query = "DROP FUNCTION IF EXISTS {$escaped_schema}.{$escaped_func}({$arguments}) CASCADE;";
+			$result = matrix_db_manager::exec_sql($sql_query);
+
+			if ($result === false) {
+				$msg = "Failed to drop function '$func_name' in PostgreSQL!";
 				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					." Function failed: $sql_query "
+					. " ERROR: $msg " . PHP_EOL
+					. " Query: $sql_query "
 					, logger::ERROR
 				);
 				return false;
@@ -588,10 +643,13 @@ class v6_to_v7 {
 
 
 	/**
-	* RENAME_CONSTRAINT
-	* @return
-	*/
-	public static function rename_constraint() {
+	 * RENAME_CONSTRAINT
+	 *
+	 * Renames primary key constraints for core matrix tables to ensure consistency with v7 naming conventions.
+	 *
+	 * @return bool True if all constraints were successfully renamed, false otherwise.
+	 */
+	public static function rename_constraint() : bool {
 
 		$ar_constraint = [
 			'matrix'				=> ['matrix_id', 'matrix_pkey'],
@@ -624,129 +682,126 @@ class v6_to_v7 {
 			'matrix_users'			=> ['matrix_users_pkey', 'matrix_users_pkey'],
 		];
 
+		$conn = DBi::_getConnection();
+
 		foreach ($ar_constraint as $matrix_table => $ar_constraint_to_change) {
 
-			$sql_query 	= "ALTER TABLE {$matrix_table} DROP CONSTRAINT IF EXISTS {$ar_constraint_to_change[0]};";
-			$result		= pg_query(DBi::_getConnection(), $sql_query);
+			$escaped_table	= pg_escape_identifier($conn, $matrix_table);
+			$old_constraint	= pg_escape_identifier($conn, $ar_constraint_to_change[0]);
+			$new_constraint	= pg_escape_identifier($conn, $ar_constraint_to_change[1]);
+
+			// CLI feedback
+			if (running_in_cli()) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->msg = " Updating constraints for table: $matrix_table";
+				print_cli(common::$pdata);
+			}
+
+			// Drop old and new (to be sure)
+			$sql_query 	= "ALTER TABLE IF EXISTS {$escaped_table} DROP CONSTRAINT IF EXISTS {$old_constraint}, DROP CONSTRAINT IF EXISTS {$new_constraint};";
+			$result		= matrix_db_manager::exec_sql($sql_query);
 
 			if($result===false) {
-				$msg = "Failed to delete constraints in PostgreSQL!";
+				$msg = "Failed to delete constraint '$old_constraint' on table '$matrix_table'";
 				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					." Function failed: $sql_query "
+					." ERROR: $msg " . PHP_EOL
+					." Query: $sql_query "
 					, logger::ERROR
 				);
 				return false;
 			}
 
-			$sql_query 	= "ALTER TABLE IF EXISTS {$matrix_table} ADD CONSTRAINT {$ar_constraint_to_change[1]} PRIMARY KEY (id) ;";
-			$result		= pg_query(DBi::_getConnection(), $sql_query);
+		// Add primary key
+		if (DBi::check_column_exists($matrix_table, 'id')) {
+			$sql_query 	= "ALTER TABLE IF EXISTS {$escaped_table} ADD CONSTRAINT {$new_constraint} PRIMARY KEY (id);";
+			$result		= matrix_db_manager::exec_sql($sql_query);
 
 			if($result===false) {
-				$msg = "Failed to create constraints in PostgreSQL!";
+				$msg = "Failed to add primary key constraint '$new_constraint' on table '$matrix_table'";
 				debug_log(__METHOD__
-					." ERROR: $msg ". PHP_EOL
-					." Function failed: $sql_query "
+					." ERROR: $msg " . PHP_EOL
+					." Query: $sql_query "
 					, logger::ERROR
 				);
 				return false;
 			}
+		} else {
+			debug_log(__METHOD__
+				." WARNING: Table '$matrix_table' does not have 'id' column. Skipping PK constraint creation."
+				, logger::WARNING
+			);
 		}
+	}
 
-	}//end rename_constraint
+	return true;
+}
 
 
 
 	/**
-	* RECREATE_DB_ASSETS
-	* Force to re-build the PostgreSQL main indexes, extensions and functions
-	* @return object $response
-	*/
+	 * RECREATE_DB_ASSETS
+	 *
+	 * Forces the re-building of PostgreSQL main assets: extensions, constraints, functions,
+	 * indexes, and generic maintenance tasks.
+	 *
+	 * @return object $response
+	 */
 	public static function recreate_db_assets() : object {
 
 		$response = new stdClass();
-			$response->result	= new stdClass();
-			$response->msg		= 'Error. Request failed ';
-			$response->errors	= [];
-			$response->success	= 0;
+		$response->result	= new stdClass();
+		$response->msg		= 'Request done with errors';
+		$response->errors	= [];
+		$response->success	= 0;
 
+		$tasks = [
+			'extensions'  => 'create_extensions',
+			'constraints' => 'rebuild_constraints',
+			'functions'   => 'rebuild_functions',
+			'indexes'     => 'rebuild_indexes',
+			'maintenance' => 'exec_maintenance' // long time process (vacuum, reindex, etc)
+		];
 
-		// CLI process data
-			$proces_name = 'extensions';
-			if ( running_in_cli()===true ) {
+		foreach ($tasks as $process_name => $method) {
+
+			// CLI feedback
+			if (running_in_cli()) {
 				if (!isset(common::$pdata)) {
 					common::$pdata = new stdClass();
+					common::$pdata->counter = 0;
 				}
-				common::$pdata->counter = 0;
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate_db_assets'	. ' | '.$proces_name;
-				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-					? dd_memory_usage() // update memory information once every 5000 items
-					: common::$pdata->memory;
+				common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ": recreate_db_assets | $process_name";
+				common::$pdata->memory = (common::$pdata->counter % 100 === 0)
+					? dd_memory_usage()
+					: (common::$pdata->memory ?? '');
 				common::$pdata->counter++;
-				// send to output
 				print_cli(common::$pdata);
 			}
-		//extensions
-		$response_extensions	= db_tasks::create_extensions();
-			$response->result->extensions	= $response_extensions->result;
-			$response->errors				= $response_extensions->errors;
-		//constraints
-			$proces_name = 'constraints';
-			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
-				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-					? dd_memory_usage() // update memory information once every 5000 items
-					: common::$pdata->memory;
-				common::$pdata->counter++;
-				// send to output
-				print_cli(common::$pdata);
-			}
-		$response_constraints	= db_tasks::rebuild_constraints();
-			$response->result->constraints	= $response_constraints->result;
-			$response->errors				= array_merge($response->errors, $response_constraints->errors);
-		// functions
-			$proces_name = 'functions';
-			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
-				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-					? dd_memory_usage() // update memory information once every 5000 items
-					: common::$pdata->memory;
-				common::$pdata->counter++;
-				// send to output
-				print_cli(common::$pdata);
-			}
-		$response_functions		= db_tasks::rebuild_functions();
-			$response->result->functions	= $response_functions->result;
-			$response->errors[]				= array_merge($response->errors, $response_functions->errors);
-		// indexes
-			$proces_name = 'indexes';
-			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
-				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-					? dd_memory_usage() // update memory information once every 5000 items
-					: common::$pdata->memory;
-				common::$pdata->counter++;
-				// send to output
-				print_cli(common::$pdata);
-			}
-		$response_indexes		= db_tasks::rebuild_indexes();
-			$response->result->indexes		= $response_indexes->result;
-			$response->errors[]				= array_merge($response->errors, $response_indexes->errors);
-		// maintenance
-			$proces_name = 'maintenance';
-			if ( running_in_cli()===true ) {
-				common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': recreate database assets'	. ' | '.$proces_name;
-				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-					? dd_memory_usage() // update memory information once every 5000 items
-					: common::$pdata->memory;
-				common::$pdata->counter++;
-				// send to output
-				print_cli(common::$pdata);
-			}
-		$response_maintenance	= db_tasks::exec_maintenance();
-			$response->result->maintenance	= $response_maintenance->result;
-			$response->errors[]				= array_merge($response->errors, $response_maintenance->errors);
 
+			// Execute task
+			if (method_exists('db_tasks', $method)) {
+				$task_response = db_tasks::$method();
+
+				$response->result->{$process_name} = $task_response->result ?? null;
+
+				if (!empty($task_response->errors)) {
+					$response->errors = array_merge($response->errors, (array)$task_response->errors);
+				}
+
+				if (($task_response->result ?? false) !== false) {
+					$response->success++;
+				}
+			}
+		}
+
+		$response->result->success_count = $response->success;
+		$response->result->total_count   = count($tasks);
+
+		if (empty($response->errors)) {
+			$response->msg = 'Request done successfully';
+		}
 
 		return $response;
 	}//end recreate_db_assets
@@ -755,30 +810,41 @@ class v6_to_v7 {
 
 	/**
 	 * REMOVE_TM_CREATED_SECTIONS
-	 * Remove time machine created sections that are not deleted
-	 * Time machine has not stored new section, only deleted ones.
-	 * The historic of the data is stored by the components not by sections.
-	 * @return bool
+	 *
+	 * Cleans up the Time Machine table by removing section-level create/update records.
+	 * In Dédalo v7, the history of data is stored at the component level. Section-level
+	 * records in TM are only preserved for the 'deleted' state to track deletions.
+	 *
+	 * @return bool True if the cleanup was successful, false otherwise.
 	 */
 	public static function remove_tm_created_sections() : bool {
 
-		$sql_query = sanitize_query ('
-			DELETE FROM "matrix_time_machine"
+		// CLI feedback
+		if (running_in_cli()) {
+			if (!isset(common::$pdata)) {
+				common::$pdata = new stdClass();
+			}
+			common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ": remove_tm_created_sections";
+			print_cli(common::$pdata);
+		}
+
+		$sql_query = sanitize_query('
+			DELETE FROM "' . static::$table_matrix_time_machine . '"
 			WHERE "section_tipo" = "tipo"
-				AND ("state" != \'deleted\' OR "state" IS NULL)
+			  AND ("state" != \'deleted\' OR "state" IS NULL)
 		');
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
-		if($result===false) {
-			$msg = "Failed to remove tm created sections ";
+		if ($result === false) {
+			$msg = 'Failed to remove TM created sections';
 			debug_log(__METHOD__
-				." ERROR: $msg "
+				. " ERROR: $msg " . PHP_EOL
+				. " Query: $sql_query "
 				, logger::ERROR
 			);
 			return false;
 		}
-
 
 		return true;
 	}//end remove_tm_created_sections
@@ -786,40 +852,52 @@ class v6_to_v7 {
 
 	/**
 	 * RECREATE_TM_TABLE
-	 * Add new columns to matrix_time_machine table
-	 * @return bool
+	 *
+	 * Extends the `matrix_time_machine` table with new columns required by the v7 schema:
+	 * `user_id`, `bulk_process`, and `data`. Also adds relevant documentation via SQL comments.
+	 *
+	 * @return bool True if the table was successfully updated, false otherwise.
 	 */
 	public static function recreate_tm_table() : bool {
 
+		// CLI feedback
+		if (running_in_cli()) {
+			if (!isset(common::$pdata)) {
+				common::$pdata = new stdClass();
+			}
+			common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ": recreate_tm_table";
+			print_cli(common::$pdata);
+		}
+
 		$sql_query = sanitize_query ('
-			ALTER TABLE "matrix_time_machine"
+			ALTER TABLE "' . static::$table_matrix_time_machine . '"
 				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
 				ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
 
-			COMMENT ON TABLE "matrix_time_machine" IS  \'Time Machine\';
+			COMMENT ON TABLE "' . static::$table_matrix_time_machine . '" IS \'Time Machine\';
 
-			COMMENT ON COLUMN matrix_time_machine.section_id IS \'section_id when the change was made\';
-			COMMENT ON COLUMN matrix_time_machine.section_tipo IS \'section_tipo when the change was made\';
-			COMMENT ON COLUMN matrix_time_machine.tipo IS \'component tipo or section tipo when the change was made\';
-			COMMENT ON COLUMN matrix_time_machine.lang IS \'component data lang of the change\';
-			COMMENT ON COLUMN matrix_time_machine.timestamp IS \'timestamp of the change\';
-			COMMENT ON COLUMN matrix_time_machine.user_id IS \'User section_id that made the change\';
-			COMMENT ON COLUMN matrix_time_machine.bulk_process IS \'Bulk process id that identify a bulk change\';
-			COMMENT ON COLUMN matrix_time_machine.data IS \'JSONB data representing the change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.section_id IS \'section_id when the change was made\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.section_tipo IS \'section_tipo when the change was made\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.tipo IS \'component tipo or section tipo when the change was made\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.lang IS \'component data lang of the change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.timestamp IS \'timestamp of the change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.user_id IS \'User section_id that made the change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.bulk_process IS \'Bulk process id that identify a bulk change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.data IS \'JSONB data representing the change\';
 		');
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
-		if($result===false) {
-			$msg = "Failed Update jer_dd with a new schema ";
+		if ($result === false) {
+			$msg = "Failed to update matrix_time_machine schema";
 			debug_log(__METHOD__
-				." ERROR: $msg "
+				. " ERROR: $msg " . PHP_EOL
+				. " Query: $sql_query "
 				, logger::ERROR
 			);
 			return false;
 		}
-
 
 		return true;
 	}//end recreate_tm_table
@@ -833,14 +911,14 @@ class v6_to_v7 {
 	*/
 	public static function fill_new_columns_in_tm() :bool {
 
-		$sql_query = sanitize_query('
-			UPDATE "matrix_time_machine"
+		$sql_query = sanitize_query ('
+			UPDATE "' . static::$table_matrix_time_machine . '"
 				SET user_id 		= "userID",
 					bulk_process 	= bulk_process_id,
 					data 			= dato;
 		');
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
 			$msg = "Failed Update matrix_time_machine new columns with its data";
@@ -866,17 +944,17 @@ class v6_to_v7 {
 	public static function delete_tm_columns() : bool {
 
 		$sql_query = sanitize_query ('
-			ALTER TABLE "matrix_time_machine"
+			ALTER TABLE "' . static::$table_matrix_time_machine . '"
 				DROP COLUMN IF EXISTS "section_id_key",
 				DROP COLUMN IF EXISTS "state",
 				DROP COLUMN IF EXISTS "userID",
 				DROP COLUMN IF EXISTS "bulk_process_id",
 				DROP COLUMN IF EXISTS "dato";
 
-			ALTER TABLE "matrix_time_machine" RENAME COLUMN bulk_process TO bulk_process_id;
+			ALTER TABLE "' . static::$table_matrix_time_machine . '" RENAME COLUMN bulk_process TO bulk_process_id;
 		');
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
 			$msg = "Failed to delete tm section_id_key and state columns ";
@@ -895,429 +973,220 @@ class v6_to_v7 {
 
 
 	/**
-	* PROCESS_MATRIX_ROW_DATA
-	* Process the row data and return the encoded columns
-	* @param array|object $datos
-	* @param string $table
-	* @param string $section_tipo
-	* @param mixed $section_id
-	* @param object $value_type_map
-	* @param object $response (by reference)
-	* @return object
-	*/
+	 * PROCESS_MATRIX_ROW_DATA
+	 *
+	 * Processes a single legacy v6 row (datos JSON blob) and distributes its content into
+	 * specialized v7 column objects based on component typology.
+	 *
+	 * @param array|object $datos Legacy data blob from v6.
+	 * @param string $table Target table name.
+	 * @param string $section_tipo Section typology.
+	 * @param mixed $section_id Section record ID.
+	 * @param object $value_type_map Map of model names to DEDALO_VALUE_TYPE constants.
+	 * @param object $response (by reference) Standard response object for error tracking.
+	 * @return object Object containing individual column datasets.
+	 */
 	public static function process_matrix_row_data($datos, string $table, string $section_tipo, $section_id, object $value_type_map, &$response) : object {
 
-		$column_data				= new stdClass();
-		$column_relation_search		= new stdClass();
-		$column_relation			= new stdClass();
-		$column_string				= new stdClass();
-		$column_date				= new stdClass();
-		$column_number				= new stdClass();
-		$column_geo					= new stdClass();
-		$column_media				= new stdClass();
-		$column_iri					= new stdClass();
-		$column_misc				= new stdClass();
-		$column_meta				= new stdClass();
+		$results = (object)[
+			'data'            => new stdClass(),
+			'relation_search' => new stdClass(),
+			'relation'        => new stdClass(),
+			'string'          => new stdClass(),
+			'date'            => new stdClass(),
+			'number'          => new stdClass(),
+			'geo'             => new stdClass(),
+			'media'           => new stdClass(),
+			'iri'             => new stdClass(),
+			'misc'            => new stdClass(),
+			'meta'            => new stdClass()
+		];
 
-		// datos properties. 'datos' is an object with all the columns data as properties (v6 format).
+		// Map of typology to target column property
+		$column_map = [
+			DEDALO_VALUE_TYPE_STRING => 'string',
+			DEDALO_VALUE_TYPE_NUMBER => 'number',
+			DEDALO_VALUE_TYPE_DATE   => 'date',
+			DEDALO_VALUE_TYPE_MEDIA  => 'media',
+			DEDALO_VALUE_TYPE_IRI    => 'iri',
+			DEDALO_VALUE_TYPE_GEO    => 'geo',
+			DEDALO_VALUE_TYPE_MISC   => 'misc'
+		];
+
 		foreach ($datos as $datos_key => $datos_value) {
-
-			if( empty($datos_value) ){
-				continue;
-			}
+			if (empty($datos_value)) continue;
 
 			switch ($datos_key) {
-
 				case 'relations_search':
 				case 'relations':
-
-					// update relations array
-					$relations = $datos_value ?? [];
-					foreach ($relations as $locator) {
-
-						// check locator from_component_tipo
-						if( !isset($locator->from_component_tipo) ){
-							$locator_string = json_encode($locator);
-							debug_log(__METHOD__
-								. " **-------- ERROR locator without from_component_tipo --------** " . PHP_EOL
-								. " section tipo: ". $section_tipo . PHP_EOL
-								. " section id: ". $section_id . PHP_EOL
-								. " table: ". $table . PHP_EOL
-								. " locator: ". $locator_string
-								, logger::ERROR
-							);
-							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' locator: '$locator_string'";
-							continue;
-						}
-						// remove the project in activity, not used anymore.
-						if( $locator->from_component_tipo==='dd550' ){
+					$target_key = ($datos_key === 'relations_search') ? 'relation_search' : 'relation';
+					foreach ($datos_value as $locator) {
+						if (!isset($locator->from_component_tipo)) {
+							$locator_string = json_handler::encode($locator);
+							debug_log(__METHOD__ . " ERROR: locator without from_component_tipo in $table/$section_id. locator: $locator_string", logger::ERROR);
+							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id'";
 							continue;
 						}
 
-						$target = ($datos_key === 'relations_search') ? $column_relation_search : $column_relation;
-						if (!isset($target->{$locator->from_component_tipo})) {
-							$target->{$locator->from_component_tipo} = [];
-						}
+						// Skip deprecated activity project link
+						if ($locator->from_component_tipo === 'dd550') continue;
 
-						$target->{$locator->from_component_tipo}[] = $locator;
+						$comp_tipo = $locator->from_component_tipo;
+						if (!isset($results->{$target_key}->{$comp_tipo})) {
+							$results->{$target_key}->{$comp_tipo} = [];
+						}
+						$results->{$target_key}->{$comp_tipo}[] = $locator;
 					}
 
-					//add id to all locators
-					// only in the relation (relation_seach doesn't use it)
-					foreach ($column_relation as $component => $relation_data) {
-						$value_key = 0;
-						foreach ($relation_data as $locator) {
-							$value_key++;
-							$locator->id = $value_key;
-							// save the counter
-							$column_meta->{$locator->from_component_tipo} = [
-								(object)['count' => $value_key]
-							];
+					// Update IDs and meta counts for relations
+					if ($datos_key === 'relations') {
+						foreach ($results->relation as $comp_tipo => $rel_data) {
+							foreach ($rel_data as $i => $locator) {
+								$locator->id = $i + 1;
+								$results->meta->{$comp_tipo} = [(object)['count' => $i + 1]];
+							}
 						}
 					}
 					break;
 
 				case 'components':
-
-					// update components object
-					$literal_components = $datos_value ?? [];
-					foreach ($literal_components as $literal_tipo => $literal_value) {
-
+					foreach ($datos_value as $literal_tipo => $literal_value) {
 						$model = ontology_node::get_model_by_tipo($literal_tipo);
 
-						// skip v5 data
-						if( in_array($model, ['component_filter','component_section_id']) ){
-							continue;
-						}
+						// Skip v5 legacy components
+						if (in_array($model, ['component_filter', 'component_section_id'])) continue;
 
-						// literal without v6 'dato' property case
-						if( !isset($literal_value->dato) ){
-							debug_log(__METHOD__
-								. " **-------- ERROR Literal without v6 'dato' property --------** " . PHP_EOL
-								. " model: " . $model. PHP_EOL
-								. " component tipo: ". $literal_tipo . PHP_EOL
-								. " section tipo: ". $section_tipo . PHP_EOL
-								. " section id: ". $section_id . PHP_EOL
-								. " table: ". $table . PHP_EOL
-								. " literal_value: ". json_encode( $literal_value ). PHP_EOL
-								. " literal_value type: " . gettype( $literal_value )
-								, logger::ERROR
-							);
+						if (!isset($literal_value->dato)) {
+							debug_log(__METHOD__ . " ERROR: Literal without v6 'dato' property ($literal_tipo) in $table/$section_id", logger::ERROR);
 							$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
 							continue;
 						}
 
-						$old_data = $literal_value->dato;
-						foreach ($old_data as $lang => $ar_value) {
+						foreach ($literal_value->dato as $lang => $ar_value) {
+							if (empty($ar_value) && $ar_value !== '0') continue;
 
-							// Ignore empty component values
-							if( !isset($ar_value) || empty($ar_value) ){
-								debug_log(__METHOD__
-									. " **-------- IGNORED Data without information --------** " . PHP_EOL
-									. " model: " . $model. PHP_EOL
-									. " component tipo: ". $literal_tipo . PHP_EOL
-									. " section tipo: ". $section_tipo . PHP_EOL
-									. " section id: ". $section_id . PHP_EOL
-									. " table: ". $table . PHP_EOL
-									. " value: ". json_encode( $ar_value ). PHP_EOL
-									. " value type: " . gettype( $ar_value )
-									, logger::WARNING
-								);
-								continue;
-							}
+							// Normalize non-array values (TinyMCE, etc.)
+							if (!is_array($ar_value)) {
+								if (($literal_tipo === 'hierarchy42' && $lang === 'lg-nolan') ||
+									($ar_value === '<br data-mce-bogus="1">') ||
+									($literal_tipo === 'dd23')) continue;
 
-							// Not array cases
-							if( !is_array($ar_value) ){
-								// ignore old recycled component order data (hierarchy42)
-								if($literal_tipo === 'hierarchy42' && $lang==='lg-nolan'){
-									continue;
-								}
-								// ignore TinyMCE empty data values
-								if($ar_value==='<br data-mce-bogus="1">' || $ar_value==='[<br data-mce-bogus="1">]'){
-									continue;
-								}
-								// ignore not used anymore component_layout dd23
-								if($literal_tipo === 'dd23'){
-									continue;
-								}
-								debug_log(__METHOD__
-									. " <<-------- CHANGED Data with wrong format: is not array -------->> " . PHP_EOL
-									. " model: " . $model. PHP_EOL
-									. " component tipo: ". $literal_tipo . PHP_EOL
-									. " section tipo: ". $section_tipo . PHP_EOL
-									. " section id: ". $section_id . PHP_EOL
-									. " table: ". $table . PHP_EOL
-									. " value: ". json_encode( $ar_value ). PHP_EOL
-									. " value type: " . gettype( $ar_value )
-									, logger::WARNING
-								);
 								$ar_value = [$ar_value];
 							}
 
-							// safe array keys
-							$ar_value = array_values($ar_value);
-
 							$value_key = 0;
-							foreach ($ar_value as $key => $value) {
+							foreach (array_values($ar_value) as $value) {
+								if (!isset($value) || (empty($value) && $value !== '0')) continue;
+								if (json_handler::encode($value) === '{"files_info":[]}') continue;
 
-								// Ignore null component values
-								if( !isset($value) ){
-									debug_log(__METHOD__
-										. " <<-------- IGNORED empty value. -------->> " . PHP_EOL
-										. " model: " . $model. PHP_EOL
-										. " component tipo: ". $literal_tipo . PHP_EOL
-										. " section tipo: ". $section_tipo . PHP_EOL
-										. " section id: ". $section_id . PHP_EOL
-										. " table: ". $table . PHP_EOL
-										. " value: ". json_encode( $value ) . PHP_EOL
-										. " value type: " . gettype( $value ) . PHP_EOL
-										. " ar_value: ". json_encode( $ar_value ) . PHP_EOL
-										. " key: ". $key
-										, logger::WARNING
-									);
-									continue;
-								}
-
-								// empty case. Ignore empty values
-								if (empty($value) && $value!='0') {
-									continue;
-								}
-
-								// empty media. Skip save empty media values
-								if (json_encode($value)==='{"files_info":[]}') {
-									continue;
-								}
-
-								// old media v5 value
-								if (is_object($value) &&
-									isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
-									isset($value->section_tipo) && $value->section_tipo === $section_tipo &&
-									isset($value->section_id) && $value->section_id == $section_id
-									) {
-									continue;
-								}
+								// Skip old v5 media records pointing to self
+								if (is_object($value) && isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
+									isset($value->section_tipo) && $value->section_tipo === $section_tipo && $value->section_id == $section_id) continue;
 
 								$value_key++;
-
-								$column_meta->{$literal_tipo} = [
-									(object)['count' => $value_key]
-								];
+								$results->meta->{$literal_tipo} = [(object)['count' => $value_key]];
 
 								$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+								$target_col = $column_map[$typology] ?? 'misc';
 
-								// new literal object with value
-								$new_literal_obj = new stdClass();
-									$new_literal_obj->id		= $value_key; // starts from 1
-									// $new_literal_obj->lang		= $lang; // UNUSED
-									$new_literal_obj->value		= $value;
-
-								switch ($typology) {
-									case DEDALO_VALUE_TYPE_STRING:
-
-										// set component path if not already set
-										if (!property_exists($column_string, $literal_tipo)) {
-											$column_string->{$literal_tipo} = [];
-										}
-										// set lang
-										$new_literal_obj->lang = $lang;
-
-										$column_string->{$literal_tipo}[] = $new_literal_obj;
-										break;
-
-									case DEDALO_VALUE_TYPE_NUMBER:
-
-										// set component path if not already set
-										if (!property_exists($column_number, $literal_tipo)) {
-											$column_number->{$literal_tipo} = [];
-										}
-
-										$column_number->{$literal_tipo}[] = $new_literal_obj;
-										break;
-
-									case DEDALO_VALUE_TYPE_MISC:
-
-										// set component path if not already set
-										if (!property_exists($column_misc, $literal_tipo)) {
-											$column_misc->{$literal_tipo} = [];
-										}
-										if($model==='component_security_access' || $model=== 'component_info' || $model=== 'component_filer_records') {
-											// Because v6 value is already object, use it directly, but add id
-											if(is_object($value)){
-												$literal_misc = $value;
-												// Add id to object
-												$literal_misc->id = $value_key;
-												$column_misc->{$literal_tipo}[] = $literal_misc;
-											}
-										}else{
-											$column_misc->{$literal_tipo}[] = $new_literal_obj;
-										}
-										break;
-
-									case DEDALO_VALUE_TYPE_DATE:
-
-										if(is_object($value)){
-											$date_literal_obj = $value;
-												$date_literal_obj->id	= $value_key;
-												// $date_literal_obj->lang	= $lang; // UNUSED
-
-											// set component path if not already set
-											if (!property_exists($column_date, $literal_tipo)) {
-												$column_date->{$literal_tipo} = [];
-											}
-
-											$column_date->{$literal_tipo}[] = $date_literal_obj;
-										}else{
-											$value_string = json_encode( $value );
-											debug_log(__METHOD__
-												. " **-------- ERROR component value out of format, is an not object --------** " . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value type: " . gettype( $value ) . PHP_EOL
-												. " value: ". $value_string
-												, logger::ERROR
-											);
-											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-											continue 2;
-										}
-										break;
-
-									case DEDALO_VALUE_TYPE_MEDIA:
-
-										if(is_object($value)){
-											$media_literal_obj = $value;
-												$media_literal_obj->id		= $value_key;
-												// $media_literal_obj->lang	= $lang; // UNUSED
-
-											// set component path if not already set
-											if (!property_exists($column_media, $literal_tipo)) {
-												$column_media->{$literal_tipo} = [];
-											}
-
-											$column_media->{$literal_tipo}[] = $media_literal_obj;
-										}else{
-											$value_string = json_encode( $value );
-											debug_log(__METHOD__
-												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value type: " . gettype( $value ) . PHP_EOL
-												. " value: ". $value_string
-												, logger::ERROR
-											);
-											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-											continue 2;
-										}
-										break;
-
-									case DEDALO_VALUE_TYPE_IRI:
-
-										if(is_object($value)){
-											$iri_literal_obj = $value;
-												//check if the data has id (introduced in v6.8.0)
-												if( empty($value->id) ){
-													$iri_literal_obj->id = $value_key;
-												}
-												$iri_literal_obj->lang = $lang;
-
-											// set component path if not already set
-											if (!property_exists($column_iri, $literal_tipo)) {
-												$column_iri->{$literal_tipo} = [];
-											}
-
-											$column_iri->{$literal_tipo}[] = $iri_literal_obj;
-										}else{
-											$value_string = json_encode( $value );
-											debug_log(__METHOD__
-												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value type: " . gettype( $value ) . PHP_EOL
-												. " value: ". $value_string
-												, logger::ERROR
-											);
-											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-											continue 2;
-										}
-										break;
-
-									case DEDALO_VALUE_TYPE_GEO:
-
-										if(is_object($value)){
-											$geo_literal_obj = $value;
-												$geo_literal_obj->id	= $value_key;
-												// $geo_literal_obj->lang	= $lang; // UNUSED
-
-											// set component path if not already set
-											if (!property_exists($column_geo, $literal_tipo)) {
-												$column_geo->{$literal_tipo} = [];
-											}
-
-											$column_geo->{$literal_tipo}[] = $geo_literal_obj;
-
-										}else{
-											$value_string = json_encode( $value );
-											debug_log(__METHOD__
-												. " **-------- ERROR component value out of format, is not an object --------** " . PHP_EOL
-												. " section tipo: ". $section_tipo . PHP_EOL
-												. " section id: ". $section_id . PHP_EOL
-												. " table: ". $table . PHP_EOL
-												. " value type: " . gettype( $value ) . PHP_EOL
-												. " value: ". $value_string
-												, logger::ERROR
-											);
-											$response->errors[] = "Bad component data (invalid component data, it is not an object). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' tipo: '$literal_tipo' value: '$value_string'";
-											continue 2;
-										}
-										break;
+								// Prepare object to store
+								if ($typology === DEDALO_VALUE_TYPE_MISC &&
+									in_array($model, ['component_security_access', 'component_info', 'component_filer_records']) &&
+									is_object($value)) {
+									$final_obj = $value;
+									$final_obj->id = $value_key;
+								} else {
+									$final_obj = (object)[
+										'id'    => $value_key,
+										'value' => $value
+									];
 								}
 
-								// temporal add info for easy debug in beta 7
-									// if (isset($new_literal_obj->literal_value->info)) {
-									// 	$new_literal_obj->info = $new_literal_obj->literal_value->info;
-									// }else{
-									// 	$label = ontology_node::get_term_by_tipo($literal_tipo);
-									// 	$new_literal_obj->info = "$label [$model]";
-									// }
+								// Special handling for language-aware strings
+								if ($typology === DEDALO_VALUE_TYPE_STRING) {
+									$final_obj->lang = $lang;
+								}
+
+								// Check format for complex types (Date, Media, Geo, IRI)
+								if (in_array($typology, [DEDALO_VALUE_TYPE_DATE, DEDALO_VALUE_TYPE_MEDIA, DEDALO_VALUE_TYPE_GEO, DEDALO_VALUE_TYPE_IRI])) {
+									if (!is_object($value)) {
+										$val_str = json_handler::encode($value);
+										debug_log(__METHOD__ . " ERROR: component value ($literal_tipo) out of format in $table/$section_id: $val_str", logger::ERROR);
+										$response->errors[] = "Bad component data (invalid format for $typology). table: '$table' tipo: '$literal_tipo'";
+										continue 2;
+									}
+									// Update existing object properties
+									$final_obj = $value;
+									if (empty($final_obj->id) || $typology !== DEDALO_VALUE_TYPE_IRI) {
+										$final_obj->id = $value_key;
+									}
+									if ($typology === DEDALO_VALUE_TYPE_IRI) {
+										$final_obj->lang = $lang;
+									}
+								}
+
+								if (!isset($results->{$target_col}->{$literal_tipo})) {
+									$results->{$target_col}->{$literal_tipo} = [];
+								}
+								$results->{$target_col}->{$literal_tipo}[] = $final_obj;
 							}
 						}
-					}//end reach ($literal_components as $literal_tipo => $literal_value)
+					}
 					break;
 
 				case 'section_real_tipo':
-
-					// ignore this property. To extinct.
-					break;
+					break; // Extinct property
 
 				case 'created_by_userID':
-
-					// Rename the property
-					$column_data->created_by_user_id = $datos_value;
+					$results->data->created_by_user_id = $datos_value;
 					break;
 
 				default:
-
 					// update other properties like section_tipo, created_date, etc.
-					$column_data->{$datos_key} = $datos_value;
+					$results->data->{$datos_key} = $datos_value;
 					break;
 			}
-		}//end foreach ($datos as $datos_key => $datos_value)
+		}
 
-		return (object)[
-			'data'				=> $column_data,
-			'relation_search'	=> $column_relation_search,
-			'relation'			=> $column_relation,
-			'string'			=> $column_string,
-			'date'				=> $column_date,
-			'number'			=> $column_number,
-			'geo'				=> $column_geo,
-			'media'				=> $column_media,
-			'iri'				=> $column_iri,
-			'misc'				=> $column_misc,
-			'meta'				=> $column_meta
-		];
-	}
+		return $results;
+	}//end process_matrix_row_data
+
+
+
+	/**
+	 * Change notifications table column name from 'datos' to 'data'
+	 * @return bool
+	 */
+	public static function change_notifications_table_column_name() : bool {
+
+		$sql_query = sanitize_query('
+			DO $$
+			BEGIN
+				IF EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_name = \'matrix_notifications\'
+					AND column_name = \'datos\'
+				) THEN
+					EXECUTE \'ALTER TABLE "matrix_notifications" RENAME COLUMN "datos" TO "data"\';
+				END IF;
+			END $$;
+		');
+
+		$result = matrix_db_manager::exec_sql($sql_query);
+
+		if($result===false) {
+			$msg = "Failed to change notifications table column name";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end change_notifications_table_column_name
+
+
 
 }//end class v6_to_v7
