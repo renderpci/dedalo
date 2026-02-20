@@ -587,12 +587,9 @@ component_date.prototype.parse_string_time = function(string_time) {
 	}
 	// if all values are null, the user want delete the date, so return with all values with null to be delete
 	if(hour===null && minute===null && second===null){
-		dd_date.hour	= null
-		dd_date.minute	= null
-		dd_date.second	= null
 		// response
 		const response = {
-			result : dd_date
+			result : {}
 		}
 		return response
 	}
@@ -742,7 +739,7 @@ component_date.prototype.parse_string_period = function(values) {
 * @param string current_value
 * 	Sample:
 	{
-	    "mode": "start",
+	    "mode": "range",
 	    "start": {
 	        "day": 12,
 	        "time": 65027145600,
