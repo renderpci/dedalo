@@ -1944,5 +1944,46 @@ final class component_text_area_test extends BaseTestCase {
 	}//end test_get_original_lang
 
 
+	/**
+	* TEST_GET_GEOJSON_DATA
+	* @return void
+	*/
+	public function test_get_geojson_data() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= self::$lang;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		// Test with geo tag content
+		// e.g., [geo-n-10-10-data::data]
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'Text with a geo tag [geo-n-10-10-data::data] and more text.';
+			$item_value->lang = self::$lang;
+
+		$component->set_data([$item_value]);
+
+		$geojson = $component->get_geojson_data();
+
+		// Ensure it returns an array
+		$this->assertTrue(
+			gettype($geojson) === 'array',
+			'expected array, but received: ' . gettype($geojson)
+		);
+	}//end test_get_geojson_data
+
 
 }//end class
