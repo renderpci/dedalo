@@ -69,7 +69,7 @@ render_edit_component_date.prototype.edit = async function(options) {
 * @param object current_value
 * 	Sample:
 	{
-	    "mode": "start",
+	    "mode": "date",
 	    "start": {
 	        "day": 12,
 	        "time": 65027145600,
@@ -249,13 +249,13 @@ export const get_ar_raw_data_value = (self) => {
 * Generic node rendered of date field node
 * @param int i
 * 	component data value array key
-* @param string mode
+* @param string date_input
 * 	values: start|end
 * @param string input_value
 * @param instance self
 * @return HTMLElement input_wrap
 */
-export const get_input_date_node = (i, mode, input_value, self) => {
+export const get_input_date_node = (i, date_input, input_value, self) => {
 
 	// input_wrap
 		const input_wrap = ui.create_dom_element({
@@ -301,7 +301,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					input_value	: input.value,
 					key			: i,
 					input_wrap	: input_wrap,
-					mode		: mode,
+					date_input	: date_input,
 					type		: 'date'
 				})
 			}
@@ -355,12 +355,12 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 /**
 * GET_INPUT_TIME_NODE
 * @param int i
-* @param string mode
+* @param string date_input
 * @param string input_value
 * @param instance self
 * @return HTMLElement input_wrap
 */
-export const get_input_time_node = (i, mode, input_value, self) => {
+export const get_input_time_node = (i, date_input, input_value, self) => {
 
 	// input_wrap
 		const input_wrap = ui.create_dom_element({
@@ -407,7 +407,7 @@ export const get_input_time_node = (i, mode, input_value, self) => {
 					input_value	: input.value,
 					key			: i,
 					input_wrap	: input_wrap,
-					mode		: mode,
+					date_input	: date_input,
 					type		: 'time'
 				})
 			}
@@ -776,20 +776,16 @@ export const render_input_element_time = (i, current_value, self) => {
 export const change_handler = function(options) {
 
 	// options
-		// const e			= options.e // event
 		const self			= options.self // instance
 		const input_value	= options.input_value // string|object
 		const key			= options.key
 		const input_wrap	= options.input_wrap
-		const mode			= options.mode // like 'start'
+		const date_input	= options.date_input // like 'start'
 		const type			= options.type // date|time
 
 	// parse value
-		// const response = type==='time'
-		// 	? self.parse_string_time(input.value)
-		// 	: self.parse_string_date(input.value)
-
 		const response = (()=>{
+			if (!self) return null
 			switch (type) {
 				case 'time':
 					return self.parse_string_time(input_value)
@@ -801,6 +797,12 @@ export const change_handler = function(options) {
 					return self.parse_string_date(input_value)
 			}
 		})()
+
+	// response check
+		if (!response) {
+			console.error("change_handler: missing response or self", options)
+			return false
+		}
 
 	// error case
 		if(response.error){
@@ -814,24 +816,38 @@ export const change_handler = function(options) {
 
 	// short vars
 		const data	= self.data || {}
-		const value	= data.value || []
+		const value	= data.entries || []
 
 	// new value. New parsed value
-		const new_value = Object.keys(response.result).length===0 && response.result.constructor===Object
+		const result = response.result || {}
+		const new_value = (Object.keys(result).length === 0 && result.constructor === Object)
 			? null // empty object case
-			: response.result
+			: result
 
 	// data_value. Current data value for current key
-		const data_value = value[key]
-			? JSON.parse(JSON.stringify(value[key]))
-			: {mode}
+		const data_value = (()=>{
+			// item. Current data value for current key
+			const item = value[key]
+				? JSON.parse(JSON.stringify(value[key]))
+				: {}
 
-	// replace value only in current mode
-		if(new_value){
-			data_value[mode] = new_value
-		}else{
-			delete data_value[mode]
-		}
+			// replace value only in current date_input
+			if(new_value){
+				item[date_input] = new_value
+			}else{
+				// delete date_input (start|end)
+				delete item[date_input]
+				// check if only id left
+				const date_input_key = Object.keys(item)
+
+				if(date_input_key.length===1 && date_input_key[0]==='id'){
+					return null
+				}else if(date_input_key.length===0){
+					return null
+				}
+			}
+			return item
+		})()
 
 	// changed_data_item
 		const changed_data_item = Object.freeze({

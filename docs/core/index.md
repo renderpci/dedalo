@@ -235,3 +235,33 @@ Or doing a join if you want to see it in list mode (without all results). With t
 The problem here are the changes, because the schema, the logic and the render is specific and rigid, if you need  change quality, you will need change the schema of the database, the logic in your code and the html associated. In simple cases or specific uses than not has changes it is not a problem, but in a large and complex situation it could be very hard. Dédalo ontology is a abstraction of all of this process and you will not change your databases or the logic associated opening the possibility to grow and change in a flexible way.
 
 You can find specific documentation on the [Dedalo ontology here.](./ontology/index.md)
+
+## Core Documentation
+
+### Request Configuration
+
+The `request_config` system defines how sections and components retrieve and display data. It bridges the ontology definition with API requests.
+
+- **[Request Config Architecture](./request_config.md)** - Complete technical documentation
+- **[Request Config Examples](./request_config_examples.md)** - Practical examples for common scenarios
+
+### Query Objects
+
+- **[Request Query Object (RQO)](./rqo.md)** - API request structure
+- **[Search Query Object (SQO)](./sqo.md)** - Database query abstraction
+
+### Data Objects
+
+- **[DD Object (ddo)](./dd_object.md)** - Normalized object for requests
+- **[Locator](./locator.md)** - Pointer between data
+- **[DD Date](./dd_date.md)** - Date representation
+
+### Ontology
+
+- **[Ontology Documentation](./ontology/index.md)** - Schema and definitions
+- **[Request Config Presets](./ontology/request_config_presets.md)** - User-defined layouts
+
+### Components
+
+- **[Component Documentation](./components/index.md)** - Available components
+
