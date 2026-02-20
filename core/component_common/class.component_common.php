@@ -81,6 +81,9 @@ abstract class component_common extends common {
 		// boolean is_temporal (used to identify temporal data that is saved differently)
 		public $is_temporal;
 
+		// Default format for diffusion outputs based on diffusion endpoint
+		public static $diffusion_output_format = ['sql' => 'string'];
+
 		// Cache for list of values
 		public static $ar_list_of_values_data_cache = [];
 		public static $list_of_values_data_cache = [];
