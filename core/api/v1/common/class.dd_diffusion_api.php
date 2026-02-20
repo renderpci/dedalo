@@ -421,6 +421,37 @@ class dd_diffusion_api {
 			'parser' 		=> $properties->process->parser ?? new stdClass()
 		];
 
+		// Resolve output_format
+		// 1. Check if defined explicitly in the ontology node properties
+		$output_format = $properties->process->output_format ?? null;
+
+		// 2. Fallback to the component's default format based on the diffusion type (currently 'sql' is assumed)
+		// To properly do this, we find the component model of the main target of this diffusion node.
+		// For simplicity, we get the target component model from the ddo_map (if it exists)
+		if (!$output_format) {
+			$diffusion_type = 'sql'; // Future: get from diffusion_element or rqo
+			
+			// Find the main component model from the first ddo map item
+			$target_model = null;
+			if (!empty($ddo_map)) {
+				$first_ddo = $ddo_map[0];
+				$target_model = $first_ddo->model ?? ontology_node::get_model_by_tipo($first_ddo->tipo);
+			}
+
+			if ($target_model && class_exists($target_model) && property_exists($target_model, 'diffusion_output_format')) {
+				$output_formats = $target_model::$diffusion_output_format;
+				if (isset($output_formats[$diffusion_type])) {
+					$output_format = $output_formats[$diffusion_type];
+				}
+			}
+		}
+
+		// Inject the calculated output format into the context
+		if ($output_format) {
+			$context[0]->output_format = $output_format;
+		}
+
+
 		if(isset($properties->varchar)){
 			$context[0]->varchar = $properties->varchar;
 		}

@@ -250,6 +250,11 @@ function process_node($node, $level) {
 					if (!isset($new_props->process)) $new_props->process = new stdClass();
 					$new_props->process->parser = $parser_process;
 
+					// If explicitly 'dato', map this explicitly to output_format: 'json'
+					if (isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
+						$new_props->process->output_format = 'json';
+					}
+
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] Case 1: 'dato' OR 'map_project_to_section_id' (relation) -> parser_locator::get_section_id\n";
 				}
@@ -287,9 +292,10 @@ function process_node($node, $level) {
 
 					$new_props->process = new stdClass();
 					$new_props->process->parser = $parser_process;
+					$new_props->process->output_format = 'int';
 
 					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first\n";
+					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first (int)\n";
 				}
 			}
 

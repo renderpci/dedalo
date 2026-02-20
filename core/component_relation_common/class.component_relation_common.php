@@ -57,6 +57,9 @@ class component_relation_common extends component_common {
 
 		protected $supports_translation = false;
 
+		// Default format for diffusion outputs based on diffusion endpoint
+		public static $diffusion_output_format = ['sql' => 'json'];
+
 		// locator_lookup_map. Auxiliar map to check if a locator already exists in the component data
 		protected $locator_lookup_map;
 
