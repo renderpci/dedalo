@@ -56,7 +56,7 @@
 			LIMIT 10;
 		',
 		'name' => 'f_unaccent',
-		'info' => 'Used to process the relation column and get the string value of section_tipo ans section_id as oh1_3'
+		'info' => 'Used to process the relation column and get the string value of section_tipo and section_id as oh1_3'
 	];
 
 	//  Create function with base flat locators st=section_tipo si=section_id (dd64_1)
@@ -90,7 +90,7 @@
 			LIMIT 10;
 		',
 		'name' => 'data_relations_flat_st_si',
-		'info' => 'Used to process the relation column and get the string value of section_tipo ans section_id as oh1_3'
+		'info' => 'Used to process the relation column and get the string value of section_tipo and section_id as oh1_3'
 	];
 
 	// Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (tchi7_dd64_1)
@@ -1654,7 +1654,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
-					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST)
+					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST);
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_lang_idx;
@@ -1666,7 +1666,7 @@
 					LIMIT 1;
 				',
 				'name' => 'matrix_time_machine_lang_idx',
-				'info' => 'Used to search by tipo.'
+				'info' => 'Used to search by lang.'
 			];
 
 		// bulk_process_id

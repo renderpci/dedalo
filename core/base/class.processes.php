@@ -188,7 +188,14 @@ class processes {
 				return $response;
 			}
 
-		// Locate the specific process item
+		// search
+			// sample data
+			// {
+			// 	"pid": 98018,
+			// 	"date": "2024-05-22 18:30:34",
+			// 	"pfile": "process_-1_2024-05-22_18-30-34_384731397978791",
+			// 	"user_id": -1
+			// }
 			$found = array_find($data, function($el) use($pid, $user_id){
 				return $el->pid===$pid && $el->user_id===$user_id;
 			});
