@@ -345,6 +345,7 @@
 				',
 				'drop' => '
 					ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key;
+					DROP INDEX IF EXISTS {$table}_tipo_key;
 				',
 				'sample' => '
 					INSERT INTO "dd_ontology"
@@ -570,7 +571,7 @@
 					WHERE parent = \'tch1\'
 					LIMIT 1;
 				',
-				'name' => 'dd_ontology_order_number_idx',
+				'name' => 'dd_ontology_parent_order_number_idx',
 				'info' => 'Used to search descriptors by parent, is_descriptor and order'
 			];
 
@@ -1692,29 +1693,6 @@
 				'info' => 'Used to search by bulk_process_id.'
 			];
 
-		// state
-			$ar_index[] = (object)[
-				'tables' => [
-					'matrix_time_machine'
-				],
-				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_state_idx
-					ON {$table}
-					USING btree ( state COLLATE pg_catalog.default ASC NULLS LAST );
-				',
-				'drop' => '
-					DROP INDEX IF EXISTS {$table}_state_idx;
-				',
-				'sample' => '
-					SELECT *
-					FROM matrix_time_machine
-					WHERE state = \'deleted\'
-					LIMIT 1;
-				',
-				'name' => 'matrix_time_machine_state_idx',
-				'info' => 'Used to search by state, possible values: deleted | created.'
-			];
-
 		// timestamp
 			$ar_index[] = (object)[
 				'tables' => [
@@ -1738,7 +1716,7 @@
 				'info' => 'Used to search by timestamp, in time machine always descendant.'
 			];
 
-		// userID
+		// user_id
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix_time_machine'
@@ -1746,7 +1724,7 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
-					USING btree ("userID" ASC NULLS LAST );
+					USING btree ("user_id" ASC NULLS LAST );
 					',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_user_id_idx;
