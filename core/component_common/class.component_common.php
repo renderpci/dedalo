@@ -2857,6 +2857,8 @@ abstract class component_common extends common {
 			'id'	=> $ddo->id ?? null
 		]);
 
+		$diffusion_data[] = $diffusion_data_object;
+
 		// Custom function case
 			// If ddo provide a specific function to get its diffusion data
 			// check if it exists and can be used by diffusion environment
@@ -2867,40 +2869,31 @@ abstract class component_common extends common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !function_exists($this->$fn) ){
+				if( !method_exists($this, $fn) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
 						, logger::ERROR
 					);
 
-					$diffusion_data[] = $diffusion_data_object;
-
 					return $diffusion_data;
 				}
 
-				// not all functions are available for diffusion
-				// in the function is allowed get its value and return
-				// if the function is NOT allowed (default) return a diffusion value as null
-				switch ($fn) {
-					// functions allowed for diffusion environment
-
-
-					default:
-						// function is not allowed for diffusion environment
-						debug_log(__METHOD__
-							. " function is can not be used by diffusion " . PHP_EOL
-							. " function name: ". $fn
-							, logger::ERROR
-						);
-						$diffusion_value = null;
-
-						break;
+				// execute the function directly since it's already validated
+				try {
+					$diffusion_value = $this->$fn();
+				} catch (Throwable $e) {
+					debug_log(__METHOD__
+						. " error executing diffusion function " . PHP_EOL
+						. " function name: ". $fn . PHP_EOL
+						. " error: " . $e->getMessage()
+						, logger::ERROR
+					);
+					$diffusion_value = null;
 				}
+
 				// set the diffusion value and return the diffusion data
 				$diffusion_data_object->set_value( $diffusion_value );
-
-				$diffusion_data[] = $diffusion_data_object;
 
 				return $diffusion_data;
 			}
