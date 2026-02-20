@@ -100,6 +100,8 @@ class search {
 		public $sql_query;
 
 
+		// ar_duplicated_fields. Store the JSON queries when searching duplicates
+		public array $ar_duplicated_fields = [];
 
 	/**
 	* GET_INSTANCE
@@ -931,10 +933,42 @@ class search {
 			}
 
 		// Search elements. Order is important
+		// Search elements. Order is important
+			$this->ar_duplicated_fields = [];
 			$main_where_sql			= $this->build_main_where_sql();
 			$sql_query_order		= $this->build_sql_query_order();	// Order before select !
-			$sql_query_select		= $this->build_sql_query_select($full_count);
+
+			$is_duplicated = false;
+			if (isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated === true) {
+				$is_duplicated = true;
+			} else {
+				$check_dup = function($obj) use (&$check_dup) {
+					if (is_object($obj) || is_array($obj)) {
+						foreach($obj as $k => $v) {
+							if ($k === 'duplicated' && $v === true) return true;
+							if ((is_object($v) || is_array($v)) && $check_dup($v)) return true;
+						}
+					}
+					return false;
+				};
+				if (isset($this->search_query_object->filter) && $check_dup($this->search_query_object->filter)) {
+					$is_duplicated = true;
+				}
+			}
+
+			$inner_full_count = $is_duplicated ? false : $full_count;
+
+			$sql_query_select		= $this->build_sql_query_select($inner_full_count);
 			$sql_filter				= $this->build_sql_filter();
+
+			if ($is_duplicated && !empty($this->ar_duplicated_fields)) {
+				$ar_dup_selects = [];
+				foreach($this->ar_duplicated_fields as $i => $expr) {
+					$ar_dup_selects[] = $expr . ' as val_' . $i;
+				}
+				$sql_query_select .= ',' . PHP_EOL . implode(','.PHP_EOL, $ar_dup_selects);
+			}
+
 			$sql_projects_filter	= $this->build_sql_projects_filter();
 			$sql_joins				= $this->get_sql_joins();
 			$main_from_sql			= $this->build_main_from_sql();
@@ -944,6 +978,29 @@ class search {
 				$sql_limit	= 'all';
 				$sql_offset	= 0;
 			}
+
+			$orig_sql_limit = $sql_limit;
+			$orig_sql_offset = $sql_offset;
+			$orig_sqo_limit = $this->search_query_object->limit;
+			$orig_sqo_offset = $this->search_query_object->offset;
+
+			if ($is_duplicated) {
+				$sql_limit = '';
+				$sql_offset = 0;
+				$this->search_query_object->limit = 0;
+				$this->search_query_object->offset = 0;
+				$this->allow_sub_select_by_id = false;
+			}
+			$orig_sqo_limit = $this->search_query_object->limit;
+			$orig_sqo_offset = $this->search_query_object->offset;
+
+			if ($is_duplicated) {
+				$sql_limit = '';
+				$sql_offset = 0;
+				$this->search_query_object->limit = 0;
+				$this->search_query_object->offset = 0;
+			}
+
 			// order default add if not exists
 			if (empty($sql_query_order)) {
 				$sql_query_order = $this->build_sql_query_order_default();
@@ -960,7 +1017,7 @@ class search {
 		switch (true) {
 
 		// count case (place always at first case)
-			case ($full_count===true):
+			case ($inner_full_count===true):
 				// Only for count
 
 				// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique
@@ -1273,6 +1330,53 @@ class search {
 						);
 					}
 				break;
+		}
+
+		if (isset($orig_sqo_limit)) {
+			// Restore original limits safely inside the flow
+			$this->search_query_object->limit = $orig_sqo_limit;
+			$this->search_query_object->offset = $orig_sqo_offset;
+		}
+
+		if (isset($is_duplicated) && $is_duplicated && !empty($this->ar_duplicated_fields)) {
+			$inner_query = rtrim($sql_query, "; \n\r");
+			$sql_query = 'WITH filtered_candidates AS (' . PHP_EOL . $inner_query . PHP_EOL . '),';
+			$sql_query .= PHP_EOL . 'duplicate_check AS (';
+			$sql_query .= PHP_EOL . '    SELECT *,';
+			$partitions = [];
+			$not_nulls = [];
+			foreach($this->ar_duplicated_fields as $i => $expr) {
+				$partitions[] = 'val_' . $i;
+				$not_nulls[] = 'val_' . $i . ' IS NOT NULL';
+			}
+			$sql_query .= PHP_EOL . '           COUNT(*) OVER(PARTITION BY ' . implode(', ', $partitions) . ') as pair_occurrence';
+			$sql_query .= PHP_EOL . '    FROM filtered_candidates';
+			$sql_query .= PHP_EOL . '    WHERE ' . implode(' AND ', $not_nulls);
+			$sql_query .= PHP_EOL . ')';
+
+			if ($full_count) {
+				$sql_query .= PHP_EOL . 'SELECT COUNT(DISTINCT section_id) as full_count';
+				$sql_query .= PHP_EOL . 'FROM duplicate_check';
+				$sql_query .= PHP_EOL . 'WHERE pair_occurrence > 1';
+			} else {
+				$sql_query .= PHP_EOL . 'SELECT *';
+				$sql_query .= PHP_EOL . 'FROM duplicate_check';
+				$sql_query .= PHP_EOL . 'WHERE pair_occurrence > 1';
+
+				if(isset($this->sql_query_order_custom)) {
+					$clean_order = preg_replace('/\b' . preg_quote($this->main_section_tipo_alias, '/') . '\./', '', $this->sql_query_order_custom);
+					$sql_query .= PHP_EOL . $clean_order;
+				}else{
+					$clean_order = preg_replace('/\b' . preg_quote($this->main_section_tipo_alias, '/') . '\./', '', $sql_query_order);
+					$sql_query .= PHP_EOL . 'ORDER BY ' . $clean_order;
+				}
+				if (!empty($orig_sql_limit)) {
+					$sql_query .= PHP_EOL . 'LIMIT ' . $orig_sql_limit;
+				}
+				if (!empty($orig_sql_offset)) {
+					$sql_query .= PHP_EOL . 'OFFSET ' . $orig_sql_offset;
+				}
+			}
 		}
 
 		$sql_query .= ';' . PHP_EOL;
@@ -2509,87 +2613,14 @@ class search {
 						// set to true to get the filter of other components
 						$this->skip_duplicated = true;
 
-						// get the main from and main where
-						$main_from_sql	= $this->build_main_from_sql();
-						$main_where_sql	= $this->build_main_where_sql();
+						if (!isset($this->ar_duplicated_fields)) {
+							$this->ar_duplicated_fields = [];
+						}
+						$this->ar_duplicated_fields[] = $json_sql_component_path;
 
-						// get other component filters to be applied to the duplicated search
-						$sql_filter					= $this->build_sql_filter();
-						$sql_filter_by_locators		= $this->build_sql_filter_by_locators();
-
-						// v1
-							// $sql_where .= '-- Search duplicated value with !! (v1)';
-							// $sql_where .= PHP_EOL . '(';
-							// 	$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
-							// 	$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
-							// 	$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
-							// 	$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
-
-							// 		if (!empty($sql_filter)) {
-							// 			$sql_where .= $sql_filter;
-							// 		}elseif (!empty($sql_filter_by_locators)) {
-							// 			$sql_where .= $sql_filter_by_locators;
-							// 		}
-							// 		if (isset($this->filter_by_user_records)) {
-							// 			$sql_where .= $this->filter_by_user_records;
-							// 		}
-							// 		if (!empty($this->filter_join_where)) {
-							// 			$sql_where .= $this->filter_join_where;
-							// 		}
-
-							// 	$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
-							// 	$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
-							// 	$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
-							// $sql_where .= PHP_EOL . ')' . PHP_EOL;
-							// $sql_where .= '-- END Search duplicated value with !! (v1)';
-
-						// v2 - Optimized with EXISTS
-							// Instead of using an uncorrelated subquery `IN (SELECT ... GROUP BY HAVING count(*) > 1)` which forces
-							// PostgreSQL to fully aggregate the entire dataset (causing massive performance drops with HashAggregates),
-							// we use a correlated `EXISTS`. This allows Postgres to use index fast-pathing (stopping at the first duplicate found).
-							//
-							// Data flow & aliasing strategy:
-							// 1. We create a dedicated `$sub_alias` based on the query's current target `$table_alias`.
-							// 2. We dynamically replace the table references in `$json_sql_component_path` and filters to use `$sub_alias`.
-							// 3. For main sections ($table_alias === $this->main_section_tipo_alias), we safely mirror all active `$sql_filter`s
-							//    to ensure the duplicate exists within the same filtered subset defined by the user.
-							// 4. For related sections, we scope directly to the `$target_section_tipo` avoiding redundant external joins,
-							//    comparing the JSON extraction directly between the outer query row and the `EXISTS` subquery row.
-							$sql_where .= '-- Search duplicated value with !! (v2)';
-
-							$target_section_tipo = end($path)->section_tipo;
-							$sub_alias = $table_alias . '_sub';
-
-							$sub_json_path = preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $json_sql_component_path);
-
-							$sql_where .= PHP_EOL . '(';
-							$sql_where .= PHP_EOL . 'EXISTS (';
-							$sql_where .= PHP_EOL . 'SELECT 1';
-							$sql_where .= PHP_EOL . 'FROM '.$this->matrix_table.' AS '.$sub_alias;
-
-							if ($table_alias === $this->main_section_tipo_alias) {
-								$sub_main_where_sql = preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $main_where_sql);
-								$sql_where .= PHP_EOL . 'WHERE '.$sub_main_where_sql;
-
-								if (!empty($sql_filter)) {
-									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $sql_filter);
-								} elseif (!empty($sql_filter_by_locators)) {
-									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $sql_filter_by_locators);
-								}
-								if (isset($this->filter_by_user_records)) {
-									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $this->filter_by_user_records);
-								}
-							} else {
-								$sql_where .= PHP_EOL . 'WHERE '.$sub_alias.'.section_tipo = \''.$target_section_tipo.'\'';
-								$sql_where .= PHP_EOL . ' AND '.$sub_alias.'.section_id > 0';
-							}
-
-							$sql_where .= PHP_EOL . ' AND '.$sub_json_path.' = '.$json_sql_component_path;
-							$sql_where .= PHP_EOL . ' AND '.$sub_alias.'.section_id != '.$table_alias.'.section_id';
-							$sql_where .= PHP_EOL . ')';
-							$sql_where .= PHP_EOL . ')' . PHP_EOL;
-							$sql_where .= '-- END Search duplicated value with !! (v2)';
-
+						$sql_where .= '-- Search duplicated value with !! (v3)';
+						$sql_where .= PHP_EOL . ' 1=1 ';
+						$sql_where .= PHP_EOL . '-- END Search duplicated value with !! (v3)' . PHP_EOL;
 
 						$sql_where .= PHP_EOL;
 						break;
