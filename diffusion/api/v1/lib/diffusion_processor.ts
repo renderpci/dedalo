@@ -25,6 +25,7 @@ import type {
 	processed_record,
 	main_node,
 	parser_definition,
+	data_item
 } from './types';
 
 
@@ -220,8 +221,8 @@ function process_record(
 		for (const [lang, lang_entries] of entries_by_lang) {
 
 			// Build data items for the parser
-			const data_items = lang_entries.map(e => {
-				const item = {
+			const data_items = lang_entries.map((e: entry_value) => {
+				const item: data_item = {
 					id:    e.id,
 					value: e.value,
 					tipo:  e.tipo,
@@ -232,9 +233,6 @@ function process_record(
 				}
 				return item;
 			});
-
-
-			// Apply parser if defined
 			let column_value: string | null = null;
 			let handled_by_parser = false;
 			
@@ -252,10 +250,22 @@ function process_record(
 							
 							for (const item of parser_result) {
 								let val_str: string;
-								if (typeof item.value === 'object' && item.value !== null) {
+								
+								// Apply requested output format if defined
+								if (ctx.output_format === 'json') {
+									// Just JSON stringify the whole value, whether object or primitive
 									val_str = JSON.stringify(item.value);
+								} else if (ctx.output_format === 'int') {
+									// Parse as integer
+									val_str = String(parseInt(String(item.value), 10));
+									if (val_str === 'NaN') val_str = '0';
 								} else {
-									val_str = String(item.value);
+									// Default string format
+									if (typeof item.value === 'object' && item.value !== null) {
+										val_str = JSON.stringify(item.value);
+									} else {
+										val_str = String(item.value);
+									}
 								}
 								
 								// Determine language key
@@ -274,8 +284,19 @@ function process_record(
 					}
 				}
 			} else {
-				// No parser — use join_items_to_string (default behavior)
-				column_value = join_items_to_string(data_items, {});
+				// No parser — use join_items_to_string (default behavior) or apply specific format to the whole set
+				if (ctx.output_format === 'json') {
+					// Just JSON encode the values
+					const raw_values = data_items.map(d => d.value);
+					column_value = JSON.stringify(raw_values);
+				} else if (ctx.output_format === 'int') {
+					// Parse first value as int
+					const first_val = data_items[0]?.value;
+					column_value = String(parseInt(String(first_val), 10));
+					if (column_value === 'NaN') column_value = '0';
+				} else {
+					column_value = join_items_to_string(data_items, {});
+				}
 			}
 
 			if (!handled_by_parser) {
