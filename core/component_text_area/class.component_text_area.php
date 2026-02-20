@@ -1426,7 +1426,7 @@ class component_text_area extends component_string_common {
 	/**
 	* GET_GEOJSON_DATA
 	* @see ontology publication use in mdcat4091
-	* @return array $geolocation_data
+	* @return array
 	*/
 	public function get_geojson_data() : array {
 
@@ -1434,7 +1434,6 @@ class component_text_area extends component_string_common {
 			$ar_elements = $this->build_geolocation_data(
 				true
 			);
-			$geolocation_data = json_encode($ar_elements, JSON_UNESCAPED_UNICODE);
 
 		// fallback optional
 			if ( empty($ar_elements) ) {
@@ -1472,9 +1471,12 @@ class component_text_area extends component_string_common {
 
 				// component_geolocation data
 				$geolocation_data = $component_geolocation->get_diffusion_value_as_geojson();
+				if (!empty($geolocation_data)) {
+					$ar_elements = json_decode($geolocation_data, true) ?? [];
+				}
 			}
 
-		return $geolocation_data; // json_encoded object
+		return $ar_elements; // array
 	}//end get_geojson_data
 
 
