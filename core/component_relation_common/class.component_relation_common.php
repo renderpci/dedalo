@@ -1073,32 +1073,32 @@ class component_relation_common extends component_common {
 					return $diffusion_data;
 				}
 
-				// not all functions are available for diffusion
-				// in the function is allowed get its value and return
-				// if the function is NOT allowed (default) return a diffusion value as null
-				switch ($fn) {
-					// add parents
-					case 'add_parents':		
-						$data = $this->get_data();
-						$diffusion_data_object->set_value( $data );
-						$diffusion_data_object = $this->add_parents( $diffusion_data_object );
-						return $diffusion_data;
-						break;	
-					// functions allowed for diffusion environment
-					case 'get_custom_parents':
-						break;
+				// execute the function directly since it's already validated
+				try {
+					$diffusion_value = $this->$fn();
 
-					default:
-						// function is not allowed for diffusion environment
-						debug_log(__METHOD__
-							. " function is can not be used by diffusion " . PHP_EOL
-							. " function name: ". $fn
-							, logger::ERROR
+					switch ($fn) {
+						// add parents
+						case 'add_parents':		
+							$data = $this->get_data();
+							$diffusion_data_object->set_value( $data );
+							$diffusion_data_object->parents = $diffusion_value;
+							
+							return $diffusion_data;
+						default:
+							break;
+					}
+				} catch (Throwable $e) {
+					// fallback when method does not expect $diffusion_data_object
+					debug_log(__METHOD__
+						. " error executing diffusion function " . PHP_EOL
+						. " function name: ". $fn . PHP_EOL
+						. " error: " . $e->getMessage()
+						, logger::ERROR
 						);
 						$diffusion_value = null;
-
-						break;
 				}
+
 				// set the diffusion value and return the diffusion data
 				$diffusion_data_object->set_value( $diffusion_value );
 				return $diffusion_data;
@@ -1455,19 +1455,18 @@ class component_relation_common extends component_common {
 	/**
 	* ADD_PARENTS
 	* Resolve hierarchy for component values (term + parents)
-	* @param object $diffusion_data_object
-	* @return object $diffusion_data_object
+	* @return array $parents_map
 	*/
-	protected function add_parents( object $diffusion_data_object ) : object {
+	protected function add_parents() : array {
 		
 		$start_time = start_time();
 
-		$data 		= $diffusion_data_object->get_value(); // Array of locators
+		$data = $this->get_data();
 
 		$parents_map 	= [];
 		$parents_chain 	= [];
 		
-		if (empty($data)) return $diffusion_data_object;
+		if (empty($data)) return $parents_map;
 
 		foreach($data as $locator) {
 			
@@ -1520,14 +1519,12 @@ class component_relation_common extends component_common {
 			
 		$parents_map[$parents_key] = $parents_chain;
 		
-		// Set parents to DDO
-		$diffusion_data_object->parents = $parents_map;
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__." Time: $exec_time", logger::DEBUG);
 		}
 
-		return $diffusion_data_object;
+		return $parents_map;
 	}
 
 	/**
