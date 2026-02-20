@@ -76,6 +76,7 @@ export interface context_field {
 	parser:      parser_definition | parser_definition[] | Record<string, never>;
 	varchar?:    number;
 	length?:     number;
+	output_format?: string;
 }
 
 export interface parser_definition {
@@ -105,6 +106,16 @@ export interface entry_value {
 	lang:   string | null;
 	value:  unknown;
 	id:     string | null;
+	parents?: any[];
+}
+
+// Re-used for parser inputs, matches entry_value closely
+export interface data_item {
+	id:    string | null;
+	value: any;
+	tipo?: string;
+	lang?: string | null;
+	parents?: any[];
 }
 
 
