@@ -127,6 +127,10 @@ class sections extends common {
 		if( !isset($this->search_query_object->offset) ) {
 			$this->search_query_object->offset = 0;
 		}
+
+		// select. Force [] (section_tipo, section_id) to reduce unused data
+		$this->search_query_object->select = [];
+
 	}//end set_up
 
 
