@@ -21,19 +21,30 @@ class update_code {
 	*/
 	public static function check_remote_server( object $server ) : object {
 
+		$server_url = $server->url ?? null;
+
+		if (empty($server_url)) {
+			$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Missing server URL';
+			$response->errors	= ['Missing server URL'];
+			$response->code		= 0;
+			return $response;
+		}
+
 		// rqo
 			$rqo = new stdClass();
 				$rqo->dd_api	= 'dd_utils_api';
 				$rqo->action	= 'get_server_ready_status';
 				$rqo->options	= new stdClass();
 					$rqo->options->check = 'code_server';
-					$rqo->options->url = $server->url;
+					$rqo->options->url = $server_url;
 
 			$rqo_string = 'rqo=' . json_encode($rqo);
 
 		// curl_request
 			$response = curl_request((object)[
-				'url'				=> $server->url,
+				'url'				=> $server_url,
 				'post'				=> true,
 				'postfields'		=> $rqo_string,
 				'returntransfer'	=> 1,
@@ -46,10 +57,12 @@ class update_code {
 					: false // default case
 			]);
 
-			if ( !empty($response->result) ){
-				$response->result = json_decode($response->result);
+			if (!empty($response->result) && is_string($response->result)) {
+				$decoded = json_decode($response->result);
+				if (json_last_error() === JSON_ERROR_NONE) {
+					$response->result = $decoded;
+				}
 			}
-
 
 		return $response;
 	}//end check_remote_server
@@ -92,26 +105,24 @@ class update_code {
 				$server_ready = update_code::check_remote_server( $server );
 
 				// add server object additional info
-				$server->msg			= $server_ready->msg;
-				$server->errors			= $server_ready->errors;
-				$server->response_code	= $server_ready->code;
-				$server->result			= $server_ready->result;
-				$server->code			= $server->code;
+				$server->msg			= $server_ready->msg ?? null;
+				$server->errors			= $server_ready->errors ?? [];
+				$server->response_code	= $server_ready->code ?? 0;
+				$server->result			= $server_ready->result ?? false;
+				$server->code			= $server->code ?? null;
 
 				$code_servers[] = $server;
 			}
 
 		$result = (object)[
 			'servers'							=> $code_servers,
-			'dedalo_source_version_local_dir'	=> DEDALO_SOURCE_VERSION_LOCAL_DIR,
-			'is_a_code_server'					=> IS_A_CODE_SERVER,
+			'dedalo_source_version_local_dir'	=> defined('DEDALO_SOURCE_VERSION_LOCAL_DIR') ? DEDALO_SOURCE_VERSION_LOCAL_DIR : null,
+			'is_a_code_server'					=> defined('IS_A_CODE_SERVER') ? IS_A_CODE_SERVER : false,
 		];
 
-		$response = new stdClass();
+		// set response
 			$response->result	= $result;
 			$response->msg		= 'OK. Request done successfully';
-			$response->errors	= [];
-
 
 		return $response;
 	}//end get_value
@@ -119,14 +130,19 @@ class update_code {
 
 
 	/**
-	* UPDATE_CODE
-	* Download code in zip format file from the GIT repository defined in config
-	* @param object $options
-	* {
-	* 	file: object
-	* }
-	* @return object $response
-	*/
+	 * UPDATE_CODE
+	 *
+	 * Downloads the Dédalo code base in ZIP format from the repository, extracts it,
+	 * and applies the update based on the specified mode. Handles pre-update scripts,
+	 * file downloading, extraction, code swapping, and cache clearing.
+	 *
+	 * @param object $options Configuration options for the update.
+	 * @property object $options->file An object containing the file to download. Must have a 'url' property.
+	 * @property string $options->update_mode The update strategy to use (e.g., 'clean' or 'incremental').
+	 * @property mixed $options->info Additional information to pass to the update execution methods.
+	 *
+	 * @return object An object containing the operation result ($response->result) and messages ($response->msg, $response->errors).
+	 */
 	public static function update_code(object $options) : object {
 		$start_time = start_time();
 
@@ -136,13 +152,14 @@ class update_code {
 			$response->errors	= [];
 
 		// options
-			$file			= $options->file;
-			$update_mode	= $options->update_mode;
-			$info			= $options->info;
+			$file			= $options->file ?? null;
+			$update_mode	= $options->update_mode ?? 'incremental';
+			$info			= $options->info ?? null;
 
 		try {
 
 			// Provisional position, @TODO: move at the end of the update process
+			// Run pre-update scripts (defined in updates.php) for this code version.
 			$update_response = update::pre_update_version();
 			return $update_response;
 
@@ -356,6 +373,13 @@ class update_code {
 				gc_collect_cycles();
 				sleep(1);
 
+			// Run pre-update scripts (defined in updates.php) for this code version.
+				// $update_response = update::pre_update_version();
+				// if ($update_response->result === false) {
+				// 	$response->errors = array_merge($response->errors, $update_response->errors);
+				// 	$response->msg .= ' pre_update_version failed. ';
+				// }
+
 			// logger activity : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), Data(array of related info)
 				logger::$obj['activity']->log_message(
 					'SAVE',
@@ -406,21 +430,30 @@ class update_code {
 				$response->errors	= [];
 
 		// options
-			$source	= $options->source;
-			$target	= $options->target;
+			$source	= $options->source ?? null;
+			$target	= $options->target ?? null;
+
+			if (empty($source) || empty($target)) {
+				$response->msg .= 'Error. Source or target undefined';
+				$response->errors[] = 'Source or target undefined';
+				return $response;
+			}
 
 		// exec sync files using RSYNC
 			$exclude	= ' --exclude="*/config*" --exclude="media" ';
 			$additional = ''; // $is_preview===true ? ' --dry-run ' : '';
-			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . $source.'/ ' . $target.'/';
-			$output		= shell_exec($command);
-			if ($output===null) {
+			$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $additional . escapeshellarg($source.'/').' ' . escapeshellarg($target.'/');
+
+			exec($command, $output, $result_code);
+
+			if ($result_code !== 0) {
 				$response->msg .= 'Error executing RSYNC command. source: '.$source;
 
 				debug_log(__METHOD__
 					. $response->msg  . PHP_EOL
 					. ' command: ' . to_string($command) . PHP_EOL
-					. ' output: ' . to_string($output)
+					. ' output: ' . to_string($output) . PHP_EOL
+					. ' result_code: ' . to_string($result_code)
 					, logger::ERROR
 
 				);
@@ -432,7 +465,7 @@ class update_code {
 			debug_log(__METHOD__
 				.' RSYNC execution done '. PHP_EOL
 				.' command: ' . $command . PHP_EOL
-				.' output: ' . $output
+				.' output: ' . to_string($output)
 				, logger::WARNING
 			);
 
@@ -464,13 +497,25 @@ class update_code {
 				$response->errors	= [];
 
 		// options
-			$source	= $options->source;
-			$target	= $options->target;
-			$info	= $options->info;
+			$source	= $options->source ?? null;
+			$target	= $options->target ?? null;
+			$info	= $options->info ?? null;
+
+			if (empty($source) || empty($target)) {
+				$response->msg .= 'Error. Source or target undefined';
+				$response->errors[] = 'Source or target undefined';
+				return $response;
+			}
+
+			// Escaped shell arguments safely
+			$esc_source      = escapeshellarg($source);
+			$esc_target      = escapeshellarg($target);
+			$esc_target_code = escapeshellarg($target . '_code');
 
 		// upgrade files
 		// copy downloaded folder to httpdocs like ../tmp/dedalo_code => ../httpdocs/dedalo_code
-			$command = "cp -R {$source} {$target}_code";
+			$command = "cp -R {$esc_source} {$esc_target_code}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
@@ -571,12 +616,17 @@ class update_code {
 
 			$tools_src = "{$target}/tools";
 			$old_tools = dir($tools_src);
-			while(($file = $old_tools->read()) !== false) {
-				if($file === "." || $file === "..") continue;
-				if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
+			if ($old_tools !== false) {
+				while(($file = $old_tools->read()) !== false) {
+					if($file === "." || $file === "..") continue;
+					if( is_dir($tools_src .'/'. $file) && !in_array($file, $dd_tools) ) {
 
-					$command = "cp -R {$tools_src}/{$file} {$target}_code/tools/{$file}";
-					exec($command, $output, $result_code);
+						$esc_file_src = escapeshellarg("{$tools_src}/{$file}");
+						$esc_file_dst = escapeshellarg("{$target}_code/tools/{$file}");
+
+						$command = "cp -R {$esc_file_src} {$esc_file_dst}";
+						$output = [];
+						exec($command, $output, $result_code);
 					if ($result_code!=0) {
 						$response->errors[]	= 'copy tools files failed';
 						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing command: '.$command;
@@ -598,13 +648,18 @@ class update_code {
 						, logger::WARNING
 					);
 				}
+				}
+				$old_tools->close();
 			}
 
 		// move directory old version to backups as '../httpdocs/dedalo' => '../backup/code/dedalo_6.3.1'
 			$backup_code_path = DEDALO_BACKUP_PATH . '/code';
 			create_directory($backup_code_path);
-			$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_his');
-			$command = "mv $target $old_copy_final_path";
+			$old_copy_final_path = "{$backup_code_path}/dedalo_" .DEDALO_VERSION . '_' . date('Y-m-d_His');
+			$esc_old_copy_final_path = escapeshellarg($old_copy_final_path);
+
+			$command = "mv {$esc_target} {$esc_old_copy_final_path}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->errors[]	= 'move old version to code backups failed';
@@ -628,7 +683,10 @@ class update_code {
 			);
 
 		// move media directory from old to the new directory like '../backup/code/dedalo_6.3.1/media' => '../httpdocs/dedalo_code/media'
-			$command = "mv {$old_copy_final_path}/media {$target}_code/media";
+			$esc_media_src = escapeshellarg("{$old_copy_final_path}/media");
+			$esc_media_dst = escapeshellarg("{$target}_code/media");
+			$command = "mv {$esc_media_src} {$esc_media_dst}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->errors[]	= 'move media dir failed';
@@ -652,7 +710,10 @@ class update_code {
 			);
 
 		// move local directory from old to the new directory like '../backup/code/dedalo_6.3.1/local' => '../httpdocs/dedalo_code/local'
-			$command = "mv {$old_copy_final_path}/local {$target}_code/local";
+			$esc_local_src = escapeshellarg("{$old_copy_final_path}/local");
+			$esc_local_dst = escapeshellarg("{$target}_code/local");
+			$command = "mv {$esc_local_src} {$esc_local_dst}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->errors[]	= 'move local dir failed';
@@ -676,7 +737,8 @@ class update_code {
 			);
 
 		// rename new version directory to final dir such as 'dedalo_code' => 'dedalo'
-			$command = "mv {$target}_code {$target}";
+			$command = "mv {$esc_target_code} {$esc_target}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->errors[]	= 'rename new version failed';
@@ -700,7 +762,8 @@ class update_code {
 			);
 
 		// set permissions
-			$command = "chmod -R 750 {$target}";
+			$command = "chmod -R 750 {$esc_target}";
+			$output = [];
 			exec($command, $output, $result_code);
 			if ($result_code!=0) {
 				$response->errors[]	= 'set permissions failed';
@@ -764,9 +827,9 @@ class update_code {
 				// Append msg
 
 				if( $output!==true ) {
-					$response->msg = ' Error, is not possible build version code shell_exec output: '. $output;
+					$response->msg = ' Error, is not possible build version code shell_exec output: '. to_string($output);
 					debug_log(__METHOD__
-						.' ERROR: build_version_code output: '.$output
+						.' ERROR: build_version_code output: '. to_string($output)
 						, logger::ERROR
 					);
 					$response->errors[] = 'shell_exec execution failed';
@@ -835,10 +898,14 @@ class update_code {
 		// source
 			$source = DEDALO_CODE_SERVER_GIT_DIR;
 
+			$esc_source = escapeshellarg($source);
+			$esc_branch = escapeshellarg($branch);
+			$esc_target = escapeshellarg($target);
+
 		// command @see https://git-scm.com/docs/git-archive
 			$command = strpos($source, 'ssh://')!==false
-				? "git archive --remote=$source --verbose --format=zip --prefix=dedalo_code/ $branch > $target" // remote GIT
-				: "cd $source; git archive --verbose --format=zip --prefix=dedalo_code/ $branch > $target "; // local GIT
+				? "git archive --remote={$esc_source} --verbose --format=zip --prefix=dedalo_code/ {$esc_branch} > {$esc_target}" // remote GIT
+				: "cd {$esc_source}; git archive --verbose --format=zip --prefix=dedalo_code/ {$esc_branch} > {$esc_target}"; // local GIT
 
 		// debug
 			debug_log(__METHOD__
@@ -847,7 +914,7 @@ class update_code {
 				, logger::DEBUG
 			);
 
-		$output			= null;
+		$output			= [];
 		$result_code	= null;
 		exec($command, $output, $result_code);
 
@@ -873,8 +940,15 @@ class update_code {
 	public static function get_code_path( ?array $version = null ) : string|false {
 
 		$dedalo_version	= $version ?? get_dedalo_version();
-		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
-		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
+		$major          = $dedalo_version[0] ?? null;
+		$minor          = $dedalo_version[1] ?? null;
+
+		if ($major === null || $minor === null || !defined('DEDALO_CODE_FILES_DIR')) {
+			return false;
+		}
+
+		$version_path	= $major . '.' . $minor;
+		$base_path		= DEDALO_CODE_FILES_DIR."/{$major}/{$version_path}";
 		$path			= is_dir( $base_path )===true
 			? $base_path
 			: false;
@@ -893,8 +967,15 @@ class update_code {
 	public static function set_code_path() : string|false {
 
 		$dedalo_version	= get_dedalo_version();
-		$version_path	= $dedalo_version[0].'.'.$dedalo_version[1];
-		$base_path		= DEDALO_CODE_FILES_DIR."/{$dedalo_version[0]}/{$version_path}";
+		$major          = $dedalo_version[0] ?? null;
+		$minor          = $dedalo_version[1] ?? null;
+
+		if ($major === null || $minor === null || !defined('DEDALO_CODE_FILES_DIR')) {
+			return false;
+		}
+
+		$version_path	= $major . '.' . $minor;
+		$base_path		= DEDALO_CODE_FILES_DIR."/{$major}/{$version_path}";
 		$path			= create_directory( $base_path )===false
 			? false
 			: $base_path;
@@ -931,6 +1012,10 @@ class update_code {
 	*/
 	public static function set_development_path() : string|false {
 
+		if (!defined('DEDALO_CODE_FILES_DIR')) {
+			return false;
+		}
+
 		$base_path	= DEDALO_CODE_FILES_DIR . '/development';
 		$path		= create_directory( $base_path )===false
 			? false
@@ -951,10 +1036,17 @@ class update_code {
 	public static function get_code_url( ?array $version = null ) : string|false {
 
 		$dedalo_version	= $version ?? get_dedalo_version();
-		$version_path	= $dedalo_version[0] .'.'. $dedalo_version[1];
-		$base_path		= DEDALO_CODE_FILES_DIR . "/{$dedalo_version[0]}/{$version_path}";
+		$major          = $dedalo_version[0] ?? null;
+		$minor          = $dedalo_version[1] ?? null;
+
+		if ($major === null || $minor === null || !defined('DEDALO_CODE_FILES_DIR') || !defined('DEDALO_CODE_FILES_URL')) {
+			return false;
+		}
+
+		$version_path	= $major .'.'. $minor;
+		$base_path		= DEDALO_CODE_FILES_DIR . "/{$major}/{$version_path}";
 		$url			= is_dir( $base_path )===true
-			? DEDALO_CODE_FILES_URL . "/{$dedalo_version[0]}/{$version_path}"
+			? DEDALO_CODE_FILES_URL . "/{$major}/{$version_path}"
 			: false;
 
 		return $url;
@@ -987,6 +1079,10 @@ class update_code {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
+
+		$client_version[0] = (int)($client_version[0] ?? 0);
+		$client_version[1] = (int)($client_version[1] ?? 0);
+		$client_version[2] = (int)($client_version[2] ?? 0);
 
 		// updates
 		// reads 'update.php' file object
@@ -1157,15 +1253,19 @@ class update_code {
 
 			$result->info->version		= $server_version;
 			$result->info->date			= $date;
-			$result->info->entity_id	= DEDALO_ENTITY_ID;
-			$result->info->entity		= DEDALO_ENTITY;
-			$result->info->entity_label	= DEDALO_ENTITY_LABEL;
-			$result->info->host			= DEDALO_HOST;
+			$result->info->entity_id	= defined('DEDALO_ENTITY_ID') ? DEDALO_ENTITY_ID : null;
+			$result->info->entity		= defined('DEDALO_ENTITY') ? DEDALO_ENTITY : null;
+			$result->info->entity_label	= defined('DEDALO_ENTITY_LABEL') ? DEDALO_ENTITY_LABEL : null;
+			$result->info->host			= defined('DEDALO_HOST') ? DEDALO_HOST : null;
 			$result->info->tool_names	= $tool_names;
 
 		// files
 			// build the file_path with the valid versions
 			// client will can select what is the update that it want use.
+			$force_update_mode = null;
+			$protocol          = defined('DEDALO_PROTOCOL') ? DEDALO_PROTOCOL : 'https://';
+			$host              = defined('DEDALO_HOST') ? DEDALO_HOST : 'localhost';
+
 			foreach ($versions as $valid_version_obj) {
 
 				$valid_version		= $valid_version_obj->version;
@@ -1185,7 +1285,7 @@ class update_code {
 
 					$file_item = new stdClass();
 						$file_item->version	= implode('.', $valid_version);
-						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $file_name );
+						$file_item->url		= $protocol . $host . $code_url .'/'. basename( $file_name );
 						$file_item->date	= $file_date;
 
 					if( !empty($force_update_mode) ){
@@ -1198,22 +1298,24 @@ class update_code {
 
 			// development version file
 				$development_path	= update_code::set_development_path();
-				$development_file	= $development_path .'/dedalo_development.zip';
-				if (file_exists($development_file)) {
+				if ($development_path !== false) {
+					$development_file	= $development_path .'/dedalo_development.zip';
+					if (file_exists($development_file)) {
 
-					$code_url	= DEDALO_CODE_FILES_URL . '/development';
-					$file_date	= date("Y-m-d H:i:s", filemtime($development_file));
+						$code_url	= defined('DEDALO_CODE_FILES_URL') ? DEDALO_CODE_FILES_URL . '/development' : '';
+						$file_date	= date("Y-m-d H:i:s", filemtime($development_file));
 
-					$file_item = new stdClass();
-						$file_item->version	= 'development';
-						$file_item->url		= DEDALO_PROTOCOL . DEDALO_HOST . $code_url .'/'. basename( $development_file );
-						$file_item->date	= $file_date;
+						$file_item = new stdClass();
+							$file_item->version	= 'development';
+							$file_item->url		= $protocol . $host . $code_url .'/'. basename( $development_file );
+							$file_item->date	= $file_date;
 
-					if( !empty($force_update_mode) ){
-						$file_item->force_update_mode	= $force_update_mode;
+						if( !empty($force_update_mode) ){
+							$file_item->force_update_mode	= $force_update_mode;
+						}
+
+						$result->files[] = $file_item;
 					}
-
-					$result->files[] = $file_item;
 				}
 
 		// response
