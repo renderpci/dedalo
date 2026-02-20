@@ -125,10 +125,11 @@ class update {
 
 						array_push($msg, 'Error on run_pre_scripts: '.to_string($current_script));
 
-						debug_log(__METHOD__." Error on run_pre_scripts ".PHP_EOL
-							. 'The result is false. Check your script: ' .PHP_EOL
-							. to_string($current_script) .PHP_EOL
-							. 'Note that the run_pre_scripts loop to be continue with the next one'
+						debug_log(__METHOD__." Error on run_pre_scripts " . PHP_EOL
+							. 'Note that the `run_pre_scripts` loop continues with the next one.' . PHP_EOL
+							. 'The result is false. Check your script: '  . PHP_EOL
+							. 'current_script: ' . to_string($current_script) . PHP_EOL
+							. 'run_scripts_response: ' . json_encode($run_scripts_response, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 

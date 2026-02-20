@@ -2057,11 +2057,7 @@ function check_basic_system() : object {
 
 				return $response;
 			}
-
 		}
-
-
-
 
 	$response->result 	= true;
 	$response->msg 		= 'OK. check_basic_system done';
