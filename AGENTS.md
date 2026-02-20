@@ -95,14 +95,12 @@ private function build_component_instance(
 ```php
 /**
  * METHOD_DESCRIPTION
- * Detailed explanation of purpose and behavior
+ * Detailed explanation of purpose and behavior.
+ * Add examples of usage where possible.
  *
  * @param type $param_name Description of parameter
  * @return type Description of return value
  * @throws Exception Description of when exception is thrown
- *
- * @package Dedalo
- * @subpackage Core
  */
 ```
 

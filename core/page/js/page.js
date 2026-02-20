@@ -225,7 +225,7 @@ page.prototype.init = async function(options) {
 						// container
 							const container	= self.bubbles_notification_container
 							if (!container) {
-								console.error('bubbles_notification_container is undefined!');
+								console.log('Warning. bubbles_notification_container is undefined!');
 								return
 							}
 

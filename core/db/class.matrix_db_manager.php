@@ -1053,9 +1053,11 @@ class matrix_db_manager {
 	* 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
 	* @param array $params = []
 	* 	Search parameters for pg_execute
+	* @param bool $verbose = false
+	* 	Show debug info
 	* @return \PgSql\Result|false $result
 	*/
-	public static function exec_search( string $sql_query, array $params=[] ) : \PgSql\Result|false {
+	public static function exec_search( string $sql_query, array $params=[], bool $verbose=false ) : \PgSql\Result|false {
 
 		// debug
 		if(SHOW_DEBUG===true) {
@@ -1133,39 +1135,153 @@ class matrix_db_manager {
 			// metrics
 			metrics::$exec_search_total_time += $total_time_ms;
 
-			// query additional info
-			$bt = debug_backtrace();
-			if (isset($bt[1]['function'])) {
+			if($verbose===true) {
+				// query additional info
+				$bt = debug_backtrace();
+				if (isset($bt[1]['function'])) {
 
-				$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
+					$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
 
-				foreach ([1,2,3,4,5,6,7,8] as $key) {
-					if (isset($bt[$key]['function'])) {
-						$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
+					foreach ([1,2,3,4,5,6,7] as $key) {
+						if (isset($bt[$key]['function'])) {
+							$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
+						}
 					}
+					$sql_query = $sql_prepend . trim($sql_query);
 				}
-				$sql_query = $sql_prepend . trim($sql_query);
-			}
 
-			// debug log sql query. See PHP log file
-			$sql_query = '-- exec_search ' . count($params) . ' params [' .$stmt_name. '] : ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
-			$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
-			if(isset($prepend_sql)) {
-				$sql_query_debug = $prepend_sql . $sql_query_debug;
+				// debug log sql query. See PHP log file
+				$sql_query = '-- exec_search ' . count($params) . ' params [' .$stmt_name. '] : ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
+				$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
+				if(isset($prepend_sql)) {
+					$sql_query_debug = $prepend_sql . $sql_query_debug;
+				}
+				$level = $total_time_ms > 20 ? logger::WARNING : logger::DEBUG;
+				debug_log(__METHOD__
+					. ' sql_query_debug: ' . PHP_EOL
+					. PHP_EOL . $sql_query_debug . PHP_EOL
+					// . PHP_EOL . $sql_query . PHP_EOL
+					// .' params: ' . json_encode($params) . PHP_EOL
+					, $level
+				);
+			}else{
+				$sql_query_debug = '-- exec_search ' . $total_time_ms . ' ms - ' . count($params) . ' params [' .$stmt_name. ']';
+				if(isset($prepend_sql)) {
+					$sql_query_debug = $prepend_sql . $sql_query_debug;
+				}
+				debug_log(__METHOD__
+					. ' sql_query_debug: ' . PHP_EOL
+					. $sql_query_debug
+					, logger::DEBUG
+				);
 			}
-			$level = $total_time_ms > 20 ? logger::WARNING : logger::DEBUG;
-			debug_log(__METHOD__
-				. ' sql_query_debug: ' . PHP_EOL
-				. PHP_EOL . $sql_query_debug . PHP_EOL
-				// . PHP_EOL . $sql_query . PHP_EOL
-				// .' params: ' . json_encode($params) . PHP_EOL
-				, $level
-			);
 		}
 
 
 		return $result; // \PgSql\Result or false
 	}//end exec_search
+
+
+
+	/**
+	 * EXEC_SQL
+	 * Perform a SQL query in DB using pg_query.
+	 * Suitable for administrative tasks like schema changes and multiple commands in one string.
+	 *
+	 * @param string $sql_query
+	 * 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
+	 * @param bool $verbose = false
+	 * 	Show debug info
+	 * @return \PgSql\Result|false $result
+	 */
+	public static function exec_sql( string $sql_query, bool $verbose=false ) : \PgSql\Result|false {
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+
+			// metrics
+			metrics::$exec_search_total_calls++;
+		}
+
+		// connection to DDBB
+		$conn = DBi::_getConnection() ?? false;
+		if ($conn===false) {
+			debug_log(__METHOD__
+				." Error. DDBB connection failed "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// exec Without prepared statement
+		$result = pg_query($conn, $sql_query);
+
+		// check result
+		if($result===false) {
+			debug_log(__METHOD__
+				." Error Processing exec_SQL Request. :". PHP_EOL
+				.' pg_last_error: ' . pg_last_error($conn) . PHP_EOL
+				." sql_query: " . to_string($sql_query)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			// time
+			$total_time_ms = exec_time_unit($start_time, 'ms');
+			if($total_time_ms>SLOW_QUERY_MS) {
+				debug_log(__METHOD__
+					. " SQL_SLOW_QUERY [$total_time_ms ms]: ". PHP_EOL
+					. $sql_query
+					, logger::WARNING
+				);
+			}
+
+			// metrics
+			metrics::$exec_search_total_time += $total_time_ms;
+
+			if($verbose===true) {
+				// query additional info
+				$bt = debug_backtrace();
+				if (isset($bt[1]['function'])) {
+
+					$sql_prepend = '-- exec_sql: ' . $total_time_ms . ' ms' . PHP_EOL;
+
+					foreach ([1,2,3,4,5,6,7] as $key) {
+						if (isset($bt[$key]['function'])) {
+							$sql_prepend .= '--  ['.$key.'] ' . $bt[$key]['function'] . "\n";
+						}
+					}
+					$sql_query = $sql_prepend . trim($sql_query);
+				}
+
+				// debug log sql query. See PHP log file
+				$sql_query = '-- exec_sql: ' . implode('|', array_reverse(get_backtrace_sequence())) . PHP_EOL . $sql_query;
+
+				$level = $total_time_ms > 20 ? logger::WARNING : logger::DEBUG;
+				debug_log(__METHOD__
+					. ' sql_query_debug: ' . PHP_EOL
+					. PHP_EOL . $sql_query . PHP_EOL
+					, $level
+				);
+			}else{
+				$sql_query_debug = '-- exec_sql ' . $total_time_ms . ' ms';
+				if(isset($prepend_sql)) {
+					$sql_query_debug = $prepend_sql . $sql_query_debug;
+				}
+				debug_log(__METHOD__
+					. ' sql_query_debug: ' . PHP_EOL
+					. $sql_query_debug
+					, logger::DEBUG
+				);
+			}
+		}
+
+		return $result;
+	}//end exec_sql
 
 
 

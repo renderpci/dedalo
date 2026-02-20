@@ -108,7 +108,6 @@ final class Builder
         'order-by=',
         'process-isolation',
         'do-not-report-useless-tests',
-        'dont-report-useless-tests',
         'random-order',
         'random-order-seed=',
         'reverse-order',
@@ -156,6 +155,7 @@ final class Builder
         'test-suffix=',
         'testsuite=',
         'exclude-testsuite=',
+        'test-files-file=',
         'log-events-text=',
         'log-events-verbose-text=',
         'version',
@@ -307,6 +307,7 @@ final class Builder
         $testSuffixes                      = null;
         $testSuite                         = null;
         $excludeTestSuite                  = null;
+        $testFilesFile                     = null;
         $useDefaultConfiguration           = true;
         $version                           = false;
         $logEventsText                     = null;
@@ -482,6 +483,11 @@ final class Builder
 
                 case '--exclude-testsuite':
                     $excludeTestSuite = $option[1];
+
+                    break;
+
+                case '--test-files-file':
+                    $testFilesFile = $option[1];
 
                     break;
 
@@ -1060,15 +1066,6 @@ final class Builder
 
                     break;
 
-                case '--dont-report-useless-tests':
-                    EventFacade::emitter()->testRunnerTriggeredPhpunitDeprecation(
-                        'Option --dont-report-useless-tests is deprecated, use --do-not-report-useless-tests instead',
-                    );
-
-                    $reportUselessTests = false;
-
-                    break;
-
                 case '--strict-coverage':
                     $strictCoverage = true;
 
@@ -1256,6 +1253,7 @@ final class Builder
 
         return new Configuration(
             $options[1],
+            $testFilesFile,
             $all,
             $atLeastVersion,
             $backupGlobals,

@@ -34,3 +34,4 @@ Information regarding project tasks and migration progress.
 16. **Naming Inconsistency**: Resolve structural naming differences between platforms:
     *   **Server-side (PHP)**: `data` -> `[data_elements]` -> `data_element` -> `{value, lang, ...}`
     *   **Client-side (JS)**: `datum` -> `data` -> `[entries]` -> `entry` -> `{value, lang, ...}`
+17. **component_date**: Mode is wrong. Review the logic.
