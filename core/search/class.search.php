@@ -596,6 +596,8 @@ class search {
 
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
 
+				dump($count_sql_query, '------------------ count_sql_query----------------------//-----');
+
 				// metrics
 				metrics::$search_total_time += $exec_time;
 			}
@@ -2515,30 +2517,80 @@ class search {
 						$sql_filter					= $this->build_sql_filter();
 						$sql_filter_by_locators		= $this->build_sql_filter_by_locators();
 
-						$sql_where .= '-- Search duplicated value with !!';
-						$sql_where .= PHP_EOL . '(';
-							$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
-							$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
-							$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
-							$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
+						// v1
+							// $sql_where .= '-- Search duplicated value with !! (v1)';
+							// $sql_where .= PHP_EOL . '(';
+							// 	$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
+							// 	$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
+							// 	$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
+							// 	$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
+
+							// 		if (!empty($sql_filter)) {
+							// 			$sql_where .= $sql_filter;
+							// 		}elseif (!empty($sql_filter_by_locators)) {
+							// 			$sql_where .= $sql_filter_by_locators;
+							// 		}
+							// 		if (isset($this->filter_by_user_records)) {
+							// 			$sql_where .= $this->filter_by_user_records;
+							// 		}
+							// 		if (!empty($this->filter_join_where)) {
+							// 			$sql_where .= $this->filter_join_where;
+							// 		}
+
+							// 	$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
+							// 	$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
+							// 	$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
+							// $sql_where .= PHP_EOL . ')' . PHP_EOL;
+							// $sql_where .= '-- END Search duplicated value with !! (v1)';
+
+						// v2 - Optimized with EXISTS
+							// Instead of using an uncorrelated subquery `IN (SELECT ... GROUP BY HAVING count(*) > 1)` which forces
+							// PostgreSQL to fully aggregate the entire dataset (causing massive performance drops with HashAggregates),
+							// we use a correlated `EXISTS`. This allows Postgres to use index fast-pathing (stopping at the first duplicate found).
+							//
+							// Data flow & aliasing strategy:
+							// 1. We create a dedicated `$sub_alias` based on the query's current target `$table_alias`.
+							// 2. We dynamically replace the table references in `$json_sql_component_path` and filters to use `$sub_alias`.
+							// 3. For main sections ($table_alias === $this->main_section_tipo_alias), we safely mirror all active `$sql_filter`s
+							//    to ensure the duplicate exists within the same filtered subset defined by the user.
+							// 4. For related sections, we scope directly to the `$target_section_tipo` avoiding redundant external joins,
+							//    comparing the JSON extraction directly between the outer query row and the `EXISTS` subquery row.
+							$sql_where .= '-- Search duplicated value with !! (v2)';
+
+							$target_section_tipo = end($path)->section_tipo;
+							$sub_alias = $table_alias . '_sub';
+
+							$sub_json_path = preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $json_sql_component_path);
+
+							$sql_where .= PHP_EOL . '(';
+							$sql_where .= PHP_EOL . 'EXISTS (';
+							$sql_where .= PHP_EOL . 'SELECT 1';
+							$sql_where .= PHP_EOL . 'FROM '.$this->matrix_table.' AS '.$sub_alias;
+
+							if ($table_alias === $this->main_section_tipo_alias) {
+								$sub_main_where_sql = preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $main_where_sql);
+								$sql_where .= PHP_EOL . 'WHERE '.$sub_main_where_sql;
 
 								if (!empty($sql_filter)) {
-									$sql_where .= $sql_filter;
-								}elseif (!empty($sql_filter_by_locators)) {
-									$sql_where .= $sql_filter_by_locators;
+									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $sql_filter);
+								} elseif (!empty($sql_filter_by_locators)) {
+									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $sql_filter_by_locators);
 								}
 								if (isset($this->filter_by_user_records)) {
-									$sql_where .= $this->filter_by_user_records;
+									$sql_where .= preg_replace('/\b' . preg_quote($table_alias, '/') . '\./', $sub_alias . '.', $this->filter_by_user_records);
 								}
-								if (!empty($this->filter_join_where)) {
-									$sql_where .= $this->filter_join_where;
-								}
+							} else {
+								$sql_where .= PHP_EOL . 'WHERE '.$sub_alias.'.section_tipo = \''.$target_section_tipo.'\'';
+								$sql_where .= PHP_EOL . ' AND '.$sub_alias.'.section_id > 0';
+							}
 
-							$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
-							$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
-							$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
-						$sql_where .= PHP_EOL . ')' . PHP_EOL;
-						$sql_where .= '-- END Search duplicated value with !!';
+							$sql_where .= PHP_EOL . ' AND '.$sub_json_path.' = '.$json_sql_component_path;
+							$sql_where .= PHP_EOL . ' AND '.$sub_alias.'.section_id != '.$table_alias.'.section_id';
+							$sql_where .= PHP_EOL . ')';
+							$sql_where .= PHP_EOL . ')' . PHP_EOL;
+							$sql_where .= '-- END Search duplicated value with !! (v2)';
+
+
 						$sql_where .= PHP_EOL;
 						break;
 					}
