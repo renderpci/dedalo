@@ -1932,18 +1932,23 @@ function get_current_data_version() : array {
 
 	try {
 
-		// Query all updates records
-			$sql = sanitize_query('
-				SELECT datos FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;
-			');
+		// Query all updates records v7 sql
+			$sql = 'SELECT data FROM "matrix_updates" ORDER BY data->>\'dedalo_version\' DESC LIMIT 1;';
 			$db_result = matrix_db_manager::exec_search($sql, []);
+
+			// On error, try using v6 sql
+			if ($db_result===false) {
+				$sql = 'SELECT datos as data FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;';
+				$db_result = matrix_db_manager::exec_search($sql, []);
+			}
+
 			if ($db_result!==false) {
 
 				$object 		= pg_fetch_object($db_result);
-				$datos_encoded	= $object->datos;
-				$datos			= json_handler::decode($datos_encoded);
+				$data_encoded	= $object->data;
+				$data			= json_handler::decode($data_encoded);
 
-				$last_version	= $datos->dedalo_version;
+				$last_version	= $data->dedalo_version;
 			}
 
 		// version
