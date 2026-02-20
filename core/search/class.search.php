@@ -598,8 +598,6 @@ class search {
 
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
 
-				dump($count_sql_query, '------------------ count_sql_query----------------------//-----');
-
 				// metrics
 				metrics::$search_total_time += $exec_time;
 			}
