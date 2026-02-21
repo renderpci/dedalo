@@ -116,7 +116,7 @@ class dd_diffusion_api {
 			$response->result 		= true;
 			$response->msg    		= 'OK. Request done';
 			$response->langs  		= $langs;
-			$response->main_lang  	= DEDALO_DATA_LANG;
+			$response->main_lang  	= DEDALO_DATA_LANG_DEFAULT;
 			$response->main   		= $main;
 			$response->datum  		= self::$datum;
 
@@ -458,6 +458,10 @@ class dd_diffusion_api {
 
 		if(isset($properties->length)){
 			$context[0]->length = $properties->length;
+		}
+
+		if(isset($properties->index)){
+			$context[0]->index = $properties->index;
 		}
 		
 		return $context;
