@@ -1,0 +1,28 @@
+[
+	{
+		"components": [
+			{
+				"source_tipo": "rsc845",
+				"target_tipo": "rsc1156",
+				"info": "Responsible"
+			}
+		],
+		"portal": "rsc1463",
+		"source_section": "rsc550",
+		"target_section": "rsc1152",
+		"info": "Moving Responsible data into Related people"
+	},
+	{
+		"components": [
+			{
+				"source_tipo": "rsc565",
+				"target_tipo": "rsc1156",
+				"info": "Restaurateur"
+			}
+		],
+		"portal": "rsc1463",
+		"source_section": "rsc550",
+		"target_section": "rsc1152",
+		"info": "Moving the Restaurateur data into Related people"
+	}
+]
