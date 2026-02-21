@@ -1466,8 +1466,7 @@ class component_relation_common extends component_common {
 
 		$data = $this->get_data();
 
-		$parents_map 	= [];
-		$parents_chain 	= [];
+		$parents_map = [];
 		
 		if (empty($data)) return $parents_map;
 
@@ -1479,6 +1478,9 @@ class component_relation_common extends component_common {
 
 			// key for parents map "es1_967"
 			$parents_key = $section_tipo . '_' . $section_id;
+
+			// Reset the chain for each locator (each gets its own chain)
+			$parents_chain = [];
 
 			// get map
 			$section_map = section::get_section_map( $section_tipo );
@@ -1496,31 +1498,24 @@ class component_relation_common extends component_common {
 			}
 
 			// 2. Resolve Parents Chain
-			// Resolve parent data			
 			$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
 
 			if (!empty($parents_locators)) {
-				// We might have multiple parents. For standard hierarchy usually one valid parent per tree branch.
-				// We iterate all found parents that match the expected `parent_section_tipo`
 				foreach($parents_locators as $parent_locator) {
 				
 					$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
 						
-					// Correct parent found
 					$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
 					
 					if($parent_data) {
 						$parents_chain[] = $parent_data;
 					}
-	
 				}
-			} else {
-				// No parent instance found, break chain
-				break;
 			}
+
+			// Save this locator's chain (may include only self if no parents found)
+			$parents_map[$parents_key] = $parents_chain;
 		}
-			
-		$parents_map[$parents_key] = $parents_chain;
 		
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time);
