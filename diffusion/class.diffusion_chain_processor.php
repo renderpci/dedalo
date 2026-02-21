@@ -178,18 +178,27 @@ class diffusion_chain_processor {
 
 		foreach ($ar_locators as $locator) {
 
+			// Check publishability of the LINKED section (not the parent section).
+			// $publishable (from diffusion node properties) overrides the live check.
 			$current_is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 
+			// If the parent is not publishable, skip the true locators
+			// This is because the parent is not publishable, so the true locators should not changed
+			// Only non publicable locators can be tested in resolution chain to remove them from the database.
 			if($is_publishable === false && $current_is_publishable === true){
 				continue;
 			}
 
-			// A. QUEUE: Store in datum_unresolved for later resolution
+			// A. QUEUE: Always queue publishable locators for later diffusion of linked sections.
+			// Unpublishable locators are queued too so they can be marked for deletion.
 			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
 			if ($level > 0 && !empty($target_diffusion_tipo)) {
 				dd_diffusion_api::$datum_unresolved[$target_diffusion_tipo][] = $locator;
 			}
-			if($is_publishable === false && $current_is_publishable === false){
+
+			// Skip unpublishable locators from value collection.
+			// A related section that is not published must not appear in the output values.
+			if($is_publishable === false || $current_is_publishable === false){
 				continue;
 			}
 
