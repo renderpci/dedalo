@@ -447,61 +447,91 @@ function apply_parser_chain(
 	// Normalize to array
 	const chain = Array.isArray(parsers) ? parsers : [parsers as parser_definition];
 
-	let current_data: any = data;
+	const state = new Map<string, any[]>();
+	let last_unmapped_result: any = data;
 
 	for (const parser_def of chain) {
 		if (!parser_def.fn) continue;
 
-		// Ensure current_data is in a format suitable for apply_parser (array)
-		// If previous parser returned a primitive, wrap it as a data item value
-		let valid_data: any[] | null;
+		let input_data: any[];
 
-		if (Array.isArray(current_data)) {
-			valid_data = current_data;
-		} else if (current_data !== null && current_data !== undefined) {
-			// Wrap primitive in a structure preserving metadata from original data if possible
-			// We try to grab metadata from the initial data if available
+		if (parser_def.id) {
+			if (state.has(parser_def.id)) {
+				input_data = state.get(parser_def.id)!;
+			} else {
+				input_data = data; // New local variable chain starts from original data
+			}
+		} else {
+			if (state.size > 0) {
+				// Combine all state variables into a single data_item array for formatters
+				const combined: any[] = [];
+				for (const [key, val] of state.entries()) {
+					if (Array.isArray(val)) {
+						for (const v_item of val) {
+							if (typeof v_item === 'object' && v_item !== null) {
+								combined.push({ ...v_item, id: key });
+							} else {
+								combined.push({ id: key, value: v_item });
+							}
+						}
+					} else {
+						combined.push({ id: key, value: val });
+					}
+				}
+				input_data = combined;
+				state.clear();
+			} else {
+				input_data = last_unmapped_result;
+			}
+		}
+
+		let valid_data: any[] | null;
+		if (Array.isArray(input_data)) {
+			valid_data = input_data;
+		} else if (input_data !== null && input_data !== undefined) {
 			const meta = (Array.isArray(data) && data.length > 0) ? data[0] : {};
 			valid_data = [{
 				id:    null,
-				value: current_data,
+				value: input_data,
 				tipo:  meta.tipo,
 				lang:  meta.lang
 			}];
 		} else {
-			// Current data is null/undefined
 			valid_data = null;
 		}
 
-		// Apply the parser
 		let result = apply_parser(parser_def.fn, valid_data, parser_def.options ?? {});
 
-		// If a parser returns null explicitly, it usually breaks the chain
-		if (result === null) return null;
+		if (result === null) {
+			if (!parser_def.id) return null;
+			continue;
+		}
 
-		// If parser definition has an ID, assign it to the result items
 		if (parser_def.id) {
-			if (Array.isArray(result)) {
-				// Assign ID to each item in the array
-				for (const item of result) {
-					if (typeof item === 'object' && item !== null) {
-						item.id = parser_def.id;
+			state.set(parser_def.id, Array.isArray(result) ? result : [result]);
+		} else {
+			last_unmapped_result = result;
+		}
+	}
+
+	// Output logic (in case the chain ended with unmapped or mapped items)
+	if (state.size > 0) {
+		const combined: any[] = [];
+		for (const [key, val] of state.entries()) {
+			if (Array.isArray(val)) {
+				for (const v_item of val) {
+					if (typeof v_item === 'object' && v_item !== null) {
+						combined.push({ ...v_item, id: key });
+					} else {
+						combined.push({ id: key, value: v_item });
 					}
 				}
 			} else {
-				// Wrap primitive result to attach ID
-				// Metadata (tipo, lang) preserved from input if possible
-				const meta = (Array.isArray(valid_data) && valid_data.length > 0) ? valid_data[0] : {};
-				result = [{
-					id:    parser_def.id,
-					value: result,
-					tipo:  meta.tipo,
-					lang:  meta.lang
-				}];
+				combined.push({ id: key, value: val });
 			}
 		}
-		current_data = result;
+		return combined;
 	}
 
-	return current_data;
+	return last_unmapped_result;
 }
