@@ -249,22 +249,30 @@ function process_record(
 						if (parser_result.length > 0) {
 							
 							for (const item of parser_result) {
-								let val_str: string;
+								let val_str: string | null = null;
 								
-								// Apply requested output format if defined
-								if (ctx.output_format === 'json') {
-									// Just JSON stringify the whole value, whether object or primitive
-									val_str = JSON.stringify(item.value);
-								} else if (ctx.output_format === 'int') {
-									// Parse as integer
-									val_str = String(parseInt(String(item.value), 10));
-									if (val_str === 'NaN') val_str = '0';
-								} else {
-									// Default string format
-									if (typeof item.value === 'object' && item.value !== null) {
-										val_str = JSON.stringify(item.value);
+								if (item.value !== null) {
+									// Apply requested output format if defined
+									if (ctx.output_format === 'json') {
+										// JSON stringify only if not already a plain string.
+										// If the parser chain (e.g. map_value) already produced a string
+										// value like "yes"/"no", leave it as-is to avoid double-encoding.
+										if (typeof item.value === 'string') {
+											val_str = item.value;
+										} else {
+											val_str = JSON.stringify(item.value);
+										}
+									} else if (ctx.output_format === 'int') {
+										// Parse as integer
+										val_str = String(parseInt(String(item.value), 10));
+										if (val_str === 'NaN') val_str = '0';
 									} else {
-										val_str = String(item.value);
+										// Default string format
+										if (typeof item.value === 'object' && item.value !== null) {
+											val_str = JSON.stringify(item.value);
+										} else {
+											val_str = String(item.value);
+										}
 									}
 								}
 								
@@ -272,7 +280,10 @@ function process_record(
 								const item_lang = item.lang || lang;
 								const key = (!item_lang || item_lang === 'lg-nolan') ? 'nolan' : item_lang;
 
-								lang_values.set(key, val_str);
+								// Only store nolan entries when they have a real value.
+								if (key !== 'nolan' || val_str !== null) {
+									lang_values.set(key, val_str);
+								}
 							}
 							handled_by_parser = true;
 						} else {
@@ -302,7 +313,11 @@ function process_record(
 			if (!handled_by_parser) {
 				// Normalize lang key: null and "lg-nolan" → "nolan"
 				const lang_key = (!lang || lang === 'lg-nolan') ? 'nolan' : lang;
-				lang_values.set(lang_key, column_value);
+				// Only store nolan entries when they have a real value.
+				// A nolan null entry would block the main_lang fallback in Phase 2.
+				if (lang_key !== 'nolan' || column_value !== null) {
+					lang_values.set(lang_key, column_value);
+				}
 			}
 		}
 	}
