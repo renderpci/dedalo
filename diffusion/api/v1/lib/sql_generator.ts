@@ -48,12 +48,21 @@ export function generate_upsert(table_name: string, record: processed_record): s
 		c === 'section_id' || c === 'lang' ? c : c
 	).join(', ');
 
-	const sql = [
-		`INSERT INTO ${safe_table} (${columns_str})`,
-		`VALUES (${placeholders})`,
-		`ON DUPLICATE KEY UPDATE`,
-		update_parts.join(', ')
-	].join('\n');
+	let sql: string;
+	if (update_parts.length === 0) {
+		// No data columns — nothing to update on conflict; use INSERT IGNORE to avoid errors
+		sql = [
+			`INSERT IGNORE INTO ${safe_table} (${columns_str})`,
+			`VALUES (${placeholders})`,
+		].join('\n');
+	} else {
+		sql = [
+			`INSERT INTO ${safe_table} (${columns_str})`,
+			`VALUES (${placeholders})`,
+			`ON DUPLICATE KEY UPDATE`,
+			update_parts.join(', ')
+		].join('\n');
+	}
 
 	return { sql, params: values };
 }
