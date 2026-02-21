@@ -309,8 +309,16 @@ function format_dd_date(date_part: dd_date_part, pattern: string): string {
 	const minute = date_part.minute ?? 0;
 	const second = date_part.second ?? 0;
 
+	// PHP sprintf('%04d', year) style padding
+	let year_str = String(year);
+	if (year < 0) {
+		year_str = '-' + String(Math.abs(year)).padStart(3, '0');
+	} else {
+		year_str = year_str.padStart(4, '0');
+	}
+
 	let result = pattern;
-	result = result.replace(/Y/g, String(year).padStart(4, '0'));
+	result = result.replace(/Y/g, year_str);
 	result = result.replace(/m/g, String(month).padStart(2, '0'));
 	result = result.replace(/d/g, String(day).padStart(2, '0'));
 	result = result.replace(/H/g, String(hour).padStart(2, '0'));
