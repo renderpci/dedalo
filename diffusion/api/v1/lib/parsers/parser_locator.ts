@@ -248,17 +248,25 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 /**
  * GET_PARENT_TERM_ID
- * From the parents chain (populated by PHP `add_parents`), extracts the
- * first parent (index 1 in chain, since index 0 is the item itself)
- * and returns its term_id as `{section_tipo}_{section_id}`.
+ * From the parents chain (populated by PHP `add_parents`), extracts
+ * chain nodes and returns their term_id as `{section_tipo}_{section_id}`.
+ *
+ * By default, returns only the first parent (index 1, since index 0 is the item itself).
+ * With `include_self: true`, returns term_ids for ALL chain nodes (index 0 = self + all parents).
  *
  * @param data    - Array of data items with parents map
  * @param options - Parser options
+ * @param options.include_self - If true, include self (index 0) and all parents. Default: false (index 1 only).
+ * @param options.records_separator - Separator for joining term_ids. Default: ', '.
  * @returns Array of data items with term_id string as value
  */
 export function get_parent_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
+
+	const include_self: boolean      = (options.include_self as boolean) ?? false;
+	const records_separator: string  = (options.records_separator as string) ?? ', ';
+	const start_index = include_self ? 0 : 1;
 
 	const result: data_item[] = [];
 
@@ -285,11 +293,12 @@ export function get_parent_term_id(data: data_item[] | null, options: parser_opt
 			if (parents_map && parents_map[key]) {
 				const chain = parents_map[key]; // [child, parent, grandparent...]
 
-				// First parent is at index 1 (index 0 is the item itself)
-				if (Array.isArray(chain) && chain.length > 1) {
-					const parent_node = chain[1];
-					const parent_term_id = parent_node.section_tipo + '_' + parent_node.section_id;
-					term_ids.push(parent_term_id);
+				if (Array.isArray(chain) && chain.length > start_index) {
+					for (let i = start_index; i < chain.length; i++) {
+						const node = chain[i];
+						const node_term_id = node.section_tipo + '_' + node.section_id;
+						term_ids.push(node_term_id);
+					}
 				}
 			}
 		}
@@ -297,7 +306,7 @@ export function get_parent_term_id(data: data_item[] | null, options: parser_opt
 		if (term_ids.length > 0) {
 			result.push({
 				...item,
-				value: term_ids.join(', '),
+				value: term_ids.join(records_separator),
 				lang:  null // term_id is language-independent
 			});
 		}

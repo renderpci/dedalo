@@ -1424,6 +1424,65 @@ class component_text_area extends component_string_common {
 
 
 	/**
+	* GET_GEOJSON_DATA
+	* @see ontology publication use in mdcat4091
+	* @return array
+	*/
+	public function get_geojson_data() : array {
+
+		// geolocation_data
+			$ar_elements = $this->build_geolocation_data(
+				true
+			);
+
+		// fallback optional
+			if ( empty($ar_elements) ) {
+
+				// find data in related component_geolocation
+					$component_geolocation_model = 'component_geolocation';
+					$ar_related_by_model = component_common::get_ar_related_by_model(
+						$component_geolocation_model,
+						$this->tipo,
+						true
+					);
+				// inform when no related component_geolocation is found
+				// and return empty array to avoid any further operations
+					if (empty($ar_related_by_model[0])) {
+						debug_log(__METHOD__
+							. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
+							. ' component_tipo: '. $this->tipo . PHP_EOL
+							. ' section_tipo: '. $this->section_tipo . PHP_EOL
+							. ' section:id: '. $this->section_id
+							, logger::WARNING
+						);
+						return [];
+					}
+				// create the component geolocation
+					$component_geolocation_tipo	= $ar_related_by_model[0];
+					$component_geolocation		= component_common::get_instance(
+						$component_geolocation_model, // string model
+						$component_geolocation_tipo, // string tipo
+						$this->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$this->section_tipo, // string section_tipo
+						false
+					);
+
+				// component_geolocation data
+				$geolocation_data = $component_geolocation->get_diffusion_value_as_geojson();
+				if (!empty($geolocation_data)) {
+					$ar_elements = json_decode($geolocation_data, true) ?? [];
+				}
+			}
+
+		return $ar_elements; // array
+	}//end get_geojson_data
+
+
+
+
+	/**
 	* BUILD_GEOLOCATION_DATA
 	* This method is v6 rebuilt to mimic v5 version. Note that now, georef data is no longer stored
 	* into the tag HTML dataset, but is moved to related component_geolocation
