@@ -299,6 +299,52 @@ function process_node($node, $level) {
 				}
 			}
 
+			// --- Case: component_select_lang (Relation) ---
+			// Resolves languages through lg1 matrix and its term (hierarchy25)
+			if ($new_props === null) {
+				$has_select_lang = false;
+				$target_rel_tipo = null;
+
+				if (!empty($relations_info)) {
+					foreach ($relations_info as $rel_info) {
+						if ($rel_info['model'] === 'component_select_lang') {
+							$has_select_lang = true;
+							$target_rel_tipo = $rel_info['tipo'];
+							break;
+						}
+					}
+				}
+
+				if ($has_select_lang) {
+					$new_props = new stdClass();
+					$new_props->process = new stdClass();
+
+					$new_props->process->ddo_map = [
+						(object)[
+							'tipo'         => $target_rel_tipo,
+							'section_tipo' => 'self'
+						],
+						(object)[
+							'tipo'         => 'hierarchy25', // Standard term component for lg1
+							'label'        => 'Term',
+							'parent'       => $target_rel_tipo,
+							'section_tipo' => 'lg1'
+						]
+					];
+
+					// The value extracted is the term name, ensure it's unboxed properly
+					$new_props->process->parser = [
+						(object)[
+							'fn' => 'parser_locator::get_first',
+							'id' => 'a'
+						]
+					];
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] component_select_lang relation -> ddo_map (hierarchy25) + get_first\n";
+				}
+			}
+
 			// --- Case: process_dato: "diffusion_sql::map_locator_to_value" (Relation) ---
 			// Maps section_id to a value using a provided map (similar to enum logic)
 			if (
