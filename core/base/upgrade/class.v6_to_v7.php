@@ -48,7 +48,7 @@ class v6_to_v7 {
 		// to store the PID of the process updated data.
 		$result = v6_to_v7::change_notifications_table_column_name();
 
-		if($result== false){
+		if($result === false){
 			$response->errors[] = 'Failed to change notifications table column name';
 			return $response;
 		}
@@ -56,7 +56,7 @@ class v6_to_v7 {
 		// 1. Add new columns to 'jer_dd'
 		$result = v6_to_v7::expand_jer_dd_with_new_schema();
 
-		if($result== false){
+		if($result === false){
 			$response->errors[] = 'Failed to expand jer_dd with new schema';
 			return $response;
 		}
@@ -64,7 +64,7 @@ class v6_to_v7 {
 		// 2. Fill the 'jer_dd' new columns with the compatible data
 		$result = v6_to_v7::fill_new_columns_in_jer_dd();
 
-		if($result== false){
+		if($result === false){
 			$response->errors[] = 'Failed to fill new columns in jer_dd';
 			return $response;
 		}
@@ -72,7 +72,7 @@ class v6_to_v7 {
 		// 3. Change the 'jer_dd' relations data to be coherent
 		$result = v6_to_v7::refactor_jer_dd_relations();
 
-		if($result== false){
+		if($result === false){
 			$response->errors[] = 'Failed to refactor jer_dd relations';
 			return $response;
 		}
@@ -80,7 +80,7 @@ class v6_to_v7 {
 		// 4. Create the new 'dd_ontology' table and set the columns with correct data
 		$result = v6_to_v7::create_dd_ontology_table();
 
-		if($result== false){
+		if($result === false){
 			$response->errors[] = 'Failed to create dd_ontology table';
 			return $response;
 		}
@@ -968,6 +968,32 @@ class v6_to_v7 {
 
 		return true;
 	}//end delete_tm_columns
+
+
+
+	/**
+	 * CREATE_MATRIX_ACTIVITY_DIFFUSION_TABLE
+	 * Create matrix_activity_diffusion table
+	 * @return bool
+	 */
+	public static function create_matrix_activity_diffusion_table() : bool {
+
+		$sql_query = file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql');
+
+		$result = matrix_db_manager::exec_sql($sql_query);
+
+		if($result===false) {
+			$msg = "Failed to create matrix_activity_diffusion table ";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end create_matrix_activity_diffusion_table
 
 
 
