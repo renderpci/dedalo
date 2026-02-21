@@ -7,7 +7,7 @@
 
 import { default_join, text_format, map_value } from './parser_text';
 import { select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
-import { get_section_id, get_first, add_parents, get_parent_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, splice_chain, flat_parents } from './parser_locator';
+import { get_section_id, get_section_tipo, get_first, add_parents, get_parent_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, splice_chain, flat_parents } from './parser_locator';
 import type { parser_options }                  from '../types';
 
 
@@ -29,6 +29,7 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_text::text_format':     text_format,
 	'parser_text::map_value':       map_value,
 	'parser_locator::get_section_id': get_section_id,
+	'parser_locator::get_section_tipo': get_section_tipo,
 	'parser_locator::get_first':    get_first,
 	'parser_locator::add_parents':  add_parents,
 	'parser_locator::get_parent_term_id': get_parent_term_id,
@@ -83,6 +84,6 @@ export function apply_parser(fn_string: string, data: any[] | null, options: par
 
 // Re-export individual parsers for direct use
 export { default_join, join_items_to_string, text_format, map_value } from './parser_text';
-export { get_section_id, get_first, add_parents, get_parent_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, splice_chain, flat_parents } from './parser_locator';
+export { get_section_id, get_section_tipo, get_first, add_parents, get_parent_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, splice_chain, flat_parents } from './parser_locator';
 export { select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
 export { replace as replace_pattern }           from './pattern_replacer';
