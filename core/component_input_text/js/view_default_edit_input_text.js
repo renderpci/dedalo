@@ -217,14 +217,14 @@ const get_content_value = (i, current_value, self) => {
 
 	// transliterate_value
 		if (with_lang_versions && self.data.transliterate_value) {
+			const transliterate_value = self.data.transliterate_value[0].value || ''
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'transliterate_value',
-				inner_html		: self.data.transliterate_value,
+				inner_html		: transliterate_value,
 				parent			: content_value
 			})
 		}
-
 
 	// component_dataframe
 		if(self.properties.has_dataframe){
