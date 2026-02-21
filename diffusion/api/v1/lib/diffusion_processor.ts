@@ -459,7 +459,6 @@ function apply_parser_chain(
 		return null;
 	}
 
-	// Normalize to array
 	const chain = Array.isArray(parsers) ? parsers : [parsers as parser_definition];
 
 	const state = new Map<string, any[]>();
