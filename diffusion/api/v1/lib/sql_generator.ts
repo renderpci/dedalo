@@ -106,6 +106,17 @@ export function generate_create_table(table: processed_table): string {
 	// Composite primary key
 	column_defs.push('PRIMARY KEY (section_id, lang)');
 
+	// Add indexes
+	for (const col_name of all_columns) {
+		const ctx = table.columns_context[col_name];
+		if (ctx) {
+			const idx = get_index_definition(col_name, ctx);
+			if (idx) {
+				column_defs.push(idx);
+			}
+		}
+	}
+
 	return [
 		`CREATE TABLE IF NOT EXISTS ${safe_table} (`,
 		'  ' + column_defs.join(',\n  '),
@@ -130,7 +141,17 @@ export function generate_add_column_sql(table: processed_table, missing_columns:
 
 	return missing_columns.map(col_name => {
 		const def = get_column_definition(col_name, table);
-		return `ALTER TABLE ${safe_table} ADD COLUMN ${def};`;
+		const ctx = table.columns_context[col_name];
+		
+		let index_sql = '';
+		if (ctx) {
+			const idx = get_index_definition(col_name, ctx);
+			if (idx) {
+				index_sql = `, ADD ${idx}`;
+			}
+		}
+		
+		return `ALTER TABLE ${safe_table} ADD COLUMN ${def}${index_sql};`;
 	});
 }
 
@@ -196,6 +217,60 @@ function get_column_definition(col_name: string, table: processed_table): string
 
 	const comment = `${ctx.term} - ${ctx.tipo}`.replace(/'/g, "''");
 	return `${safe_col} ${type} DEFAULT NULL COMMENT '${comment}'`;
+}
+
+
+
+/**
+ * GET_INDEX_DEFINITION
+ * Returns the index declaration for a column based on its model.
+ * Honors explicit index overrides if present on context.
+ */
+function get_index_definition(col_name: string, ctx: any): string | null {
+	const safe_col = escape_identifier(col_name);
+
+	// Let properties override default index type
+	const explicit_index = ctx.index_type || ctx.index;
+	if (explicit_index) {
+		const idx_upper = typeof explicit_index === 'string' ? explicit_index.toUpperCase() : '';
+		if (idx_upper === 'FULLTEXT') {
+			return `FULLTEXT KEY ${safe_col} (${safe_col})`;
+		} else if (idx_upper === 'BTREE' || idx_upper === 'KEY') {
+			let prefix = '';
+			const max_len = Number(ctx.varchar) || 0;
+			if (ctx.model === 'field_varchar' || ctx.model === 'field_enum' || ctx.model === 'field_text') {
+				prefix = (max_len > 0 && max_len < 250) ? '' : '(250)';
+			}
+			return `KEY ${safe_col} (${safe_col}${prefix})`;
+		} else if (idx_upper === 'NONE' || explicit_index === false) {
+			return null;
+		}
+	}
+
+	// Default index generation mimicking v6
+	switch (ctx.model) {
+		case 'field_text':
+		case 'field_mediumtext':
+			return `FULLTEXT KEY ${safe_col} (${safe_col})`;
+
+		case 'field_varchar':
+		case 'field_enum': {
+			const max_len = Number(ctx.varchar) || 0;
+			const prefix = (max_len > 0 && max_len < 250) ? '' : '(250)';
+			return `KEY ${safe_col} (${safe_col}${prefix})`;
+		}
+
+		case 'field_boolean':
+		case 'field_int':
+		case 'field_year':
+		case 'field_decimal':
+		case 'field_date':
+		case 'field_datetime':
+			return `KEY ${safe_col} (${safe_col})`;
+
+		default:
+			return null;
+	}
 }
 
 
