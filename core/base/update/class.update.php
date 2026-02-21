@@ -99,8 +99,24 @@ class update {
 				}
 			}
 			if (empty($update)) {
-				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
-				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
+
+				try {
+					$fisrt_update = array_key_first((array) $updates);
+
+					// MINIMUM UPDATE FROM
+					$ar_version_expected = [
+						$updates->$fisrt_update->update_from_major,
+						$updates->$fisrt_update->update_from_medium,
+						$updates->$fisrt_update->update_from_minor
+					];
+				} catch (\Throwable $th) {
+					$ar_version_expected = [];
+				}
+
+				$response->msg = 'Unable to get proper data update from updates file. '. PHP_EOL
+					.'Current data version (from table matrix_updates): '.implode('.', $current_version) . PHP_EOL
+					.'Update file (updates.php) data version expected: ' . implode('.', $ar_version_expected);
+				$response->errors[] = 'Update item not found for version '.implode('.', $current_version);
 				return $response;
 			}
 
@@ -302,21 +318,22 @@ class update {
 
 								array_push($msg, "Error on SQL_update: ".to_string($current_query));
 
-								// $response->result	= false ;
-								// $response->msg		= $msg;
-								// return $response;
+								$response->result	= false ;
+								$response->msg		= $msg;
 
 								debug_log(__METHOD__." Error on update SQL_update ".PHP_EOL
 									. 'The result is false. Check your query sentence: ' .PHP_EOL
 									. to_string($current_query) .PHP_EOL
-									. 'Note that the update SQL_update loop to be continue with the next one'
+									. 'The update process is aborted to prevent data corruption.'
 									, logger::ERROR
 								);
 
 								// log line
 									$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . ($key+1);
-									$log_line .= PHP_EOL . 'The result is false. Check your query sentence';
+									$log_line .= PHP_EOL . 'The result is false. Check your query sentence. The update process aborted.';
 									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+								return $response;
 							}
 
 							// log line
@@ -395,6 +412,7 @@ class update {
 						}//end foreach ((array)$update->components_update as $current_model)
 					}
 					break;
+
 				case 'run_scripts':
 					// 3 run_scripts
 					if(isset($update->run_scripts)){
@@ -445,14 +463,11 @@ class update {
 
 								array_push($msg, 'Error on run_scripts: '.to_string($current_script));
 
-								// $response->result	= false;
-								// $response->msg		= $msg;
-								// return $response;
-
 								debug_log(__METHOD__." Error on run_scripts ".PHP_EOL
 									. 'The result is false. Check your script: ' .PHP_EOL
-									. to_string($current_script) .PHP_EOL
-									. 'Note that the run_scripts loop to be continue with the next one'
+									. 'current_script: ' .to_string($current_script) .PHP_EOL
+									. 'run_scripts_response: ' .json_encode($run_scripts_response, JSON_PRETTY_PRINT) .PHP_EOL
+									. 'Note that the run_scripts loop will continue with the next script.'
 									, logger::ERROR
 								);
 
