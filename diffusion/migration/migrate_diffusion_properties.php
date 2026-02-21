@@ -25,6 +25,8 @@ if (!class_exists('dd_ontology_db_manager')) {
 	die("Error: class 'dd_ontology_db_manager' not found.\n");
 }
 
+force_login(-1);
+
 $root_tipo = DEDALO_DIFFUSION_TIPO; // Diffusion Root
 echo "Starting migration analysis from root: $root_tipo\n";
 
@@ -158,6 +160,7 @@ function process_node($node, $level) {
 		case 'field_boolean':
 		case 'field_decimal':
 		case 'field_point':
+		case 'field_mediumtext':
 			$diffusion_type = 'field';
 			
 			// Calculate effective count ignoring behavioral properties (info, exclude_column, is_publicable)
@@ -247,6 +250,11 @@ function process_node($node, $level) {
 					if (!isset($new_props->process)) $new_props->process = new stdClass();
 					$new_props->process->parser = $parser_process;
 
+					// If explicitly 'dato', map this explicitly to output_format: 'json'
+					if (isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
+						$new_props->process->output_format = 'json';
+					}
+
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] Case 1: 'dato' OR 'map_project_to_section_id' (relation) -> parser_locator::get_section_id\n";
 				}
@@ -284,9 +292,141 @@ function process_node($node, $level) {
 
 					$new_props->process = new stdClass();
 					$new_props->process->parser = $parser_process;
+					$new_props->process->output_format = 'int';
 
 					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first\n";
+					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first (int)\n";
+				}
+			}
+
+			// --- Case: process_dato: "diffusion_sql::map_locator_to_value" (Relation) ---
+			// Maps section_id to a value using a provided map (similar to enum logic)
+			if (
+				$new_props === null
+				&& isset($props->process_dato)
+				&& $props->process_dato === 'diffusion_sql::map_locator_to_value'
+				&& isset($props->process_dato_arguments->map)
+			) {
+				$new_props = new stdClass();
+
+				$map_data = $props->process_dato_arguments->map;
+
+				$parser_process = [
+					(object)[
+						'fn' => 'parser_locator::get_section_id',
+						'id' => 'a'
+					],
+					(object)[
+						'fn' => 'parser_locator::get_first',
+						'id' => 'a'
+					],
+					(object)[
+						'fn' => 'parser_text::map_value',
+						'options' => (object)[
+							'map' => [
+								(object)[
+									'a' => $map_data
+								]
+							]
+						]
+					]
+				];
+
+				$new_props->process = new stdClass();
+				$new_props->process->parser = $parser_process;
+
+				echo "{$indent}- [$tipo] $model_name\n";
+				echo "{$indent}  [RULE APPLIED] map_locator_to_value -> get_section_id + get_first + map_value\n";
+			}
+
+			// --- Case: component_autocomplete_hi + map_locator_to_terminoID (combined) ---
+			// When autocomplete_hi has map_locator_to_terminoID with add_parents:false in custom_arguments,
+			// output only term_id parsers (no parent resolution).
+			// When add_parents is true/default, skip and let the existing autocomplete_hi rule handle it.
+			if (
+				$new_props === null
+				&& isset($props->process_dato)
+				&& (
+					$props->process_dato === 'diffusion_sql::map_locator_to_terminoID'
+					|| $props->process_dato === 'diffusion_sql::map_locator_to_term_id'
+				)
+				&& !empty($relations_info)
+			) {
+				// Detect component_autocomplete_hi in relations
+				$is_autocomplete_hi_combined = false;
+				foreach ($relations_info as $rel_info) {
+					if ($rel_info['model'] === 'component_autocomplete_hi') {
+						$is_autocomplete_hi_combined = true;
+						break;
+					}
+				}
+
+				if ($is_autocomplete_hi_combined) {
+					// Check add_parents flag in process_dato_arguments.custom_arguments
+					$add_parents_flag = true; // default: resolve parents
+					if (
+						isset($props->process_dato_arguments->custom_arguments->add_parents)
+						&& $props->process_dato_arguments->custom_arguments->add_parents === false
+					) {
+						$add_parents_flag = false;
+					}
+					// Also check if custom_arguments is an array (alternative format)
+					if (
+						isset($props->process_dato_arguments->custom_arguments)
+						&& is_array($props->process_dato_arguments->custom_arguments)
+					) {
+						foreach ($props->process_dato_arguments->custom_arguments as $arg) {
+							if (is_object($arg) && isset($arg->add_parents) && $arg->add_parents === false) {
+								$add_parents_flag = false;
+								break;
+							}
+						}
+					}
+
+					if (!$add_parents_flag) {
+						// add_parents: false → only term_id, no parent resolution
+						$new_props = new stdClass();
+
+						$parser_process = [
+							(object)[
+								'fn' => 'parser_locator::get_section_id',
+								'id' => 'a'
+							],
+							(object)[
+								'fn' => 'parser_locator::get_section_tipo',
+								'id' => 'b'
+							],
+							(object)[
+								'fn' => 'parser_text::text_format',
+								'options' => (object)[
+									'pattern' => '${b}_${a}'
+								]
+							]
+						];
+
+						$new_props->process = new stdClass();
+						$new_props->process->parser = $parser_process;
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:false) -> term_id only\n";
+					} else {
+						// add_parents: true/default → resolve parents + output as term_id
+						$new_props = new stdClass();
+
+						$new_props->process = new stdClass();
+						$new_props->process->fn = 'add_parents';
+						$new_props->process->parser = [
+							(object)[
+								'fn' => 'parser_locator::get_parent_term_id',
+								'options' => (object)[
+									'include_self' => true
+								]
+							]
+						];
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:true) -> add_parents + term_id\n";
+					}
 				}
 			}
 
@@ -369,7 +509,17 @@ function process_node($node, $level) {
 				// When option_obj.add_parents is explicitly false, skip this rule
 				$add_parents_false = $option_obj && isset($option_obj->add_parents) && $option_obj->add_parents === false;
 
-				if (!$add_parents_false && ($is_autocomplete_hi || $option_obj)) {
+				// When process_dato is resolve_component_value, data returns as-is — clear any old properties
+				$is_resolve_component = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::resolve_component_value';
+				if ($is_resolve_component) {
+					// Force save empty props to clear any previously migrated incorrect data
+					if (!$new_props) $new_props = new stdClass();
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
+				}
+
+				if (!$add_parents_false && !$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
 
 					if (!$new_props) $new_props = new stdClass();
 					$new_props->process = new stdClass();
@@ -458,6 +608,34 @@ function process_node($node, $level) {
 
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID_parent -> parser_locator::get_parent_term_id\n";
+				}
+			}
+
+			// --- Rule: Geolocation (get_geojson_data) ---
+			// When process_dato is build_geolocation_data_geojson and relation is component_text_area
+			if ($new_props === null || !isset($new_props->process)) {
+				$is_geojson = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::build_geolocation_data_geojson';
+
+				if ($is_geojson) {
+					// Verify relation is component_text_area
+					$is_text_area = false;
+					if (!empty($relations_info)) {
+						foreach ($relations_info as $rel_info) {
+							if ($rel_info['model'] === 'component_text_area') {
+								$is_text_area = true;
+								break;
+							}
+						}
+					}
+
+					if ($is_text_area) {
+						if (!$new_props) $new_props = new stdClass();
+						$new_props->process = new stdClass();
+						$new_props->process->fn = 'get_geojson_data';
+
+						echo "{$indent}- [$tipo] $model_name\n";
+						echo "{$indent}  [RULE APPLIED] build_geolocation_data_geojson -> fn: get_geojson_data\n";
+					}
 				}
 			}
 
@@ -808,3 +986,81 @@ function get_ddo_map($current_tipo) {
 
 	return count($ddo_map) > 0 ? $ddo_map : null;
 }
+
+
+
+	/**
+	* FORCE_LOGIN
+	* @param int $user_id
+	* @return void
+	*/
+	function force_login($user_id) : void {
+
+		// check is development server. if not, throw to prevent malicious access
+			if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
+				throw new Exception("Error. Only development servers can use this method", 1);
+				die();
+			}
+
+		// user
+			$username		= 'test ' . $user_id;
+			$full_username	= 'test user ' . $user_id;
+
+		// dd_init_test
+			$init_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
+			if ($init_response->result===false) {
+				debug_log(__METHOD__
+					." Init test error (dd_init_test): ". PHP_EOL
+					.' init_response: ' . $init_response->msg
+					, logger::ERROR
+				);
+			}
+
+		// is_global_admin (before set user session vars)
+			$is_global_admin = (bool)security::is_global_admin($user_id);
+			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
+
+		// is_developer (before set user session vars)
+			$is_developer = (bool)security::is_developer($user_id);
+			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
+
+		// session : If backup is OK, fix session data
+			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
+			$_SESSION['dedalo']['auth']['username']			= $username;
+			$_SESSION['dedalo']['auth']['full_username']	= $full_username;
+			$_SESSION['dedalo']['auth']['is_logged']		= 1;
+
+		// config key
+			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+
+		// login_type
+			$_SESSION['dedalo']['auth']['login_type'] = 'default';
+
+		// dedalo_lock_components unlock
+			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
+				lock_components::force_unlock_all_components($user_id);
+			}
+
+		// precalculate profiles datalist security access in background
+		// This file is generated on every user login, launching the process in background
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
+				dd_cache::process_and_cache_to_file((object)[
+					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
+					'data'			=> (object)[
+						'session_id'	=> session_id(),
+						'user_id'		=> $user_id,
+						'lang'			=> DEDALO_APPLICATION_LANG
+					],
+					'file_name'		=> $cache_file_name,
+					'wait'			=> false
+				]);
+			}
+
+		// login activity report
+			login::login_activity_report(
+				"User $user_id is logged. Hello $username",
+				'LOG IN',
+				null
+			);
+	}//end force_login

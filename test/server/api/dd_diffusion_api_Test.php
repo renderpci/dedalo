@@ -140,7 +140,7 @@ final class dd_diffusion_api_test extends BaseTestCase {
      */
     public function test_new_properties(): void {
         
-        $source_tipo = 'oh66'; // A table with migrated ddo_map
+        $source_tipo = 'rsc275'; // A table with migrated ddo_map
         
          // Use a section that is likely to have data or just check execution
         $rqo = (object)[
@@ -151,8 +151,9 @@ final class dd_diffusion_api_test extends BaseTestCase {
             ],
             'sqo' => (object)[
                 'select' => [],
-                'section_tipo' => ['oh1'],
-                'limit' => 1
+                'section_tipo' => ['rsc167'],
+                'limit' => 1,
+                'offset' => 1
             ],
             'options' => (object)[
                 'include_debug' => true,
