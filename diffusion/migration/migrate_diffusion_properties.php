@@ -519,18 +519,25 @@ function process_node($node, $level) {
 					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
 				}
 
-				if (!$add_parents_false && !$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
+				if (!$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
 
 					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
+					if (!isset($new_props->process)) $new_props->process = new stdClass();
 					$new_props->process->fn = 'add_parents';
 
-					if ($option_obj) {
+					if (!isset($new_props->process->parser)) $new_props->process->parser = [];
+
+					if ($option_obj || $is_autocomplete_hi) {
 						// Build parser options from option_obj — only include present values
 						$parser_options = new stdClass();
 
+						// include_parents (V7 TS parser option)
+						if ($add_parents_false) {
+							$parser_options->include_parents = false;
+						}
+
 						// resolve_value
-						if (isset($option_obj->resolve_value)) {
+						if ($option_obj && isset($option_obj->resolve_value)) {
 							$parser_options->resolve_value = $option_obj->resolve_value;
 						}
 
