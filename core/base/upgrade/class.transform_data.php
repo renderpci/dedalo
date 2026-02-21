@@ -2612,7 +2612,10 @@ class transform_data {
 						$portal_locator->set_section_id( $new_section_id );
 						$portal_locator->set_section_tipo( $target_section );
 
-					$portal_component->set_dato( $portal_locator );
+					$current_dato = $portal_component->get_dato();
+					$current_dato[] = $portal_locator;
+
+					$portal_component->set_dato($current_dato);
 					$portal_section_id = $portal_component->Save();
 
 					// check the save was ok
