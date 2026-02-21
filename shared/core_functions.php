@@ -1944,11 +1944,15 @@ function get_current_data_version() : array {
 
 			if ($db_result!==false) {
 
-				$object 		= pg_fetch_object($db_result);
-				$data_encoded	= $object->data;
-				$data			= json_handler::decode($data_encoded);
+				$object = pg_fetch_object($db_result);
+				if (is_object($object) && isset($object->data)) {
+					$data_encoded	= $object->data;
+					$data			= json_handler::decode($data_encoded);
 
-				$last_version	= $data->dedalo_version;
+					if (is_object($data) && isset($data->dedalo_version)) {
+						$last_version	= $data->dedalo_version;
+					}
+				}
 			}
 
 		// version
@@ -2007,6 +2011,7 @@ function check_basic_system() : object {
 	$response = new stdClass();
 		$response->result	= false;
 		$response->msg		= 'Error. check_basic_system failed';
+		$response->errors	= [];
 
 	// basic system files check
 	// langs js
@@ -2052,7 +2057,8 @@ function check_basic_system() : object {
 			if ($pre_update_response->result===false) {
 
 				$response->result	= false;
-				$response->msg		= 'Error. pre_update_version script failed';
+				$response->msg		= 'Error. pre_update_version script failed. Table dd_ontology is not installed. ' . PHP_EOL . ($pre_update_response->msg ?? '');
+				$response->errors 	= $pre_update_response->errors ?? ['Error. pre_update_version script failed'];
 
 				debug_log(__METHOD__
 					. " Error. pre_update_version script failed " . PHP_EOL
