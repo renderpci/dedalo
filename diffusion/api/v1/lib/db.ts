@@ -30,8 +30,7 @@ export function get_pool(database_name: string): mysql.Pool {
 	}
 
 	const pool = mysql.createPool({
-		host:              process.env.DB_HOST     || 'localhost',
-		port:              parseInt(process.env.DB_PORT || '3306', 10),
+		socketPath:        process.env.DB_SOCKET   || '/tmp/mysql.sock',
 		user:              process.env.DB_USER     || 'root',
 		password:          process.env.DB_PASSWORD || '',
 		database:          database_name,
