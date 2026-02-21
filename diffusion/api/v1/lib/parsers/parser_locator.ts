@@ -181,8 +181,12 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 						for (const lang of all_langs) {
 
 							let final_str_parts: string[] = [];
+							
+							// Respect include_parents option. Default to true.
+							const include_parents: boolean = (options.include_parents as boolean) ?? true;
+							const chain_to_process = include_parents ? chain : [chain[0]];
 
-							for (const node of chain) {
+							for (const node of chain_to_process) {
 								let term_str = '';
 
 								// Try to find exact match
@@ -236,7 +240,7 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 			result.push({
 				...item,
 				lang:  lang === '__nolan__' ? null : lang,
-				value: strs.join('; ')
+				value: strs.join(records_separator)
 			});
 		}
 	}
