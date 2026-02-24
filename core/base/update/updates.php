@@ -338,7 +338,8 @@ $updates->$v = new stdClass();
 				'stop_on_error'	=> true,
 				'script_vars'	=> [
 					$ar_tables,
-					false // save option. On false, only data review is made. Not save
+					false, // save option. On false, only data review is made. Not save
+					'matrix_processor' // process type
 				] // Note that only ONE argument encoded is sent
 			];
 

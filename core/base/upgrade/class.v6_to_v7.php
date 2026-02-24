@@ -335,6 +335,7 @@ class v6_to_v7 {
 
 	/**
 	* CONVERT_TABLE_DATA
+	* Alias of update::convert_table_data
 	* @param array $ar_tables
 	* @param string $action
 	* @return bool
@@ -408,7 +409,7 @@ class v6_to_v7 {
 
 				// CLI process data status
 				if ( running_in_cli()===true ) {
-					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': reformat_matrix_data'
+					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': ' . __METHOD__
 						. ' | table: '			. $table
 						. ' | id: '				. $id .' - ' . $max
 						. ' | section_tipo: '	. $section_tipo
@@ -640,6 +641,7 @@ class v6_to_v7 {
 
 		return true;
 	}//end delete_v6_db_indexes
+
 
 
 	/**

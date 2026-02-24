@@ -5190,6 +5190,9 @@ dd-modal .footer.distribute {
 .page_error_container > .icon_dedalo {
   height: 7rem;
 }
+.page_error_container > .server_response_error {
+  white-space: pre-wrap;
+}
 .process_status_node {
   position: relative;
   padding: 0px !important;
@@ -5197,10 +5200,9 @@ dd-modal .footer.distribute {
 }
 .process_status_node > .spinner {
   position: absolute !important;
-  top: 0.48rem !important;
-  left: 0.5rem !important;
+  top: 1rem !important;
+  left: 1rem !important;
   margin: 0px !important;
-  scale: 0.82;
 }
 .process_status_node > .button_stop_process {
   position: absolute;

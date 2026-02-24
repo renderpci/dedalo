@@ -11,10 +11,10 @@
 class processes {
 
 	/** @var string Table name used for storing process data */
-	const PROCESSES_TABLE	= 'matrix_notifications';
+	const PROCESSES_TABLE = 'matrix_notifications';
 
 	/** @var int Constant ID for the process list record */
-	const RECORD_ID			= 2;
+	const RECORD_ID = 2;
 
 
 
