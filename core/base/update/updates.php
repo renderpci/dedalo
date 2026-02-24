@@ -426,7 +426,19 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// Create matrix_activity_diffusion table
+		// TM : Update all data in PostgreSQL with new v7 format
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'UPDATE all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'reformat_matrix_time_machine_data',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+					['matrix_time_machine'],
+					true // save option. On false, only data review is made. Not save
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// DIFFUSION_ACTIVITY : Create matrix_activity_diffusion table
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Create MATRIX_ACTIVITY_DIFFUSION table.',
 				'script_class'	=> 'v6_to_v7',
