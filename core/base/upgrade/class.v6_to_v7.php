@@ -492,7 +492,7 @@ class v6_to_v7 {
 						return; // Return from closure
 					}
 				}
-			}
+			}//end callback function
 		);
 
 		$response->result	= empty($response->errors);
@@ -502,6 +502,578 @@ class v6_to_v7 {
 
 		return $response;
 	}//end reformat_matrix_data
+
+
+
+	/**
+	 * PROCESS_MATRIX_ROW_DATA
+	 *
+	 * Processes a single legacy v6 row (datos JSON blob) and distributes its content into
+	 * specialized v7 column objects based on component typology.
+	 *
+	 * @param array|object $datos Legacy data blob from v6.
+	 * @param string $table Target table name.
+	 * @param string $section_tipo Section typology.
+	 * @param mixed $section_id Section record ID.
+	 * @param object $value_type_map Map of model names to DEDALO_VALUE_TYPE constants.
+	 * @param object $response (by reference) Standard response object for error tracking.
+	 * @return object Object containing individual column datasets.
+	 */
+	public static function process_matrix_row_data($datos, string $table, string $section_tipo, $section_id, object $value_type_map, &$response) : object {
+
+		$results = (object)[
+			'data'            => new stdClass(),
+			'relation_search' => new stdClass(),
+			'relation'        => new stdClass(),
+			'string'          => new stdClass(),
+			'date'            => new stdClass(),
+			'number'          => new stdClass(),
+			'geo'             => new stdClass(),
+			'media'           => new stdClass(),
+			'iri'             => new stdClass(),
+			'misc'            => new stdClass(),
+			'meta'            => new stdClass()
+		];
+
+		// Map of typology to target column property
+		$column_map = [
+			DEDALO_VALUE_TYPE_STRING => 'string',
+			DEDALO_VALUE_TYPE_NUMBER => 'number',
+			DEDALO_VALUE_TYPE_DATE   => 'date',
+			DEDALO_VALUE_TYPE_MEDIA  => 'media',
+			DEDALO_VALUE_TYPE_IRI    => 'iri',
+			DEDALO_VALUE_TYPE_GEO    => 'geo',
+			DEDALO_VALUE_TYPE_MISC   => 'misc'
+		];
+
+		foreach ($datos as $datos_key => $datos_value) {
+			if (empty($datos_value)) continue;
+
+			switch ($datos_key) {
+				case 'relations_search':
+				case 'relations':
+					$target_key = ($datos_key === 'relations_search') ? 'relation_search' : 'relation';
+					foreach ($datos_value as $locator) {
+						if (!isset($locator->from_component_tipo)) {
+							$locator_string = json_handler::encode($locator);
+							debug_log(__METHOD__ . " ERROR: locator without from_component_tipo in $table/$section_id. locator: $locator_string", logger::ERROR);
+							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id'";
+							continue;
+						}
+
+						// Skip deprecated activity project link
+						if ($locator->from_component_tipo === 'dd550') continue;
+
+						$comp_tipo = $locator->from_component_tipo;
+						if (!isset($results->{$target_key}->{$comp_tipo})) {
+							$results->{$target_key}->{$comp_tipo} = [];
+						}
+						$results->{$target_key}->{$comp_tipo}[] = $locator;
+					}
+
+					// Update IDs and meta counts for relations
+					if ($datos_key === 'relations') {
+						foreach ($results->relation as $comp_tipo => $rel_data) {
+							foreach ($rel_data as $i => $locator) {
+								$locator->id = $i + 1;
+								$results->meta->{$comp_tipo} = [(object)['count' => $i + 1]];
+							}
+						}
+					}
+					break;
+
+				case 'components':
+					foreach ($datos_value as $literal_tipo => $literal_value) {
+
+						// Get model
+						$model = ontology_node::get_model_by_tipo($literal_tipo);
+
+						// Skip v5 legacy components columns
+						if (in_array($model, ['component_filter', 'component_section_id'])) continue;
+
+						// Get target column based on typology
+						$typology   = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+						$target_col = $column_map[$typology] ?? 'misc';
+
+						if (!isset($literal_value->dato)) {
+							debug_log(__METHOD__ . " ERROR: Literal without v6 'dato' property ($literal_tipo) in $table/$section_id", logger::ERROR);
+							$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
+							continue;
+						}
+
+						$value_key = 0;
+						foreach ($literal_value->dato as $lang => $ar_value) {
+
+							// Skip empty values
+							if (empty($ar_value) && $ar_value !== '0') continue;
+
+							// Migrate data (Add 'id' property to each value, normalize data as array, set 'lang' property if missing)
+							$migrate_component_data_response = self::migrate_component_data(
+								$literal_tipo,
+								$ar_value,
+								$lang,
+								$section_tipo,
+								$section_id,
+								$value_key
+							);
+
+							if ($migrate_component_data_response->result === false) {
+								// If the data isn't useful for saving (legacy garbage), no errors are added to the response. This is not an error, it's just a skip.
+								if(!empty($migrate_component_data_response->errors)){
+									$response->errors[] = "Error on SQL execution for ID $section_id. Table: $table : "
+										. implode("\n", $migrate_component_data_response->errors);
+								}
+								continue;
+							}
+
+							// If the data is empty, skip it
+							if(empty($migrate_component_data_response->result)) continue;
+
+							// Set component data
+							if (!isset($results->{$target_col}->{$literal_tipo})) {
+								$results->{$target_col}->{$literal_tipo} = [];
+							}
+							$results->{$target_col}->{$literal_tipo} = array_merge(
+								$results->{$target_col}->{$literal_tipo},
+								$migrate_component_data_response->result
+							);
+						}//end foreach ($literal_value->dato as $lang => $ar_value)
+
+						// Set component counter
+						// get the last id iterating all items of all langs
+						// Note that all langs share id across all items, like:
+						// [{
+						// 	id: 1,
+						// 	lang: 'lg-spa'
+						// },
+						// {
+						// 	id: 1,
+						// 	lang: 'lg-eng'
+						// }]
+						if(isset($results->{$target_col}->{$literal_tipo})) {
+							$last_id = 0;
+							foreach ($results->{$target_col}->{$literal_tipo} as $value) {
+								if (isset($value->id) && is_numeric($value->id) && (int)$value->id > $last_id) {
+									$last_id = (int)$value->id;
+								}
+							}
+							if($last_id > 0) {
+								$results->meta->{$literal_tipo} = [(object)['count' => $last_id]];
+							}
+						}
+
+						/* OLD WAY - Changed by new migrate_component_data function unified for time machine
+
+						foreach ($literal_value->dato as $lang => $ar_value) {
+							if (empty($ar_value) && $ar_value !== '0') continue;
+
+							// Normalize non-array values (TinyMCE, etc.)
+							if (!is_array($ar_value)) {
+								if (($literal_tipo === 'hierarchy42' && $lang === 'lg-nolan') ||
+									($ar_value === '<br data-mce-bogus="1">') ||
+									($literal_tipo === 'dd23')) continue;
+
+								$ar_value = [$ar_value];
+							}
+
+							$value_key = 0;
+							foreach (array_values($ar_value) as $value) {
+								if (!isset($value) || (empty($value) && $value !== '0')) continue;
+								if (json_handler::encode($value) === '{"files_info":[]}') continue;
+
+								// Skip old v5 media records pointing to self
+								if (is_object($value) && isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
+									isset($value->section_tipo) && $value->section_tipo === $section_tipo && $value->section_id == $section_id) continue;
+
+								$value_key++;
+								$results->meta->{$literal_tipo} = [(object)['count' => $value_key]];
+
+								$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+								$target_col = $column_map[$typology] ?? 'misc';
+
+								// Prepare object to store
+								if ($typology === DEDALO_VALUE_TYPE_MISC &&
+									in_array($model, ['component_security_access', 'component_info', 'component_filter_records']) &&
+									is_object($value)) {
+									$final_obj = $value;
+									$final_obj->id = $value_key;
+								} else {
+									$final_obj = (object)[
+										'id'    => $value_key,
+										'value' => $value
+									];
+								}
+
+								// Special handling for language-aware strings
+								if ($typology === DEDALO_VALUE_TYPE_STRING) {
+									$final_obj->lang = $lang;
+								}
+
+								// Check format for complex types (Date, Media, Geo, IRI)
+								if (in_array($typology, [DEDALO_VALUE_TYPE_DATE, DEDALO_VALUE_TYPE_MEDIA, DEDALO_VALUE_TYPE_GEO, DEDALO_VALUE_TYPE_IRI])) {
+									if (!is_object($value)) {
+										$val_str = json_handler::encode($value);
+										debug_log(__METHOD__ . " ERROR: component value ($literal_tipo) out of format in $table/$section_id: $val_str", logger::ERROR);
+										$response->errors[] = "Bad component data (invalid format for $typology). table: '$table' tipo: '$literal_tipo'";
+										continue 2;
+									}
+									// Update existing object properties
+									$final_obj = $value;
+									if (empty($final_obj->id) || $typology !== DEDALO_VALUE_TYPE_IRI) {
+										$final_obj->id = $value_key;
+									}
+									if ($typology === DEDALO_VALUE_TYPE_IRI) {
+										$final_obj->lang = $lang;
+									}
+								}
+
+								if (!isset($results->{$target_col}->{$literal_tipo})) {
+									$results->{$target_col}->{$literal_tipo} = [];
+								}
+								$results->{$target_col}->{$literal_tipo}[] = $final_obj;
+							}
+						}
+						*/
+					}
+					break;
+
+				case 'section_real_tipo':
+					break; // Extinct property
+
+				case 'created_by_userID':
+					$results->data->created_by_user_id = $datos_value;
+					break;
+
+				default:
+					// update other properties like section_tipo, created_date, etc.
+					$results->data->{$datos_key} = $datos_value;
+					break;
+			}
+		}
+
+		return $results;
+	}//end process_matrix_row_data
+
+
+
+	/**
+	 * REFORMAT_MATRIX_TIME_MACHINE_DATA
+	 *
+	 * Converts legacy v6 data format (single 'datos' JSON blob) to the new v7 columnar data format.
+	 *
+	 * Example usage:
+	 * ```php
+	 * $ar_tables = ['matrix_time_machine'];
+	 * $save = true; // Set to false for a dry-run check
+	 * $response = v6_to_v7::reformat_matrix_time_machine_data($ar_tables, $save);
+	 * ```
+	 *
+	 * @param array $ar_tables List of database tables to process.
+	 * @param bool $save If true, saves changes to DB. If false, only performs a data review.
+	 * @return object Standard response object.
+	 */
+	public static function reformat_matrix_time_machine_data( array $ar_tables, bool $save ) {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		debug_log(__METHOD__ . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			. ' CONVERTING ... ' . PHP_EOL
+			. ' reformat_matrix_time_machine_data - tables: ' . json_handler::encode($ar_tables) . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			, logger::WARNING
+		);
+
+		// Pre-fetch value type map once
+		$value_type_map = v6_to_v7::get_value_type_map();
+
+		// CLI process data initialization
+		if ( running_in_cli()===true ) {
+			if (!isset(common::$pdata)) {
+				common::$pdata = new stdClass();
+			}
+			common::$pdata->table = '';
+			common::$pdata->memory = '';
+			common::$pdata->counter = 0;
+		}
+
+		$conn = DBi::_getConnection();
+
+		// iterate tables
+		update::tables_rows_iterator(
+			$ar_tables,
+			function($row, $table, $max) use ($response, $save, $conn, $value_type_map) {
+
+				$id				= $row['id'];
+				$section_tipo	= $row['section_tipo'] ?? null;
+				$data			= (isset($row['data'])) ? json_handler::decode($row['data']) : null;
+				$section_id		= $row['section_id'] ?? '';
+				$tipo			= $row['tipo'] ?? null;
+				$lang			= $row['lang'] ?? null;
+
+				if( empty($tipo) ) {
+					$response->errors[] = "Ignored empty column tipo for matrix_time_machine ID $id";
+					return;
+				}
+
+				// Old data garbage
+				if( $tipo === 'termino') {
+					$response->errors[] = "Ignored old data garbage for matrix_time_machine ID $id";
+					return;
+				}
+
+				if( empty($lang) ) {
+					$response->errors[] = "Ignored empty column lang for matrix_time_machine ID $id";
+					return;
+				}
+
+				// CLI process data status
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': ' . __METHOD__
+						. ' | table: '			. $table
+						. ' | id: '				. $id .' - ' . $max
+						. ' | section_tipo: '	. $section_tipo
+						. ' | section_id: '		. ($row['section_id'] ?? '');
+					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+						? dd_memory_usage()
+						: common::$pdata->memory;
+					common::$pdata->table = $table;
+					common::$pdata->section_tipo = $section_tipo;
+					common::$pdata->counter++;
+					print_cli(common::$pdata);
+				}
+
+				if(empty($data)) {
+					return;
+				}
+
+				// safe tipo
+				$safe_tipo = safe_tipo($tipo);
+				if( empty($safe_tipo) ) {
+					$response->errors[] = "Ignored empty safe_tipo for matrix_time_machine ID $id. Tipo: $tipo";
+					return;
+				}
+
+				// data migrate to v7
+				$migrated_data_response = v6_to_v7::migrate_component_data($safe_tipo, $data, $lang, $section_tipo, $section_id);
+				if( $migrated_data_response->result === false ) {
+					if(!empty($migrated_data_response->errors)) {
+						$response->errors[] = "matrix_time_machine ID $id";
+						$response->errors = array_merge($response->errors, $migrated_data_response->errors);
+					}
+					return;
+				}
+
+				// Check if any transformation actually happened
+				// Use JSON comparison to avoid PHP type conversion errors (e.g., comparing object with scalar)
+				if(json_handler::encode($migrated_data_response->result) === json_handler::encode($data)) {
+					return;
+				}
+
+				$data_json = (empty($migrated_data_response->result))
+					? null
+					: json_handler::encode($migrated_data_response->result, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+
+				$params = [
+					$data_json,
+					$id
+				];
+
+				$escaped_table = pg_escape_identifier($conn, $table);
+
+				$strQuery = 'UPDATE ' . $escaped_table . ' SET data = $1 WHERE id = $2';
+
+				if ($save) {
+					$result = matrix_db_manager::exec_search($strQuery, $params, false);
+				} else {
+					// Debug
+					debug_log(__METHOD__
+						. ' Time machine re format data: ID ' . $id . PHP_EOL
+						. ' data: ' . json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL
+						. ' final_data: ' . json_encode($migrated_data_response->result, JSON_PRETTY_PRINT)
+					    , logger::DEBUG
+					);
+
+					$result = true;
+				}
+
+				if($result===false) {
+					$msg = "Failed Update section_data ($table) $id";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					$response->errors[] = "Error on SQL execution for ID $id. Table: $table";
+					return; // Return from closure
+				}
+
+			}//end function
+		);
+
+		$response->result	= empty($response->errors);
+		$response->msg		= empty($response->errors)
+			? 'Request done successfully'
+			: 'Request done with errors (' . count($response->errors) . ')';
+
+		return $response;
+	}//end reformat_matrix_time_machine_data
+
+
+
+	/**
+	 * MIGRATE_COMPONENT_DATA
+	 *
+	 * Migrates component data from v6 format to v7 format.
+	 * Handles normalization of non-array values, typology mapping, language-aware strings,
+	 * and specialized formatting for complex types (Date, Media, Geo, IRI).
+	 *
+	 * (!) It is used ONLY in TIME MACHINE transformations (matrix_time_machine table) to avoid change
+	 * the actual process_matrix_row_data method.
+	 *
+	 * @param string $tipo The component type (e.g., 'dd12').
+	 * @param mixed $raw_value The raw data to migrate. Can be a single value or an array of values.
+	 * @param string $lang The language code (e.g., 'lg-eng').
+	 * @param string|null $section_tipo The section type (e.g., 'oh1').
+	 * @param mixed $section_id The section id (e.g., 123).
+	 * @param int $value_key The key of the value to migrate. Defaults to 0.
+	 * @return stdClass Response object with 'errors' (array) and 'result' (array|false).
+	 *                  'result' contains the migrated data array or false if no changes were needed.
+	 */
+	public static function migrate_component_data(
+		string $tipo,
+		mixed $raw_value, // each lang value
+		string $lang,
+		?string $section_tipo = null,
+		mixed $section_id = null,
+		int $value_key = 0
+	) : stdClass {
+
+		$response = new stdClass();
+		$response->errors = [];
+
+		// safe tipo. Check if the tipo is valid
+		$safe_tipo = safe_tipo($tipo);
+		if( empty($safe_tipo) ) {
+			$response->errors[] = "Ignored empty safe_tipo. Tipo: $tipo";
+			$response->result = false;
+			return $response;
+		}
+
+		$model = ontology_node::get_model_by_tipo($tipo);
+		if( empty($model) ) {
+			$response->errors[] = "Ignored empty model. Tipo: $tipo";
+			$response->result = false;
+			return $response;
+		}
+
+		// relations. Do not touch them
+		$components_with_relations = component_relation_common::get_components_with_relations();
+		if(in_array($model, $components_with_relations)) {
+			$response->result = false;
+			return $response;
+		}
+
+		// Normalize non-array values (TinyMCE, etc.)
+		if (!is_array($raw_value)) {
+			// To delete values
+			if (($tipo === 'hierarchy42' && $lang === 'lg-nolan') || // component_text_area Space frame
+				($raw_value === '<br data-mce-bogus="1">') ||
+				($tipo === 'dd23')) { // component_layout Layout (Layout templates)
+				// Blank value, forces to ignore the value
+				$ar_value = [];
+			}else{
+				$ar_value = [$raw_value];
+			}
+		}else{
+			$ar_value = $raw_value;
+		}
+
+		// typology
+		$value_type_map = v6_to_v7::get_value_type_map();
+		$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
+
+		$final_data = [];
+		foreach (array_values((array)$ar_value) as $value) {
+
+			// Skip entries with no value
+			if (!isset($value) || (empty($value) && $value !== '0')) continue;
+
+			// Skip media components with empty files_info
+			if (json_handler::encode($value) === '{"files_info":[]}') continue;
+
+			// Skip old v5 media records pointing to self
+			if (is_object($value) && isset($value->component_tipo) && $value->component_tipo === $tipo &&
+				isset($value->section_tipo) && $value->section_tipo === $section_tipo &&
+				isset($value->section_id) && $value->section_id == $section_id) {
+				continue;
+			}
+
+			$value_key++;
+
+			// Prepare object to store
+			if(!is_object($value)) {
+
+				// Check format for complex types (Date, Media, Geo, IRI)
+				// This data has a bad format, inform to the user and do not save it
+				if (in_array($typology, [DEDALO_VALUE_TYPE_DATE, DEDALO_VALUE_TYPE_MEDIA, DEDALO_VALUE_TYPE_GEO])) {
+
+					$val_str = json_handler::encode($value);
+					debug_log(__METHOD__ . " ERROR: component value ($tipo) out of format: $val_str (section_tipo: '$section_tipo' - section_id: '$section_id')", logger::ERROR);
+					$response->errors[] = "Bad component data (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
+					$response->result = false;
+					return $response;
+				}
+
+				// Create a normalized object with id and value
+				if ($typology === DEDALO_VALUE_TYPE_IRI) {
+
+					// IRI case : use 'iri' instead of 'value' as property name
+
+					$parts = explode('http', (string)$value, 2);
+					$last_part = end($parts);
+
+					$final_obj = (object)[
+						'iri' => 'http' . $last_part ?? ''
+					];
+
+					// Add label when $parts > 1
+					if(count($parts) > 1 && !empty($parts[0]) {
+						$final_obj->title = $parts[0] ?? '';
+					}
+
+				}else{
+
+					$final_obj = (object)[
+						'value' => $value
+					];
+				}
+			} else {
+				// Handle as object
+				$final_obj = $value;
+			}
+
+			// Add property 'id' to the object. ALL components except relations have an 'id' property.
+			if(!isset($final_obj->id)) {
+				$final_obj->id = $value_key;
+			}
+
+			// Special handling for language-aware strings
+			if ($typology === DEDALO_VALUE_TYPE_STRING || $typology === DEDALO_VALUE_TYPE_IRI) {
+				$final_obj->lang = $lang;
+			}
+
+
+			$final_data[] = $final_obj;
+		}//end foreach (array_values((array)$ar_value) as $value)
+
+		$response->result = $final_data;
+
+
+		return $response;
+	}//end migrate_component_data
 
 
 
@@ -715,30 +1287,31 @@ class v6_to_v7 {
 				return false;
 			}
 
-		// Add primary key
-		if (DBi::check_column_exists($matrix_table, 'id')) {
-			$sql_query 	= "ALTER TABLE IF EXISTS {$escaped_table} ADD CONSTRAINT {$new_constraint} PRIMARY KEY (id);";
-			$result		= matrix_db_manager::exec_sql($sql_query);
+			// Add primary key
+			if (DBi::check_column_exists($matrix_table, 'id')) {
+				$sql_query 	= "ALTER TABLE IF EXISTS {$escaped_table} ADD CONSTRAINT {$new_constraint} PRIMARY KEY (id);";
+				$result		= matrix_db_manager::exec_sql($sql_query);
 
-			if($result===false) {
-				$msg = "Failed to add primary key constraint '$new_constraint' on table '$matrix_table'";
+				if($result===false) {
+					$msg = "Failed to add primary key constraint '$new_constraint' on table '$matrix_table'";
+					debug_log(__METHOD__
+						." ERROR: $msg " . PHP_EOL
+						." Query: $sql_query "
+						, logger::ERROR
+					);
+					return false;
+				}
+			} else {
 				debug_log(__METHOD__
-					." ERROR: $msg " . PHP_EOL
-					." Query: $sql_query "
-					, logger::ERROR
+					." WARNING: Table '$matrix_table' does not have 'id' column. Skipping PK constraint creation."
+					, logger::WARNING
 				);
-				return false;
 			}
-		} else {
-			debug_log(__METHOD__
-				." WARNING: Table '$matrix_table' does not have 'id' column. Skipping PK constraint creation."
-				, logger::WARNING
-			);
-		}
-	}
+		}//end foreach ($ar_constraint as $matrix_table => $ar_constraint_to_change)
 
-	return true;
-}
+
+		return true;
+	}//end rename_constraint
 
 
 
@@ -774,7 +1347,7 @@ class v6_to_v7 {
 					common::$pdata = new stdClass();
 					common::$pdata->counter = 0;
 				}
-				common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ": recreate_db_assets | $process_name";
+				common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ": recreate_db_assets | $process_name -> $method";
 				common::$pdata->memory = (common::$pdata->counter % 100 === 0)
 					? dd_memory_usage()
 					: (common::$pdata->memory ?? '');
@@ -831,9 +1404,19 @@ class v6_to_v7 {
 		}
 
 		$sql_query = sanitize_query('
-			DELETE FROM "' . static::$table_matrix_time_machine . '"
-			WHERE "section_tipo" = "tipo"
-			  AND ("state" != \'deleted\' OR "state" IS NULL)
+			DO $$
+			BEGIN
+				IF EXISTS (
+					SELECT 1
+					FROM information_schema.columns
+					WHERE table_name = \'' . static::$table_matrix_time_machine . '\'
+					AND column_name = \'state\'
+				) THEN
+					DELETE FROM "' . static::$table_matrix_time_machine . '"
+					WHERE "section_tipo" = "tipo"
+					  AND ("state" != \'deleted\' OR "state" IS NULL);
+				END IF;
+			END $$;
 		');
 
 		$result = matrix_db_manager::exec_sql($sql_query);
@@ -850,6 +1433,7 @@ class v6_to_v7 {
 
 		return true;
 	}//end remove_tm_created_sections
+
 
 
 	/**
@@ -912,6 +1496,15 @@ class v6_to_v7 {
 	* New columns data is compatible with previous column data.
 	*/
 	public static function fill_new_columns_in_tm() :bool {
+
+		$column_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'userID');
+		if(!$column_exists) {
+			debug_log(__METHOD__
+				." WARNING: Ignore fill_new_columns_in_tm because userID column does not exist "
+				, logger::WARNING
+			);
+			return true;
+		}
 
 		$sql_query = sanitize_query ('
 			UPDATE "' . static::$table_matrix_time_machine . '"
@@ -999,189 +1592,9 @@ class v6_to_v7 {
 
 
 
-
 	/**
-	 * PROCESS_MATRIX_ROW_DATA
+	 * CHANGE_NOTIFICATIONS_TABLE_COLUMN_NAME
 	 *
-	 * Processes a single legacy v6 row (datos JSON blob) and distributes its content into
-	 * specialized v7 column objects based on component typology.
-	 *
-	 * @param array|object $datos Legacy data blob from v6.
-	 * @param string $table Target table name.
-	 * @param string $section_tipo Section typology.
-	 * @param mixed $section_id Section record ID.
-	 * @param object $value_type_map Map of model names to DEDALO_VALUE_TYPE constants.
-	 * @param object $response (by reference) Standard response object for error tracking.
-	 * @return object Object containing individual column datasets.
-	 */
-	public static function process_matrix_row_data($datos, string $table, string $section_tipo, $section_id, object $value_type_map, &$response) : object {
-
-		$results = (object)[
-			'data'            => new stdClass(),
-			'relation_search' => new stdClass(),
-			'relation'        => new stdClass(),
-			'string'          => new stdClass(),
-			'date'            => new stdClass(),
-			'number'          => new stdClass(),
-			'geo'             => new stdClass(),
-			'media'           => new stdClass(),
-			'iri'             => new stdClass(),
-			'misc'            => new stdClass(),
-			'meta'            => new stdClass()
-		];
-
-		// Map of typology to target column property
-		$column_map = [
-			DEDALO_VALUE_TYPE_STRING => 'string',
-			DEDALO_VALUE_TYPE_NUMBER => 'number',
-			DEDALO_VALUE_TYPE_DATE   => 'date',
-			DEDALO_VALUE_TYPE_MEDIA  => 'media',
-			DEDALO_VALUE_TYPE_IRI    => 'iri',
-			DEDALO_VALUE_TYPE_GEO    => 'geo',
-			DEDALO_VALUE_TYPE_MISC   => 'misc'
-		];
-
-		foreach ($datos as $datos_key => $datos_value) {
-			if (empty($datos_value)) continue;
-
-			switch ($datos_key) {
-				case 'relations_search':
-				case 'relations':
-					$target_key = ($datos_key === 'relations_search') ? 'relation_search' : 'relation';
-					foreach ($datos_value as $locator) {
-						if (!isset($locator->from_component_tipo)) {
-							$locator_string = json_handler::encode($locator);
-							debug_log(__METHOD__ . " ERROR: locator without from_component_tipo in $table/$section_id. locator: $locator_string", logger::ERROR);
-							$response->errors[] = "Bad component data (locator without from_component_tipo property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id'";
-							continue;
-						}
-
-						// Skip deprecated activity project link
-						if ($locator->from_component_tipo === 'dd550') continue;
-
-						$comp_tipo = $locator->from_component_tipo;
-						if (!isset($results->{$target_key}->{$comp_tipo})) {
-							$results->{$target_key}->{$comp_tipo} = [];
-						}
-						$results->{$target_key}->{$comp_tipo}[] = $locator;
-					}
-
-					// Update IDs and meta counts for relations
-					if ($datos_key === 'relations') {
-						foreach ($results->relation as $comp_tipo => $rel_data) {
-							foreach ($rel_data as $i => $locator) {
-								$locator->id = $i + 1;
-								$results->meta->{$comp_tipo} = [(object)['count' => $i + 1]];
-							}
-						}
-					}
-					break;
-
-				case 'components':
-					foreach ($datos_value as $literal_tipo => $literal_value) {
-						$model = ontology_node::get_model_by_tipo($literal_tipo);
-
-						// Skip v5 legacy components
-						if (in_array($model, ['component_filter', 'component_section_id'])) continue;
-
-						if (!isset($literal_value->dato)) {
-							debug_log(__METHOD__ . " ERROR: Literal without v6 'dato' property ($literal_tipo) in $table/$section_id", logger::ERROR);
-							$response->errors[] = "Bad component data (literal without v6 'dato' property). table: '$table' section_tipo: '$section_tipo' section_id: '$section_id' component_tipo: '$literal_tipo'";
-							continue;
-						}
-
-						foreach ($literal_value->dato as $lang => $ar_value) {
-							if (empty($ar_value) && $ar_value !== '0') continue;
-
-							// Normalize non-array values (TinyMCE, etc.)
-							if (!is_array($ar_value)) {
-								if (($literal_tipo === 'hierarchy42' && $lang === 'lg-nolan') ||
-									($ar_value === '<br data-mce-bogus="1">') ||
-									($literal_tipo === 'dd23')) continue;
-
-								$ar_value = [$ar_value];
-							}
-
-							$value_key = 0;
-							foreach (array_values($ar_value) as $value) {
-								if (!isset($value) || (empty($value) && $value !== '0')) continue;
-								if (json_handler::encode($value) === '{"files_info":[]}') continue;
-
-								// Skip old v5 media records pointing to self
-								if (is_object($value) && isset($value->component_tipo) && $value->component_tipo === $literal_tipo &&
-									isset($value->section_tipo) && $value->section_tipo === $section_tipo && $value->section_id == $section_id) continue;
-
-								$value_key++;
-								$results->meta->{$literal_tipo} = [(object)['count' => $value_key]];
-
-								$typology = $value_type_map->{$model} ?? DEDALO_VALUE_TYPE_MISC;
-								$target_col = $column_map[$typology] ?? 'misc';
-
-								// Prepare object to store
-								if ($typology === DEDALO_VALUE_TYPE_MISC &&
-									in_array($model, ['component_security_access', 'component_info', 'component_filer_records']) &&
-									is_object($value)) {
-									$final_obj = $value;
-									$final_obj->id = $value_key;
-								} else {
-									$final_obj = (object)[
-										'id'    => $value_key,
-										'value' => $value
-									];
-								}
-
-								// Special handling for language-aware strings
-								if ($typology === DEDALO_VALUE_TYPE_STRING) {
-									$final_obj->lang = $lang;
-								}
-
-								// Check format for complex types (Date, Media, Geo, IRI)
-								if (in_array($typology, [DEDALO_VALUE_TYPE_DATE, DEDALO_VALUE_TYPE_MEDIA, DEDALO_VALUE_TYPE_GEO, DEDALO_VALUE_TYPE_IRI])) {
-									if (!is_object($value)) {
-										$val_str = json_handler::encode($value);
-										debug_log(__METHOD__ . " ERROR: component value ($literal_tipo) out of format in $table/$section_id: $val_str", logger::ERROR);
-										$response->errors[] = "Bad component data (invalid format for $typology). table: '$table' tipo: '$literal_tipo'";
-										continue 2;
-									}
-									// Update existing object properties
-									$final_obj = $value;
-									if (empty($final_obj->id) || $typology !== DEDALO_VALUE_TYPE_IRI) {
-										$final_obj->id = $value_key;
-									}
-									if ($typology === DEDALO_VALUE_TYPE_IRI) {
-										$final_obj->lang = $lang;
-									}
-								}
-
-								if (!isset($results->{$target_col}->{$literal_tipo})) {
-									$results->{$target_col}->{$literal_tipo} = [];
-								}
-								$results->{$target_col}->{$literal_tipo}[] = $final_obj;
-							}
-						}
-					}
-					break;
-
-				case 'section_real_tipo':
-					break; // Extinct property
-
-				case 'created_by_userID':
-					$results->data->created_by_user_id = $datos_value;
-					break;
-
-				default:
-					// update other properties like section_tipo, created_date, etc.
-					$results->data->{$datos_key} = $datos_value;
-					break;
-			}
-		}
-
-		return $results;
-	}//end process_matrix_row_data
-
-
-
-	/**
 	 * Change notifications table column name from 'datos' to 'data'
 	 * @return bool
 	 */
