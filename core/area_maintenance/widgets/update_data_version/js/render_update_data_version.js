@@ -9,6 +9,7 @@
 	import {when_in_dom} from '../../../../common/js/events.js'
 	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {login} from '../../../../login/js/login.js'
 	import {set_widget_label_style} from '../../../js/render_area_maintenance.js'
 
 	// hljs
@@ -97,12 +98,28 @@ const get_content_data = async function(self) {
 
 	// dedalo_db_management
 		if (!update_version) {
+			// Info text
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'info_text success_text',
 				inner_html		: 'Data format is updated: ' + current_version_in_db.join('.'),
 				parent			: content_data
 			})
+			// Button quit. Allows the user quit from Dédalo here
+			const button_quit = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'quit_button light',
+				inner_html		: 'Quit',
+				parent			: content_data
+			})
+			const click_handler = (e) => {
+				e.stopPropagation()
+				login.quit({
+					caller : self
+				})
+			}
+			button_quit.addEventListener('click', click_handler)
+
 			return content_data
 		}
 
