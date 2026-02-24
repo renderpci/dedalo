@@ -1165,7 +1165,9 @@ class matrix_db_manager {
 					, $level
 				);
 			}else{
-				$sql_query_debug = '-- exec_search ' . $total_time_ms . ' ms - ' . count($params) . ' params [' .$stmt_name. ']';
+				$lines = explode("\n", trim($sql_query));
+				$subquery = substr($lines[0] ?? '', 0, 250);
+				$sql_query_debug = '-- exec_search ' . $total_time_ms . ' ms - ' . count($params) . ' params [' .$stmt_name. '] - ' . $subquery;
 				if(isset($prepend_sql)) {
 					$sql_query_debug = $prepend_sql . $sql_query_debug;
 				}
