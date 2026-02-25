@@ -216,14 +216,14 @@ const get_content_value = (i, current_value, self) => {
 		}//end if(i>0)
 
 	// transliterate_value
-		if (with_lang_versions && self.data.transliterate_value) {
-			const transliterate_value = self.data.transliterate_value[0].value || ''
+		if (with_lang_versions && self.data.transliterate_value && Array.isArray(self.data.transliterate_value) && self.data.transliterate_value.length > 0) {
+			const transliterate_value = self.data.transliterate_value[0].value || '';
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'transliterate_value',
 				inner_html		: transliterate_value,
 				parent			: content_value
-			})
+			});
 		}
 
 	// component_dataframe
