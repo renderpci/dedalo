@@ -419,8 +419,8 @@ class matrix_db_manager {
 			. ' SET ' . implode(', ', $set_clauses)
 			. ' WHERE section_id = $1 AND section_tipo = $2';
 
-		// Execute using pg_query_params for performance and security
-		$result = pg_query_params($conn, $sql, $params);
+		// exec_search manages recycling statements
+		$result = self::exec_search($sql, $params);
 
 		// No record existing case.
 		// When the record doesn't exist in DB, perform a INSERT
@@ -436,7 +436,8 @@ class matrix_db_manager {
 				VALUES ('
 				. implode(', ', $placeholders) . ')';
 
-			$result = pg_query_params($conn, $sql_insert, $params);
+			// exec_search manages recycling statements
+			$result = self::exec_search($sql_insert, $params);
 		}
 
 		if (!$result) {
