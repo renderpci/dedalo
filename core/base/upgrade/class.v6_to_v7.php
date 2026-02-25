@@ -1040,7 +1040,7 @@ class v6_to_v7 {
 					];
 
 					// Add label when $parts > 1
-					if(count($parts) > 1 && !empty($parts[0]) {
+					if(count($parts) > 1 && !empty($parts[0])) {
 						$final_obj->title = $parts[0] ?? '';
 					}
 
