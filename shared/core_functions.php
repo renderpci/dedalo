@@ -2657,6 +2657,37 @@ function are_all_properties_empty( object $object ) : bool {
 
 
 /**
+ * NORMALIZE_ARRAY
+ * Converts objects to arrays, sorts keys of internal elements, and sorts the outer array.
+ * It recursively sorts the keys of each object and then sorts
+ * the outer array itself so that the internal structure is identical regardless of how it started.
+ * Use as:
+ * 	$isEqual = normalize_array($array1) === normalize_array($array2);
+ * @param array $arr The array to normalize.
+ * @return array The normalized array.
+ */
+function normalize_array(array $arr) : array {
+    // 1. Convert objects to associative arrays (easier to sort)
+    $arr = json_decode(json_encode($arr), true);
+
+    // 2. Sort the keys of each internal element
+    foreach ($arr as &$item) {
+        if (is_array($item)) {
+            ksort($item);
+        }
+    }
+
+    // 3. Sort the outer array based on the serialized values of the items
+    usort($arr, function($a, $b) {
+        return serialize($a) <=> serialize($b);
+    });
+
+    return $arr;
+}//end normalize_array
+
+
+
+/**
 * DEBUG_PREPARED_STATEMENT
 * Resolve SQL parameters for debugging.
 * @param string $sql_template
