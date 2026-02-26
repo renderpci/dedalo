@@ -1022,7 +1022,7 @@ class v6_to_v7 {
 
 					$val_str = json_handler::encode($value);
 					debug_log(__METHOD__ . " ERROR: component value ($tipo) out of format: $val_str (section_tipo: '$section_tipo' - section_id: '$section_id')", logger::ERROR);
-					$response->errors[] = "Bad component data (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
+					$response->errors[] = "Bad component data [1] (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
 					$response->result = false;
 					return $response;
 				}
@@ -1036,23 +1036,51 @@ class v6_to_v7 {
 					$last_part = end($parts);
 
 					$final_obj = (object)[
-						'iri' => 'http' . $last_part ?? ''
+						'iri' => 'http' . ($last_part ?? '')
 					];
 
 					// Add label when $parts > 1
 					if(count($parts) > 1 && !empty($parts[0])) {
-						$final_obj->title = $parts[0] ?? '';
+						$final_obj->title = $parts[0];
 					}
 
 				}else{
 
-					$final_obj = (object)[
-						'value' => $value
-					];
+					// Assume the value is a v6 data like string or array. Move to v7 object with 'value' property
+					if(in_array($model, component_common::$components_using_value_property)) {
+
+						$final_obj = (object)[
+							'value' => $value
+						];
+
+					}else{
+
+						$val_str = json_handler::encode($value);
+						debug_log(__METHOD__ . " ERROR: component value ($tipo) out of format: $val_str (section_tipo: '$section_tipo' - section_id: '$section_id')", logger::ERROR);
+						$response->errors[] = "Bad component data [2]. Expected object. (invalid format. typology: $typology - model: $model). tipo: '$tipo' - section_tipo: '$section_tipo' - section_id: '$section_id'";
+						$response->result = false;
+						return $response;
+					}
 				}
 			} else {
 				// Handle as object
-				$final_obj = $value;
+				// This components add a new 'value' property if it is not already present.
+				if(in_array($model, component_common::$components_using_value_property) && !isset($value->value)) {
+
+					if(in_array($model, ['component_filter_records','component_info','component_security_access'])) {
+						// Only set the missing property as null
+						$value->value = null;
+						$final_obj = $value;
+					}else{
+						// Wrap the value in a new object
+						$final_obj = (object)[
+							'value' => $value
+						];
+					}
+				}else{
+					// Other components, such as component_date, component_geolocation, component_av, etc. are already objects. However, they do not use the 'value' property.
+					$final_obj = $value;
+				}
 			}
 
 			// Add property 'id' to the object. ALL components except relations have an 'id' property.
