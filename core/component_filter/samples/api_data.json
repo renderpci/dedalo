@@ -5,7 +5,7 @@
 	"mode": "edit",
 	"lang": "lg-nolan",
 	"from_component_tipo": "test101",
-	"value": [
+	"entries": [
 		{
 			"id": 1,
 			"section_id": "1",
@@ -13,10 +13,10 @@
 			"from_component_tipo": "test101"
 		},
 		{
+			"id": 2,
 			"section_tipo": "dd153",
 			"section_id": "7",
-			"from_component_tipo": "test101",
-			"id": 2
+			"from_component_tipo": "test101"
 		}
 	],
 	"debug_model": "component_filter",
