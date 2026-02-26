@@ -209,30 +209,10 @@ class matrix_db_manager {
 			RETURNING section_id;
 		";
 
-		// With prepared statement
-		$stmt_name = 'create_' . $table . '_' . md5(implode('_', $columns));
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql
-			)) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-		$result = pg_execute($conn, $stmt_name, $params);
+		// exec_search manages prepared statement recycling and error logging
+		$result = self::exec_search($sql, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. " Query failed: " . pg_last_error($conn) . PHP_EOL
-				. " sql: " . to_string($sql) . PHP_EOL
-				. " params: " . json_encode($params, JSON_PRETTY_PRINT) . PHP_EOL
-				. " sql_debug: " . debug_prepared_statement($sql, $params, $conn)
-				, logger::ERROR
-			);
 			return false;
 		}
 
@@ -286,36 +266,13 @@ class matrix_db_manager {
 			return false;
 		}
 
-		$conn = DBi::_getConnection();
+		$select_fields	= '*'; // Select all because is faster than the list of the columns
+		$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
 
-		// With prepared statement
-		$stmt_name = 'read_' . $table;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$select_fields	= '*'; // Select all because is faster than the list of the columns
-			$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql
-			)) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-		$result = pg_execute(
-			$conn,
-			$stmt_name,
-			[$section_id, $section_tipo]
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = self::exec_search($sql, [$section_id, $section_tipo]);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. " Error execution READ on table: $table " . PHP_EOL
-				. ' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
 			return false;
 		}
 
@@ -683,10 +640,7 @@ class matrix_db_manager {
 			return false;
 		}
 
-		$conn = DBi::_getConnection();
 
-		// statement base name with prepared statement
-		$stmt_name_parts = ['update_by_key', $table];
 
 		// Parameters: $1=section_tipo, $2=section_id, $3=path, $4=value, $5=path2, $6=value2, etc.
 		$params = [$section_id, $section_tipo];
@@ -747,10 +701,10 @@ class matrix_db_manager {
 						debug_log(__METHOD__ . " Invalid JSON value for key: $key", logger::ERROR);
 						return false;
 					}
-					$stmt_name_parts[] = 'update';
+
 				} else {
 					$json_value = null;
-					$stmt_name_parts[] = 'delete';
+
 				}
 
 				// Add parameters
@@ -773,54 +727,21 @@ class matrix_db_manager {
 			// Add the complete SET clause for this column
 			$sentences[] = "$column = $column_expression";
 
-			// Add column name to statement identifier
-			$stmt_name_parts[] = $column;
+
 		}
 
-		// Give the unique name for the all sentences
-		$full_stmt_name = implode('_', $stmt_name_parts);
+		// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
+		$sql = '
+			UPDATE ' . $table . '
+			SET ' . implode(', ' . PHP_EOL, $sentences) . '
+			WHERE section_id = $1 AND section_tipo = $2
+			RETURNING id
+		';
 
-		// UPDATE/SET operation
-		if (!isset(DBi::$prepared_statements[$full_stmt_name])) {
-			// Efficient SQL for setting/updating a key (uses COALESCE for NULL safety)
-			$sql = '
-				UPDATE ' . $table . '
-				SET ' . implode(', ' . PHP_EOL, $sentences) . '
-				WHERE section_id = $1 AND section_tipo = $2
-				RETURNING id
-			';
-
-			if (!pg_prepare($conn, $full_stmt_name, $sql)) {
-				debug_log(__METHOD__ . " Failed to prepare statement: " . pg_last_error($conn), logger::ERROR);
-				if (SHOW_DEBUG) {
-					$sql_debug = debug_prepared_statement($sql, $params, $conn);
-					debug_log(__METHOD__ . " sql_debug: " . $sql_debug, logger::ERROR);
-					debug_log(__METHOD__ . " data_to_save: " . json_encode($data_to_save, JSON_PRETTY_PRINT), logger::ERROR);
-				}
-				return false;
-			}
-			DBi::$prepared_statements[$full_stmt_name] = true;
-		}
-
-		// Execute Statement
-		$result = pg_execute(
-			$conn,
-			$full_stmt_name,
-			$params
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = self::exec_search($sql, $params);
 
 		if ($result === false) {
-			// Query failed
-			debug_log(
-				__METHOD__
-					. " Update operation failed:  " . PHP_EOL
-					. ' Error: ' . pg_last_error($conn) . PHP_EOL
-					. ' table: ' . to_string($table) . PHP_EOL
-					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-					. ' section_id: ' . to_string($section_id) . PHP_EOL
-					. ' data_to_save: ' . json_encode($data_to_save, JSON_PRETTY_PRINT),
-				logger::ERROR
-			);
 			return false;
 		}
 
@@ -858,43 +779,15 @@ class matrix_db_manager {
 			return false;
 		}
 
-		$conn = DBi::_getConnection();
+		// Index use sample:
+		// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
+		$sql = 'DELETE FROM "' . $table . '"'
+			. ' WHERE section_id = $1 AND section_tipo = $2';
 
-		// With prepared statement
-		$stmt_name = 'delete_' . $table;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-
-			// Index use sample:
-			// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
-
-			$sql = 'DELETE FROM "' . $table . '"'
-				. ' WHERE section_id = $1 AND section_tipo = $2';
-
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql
-			)) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-
-		// Execute
-		$result = pg_execute(
-			$conn,
-			$stmt_name,
-			[$section_id, $section_tipo] // spread values
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = self::exec_search($sql, [$section_id, $section_tipo]);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. ' Error executing DELETE on table: ' . $table . PHP_EOL
-				. ' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
 			return false;
 		}
 
@@ -1122,7 +1015,7 @@ class matrix_db_manager {
 		}
 
 		// debug
-		if(SHOW_DEBUG===true) {
+		if(SHOW_DEBUG==='calasparra') {
 			// time
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 			if($total_time_ms>SLOW_QUERY_MS) {

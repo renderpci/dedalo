@@ -117,6 +117,14 @@ class security {
 				return 1;
 			}
 
+		// time machine dd15 records
+			if ($parent_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				/**
+				 * @todo working here to decide the proper permissions for time machine dd15 records
+				 */
+				return 1;
+			}
+
 		// maintenance area is only accessible by root, global admin or developer,
 			if ($tipo===DEDALO_AREA_MAINTENANCE_TIPO) {
 				$is_global_admin	= security::is_global_admin($user_id);

@@ -104,28 +104,10 @@ class tm_db_manager {
 			RETURNING \"id\"
 		";
 
-		// Execute query with prepared statement
-		$stmt_name = 'tm_db_create_' . $table;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql)
-			) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-		$result = pg_execute(
-			$conn,
-			$stmt_name,
-			$params
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = matrix_db_manager::exec_search($sql, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__ . " Query failed: " . pg_last_error($conn), logger::ERROR);
 			return false;
 		}
 
@@ -162,36 +144,13 @@ class tm_db_manager {
 
 		$table = self::$table;
 
-		$conn = DBi::_getConnection();
+		$select_fields	= '*'; // Select all because is faster than the list of the columns
+		$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE id = $1 LIMIT 1';
 
-		// With prepared statement
-		$stmt_name = 'tm_db_read_' . $table;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-			$select_fields	= '*'; // Select all because is faster than the list of the columns
-			$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE id = $1 LIMIT 1';
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql
-			)) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-		$result = pg_execute(
-			$conn,
-			$stmt_name,
-			[$id]
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = matrix_db_manager::exec_search($sql, [$id]);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. " Error executing READ query on table: $table" . PHP_EOL
-				. ' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
 			return false;
 		}
 
@@ -281,16 +240,10 @@ class tm_db_manager {
 			. ' SET ' . implode(', ', $set_clauses)
 			. ' WHERE id = $1';
 
-		// Execute using pg_query_params for performance and security (using the binary protocol)
-		$result = pg_query_params($conn, $sql, $params);
+		// exec_search manages prepared statement recycling and error logging
+		$result = matrix_db_manager::exec_search($sql, $params);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. " Error updating record" . PHP_EOL
-				. ' sql: ' . $sql . PHP_EOL
-				. ' error: ' . pg_last_error($conn)
-				,logger::ERROR
-			);
 			return false;
 		}
 
@@ -313,43 +266,15 @@ class tm_db_manager {
 
 		$table = self::$table;
 
-		$conn = DBi::_getConnection();
+		// Index use sample:
+		// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
+		$sql = 'DELETE FROM "' . $table . '"'
+			. ' WHERE id = $1';
 
-		// With prepared statement
-		$stmt_name = 'tm_db_delete_' . $table;
-		if (!isset(DBi::$prepared_statements[$stmt_name])) {
-
-			// Index use sample:
-			// Index Scan using matrix_section_tipo_section_id_desc_idx on matrix
-
-			$sql = 'DELETE FROM "' . $table . '"'
-				. ' WHERE id = $1';
-
-			if (!pg_prepare(
-				$conn,
-				$stmt_name,
-				$sql
-			)) {
-				debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-				return false;
-			}
-			// Set the statement as existing.
-			DBi::$prepared_statements[$stmt_name] = true;
-		}
-
-		// Execute
-		$result = pg_execute(
-			$conn,
-			$stmt_name,
-			[$id]
-		);
+		// exec_search manages prepared statement recycling and error logging
+		$result = matrix_db_manager::exec_search($sql, [$id]);
 
 		if (!$result) {
-			debug_log(__METHOD__
-				. ' Error executing DELETE on table: ' . $table . PHP_EOL
-				. ' error: ' . pg_last_error($conn)
-				, logger::ERROR
-			);
 			return false;
 		}
 
