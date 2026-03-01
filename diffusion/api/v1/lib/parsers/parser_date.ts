@@ -8,6 +8,7 @@
  */
 
 import type { parser_options } from '../types';
+import { langs_config } from '../diffusion_processor';
 
 
 
@@ -42,14 +43,14 @@ interface dd_date_part {
  * Default: ["start"]
  *
  * @param data    - Array of data items containing date values
- * @param options - { properties: string[] }  e.g. ["start"] or ["start", "end"]
+ * @param options - { select: string[] }  e.g. ["start"] or ["start", "end"]
  * @returns Array of data items with extracted date parts
  */
 export function select_properties(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const properties: string[] = (options.properties as string[]) ?? ['start'];
+	const select_props: string[] = (options.select as string[]) ?? ['start'];
 	const result: data_item[] = [];
 
 	for (const item of data) {
@@ -61,7 +62,7 @@ export function select_properties(data: data_item[] | null, options: parser_opti
 		for (const date_obj of values) {
 			if (!date_obj || typeof date_obj !== 'object') continue;
 
-			for (const prop of properties) {
+			for (const prop of select_props) {
 				if (date_obj[prop] !== undefined && date_obj[prop] !== null) {
 					extracted.push(date_obj[prop]);
 				}
@@ -168,7 +169,11 @@ export function format_string_date(data: data_item[] | null, options: parser_opt
 
 		for (const date_part of values) {
 			if (date_part && typeof date_part === 'object') {
-				formatted_parts.push(format_dd_date(date_part as dd_date_part, pattern));
+				if(pattern === 'unix_timestamp'){
+					formatted_parts.push(date_part.get_unix_timestamp());
+				}else{
+					formatted_parts.push(format_dd_date(date_part as dd_date_part, pattern));
+				}
 			}
 		}
 
