@@ -180,15 +180,11 @@ function process_datum_group(
  *
  * @param record    - The raw datum record
  * @param context   - Array of context field definitions (columns)
- * @param all_langs - All languages to produce records for
- * @param main_lang - Main/default language for fallback
  * @returns Array of processed records, one per lang
  */
 function process_record(
 	record:    datum_record,
 	context:   context_field[],
-	all_langs: string[],
-	main_lang: string | null,
 ): processed_record[] {
 
 	// ---------------------------------------------------------------
@@ -326,7 +322,7 @@ function process_record(
 	// PHASE 2: Expand to one record per lang
 	// ---------------------------------------------------------------
 	// If no langs provided, emit a single record with null lang
-	if (all_langs.length === 0) {
+	if (langs_config.langs.length === 0) {
 		const columns: Record<string, string | null> = {};
 		for (const [column_name, lang_values] of column_parsed_values) {
 			// Take nolan or first available
@@ -343,7 +339,7 @@ function process_record(
 
 	const results: processed_record[] = [];
 
-	for (const lang of all_langs) {
+	for (const lang of langs_config.langs) {
 
 		const columns: Record<string, string | null> = {};
 
@@ -362,8 +358,8 @@ function process_record(
 			}
 
 			// Priority 3: main_lang fallback
-			if (main_lang && lang_values.has(main_lang)) {
-				columns[column_name] = lang_values.get(main_lang)!;
+			if (langs_config.main_lang && lang_values.has(langs_config.main_lang)) {
+				columns[column_name] = lang_values.get(langs_config.main_lang)!;
 				continue;
 			}
 
