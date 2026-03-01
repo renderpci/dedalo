@@ -115,7 +115,7 @@ export interface data_item {
 	value: any;
 	tipo?: string;
 	lang?: string | null;
-	parents?: any[];
+	parents?: any;
 }
 
 
