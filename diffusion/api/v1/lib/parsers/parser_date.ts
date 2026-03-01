@@ -235,6 +235,114 @@ export function string_date(data: data_item[] | null, options: parser_options): 
 }
 
 
+/**
+ * DEFAULT
+ * Port of PHP component_date::get_diffusion_value().
+ * Mode-aware parser that converts dd_date objects to a diffusion-ready string.
+ *
+ * Modes (resolved via options.date_mode):
+ *   - 'range' | 'time_range' : "start_ts,end_ts"  (comma-separated, "Y-m-d H:i:s")
+ *   - 'period'               : "N years N months N days" (human-readable, localized labels)
+ *   - 'date' | default       : "Y-m-d H:i:s" of the start date-part
+ *
+ * Returns only the first collected value (mirrors PHP "Temporal !!" behaviour).
+ * Returns null when data is empty or no valid date part is found.
+ *
+ * @param data    - Array of data items containing date values
+ * @param options - { date_mode?: string }
+ * @returns Array with a single data item whose value is the formatted string, or null
+ */
+export default function (data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const date_mode = (options.date_mode as string) ?? 'date';
+
+	const ar_diffusion_values: string[]  = [];
+	const ar_period_items:     data_item[] = []; // per-lang items for period mode
+
+	for (const item of data) {
+		const val    = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		for (const date_obj of values) {
+			if (!date_obj || typeof date_obj !== 'object') continue;
+
+			switch (date_mode) {
+
+				case 'range':
+				case 'time_range': {
+					const ar_date: string[] = [];
+					if (date_obj.start && date_obj.start.year !== undefined) {
+						ar_date.push(format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					if (date_obj.end && date_obj.end.year !== undefined) {
+						ar_date.push(format_dd_date(date_obj.end as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					if (ar_date.length > 0) {
+						ar_diffusion_values.push(ar_date.join(','));
+					}
+					break;
+				}
+
+				case 'period': {
+					if (date_obj.period) {
+						const period = date_obj.period as dd_date_part;
+
+						// Build the period string for a given lang code
+						const build_period_string = (target_lang: string): string | null => {
+							const parts: string[] = [];
+							if (period.year  !== undefined) parts.push(period.year  + ' ' + get_label('years',  target_lang));
+							if (period.month !== undefined) parts.push(period.month + ' ' + get_label('months', target_lang));
+							if (period.day   !== undefined) parts.push(period.day   + ' ' + get_label('days',   target_lang));
+							return parts.length > 0 ? parts.join(' ') : null;
+						};
+
+						const target_langs = langs_config.langs;
+
+						if (target_langs.length > 0) {
+							// Emit one result item per known lang
+							for (const target_lang of target_langs) {
+								const period_str = build_period_string(target_lang);
+								if (period_str) {
+									ar_period_items.push({ ...item, lang: target_lang, value: period_str });
+								}
+							}
+						} 
+					}
+					break;
+				}
+
+				case 'date':
+				default: {
+					if (date_obj.start && date_obj.start.year !== undefined) {
+						ar_diffusion_values.push(format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					break;
+				}
+			}
+		}
+	}// end for
+
+	// Period mode: return per-lang items directly
+	if (ar_period_items.length > 0) {
+		return ar_period_items;
+	}
+
+	if (ar_diffusion_values.length === 0) return null;
+
+	// Mirror PHP: only the first value is used ("Temporal !!")
+	const diffusion_value = ar_diffusion_values[0] || null;
+
+	if (!diffusion_value) return null;
+
+	return [{
+		...data[0],
+		value: diffusion_value
+	}];
+}
+
+
 
 /**
  * UNIX_TIMESTAMP
