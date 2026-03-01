@@ -385,13 +385,14 @@ export function truncate_by_term_id(data: data_item[] | null, options: parser_op
  * Cut the parent chain before any node whose typology model
  * (typology_section_tipo_typology_section_id) matches one of the specified values.
  *
- * @param options.parent_end_by_model - Array of model strings, e.g. ["es2_8871"]
+ * @param options.parent_end_by_typology_term_id - Array of model strings, e.g. ["es2_8871"]
+ * @param options.parent_end_by_typology_term_id - Alias for parent_end_by_typology_term_id
  */
 export function truncate_by_model(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const end_models = options.parent_end_by_model as string[];
+	const end_models = options.parent_end_by_typology_term_id as string[];
 	if (!end_models || !Array.isArray(end_models) || end_models.length === 0) return data;
 
 	const end_set = new Set(end_models);
@@ -415,17 +416,19 @@ export function truncate_by_model(data: data_item[] | null, options: parser_opti
  * FILTER_BY_SECTION_TIPO
  * Keep only nodes in the chain whose section_tipo matches the specified value.
  *
- * @param options.parent_section_tipo - The section_tipo to keep, e.g. "cult1"
+ * @param options.parent_section_tipo - The section_tipo to keep, e.g. "cult1" or ["cult1", "cult2"]
  */
 export function filter_by_section_tipo(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const target_tipo = options.parent_section_tipo as string;
+	const target_tipo = options.parent_section_tipo;
 	if (!target_tipo) return data;
 
+	const target_set = new Set(Array.isArray(target_tipo) ? target_tipo : [target_tipo as string]);
+
 	return map_chains(data, (chain) => {
-		return chain.filter(node => node.section_tipo === target_tipo);
+		return chain.filter(node => target_set.has(node.section_tipo));
 	});
 }
 
