@@ -115,136 +115,186 @@ export function get_first(data: data_item[] | null, options: parser_options): da
 }
 
 /**
- * ADD_PARENTS
- * format output string with term and its parents: "Term, Parent 1, Parent 2..."
- * Returns one data_item per language found in the term chain.
+ * PARENTS
+ * Unified parser to process parent information.
+ * Supports extracting terms, term_ids, section_ids, and typologies.
  *
  * @param data    - Array of data items
  * @param options - Parser options
- * @returns Array of data items with formatted string as value, keyed by lang
+ * @param options.value - What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
+ * @param options.include_parents - If true, include all parents in the chain. Default: true.
+ * @param options.include_self - If true, include the item itself (index 0). Default: true.
+ * @param options.records_separator - Separator between different parent chains. Default: ", ". Set to false for array output.
+ * @param options.fields_separator - Separator between values in the same chain. Default: " - ".
+ * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
+ * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: [].
+ * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: [].
+ * @param options.parent_section_tipo - Array section_tipo to keep to Default: undefined.
+ * @param options.parent_term_id - Array term_id to keep to Default: undefined.
+ * @param options.parent_typology_term_id - Array get the parent with the typology term_id. Default: undefined.
+ * @param options.parent_end_by_typology_term_id - Array 
+ * @param options.merge - Define the way to merger the parents. nested | flat | pipe Default: undefined.
+ * 	- undefined: 	["Madrid", "Spain", "Paris", "France"]
+ * 	- string: 		"Madrid - Spain, Paris - France" // use the fields_separator to separate the values and the records_separator to separate the pipe
+ * 	- nested: 		[["Madrid", "Spain"], ["Paris", "France"]]
+ * 	- flat: 		["Madrid - Spain", "Paris - France"] // use the fields_separator to separate the values
+ * 	- pipe: 		["Madrid", "Spain"] | ["Paris", "France"] // use the records_separator to separate the pipe
+ * @returns Array of data items with formatted value
  */
-export function add_parents(data: data_item[] | null, options: parser_options): data_item[] | null {
+export function parents(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	// Options with defaults matching current behavior
-	const resolve_value: boolean     = (options.resolve_value as boolean) ?? true;
+	// Extract options with defaults
+	const value_to_extract: string   = (options.value as string) ?? 'term';
+	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
+	const include_self: boolean      = (options.include_self as boolean)    ?? true;
 	const records_separator: string  = (options.records_separator as string) ?? ', ';
+	const fields_separator: string   = (options.fields_separator as string)  ?? ' - ';
+	const merge: string | undefined  = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
+
+	// langs
+	const main_lang = langs_config.main_lang;
+	const langs     = langs_config.langs;
 
 	const result: data_item[] = [];
 
 	for (const item of data) {
-
-		// item has value (array of objects) and parents (map)
 		const parents_map	= (item as any).parents;
 		const val			= item.value;
 		const values		= Array.isArray(val) ? val : [val];
 
-		// Map to collect strings by language: { 'lg-spa': ['Barcelona, Cataluña, España'], 'lg-eng': ['Barcelona, Catalonia, Spain'] }
-		const lang_values: Record<string, string[]> = {};
-
-		for(const current_val of values) {
-
-			// val is locator object
-			if(!current_val || typeof current_val !== 'object') continue;
+		// Map to collect extracted values by language: { 'lg-spa': [ ['Spain', 'Madrid'], ['France', 'Paris'] ], etc. }
+		const lang_nodes: Record<string, any[][]> = {};
+		
+		for (const current_val of values) {
+			if (!current_val || typeof current_val !== 'object') continue;
 
 			const section_tipo	= (current_val as any).section_tipo;
 			const section_id	= (current_val as any).section_id;
+			if (!section_tipo || !section_id) continue;
 
-			if(!section_tipo || !section_id) continue;
+			const key = term_id_from_locator(current_val as locator);
+			if (!key || !parents_map || !parents_map[key]) continue;
 
-			const key = section_tipo + '_' + section_id;
+			const original_chain = parents_map[key]; // Array of hierarchy objects [self, parent, grandparent...]
+			if (!Array.isArray(original_chain) || original_chain.length === 0) continue;
 
-			// Get parent chain for this item
-			if(parents_map && parents_map[key]) {
-				const chain = parents_map[key]; // Array of hierarchy objects [child, parent, grandparent...]
+			// 1. Atomize: Apply filters and truncation logic
+			const filtered_chain = apply_chain_filters(original_chain, options);
+			if (filtered_chain.length === 0) continue;
 
-				if(Array.isArray(chain) && chain.length > 0) {
+			// 2. Apply include_self and include_parents slicing
+			const start_idx = include_self ? 0 : 1;
+			const end_idx   = include_parents ? filtered_chain.length : (include_self ? 1 : 0);
 
-					if (resolve_value) {
-						// Use term values to build strings (default behavior)
+			if (start_idx >= filtered_chain.length || (end_idx <= start_idx && include_parents)) continue;
 
-						// Collect all unique languages across the entire chain
-						const all_langs = new Set<string>();
+			const chain_to_process = filtered_chain.slice(start_idx, end_idx === 0 && !include_parents ? 1 : end_idx);
+			if (chain_to_process.length === 0) continue;
 
-						for(const node of chain) {
-							if(Array.isArray(node.term)) {
-								for(const t of node.term) {
-									if(t.lang) all_langs.add(t.lang);
+			if (value_to_extract === 'term') {
+				// Special handling for multilingual terms
+				for (const lang of langs) {
+					const chain_values: string[] = [];
+					for (const node of chain_to_process) {
+						let term_str = '';
+						if (Array.isArray(node.term) && node.term.length > 0) {
+							// 2 if the parent has a lang into the term, use it
+							const term_obj = node.term.find((t: any) => t.lang === lang);
+							if (term_obj) {
+								term_str = term_obj.value;
+							} else {
+								// 2.1 search by the term items the term with main_lang
+								const main_term_obj = main_lang ? node.term.find((t: any) => t.lang === main_lang) : null;
+								if (main_term_obj) {
+									term_str = main_term_obj.value;
+								} else {
+									// 2.1.1 If the term has not the current lang or the main_lang value, use the first lang defined
+									term_str = node.term[0].value;
 								}
 							}
 						}
-
-						if (all_langs.size === 0) continue;
-
-						// Generate string for each language
-						for (const lang of all_langs) {
-
-							let final_str_parts: string[] = [];
-							
-							// Respect include_parents option. Default to true.
-							const include_parents: boolean = (options.include_parents as boolean) ?? true;
-							const chain_to_process = include_parents ? chain : [chain[0]];
-
-							for (const node of chain_to_process) {
-								let term_str = '';
-
-								// Try to find exact match
-								if(Array.isArray(node.term)) {
-									const term_obj = node.term.find((t:any) => t.lang === lang);
-									if(term_obj) {
-										term_str = term_obj.value;
-									} else {
-										// Fallback: use first available (usually original language)
-										if(node.term.length > 0) {
-											term_str = node.term[0].value;
-										}
-									}
-								}
-
-								if(term_str) {
-									final_str_parts.push(term_str);
-								}
-							}
-
-							if (final_str_parts.length > 0) {
-								const final_str = final_str_parts.join(records_separator);
-
-								if (!lang_values[lang]) lang_values[lang] = [];
-								lang_values[lang].push(final_str);
-							}
-						}
-
-					} else {
-						// resolve_value = false: use section_id instead of term
-						const id_parts: string[] = [];
-
-						for (const node of chain) {
-							if (node.section_id !== undefined && node.section_id !== null) {
-								id_parts.push(String(node.section_id));
-							}
-						}
-
-						if (id_parts.length > 0) {
-							const nolan_key = '__nolan__';
-							if (!lang_values[nolan_key]) lang_values[nolan_key] = [];
-							lang_values[nolan_key].push(id_parts.join(records_separator));
-						}
+						if (term_str) chain_values.push(term_str);
 					}
+					if (chain_values.length > 0) {
+						if (!lang_nodes[lang]) lang_nodes[lang] = [];
+						lang_nodes[lang].push(chain_values);
+					}
+				}
+			} else {
+				// Single-value extraction (term_id, section_id, etc.)
+				const nolan_key = '__nolan__';
+				const chain_values: string[] = [];
+
+				for (const node of chain_to_process) {
+					let extracted: string | null = null;
+					switch (value_to_extract) {
+						case 'term_id':
+							extracted = term_id_from_locator(node as locator);
+							break;
+						case 'section_id':
+							extracted = String(node.section_id);
+							break;
+						case 'typology':
+							extracted = node.typology;
+							break;
+						case 'typology_section_id':
+							extracted = node.typology_section_id;
+							break;
+						case 'typology_term_id':
+							extracted = node.typology_section_tipo + '_' + node.typology_section_id;
+							break;
+					}
+					if (extracted) chain_values.push(extracted);
+				}
+
+				if (chain_values.length > 0) {
+					if (!lang_nodes[nolan_key]) lang_nodes[nolan_key] = [];
+					lang_nodes[nolan_key].push(chain_values);
 				}
 			}
 		}
 
-		// Create result items from map
-		for (const [lang, strs] of Object.entries(lang_values)) {
+		// Build final output per language
+		for (const [lang, collection] of Object.entries(lang_nodes)) {
+			let final_value: any;
+
+			switch (merge) {
+				case 'nested':
+					// [["Madrid", "Spain"], ["Paris", "France"]]
+					final_value = collection;
+					break;
+
+				case 'flat':
+					// ["Madrid - Spain", "Paris - France"]
+					final_value = collection.map(chain => chain.join(fields_separator));
+					break;
+
+				case 'pipe':
+					// ["Madrid", "Spain"] | ["Paris", "France"] (using records_separator as joiner)
+					final_value = collection.map(chain => JSON.stringify(chain)).join(records_separator);
+					break;
+
+				case 'string':
+					// "Madrid - Spain, Paris - France" (using fields_separator to separate the values and the records_separator to separate the pipe)
+					final_value = collection.map(chain => chain.join(fields_separator)).join(records_separator);
+					break;
+
+				default:
+					// Flat array output: ["Madrid", "Spain", "Paris", "France"]
+					final_value = collection.flat();
+			}
+
 			result.push({
 				...item,
-				lang:  lang === '__nolan__' ? null : lang,
-				value: strs.join(records_separator)
+				lang: lang === '__nolan__' ? null : lang,
+				value: final_value
 			});
 		}
 	}
 
+	
 	return result.length > 0 ? result : null;
 }
 
