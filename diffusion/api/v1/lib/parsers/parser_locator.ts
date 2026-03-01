@@ -3,17 +3,18 @@
  * Locate and extract specific data from diffusion objects.
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
+import { langs_config } from '../diffusion_processor';
+import { get_first } from './parser_helper';
 
-/**
- * Data item as received from the PHP diffusion_api entries.
- */
-interface data_item {
-	id?:    string | null;
-	value:  unknown;
-	tipo?:  string;
-	lang?:  string | null;
+interface locator {
+	section_tipo: string;
+	section_id: string | number;
 }
+
+
+
+
 
 /**
  * GET_SECTION_ID
