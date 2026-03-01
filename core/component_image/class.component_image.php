@@ -245,52 +245,6 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
-	* GET_EXTERNAL_SOURCE
-	* Look current component properties to find the property 'external_source'
-	* If found, the source path of current media will be get from a component_iri
-	* @see rsc29 (component_image 'Image') properties
-	* @return string|null $external_source
-	* sample:
-	* 	'rsc496' (component_iri)
-	*/
-	public function get_external_source() : ?string {
-
-		$properties = $this->get_properties();
-		if (isset($properties->external_source) && !empty($this->section_id)) {
-
-			$component_tipo		= $properties->external_source;
-			$component_model	= ontology_node::get_model_by_tipo($component_tipo,true);
-			$component			= component_common::get_instance(
-				$component_model,
-				$component_tipo,
-				$this->section_id,
-				'edit',
-				DEDALO_DATA_NOLAN,
-				$this->section_tipo
-			);
-
-			$data			= $component->get_data();
-			$first_value	= !empty($data) && is_array($data)
-				? $data[0]
-				: null;
-
-			// used to change the IRI of the image, don't use it as dataframe section
-			// only control if the URI is internal or external.
-			if(!empty($first_value->dataframe)){
-				if(isset($first_value->iri) && !empty($first_value->iri)) {
-					// external_source get from IRI
-					$external_source = $first_value->iri;
-				}
-			}
-		}//end if (isset($properties->external_source) && !empty($this->get_parent()) )
-
-
-		return $external_source ?? null;
-	}//end get_external_source
-
-
-
-	/**
 	* GET_BEST_EXTENSIONS
 	* Extensions list of preferable extensions in original or modified qualities.
 	* Ordered by most preferable extension, first is the best.
