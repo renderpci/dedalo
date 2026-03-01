@@ -201,7 +201,7 @@ export function format_string_date(data: data_item[] | null, options: parser_opt
  *
  * @param data    - Array of data items containing date values
  * @param options - Combined options for all three sub-parsers:
- *   - properties:         string[] (default: ["start"])
+ *   - select:             string[] (default: ["start"])
  *   - keys:               number[] (default: [0])
  *   - pattern:            string   (default: "Y-m-d")
  *   - records_separator:  string   (default: " | ")
@@ -214,7 +214,7 @@ export function string_date(data: data_item[] | null, options: parser_options): 
 
 	// Merge defaults
 	const merged_options: parser_options = {
-		properties:        ['start'],
+		select:            ['start'],
 		keys:              [0],
 		pattern:           'Y-m-d',
 		records_separator: ' | ',
