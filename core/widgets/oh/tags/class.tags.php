@@ -14,7 +14,7 @@ class tags extends widget_common {
 	* @return array $data
 	* 	Array of objects
 	*/
-	public function get_data() : array {
+	public function get_data() : ?array {
 
 		$section_tipo	= $this->section_tipo;
 		$section_id		= $this->section_id;

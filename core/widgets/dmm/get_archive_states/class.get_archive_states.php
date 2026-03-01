@@ -12,7 +12,7 @@ class get_archive_states extends widget_common {
 	* GET_DATA
 	* @return
 	*/
-	public function get_data() {
+	public function get_data() : ?array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
