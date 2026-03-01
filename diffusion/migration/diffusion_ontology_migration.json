@@ -114,7 +114,7 @@
 					"id": "a"
 				},
 				{
-					"fn": "parser_locator::get_first",
+					"fn": "parser_helper::get_first",
 					"id": "a"
 				},
 				{
@@ -180,14 +180,14 @@
 							"id": "a"
 						},
 						{
-							"fn": "parser_locator::get_first",
+							"fn": "parser_helper::get_first",
 							"id": "a"
 						}
 					]
 				}
 			}
 		}
-	}
+	},
 	{
 		"from": {
 			"propiedades": {
