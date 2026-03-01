@@ -241,10 +241,10 @@ export function string_date(data: data_item[] | null, options: parser_options): 
  * Converts dd_date objects to Unix timestamp (seconds since epoch).
  * Chains: select_properties → select_keys → convert to timestamp.
  *
- * Default: properties=["start"], keys=[0]
+ * Default: select=["start"], keys=[0]
  *
  * @param data    - Array of data items containing date values
- * @param options - { properties: string[], keys: number[] }
+ * @param options - { select: string[], keys: number[] }
  * @returns Array of data items with Unix timestamp (int) as value
  */
 export function unix_timestamp(data: data_item[] | null, options: parser_options): data_item[] | null {
@@ -252,7 +252,7 @@ export function unix_timestamp(data: data_item[] | null, options: parser_options
 	if (!data || data.length === 0) return null;
 
 	const merged_options: parser_options = {
-		properties: ['start'],
+		select: ['start'],
 		keys:       [0],
 		...options
 	};
