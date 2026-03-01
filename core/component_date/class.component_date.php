@@ -1087,4 +1087,102 @@ class component_date extends component_common {
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* * @see class.diffusion_mysql.php
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*/
+	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+
+		$diffusion_value = null;
+
+		// ar_dato
+			$ar_data = $this->get_data();
+			if(empty($ar_data)){
+				return $diffusion_value;
+			}
+
+		// date mode
+			$date_mode = $this->get_date_mode();
+
+		$ar_diffusion_values = array();
+		foreach($ar_data as $data) {
+
+			// $ar_diffusion_values[] = self::data_item_to_value($data, $date_mode);
+
+			// DES
+			switch ($date_mode) {
+				case 'range':
+				case 'time_range':
+					$ar_date=array();
+					// start
+					if (isset($data->start) && isset($data->start->year)) {
+						$dd_date 		= new dd_date($data->start);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}
+					// end
+					if (isset($data->end) && isset($data->end->year)) {
+						$dd_date 		= new dd_date($data->end);
+						$timestamp 		= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_date[] 		= $timestamp;
+					}
+					$ar_diffusion_values[] = implode(',',$ar_date);
+					break;
+
+				case 'period':
+					// Compute days
+					if (isset($data->period)) {
+						# $seconds = $data->period->time;
+						# $days = ceil($seconds/3600/24);
+						$ar_string_period = [];
+						if (isset($data->period->year)) {
+							$ar_string_period[] = $data->period->year .' '. label::get_label('years', $lang);
+						}
+						if (isset($data->period->month)) {
+							$ar_string_period[] = $data->period->month .' '. label::get_label('months', $lang);
+						}
+						if (isset($data->period->day)) {
+							$ar_string_period[] = $data->period->day .' '. label::get_label('days', $lang);
+						}
+						$ar_diffusion_values[] = implode(' ',$ar_string_period);
+					}
+					break;
+
+				case 'date':
+				default:
+					if (isset($data->start) && isset($data->start->year)) {
+						$dd_date 		 		= new dd_date($data->start);
+						$timestamp 				= $dd_date->get_dd_timestamp("Y-m-d H:i:s");
+						$ar_diffusion_values[] 	= $timestamp;
+					}
+					break;
+			}
+		}//end foreach($ar_data as $data)
+
+		if (empty($ar_diffusion_values)) {
+			return null;
+		}
+
+		# NOTA
+		# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
+		$diffusion_value = $ar_diffusion_values[0] ?? null; // Temporal !!
+
+		// Force null on empty value to avoid errors on MYSQL save value invalid format
+		// Only valid dates or null area accepted
+		if (empty($diffusion_value)) {
+			$diffusion_value = null;
+		}
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
 }//end class component_date
