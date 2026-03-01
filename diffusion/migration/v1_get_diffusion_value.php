@@ -1,0 +1,560 @@
+<?php
+
+function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to_be_used, $option_obj, $ddo_map){
+
+	$process = new stdClass();
+
+	switch($model){
+		case 'component_3d':
+		case 'component_av':
+		case 'component_image':
+		case 'component_pdf':
+		case 'component_svg':
+
+			$parser_process = (object)[
+				"output_format" => "string"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = "/dedalo/media/image.jpg";
+
+			break;
+		case 'component_check_box':
+
+			$fields_separator = $custom_arguments[0]->divisor ??', ';
+
+			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+			if (!empty($related_section)) {
+
+				$letter_ids = [];
+				foreach ($related_component as $i => $component_tipo) {
+					$letter_id = chr(ord('a') + $i);
+					$letter_ids[] = $letter_id;
+					$ddo_map[] = (object)[
+						'id' => $letter_id,
+						'tipo' => $component_tipo,
+						'parent' => $tipo,
+						'section' => $related_section[0]
+					]; 
+				}
+			}
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::text_format',
+						'options' => (object)[
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->output_sample = "Goméz Pérez, Raspa";
+
+			break;
+		case 'component_date':
+
+			$date_mode = component_date::get_date_mode_static($tipo);
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_date::default',
+						'options' => (object)[
+							'date_mode' => $date_mode
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = "2026-02-26 19:39:16";
+
+			break;
+		case 'component_dataframe':
+			break;
+		case 'component_email':
+
+			$fields_separator =', ';
+			$record_separator =' | ';
+
+			$parser_process = (object)[
+				"output_format" => "string"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = "raspa@dedalo.dev | boss@dedalo.dev";
+
+			break;
+		case 'component_external':
+			break;
+		case 'component_filter':
+
+			$record_separator =' | ';
+
+			$ddo_map[] = (object)[
+				'tipo' => DEDALO_PROJECTS_NAME_TIPO,
+				'parent' => $tipo,
+				'section' => DEDALO_SECTION_PROJECTS_TIPO
+			];			
+
+			$parser_process = (object)[					
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->output_sample = "My project | Another project";
+			break;
+		case 'component_geolocation':
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_helper::get_first',
+					]
+				],
+				"output_format" => "json"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = {"lat"=> 41.3851, "long"=> 2.1734};
+			break;
+
+		case 'component_info':
+			$record_separator =', ';
+
+			$arguments = $custom_arguments[0];
+
+			$options = new stdClass();
+			if($arguments->separator){
+				$options->record_separator = $arguments->separator ?? $record_separator;
+			}
+			if($arguments->key_values){
+				$options->keys = $arguments->key_values;
+			}
+
+			$parser_process = (object)[		
+				'fn' => 'component_info::get_data_parsed',			
+				'parser' => [
+					(object)[
+						'fn' => 'parser_info::default',
+						'options' => $options
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->output_sample = "1 year, 2 months, 3 days";
+			
+			break;
+		case 'component_input_text':
+			$record_separator =' | ';
+			// nothing to do, the default proceess is compatible with the v6
+			break;
+		case 'component_inverse':
+			break;
+		case 'component_iri':
+			$fields_separator =', ';							
+			$record_separator =' | ';
+
+			//@TODO: 
+			
+			break;
+		case 'component_json':
+
+			$parser_process = (object)[
+				"output_format" => "json"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = "{\"key\":\"value\"}";
+			break;
+		case 'component_number':
+
+			$parser_process = (object)[
+				'parser' => [
+					(object)[
+						'fn' => 'parser_helper::get_first'
+					]
+				],
+				"output_format" => "string"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = "123";
+			break;
+		case 'component_portal':
+
+			switch($data_to_be_used){
+				case 'valor_list':
+					$fields_separator = $custom_arguments[0]->divisor ??' ';
+					$record_separator =' | ';
+											
+					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					if (!empty($related_section)) {
+
+						$letter_ids = [];
+						foreach ($related_component as $i => $component_tipo) {
+							$letter_id = chr(ord('a') + $i);
+							$letter_ids[] = $letter_id;
+							$ddo_map[] = (object)[
+								'id' => $letter_id,
+								'tipo' => $component_tipo,
+								'parent' => $tipo,
+								'section' => $related_section[0]
+							]; 
+						}
+					}
+
+					$parser_process = (object)[					
+						'parser' => [
+							(object)[
+								'fn' => 'parser_text::text_format',
+								'options' => (object)[
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+								]
+							]
+						],
+						"output_format" => "string"
+					];
+					$process = $parser_process;
+					$process->output_sample = "Goméz Pérez, Raspa";
+					break;
+				case 'valor':
+					$fields_separator = $custom_arguments[0]->divisor ??', ';
+					$record_separator =' | ';
+											
+					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					if (!empty($related_section)) {
+
+						$letter_ids = [];
+						foreach ($related_component as $i => $component_tipo) {
+							$letter_id = chr(ord('a') + $i);
+							$letter_ids[] = $letter_id;
+							$ddo_map[] = (object)[
+								'id' => $letter_id,
+								'tipo' => $component_tipo,
+								'parent' => $tipo,
+								'section' => $related_section[0]
+							]; 
+						}
+					}
+
+					$parser_process = (object)[					
+						'parser' => [
+							(object)[
+								'fn' => 'parser_text::text_format',
+								'options' => (object)[
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+								]
+							]
+						],
+						"output_format" => "string"
+					];
+					$process = $parser_process;
+					$process->output_sample = "Goméz Pérez, Raspa";
+					break;
+				case 'dato_full':
+					$parser_process = (object)[
+						"output_format" => "json"
+					];
+
+					$process = $parser_process;
+					$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}, {"section_id":"2", "section_tipo":"rsc197"}]';
+					break;
+				case 'dato':
+				default:
+					$parser_process = (object)[
+						"parser" => [
+							(object)[
+								'fn' => 'parser_locator::get_section_id'
+							]
+						],
+						"output_format" => "json"
+					];
+
+					$process = $parser_process;
+					$process->output_sample = ["1", "2"];
+					break;
+			}
+			break;
+		case 'component_autocomplete':
+			// @TODO: the exception is_publicable is not handled here!! check if it is needed
+			$fields_separator = $custom_arguments[0]->divisor ??' ';
+			$record_separator =' | ';
+									
+			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+			if (!empty($related_section)) {
+
+				$letter_ids = [];
+				foreach ($related_component as $i => $component_tipo) {
+					$letter_id = chr(ord('a') + $i);
+					$letter_ids[] = $letter_id;
+					$ddo_map[] = (object)[
+						'id' => $letter_id,
+						'tipo' => $component_tipo,
+						'parent' => $tipo,
+						'section' => $related_section[0]
+					]; 
+				}
+			}
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::text_format',
+						'options' => (object)[
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->output_sample = "Goméz Pérez, Raspa";
+			
+			break;
+		case 'component_autocomplete_hi':
+		case 'component_autocomplete_ts':
+			$fields_separator =' - ';
+			$record_separator =', ';
+
+			if($option_obj) {
+
+				$add_parents 					= $option_obj->add_parents ?? null;
+				// $resolve_value 					= $option_obj->resolve_value ?? null;
+				$parent_section_tipo 			= $option_obj->parent_section_tipo ?? null;
+				$process_dato_arguments 		= $option_obj->process_dato_arguments ?? null;
+				$check_publishable 				= $option_obj->check_publishable ?? null;
+				$custom_parents 				= $option_obj->custom_parents ?? null;
+				$divisor 						= $option_obj->divisor ?? null;
+				$parent_term_id 				= $option_obj->parent_term_id ?? null;
+				$divisor_parents 				= $option_obj->divisor_parents ?? null;
+				$records_separator 				= $option_obj->records_separator ?? null;
+				
+				// 1.1 "add_parents" alone and true or false
+				if( isset($add_parents) 
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $check_publishable === null
+					&& $custom_parents === null								
+					&& $parent_term_id === null								
+					) {
+					
+					$parser_process = (object)[
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => (object)[
+										'value' => 'term',
+										"include_parents" => $add_parents,
+										'fields_separator' => $divisor ?? ' - ',
+										'records_separator' => $divisor_parents ?? $records_separator ?? ', '
+									]
+								]
+							],
+							'output_format' => 'string'							
+						]
+					;
+					$process = $parser_process;
+					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
+
+				break;
+				}// end if( add_parents alone and true or false)
+
+				// 1.2 "check_publishable" alone and true
+				if( isset($check_publishable) 
+					&& $add_parents === null
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $custom_parents === null									
+					&& $parent_term_id === null							
+				) {
+					
+					$parser_process = (object)[
+							'is_publishable' => true,
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => (object)[
+										'value' => 'term',														
+										'records_separator' => $divisor_parents ?? $records_separator ?? ', '
+									]
+								]
+							],
+							"output_format" => "string"
+						];
+					$process = $parser_process;
+					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
+
+					
+					break;
+				}// end if( check_publishable alone and true)
+
+				// 1.3 "custom_parents" alone
+				if( isset($custom_parents) 
+					&& $add_parents === null
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $check_publishable === null									
+					&& $parent_term_id === null									
+				) {
+
+					$parents_splice 			= $custom_parents->parents_splice ?? null;
+					$parent_end_by_term_id 		= $custom_parents->parent_end_by_term_id ?? null;
+					$parent_end_by_model 		= $custom_parents->parent_end_by_model ?? null;
+					
+					$parser_process = [
+						(object)[
+							'is_publishable' => true,
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => (object)[
+										"parents_splice" 					=> $parents_splice,
+										"parent_end_by_term_id" 			=> $parent_end_by_term_id,
+										"parent_end_by_typology_term_id" 	=> $parent_end_by_model
+									]
+								]
+							],
+							"output_format" => "string"
+						]
+					];
+					$process = $parser_process;
+					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
+
+					break;
+				}// end if($custom_parents)
+
+				// 1.4 "parent_section_tipo" and "process_dato_arguments"
+				if( isset($parent_section_tipo) 
+					&& isset($process_dato_arguments)				
+					&& $custom_parents === null									
+					&& $check_publishable === null									
+					&& $parent_term_id === null									
+				) {
+
+					$parents_splice = $process_dato_arguments->custom_parents->parents_splice ?? null;
+					$parent_end_by_term_id = $process_dato_arguments->custom_parents->parent_end_by_term_id ?? null;
+					$parent_end_by_model = $process_dato_arguments->custom_parents->parent_end_by_model ?? null;
+
+					$parser_options = new stdClass();
+					if(isset($add_parents)){
+						$parser_options->include_parents = $add_parents;
+					}
+					if(isset($parents_splice)){
+						$parser_options->parents_splice = $parents_splice;
+					}
+					if(isset($parent_end_by_term_id)){
+						$parser_options->parent_end_by_term_id = $parent_end_by_term_id;
+					}
+					if(isset($parent_end_by_model)){
+						$parser_options->parent_end_by_typology_term_id = $parent_end_by_model;
+					}
+					if(isset($divisor)){
+						$parser_options->fields_separator = $divisor;
+					}
+					if(isset($records_separator)){
+						$parser_options->records_separator = $records_separator;
+					}
+					if(isset($parent_term_id)){
+						$parser_options->parent_term_id = $parent_term_id;
+					}
+
+					$parser_process = [
+						(object)[
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => $parser_options
+								]
+							],
+							"output_format" => "string"
+						]
+					];
+					$process = $parser_process;
+					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
+
+					break;
+				}
+			}
+			break;
+		case 'component_publication':  
+			break;
+		case 'component_relation_children':
+		case 'component_relation_index':
+			$parser_process = (object)[
+				"output_format" => "json"
+			];
+
+			$process = $parser_process;
+			$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}]';
+		
+			break;
+		case 'component_relation_model':
+
+			$fields_separator = $custom_arguments[0]->divisor ??', ';
+
+			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+			if (!empty($related_section)) {
+
+				$letter_ids = [];
+				foreach ($related_component as $i => $component_tipo) {
+					$letter_id = chr(ord('a') + $i);
+					$letter_ids[] = $letter_id;
+					$ddo_map[] = (object)[
+						'id' => $letter_id,
+						'tipo' => $component_tipo,
+						'parent' => $tipo,
+						'section' => $related_section[0]
+					]; 
+				}
+			}
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::text_format',
+						'options' => (object)[
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->output_sample = "Goméz Pérez, Raspa";
+
+			break;
+		case 'component_relation_parent':
+			$fields_separator =', ';
+			$record_separator =', ';
+			break;
+		case 'component_relation_related':
+			$fields_separator =' | ';
+			$record_separator ='<br>';
+			break;
+		case 'component_section_id':
+		case 'component_select':    
+		case 'component_select_lang':
+		case 'component_radio_button':
+			break;
+		case 'component_text_area':     
+			break;
+
+		case 'relation_list':
+			break;
+	}
+	
+}
