@@ -364,6 +364,13 @@ class component_media_common extends component_common {
 				return $diffusion_data;
 			}
 
+		// Resolve the external source
+			$external_source = $this->get_external_source();
+			if (!empty($external_source)) {
+				$diffusion_data_object->set_value( $external_source );
+				return $diffusion_data;
+			}
+
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 
@@ -412,6 +419,52 @@ class component_media_common extends component_common {
 
 		return $diffusion_data;
 	}//end get_diffusion_data
+
+
+
+	/**
+	* GET_EXTERNAL_SOURCE
+	* Look current component properties to find the property 'external_source'
+	* If found, the source path of current media will be get from a component_iri
+	* @see rsc29 (component_image 'Image') properties
+	* @return string|null $external_source
+	* sample:
+	* 	'rsc496' (component_iri)
+	*/
+	public function get_external_source() : ?string {
+
+		$properties = $this->get_properties();
+		if (isset($properties->external_source) && !empty($this->section_id)) {
+
+			$component_tipo		= $properties->external_source;
+			$component_model	= ontology_node::get_model_by_tipo($component_tipo,true);
+			$component			= component_common::get_instance(
+				$component_model,
+				$component_tipo,
+				$this->section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$this->section_tipo
+			);
+
+			$data			= $component->get_data();
+			$first_value	= !empty($data) && is_array($data)
+				? $data[0]
+				: null;
+
+			// used to change the IRI of the image, don't use it as dataframe section
+			// only control if the URI is internal or external.
+			if(!empty($first_value->dataframe)){
+				if(isset($first_value->iri) && !empty($first_value->iri)) {
+					// external_source get from IRI
+					$external_source = $first_value->iri;
+				}
+			}
+		}//end if (isset($properties->external_source) && !empty($this->get_parent()) )
+
+
+		return $external_source ?? null;
+	}//end get_external_source
 
 
 
