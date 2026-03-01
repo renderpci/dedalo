@@ -251,6 +251,87 @@ export function add_parents(data: data_item[] | null, options: parser_options): 
 
 
 /**
+ * APPLY_CHAIN_FILTERS (Atomized helper)
+ * Applies truncation, filtering and splicing to a single parent chain.
+ * Logic order follows legacy PHP behavior.
+ */
+function apply_chain_filters(chain: any[], options: parser_options): any[] {
+	let processed = [...chain];
+	let truncation_applied = false;
+
+	// 1. Truncate by term_id (section_tipo_section_id)
+	const end_ids = options.parent_end_by_term_id as string[];
+	if (end_ids && Array.isArray(end_ids) && end_ids.length > 0) {
+		const end_set = new Set(end_ids);
+		const result: any[] = [];
+		for (const node of processed) {
+			const term_id = term_id_from_locator(node as locator);
+			if (term_id && end_set.has(term_id)) {
+				truncation_applied = true;
+				break;
+			}
+			result.push(node);
+		}
+		processed = result;
+	}
+
+	// 2. Truncate by typology_term_id
+	const end_models = options.parent_end_by_typology_term_id as string[];
+	if (end_models && Array.isArray(end_models) && end_models.length > 0) {
+		const end_set = new Set(end_models);
+		const result: any[] = [];
+		for (const node of processed) {
+			if (node.typology_section_tipo && node.typology_section_id) {
+				const model_id = node.typology_section_tipo + '_' + node.typology_section_id;
+				if (end_set.has(model_id)) {
+					truncation_applied = true;
+					break;
+				}
+			}
+			result.push(node);
+		}
+		processed = result;
+	}
+
+	// 3. Filter by section_tipo (supports array)
+	const target_tipo = options.parent_section_tipo;
+	if (target_tipo) {
+		const target_set = new Set(Array.isArray(target_tipo) ? target_tipo : [target_tipo as string]);
+		processed = processed.filter(node => target_set.has(node.section_tipo));
+	}
+
+	// 3a. Filter by parent_term_id (supports array)
+	processed = filter_chain_by_term_id(processed, options);
+
+	// 4. Splice chain (only if NO truncation matched)
+	const splice_args = options.parents_splice as number[];
+	if (!truncation_applied && splice_args && Array.isArray(splice_args) && splice_args.length > 0) {
+		const copy = [...processed];
+		if (splice_args.length === 1) {
+			copy.splice(splice_args[0]);
+		} else {
+			copy.splice(splice_args[0], splice_args[1]);
+		}
+		processed = copy;
+	}
+
+	// 5. Slice chain (only if NO truncation matched)
+	const slice_args = options.parents_slice as number[];
+	if (!truncation_applied && slice_args && Array.isArray(slice_args) && slice_args.length > 0) {
+		const start_arg = slice_args[0];
+		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+		const s = start_arg < 0 ? Math.max(processed.length + start_arg, 0) : start_arg;
+		let e = processed.length;
+		if (length_arg !== undefined && length_arg !== null) {
+			e = length_arg < 0 ? processed.length + length_arg : s + length_arg;
+		}
+
+		processed = processed.slice(s, Math.max(s, e));
+	}
+
+	return processed;
+}
 
 /**
  * Shared logic for filtering by term_id
