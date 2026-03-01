@@ -461,6 +461,23 @@ export function splice_chain(data: data_item[] | null, options: parser_options):
 		return copy;
 	});
 }
+
+
+/**
+ * Filter parents by term_id
+ * filtered by parents_recursive_data. We want only terms with parent given (see propiedades of isad98)
+ * This is useful when we want to discriminate thesaurus branch by top parent
+ */
+export function filter_parents_by_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
+	
+	if (!data || data.length === 0) return null;
+
+	return map_chains(data, (chain) => filter_chain_by_term_id(chain, options));
+}
+
+
+
+
 /**
  * TERM_ID_FROM_LOCATOR
  * Auxiliar method to calculate the term_id from a locator or parent/node data.
