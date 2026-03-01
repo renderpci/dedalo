@@ -69,6 +69,18 @@ abstract class component_common extends common {
 			'component_svg',
 			'component_text_area'
 		];
+		// components_using_value_property as [{"id": 1,"value": mixed}]
+		public static $components_using_value_property = [
+			'component_email',
+			'component_filter_records',
+			'component_info',
+			'component_input_text',
+			'component_json',
+			'component_number',
+			'component_password',
+			// 'component_security_access', ? [{"id": 1,"tipo": "dd242","value": 2,"section_tipo": "dd242"}]
+			'component_text_area'
+		];
 		// dataframe ddo
 		// the component_dataframe defines by the request config
 		public $ar_dataframe_ddo;

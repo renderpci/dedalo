@@ -28,7 +28,7 @@ export const view_default_edit_input_text = function() {
 * Render node for use in current view
 * @param object self
 * @param object options
-* @return HTMLElement wrapper
+* @return Promise<HTMLElement> wrapper
 */
 view_default_edit_input_text.render = async function(self, options) {
 
@@ -99,7 +99,7 @@ const get_content_data_edit = function(self) {
 * GET_CONTENT_VALUE
 * Creates the current input text node
 * @param int i
-* @param string current_value
+* @param object current_value
 * @param object self
 * @return HTMLElement content_value
 */
@@ -113,7 +113,7 @@ const get_content_value = (i, current_value, self) => {
 		const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// check if the component is mandatory and it doesn't has value
-		const add_class = self.context.properties.mandatory && !current_value && self.lang===page_globals.dedalo_data_nolan
+		const add_class = self.context.properties.mandatory && !current_value.value && self.lang===page_globals.dedalo_data_nolan
 			? ' mandatory'
 			: ''
 
@@ -161,7 +161,7 @@ const get_content_value = (i, current_value, self) => {
 		// change event
 			input.addEventListener('change', (e) => {
 				change_handler(e, i, self)
-				// mandatory stye update
+				// mandatory style update
 				if (e.target.value && e.target.value.length) {
 					if (input.classList.contains('mandatory')) {
 						input.classList.remove('mandatory')
@@ -216,18 +216,18 @@ const get_content_value = (i, current_value, self) => {
 		}//end if(i>0)
 
 	// transliterate_value
-		if (with_lang_versions && self.data.transliterate_value) {
+		if (with_lang_versions && Array.isArray(self.data.transliterate_value) && self.data.transliterate_value[i]) {
+			const transliterate_value = self.data.transliterate_value[i].value || '';
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'transliterate_value',
-				inner_html		: self.data.transliterate_value,
+				text_content	: transliterate_value,
 				parent			: content_value
-			})
+			});
 		}
 
-
 	// component_dataframe
-		if(self.properties.has_dataframe){
+		if(self.context.properties?.has_dataframe){
 
 			content_value.classList.add('has_dataframe')
 
@@ -260,7 +260,7 @@ const get_content_value = (i, current_value, self) => {
 * GET_CONTENT_VALUE_READ
 * Creates the current value DOM node
 * @param int i
-* @param string current_value
+* @param object current_value
 * @param object self
 * @return HTMLElement content_value
 */
@@ -274,7 +274,7 @@ const get_content_value_read = (i, current_value, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: final_value
+			text_content	: final_value
 		})
 
 
@@ -368,7 +368,7 @@ const get_buttons = (self) => {
 *  Search duplicates from database
 * @param object self
 * @param string|null value
-* @return void
+* @return Promise<void>
 */
 const check_duplicates = async function(self, value) {
 

@@ -170,8 +170,8 @@ class tm_record {
 	* Keys are column names, values are their new values.
 	* @param mixed $previous_data=null
 	* Previous data to check if time machine record already exists.
-	* @return section_record|false $section_id
-	* Returns the new section_record instance on success, or `false` if validation fails,
+	* @return tm_record|false $tm_record
+	* Returns the new tm_record instance on success, or `false` if validation fails,
 	* query preparation fails, or execution fails.
 	*/
 	public static function create( object $values, mixed $previous_data=null ) : tm_record|false {
@@ -194,7 +194,7 @@ class tm_record {
 
 		$mandatory = ['section_id','section_tipo','tipo','lang'];
 		foreach ( $mandatory as $column ) {
-			if( empty( $values->$column) ){
+			if( !isset($values->$column) || $values->$column === '' || $values->$column === null ){
 				debug_log( __METHOD__
 					. " Column '$column' is mandatory" . PHP_EOL
 					. ' values: ' . json_encode($values, JSON_PRETTY_PRINT)
@@ -214,49 +214,59 @@ class tm_record {
 		// This allow safe time machine save data not already saved (old imports case for example)
 		if ( !empty($previous_data) ) {
 
-			$tm_values = new stdClass();
-				$tm_values->section_id 		= (int)$values->section_id; // string|int section_id (component parent)
-				$tm_values->section_tipo 	= $values->section_tipo; // string section_tipo
-				$tm_values->tipo 			= $values->tipo; // string $tipo (component_tipo)
-				$tm_values->lang			= $values->lang; // string $lang
+			// Previous data match values->data ?
+			$current_data = $values->data ?? null;
+			$same_data = (is_array($previous_data) && is_array($current_data))
+				? normalize_array($previous_data) === normalize_array($current_data)
+				: $previous_data == $current_data;
 
-			// Set the limit to 1
-			// When the search give 1 record, stop the search because time machine has previous data
-			$limit = 1;
+			if(!$same_data) {
 
-			$db_result = tm_record::search( $tm_values, $limit );
+				$tm_values = new stdClass();
+					$tm_values->section_id 		= (int)$values->section_id; // string|int section_id (component parent)
+					$tm_values->section_tipo 	= $values->section_tipo; // string section_tipo
+					$tm_values->tipo 			= $values->tipo; // string $tipo (component_tipo)
+					$tm_values->lang			= $values->lang; // string $lang
 
-			// empty records or not data match, mints that previous data exists in component but not in time_machine.
-			// To fix this, save before the previous data and later the new data
-			if ($db_result->row_count() < 1) {
+				// Set the limit to 1
+				// When the search give 1 record, stop the search because time machine has previous data
+				$limit = 1;
 
-				// Create a new record with the previous data
-				$new_values = clone($values);
-					// set a previous timestamp to save in db. This will make sure that we have not use the same timestamp of the changed data.
-					$new_values->timestamp = dd_date::get_timestamp_now_for_db( ['sub' => 'PT1M'] ); // now minus 1 minute.
-					// use previous data as to-save data
-					$new_values->data = $previous_data;
-					// unset the bulk_process_id
-					// unsaved time_machine data is a fix of previous saved data, it need to be outside the process because
-					// the process need to be coherent to the change, the fix time_machine is other process than not happen previously.
-					// save current data as previous of the process, to prevent revert it.
-					$new_values->bulk_process_id = null;
+				$db_result = tm_record::search( $tm_values, $limit );
 
-				$new_tm_record = tm_record::create( $new_values );
+				// empty records or not data match, means that previous data exists in component but not in time_machine.
+				// To fix this, save before the previous data and later the new data
+				if ($db_result->row_count() === 0) {
 
-				if(!$new_tm_record){
-					debug_log( __METHOD__
-						. " Error creating new record (previous data): " . PHP_EOL
+					// Create a new record with the previous data
+					$new_values = clone($values);
+						// set a previous timestamp to save in db. This will make sure that we have not use the same timestamp of the changed data.
+						$new_values->timestamp = dd_date::get_timestamp_now_for_db( ['sub' => 'PT1M'] ); // now minus 1 minute.
+						// use previous data as to-save data
+						$new_values->data = $previous_data;
+						// unset the bulk_process_id
+						// unsaved time_machine data is a fix of previous saved data, it need to be outside the process because
+						// the process need to be coherent to the change, the fix time_machine is other process than not happen previously.
+						// save current data as previous of the process, to prevent revert it.
+						$new_values->bulk_process_id = null;
+
+					// Create the TM record in DB
+					$create_result = tm_db_manager::create( $new_values );
+
+					if($create_result === false){
+						debug_log( __METHOD__
+							. " Error creating new record (previous data): " . PHP_EOL
+							.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+						return false;
+					}
+					debug_log(__METHOD__
+						." Saved time machine NOT already saved component dato." . PHP_EOL
 						.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
-						, logger::ERROR
+						, logger::WARNING
 					);
-					return false;
 				}
-				debug_log(__METHOD__
-					." Saved time machine NOT already saved component dato." . PHP_EOL
-					.' new_values:  ' . json_encode($new_values, JSON_PRETTY_PRINT)
-					, logger::WARNING
-				);
 			}
 		}//end if (!empty($previous_data))
 

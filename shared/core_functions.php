@@ -1932,18 +1932,27 @@ function get_current_data_version() : array {
 
 	try {
 
-		// Query all updates records
-			$sql = sanitize_query('
-				SELECT datos FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;
-			');
+		// Query all updates records v7 sql
+			$sql = 'SELECT data FROM "matrix_updates" ORDER BY data->>\'dedalo_version\' DESC LIMIT 1;';
 			$db_result = matrix_db_manager::exec_search($sql, []);
+
+			// On error, try using v6 sql
+			if ($db_result===false) {
+				$sql = 'SELECT datos as data FROM "matrix_updates" ORDER BY datos->>\'dedalo_version\' DESC LIMIT 1;';
+				$db_result = matrix_db_manager::exec_search($sql, []);
+			}
+
 			if ($db_result!==false) {
 
-				$object 		= pg_fetch_object($db_result);
-				$datos_encoded	= $object->datos;
-				$datos			= json_handler::decode($datos_encoded);
+				$object = pg_fetch_object($db_result);
+				if (is_object($object) && isset($object->data)) {
+					$data_encoded	= $object->data;
+					$data			= json_handler::decode($data_encoded);
 
-				$last_version	= $datos->dedalo_version;
+					if (is_object($data) && isset($data->dedalo_version)) {
+						$last_version	= $data->dedalo_version;
+					}
+				}
 			}
 
 		// version
@@ -2002,6 +2011,7 @@ function check_basic_system() : object {
 	$response = new stdClass();
 		$response->result	= false;
 		$response->msg		= 'Error. check_basic_system failed';
+		$response->errors	= [];
 
 	// basic system files check
 	// langs js
@@ -2047,7 +2057,8 @@ function check_basic_system() : object {
 			if ($pre_update_response->result===false) {
 
 				$response->result	= false;
-				$response->msg		= 'Error. pre_update_version script failed';
+				$response->msg		= 'Error. pre_update_version script failed. Table dd_ontology is not installed. ' . PHP_EOL . ($pre_update_response->msg ?? '');
+				$response->errors 	= $pre_update_response->errors ?? ['Error. pre_update_version script failed'];
 
 				debug_log(__METHOD__
 					. " Error. pre_update_version script failed " . PHP_EOL
@@ -2642,6 +2653,37 @@ function are_all_properties_empty( object $object ) : bool {
 
     return empty($non_empty_properties);
 }//end are_all_properties_empty
+
+
+
+/**
+ * NORMALIZE_ARRAY
+ * Converts objects to arrays, sorts keys of internal elements, and sorts the outer array.
+ * It recursively sorts the keys of each object and then sorts
+ * the outer array itself so that the internal structure is identical regardless of how it started.
+ * Use as:
+ * 	$isEqual = normalize_array($array1) === normalize_array($array2);
+ * @param array $arr The array to normalize.
+ * @return array The normalized array.
+ */
+function normalize_array(array $arr) : array {
+    // 1. Convert objects to associative arrays (easier to sort)
+    $arr = json_decode(json_encode($arr), true);
+
+    // 2. Sort the keys of each internal element
+    foreach ($arr as &$item) {
+        if (is_array($item)) {
+            ksort($item);
+        }
+    }
+
+    // 3. Sort the outer array based on the serialized values of the items
+    usort($arr, function($a, $b) {
+        return serialize($a) <=> serialize($b);
+    });
+
+    return $arr;
+}//end normalize_array
 
 
 

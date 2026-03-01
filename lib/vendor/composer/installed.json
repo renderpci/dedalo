@@ -2445,20 +2445,20 @@
         },
         {
             "name": "spiral/roadrunner",
-            "version": "v2025.1.7",
-            "version_normalized": "2025.1.7.0",
+            "version": "v2025.1.8",
+            "version_normalized": "2025.1.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/roadrunner-server/roadrunner.git",
-                "reference": "f0e9beb540b12e85e36ac5ff83f728eed0436164"
+                "reference": "e3b05713e8d65ad4d5104d839890cc4892d63b2d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/roadrunner-server/roadrunner/zipball/f0e9beb540b12e85e36ac5ff83f728eed0436164",
-                "reference": "f0e9beb540b12e85e36ac5ff83f728eed0436164",
+                "url": "https://api.github.com/repos/roadrunner-server/roadrunner/zipball/e3b05713e8d65ad4d5104d839890cc4892d63b2d",
+                "reference": "e3b05713e8d65ad4d5104d839890cc4892d63b2d",
                 "shasum": ""
             },
-            "time": "2026-02-17T07:53:07+00:00",
+            "time": "2026-02-19T14:32:44+00:00",
             "type": "metapackage",
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -2484,7 +2484,7 @@
                 "chat": "https://discord.gg/V6EK4he",
                 "docs": "https://docs.roadrunner.dev/",
                 "issues": "https://github.com/roadrunner-server/roadrunner/issues",
-                "source": "https://github.com/roadrunner-server/roadrunner/tree/v2025.1.7"
+                "source": "https://github.com/roadrunner-server/roadrunner/tree/v2025.1.8"
             },
             "funding": [
                 {
