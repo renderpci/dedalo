@@ -461,6 +461,25 @@ export function splice_chain(data: data_item[] | null, options: parser_options):
 		return copy;
 	});
 }
+/**
+ * TERM_ID_FROM_LOCATOR
+ * Auxiliar method to calculate the term_id from a locator or parent/node data.
+ * from : {section_tipo:"oh1", section_id:"25"} to "oh1_25"
+ * @param locator - locator object
+ * @returns term_id - String or null
+ */
+function term_id_from_locator(locator: locator | null): string | null {
+
+	if (!locator) return null;
+
+	const term_id = (locator.section_tipo && locator.section_id)
+		? locator.section_tipo + '_' + locator.section_id
+		: null;
+
+	return term_id;
+}
+
+
 
 
 
