@@ -293,6 +293,41 @@ export function unix_timestamp(data: data_item[] | null, options: parser_options
 // =====================================================
 
 /**
+ * GET_LABEL
+ * Returns a localized human-readable label for date period units.
+ * Mirrors PHP's label::get_label() for the keys used by component_date.
+ *
+ * @param key  - 'years' | 'months' | 'days'
+ * @param lang - Language code (e.g. 'en', 'es')
+ * @returns Localized label string
+ */
+function get_label(key: 'years' | 'months' | 'days', lang: string): string {
+
+	// Map Dédalo lang codes (e.g. "lg-spa") to the short key used in the label table.
+	// Falls back to the lang string itself for direct short-code usage.
+	const lang_code_map: Record<string, string> = {
+		'lg-eng': 'en',
+		'lg-spa': 'es',
+		'lg-cat': 'ca',
+		'lg-fra': 'fr',
+		'lg-deu': 'de',
+		'lg-por': 'pt',
+		'lg-ita': 'it',
+		'lg-nob': 'no',
+		'lg-swe': 'sv',
+		'lg-nld': 'nl',
+	};
+	const short = lang_code_map[lang] ?? lang;
+
+	const labels: Record<string, Record<string, string>> = {
+		years:  { en: 'years',  es: 'años',   ca: 'anys',  fr: 'ans',   de: 'Jahre',  pt: 'anos',  it: 'anni',  no: 'år',   sv: 'år',   nl: 'jaar'   },
+		months: { en: 'months', es: 'meses',  ca: 'mesos', fr: 'mois',  de: 'Monate', pt: 'meses', it: 'mesi',  no: 'mnd',  sv: 'mån',  nl: 'maanden' },
+		days:   { en: 'days',   es: 'días',   ca: 'dies',  fr: 'jours', de: 'Tage',   pt: 'dias',  it: 'giorni', no: 'dager', sv: 'dagar', nl: 'dagen' },
+	};
+	return labels[key]?.[short] ?? labels[key]?.['en'] ?? key;
+}
+
+/**
  * FORMAT_DD_DATE
  * Converts a dd_date_part object to a formatted string using PHP-style format tokens.
  *
