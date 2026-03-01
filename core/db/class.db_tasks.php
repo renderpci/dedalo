@@ -51,6 +51,12 @@ class db_tasks {
 					continue; // Skip table
 				}
 
+				$table_exists = DBi::check_table_exists($table_name);
+				if( $table_exists===false ) {
+					$response->errors[] = "Table $table_name not exists. Ignored check_sequences";
+					continue;
+				}
+
 				// Detected  sqlmap tables. 'sqlmapfile','sqlmapoutput'
 				if (strpos($table_name, 'sqlmap')!==false) {
 					throw new Exception("Error Processing Request. Security sql injection warning", 1);
@@ -230,6 +236,17 @@ class db_tasks {
 
 		// VACUUM each table individually
 		foreach ($valid_tables as $table) {
+
+			$table_exists = DBi::check_table_exists($table);
+			if( $table_exists===false ) {
+				$response->errors[] = "Table does not exist: " . $table;
+				debug_log(__METHOD__
+					. " Ignored non existing table " . PHP_EOL
+					. ' table: ' . to_string($table)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
 			$command = $command_base . ' -c ' . escapeshellarg("VACUUM ANALYZE $escaped_table;");
@@ -605,6 +622,13 @@ class db_tasks {
 
 			foreach ($tables as $table) {
 
+				// 0 Prevent errors if table not exists
+					$table_exists = DBi::check_table_exists($table);
+					if( $table_exists===false ) {
+						$response->errors[] = "Table $table not exists. Ignored index $index->name";
+						continue;
+					}
+
 				// 1 Drop
 					// exec drop query
 					$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
@@ -691,6 +715,13 @@ class db_tasks {
 
 			foreach ($tables as $table) {
 
+				// 0 Prevent errors if table not exists
+					$table_exists = DBi::check_table_exists($table);
+					if( $table_exists===false ) {
+						$response->errors[] = "Table $table not exists. Ignored constraint $constraint->name";
+						continue;
+					}
+
 				// 1 Drop
 					// exec drop query
 					$sql_query		= db_tasks::parse_sql_sentence($constraint->drop, $table);
@@ -714,7 +745,7 @@ class db_tasks {
 					}
 			}
 
-				$response->success++;
+			$response->success++;
 		}
 
 		// debug
@@ -788,7 +819,7 @@ class db_tasks {
 	* @return string $sql_query
 	*/
 	private static function clean_sql_sentence( string $sql_query ) : string {
-		return trim(str_replace(["\n","\t"], [' ',''], $sql_query));
+		return trim(str_replace(["\t"], [' '], $sql_query));
 	}//end clean_sql_sentence
 
 

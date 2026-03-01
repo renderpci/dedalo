@@ -99,8 +99,24 @@ class update {
 				}
 			}
 			if (empty($update)) {
-				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
-				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
+
+				try {
+					$fisrt_update = array_key_first((array) $updates);
+
+					// MINIMUM UPDATE FROM
+					$ar_version_expected = [
+						$updates->$fisrt_update->update_from_major,
+						$updates->$fisrt_update->update_from_medium,
+						$updates->$fisrt_update->update_from_minor
+					];
+				} catch (\Throwable $th) {
+					$ar_version_expected = [];
+				}
+
+				$response->msg = 'Unable to get proper data update from updates file. '. PHP_EOL
+					.'Current data version (from table matrix_updates): '.implode('.', $current_version) . PHP_EOL
+					.'Update file (updates.php) data version expected: ' . implode('.', $ar_version_expected);
+				$response->errors[] = 'Update item not found for version '.implode('.', $current_version);
 				return $response;
 			}
 
@@ -302,21 +318,22 @@ class update {
 
 								array_push($msg, "Error on SQL_update: ".to_string($current_query));
 
-								// $response->result	= false ;
-								// $response->msg		= $msg;
-								// return $response;
+								$response->result	= false ;
+								$response->msg		= $msg;
 
 								debug_log(__METHOD__." Error on update SQL_update ".PHP_EOL
 									. 'The result is false. Check your query sentence: ' .PHP_EOL
 									. to_string($current_query) .PHP_EOL
-									. 'Note that the update SQL_update loop to be continue with the next one'
+									. 'The update process is aborted to prevent data corruption.'
 									, logger::ERROR
 								);
 
 								// log line
 									$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . ($key+1);
-									$log_line .= PHP_EOL . 'The result is false. Check your query sentence';
+									$log_line .= PHP_EOL . 'The result is false. Check your query sentence. The update process aborted.';
 									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+								return $response;
 							}
 
 							// log line
@@ -395,6 +412,7 @@ class update {
 						}//end foreach ((array)$update->components_update as $current_model)
 					}
 					break;
+
 				case 'run_scripts':
 					// 3 run_scripts
 					if(isset($update->run_scripts)){
@@ -445,14 +463,11 @@ class update {
 
 								array_push($msg, 'Error on run_scripts: '.to_string($current_script));
 
-								// $response->result	= false;
-								// $response->msg		= $msg;
-								// return $response;
-
 								debug_log(__METHOD__." Error on run_scripts ".PHP_EOL
 									. 'The result is false. Check your script: ' .PHP_EOL
-									. to_string($current_script) .PHP_EOL
-									. 'Note that the run_scripts loop to be continue with the next one'
+									. 'current_script: ' .to_string($current_script) .PHP_EOL
+									. 'run_scripts_response: ' .json_encode($run_scripts_response, JSON_PRETTY_PRINT) .PHP_EOL
+									. 'Note that the run_scripts loop will continue with the next script.'
 									, logger::ERROR
 								);
 
@@ -1156,15 +1171,11 @@ class update {
 				, logger::WARNING
 			);
 
-			// CLI process data
+			// CLI process data (table started)
 				if ( running_in_cli()===true ) {
-					common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator'
+					common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator started'
 						. ' | table: ' . $table;
 					common::$pdata->table = $table;
-					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
-						? dd_memory_usage() // update memory information once every 5000 items
-						: common::$pdata->memory;
-					common::$pdata->counter++;
 					// send to output
 					print_cli(common::$pdata);
 				}
@@ -1172,20 +1183,36 @@ class update {
 			// Get last id in the table
 			$strQuery 	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
 			$result 	= matrix_db_manager::exec_search($strQuery, []);
+			if(!$result) {
+				debug_log(__METHOD__
+				   .' ERROR: No result from query: ' . $strQuery
+				   , logger::ERROR
+				);
+				continue;
+			}
 			$rows 		= pg_fetch_assoc($result);
+			pg_free_result($result);
 			if (!$rows) {
 				continue;
 			}
-			$max = $rows['id'];
+			$max = (int)$rows['id'];
 
 			// Get first id in the table
 			$min_strQuery	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
 			$min_result		= matrix_db_manager::exec_search($min_strQuery, []);
-			$min_rows		= pg_fetch_assoc($min_result);
+			if(!$min_result) {
+				debug_log(__METHOD__
+				   .' ERROR: No result from query: ' . $min_strQuery
+				   , logger::ERROR
+				);
+				continue;
+			}
+			$min_rows = pg_fetch_assoc($min_result);
+			pg_free_result($min_result);
 			if (!$min_rows) {
 				continue;
 			}
-			$min = $min_rows['id'];
+			$min = (int)$min_rows['id'];
 
 			//$min = 1;
 
@@ -1207,7 +1234,10 @@ class update {
 				}
 				$n_rows = pg_num_rows($result);
 
-				if ($n_rows<1) continue;
+				if ($n_rows<1) {
+					pg_free_result($result);
+					continue;
+				}
 
 				while($row = pg_fetch_assoc($result)) {
 
@@ -1216,24 +1246,36 @@ class update {
 
 				}// end while
 
-				// log info each 1000
-					if ($i_ref===0) {
+				// release result to prevent memory leak
+				pg_free_result($result);
+
+				// log info each 5000
+					if ($i_ref===0 && isset($id)) {
 						debug_log(__METHOD__
 							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
 							, logger::DEBUG
 						);
 
-						// clean vars
-						// unset($result);
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator'
+								. ' | table: ' . $table . ' (' . $id . '/' . $max . ')';
+							common::$pdata->memory = dd_memory_usage();
+							print_cli(common::$pdata);
+						}
+
 						// let GC do the memory job
 						time_nanosleep(0, 5000); // Slept for 5000 nanoseconds
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
 					}
 
-				// reset counter
+				// update and reset counter
+					if ( running_in_cli()===true ) {
+						common::$pdata->counter++;
+					}
+
 					$i_ref++;
-					if ($i_ref > 5001) {
+					if ($i_ref >= 5000) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)

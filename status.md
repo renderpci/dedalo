@@ -1,6 +1,6 @@
 # Dédalo Project Status
 
-Information regarding project tasks and migration progress.
+Information regarding project tasks and migration progress. NOT for agents.
 
 ## Tasks
 

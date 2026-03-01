@@ -28,6 +28,36 @@ final class dd_utils_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// v6 to v7 migration check
+		// Check if table dd_ontology exists
+		if (!DBi::check_table_exists('dd_ontology')) {
+			// run pre_update_version
+			try {
+				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v6_to_v7.php';
+				$pre_update_response = v6_to_v7::pre_update();
+				if ($pre_update_response->result === false) {
+					debug_log(__METHOD__
+						. " Error on v6_to_v7 pre_update" . PHP_EOL
+						, logger::ERROR
+					);
+					$response->msg = 'Error on run v6_to_v7 pre_update';
+					$response->errors[] = 'Error on run v6_to_v7 pre_update';
+
+					return $response;
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Error (exception) on v6_to_v7 pre_update" . PHP_EOL
+					. ' Caught exception: ' . $e->getMessage()
+					, logger::ERROR
+				);
+				$response->msg = 'Error. Exception running v6_to_v7 pre_update';
+				$response->errors[] = 'Error. Exception running v6_to_v7 pre_update';
+				return $response;
+			}
+		}
 
 		$login = new login();
 

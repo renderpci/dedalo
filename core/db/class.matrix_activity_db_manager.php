@@ -59,7 +59,7 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		// 	);
 		// 	return false;
 		// }
-		
+
 		// Connection
 		$conn = DBi::_getConnection();
 
@@ -67,8 +67,8 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		$columns		= ['"section_tipo"']; // required columns
 		$placeholders	= ['$1']; // placeholders for them
 		$params			= [$section_tipo]; // param values (first one for tipo)
-		$param_index	= 2; // next param index ($2, $3, ...)	
-		
+		$param_index	= 2; // next param index ($2, $3, ...)
+
 		// Add fixed columns (this allows use prepared statements)
 		foreach (self::$columns as $col => $col_value) {
 			// Prevent double columns (section_tipo and section_id are added by default)
@@ -82,7 +82,7 @@ class matrix_activity_db_manager extends matrix_db_manager {
 			if ($value !== null && isset(self::$json_columns[$col])) {
 				// Encode PHP array/object as JSON string
 				$params[]		= json_handler::encode($value);
-				$placeholders[]	= '$' . $param_index . '::jsonb';	
+				$placeholders[]	= '$' . $param_index . '::jsonb';
 			}else{
 				$params[]		= $value;
 				$placeholders[]	= '$' . $param_index;
@@ -93,35 +93,18 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		}
 
 		// (!) Note that value returned by save action, in case of activity, is the section_id
-		// auto created by table sequence 'matrix_activity_section_id_seq', not by the counter.	
+		// auto created by table sequence 'matrix_activity_section_id_seq', not by the counter.
 
-		// Execute with prepared statements
-			$stmt_name = 'create_' . $table;
-			if (!isset(DBi::$prepared_statements[$stmt_name])) {
-				$sql = "
-					INSERT INTO $table (" . implode(', ', $columns) . ")
-					VALUES (" . implode(', ', $placeholders) . ")					
-				";
-				if (!pg_prepare(
-					$conn,
-					$stmt_name,
-					$sql)
-				) {
-					debug_log(__METHOD__ . " Prepare failed: " . pg_last_error($conn), logger::ERROR);
-					return false;
-				}
-				// Set the statement as existing.
-				DBi::$prepared_statements[$stmt_name] = true;
-			}
-			$result = pg_execute(
-				$conn,
-				$stmt_name,
-				$params
-			);
+		// SQL query for insert
+		$sql = "
+			INSERT INTO $table (" . implode(', ', $columns) . ")
+			VALUES (" . implode(', ', $placeholders) . ")
+		";
+
+		// exec_search manages prepared statement recycling and error logging
+		$result = self::exec_search($sql, $params);
 
 		if (!$result) {
-			// Log error if COMMIT fails (rare, but possible due to network or server issues)
-			debug_log(__METHOD__ . " CRITICAL: COMMIT FAILED: " . pg_last_error($conn), logger::ERROR);
 			return false;
 		}
 

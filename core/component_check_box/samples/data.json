@@ -2,11 +2,13 @@
 	{
 		"id": 1,
 		"section_id": "1",
-		"section_tipo": "dd64"
+		"section_tipo": "dmm798",
+		"from_component_tipo": "dmm567"
 	},
 	{
+		"id": 2,
 		"section_id": "2",
-		"section_tipo": "dd64",
-		"id": 2
+		"section_tipo": "dmm798",
+		"from_component_tipo": "dmm567"
 	}
 ]

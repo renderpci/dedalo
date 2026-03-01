@@ -209,10 +209,9 @@ final class dd_core_api {
 				// check_basic_system (lang and structure files)
 					$is_system_ready = check_basic_system();
 					if ($is_system_ready->result===false) {
-						$msg = 'System is not ready. check_basic_system returns errors';
-						$response->result	= false;
-						$response->errors[]	= 'system not ready';
-						$response->msg		= $msg;
+						$response->result 	= false;
+						$response->errors 	= $is_system_ready->errors ?? ['system not ready'];
+						$response->msg 		= 'System is not ready. check_basic_system returns errors: ' . PHP_EOL . ($is_system_ready->msg ?? '');
 
 						return $response;
 					}
