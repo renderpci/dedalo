@@ -29,6 +29,16 @@ import type {
 } from './types';
 
 
+export interface LangsConfig {
+	langs:     string[];
+	main_lang: string | null;
+}
+
+export const langs_config: LangsConfig = {
+	langs: [],
+	main_lang: null
+};
+
 
 /**
  * PROCESS_RESPONSE
@@ -51,10 +61,13 @@ export function process_response(response: php_api_response): processed_table[] 
 	const all_langs = response.langs ? Object.keys(response.langs) : [];
 	const main_lang = response.main_lang ?? null;
 
+	langs_config.langs 		= all_langs;
+	langs_config.main_lang 	= main_lang;
+
 	const tables: processed_table[] = [];
 
 	for (const datum of response.datum) {
-		const table = process_datum_group(datum, database_name, all_langs, main_lang);
+		const table = process_datum_group(datum, database_name);
 		if (table) {
 			tables.push(table);
 		}
@@ -111,15 +124,11 @@ function resolve_table_name(datum: datum_group): string {
  *
  * @param datum         - The datum group
  * @param database_name - Target database name
- * @param all_langs     - All available languages from the response
- * @param main_lang     - The main/default language for fallback
  * @returns A processed_table or null if no data
  */
 function process_datum_group(
 	datum:         datum_group,
-	database_name: string,
-	all_langs:     string[],
-	main_lang:     string | null
+	database_name: string
 ): processed_table | null {
 
 	if (!datum.data || datum.data.length === 0) {
@@ -143,7 +152,7 @@ function process_datum_group(
 			deletions.push(record.section_id);
 			continue;
 		}
-		const processed = process_record(record, datum.context, all_langs, main_lang);
+		const processed = process_record(record, datum.context);
 		records.push(...processed);
 	}
 
