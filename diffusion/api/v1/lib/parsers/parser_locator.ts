@@ -463,6 +463,38 @@ export function splice_chain(data: data_item[] | null, options: parser_options):
 }
 
 
+
+/**
+ * SLICE_CHAIN
+ * Apply Array.slice() on the parent chain mimicking PHP array_slice.
+ * Accepts 1 or 2 arguments matching the parents_slice format:
+ *   [offset]         → mimics array_slice(chain, offset)
+ *   [offset, length] → mimics array_slice(chain, offset, length)
+ *
+ * @param options.parents_slice - Array of 1-2 numbers, e.g. [0, -1] or [2]
+ */
+export function slice_chain(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const slice_args = options.parents_slice as number[];
+	if (!slice_args || !Array.isArray(slice_args) || slice_args.length === 0) return data;
+
+	return map_chains(data, (chain) => {
+		const start_arg = slice_args[0];
+		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+		const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
+		let e = chain.length;
+		if (length_arg !== undefined && length_arg !== null) {
+			e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
+		}
+
+		return chain.slice(s, Math.max(s, e));
+	});
+}
+
+
 /**
  * Filter parents by term_id
  * filtered by parents_recursive_data. We want only terms with parent given (see propiedades of isad98)
