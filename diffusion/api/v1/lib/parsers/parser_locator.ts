@@ -88,31 +88,49 @@ export function get_section_tipo(data: data_item[] | null, options: parser_optio
 }
 
 /**
- * GET_FIRST
- * Returns the first data item from the list.
+ * GET_TERM_ID
+ * Extracts the term_id(s) from the data item value.
+ * Each locator object becomes one term_id string: "{section_tipo}_{section_id}".
+ * Supports single locators and arrays of locators.
  *
  * @param data    - Array of data items
  * @param options - Parser options
- * @returns Array containing only the first data item
+ * @returns Array of data items with term_id(s) as value (array of strings)
  */
-export function get_first(data: data_item[] | null, options: parser_options): data_item[] | null {
+export function get_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 	const result: data_item[] = [];
 
 	for (const item of data) {
 		const val = item.value;
-		const final_val = (Array.isArray(val) && val.length > 0) 
-            ? val[0] 
-            : val;
+		const locators = Array.isArray(val) ? val : [val];
+
+		const term_ids: string[] = [];
+		for (const loc of locators) {
+			if (typeof loc === 'object' && loc !== null && 'section_tipo' in loc && 'section_id' in loc) {
+				const tid = term_id_from_locator(loc as locator);
+				if (tid !== null) term_ids.push(tid);
+			}
+		}
 		result.push({
 			...item,
-			value: final_val
+			value: term_ids
 		});
 	}
 
 	return result.length > 0 ? result : null;
 }
+
+
+
+
+
+
+
+
+
+
 
 /**
  * PARENTS
