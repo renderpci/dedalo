@@ -33,8 +33,16 @@ final class ImageMagick {
 	* @return string
 	*/
 	public static function get_imagemagick_installed_path() : string {
+		static $path;
+		if (isset($path)) return $path;
 
-		return MAGICK_PATH . 'convert';
+		$path = MAGICK_PATH . 'magick';
+		if(file_exists($path)) {
+			return $path;
+		}
+
+		$path = MAGICK_PATH . 'convert';
+		return $path;
 	}//end get_imagemagick_installed_path
 
 
@@ -44,8 +52,18 @@ final class ImageMagick {
 	* @return string
 	*/
 	public static function get_imagemagick_identify_path() : string {
+		static $path;
+		if (isset($path)) return $path;
 
-		return MAGICK_PATH . 'identify';
+		// If 'magick' exists, use 'magick identify'.
+		// Note: get_imagemagick_installed_path() returns the full path to the binary.
+		if (str_ends_with(self::get_imagemagick_installed_path(), 'magick')) {
+			$path = self::get_imagemagick_installed_path() . ' identify';
+		} else {
+			$path = MAGICK_PATH . 'identify';
+		}
+
+		return $path;
 	}//end get_imagemagick_identify_path
 
 
@@ -417,22 +435,37 @@ final class ImageMagick {
 	*/
 	public static function has_meta_channel( string $source_file ) : bool {
 
+		if (!file_exists($source_file)) {
+			debug_log(__METHOD__ . " Source file does not exist: $source_file", logger::ERROR);
+			return false;
+		}
+
+		// extension check. Prevent to process files that are not tif or psd, eg. 'svg'
+		$extension = strtolower(pathinfo($source_file, PATHINFO_EXTENSION));
+		$valid_extensions = ['tif', 'tiff', 'psd'];
+		if (!in_array($extension, $valid_extensions)) {
+			debug_log(__METHOD__ . " Ignored has_meta_channel check for source file. It's not a tif or psd file: $source_file", logger::WARNING);
+			return false;
+		}
+
 		// tiff info. Get the channel number of TIFF (PSD use the same property) :
-			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[channels]" '. '"'. $source_file . '"';
-			$string_channels	= shell_exec($command);
+			$command = ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[channels]" ' . escapeshellarg($source_file);
+			exec($command . ' 2>&1', $output, $worked_result);
+			$string_channels = implode(PHP_EOL, $output);
 
 			debug_log(__METHOD__
 				. " has_meta_channel command " . PHP_EOL
-				. 'command: ' .to_string($command) . PHP_EOL
+				. 'command: ' . $command . PHP_EOL
 				. 'channels: ' . json_encode($string_channels)
 				, logger::WARNING
 			);
 
-			if (empty($string_channels)) {
+			if ($worked_result !== 0 || empty($string_channels)) {
 				debug_log(__METHOD__
-					. " Unable to get command execution result on get channels. Empty result " . PHP_EOL
-					. 'command: ' .to_string($command) . PHP_EOL
-					. 'channels: ' . json_encode($string_channels)
+					. " Unable to get command execution result on get channels, or error occurred. " . PHP_EOL
+					. 'command: ' . $command . ' 2>&1' . PHP_EOL
+					. 'worked_result: ' . (string)$worked_result . PHP_EOL
+					. 'output: ' . json_encode($string_channels)
 					, logger::ERROR
 				);
 				return false;
@@ -444,16 +477,18 @@ final class ImageMagick {
 		// srgba 6.2 -> 6 channels 2 of them is meta channel (transparent channel)
 
 		// find every number into the string 3.1
-		preg_match_all('/\d+.\d+/', $string_channels, $ar_channels_info);
+		preg_match_all('/\d+\.\d+/', $string_channels, $ar_channels_info);
 
 		$meta_channel = false;
-		foreach ($ar_channels_info[0] as $channels_data) {
-			$ar_channel_info	= explode('.', $channels_data);
-			$meta_channel_info	= (int)$ar_channel_info[1];
+		if (!empty($ar_channels_info[0])) {
+			foreach ($ar_channels_info[0] as $channels_data) {
+				$ar_channel_info	= explode('.', $channels_data);
+				$meta_channel_info	= (int)$ar_channel_info[1];
 
-			if($meta_channel_info > 0){
-				$meta_channel = true;
-				break;
+				if($meta_channel_info > 0){
+					$meta_channel = true;
+					break;
+				}
 			}
 		}
 
