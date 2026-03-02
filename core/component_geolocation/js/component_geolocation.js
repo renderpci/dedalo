@@ -480,14 +480,16 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		const input_alt		= content_value.querySelector("input[data-name='alt']")
 
 	// Set values to inputs
-		input_lat.value		= data.lat
-		input_lon.value		= data.lon
-		input_zoom.value	= data.zoom
+		if (input_lat) input_lat.value	= data.lat
+		if (input_lon) input_lon.value	= data.lon
+		if (input_zoom) input_zoom.value = data.zoom
 
 	// get the value from alt input
-		data.alt = input_alt.value
-			? JSON.parse(input_alt.value)
-			: null
+		if (input_alt) {
+			data.alt = input_alt.value
+				? parseFloat(input_alt.value)
+				: null
+		}
 
 	// set the current value
 		self.current_value[key].lat		= data.lat
@@ -555,25 +557,30 @@ component_geolocation.prototype.layers_loader = function(options) {
 
 			case ('full'):
 				const ar_layer		=  self.ar_layer_loaded
-				const ar_layer_len	= ar_layer.length
-				for (let i = 0; i < ar_layer_len; i++) {
-					const layer = ar_layer[i]
-					self.load_layer(layer)
+				if (ar_layer && Array.isArray(ar_layer)) {
+					const ar_layer_len	= ar_layer.length
+					for (let i = 0; i < ar_layer_len; i++) {
+						const layer = ar_layer[i]
+						self.load_layer(layer)
+					}
 				}
 				// active all layer in control
-				const control_layers_len = self.layer_control._layers.length
-				for (let i = 0; i < control_layers_len; i++) {
-					const layer = self.layer_control._layers[i]
-					if(layer.overlay){
-						const input = self.layer_control._layerControlInputs[i]
-						if(!input.checked){
-							input.click()
+				if (self.layer_control && self.layer_control._layers) {
+					const control_layers_len = self.layer_control._layers.length
+					for (let i = 0; i < control_layers_len; i++) {
+						const layer = self.layer_control._layers[i]
+						if(layer.overlay){
+							const input = self.layer_control._layerControlInputs[i]
+							if(input && !input.checked){
+								input.click()
+							}
 						}
 					}
 				}
 				break;
 
 			case ('layer'):
+				if (!self.ar_layer_loaded) return false
 				const loaded_layer = self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
 				// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
 				// create new layer data with the new id and set to ar_layer_loaded
