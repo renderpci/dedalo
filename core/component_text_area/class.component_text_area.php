@@ -33,21 +33,22 @@ class component_text_area extends component_string_common {
 	* IS_EMPTY
 	* Check if given value is or not empty considering
 	* spaces and '<p></p>' as empty values
-	* @param object|null $data_item
+	* Use only for data entries.
+	* @param mixed $data_item
 	* @return bool
 	*/
-	public function is_empty( ?object $data_item ) : bool {
+	public function is_empty( mixed $data_item ) : bool {
 
 		$is_empty = parent::is_empty($data_item);
 		if ($is_empty===true) {
 			return true;
 		}
 
-		$value = $data_item->value;
+		$value = $data_item->value ?? '';
 
 		// check for specific non empty values that can be considered empty
 		// in this component because are garbage form the text editor (ckeditor/tinyMCE)
-		$trim_value = is_string($value) ? trim($value) : $value;
+		$trim_value = trim($value);
 		$garbage_values = [
 			'<p></p>',
 			'<p> </p>',
@@ -523,7 +524,7 @@ class component_text_area extends component_string_common {
 			// set the new data to component text area
 			$this->set_data($new_data);
 			// save
-			$this->save();			
+			$this->save();
 
 		}else{
 			// inform that the data item will be not deleted from data
@@ -1805,7 +1806,7 @@ class component_text_area extends component_string_common {
 						$value = component_string_common::truncate_text(
 							$string_value, // string html
 							(int)$max_chars // int maxLength
-						);						
+						);
 				}
 				$data_item->value = $value;
 

@@ -8748,6 +8748,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   line-clamp: 10;
   -webkit-box-orient: vertical;
   height: 100%;
+  word-break: normal;
 }
 .service_time_machine.view_mini .list_body > .content_data > .section_record .column_service_time_machine.column_dd1574 {
   grid-column: 3;
@@ -8996,10 +8997,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   min-height: inherit;
 }
 .wrapper_tool > .content_data {
+  contain: content;
   width: 100%;
   padding: 1rem;
 }
 .wrapper_tool > .content_data > .footer_node {
+  contain: content;
   padding: 3rem;
   padding-top: 4rem;
   display: flex;
@@ -13309,7 +13312,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   height: 30.5rem;
 }
 .component_geolocation.view_line > .content_data {
+  display: block;
   height: 100% !important;
+  overflow: hidden;
+}
+.component_geolocation.view_line > .content_data > .content_value {
+  height: calc(30.5rem - 1rem);
 }
 .component_geolocation.view_print .leaflet-control-container {
   display: none;

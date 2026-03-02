@@ -52,7 +52,8 @@ class component_string_common extends component_common {
 
 		return [
 			'component_input_text',
-			'component_text_area'
+			'component_text_area',
+			'component_email'
 		];
 	}//end get_string_components
 
@@ -60,21 +61,27 @@ class component_string_common extends component_common {
 
 	/**
 	* IS_EMPTY
-	* @param object|null $data_item
+	* Use only for data entries.
+	* @param mixed $data_item
 	* Check if given data_item is or not empty considering
 	* spaces and ' ' as empty values
 	* @return bool
 	*/
-	public function is_empty( ?object $data_item ) : bool {
+	public function is_empty( mixed $data_item ) : bool {
 
 		// null case explicit
 		if($data_item===null) {
 			return true;
 		}
 
+		// non object case. As data entry, is considered empty.
+		if ( !is_object($data_item) ) {
+			return true;
+		}
+
 		$value = $data_item->value ?? null;
 		$trim_value = is_string($value) ? trim($value) : $value;
-		if( !empty($trim_value) ) {
+		if( !empty($trim_value) || $trim_value==='0' || $trim_value===0 || $trim_value===0.0 ) {
 			return false;
 		}
 
