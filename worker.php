@@ -92,6 +92,10 @@ while ($request = $psr7Worker->waitRequest()) {
         // Ensure essential server variables for Dédalo
         $_SERVER['REQUEST_TIME_FLOAT'] = $_SERVER['REQUEST_TIME_FLOAT'] ?? microtime(true);
         $_SERVER['REMOTE_ADDR'] = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $host_header = $request->getHeaderLine('Host');
+        if (!empty($host_header)) {
+            $_SERVER['HTTP_HOST'] = $host_header;
+        }
 
         // Fix $_FILES (simple placeholder for now)
         $_FILES = [];

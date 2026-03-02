@@ -1015,7 +1015,7 @@ class matrix_db_manager {
 		}
 
 		// debug
-		if(SHOW_DEBUG==='calasparra') {
+		if(SHOW_DEBUG===true && (!defined('IS_UNIT_TEST') || IS_UNIT_TEST===false)) {
 			// time
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 			if($total_time_ms>SLOW_QUERY_MS) {
