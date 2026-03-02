@@ -108,6 +108,16 @@
 							true // bool cache
 						);
 
+						// Safety check: ensure $section is a valid object before using it
+						if (!$section instanceof section) {
+							debug_log('sections_json'
+								. " Skip invalid section_tipo: $section_tipo [record section_id: $section_id]" . PHP_EOL
+								. " section::get_instance returned false (likely non-section model)"
+								, logger::WARNING
+							);
+							continue;
+						}
+
 						// permissions check: skip section and its all section_records without at least read access
 						// Only sections with at least read access are included in the result
 
