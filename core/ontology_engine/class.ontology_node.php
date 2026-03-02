@@ -1204,8 +1204,7 @@ class ontology_node {
 				break;
 
 			case 'related' :
-				$ontology_node = ontology_node::get_instance($tipo);
-				$ar_targets    = $ontology_node->get_relation_nodes($tipo, true, true);
+				$ar_targets = ontology_node::get_relation_nodes($tipo, true, true);
 				break;
 
 			case 'parent' :
