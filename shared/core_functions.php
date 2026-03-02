@@ -1730,10 +1730,14 @@ function safe_tld(string $tld) : string|bool {
 /**
 * SAFE_TIPO
 * Remove extra malicious code
-* @param string $tipo
+* @param mixed $tipo
 * @return string|false $tipo
 */
-function safe_tipo(string $tipo) : string|false {
+function safe_tipo(mixed $tipo) : string|false {
+
+	if( !is_string($tipo) ) {
+		return false;
+	}
 
 	preg_match("/^[a-z]{2,}[0-9]+$/", $tipo, $output_array);
 	if ( empty($output_array) || empty($output_array[0]) ) {
