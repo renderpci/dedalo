@@ -878,6 +878,8 @@ final class dd_api_Test extends BaseTestCase {
 	*/
 	public function test_duplicate() : void {
 
+		$this->user_login();
+
 		$section_id = 1;
 
 		$rqo = json_decode('

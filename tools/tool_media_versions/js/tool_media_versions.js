@@ -268,7 +268,7 @@ tool_media_versions.prototype.get_files_info = async function() {
 
 
 /**
-* DELETE_quality
+* DELETE_QUALITY
 * Delete version of given quality
 * @param string quality
 * @return promise
