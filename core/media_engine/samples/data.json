@@ -1,6 +1,9 @@
 [
 	{
 		"video_file": "dummy_video.mp4",
-		"audio_file": "dummy_audio.mp3"
+		"audio_file": "dummy_audio.mp3",
+		"image_file": "dummy_image.jpg",
+		"image_alpha_file": "dummy_image_alpha.png",
+		"image_alpha_tif": "dummy_image_alpha.tif"
 	}
 ]
