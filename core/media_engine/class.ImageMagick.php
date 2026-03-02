@@ -223,7 +223,7 @@ final class ImageMagick {
 			$begin_flags = '';
 
 			$begin_flags .= isset($density)
-				? '-density '. $density.' '
+				? '-density '. escapeshellarg((string)$density).' '
 				: '';
 			$begin_flags .= isset($antialias)
 				? '-antialias '
@@ -317,10 +317,10 @@ final class ImageMagick {
 
 					# Command middle_flags
 					if ($has_profile_source) {
-						$middle_flags .= ' -profile "'. (string)$profile_source .'" ';
+						$middle_flags .= ' -profile '. escapeshellarg((string)$profile_source) .' ';
 					}
 					if ($has_profile_file) {
-						$middle_flags .= ' -profile "'. (string)$profile_file .'" ';
+						$middle_flags .= ' -profile '. escapeshellarg((string)$profile_file) .' ';
 					}
 					$middle_flags	.= ($flatten === true && $is_opaque === true)
 						? " -flatten "
@@ -338,11 +338,11 @@ final class ImageMagick {
 					break;
 			}
 
-			$middle_flags .= ' -quality '.$quality.' ';
+			$middle_flags .= ' -quality '.escapeshellarg((string)$quality).' ';
 			$middle_flags .= ' -auto-orient '; // Always add
 			$middle_flags .= ' -quiet ';
 			$middle_flags .= isset($resize)
-				? ' -resize '. $resize.' ' // sample: 25% | 1024x756
+				? ' -resize '. escapeshellarg((string)$resize).' ' // sample: 25% | 1024x756
 				: '';
 
 		// command
@@ -536,16 +536,18 @@ final class ImageMagick {
 
 		// command
 			$color = isset($background_color)
-				? "-virtual-pixel background -background '$background_color' -interpolate Mesh"
+				? "-virtual-pixel background -background " . escapeshellarg((string)$background_color) . " -interpolate Mesh"
 				: '';
 			// if alpha is set and true replace the background color to transparent
 			if(isset($alpha) && $alpha === true){
 				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
 			};
+
+			$safe_degrees = escapeshellarg((string)$degrees);
 			if($rotation_mode === 'expanded'){
-				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color +distort SRT $degrees +repage ". escapeshellarg($target);
+				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color +distort SRT $safe_degrees +repage ". escapeshellarg($target);
 			}else{
-				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color -distort SRT $degrees +repage ". escapeshellarg($target);
+				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color -distort SRT $safe_degrees +repage ". escapeshellarg($target);
 			}
 
 			$result = shell_exec($command);
@@ -594,8 +596,10 @@ final class ImageMagick {
 		$x		= $crop_area->x;
 		$y		= $crop_area->y;
 
+		$geometry = escapeshellarg("{$width}x{$height}+{$x}+{$y}");
+
 		// command
-		$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." -crop {$width}x{$height}+{$x}+{$y} +repage ". escapeshellarg($target);
+		$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." -crop {$geometry} +repage ". escapeshellarg($target);
 
 		$result = shell_exec($command);
 
@@ -773,8 +777,9 @@ final class ImageMagick {
 			switch( $orientation ) {
 				case 'LeftBottom':// rotate 90
 				case 'RightTop':// rotate 270 || -90
-					$width 	= $height;
-					$height = $width;
+					$tmp_width = $width;
+					$width 	   = $height;
+					$height    = $tmp_width;
 					break;
 				case 'TopLeft':	// rotate 0
 				case 'BottomRight': // rotate 180
