@@ -8,6 +8,7 @@
  */
 
 import type { parser_options } from '../types';
+import { langs_config } from '../diffusion_processor';
 
 
 
@@ -42,14 +43,14 @@ interface dd_date_part {
  * Default: ["start"]
  *
  * @param data    - Array of data items containing date values
- * @param options - { properties: string[] }  e.g. ["start"] or ["start", "end"]
+ * @param options - { select: string[] }  e.g. ["start"] or ["start", "end"]
  * @returns Array of data items with extracted date parts
  */
 export function select_properties(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const properties: string[] = (options.properties as string[]) ?? ['start'];
+	const select_props: string[] = (options.select as string[]) ?? ['start'];
 	const result: data_item[] = [];
 
 	for (const item of data) {
@@ -61,7 +62,7 @@ export function select_properties(data: data_item[] | null, options: parser_opti
 		for (const date_obj of values) {
 			if (!date_obj || typeof date_obj !== 'object') continue;
 
-			for (const prop of properties) {
+			for (const prop of select_props) {
 				if (date_obj[prop] !== undefined && date_obj[prop] !== null) {
 					extracted.push(date_obj[prop]);
 				}
@@ -168,7 +169,11 @@ export function format_string_date(data: data_item[] | null, options: parser_opt
 
 		for (const date_part of values) {
 			if (date_part && typeof date_part === 'object') {
-				formatted_parts.push(format_dd_date(date_part as dd_date_part, pattern));
+				if(pattern === 'unix_timestamp'){
+					formatted_parts.push(date_part.get_unix_timestamp());
+				}else{
+					formatted_parts.push(format_dd_date(date_part as dd_date_part, pattern));
+				}
 			}
 		}
 
@@ -201,7 +206,7 @@ export function format_string_date(data: data_item[] | null, options: parser_opt
  *
  * @param data    - Array of data items containing date values
  * @param options - Combined options for all three sub-parsers:
- *   - properties:         string[] (default: ["start"])
+ *   - select:             string[] (default: ["start"])
  *   - keys:               number[] (default: [0])
  *   - pattern:            string   (default: "Y-m-d")
  *   - records_separator:  string   (default: " | ")
@@ -214,7 +219,7 @@ export function string_date(data: data_item[] | null, options: parser_options): 
 
 	// Merge defaults
 	const merged_options: parser_options = {
-		properties:        ['start'],
+		select:            ['start'],
 		keys:              [0],
 		pattern:           'Y-m-d',
 		records_separator: ' | ',
@@ -235,16 +240,124 @@ export function string_date(data: data_item[] | null, options: parser_options): 
 }
 
 
+/**
+ * DEFAULT
+ * Port of PHP component_date::get_diffusion_value().
+ * Mode-aware parser that converts dd_date objects to a diffusion-ready string.
+ *
+ * Modes (resolved via options.date_mode):
+ *   - 'range' | 'time_range' : "start_ts,end_ts"  (comma-separated, "Y-m-d H:i:s")
+ *   - 'period'               : "N years N months N days" (human-readable, localized labels)
+ *   - 'date' | default       : "Y-m-d H:i:s" of the start date-part
+ *
+ * Returns only the first collected value (mirrors PHP "Temporal !!" behaviour).
+ * Returns null when data is empty or no valid date part is found.
+ *
+ * @param data    - Array of data items containing date values
+ * @param options - { date_mode?: string }
+ * @returns Array with a single data item whose value is the formatted string, or null
+ */
+export default function (data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const date_mode = (options.date_mode as string) ?? 'date';
+
+	const ar_diffusion_values: string[]  = [];
+	const ar_period_items:     data_item[] = []; // per-lang items for period mode
+
+	for (const item of data) {
+		const val    = item.value;
+		const values = Array.isArray(val) ? val : [val];
+
+		for (const date_obj of values) {
+			if (!date_obj || typeof date_obj !== 'object') continue;
+
+			switch (date_mode) {
+
+				case 'range':
+				case 'time_range': {
+					const ar_date: string[] = [];
+					if (date_obj.start && date_obj.start.year !== undefined) {
+						ar_date.push(format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					if (date_obj.end && date_obj.end.year !== undefined) {
+						ar_date.push(format_dd_date(date_obj.end as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					if (ar_date.length > 0) {
+						ar_diffusion_values.push(ar_date.join(','));
+					}
+					break;
+				}
+
+				case 'period': {
+					if (date_obj.period) {
+						const period = date_obj.period as dd_date_part;
+
+						// Build the period string for a given lang code
+						const build_period_string = (target_lang: string): string | null => {
+							const parts: string[] = [];
+							if (period.year  !== undefined) parts.push(period.year  + ' ' + get_label('years',  target_lang));
+							if (period.month !== undefined) parts.push(period.month + ' ' + get_label('months', target_lang));
+							if (period.day   !== undefined) parts.push(period.day   + ' ' + get_label('days',   target_lang));
+							return parts.length > 0 ? parts.join(' ') : null;
+						};
+
+						const target_langs = langs_config.langs;
+
+						if (target_langs.length > 0) {
+							// Emit one result item per known lang
+							for (const target_lang of target_langs) {
+								const period_str = build_period_string(target_lang);
+								if (period_str) {
+									ar_period_items.push({ ...item, lang: target_lang, value: period_str });
+								}
+							}
+						} 
+					}
+					break;
+				}
+
+				case 'date':
+				default: {
+					if (date_obj.start && date_obj.start.year !== undefined) {
+						ar_diffusion_values.push(format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s'));
+					}
+					break;
+				}
+			}
+		}
+	}// end for
+
+	// Period mode: return per-lang items directly
+	if (ar_period_items.length > 0) {
+		return ar_period_items;
+	}
+
+	if (ar_diffusion_values.length === 0) return null;
+
+	// Mirror PHP: only the first value is used ("Temporal !!")
+	const diffusion_value = ar_diffusion_values[0] || null;
+
+	if (!diffusion_value) return null;
+
+	return [{
+		...data[0],
+		value: diffusion_value
+	}];
+}
+
+
 
 /**
  * UNIX_TIMESTAMP
  * Converts dd_date objects to Unix timestamp (seconds since epoch).
  * Chains: select_properties → select_keys → convert to timestamp.
  *
- * Default: properties=["start"], keys=[0]
+ * Default: select=["start"], keys=[0]
  *
  * @param data    - Array of data items containing date values
- * @param options - { properties: string[], keys: number[] }
+ * @param options - { select: string[], keys: number[] }
  * @returns Array of data items with Unix timestamp (int) as value
  */
 export function unix_timestamp(data: data_item[] | null, options: parser_options): data_item[] | null {
@@ -252,7 +365,7 @@ export function unix_timestamp(data: data_item[] | null, options: parser_options
 	if (!data || data.length === 0) return null;
 
 	const merged_options: parser_options = {
-		properties: ['start'],
+		select: ['start'],
 		keys:       [0],
 		...options
 	};
@@ -293,6 +406,41 @@ export function unix_timestamp(data: data_item[] | null, options: parser_options
 // =====================================================
 
 /**
+ * GET_LABEL
+ * Returns a localized human-readable label for date period units.
+ * Mirrors PHP's label::get_label() for the keys used by component_date.
+ *
+ * @param key  - 'years' | 'months' | 'days'
+ * @param lang - Language code (e.g. 'en', 'es')
+ * @returns Localized label string
+ */
+function get_label(key: 'years' | 'months' | 'days', lang: string): string {
+
+	// Map Dédalo lang codes (e.g. "lg-spa") to the short key used in the label table.
+	// Falls back to the lang string itself for direct short-code usage.
+	const lang_code_map: Record<string, string> = {
+		'lg-eng': 'en',
+		'lg-spa': 'es',
+		'lg-cat': 'ca',
+		'lg-fra': 'fr',
+		'lg-deu': 'de',
+		'lg-por': 'pt',
+		'lg-ita': 'it',
+		'lg-nob': 'no',
+		'lg-swe': 'sv',
+		'lg-nld': 'nl',
+	};
+	const short = lang_code_map[lang] ?? lang;
+
+	const labels: Record<string, Record<string, string>> = {
+		years:  { en: 'years',  es: 'años',   ca: 'anys',  fr: 'ans',   de: 'Jahre',  pt: 'anos',  it: 'anni',  no: 'år',   sv: 'år',   nl: 'jaar'   },
+		months: { en: 'months', es: 'meses',  ca: 'mesos', fr: 'mois',  de: 'Monate', pt: 'meses', it: 'mesi',  no: 'mnd',  sv: 'mån',  nl: 'maanden' },
+		days:   { en: 'days',   es: 'días',   ca: 'dies',  fr: 'jours', de: 'Tage',   pt: 'dias',  it: 'giorni', no: 'dager', sv: 'dagar', nl: 'dagen' },
+	};
+	return labels[key]?.[short] ?? labels[key]?.['en'] ?? key;
+}
+
+/**
  * FORMAT_DD_DATE
  * Converts a dd_date_part object to a formatted string using PHP-style format tokens.
  *
@@ -309,8 +457,16 @@ function format_dd_date(date_part: dd_date_part, pattern: string): string {
 	const minute = date_part.minute ?? 0;
 	const second = date_part.second ?? 0;
 
+	// PHP sprintf('%04d', year) style padding
+	let year_str = String(year);
+	if (year < 0) {
+		year_str = '-' + String(Math.abs(year)).padStart(3, '0');
+	} else {
+		year_str = year_str.padStart(4, '0');
+	}
+
 	let result = pattern;
-	result = result.replace(/Y/g, String(year).padStart(4, '0'));
+	result = result.replace(/Y/g, year_str);
 	result = result.replace(/m/g, String(month).padStart(2, '0'));
 	result = result.replace(/d/g, String(day).padStart(2, '0'));
 	result = result.replace(/H/g, String(hour).padStart(2, '0'));

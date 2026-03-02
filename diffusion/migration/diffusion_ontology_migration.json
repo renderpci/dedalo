@@ -107,7 +107,6 @@
 	},
 	"to": {
 		"properties": {
-		{
 			"process": {
 				"parser": [
 				{
@@ -115,32 +114,29 @@
 					"id": "a"
 				},
 				{
-					"fn": "parser_locator::get_first",
+					"fn": "parser_helper::get_first",
 					"id": "a"
 				},
 				{
 					"fn": "parser_text::map_value",
 					"options": {
-					"map": [
-						{
-						"a": {
-							"1": "yes",
-							"2": "no"
-						}
-						}
-					]
+						"map": [
+							{
+								"a": {
+									"1": "yes",
+									"2": "no"
+								}
+							}
+						]
 					}
 				}
 				]
 			}
 		}
-	}
 	},
 	{
 		"from": {
 			"propiedades": {
-				
-				"varchar": 255
 				
 			}
 		},
@@ -152,49 +148,45 @@
 	},
 	{ "from": {"propiedades": {"exclude_column": true}}, "to": {"properties": {"exclude_column": true}}},
 	{
-	"from": {
-		"propiedades": {
-		"data_to_be_used": "dato"
-		}
-	},
-	"to": {
-		"properties": {
-		{
-			"process": {
-				"parser": [
-				{
-					"fn": "parser_locator::get_section_id"
+		"from": {
+			"propiedades": {
+				"data_to_be_used": "dato"
+			}
+		},
+		"to": {
+			"properties": {
+				"process": {
+					"parser": [
+						{
+							"fn": "parser_locator::get_section_id"
+						}
+					]
 				}
-				]
-			}
 			}
 		}
-	}
 	},
 	{
-	"from": {
-		"propiedades": {
-		"process_dato": "diffusion_sql::map_quality_to_int"
-		}
-	},
-	"to": {
-		"properties": {
-		{
-			"process": {
-				"parser": [
-				{
-					"fn": "parser_locator::get_section_id",
-					"id": "a"
-				},
-				{
-					"fn": "parser_locator::get_first",
-					"id": "a"
+		"from": {
+			"propiedades": {
+				"process_dato": "diffusion_sql::map_quality_to_int"
+			}
+		},
+		"to": {
+			"properties": {
+				"process": {
+					"parser": [
+						{
+							"fn": "parser_locator::get_section_id",
+							"id": "a"
+						},
+						{
+							"fn": "parser_helper::get_first",
+							"id": "a"
+						}
+					]
 				}
-				]
-			}
 			}
 		}
-	}
 	},
 	{
 		"from": {

@@ -3,17 +3,18 @@
  * Locate and extract specific data from diffusion objects.
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
+import { langs_config } from '../diffusion_processor';
+import { get_first } from './parser_helper';
 
-/**
- * Data item as received from the PHP diffusion_api entries.
- */
-interface data_item {
-	id?:    string | null;
-	value:  unknown;
-	tipo?:  string;
-	lang?:  string | null;
+interface locator {
+	section_tipo: string;
+	section_id: string | number;
 }
+
+
+
+
 
 /**
  * GET_SECTION_ID
@@ -88,238 +89,332 @@ export function get_section_tipo(data: data_item[] | null, options: parser_optio
 }
 
 /**
- * GET_FIRST
- * Returns the first data item from the list.
+ * GET_TERM_ID
+ * Extracts the term_id(s) from the data item value.
+ * Each locator object becomes one term_id string: "{section_tipo}_{section_id}".
+ * Supports single locators and arrays of locators.
  *
  * @param data    - Array of data items
  * @param options - Parser options
- * @returns Array containing only the first data item
+ * @returns Array of data items with term_id(s) as value (array of strings)
  */
-export function get_first(data: data_item[] | null, options: parser_options): data_item[] | null {
+export function get_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 	const result: data_item[] = [];
 
 	for (const item of data) {
 		const val = item.value;
-		const final_val = (Array.isArray(val) && val.length > 0) 
-            ? val[0] 
-            : val;
+		const locators = Array.isArray(val) ? val : [val];
+
+		const term_ids: string[] = [];
+		for (const loc of locators) {
+			if (typeof loc === 'object' && loc !== null && 'section_tipo' in loc && 'section_id' in loc) {
+				const tid = term_id_from_locator(loc as locator);
+				if (tid !== null) term_ids.push(tid);
+			}
+		}
 		result.push({
 			...item,
-			value: final_val
+			value: term_ids
 		});
 	}
 
 	return result.length > 0 ? result : null;
 }
 
+
+
+
+
+
+
+
+
+
+
 /**
- * ADD_PARENTS
- * format output string with term and its parents: "Term, Parent 1, Parent 2..."
- * Returns one data_item per language found in the term chain.
+ * PARENTS
+ * Unified parser to process parent information.
+ * Supports extracting terms, term_ids, section_ids, and typologies.
  *
  * @param data    - Array of data items
  * @param options - Parser options
- * @returns Array of data items with formatted string as value, keyed by lang
+ * @param options.value - What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
+ * @param options.include_parents - If true, include all parents in the chain. Default: true.
+ * @param options.include_self - If true, include the item itself (index 0). Default: true.
+ * @param options.records_separator - Separator between different parent chains. Default: ", ". Set to false for array output.
+ * @param options.fields_separator - Separator between values in the same chain. Default: " - ".
+ * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
+ * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: [].
+ * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: [].
+ * @param options.parent_section_tipo - Array section_tipo to keep to Default: undefined.
+ * @param options.parent_term_id - Array term_id to keep to Default: undefined.
+ * @param options.parent_typology_term_id - Array get the parent with the typology term_id. Default: undefined.
+ * @param options.parent_end_by_typology_term_id - Array 
+ * @param options.merge - Define the way to merger the parents. nested | flat | pipe Default: undefined.
+ * 	- undefined: 	["Madrid", "Spain", "Paris", "France"]
+ * 	- string: 		"Madrid - Spain, Paris - France" // use the fields_separator to separate the values and the records_separator to separate the pipe
+ * 	- nested: 		[["Madrid", "Spain"], ["Paris", "France"]]
+ * 	- flat: 		["Madrid - Spain", "Paris - France"] // use the fields_separator to separate the values
+ * 	- pipe: 		["Madrid", "Spain"] | ["Paris", "France"] // use the records_separator to separate the pipe
+ * @returns Array of data items with formatted value
  */
-export function add_parents(data: data_item[] | null, options: parser_options): data_item[] | null {
+export function parents(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	// Options with defaults matching current behavior
-	const resolve_value: boolean     = (options.resolve_value as boolean) ?? true;
+	// Extract options with defaults
+	const value_to_extract: string   = (options.value as string) ?? 'term';
+	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
+	const include_self: boolean      = (options.include_self as boolean)    ?? true;
 	const records_separator: string  = (options.records_separator as string) ?? ', ';
+	const fields_separator: string   = (options.fields_separator as string)  ?? ' - ';
+	const merge: string | undefined  = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
+
+	// langs
+	const main_lang = langs_config.main_lang;
+	const langs     = langs_config.langs;
 
 	const result: data_item[] = [];
 
 	for (const item of data) {
-
-		// item has value (array of objects) and parents (map)
 		const parents_map	= (item as any).parents;
 		const val			= item.value;
 		const values		= Array.isArray(val) ? val : [val];
 
-		// Map to collect strings by language: { 'lg-spa': ['Barcelona, Cataluña, España'], 'lg-eng': ['Barcelona, Catalonia, Spain'] }
-		const lang_values: Record<string, string[]> = {};
-
-		for(const current_val of values) {
-
-			// val is locator object
-			if(!current_val || typeof current_val !== 'object') continue;
+		// Map to collect extracted values by language: { 'lg-spa': [ ['Spain', 'Madrid'], ['France', 'Paris'] ], etc. }
+		const lang_nodes: Record<string, any[][]> = {};
+		
+		for (const current_val of values) {
+			if (!current_val || typeof current_val !== 'object') continue;
 
 			const section_tipo	= (current_val as any).section_tipo;
 			const section_id	= (current_val as any).section_id;
+			if (!section_tipo || !section_id) continue;
 
-			if(!section_tipo || !section_id) continue;
+			const key = term_id_from_locator(current_val as locator);
+			if (!key || !parents_map || !parents_map[key]) continue;
 
-			const key = section_tipo + '_' + section_id;
+			const original_chain = parents_map[key]; // Array of hierarchy objects [self, parent, grandparent...]
+			if (!Array.isArray(original_chain) || original_chain.length === 0) continue;
 
-			// Get parent chain for this item
-			if(parents_map && parents_map[key]) {
-				const chain = parents_map[key]; // Array of hierarchy objects [child, parent, grandparent...]
+			// 1. Atomize: Apply filters and truncation logic
+			const filtered_chain = apply_chain_filters(original_chain, options);
+			if (filtered_chain.length === 0) continue;
 
-				if(Array.isArray(chain) && chain.length > 0) {
+			// 2. Apply include_self and include_parents slicing
+			const start_idx = include_self ? 0 : 1;
+			const end_idx   = include_parents ? filtered_chain.length : (include_self ? 1 : 0);
 
-					if (resolve_value) {
-						// Use term values to build strings (default behavior)
+			if (start_idx >= filtered_chain.length || (end_idx <= start_idx && include_parents)) continue;
 
-						// Collect all unique languages across the entire chain
-						const all_langs = new Set<string>();
+			const chain_to_process = filtered_chain.slice(start_idx, end_idx === 0 && !include_parents ? 1 : end_idx);
+			if (chain_to_process.length === 0) continue;
 
-						for(const node of chain) {
-							if(Array.isArray(node.term)) {
-								for(const t of node.term) {
-									if(t.lang) all_langs.add(t.lang);
+			if (value_to_extract === 'term') {
+				// Special handling for multilingual terms
+				for (const lang of langs) {
+					const chain_values: string[] = [];
+					for (const node of chain_to_process) {
+						let term_str = '';
+						if (Array.isArray(node.term) && node.term.length > 0) {
+							// 2 if the parent has a lang into the term, use it
+							const term_obj = node.term.find((t: any) => t.lang === lang);
+							if (term_obj) {
+								term_str = term_obj.value;
+							} else {
+								// 2.1 search by the term items the term with main_lang
+								const main_term_obj = main_lang ? node.term.find((t: any) => t.lang === main_lang) : null;
+								if (main_term_obj) {
+									term_str = main_term_obj.value;
+								} else {
+									// 2.1.1 If the term has not the current lang or the main_lang value, use the first lang defined
+									term_str = node.term[0].value;
 								}
 							}
 						}
-
-						if (all_langs.size === 0) continue;
-
-						// Generate string for each language
-						for (const lang of all_langs) {
-
-							let final_str_parts: string[] = [];
-
-							for (const node of chain) {
-								let term_str = '';
-
-								// Try to find exact match
-								if(Array.isArray(node.term)) {
-									const term_obj = node.term.find((t:any) => t.lang === lang);
-									if(term_obj) {
-										term_str = term_obj.value;
-									} else {
-										// Fallback: use first available (usually original language)
-										if(node.term.length > 0) {
-											term_str = node.term[0].value;
-										}
-									}
-								}
-
-								if(term_str) {
-									final_str_parts.push(term_str);
-								}
-							}
-
-							if (final_str_parts.length > 0) {
-								const final_str = final_str_parts.join(records_separator);
-
-								if (!lang_values[lang]) lang_values[lang] = [];
-								lang_values[lang].push(final_str);
-							}
-						}
-
-					} else {
-						// resolve_value = false: use section_id instead of term
-						const id_parts: string[] = [];
-
-						for (const node of chain) {
-							if (node.section_id !== undefined && node.section_id !== null) {
-								id_parts.push(String(node.section_id));
-							}
-						}
-
-						if (id_parts.length > 0) {
-							const nolan_key = '__nolan__';
-							if (!lang_values[nolan_key]) lang_values[nolan_key] = [];
-							lang_values[nolan_key].push(id_parts.join(records_separator));
-						}
+						if (term_str) chain_values.push(term_str);
 					}
+					if (chain_values.length > 0) {
+						if (!lang_nodes[lang]) lang_nodes[lang] = [];
+						lang_nodes[lang].push(chain_values);
+					}
+				}
+			} else {
+				// Single-value extraction (term_id, section_id, etc.)
+				const nolan_key = '__nolan__';
+				const chain_values: string[] = [];
+
+				for (const node of chain_to_process) {
+					let extracted: string | null = null;
+					switch (value_to_extract) {
+						case 'term_id':
+							extracted = term_id_from_locator(node as locator);
+							break;
+						case 'section_id':
+							extracted = String(node.section_id);
+							break;
+						case 'typology':
+							extracted = node.typology;
+							break;
+						case 'typology_section_id':
+							extracted = node.typology_section_id;
+							break;
+						case 'typology_term_id':
+							extracted = node.typology_section_tipo + '_' + node.typology_section_id;
+							break;
+					}
+					if (extracted) chain_values.push(extracted);
+				}
+
+				if (chain_values.length > 0) {
+					if (!lang_nodes[nolan_key]) lang_nodes[nolan_key] = [];
+					lang_nodes[nolan_key].push(chain_values);
 				}
 			}
 		}
 
-		// Create result items from map
-		for (const [lang, strs] of Object.entries(lang_values)) {
+		// Build final output per language
+		for (const [lang, collection] of Object.entries(lang_nodes)) {
+			let final_value: any;
+
+			switch (merge) {
+				case 'nested':
+					// [["Madrid", "Spain"], ["Paris", "France"]]
+					final_value = collection;
+					break;
+
+				case 'flat':
+					// ["Madrid - Spain", "Paris - France"]
+					final_value = collection.map(chain => chain.join(fields_separator));
+					break;
+
+				case 'pipe':
+					// ["Madrid", "Spain"] | ["Paris", "France"] (using records_separator as joiner)
+					final_value = collection.map(chain => JSON.stringify(chain)).join(records_separator);
+					break;
+
+				case 'string':
+					// "Madrid - Spain, Paris - France" (using fields_separator to separate the values and the records_separator to separate the pipe)
+					final_value = collection.map(chain => chain.join(fields_separator)).join(records_separator);
+					break;
+
+				default:
+					// Flat array output: ["Madrid", "Spain", "Paris", "France"]
+					final_value = collection.flat();
+			}
+
 			result.push({
 				...item,
-				lang:  lang === '__nolan__' ? null : lang,
-				value: strs.join('; ')
+				lang: lang === '__nolan__' ? null : lang,
+				value: final_value
 			});
 		}
 	}
 
+	
 	return result.length > 0 ? result : null;
 }
 
 
 
 /**
- * GET_PARENT_TERM_ID
- * From the parents chain (populated by PHP `add_parents`), extracts
- * chain nodes and returns their term_id as `{section_tipo}_{section_id}`.
- *
- * By default, returns only the first parent (index 1, since index 0 is the item itself).
- * With `include_self: true`, returns term_ids for ALL chain nodes (index 0 = self + all parents).
- *
- * @param data    - Array of data items with parents map
- * @param options - Parser options
- * @param options.include_self - If true, include self (index 0) and all parents. Default: false (index 1 only).
- * @param options.records_separator - Separator for joining term_ids. Default: ', '.
- * @returns Array of data items with term_id string as value
+ * APPLY_CHAIN_FILTERS (Atomized helper)
+ * Applies truncation, filtering and splicing to a single parent chain.
+ * Logic order follows legacy PHP behavior.
  */
-export function get_parent_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
+function apply_chain_filters(chain: any[], options: parser_options): any[] {
+	let processed = [...chain];
+	let truncation_applied = false;
 
-	if (!data || data.length === 0) return null;
-
-	const include_self: boolean      = (options.include_self as boolean) ?? false;
-	const records_separator: string  = (options.records_separator as string) ?? ', ';
-	const start_index = include_self ? 0 : 1;
-
-	const result: data_item[] = [];
-
-	for (const item of data) {
-
-		const parents_map = (item as any).parents;
-		const val         = item.value;
-		const values      = Array.isArray(val) ? val : [val];
-
-		const term_ids: string[] = [];
-
-		for (const current_val of values) {
-
-			if (!current_val || typeof current_val !== 'object') continue;
-
-			const section_tipo = (current_val as any).section_tipo;
-			const section_id   = (current_val as any).section_id;
-
-			if (!section_tipo || !section_id) continue;
-
-			const key = section_tipo + '_' + section_id;
-
-			// Get parent chain for this item
-			if (parents_map && parents_map[key]) {
-				const chain = parents_map[key]; // [child, parent, grandparent...]
-
-				if (Array.isArray(chain) && chain.length > start_index) {
-					for (let i = start_index; i < chain.length; i++) {
-						const node = chain[i];
-						const node_term_id = node.section_tipo + '_' + node.section_id;
-						term_ids.push(node_term_id);
-					}
-				}
+	// 1. Truncate by term_id (section_tipo_section_id)
+	const end_ids = options.parent_end_by_term_id as string[];
+	if (end_ids && Array.isArray(end_ids) && end_ids.length > 0) {
+		const end_set = new Set(end_ids);
+		const result: any[] = [];
+		for (const node of processed) {
+			const term_id = term_id_from_locator(node as locator);
+			if (term_id && end_set.has(term_id)) {
+				truncation_applied = true;
+				break;
 			}
+			result.push(node);
 		}
-
-		if (term_ids.length > 0) {
-			result.push({
-				...item,
-				value: term_ids.join(records_separator),
-				lang:  null // term_id is language-independent
-			});
-		}
+		processed = result;
 	}
 
-	return result.length > 0 ? result : null;
+	// 2. Truncate by typology_term_id
+	const end_models = options.parent_end_by_typology_term_id as string[];
+	if (end_models && Array.isArray(end_models) && end_models.length > 0) {
+		const end_set = new Set(end_models);
+		const result: any[] = [];
+		for (const node of processed) {
+			if (node.typology_section_tipo && node.typology_section_id) {
+				const model_id = node.typology_section_tipo + '_' + node.typology_section_id;
+				if (end_set.has(model_id)) {
+					truncation_applied = true;
+					break;
+				}
+			}
+			result.push(node);
+		}
+		processed = result;
+	}
+
+	// 3. Filter by section_tipo (supports array)
+	const target_tipo = options.parent_section_tipo;
+	if (target_tipo) {
+		const target_set = new Set(Array.isArray(target_tipo) ? target_tipo : [target_tipo as string]);
+		processed = processed.filter(node => target_set.has(node.section_tipo));
+	}
+
+	// 3a. Filter by parent_term_id (supports array)
+	processed = filter_chain_by_term_id(processed, options);
+
+	// 4. Splice chain (only if NO truncation matched)
+	const splice_args = options.parents_splice as number[];
+	if (!truncation_applied && splice_args && Array.isArray(splice_args) && splice_args.length > 0) {
+		const copy = [...processed];
+		if (splice_args.length === 1) {
+			copy.splice(splice_args[0]);
+		} else {
+			copy.splice(splice_args[0], splice_args[1]);
+		}
+		processed = copy;
+	}
+
+	// 5. Slice chain (only if NO truncation matched)
+	const slice_args = options.parents_slice as number[];
+	if (!truncation_applied && slice_args && Array.isArray(slice_args) && slice_args.length > 0) {
+		const start_arg = slice_args[0];
+		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+		const s = start_arg < 0 ? Math.max(processed.length + start_arg, 0) : start_arg;
+		let e = processed.length;
+		if (length_arg !== undefined && length_arg !== null) {
+			e = length_arg < 0 ? processed.length + length_arg : s + length_arg;
+		}
+
+		processed = processed.slice(s, Math.max(s, e));
+	}
+
+	return processed;
 }
 
+/**
+ * Shared logic for filtering by term_id
+ */
+function filter_chain_by_term_id(chain: any[], options: parser_options): any[] {
+	const target_term_id = options.parent_term_id;
+	if (!target_term_id) return chain;
 
-
-// =====================================================================
-// Chain-filtering parsers (operate on parents_map before string building)
-// =====================================================================
+	const target_set = new Set(Array.isArray(target_term_id) ? target_term_id : [target_term_id as string]);
+	return chain.filter(node => {
+		const term_id = term_id_from_locator(node as locator);
+		return term_id ? target_set.has(term_id) : false;
+	});
+}
 
 /**
  * Helper: iterate all chain entries in parents_map and apply a transform function.
@@ -366,8 +461,8 @@ export function truncate_by_term_id(data: data_item[] | null, options: parser_op
 	return map_chains(data, (chain) => {
 		const result: any[] = [];
 		for (const node of chain) {
-			const term_id = node.section_tipo + '_' + node.section_id;
-			if (end_set.has(term_id)) break;
+			const term_id = term_id_from_locator(node as locator);
+			if (term_id && end_set.has(term_id)) break;
 			result.push(node);
 		}
 		return result;
@@ -381,13 +476,14 @@ export function truncate_by_term_id(data: data_item[] | null, options: parser_op
  * Cut the parent chain before any node whose typology model
  * (typology_section_tipo_typology_section_id) matches one of the specified values.
  *
- * @param options.parent_end_by_model - Array of model strings, e.g. ["es2_8871"]
+ * @param options.parent_end_by_typology_term_id - Array of model strings, e.g. ["es2_8871"]
+ * @param options.parent_end_by_typology_term_id - Alias for parent_end_by_typology_term_id
  */
 export function truncate_by_model(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const end_models = options.parent_end_by_model as string[];
+	const end_models = options.parent_end_by_typology_term_id as string[];
 	if (!end_models || !Array.isArray(end_models) || end_models.length === 0) return data;
 
 	const end_set = new Set(end_models);
@@ -411,17 +507,19 @@ export function truncate_by_model(data: data_item[] | null, options: parser_opti
  * FILTER_BY_SECTION_TIPO
  * Keep only nodes in the chain whose section_tipo matches the specified value.
  *
- * @param options.parent_section_tipo - The section_tipo to keep, e.g. "cult1"
+ * @param options.parent_section_tipo - The section_tipo to keep, e.g. "cult1" or ["cult1", "cult2"]
  */
 export function filter_by_section_tipo(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const target_tipo = options.parent_section_tipo as string;
+	const target_tipo = options.parent_section_tipo;
 	if (!target_tipo) return data;
 
+	const target_set = new Set(Array.isArray(target_tipo) ? target_tipo : [target_tipo as string]);
+
 	return map_chains(data, (chain) => {
-		return chain.filter(node => node.section_tipo === target_tipo);
+		return chain.filter(node => target_set.has(node.section_tipo));
 	});
 }
 
@@ -461,19 +559,80 @@ export function splice_chain(data: data_item[] | null, options: parser_options):
 
 
 /**
+ * SLICE_CHAIN
+ * Apply Array.slice() on the parent chain mimicking PHP array_slice.
+ * Accepts 1 or 2 arguments matching the parents_slice format:
+ *   [offset]         → mimics array_slice(chain, offset)
+ *   [offset, length] → mimics array_slice(chain, offset, length)
+ *
+ * @param options.parents_slice - Array of 1-2 numbers, e.g. [0, -1] or [2]
+ */
+export function slice_chain(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const slice_args = options.parents_slice as number[];
+	if (!slice_args || !Array.isArray(slice_args) || slice_args.length === 0) return data;
+
+	return map_chains(data, (chain) => {
+		const start_arg = slice_args[0];
+		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+		const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
+		let e = chain.length;
+		if (length_arg !== undefined && length_arg !== null) {
+			e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
+		}
+
+		return chain.slice(s, Math.max(s, e));
+	});
+}
+
+
+/**
+ * Filter parents by term_id
+ * filtered by parents_recursive_data. We want only terms with parent given (see propiedades of isad98)
+ * This is useful when we want to discriminate thesaurus branch by top parent
+ */
+export function filter_parents_by_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
+	
+	if (!data || data.length === 0) return null;
+
+	return map_chains(data, (chain) => filter_chain_by_term_id(chain, options));
+}
+
+
+
+
+/**
+ * TERM_ID_FROM_LOCATOR
+ * Auxiliar method to calculate the term_id from a locator or parent/node data.
+ * from : {section_tipo:"oh1", section_id:"25"} to "oh1_25"
+ * @param locator - locator object
+ * @returns term_id - String or null
+ */
+function term_id_from_locator(locator: locator | null): string | null {
+
+	if (!locator) return null;
+
+	const term_id = (locator.section_tipo && locator.section_id)
+		? locator.section_tipo + '_' + locator.section_id
+		: null;
+
+	return term_id;
+}
+
+
+
+
+
+/**
  * FLAT_PARENTS
  * Global convenience parser that chains all filtering operations and then
- * builds the final string via add_parents.
+ * builds the final string via `parents`.
  *
- * Processing order (matches legacy PHP behavior):
- * 1. truncate_by_term_id  (if parent_end_by_term_id present)
- * 2. truncate_by_model    (if parent_end_by_model present)
- * 3. filter_by_section_tipo (if parent_section_tipo present)
- * 4. splice_chain          (if parents_splice present AND no truncation matched)
- * 5. add_parents           (with resolve_value and records_separator)
- *
- * Per legacy behavior: "the parents_splice don't act if the previous
- * truncation criteria are matched"
+ * Delegates to `parents`, which handles all filtering and string-building
+ * internally (apply_chain_filters + multilingual term extraction).
  *
  * @param options - Combined options for all sub-parsers
  */
@@ -481,62 +640,8 @@ export function flat_parents(data: data_item[] | null, options: parser_options):
 
 	if (!data || data.length === 0) return null;
 
-	let result: data_item[] | null = data;
-
-	// Track whether truncation was applied
-	let truncation_applied = false;
-
-	// 1. truncate_by_term_id
-	if (options.parent_end_by_term_id) {
-		const before_count = count_chain_nodes(result);
-		result = truncate_by_term_id(result, options);
-		if (!result) return null;
-		const after_count = count_chain_nodes(result);
-		if (after_count < before_count) truncation_applied = true;
-	}
-
-	// 2. truncate_by_model
-	if (options.parent_end_by_model) {
-		const before_count = count_chain_nodes(result);
-		result = truncate_by_model(result, options);
-		if (!result) return null;
-		const after_count = count_chain_nodes(result);
-		if (after_count < before_count) truncation_applied = true;
-	}
-
-	// 3. filter_by_section_tipo
-	if (options.parent_section_tipo) {
-		result = filter_by_section_tipo(result, options);
-		if (!result) return null;
-	}
-
-	// 4. splice_chain — only if no truncation was applied
-	if (options.parents_splice && !truncation_applied) {
-		result = splice_chain(result, options);
-		if (!result) return null;
-	}
-
-	// 5. add_parents (string building with resolve_value and records_separator)
-	result = add_parents(result, options);
-
-	return result;
+	// Delegate fully to `parents` — it applies all filters and builds the output.
+	return parents(data, options);
 }
 
-
-/**
- * Helper: count total nodes across all chains in parents_map.
- */
-function count_chain_nodes(data: data_item[] | null): number {
-	if (!data) return 0;
-	let count = 0;
-	for (const item of data) {
-		const parents_map = (item as any).parents;
-		if (parents_map) {
-			for (const chain of Object.values(parents_map)) {
-				if (Array.isArray(chain)) count += chain.length;
-			}
-		}
-	}
-	return count;
-}
 

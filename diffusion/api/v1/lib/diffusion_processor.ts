@@ -29,6 +29,16 @@ import type {
 } from './types';
 
 
+export interface LangsConfig {
+	langs:     string[];
+	main_lang: string | null;
+}
+
+export const langs_config: LangsConfig = {
+	langs: [],
+	main_lang: null
+};
+
 
 /**
  * PROCESS_RESPONSE
@@ -51,10 +61,13 @@ export function process_response(response: php_api_response): processed_table[] 
 	const all_langs = response.langs ? Object.keys(response.langs) : [];
 	const main_lang = response.main_lang ?? null;
 
+	langs_config.langs 		= all_langs;
+	langs_config.main_lang 	= main_lang;
+
 	const tables: processed_table[] = [];
 
 	for (const datum of response.datum) {
-		const table = process_datum_group(datum, database_name, all_langs, main_lang);
+		const table = process_datum_group(datum, database_name);
 		if (table) {
 			tables.push(table);
 		}
@@ -111,15 +124,11 @@ function resolve_table_name(datum: datum_group): string {
  *
  * @param datum         - The datum group
  * @param database_name - Target database name
- * @param all_langs     - All available languages from the response
- * @param main_lang     - The main/default language for fallback
  * @returns A processed_table or null if no data
  */
 function process_datum_group(
 	datum:         datum_group,
-	database_name: string,
-	all_langs:     string[],
-	main_lang:     string | null
+	database_name: string
 ): processed_table | null {
 
 	if (!datum.data || datum.data.length === 0) {
@@ -143,7 +152,7 @@ function process_datum_group(
 			deletions.push(record.section_id);
 			continue;
 		}
-		const processed = process_record(record, datum.context, all_langs, main_lang);
+		const processed = process_record(record, datum.context);
 		records.push(...processed);
 	}
 
@@ -180,15 +189,11 @@ function process_datum_group(
  *
  * @param record    - The raw datum record
  * @param context   - Array of context field definitions (columns)
- * @param all_langs - All languages to produce records for
- * @param main_lang - Main/default language for fallback
  * @returns Array of processed records, one per lang
  */
 function process_record(
 	record:    datum_record,
 	context:   context_field[],
-	all_langs: string[],
-	main_lang: string | null,
 ): processed_record[] {
 
 	// ---------------------------------------------------------------
@@ -249,22 +254,30 @@ function process_record(
 						if (parser_result.length > 0) {
 							
 							for (const item of parser_result) {
-								let val_str: string;
+								let val_str: string | null = null;
 								
-								// Apply requested output format if defined
-								if (ctx.output_format === 'json') {
-									// Just JSON stringify the whole value, whether object or primitive
-									val_str = JSON.stringify(item.value);
-								} else if (ctx.output_format === 'int') {
-									// Parse as integer
-									val_str = String(parseInt(String(item.value), 10));
-									if (val_str === 'NaN') val_str = '0';
-								} else {
-									// Default string format
-									if (typeof item.value === 'object' && item.value !== null) {
-										val_str = JSON.stringify(item.value);
+								if (item.value !== null) {
+									// Apply requested output format if defined
+									if (ctx.output_format === 'json') {
+										// JSON stringify only if not already a plain string.
+										// If the parser chain (e.g. map_value) already produced a string
+										// value like "yes"/"no", leave it as-is to avoid double-encoding.
+										if (typeof item.value === 'string') {
+											val_str = item.value;
+										} else {
+											val_str = JSON.stringify(item.value);
+										}
+									} else if (ctx.output_format === 'int') {
+										// Parse as integer
+										val_str = String(parseInt(String(item.value), 10));
+										if (val_str === 'NaN') val_str = '0';
 									} else {
-										val_str = String(item.value);
+										// Default string format
+										if (typeof item.value === 'object' && item.value !== null) {
+											val_str = JSON.stringify(item.value);
+										} else {
+											val_str = String(item.value);
+										}
 									}
 								}
 								
@@ -272,7 +285,10 @@ function process_record(
 								const item_lang = item.lang || lang;
 								const key = (!item_lang || item_lang === 'lg-nolan') ? 'nolan' : item_lang;
 
-								lang_values.set(key, val_str);
+								// Only store nolan entries when they have a real value.
+								if (key !== 'nolan' || val_str !== null) {
+									lang_values.set(key, val_str);
+								}
 							}
 							handled_by_parser = true;
 						} else {
@@ -302,7 +318,11 @@ function process_record(
 			if (!handled_by_parser) {
 				// Normalize lang key: null and "lg-nolan" → "nolan"
 				const lang_key = (!lang || lang === 'lg-nolan') ? 'nolan' : lang;
-				lang_values.set(lang_key, column_value);
+				// Only store nolan entries when they have a real value.
+				// A nolan null entry would block the main_lang fallback in Phase 2.
+				if (lang_key !== 'nolan' || column_value !== null) {
+					lang_values.set(lang_key, column_value);
+				}
 			}
 		}
 	}
@@ -311,7 +331,7 @@ function process_record(
 	// PHASE 2: Expand to one record per lang
 	// ---------------------------------------------------------------
 	// If no langs provided, emit a single record with null lang
-	if (all_langs.length === 0) {
+	if (langs_config.langs.length === 0) {
 		const columns: Record<string, string | null> = {};
 		for (const [column_name, lang_values] of column_parsed_values) {
 			// Take nolan or first available
@@ -328,7 +348,7 @@ function process_record(
 
 	const results: processed_record[] = [];
 
-	for (const lang of all_langs) {
+	for (const lang of langs_config.langs) {
 
 		const columns: Record<string, string | null> = {};
 
@@ -347,8 +367,8 @@ function process_record(
 			}
 
 			// Priority 3: main_lang fallback
-			if (main_lang && lang_values.has(main_lang)) {
-				columns[column_name] = lang_values.get(main_lang)!;
+			if (langs_config.main_lang && lang_values.has(langs_config.main_lang)) {
+				columns[column_name] = lang_values.get(langs_config.main_lang)!;
 				continue;
 			}
 
@@ -444,64 +464,93 @@ function apply_parser_chain(
 		return null;
 	}
 
-	// Normalize to array
 	const chain = Array.isArray(parsers) ? parsers : [parsers as parser_definition];
 
-	let current_data: any = data;
+	const state = new Map<string, any[]>();
+	let last_unmapped_result: any = data;
 
 	for (const parser_def of chain) {
 		if (!parser_def.fn) continue;
 
-		// Ensure current_data is in a format suitable for apply_parser (array)
-		// If previous parser returned a primitive, wrap it as a data item value
-		let valid_data: any[] | null;
+		let input_data: any[];
 
-		if (Array.isArray(current_data)) {
-			valid_data = current_data;
-		} else if (current_data !== null && current_data !== undefined) {
-			// Wrap primitive in a structure preserving metadata from original data if possible
-			// We try to grab metadata from the initial data if available
+		if (parser_def.id) {
+			if (state.has(parser_def.id)) {
+				input_data = state.get(parser_def.id)!;
+			} else {
+				input_data = data; // New local variable chain starts from original data
+			}
+		} else {
+			if (state.size > 0) {
+				// Combine all state variables into a single data_item array for formatters
+				const combined: any[] = [];
+				for (const [key, val] of state.entries()) {
+					if (Array.isArray(val)) {
+						for (const v_item of val) {
+							if (typeof v_item === 'object' && v_item !== null) {
+								combined.push({ ...v_item, id: key });
+							} else {
+								combined.push({ id: key, value: v_item });
+							}
+						}
+					} else {
+						combined.push({ id: key, value: val });
+					}
+				}
+				input_data = combined;
+				state.clear();
+			} else {
+				input_data = last_unmapped_result;
+			}
+		}
+
+		let valid_data: any[] | null;
+		if (Array.isArray(input_data)) {
+			valid_data = input_data;
+		} else if (input_data !== null && input_data !== undefined) {
 			const meta = (Array.isArray(data) && data.length > 0) ? data[0] : {};
 			valid_data = [{
 				id:    null,
-				value: current_data,
+				value: input_data,
 				tipo:  meta.tipo,
 				lang:  meta.lang
 			}];
 		} else {
-			// Current data is null/undefined
 			valid_data = null;
 		}
 
-		// Apply the parser
 		let result = apply_parser(parser_def.fn, valid_data, parser_def.options ?? {});
 
-		// If a parser returns null explicitly, it usually breaks the chain
-		if (result === null) return null;
+		if (result === null) {
+			if (!parser_def.id) return null;
+			continue;
+		}
 
-		// If parser definition has an ID, assign it to the result items
 		if (parser_def.id) {
-			if (Array.isArray(result)) {
-				// Assign ID to each item in the array
-				for (const item of result) {
-					if (typeof item === 'object' && item !== null) {
-						item.id = parser_def.id;
+			state.set(parser_def.id, Array.isArray(result) ? result : [result]);
+		} else {
+			last_unmapped_result = result;
+		}
+	}
+
+	// Output logic (in case the chain ended with unmapped or mapped items)
+	if (state.size > 0) {
+		const combined: any[] = [];
+		for (const [key, val] of state.entries()) {
+			if (Array.isArray(val)) {
+				for (const v_item of val) {
+					if (typeof v_item === 'object' && v_item !== null) {
+						combined.push({ ...v_item, id: key });
+					} else {
+						combined.push({ id: key, value: v_item });
 					}
 				}
 			} else {
-				// Wrap primitive result to attach ID
-				// Metadata (tipo, lang) preserved from input if possible
-				const meta = (Array.isArray(valid_data) && valid_data.length > 0) ? valid_data[0] : {};
-				result = [{
-					id:    parser_def.id,
-					value: result,
-					tipo:  meta.tipo,
-					lang:  meta.lang
-				}];
+				combined.push({ id: key, value: val });
 			}
 		}
-		current_data = result;
+		return combined;
 	}
 
-	return current_data;
+	return last_unmapped_result;
 }

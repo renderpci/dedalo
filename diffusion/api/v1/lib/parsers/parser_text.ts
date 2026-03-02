@@ -123,7 +123,6 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 		return default_join(data, options);
 	}
 
-	// Build a map of id → value
 	// Extract placeholder names from pattern to determine order
 	const placeholder_regex = /\$\{([a-zA-Z0-9_]+)\}/g;
 	const placeholder_names: string[] = [];
@@ -134,24 +133,46 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 		}
 	}
 
-	// Build values array in placeholder order
-	const id_map = new Map<string, string | null>();
+	// Build values array in placeholder order, supporting parallel loops (zipping arrays of equal/variadic length)
+	const id_map = new Map<string, any[]>();
+	let max_len = 1;
+	let source_was_array = false;
+
 	for (const item of data) {
 		if (item.id) {
 			const val = item.value;
-			id_map.set(item.id, val !== null && val !== undefined ? stringify_value(val) : null);
+			if (Array.isArray(val)) {
+				source_was_array = true;
+				max_len = Math.max(max_len, val.length);
+				id_map.set(item.id, val.map(v => v !== null && v !== undefined ? stringify_value(v) : null));
+			} else {
+				id_map.set(item.id, [val !== null && val !== undefined ? stringify_value(val) : null]);
+			}
 		}
 	}
 
-	const values = placeholder_names.map(name => id_map.get(name) ?? null);
+	const zipped_results: string[] = [];
 
-	const result_str = replace(pattern, values);
+	for (let i = 0; i < max_len; i++) {
+		const values = placeholder_names.map(name => {
+			const mapped = id_map.get(name);
+			if (!mapped) return null;
+			// If array has only 1 element, repeat it; otherwise zip sequence
+			return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
+		});
 
-	if (!result_str) return null;
+		const result_str = replace(pattern, values);
+		if (result_str) {
+			zipped_results.push(result_str);
+		}
+	}
 
+	if (zipped_results.length === 0) return null;
+
+	// Output primitive or object wrapper based on original data type
 	return [{
 		id:    null,
-		value: result_str,
+		value: source_was_array ? zipped_results : zipped_results[0],
 		tipo:  data[0].tipo,
 		lang:  data[0].lang
 	}];

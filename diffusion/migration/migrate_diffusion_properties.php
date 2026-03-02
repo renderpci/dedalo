@@ -299,6 +299,52 @@ function process_node($node, $level) {
 				}
 			}
 
+			// --- Case: component_select_lang (Relation) ---
+			// Resolves languages through lg1 matrix and its term (hierarchy25)
+			if ($new_props === null) {
+				$has_select_lang = false;
+				$target_rel_tipo = null;
+
+				if (!empty($relations_info)) {
+					foreach ($relations_info as $rel_info) {
+						if ($rel_info['model'] === 'component_select_lang') {
+							$has_select_lang = true;
+							$target_rel_tipo = $rel_info['tipo'];
+							break;
+						}
+					}
+				}
+
+				if ($has_select_lang) {
+					$new_props = new stdClass();
+					$new_props->process = new stdClass();
+
+					$new_props->process->ddo_map = [
+						(object)[
+							'tipo'         => $target_rel_tipo,
+							'section_tipo' => 'self'
+						],
+						(object)[
+							'tipo'         => 'hierarchy25', // Standard term component for lg1
+							'label'        => 'Term',
+							'parent'       => $target_rel_tipo,
+							'section_tipo' => 'lg1'
+						]
+					];
+
+					// The value extracted is the term name, ensure it's unboxed properly
+					$new_props->process->parser = [
+						(object)[
+							'fn' => 'parser_locator::get_first',
+							'id' => 'a'
+						]
+					];
+
+					echo "{$indent}- [$tipo] $model_name\n";
+					echo "{$indent}  [RULE APPLIED] component_select_lang relation -> ddo_map (hierarchy25) + get_first\n";
+				}
+			}
+
 			// --- Case: process_dato: "diffusion_sql::map_locator_to_value" (Relation) ---
 			// Maps section_id to a value using a provided map (similar to enum logic)
 			if (
@@ -519,18 +565,25 @@ function process_node($node, $level) {
 					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
 				}
 
-				if (!$add_parents_false && !$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
+				if (!$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
 
 					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
+					if (!isset($new_props->process)) $new_props->process = new stdClass();
 					$new_props->process->fn = 'add_parents';
 
-					if ($option_obj) {
+					if (!isset($new_props->process->parser)) $new_props->process->parser = [];
+
+					if ($option_obj || $is_autocomplete_hi) {
 						// Build parser options from option_obj — only include present values
 						$parser_options = new stdClass();
 
+						// include_parents (V7 TS parser option)
+						if ($add_parents_false) {
+							$parser_options->include_parents = false;
+						}
+
 						// resolve_value
-						if (isset($option_obj->resolve_value)) {
+						if ($option_obj && isset($option_obj->resolve_value)) {
 							$parser_options->resolve_value = $option_obj->resolve_value;
 						}
 
@@ -874,9 +927,35 @@ try {
 
 function save_node($node_info) {
 
-	$tld = get_tld_from_tipo($node_info['tipo']);
+	$tipo    = $node_info['tipo'];
+	$tld     = get_tld_from_tipo($tipo);
+
+	// Check for empty object and convert to null
+	$val = $node_info['properties'];
+	if (is_object($val) && count((array)$val) === 0) {
+		$val = null;
+	}
+
+	// --- PRIMARY: Write directly to dd_ontology.properties ---
+	// dd_diffusion_api reads from dd_ontology (the fast-lookup flat store) via
+	// dd_ontology_db_manager::read(), NOT from the UI matrix data.
+	// So we must update dd_ontology directly for the diffusion engine to pick up the change.
+	$dd_update_result = dd_ontology_db_manager::update($tipo, (object)['properties' => $val]);
+	if (!$dd_update_result) {
+		echo "  [WARN] dd_ontology update failed for $tipo\n";
+	}
+
+	// Invalidate static instance cache so fresh reads reflect the new value
+	if (isset(ontology_node::$instances[$tipo])) {
+		unset(ontology_node::$instances[$tipo]);
+	}
+	if (isset(dd_ontology_db_manager::$load_cache[$tipo])) {
+		unset(dd_ontology_db_manager::$load_cache[$tipo]);
+	}
+
+	// --- SECONDARY: Also save via UI component path (matrix_ontology) for consistency ---
 	$section_tipo = $tld.'0';
-	$section_id = get_section_id_from_tipo($node_info['tipo']);
+	$section_id = get_section_id_from_tipo($tipo);
 
 	$component_tipo = 'ontology18';
 	$model = ontology_node::get_model_by_tipo($component_tipo,true);
@@ -889,55 +968,30 @@ function save_node($node_info) {
 		$section_tipo
 	);
 
-	// Check for empty object and convert to null
-	$val = $node_info['properties'];
-	if (is_object($val) && count((array)$val) === 0) {
-		$val = null;
-	}
-
 	$data = [(object)[
 		'value' => $val
 	] ];
 
-
 	$properties_component->set_data($data);
 	$properties_component->save();
 
-	// Unit Test: Verify data was saved
-	$verify_component = component_common::get_instance(
-		$model, 
-		$component_tipo, 
-		$section_id, 
-		'list', 
-		DEDALO_DATA_NOLAN, 
-		$section_tipo
-	);
-	$saved_data = $verify_component->get_data();
+	// Unit Test: Verify data was saved to dd_ontology (primary source)
+	$fresh = ontology_node::get_instance($tipo);
+	$fresh->load_data();
+	$saved_val = $fresh->get_properties();
 	
-	// Normalize for comparison (assuming set_data accepted array)
 	$input_data_json = json_encode($val);
-	$saved_data_json = is_string($saved_data) ? $saved_data : json_encode($saved_data);
-	
-	// Decode both to compare structures (ignoring white space diffs)
-	$input_obj = json_decode($input_data_json);
-	$saved_obj = json_decode($saved_data_json);
-	
-	// Handle case where saved data is wrapped in array (multi-value) and input is single object
-	if (is_array($saved_obj) && count($saved_obj) === 1 && isset($saved_obj[0]->value)) {
-		if ($input_obj == $saved_obj[0]->value) {
-			echo "  [TEST PASS] Data verified for $tld (ontology18) [Wrapped]\n";
-			return;
-		}
-	}
+	$saved_json      = json_encode($saved_val);
 
-	if ($input_obj == $saved_obj) {
-		echo "  [TEST PASS] Data verified for $tld (ontology18)\n";
+	if ($input_data_json === $saved_json) {
+		echo "  [TEST PASS] Data verified for $tld (dd_ontology)\n";
 	} else {
-		echo "  [TEST FAIL] Data Mismatch for $tld\n";
+		echo "  [TEST FAIL] dd_ontology Mismatch for $tld\n";
 		echo "    Expected: $input_data_json\n";
-		echo "    Actual:   $saved_data_json\n";
+		echo "    Actual:   $saved_json\n";
 	}
 }
+
 
 
 function get_ddo_map($current_tipo) {

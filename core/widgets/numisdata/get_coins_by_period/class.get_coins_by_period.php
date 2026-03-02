@@ -72,7 +72,7 @@ class get_coins_by_period extends widget_common {
 	* GET_DATA
 	* @return
 	*/
-	public function get_data() {
+	public function get_data() : ?array {
 
 		// check the time of the current processes
 		// $time = 0;

@@ -73,7 +73,7 @@ class calculation extends widget_common {
 	*  }
 	* @return
 	*/
-	public function get_data() : array {
+	public function get_data() : ?array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
