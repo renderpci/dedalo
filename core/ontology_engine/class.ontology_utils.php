@@ -251,6 +251,10 @@ class ontology_utils {
 	 */
 	public static function create_bk_table( array $tlds ) : bool {
 
+		if (empty($tlds)) {
+			return false;
+		}
+
 		$table = ontology_node::$table;
 		$conn  = DBi::_getConnection();
 		$where_clauses = [];
@@ -315,6 +319,10 @@ class ontology_utils {
 	 * @return bool True on success.
 	 */
 	public static function restore_from_bk_table( array $tlds ) : bool {
+
+		if (empty($tlds)) {
+			return false;
+		}
 
 		// delete original nodes in dd_ontology
 		foreach ($tlds as $tld) {
