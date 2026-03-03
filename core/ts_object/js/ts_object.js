@@ -1424,6 +1424,7 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 					component_wrapper.instance.destroy(true, true, true)
 					return true
 				}
+
 				// destroy component instance
 				component_wrapper.instance.destroy(true, true, true)
 			}
