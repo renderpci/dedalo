@@ -1066,12 +1066,12 @@ li .reset_input select {
 .error {
   background-color: #dc3545 !important;
   transition: background-color 0.3s ease;
-  color: #ffffff;
+  color: #ffffff !important;
 }
 .error_alert {
   background-color: #dc3545 !important;
   transition: background-color 0.3s ease;
-  color: #ffffff;
+  color: #ffffff !important;
   --icon-path: url('../../themes/default/icons/alert.svg');
   display: flex;
   padding: 1rem;
