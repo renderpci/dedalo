@@ -314,16 +314,23 @@ const get_content_data_edit = function(self) {
 			parent			: fragment
 		})
 
+	// section label container
+		const section_label_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_label_container top_item',
+			parent			: fragment
+		})
+
 	// section label button (go to list)
 		const section_label = render_section_label(self)
-		fragment.appendChild(section_label)
+		section_label_container.appendChild(section_label)
 
 	// inspector button toggle
 		const button_toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector top_item no_visible',
 			title			: get_label.inspector || 'Inspector',
-			parent			: fragment
+			parent			: section_label_container
 		})
 		// click event
 		const toggle_inspector_handler = (e) => {

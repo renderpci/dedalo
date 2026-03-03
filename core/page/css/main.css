@@ -7075,7 +7075,7 @@ dd-modal .footer.distribute {
 .menu > .content_data.master {
   background-color: #276f67;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data {
     position: relative;
     --menu_heigth: 3rem;
@@ -7134,7 +7134,7 @@ dd-modal .footer.distribute {
   margin-left: 0.5rem;
   z-index: 2;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .menu_hierarchy {
     display: none;
   }
@@ -7282,7 +7282,7 @@ dd-modal .footer.distribute {
 .menu > .content_data > .menu_mobile_icon:active {
   opacity: 0.5;
 }
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 1185px) {
   .menu > .content_data > .menu_mobile_icon {
     display: none;
   }
@@ -7294,7 +7294,7 @@ dd-modal .footer.distribute {
   font-size: 1.25rem;
   padding: 1rem;
 }
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 1185px) {
   .menu > .content_data > .menu_mobile_wrapper {
     display: none;
   }
@@ -7326,7 +7326,7 @@ dd-modal .footer.distribute {
   right: 0.66em;
   pointer-events: none;
 }
-@media screen and (min-width: 1024px) {
+@media screen and (min-width: 1185px) {
   .menu > .content_data > .menu_mobile_wrapper .menu_mobile_item.with_children:after {
     top: 0.66em;
   }
@@ -7343,7 +7343,7 @@ dd-modal .footer.distribute {
   margin-right: 0.5rem;
   cursor: pointer;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .ontology.top_item {
     display: none;
   }
@@ -7365,7 +7365,7 @@ dd-modal .footer.distribute {
   background-color: transparent;
   height: auto;
   max-width: 99.9%;
-  padding-left: 0.6em;
+  padding-left: 0px;
   padding-right: 1em;
   color: #cccccc;
   border: none;
@@ -7385,7 +7385,7 @@ dd-modal .footer.distribute {
 .menu > .content_data > .dedalo_aplication_langs_selector.data {
   margin-left: 0.5rem;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .dedalo_aplication_langs_selector {
     text-overflow: ellipsis;
     width: 6rem;
@@ -7401,51 +7401,58 @@ dd-modal .footer.distribute {
 }
 .menu > .content_data > .menu_spacer {
   flex: 1;
+  margin: 0px;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .menu_spacer {
     display: none;
   }
 }
-.menu > .content_data > .section_label {
+.menu > .content_data > .section_label_container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+.menu > .content_data > .section_label_container > .section_label {
   cursor: pointer;
   margin-right: 1rem;
   user-select: none;
 }
-@media screen and (max-width: 1024px) {
-  .menu > .content_data > .section_label {
+@media screen and (max-width: 960px) {
+  .menu > .content_data > .section_label_container > .section_label {
     font-size: 1rem;
     text-align: right;
     flex: 1;
   }
 }
-.menu > .content_data > .section_label:hover {
+.menu > .content_data > .section_label_container > .section_label:hover {
   opacity: 1;
 }
-.menu > .content_data > .section_label:active {
+.menu > .content_data > .section_label_container > .section_label:active {
   opacity: 0.4;
 }
-.menu > .content_data > .section_label.inactive {
+.menu > .content_data > .section_label_container > .section_label.inactive {
   cursor: default;
   pointer-events: none;
   opacity: 0.9;
 }
-.menu > .content_data > .button_toggle_inspector {
+.menu > .content_data > .section_label_container > .button_toggle_inspector {
   background-image: url('../../themes/default/icons/inspector.svg');
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
   width: 1.4rem;
-  height: 1rem;
+  height: 2rem;
   margin-right: 1rem;
   margin-left: 0px;
   cursor: pointer;
 }
-.menu > .content_data > .button_toggle_inspector:active {
+.menu > .content_data > .section_label_container > .button_toggle_inspector:active {
   opacity: 0.4;
 }
-@media screen and (max-width: 1024px) {
-  .menu > .content_data > .button_toggle_inspector {
+@media screen and (max-width: 1185px) {
+  .menu > .content_data > .section_label_container > .button_toggle_inspector {
     display: none;
   }
 }
@@ -7462,7 +7469,7 @@ dd-modal .footer.distribute {
   min-height: var(--menu_heigth);
   font-size: 1rem;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .debug_info_bar {
     line-height: 1.5rem;
     padding: 0.5rem;
@@ -7525,7 +7532,7 @@ dd-modal .footer.distribute {
 .menu > .content_data > .debug_info_bar > .service_worker_active.transparent {
   background-color: transparent !important;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .debug_info_bar > .service_worker_active {
     height: 1.5rem;
   }
@@ -7580,7 +7587,7 @@ dd-modal .footer.distribute {
 .menu > .content_data > .debug_info_bar > .environment.transparent {
   background-color: transparent !important;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .debug_info_bar > .environment {
     height: 1.5rem;
   }
@@ -7589,7 +7596,7 @@ dd-modal .footer.distribute {
   position: absolute;
   right: 1rem;
 }
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 1185px) {
   .menu > .content_data > .debug_info_bar .ip_server {
     position: relative;
     margin-left: 1rem;
@@ -8794,6 +8801,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .service_time_machine.time_machine_list .column:nth-child(4) img.draw {
   max-height: 1.2rem;
+}
+.service_time_machine.view_tool > .list_body {
+  height: auto;
 }
 .service_time_machine.view_tool .content_data > .section_record .column_service_time_machine {
   max-height: unset;
