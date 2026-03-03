@@ -159,10 +159,14 @@ const get_content_data = async function(self) {
 						try {
 							const build_result = await current_instance.build(true)
 							if (build_result === false) {
+								const parts = []
+								if(current_instance.section_tipo) parts.push(current_instance.section_tipo)
+								if(current_instance.section_id) parts.push(current_instance.section_id)
+								const _id = parts.join(' - ')
 								return ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'error_alert',
-									inner_html		: `Error: Could not build element "${current_instance.model}" (missing context or data)`
+									inner_html		: `Error: Could not build element "${current_instance.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
 								})
 							}
 
