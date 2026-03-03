@@ -909,7 +909,7 @@ ts_object.prototype.refresh_element = async function(hilite=true, callback) {
 	})
 
 	// element to hilite
-	if (hilite) {
+	if (hilite && self.term_node) {
 		requestAnimationFrame( () => { self.hilite_element(self.term_node) })
 	}
 
@@ -961,9 +961,7 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 			left	: (width - 1280),
 			on_blur : () => {
 				// refresh the instance
-				const instance = (self.section_id==section_id && self.section_tipo===section_tipo)
-					? self
-					: get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object')
+				const instance = get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object') || self
 				if (instance) {
 					instance.refresh_element()
 				}else{
@@ -1389,8 +1387,22 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 				}
 
 				// build and render component
-					await current_component.build(true)
-					const component_node = await current_component.render()
+					const build_result = await current_component.build(true)
+					const component_node = !build_result
+						? (function(){
+							const parts = []
+							if(current_component.section_tipo) parts.push(current_component.section_tipo)
+							if(current_component.section_id) parts.push(current_component.section_id)
+							const _id = parts.join(' - ')
+							const node = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'wrapper_component error_alert',
+								inner_html		: `Error: Could not build element "${current_component.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
+							})
+							node.failed = true
+							return node
+						  })()
+						: await current_component.render()
 					// set pointer instance to DOM node
 					component_node.instance = current_component
 
@@ -1419,6 +1431,12 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 			for (let i = all_element_data_div_len - 1; i >= 0; i--) {
 				const component_wrapper = all_element_data_div[i]
+
+				// Error messages case
+				if (component_wrapper.failed) {
+					component_wrapper.remove()
+				}
+
 				if (component_wrapper.instance.tipo===tipo) {
 					// this component already exists. Remove it and stop
 					component_wrapper.instance.destroy(true, true, true)
