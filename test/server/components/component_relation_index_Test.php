@@ -164,6 +164,44 @@ final class component_relation_index_test extends BaseTestCase {
 
 
 	/**
+	* TEST_get_section_datum_from_locator_edge_cases
+	* @return void
+	*/
+	public function test_get_section_datum_from_locator_edge_cases() {
+
+		$component = $this->build_component_instance();
+
+		// Case 1: Invalid section_tipo (triggers fix)
+		// We use an existing tipo but with a model that is NOT 'section' (e.g. 'test25')
+		// This ensures section::get_instance returns false without breaking ontology_node initialization
+		$locator_invalid_tipo = new locator((object)[
+			'type' => 'dd96',
+			'section_tipo' => 'test25',
+			'section_id' => 1
+		]);
+		$result = $component->get_section_datum_from_locator($locator_invalid_tipo);
+		$this->assertInstanceOf(stdClass::class, $result);
+		$this->assertIsArray($result->context);
+		$this->assertIsArray($result->data); // User recently changed this to [] in class
+
+		// Case 2: Missing section_id
+		$locator_missing_id = new locator((object)[
+			'type' => 'dd96',
+			'section_tipo' => 'rsc167'
+			// section_id missing
+		]);
+		$result = $component->get_section_datum_from_locator($locator_missing_id);
+		$this->assertInstanceOf(stdClass::class, $result);
+
+		// Case 3: Empty locator
+		$locator_empty = new locator();
+		$result = $component->get_section_datum_from_locator($locator_empty);
+		$this->assertInstanceOf(stdClass::class, $result);
+	}//end test_get_section_datum_from_locator_edge_cases
+
+
+
+	/**
 	* TEST_remove_locator
 	* @return void
 	*/
