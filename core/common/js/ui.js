@@ -2952,9 +2952,12 @@ export const ui = {
 			class_name		: 'exit_button',
 			parent			: node
 		})
-		const click_handler = function(e) {
-			e.stopPropagation()
-
+		// set exit event
+		const exit_fullscreen = function(e) {
+			if (e && e.key !== 'Escape') {
+				return
+			}
+			document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 			node.classList.remove('fullscreen')
 			if (menu_wrapper) {
 				menu_wrapper.classList.remove('hide')
@@ -2964,26 +2967,13 @@ export const ui = {
 				exit_callback()
 			}
 		}
-		exit_button.addEventListener('click', click_handler)
-
-		// set exit event
-		const exit_fullscreen = function(e) {
-
-			if (e.key==='Escape') {
-				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
-
-				node.classList.remove('fullscreen')
-				if (menu_wrapper) {
-					menu_wrapper.classList.remove('hide')
-				}
-				exit_button.remove()
-				if(exit_callback){
-					exit_callback()
-				}
-			}
-		}
 		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 
+		const click_handler = function(e) {
+			e.stopPropagation()
+			exit_fullscreen()
+		}
+		exit_button.addEventListener('click', click_handler)
 
 		return true
 	},//end enter_fullscreen
