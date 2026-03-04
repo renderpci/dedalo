@@ -2998,7 +2998,7 @@ export const ui = {
 	*/
 	get_ontology_term_link(tipo) {
 
-		const url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+		const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${tipo}`
 
 		const ontology_term_link = ui.create_dom_element({
 			element_type	: 'a',
