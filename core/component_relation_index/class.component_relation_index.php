@@ -297,7 +297,7 @@ class component_relation_index extends component_relation_common {
 				continue;
 			}
 			$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo_value);
-			if(empty($current_matrix_table)){				
+			if(empty($current_matrix_table)){
 				continue;
 			}
 
