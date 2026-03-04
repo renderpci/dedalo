@@ -341,7 +341,7 @@ ts_object.prototype.get_node_data = async function() {
 
 	// short vars
 		const caller				= self.caller
-		const thesaurus_view_mode	= caller.thesaurus_view_mode
+		const thesaurus_view_mode	= caller?.thesaurus_view_mode
 		const terms_are_model		= thesaurus_view_mode==='model'
 		const section_tipo			= self.section_tipo
 		const section_id			= self.section_id
@@ -436,8 +436,8 @@ ts_object.prototype.get_children_data = async function(options) {
 		const section_tipo			= self.section_tipo
 		const children_tipo			= self.children_tipo
 		const caller				= self.caller
-		const model					= caller.model
-		const thesaurus_view_mode	= caller.thesaurus_view_mode
+		const model					= caller?.model
+		const thesaurus_view_mode	= caller?.thesaurus_view_mode
 		const terms_are_model		= thesaurus_view_mode==='model'
 
 	// cache
@@ -1100,7 +1100,7 @@ ts_object.prototype.delete_term = async function(options) {
 
 	// refresh parent children data
 		if (delete_section_result && self.caller) {
-			self.caller.remove_children_item(self.data)
+			self.caller?.remove_children_item(self.data)
 		}
 	return delete_section_result
 }//end delete_term
@@ -1980,7 +1980,7 @@ ts_object.prototype.save_order = async function( value ) {
 
 	// short vars
 	// children nodes of type 'wrap_ts_object'
-	const child_nodes		= [...self.caller.children_container.childNodes].filter(el => el.classList.contains('wrap_ts_object'))
+	const child_nodes		= [...(self.caller?.children_container?.childNodes || [])].filter(el => el.classList.contains('wrap_ts_object'))
 	const child_nodes_len	= child_nodes.length
 
 	// new_value. Prevent set invalid values
@@ -2045,7 +2045,7 @@ ts_object.prototype.save_order = async function( value ) {
 		// Update parent instance children data order
 
 		// current_ar_children_data from caller (parent instance)
-		const current_ar_children_data = self.caller.children_data.ar_children_data
+		const current_ar_children_data = self.caller?.children_data?.ar_children_data || []
 
 		// order_reference as [ts1_7,ts1_25]
 		const order_reference = ar_locators.map(el => el.section_tipo + '_' + el.section_id)
@@ -2065,7 +2065,9 @@ ts_object.prototype.save_order = async function( value ) {
 		});
 
 		// overwrite value
-		self.caller.children_data.ar_children_data = order_children
+		if (self.caller?.children_data) {
+			self.caller.children_data.ar_children_data = order_children
+		}
 
 		// Create a custom instances list with only ts_object instances
 		const ts_object_instances_list = get_all_instances().filter(el => {

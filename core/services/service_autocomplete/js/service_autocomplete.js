@@ -903,6 +903,8 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 */
 service_autocomplete.prototype.get_total = function() {
 
+	const self = this
+
 	const total = self.limit
 
 	return total
