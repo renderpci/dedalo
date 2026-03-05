@@ -659,16 +659,15 @@ abstract class component_common extends common {
 	* Empty array cases: [null], [''] return null
 	* Empty values cases: like [{"value":""}] [{"value":null}] are valid and will be stored as is
 	* this is to allow empty values to preserve the number of items in multi-value components
-	* and allow to asing dataframe to empty values.
-	* @param array|null data
+	* and allow to assign dataframe to empty values.
+	* @param array|null $data
 	* @return bool $result
 	*/
 	public function set_data( ?array $data ) : bool {
 
 		// unset previous calculated ar_list_of_values
-		if (isset($this->ar_list_of_values)) {
-			unset($this->ar_list_of_values);
-		}
+		unset($this->ar_list_of_values);
+
 		// empty data: [] to null
 		if (empty($data)) {
 			$data = null;
@@ -679,14 +678,23 @@ abstract class component_common extends common {
 			$data = null;
 		}
 
-		// resolved set
-			// $this->data_resolved = $data;
-
 		// db_data
 		// Store data before change it with new one.
 		if(!isset($this->db_data)) {
 			// clone the data array for safe.
-			$this->db_data = json_decode( json_encode($this->get_data()) );
+			$encoded = json_encode($this->get_data());
+			if ($encoded !== false) {
+				$this->db_data = json_decode($encoded);
+			}else{
+				debug_log(__METHOD__
+					. " Failed to json_encode current data for db_data backup" . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				$this->db_data = null;
+			}
 		}
 
 		// Counter
@@ -697,7 +705,8 @@ abstract class component_common extends common {
 			$ar_id = [];
 			foreach( $data as $element ){
 
-				// Check if the data is an object before attempting property access
+				// Check if the data is an object before attempting property access.
+				// Non-object values are wrapped into a stdClass for uniform processing.
 				if( !is_object($element) ) {
 					$new_element = new stdClass();
 						$new_element->value = $element;
@@ -707,14 +716,14 @@ abstract class component_common extends common {
 					// Replace element with new_element
 					$element = $new_element;
 					debug_log(__METHOD__
-						. " New element created (is not object and not has id): " . json_encode($element)
-						, logger::ERROR
+						. " New element created (is not object): " . json_encode($element)
+						, logger::WARNING
 					);
 				}
 
 				// Determine if the value has a valid, non-empty ID to be treated as existing data.
-				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
-				$has_id = ( property_exists($element, 'id') && $element->id) ? true : false;
+				// This ensures objects with an 'id' property set to null or empty string are treated as new.
+				$has_id = property_exists($element, 'id') && $element->id !== null && $element->id !== '';
 				$element_to_validate = $has_id
 					? $element
 					: $this->set_data_item_counter( $element );
@@ -723,13 +732,15 @@ abstract class component_common extends common {
 				if( $safe_element ) {
 					$data_to_set[] = $safe_element;
 					// Set every id of data into the array
-					$ar_id[] = $safe_element->id;
+					if (isset($safe_element->id)) {
+						$ar_id[] = $safe_element->id;
+					}
 				}
 
 				$init = false;
 			}
 
-			// Set the counter with the max id when the counter is bellow it.
+			// Set the counter with the max id when the counter is below it.
 			if (!empty($ar_id)) {
 				$max_id = max($ar_id);
 				$counter = $this->get_counter();
@@ -738,9 +749,6 @@ abstract class component_common extends common {
 					$this->set_counter( $max_id );
 				}
 			}
-		}else{
-			// Replace data_to_set with empty data (null)
-			$data_to_set = $data;
 		}
 
 		// section record: set component data into section record.
@@ -748,10 +756,10 @@ abstract class component_common extends common {
 		$result = $section_record->set_component_data(
 			$this->tipo,
 			$this->data_column_name,
-			$data_to_set
+			!empty($data_to_set) ? $data_to_set : null
 		);
 
-		$this->data_resolved = $data_to_set;
+		$this->data_resolved = !empty($data_to_set) ? $data_to_set : null;
 
 
 		return $result;
