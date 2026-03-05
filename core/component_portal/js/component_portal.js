@@ -145,12 +145,56 @@ component_portal.prototype.init = async function(options) {
 						return
 					}
 				// modal close
-					if (self.modal) {
+					if (self.modal && locator.close_modal !== false) {
 						self.modal.close()
 					}
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('initiator_link_' + self.id, initiator_link_handler)
+			)
+
+		// initiator_unlink. Observes user click over list record to remove from portal
+			const initiator_unlink_handler = async (locator) => {
+				// debug
+					if (SHOW_DEBUG===true) {
+						console.log('-> event fn_initiator_unlink locator:', locator);
+					}
+				// remove locator
+					const current_entries = self.data.entries || []
+					const paginated_key = current_entries.findIndex(item => item.section_tipo === locator.section_tipo && item.section_id == locator.section_id)
+
+					if (paginated_key === -1) {
+						console.warn('Value to unlink not found in current entries');
+						return
+					}
+
+					const changed_data = [Object.freeze({
+						action	: 'remove',
+						key		: paginated_key,
+						value	: null
+					})]
+
+					const api_response = await self.change_value({
+						changed_data	: changed_data,
+						refresh			: false,
+						label			: locator.section_id,
+						remove_dialog	: ()=>{
+							return true
+						}
+					})
+
+					if (api_response===false || api_response.result===false) {
+						console.warn("// unlink api_response failed ", api_response);
+						return false
+					}
+
+					await self.refresh({
+						build_autoload		: true,
+						tmp_api_response	: api_response
+					})
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('initiator_unlink_' + self.id, initiator_unlink_handler)
 			)
 
 		// link_term. Observes thesaurus tree link index button click

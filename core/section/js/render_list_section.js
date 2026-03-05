@@ -136,28 +136,111 @@ export const render_column_id = function(options) {
 						class_name		: 'link_button',
 						parent			: fragment
 					})
+
+					// check if item is already added in the parent portal
+					const top_window = window.parent
+					let is_added = false
+					let caller_instance = null
+
+					if (top_window) {
+						// Try to get via get_instance if available
+						if (typeof top_window.get_instance === 'function') {
+							caller_instance = top_window.get_instance(self.initiator)
+						}
+
+						// Fallback: search in dd_page.ar_instances recursively if initiator is known
+						if (!caller_instance && self.initiator && top_window.dd_page && Array.isArray(top_window.dd_page.ar_instances)) {
+							const find_instance_recursively = (instances, target_id) => {
+								for (const inst of instances) {
+									if (inst && inst.id === target_id) return inst
+									if (inst && Array.isArray(inst.ar_instances)) {
+										const found = find_instance_recursively(inst.ar_instances, target_id)
+										if (found) return found
+									}
+								}
+								return null
+							}
+							caller_instance = find_instance_recursively(top_window.dd_page.ar_instances, self.initiator)
+						}
+
+						// If we found the instance (not a Promise), manage the session map
+						if (caller_instance && typeof caller_instance.then !== 'function') {
+							if (!caller_instance.session_linked_items) {
+								caller_instance.session_linked_items = new Map()
+
+								// Initial population from portal data
+								const portal_data = caller_instance.data?.entries || caller_instance.datum?.data?.find(el => el.tipo === caller_instance.tipo)?.entries
+								if (Array.isArray(portal_data)) {
+									portal_data.forEach(item => {
+										const key = String(item.section_tipo) + '_' + String(item.section_id)
+										caller_instance.session_linked_items.set(key, true)
+									})
+								}
+							}
+
+							const item_key = String(section_tipo) + '_' + String(section_id)
+							is_added = caller_instance.session_linked_items.get(item_key) === true
+						}
+					}
+
+					if (is_added) {
+						link_button.classList.add('added')
+						link_button.title = 'Remove'
+					}
+
+					// link_icon
+					const icon_class = is_added ? 'button check icon' : 'button link icon'
+					const link_icon = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: icon_class
+					})
+
 					link_button.addEventListener('click', function(e) {
 						e.stopPropagation()
 
-						const top_window = window.parent
 						if (!top_window.event_manager) {
 							console.error('Unable to get top_window event_manager:', top_window);
 							return
 						}
 
-						// top window event
-						top_window.event_manager.publish('initiator_link_' + self.initiator, {
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						})
+						if (is_added) {
+							// top window event to unlink
+							top_window.event_manager.publish('initiator_unlink_' + self.initiator, {
+								section_tipo	: section_tipo,
+								section_id		: section_id,
+								close_modal		: false
+							})
+							// update session state
+							if (caller_instance && caller_instance.session_linked_items) {
+								const item_key = String(section_tipo) + '_' + String(section_id)
+								caller_instance.session_linked_items.set(item_key, false)
+							}
+							// optimistically update UI
+							is_added = false
+							link_button.classList.remove('added')
+							link_button.title = ''
+							link_icon.className = 'button link icon'
+						} else {
+							// top window event to link
+							top_window.event_manager.publish('initiator_link_' + self.initiator, {
+								section_tipo	: section_tipo,
+								section_id		: section_id,
+								close_modal		: false
+							})
+							// update session state
+							if (caller_instance && caller_instance.session_linked_items) {
+								const item_key = String(section_tipo) + '_' + String(section_id)
+								caller_instance.session_linked_items.set(item_key, true)
+							}
+							// optimistically update UI
+							is_added = true
+							link_button.classList.add('added')
+							link_button.title = 'Remove'
+							link_icon.className = 'button check icon'
+						}
 					})
 					link_button.appendChild(section_id_node)
-					// link_icon
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button link icon',
-						parent			: link_button
-					})
+					link_button.appendChild(link_icon)
 
 				// button_edit
 					// const button_edit = ui.create_dom_element({
