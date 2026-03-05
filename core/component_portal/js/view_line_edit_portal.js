@@ -386,7 +386,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 		const row_key			= options.row_key
 		const paginated_key		= options.paginated_key
 		const section_id		= options.section_id
-		// const section_tipo	= options.section_tipo
+		const section_tipo		= options.section_tipo
 		// const locator		= options.locator
 
 	// button_remove
