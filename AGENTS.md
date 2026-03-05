@@ -24,6 +24,9 @@ composer install
 composer update
 ```
 
+### Ignore files
+- Ignore all files inside 'acc' directories.
+
 ### Testing
 ```bash
 # Run all tests
