@@ -147,6 +147,7 @@ const get_content_data_edit = function(self) {
 
 	// menu_active. set the first state of the menu
 		self.menu_active = false
+		self.events_tokens ??= []
 
 	// username
 		const username = self.data.username
@@ -161,14 +162,17 @@ const get_content_data_edit = function(self) {
 			class_name		: 'quit top_item',
 			parent			: fragment
 		})
-		const click_handler = (e) => {
+		quit_button.tabIndex = 0
+		quit_button.setAttribute('role', 'button')
+		const quit_click_handler = (e) => {
 			e.stopPropagation()
 			// login quit
 			login.quit({
 				caller : self
 			})
 		}
-		quit_button.addEventListener('click', click_handler)
+		quit_button.addEventListener('click', quit_click_handler)
+		quit_button.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') quit_click_handler(e) })
 
 	// dedalo_icon
 		const dedalo_icon = ui.create_dom_element({
@@ -176,12 +180,15 @@ const get_content_data_edit = function(self) {
 			class_name		: 'dedalo_icon_top top_item',
 			parent			: fragment
 		})
+		dedalo_icon.tabIndex = 0
+		dedalo_icon.setAttribute('role', 'button')
 		// click event
-		const click_open_handler = (e) => {
+		const dedalo_icon_click_handler = (e) => {
 			e.stopPropagation()
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		}
-		dedalo_icon.addEventListener('click', click_open_handler)
+		dedalo_icon.addEventListener('click', dedalo_icon_click_handler)
+		dedalo_icon.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') dedalo_icon_click_handler(e) })
 
 	// menu_hierarchy. areas/sections hierarchy list
 		// menu tree (desktop)
@@ -203,6 +210,10 @@ const get_content_data_edit = function(self) {
 				class_name		: 'menu_mobile_icon top_item',
 				parent			: fragment
 			})
+			menu_mobile_icon.tabIndex = 0
+			menu_mobile_icon.setAttribute('role', 'button')
+
+			let menu_mobile_wrapper = null
 			// click event
 			const menu_mobile_click_handler = (e) => {
 				e.stopPropagation()
@@ -212,8 +223,10 @@ const get_content_data_edit = function(self) {
 						self	: self,
 						tipo	: 'dd1'
 					})
-					// insert after button_toggle_inspector
-					button_toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, button_toggle_inspector.nextSibling);
+					// insert after section_label_container
+					if (section_label_container && section_label_container.parentNode) {
+						section_label_container.parentNode.insertBefore(menu_mobile_wrapper, section_label_container.nextSibling);
+					}
 					const user_navigation_handler = (e) => {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
@@ -227,7 +240,7 @@ const get_content_data_edit = function(self) {
 				}
 			}
 			menu_mobile_icon.addEventListener('click', menu_mobile_click_handler)
-			let menu_mobile_wrapper = null
+			menu_mobile_icon.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') menu_mobile_click_handler(e) })
 
 	// ontology link
 		// if (self.data && self.data.show_ontology===true) {
@@ -252,16 +265,19 @@ const get_content_data_edit = function(self) {
 		if (username==='root') {
 			logged_user_name.classList.add('is_root','noevents')
 		}else{
+			logged_user_name.tabIndex = 0
+			logged_user_name.setAttribute('role', 'button')
 			// click event
-			const click_handler = function(e) {
+			const tool_user_admin_click_handler = function(e) {
 				e.stopPropagation();
 				self.open_tool_user_admin_handler()
 			}//end fn_open_tool
-			logged_user_name.addEventListener('click', click_handler)
+			logged_user_name.addEventListener('click', tool_user_admin_click_handler)
+			logged_user_name.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') tool_user_admin_click_handler(e) })
 		}
 
 	// application lang selector
-		const lang_datalist = page_globals.dedalo_application_langs
+		const lang_datalist = page_globals.dedalo_application_langs || []
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
 			name	: 'dedalo_application_langs',
 			langs	: lang_datalist,
@@ -332,15 +348,18 @@ const get_content_data_edit = function(self) {
 			title			: get_label.inspector || 'Inspector',
 			parent			: section_label_container
 		})
+		button_toggle_inspector.tabIndex = 0
+		button_toggle_inspector.setAttribute('role', 'button')
 		// click event
-		const toggle_inspector_handler = (e) => {
+		const toggle_inspector_click_handler = (e) => {
 			e.stopPropagation()
 			ui.toggle_inspector()
 		}
-		button_toggle_inspector.addEventListener('click', toggle_inspector_handler)
+		button_toggle_inspector.addEventListener('click', toggle_inspector_click_handler)
+		button_toggle_inspector.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_inspector_click_handler(e) })
 
 	// debug info bar
-		const debug_info_bar = (SHOW_DEVELOPER===true || SHOW_DEBUG===true)
+		const debug_info_bar = ((typeof SHOW_DEVELOPER !== 'undefined' && SHOW_DEVELOPER===true) || (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG===true))
 			? render_debug_info_bar(self)
 			: null
 		if(debug_info_bar) {
