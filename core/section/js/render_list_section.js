@@ -140,47 +140,53 @@ export const render_column_id = function(options) {
 					// check if item is already added in the parent portal
 					const top_window = window.parent
 					let is_added = false
-					let caller_instance = null
 
-					if (top_window) {
-						// Try to get via get_instance if available
-						if (typeof top_window.get_instance === 'function') {
-							caller_instance = top_window.get_instance(self.initiator)
-						}
+					if (self.caller_instance === undefined) {
+						self.caller_instance = null
+						if (top_window) {
+							// Try to get via get_instance if available
+							if (typeof top_window.get_instance === 'function') {
+								self.caller_instance = top_window.get_instance(self.initiator)
+							}
 
-						// Fallback: search in dd_page.ar_instances recursively if initiator is known
-						if (!caller_instance && self.initiator && top_window.dd_page && Array.isArray(top_window.dd_page.ar_instances)) {
-							const find_instance_recursively = (instances, target_id) => {
-								for (const inst of instances) {
-									if (inst && inst.id === target_id) return inst
-									if (inst && Array.isArray(inst.ar_instances)) {
-										const found = find_instance_recursively(inst.ar_instances, target_id)
-										if (found) return found
+							// Fallback: search in dd_page.ar_instances recursively if initiator is known
+							if (!self.caller_instance && self.initiator && top_window.dd_page && Array.isArray(top_window.dd_page.ar_instances)) {
+								const find_instance_recursively = (instances, target_id) => {
+									for (const inst of instances) {
+										if (inst && inst.id === target_id) return inst
+										if (inst && Array.isArray(inst.ar_instances)) {
+											const found = find_instance_recursively(inst.ar_instances, target_id)
+											if (found) return found
+										}
+									}
+									return null
+								}
+								self.caller_instance = find_instance_recursively(top_window.dd_page.ar_instances, self.initiator)
+							}
+
+							// If we found the instance (not a Promise), manage the session map
+							if (self.caller_instance && typeof self.caller_instance.then !== 'function') {
+								if (!self.caller_instance.session_linked_items) {
+									self.caller_instance.session_linked_items = new Map()
+
+									// Initial population from portal data
+									const portal_data = self.caller_instance.data?.entries || self.caller_instance.datum?.data?.find(el => el.tipo === self.caller_instance.tipo)?.entries
+									if (Array.isArray(portal_data)) {
+										portal_data.forEach(item => {
+											const key = String(item.section_tipo) + '_' + String(item.section_id)
+											self.caller_instance.session_linked_items.set(key, true)
+										})
 									}
 								}
-								return null
 							}
-							caller_instance = find_instance_recursively(top_window.dd_page.ar_instances, self.initiator)
 						}
+					}
 
-						// If we found the instance (not a Promise), manage the session map
-						if (caller_instance && typeof caller_instance.then !== 'function') {
-							if (!caller_instance.session_linked_items) {
-								caller_instance.session_linked_items = new Map()
+					let caller_instance = self.caller_instance
 
-								// Initial population from portal data
-								const portal_data = caller_instance.data?.entries || caller_instance.datum?.data?.find(el => el.tipo === caller_instance.tipo)?.entries
-								if (Array.isArray(portal_data)) {
-									portal_data.forEach(item => {
-										const key = String(item.section_tipo) + '_' + String(item.section_id)
-										caller_instance.session_linked_items.set(key, true)
-									})
-								}
-							}
-
-							const item_key = String(section_tipo) + '_' + String(section_id)
-							is_added = caller_instance.session_linked_items.get(item_key) === true
-						}
+					if (caller_instance && typeof caller_instance.then !== 'function') {
+						const item_key = String(section_tipo) + '_' + String(section_id)
+						is_added = caller_instance.session_linked_items.get(item_key) === true
 					}
 
 					if (is_added) {
