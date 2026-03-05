@@ -7059,15 +7059,16 @@ dd-modal .footer.distribute {
   top: -0.1px;
   left: 0px;
   z-index: 4;
+  background-color: #212529;
+  box-shadow: 0 2px 3px #7f7f7f;
 }
 .menu > .content_data {
   --menu_heigth: 2.2rem;
+  position: relative;
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  box-shadow: 0 2px 3px #7f7f7f;
-  background-color: #212529;
   font-size: 1rem;
   color: #ffffff;
   line-height: 1.2em;
@@ -7075,18 +7076,12 @@ dd-modal .footer.distribute {
 .menu > .content_data.master {
   background-color: #276f67;
 }
-@media screen and (max-width: 1185px) {
-  .menu > .content_data {
-    position: relative;
-    --menu_heigth: 3rem;
-  }
-}
-.menu > .content_data.wrapping > .menu_hierarchy,
-.menu > .content_data.wrapping > .ontology {
+.menu > .content_data.compact > .menu_hierarchy,
+.menu > .content_data.compact > .ontology {
   display: none;
 }
-.menu > .content_data.wrapping > .menu_mobile_icon,
-.menu > .content_data.wrapping > .menu_mobile_wrapper {
+.menu > .content_data.compact > .menu_mobile_icon,
+.menu > .content_data.compact > .menu_mobile_wrapper {
   display: block;
 }
 .menu > .content_data:before {
@@ -7133,11 +7128,6 @@ dd-modal .footer.distribute {
   padding: 0px;
   margin-left: 0.5rem;
   z-index: 2;
-}
-@media screen and (max-width: 1185px) {
-  .menu > .content_data > .menu_hierarchy {
-    display: none;
-  }
 }
 .menu > .content_data > .menu_hierarchy ul {
   display: none;
@@ -7278,14 +7268,10 @@ dd-modal .footer.distribute {
   margin-right: 0.75rem;
   left: 0.5rem;
   cursor: pointer;
+  display: none;
 }
 .menu > .content_data > .menu_mobile_icon:active {
   opacity: 0.5;
-}
-@media screen and (min-width: 1185px) {
-  .menu > .content_data > .menu_mobile_icon {
-    display: none;
-  }
 }
 .menu > .content_data > .menu_mobile_wrapper {
   width: 100%;
@@ -7293,11 +7279,7 @@ dd-modal .footer.distribute {
   background-color: #353535;
   font-size: 1.25rem;
   padding: 1rem;
-}
-@media screen and (min-width: 1185px) {
-  .menu > .content_data > .menu_mobile_wrapper {
-    display: none;
-  }
+  display: none;
 }
 .menu > .content_data > .menu_mobile_wrapper .menu_mobile_item {
   display: block;
@@ -7456,31 +7438,28 @@ dd-modal .footer.distribute {
     display: none;
   }
 }
-.menu > .content_data > .debug_info_bar {
+.menu > .debug_info_bar {
+  contain: content;
   background-color: #3a3a3a;
   width: 100%;
   margin: 0px;
-  padding: 0px;
-  padding-right: 0.5rem;
+  padding: 0.35rem;
+  padding-left: 0px;
+  padding-bottom: 0.5rem;
   display: flex;
   flex-wrap: wrap;
   flex-basis: 100%;
-  line-height: var(--menu_heigth);
+  align-items: center;
+  line-height: 1.3rem;
   min-height: var(--menu_heigth);
   font-size: 1rem;
 }
-@media screen and (max-width: 1185px) {
-  .menu > .content_data > .debug_info_bar {
-    line-height: 1.5rem;
-    padding: 0.5rem;
-  }
-}
-.menu > .content_data > .debug_info_bar > div {
+.menu > .debug_info_bar > div {
   padding-left: 1em;
   color: #999999;
   font-size: 94%;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active {
+.menu > .debug_info_bar > .service_worker_active {
   background-color: #000000;
   cursor: pointer;
   display: inline-flex;
@@ -7512,33 +7491,34 @@ dd-modal .footer.distribute {
   cursor: default;
   background-color: #f78a1c;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active:hover {
+.menu > .debug_info_bar > .service_worker_active:hover {
   opacity: 1 !important;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active:active {
+.menu > .debug_info_bar > .service_worker_active:active {
   opacity: 0.4 !important;
 }
-.buttons_container .menu > .content_data > .debug_info_bar > .service_worker_active {
+.buttons_container .menu > .debug_info_bar > .service_worker_active {
   background-color: #ffffff;
   margin-top: 0px;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active.white {
+.menu > .debug_info_bar > .service_worker_active.white {
   background-color: #ffffff !important;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active.grey {
+.menu > .debug_info_bar > .service_worker_active.grey {
   background-color: #bbbbbb;
   opacity: 0.75;
 }
-.menu > .content_data > .debug_info_bar > .service_worker_active.transparent {
+.menu > .debug_info_bar > .service_worker_active.transparent {
   background-color: transparent !important;
 }
 @media screen and (max-width: 1185px) {
-  .menu > .content_data > .debug_info_bar > .service_worker_active {
+  .menu > .debug_info_bar > .service_worker_active {
     height: 1.5rem;
   }
 }
-.menu > .content_data > .debug_info_bar > .environment {
+.menu > .debug_info_bar > .environment {
   background-color: #000000;
+  cursor: pointer;
   display: inline-flex;
   line-height: 1em;
   margin: 0px;
@@ -7560,44 +7540,35 @@ dd-modal .footer.distribute {
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  cursor: pointer;
-  width: 1rem;
-  height: 2.2rem;
-  display: inline-block;
-  margin-left: 0.9rem;
-  background-color: #999999;
+  margin-left: 0.75rem;
+  background-color: #aaaaaa;
 }
-.menu > .content_data > .debug_info_bar > .environment:hover {
+.menu > .debug_info_bar > .environment:hover {
   opacity: 1 !important;
 }
-.menu > .content_data > .debug_info_bar > .environment:active {
+.menu > .debug_info_bar > .environment:active {
   opacity: 0.4 !important;
 }
-.buttons_container .menu > .content_data > .debug_info_bar > .environment {
+.buttons_container .menu > .debug_info_bar > .environment {
   background-color: #ffffff;
   margin-top: 0px;
 }
-.menu > .content_data > .debug_info_bar > .environment.white {
+.menu > .debug_info_bar > .environment.white {
   background-color: #ffffff !important;
 }
-.menu > .content_data > .debug_info_bar > .environment.grey {
+.menu > .debug_info_bar > .environment.grey {
   background-color: #bbbbbb;
   opacity: 0.75;
 }
-.menu > .content_data > .debug_info_bar > .environment.transparent {
+.menu > .debug_info_bar > .environment.transparent {
   background-color: transparent !important;
 }
-@media screen and (max-width: 1185px) {
-  .menu > .content_data > .debug_info_bar > .environment {
-    height: 1.5rem;
-  }
-}
-.menu > .content_data > .debug_info_bar .ip_server {
+.menu > .debug_info_bar .ip_server {
   position: absolute;
   right: 1rem;
 }
 @media screen and (max-width: 1185px) {
-  .menu > .content_data > .debug_info_bar .ip_server {
+  .menu > .debug_info_bar .ip_server {
     position: relative;
     margin-left: 1rem;
   }

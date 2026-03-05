@@ -153,17 +153,17 @@ final class component_common_test extends BaseTestCase {
 			);
 
 			$result = $component->get_identifier();
-			
+
 			// 1 - Check result type
 			$this->assertTrue(
 				gettype($result)==='string',
 				'result type expected string. current type: ' .gettype($result)
 			);
 
-			// 2 - Check result format			
+			// 2 - Check result format
 			// expected format: test89_test3_1
-			$expected =   $component->get_tipo() . locator::DELIMITER 
-						. $component->get_section_tipo() . locator::DELIMITER 
+			$expected =   $component->get_tipo() . locator::DELIMITER
+						. $component->get_section_tipo() . locator::DELIMITER
 						. $component->get_section_id();
 			$this->assertTrue(
 				$result===$expected,
@@ -281,7 +281,7 @@ final class component_common_test extends BaseTestCase {
 
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-			
+
 			if (isset($element->test_save) && $element->test_save===false || !isset($element->new_value)) {
 				echo '- Ignored save test for model: ' . $element->model . PHP_EOL;
 				continue;
@@ -305,7 +305,7 @@ final class component_common_test extends BaseTestCase {
 				}
 
 				// Add id to new data
-				$new_data_fixed = array_map(function($item) use ($element, $direct_data) {					
+				$new_data_fixed = array_map(function($item) use ($element, $direct_data) {
 					if(in_array($element->model, $direct_data)) {
 						$data_element = $item;
 						$data_element->id = 1;
@@ -316,7 +316,7 @@ final class component_common_test extends BaseTestCase {
 					}
 					return $data_element;
 				}, $new_data);
-			
+
 				// 1 - Check new_data_fixed type
 				$this->assertTrue(
 					gettype($new_data_fixed)==='array',
@@ -461,7 +461,7 @@ final class component_common_test extends BaseTestCase {
 				'component_inverse', // data is external, not loaded from section
 				'component_section_id' // data is direct, not loaded from section
 			])) {
-				
+
 				$this->assertInstanceOf(section_record::class, $component->section_record);
 
 				$this->assertTrue(
@@ -590,13 +590,13 @@ final class component_common_test extends BaseTestCase {
 			);
 
 			$dd_grid_cell_object = $component->get_grid_value();
-				// dump($dd_grid_cell_object, ' dd_grid_cell_object ++ '.to_string($element->model));			
+				// dump($dd_grid_cell_object, ' dd_grid_cell_object ++ '.to_string($element->model));
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
 				'expected running without errors'
 			);
-			
+
 			$this->assertInstanceOf(dd_grid_cell_object::class, $dd_grid_cell_object);
 
 			switch ($element->model) {
@@ -611,7 +611,7 @@ final class component_common_test extends BaseTestCase {
 						gettype($dd_grid_cell_object->value)==='array' || gettype($dd_grid_cell_object->value)==='NULL',
 						'expected get_grid_value type is object->value. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
 					);
-					break;		
+					break;
 			}
 
 			// Columns type test
@@ -671,13 +671,13 @@ final class component_common_test extends BaseTestCase {
 						gettype($dd_grid_cell_object->value)==='array',
 						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
 					);
-				}else{						
+				}else{
 					$this->assertTrue(
 						gettype($dd_grid_cell_object->value)==='array',
 						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
-					);				
+					);
 				}
-			}			
+			}
 		}//end foreach (get_elements() as $element)
 	}//end test_get_raw_value
 
@@ -774,7 +774,7 @@ final class component_common_test extends BaseTestCase {
 				$new_data_base	= call_user_func_array($element->new_value, $arguments);
 
 				// Add id to new data
-				$new_data = array_map(function($item) use ($element) {					
+				$new_data = array_map(function($item) use ($element) {
 					if(in_array($element->model, component_relation_common::get_components_with_relations())) {
 						$data_element = clone $item;
 						$data_element->id = 1;
@@ -806,8 +806,8 @@ final class component_common_test extends BaseTestCase {
 						$included = locator::in_array_locator($new_data[0], $component_data2, ['section_tipo','section_id']);
 						$this->assertTrue(
 							$included===true,
-							'Current component data must contain all new locators '.$element->model .PHP_EOL							
-								.'new_data        : '.json_encode($new_data, JSON_PRETTY_PRINT) . PHP_EOL							
+							'Current component data must contain all new locators '.$element->model .PHP_EOL
+								.'new_data        : '.json_encode($new_data, JSON_PRETTY_PRINT) . PHP_EOL
 								.'component_data2 : '.json_encode($component_data2, JSON_PRETTY_PRINT) .PHP_EOL
 								.'$element->new_value: '.json_encode($element->new_value, JSON_PRETTY_PRINT) .PHP_EOL
 								.'$element->new_value_params: '.json_encode($element->new_value_params, JSON_PRETTY_PRINT) .PHP_EOL
@@ -818,7 +818,7 @@ final class component_common_test extends BaseTestCase {
 						$this->assertEquals(
 							$component_data2, $new_data,
 							'both data and new_data expected equal. model: '.$element->model .' '. PHP_EOL
-							.'new_data        : '.json_encode($new_data, JSON_PRETTY_PRINT) .PHP_EOL	
+							.'new_data        : '.json_encode($new_data, JSON_PRETTY_PRINT) .PHP_EOL
 							.'component_data2 : '.json_encode($component_data2, JSON_PRETTY_PRINT)
 						);
 					break;
@@ -864,8 +864,8 @@ final class component_common_test extends BaseTestCase {
 						$included = locator::in_array_locator($new_data[0], $component_data2, ['section_tipo','section_id']);
 						$this->assertTrue(
 							$included===true,
-							'Current component data must contain all new locators '.$element->model .PHP_EOL							
-								.'new_data            : '.json_encode($new_data, JSON_PRETTY_PRINT) . PHP_EOL							
+							'Current component data must contain all new locators '.$element->model .PHP_EOL
+								.'new_data            : '.json_encode($new_data, JSON_PRETTY_PRINT) . PHP_EOL
 								.'component_copy_data : '.json_encode($component_copy_data, JSON_PRETTY_PRINT) .PHP_EOL
 						);
 						break;
@@ -879,9 +879,9 @@ final class component_common_test extends BaseTestCase {
 						);
 					break;
 				}
-				
+
 			$checked[] = $element->model;
-			
+
 		}//end foreach (get_elements() as $element)
 	}//end test_save
 
@@ -1011,7 +1011,7 @@ final class component_common_test extends BaseTestCase {
 				case 'component_filter':
 				case 'component_filter_master':
 					break;
-				
+
 				default:
 					$this->assertTrue(
 						$component->get_data()===null,
@@ -1551,7 +1551,7 @@ final class component_common_test extends BaseTestCase {
 
 				$this->assertTrue( $found_data->section_id===$component->get_section_id() );
 				$this->assertTrue( $found_data->section_tipo===$component->get_section_tipo() );
-				
+
 				// Lang check
 				$is_translatable = ontology_node::get_translatable($component->tipo);
 				$with_lang_versions = $component->with_lang_versions;
@@ -1559,26 +1559,26 @@ final class component_common_test extends BaseTestCase {
 					? $component->get_lang()
 					: DEDALO_DATA_NOLAN;
 				if($element->model !== 'component_iri') {
-				
-					$this->assertTrue( 
+
+					$this->assertTrue(
 						$found_data->lang === $expected_component_lang,
 						$element->model.' expected found_data->lang: ' . $found_data->lang . PHP_EOL
 						. 'component_lang: ' . $component->get_lang() . PHP_EOL
 						. 'expected_component_lang: ' . $expected_component_lang . PHP_EOL
 					);
 				}
-				
+
 				$this->assertTrue( $found_data->from_component_tipo===$component->get_tipo() );
 
 				// if (gettype($found_data->value)!=='array' && !is_null($found_data->value)) {
 				// 	dump($found_data, ' var ++ ))))))))))))))))) '.to_string($element->model));
 				// 	dump(gettype($found_data->value), ' gettype ((((((((((((((((((( ))))))))))))))))))) ++ '.to_string($element->model));
 				// }
-				
+
 				$this->assertTrue(
 					gettype($found_data->value)==='array' || gettype($found_data->value)==='NULL',
 					'expected type array|null value. type: '.gettype($found_data->value)
-				);				
+				);
 			}
 		}
 	}//end test_get_component_json
