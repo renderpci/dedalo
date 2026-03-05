@@ -168,30 +168,22 @@ component_portal.prototype.init = async function(options) {
 						return
 					}
 
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: paginated_key,
-						value	: null
-					})]
+				// row_key
+					const row_key = current_entries[paginated_key].id || null
 
-					const api_response = await self.change_value({
-						changed_data	: changed_data,
-						refresh			: false,
-						label			: locator.section_id,
-						remove_dialog	: ()=>{
-							return true
-						}
+				// remove locator selected
+					const result = await self.unlink_record({
+						paginated_key 	: paginated_key,
+						row_key 		: row_key,
+						section_id 		: locator.section_id
 					})
-
-					if (api_response===false || api_response.result===false) {
-						console.warn("// unlink api_response failed ", api_response);
-						return false
+					if (result===false) {
+						return
 					}
-
-					await self.refresh({
-						build_autoload		: true,
-						tmp_api_response	: api_response
-					})
+				// modal close
+					if (self.modal && locator.close_modal !== false) {
+						self.modal.close()
+					}
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('initiator_unlink_' + self.id, initiator_unlink_handler)
@@ -741,7 +733,7 @@ component_portal.prototype.add_value = async function(value) {
 	const self = this
 
 	// current_value. Get the current_value of the component
-		const current_entries	= self.data.entries || []
+		const current_entries = self.data.entries || []
 
 	// data_limit. Maximum records allowed by this portal
 		if (data_limit_reached(self)) {
