@@ -1615,4 +1615,56 @@ final class component_common_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_handle_query_splitting
+	* @return void
+	*/
+	public function test_handle_query_splitting(): void {
+
+		$query_object = new stdClass();
+		$query_object->path = [ (object)['component_tipo' => 'test52'] ];
+		$query_object->table_alias = 'm';
+		$query_object->table = 'matrix';
+		$query_object->q = 'Pérez López';
+		$query_object->q_split = true;
+
+		$q_items = ['Pérez', 'López'];
+
+		// We call the method on component_input_text because it implements resolve_query_object_sql via search_component_string_common trait.
+		// handle_query_splitting is inherited from component_common.
+		$group = component_input_text::handle_query_splitting($query_object, $q_items, '$and');
+
+		$this->assertInstanceOf(stdClass::class, $group);
+		$this->assertObjectHasProperty('$and', $group);
+		$this->assertCount(2, $group->{'$and'});
+
+		// Verify elements
+		foreach ($group->{'$and'} as $index => $item) {
+			$this->assertEquals($q_items[$index], $item->q);
+			$this->assertFalse($item->q_split);
+
+			// Verify that resolve_query_object_sql was actually called
+			// By checking for sentence and params which are added by the resolver
+			$this->assertObjectHasProperty('sentence', $item);
+			$this->assertObjectHasProperty('params', $item);
+		}
+	}//end test_handle_query_splitting
+
+
+
+	/**
+	* TEST_remove_first_and_last_quotes
+	* @return void
+	*/
+	public function test_remove_first_and_last_quotes(): void {
+
+		$this->assertEquals('abc', component_common::remove_first_and_last_quotes('"abc"'));
+		$this->assertEquals('abc', component_common::remove_first_and_last_quotes('abc'));
+		$this->assertEquals('!=abc', component_common::remove_first_and_last_quotes('!="abc"'));
+		$this->assertEquals('>=abc', component_common::remove_first_and_last_quotes('>="abc"'));
+		$this->assertEquals('*abc', component_common::remove_first_and_last_quotes('*"abc"'));
+	}//end test_remove_first_and_last_quotes
+
+
+
 }//end class component_common_test
