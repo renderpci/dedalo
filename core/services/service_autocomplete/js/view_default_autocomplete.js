@@ -1157,7 +1157,7 @@ const render_datalist = async function(self, result) {
 					// default click action
 
 					// add value. Don't wait here
-						self.caller?.add_value(value)
+						self.caller?.link_record(value)
 
 					// clean the last list
 						while (datalist.firstChild) {

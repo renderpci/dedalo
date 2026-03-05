@@ -244,7 +244,7 @@ export const on_drop = function(node, event, options) {
 			}
 
 			// add new locator to the target portal
-			self.add_value(data_parse.locator)
+			self.link_record(data_parse.locator)
 
 			// remove the locator from the source portal
 			const source_id		= data_parse.source_id
@@ -254,7 +254,7 @@ export const on_drop = function(node, event, options) {
 			if(source_instance){
 				source_instance.unlink_record({
 					paginated_key	: data_parse.locator.paginated_key,
-					section_id		: source_instance.section_id,
+					section_id		: data_parse.locator.section_id,
 				})
 			}
 
