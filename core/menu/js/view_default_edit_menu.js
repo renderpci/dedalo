@@ -70,62 +70,32 @@ view_default_edit_menu.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// debug info bar
+		const debug_info_bar = ((typeof SHOW_DEVELOPER !== 'undefined' && SHOW_DEVELOPER===true) || (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG===true))
+			? render_debug_info_bar(self)
+			: null
+		if(debug_info_bar) {
+			wrapper.appendChild( debug_info_bar );
+		}
+
 	// events
-		// adjust_size. Adapt vertical size based on window width resizing
+		// compact toggle. Detect content_data overflow to switch between
+		// desktop menu_hierarchy and mobile menu_mobile_icon
 		const resize_observer = new ResizeObserver((entries) => {
-			entries.forEach((entry) => {
-				const debug_info_bar = content_data.debug_info_bar
-				// debug_info_bar
-				const debug_info_bar_height = debug_info_bar
-					? debug_info_bar.getBoundingClientRect().height
-					: 0
-
-				// wrapper height current
-				const wrapper_height = entry.contentRect.height
-
-				// subtract debug_info_bar_height from wrapper height
-				const limit = Math.floor(wrapper_height - debug_info_bar_height)
-
-				const adjust_size = () => {
-					if (limit > 50) {
-						wrapper.classList.add('wrapping')
-						// fix width edge
-						wrapper.width_edge = entry.contentRect.width
-					}else{
-						if (wrapper.width_edge && entry.contentRect.width > wrapper.width_edge) {
-							wrapper.classList.remove('wrapping')
-						}
-					}
+			for (const entry of entries) {
+				const height = entry.contentRect.height;
+				if (height > 50) {
+					content_data.classList.add('compact');
+					content_data._compact_edge = entry.contentRect.width;
+				} else if (content_data._compact_edge && entry.contentRect.width > content_data._compact_edge) {
+					content_data.classList.remove('compact');
 				}
-				requestAnimationFrame(adjust_size)
-			});
+			}
 		});
-		// adjust inspector_container top position. Set pinned class on menu sticky pin
-		const intersection_observer = new IntersectionObserver(
-			([e]) => {
-				const pinned = e.intersectionRatio < 1
-
-				// toggle menu class 'is_pinned'
-				e.target.classList.toggle('is_pinned', pinned)
-
-				// move up inspector on pinned
-				const inspector_container = document.getElementById('inspector_container')
-				if (inspector_container) {
-					const top = wrapper.getBoundingClientRect().bottom;
-					if (pinned) {
-						inspector_container.style.top = (top + 13) + 'px'
-					}else{
-						inspector_container.style.removeProperty('top');
-					}
-				}
-			},
-			{ threshold: [1] }
-		);
 
 		// fire events when_in_viewport
 		when_in_viewport(wrapper, () => {
-			resize_observer.observe(wrapper);
-			intersection_observer.observe(wrapper);
+			resize_observer.observe(content_data);
 			// update class from version
 			wrapper.classList.add('v'+page_globals.dedalo_version.replaceAll('.','_'))
 		})
@@ -358,14 +328,6 @@ const get_content_data_edit = function(self) {
 		button_toggle_inspector.addEventListener('click', toggle_inspector_click_handler)
 		button_toggle_inspector.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_inspector_click_handler(e) })
 
-	// debug info bar
-		const debug_info_bar = ((typeof SHOW_DEVELOPER !== 'undefined' && SHOW_DEVELOPER===true) || (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG===true))
-			? render_debug_info_bar(self)
-			: null
-		if(debug_info_bar) {
-			fragment.appendChild( debug_info_bar );
-		}
-
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
@@ -373,7 +335,6 @@ const get_content_data_edit = function(self) {
 		})
 		content_data.appendChild(fragment)
 		// set pointers
-		content_data.debug_info_bar				= debug_info_bar
 		content_data.section_label				= section_label
 		content_data.button_toggle_inspector	= button_toggle_inspector
 
