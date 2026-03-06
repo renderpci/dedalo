@@ -584,6 +584,9 @@ pre {
 .hide {
   display: none !important;
 }
+.hide_opacity {
+  opacity: 0 !important;
+}
 .invisible {
   visibility: hidden !important;
   opacity: 0 !important;
@@ -1249,6 +1252,7 @@ li .reset_input select {
   padding: 1rem;
   position: relative;
   padding-left: 3.5rem !important;
+  margin-top: 0.33rem;
   overflow: hidden;
 }
 .container_placeholder > .spinner {
@@ -5849,6 +5853,7 @@ dd-modal .footer.distribute {
   width: 1.3rem;
   margin-right: -2px;
   pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
 }
 .column.column_section_id > .section_id_container {
   padding: 0.12rem;
