@@ -756,7 +756,6 @@ final class dd_core_api {
 					foreach ($db_result as $section_record) {
 						$raw_data[] = $section_record->$column->$tipo ?? null;
 					}
-
 					break;
 
 				case 'section':

@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		clone,
@@ -130,6 +131,16 @@ export const render_column_id = function(options) {
 			// initiator. is a url var used in iframe containing section list to link to opener portal
 			case (self.initiator && self.initiator.indexOf('component_')!==-1): {
 
+				const top_window 	= window.parent
+				const initiator		= self.initiator
+				const caller_instance = top_window ? top_window.get_instance_by_id(initiator) : null
+
+				// link_icon
+					const link_icon = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link icon hide_opacity'
+					})
+
 				// link_button. component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'button',
@@ -137,116 +148,78 @@ export const render_column_id = function(options) {
 						parent			: fragment
 					})
 
-					// check if item is already added in the parent portal
-					const top_window = window.parent
-					let is_added = false
+				// update link button
+					_update_link_button(initiator, link_icon, link_button, section_tipo, section_id)
 
-					if (self.caller_instance === undefined) {
-						self.caller_instance = null
-						if (top_window) {
-							// Try to get via get_instance if available
-							if (typeof top_window.get_instance === 'function') {
-								self.caller_instance = top_window.get_instance(self.initiator)
-							}
-
-							// Fallback: search in dd_page.ar_instances recursively if initiator is known
-							if (!self.caller_instance && self.initiator && top_window.dd_page && Array.isArray(top_window.dd_page.ar_instances)) {
-								const find_instance_recursively = (instances, target_id) => {
-									for (const inst of instances) {
-										if (inst && inst.id === target_id) return inst
-										if (inst && Array.isArray(inst.ar_instances)) {
-											const found = find_instance_recursively(inst.ar_instances, target_id)
-											if (found) return found
-										}
-									}
-									return null
-								}
-								self.caller_instance = find_instance_recursively(top_window.dd_page.ar_instances, self.initiator)
-							}
-
-							// If we found the instance (not a Promise), manage the session map
-							if (self.caller_instance && typeof self.caller_instance.then !== 'function') {
-								if (!self.caller_instance.session_linked_items) {
-									self.caller_instance.session_linked_items = new Map()
-
-									// Initial population from portal data
-									const portal_data = self.caller_instance.data?.entries || self.caller_instance.datum?.data?.find(el => el.tipo === self.caller_instance.tipo)?.entries
-									if (Array.isArray(portal_data)) {
-										portal_data.forEach(item => {
-											const key = String(item.section_tipo) + '_' + String(item.section_id)
-											self.caller_instance.session_linked_items.set(key, true)
-										})
-									}
-								}
-							}
-						}
-					}
-
-					let caller_instance = self.caller_instance
-
-					if (caller_instance && typeof caller_instance.then !== 'function') {
-						const item_key = String(section_tipo) + '_' + String(section_id)
-						is_added = caller_instance.session_linked_items.get(item_key) === true
-					}
-
-					if (is_added) {
-						link_button.classList.add('added')
-						link_button.title = 'Remove'
-					}
-
-					// link_icon
-					const icon_class = is_added ? 'button check icon' : 'button link icon'
-					const link_icon = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: icon_class
-					})
-
-					link_button.addEventListener('click', function(e) {
+				// Click event
+					const link_click_handler = (e) => {
 						e.stopPropagation()
 
-						if (!top_window.event_manager) {
+						if (!top_window || !top_window.event_manager) {
 							console.error('Unable to get top_window event_manager:', top_window);
 							return
 						}
 
+						const item_key = String(section_tipo) + '_' + String(section_id)
+						const is_added = caller_instance && caller_instance.session_linked_items
+							? caller_instance.session_linked_items.get(item_key) === true
+							: false
+
 						if (is_added) {
 							// top window event to unlink
-							top_window.event_manager.publish('initiator_unlink_' + self.initiator, {
+							top_window.event_manager.publish('initiator_unlink_' + initiator, {
 								section_tipo	: section_tipo,
 								section_id		: section_id,
 								close_modal		: false
 							})
 							// update session state
 							if (caller_instance && caller_instance.session_linked_items) {
-								const item_key = String(section_tipo) + '_' + String(section_id)
 								caller_instance.session_linked_items.set(item_key, false)
 							}
+							// keep entries_full synchronized (remove item)
+							if (caller_instance && Array.isArray(caller_instance.data?.entries_full)) {
+								const index = caller_instance.data.entries_full.findIndex(
+									item => String(item.section_tipo) === String(section_tipo) && String(item.section_id) === String(section_id)
+								)
+								if (index !== -1) caller_instance.data.entries_full.splice(index, 1)
+							}
+							if (caller_instance && caller_instance.data?.pagination?.total !== undefined) {
+								caller_instance.data.pagination.total = Math.max(0, caller_instance.data.pagination.total - 1)
+								caller_instance._linked_cache_total = caller_instance.data.pagination.total
+							}
 							// optimistically update UI
-							is_added = false
-							link_button.classList.remove('added')
-							link_button.title = ''
-							link_icon.className = 'button link icon'
+							_set_link_button_state(false, link_icon, link_button)
 						} else {
 							// top window event to link
-							top_window.event_manager.publish('initiator_link_' + self.initiator, {
+							top_window.event_manager.publish('initiator_link_' + initiator, {
 								section_tipo	: section_tipo,
 								section_id		: section_id,
 								close_modal		: false
 							})
 							// update session state
 							if (caller_instance && caller_instance.session_linked_items) {
-								const item_key = String(section_tipo) + '_' + String(section_id)
 								caller_instance.session_linked_items.set(item_key, true)
 							}
+							// keep entries_full synchronized (add item)
+							if (caller_instance && Array.isArray(caller_instance.data?.entries_full)) {
+								const exists = caller_instance.data.entries_full.some(
+									item => String(item.section_tipo) === String(section_tipo) && String(item.section_id) === String(section_id)
+								)
+								if (!exists) caller_instance.data.entries_full.push({ section_tipo, section_id })
+							}
+							if (caller_instance && caller_instance.data?.pagination?.total !== undefined) {
+								caller_instance.data.pagination.total += 1
+								caller_instance._linked_cache_total = caller_instance.data.pagination.total
+							}
 							// optimistically update UI
-							is_added = true
-							link_button.classList.add('added')
-							link_button.title = 'Remove'
-							link_icon.className = 'button check icon'
+							_set_link_button_state(true, link_icon, link_button)
 						}
-					})
+					}
+					link_button.addEventListener('click', link_click_handler)
+					// Append nodes
 					link_button.appendChild(section_id_node)
 					link_button.appendChild(link_icon)
+
 
 				// button_edit
 					// const button_edit = ui.create_dom_element({
@@ -655,6 +628,179 @@ export const render_column_id = function(options) {
 
 	return fragment
 }//end render_column_id
+
+
+
+/**
+ * Updates the visual state of a link button and its icon based on whether a record is already linked.
+ * This function fetches the caller component's full data if not already present and uses a Map (session_linked_items)
+ * for efficient lookup of linked records.
+ *
+ * @private
+ * @async
+ * @param {string} initiator - Unique ID of the caller component instance.
+ * @param {HTMLElement} link_icon - The icon element to update.
+ * @param {HTMLElement} [link_button] - Optional button element wrapping the icon.
+ * @param {string|number} section_tipo - The section type of the record being checked.
+ * @param {string|number} section_id - The ID of the record being checked.
+ * @returns {Promise<void>}
+ */
+const _update_link_button = async function(initiator, link_icon, link_button, section_tipo, section_id) {
+
+	if (!initiator) return
+
+	const top_window = window.parent
+	if (!top_window || typeof top_window.get_instance_by_id !== 'function') return
+
+	const caller_instance = top_window.get_instance_by_id(initiator)
+	if (!caller_instance) {
+		console.error('Caller instance not found for initiator:', initiator)
+		return
+	}
+
+	// 0. Cache Invalidation Check
+	// If the parent component's data reference or total changed (e.g. user manually unlinked/linked externally),
+	// we wipe the cached state so it reliably regenerates with fresh component state on reopening the iframe.
+	const current_entries_ref = caller_instance.data?.entries
+	const current_total = caller_instance.data?.pagination?.total
+	if (
+		caller_instance._linked_cache_entries_ref !== current_entries_ref ||
+		caller_instance._linked_cache_total !== current_total
+	) {
+		caller_instance.session_linked_items = null
+		delete caller_instance._loading_full_data
+		if (caller_instance.data) {
+			caller_instance.data.entries_full = null
+		}
+		caller_instance._linked_cache_entries_ref = current_entries_ref
+		caller_instance._linked_cache_total = current_total
+	}
+
+	// 1. Instant Return Optimization
+	// If the session Map already exists, just update the UI and return.
+	if (caller_instance.session_linked_items) {
+		const item_key = String(section_tipo) + '_' + String(section_id)
+		const is_added = caller_instance.session_linked_items.get(item_key) === true
+		_set_link_button_state(is_added, link_icon, link_button)
+
+		requestAnimationFrame(() => link_icon?.classList.remove('hide_opacity'))
+		return
+	}
+
+	// Ensure caller_instance.data exists
+	if (!caller_instance.data) {
+		caller_instance.data = {}
+	}
+
+	// Try to get the full data from the caller instance
+	const total = caller_instance.data.pagination?.total
+	const limit = caller_instance.data.pagination?.limit || 10
+	// Check if the data is below the limit.
+	// If so, fetch the full data from component data, and prevent fetching full data from API.
+	if (total !== undefined && (total <= limit)) {
+		caller_instance.data.entries_full = caller_instance.data.entries || []
+	} else if (!caller_instance.section_id || caller_instance.section_id === '0') {
+		// Optimization: if it is a new record, it cannot have linked items.
+		caller_instance.data.entries_full = []
+	}
+
+	try {
+		// Race condition protection: If data is being loaded, wait for the existing loading promise.
+		// This prevents redundant API calls when multiple buttons (rows) are initialized simultaneously.
+		if (caller_instance._loading_full_data) {
+			await caller_instance._loading_full_data
+		} else if (!caller_instance.data.entries_full) {
+
+			// Create a shared promise for the API request
+			caller_instance._loading_full_data = (async () => {
+				const rqo = {
+					action	: 'read_raw',
+					options	: {
+						type			: 'component',
+						section_tipo	: caller_instance.section_tipo,
+						tipo			: caller_instance.tipo,
+						model			: caller_instance.model
+					},
+					sqo : {
+						select 				: [],
+						section_tipo		: [caller_instance.section_tipo],
+						filter_by_locators 	: [{
+							section_tipo : caller_instance.section_tipo,
+							section_id : caller_instance.section_id
+						}]
+					}
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				// Expecting result[0] to contain the array of linked items
+				caller_instance.data.entries_full = api_response.result?.[0] || []
+			})()
+
+			try {
+				await caller_instance._loading_full_data
+			} finally {
+				delete caller_instance._loading_full_data
+			}
+		}
+
+		// Initialize session_linked_items Map once from the full data array
+		if (!caller_instance.session_linked_items) {
+			caller_instance.session_linked_items = new Map()
+			if (Array.isArray(caller_instance.data.entries_full)) {
+				caller_instance.data.entries_full.forEach(item => {
+					if (item.section_tipo && item.section_id) {
+						const key = String(item.section_tipo) + '_' + String(item.section_id)
+						caller_instance.session_linked_items.set(key, true)
+					}
+				})
+			}
+		}
+
+		// Final UI update
+		const item_key = String(section_tipo) + '_' + String(section_id)
+		const is_added = caller_instance.session_linked_items.get(item_key) === true
+
+		_set_link_button_state(is_added, link_icon, link_button)
+
+	} catch (error) {
+		console.error('Error in _update_link_button:', error)
+	} finally {
+		// Ensure the icon is at least revealed if it was hidden via hide_opacity
+		requestAnimationFrame(() => {
+			link_icon?.classList.remove('hide_opacity')
+		})
+	}
+}//end _update_link_button
+
+
+
+/**
+ * Sync helper to set the visual state of the link button/icon.
+ *
+ * @private
+ * @param {boolean} is_added - Whether the record is currently linked.
+ * @param {HTMLElement} link_icon - The icon element.
+ * @param {HTMLElement} [link_button] - Optional button element.
+ */
+const _set_link_button_state = function(is_added, link_icon, link_button) {
+
+	if (is_added) {
+		if (link_button) {
+			link_button.classList.add('added')
+			link_button.title = 'Remove'
+		}
+		link_icon.classList.add('check')
+		link_icon.classList.remove('link')
+	} else {
+		if (link_button) {
+			link_button.classList.remove('added')
+			link_button.title = ''
+		}
+		link_icon.classList.add('link')
+		link_icon.classList.remove('check')
+	}
+}//end _set_link_button_state
 
 
 
