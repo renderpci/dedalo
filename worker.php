@@ -41,6 +41,11 @@ if (!file_exists(APP_ROOT . '/config/config.php')) {
 }
 require APP_ROOT . '/config/config.php';
 
+// Enable persistent DB connections for high-performance RR worker loops
+if (!defined('PERSISTENT_CONNECTION')) {
+    define('PERSISTENT_CONNECTION', true);
+}
+
 // Suppress deprecation warnings (e.g. from protobuf) and ensure clean output
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 // ini_set('display_errors', '0');
@@ -55,7 +60,16 @@ while ($request = $psr7Worker->waitRequest()) {
         metrics::reset();
         $GLOBALS['DEDALO_RAW_BODY'] = null;
 
-        // Clear caches if they exist
+        // Clear static class caches to prevent cross-request pollution
+        if (class_exists('common')) {
+            common::clear();
+        }
+        if (class_exists('section')) {
+            section::clear();
+        }
+        if (class_exists('component_common')) {
+            component_common::clear();
+        }
         if (class_exists('section_record_instances_cache')) {
             section_record_instances_cache::clear();
         }
@@ -124,13 +138,17 @@ while ($request = $psr7Worker->waitRequest()) {
             $dedalo_session_name = 'dedalo_' . DEDALO_MAJOR_VERSION . '_' . DEDALO_ENTITY . (isset($_SERVER['HTTPS']) ? '_ssl' : '');
             $dedalo_session_name = str_replace([',', '.'], '_', $dedalo_session_name);
 
-            error_log("RR Worker: Incoming Cookies: " . json_encode($_COOKIE));
-            error_log("RR Worker: Constant DEDALO_ENTITY: " . DEDALO_ENTITY);
-            error_log("RR Worker: Constant DEDALO_HOST: " . DEDALO_HOST);
-            error_log("RR Worker: Target Session Name: $dedalo_session_name");
+            if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+                error_log("RR Worker: Incoming Cookies: " . json_encode($_COOKIE));
+                error_log("RR Worker: Constant DEDALO_ENTITY: " . DEDALO_ENTITY);
+                error_log("RR Worker: Constant DEDALO_HOST: " . DEDALO_HOST);
+                error_log("RR Worker: Target Session Name: $dedalo_session_name");
+            }
 
             if (isset($_COOKIE[$dedalo_session_name])) {
-                error_log("RR Worker: Found session cookie: " . $_COOKIE[$dedalo_session_name]);
+                if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+                    error_log("RR Worker: Found session cookie: " . $_COOKIE[$dedalo_session_name]);
+                }
                 session_id($_COOKIE[$dedalo_session_name]);
             }
 
@@ -161,7 +179,7 @@ while ($request = $psr7Worker->waitRequest()) {
                 'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false
             ]);
 
-            error_log("RR Worker: Session started. ID: " . session_id());
+            if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) error_log("RR Worker: Session started. ID: " . session_id());
 
             // Execute Dédalo API entry point
             require APP_ROOT . '/core/api/v1/json/index.php';
@@ -191,14 +209,17 @@ while ($request = $psr7Worker->waitRequest()) {
 
         // Sanity check: If we have multiple JSON objects (e.g. from a double echo),
         // try to take only the first one or log it.
-        if (str_contains($output, '}{')) {
+        $pos = strpos($output, '}{');
+        if ($pos !== false) {
             error_log("RR Worker WARNING: Multiple JSON objects detected in output. Truncating to first one.");
-            $output = explode('}{', $output)[0] . '}';
+            $output = substr($output, 0, $pos + 1);
         }
 
         // Capture headers set via PHP's header() function
         $phpHeaders = headers_list();
-        error_log("RR Worker: Captured PHP Headers: " . json_encode($phpHeaders));
+        if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+            error_log("RR Worker: Captured PHP Headers: " . json_encode($phpHeaders));
+        }
         header_remove(); // Clear headers for the next worker loop request
 
         // 4. Build PSR-7 Response
@@ -240,15 +261,19 @@ while ($request = $psr7Worker->waitRequest()) {
             }
 
             $cookieStr = implode('; ', $cookieParts);
-            error_log("RR Worker: Injecting Set-Cookie: $cookieStr");
+            if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+                error_log("RR Worker: Injecting Set-Cookie: $cookieStr");
+            }
             $response = $response->withAddedHeader('Set-Cookie', $cookieStr);
         }
 
         // Apply CORS headers
         $response = $applyCors($response, $request);
 
-        error_log("RR Worker: Request Origin: " . $request->getHeaderLine('Origin'));
-        error_log("RR Worker: Request Host: " . $request->getHeaderLine('Host'));
+        if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+            error_log("RR Worker: Request Origin: " . $request->getHeaderLine('Origin'));
+            error_log("RR Worker: Request Host: " . $request->getHeaderLine('Host'));
+        }
 
         // Fallback for empty output (Dédalo API should usually return at least {})
         if ($output === '') {

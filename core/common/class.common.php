@@ -188,6 +188,21 @@ abstract class common {
 			// 'section_group_portal'
 		];
 
+		/**
+		* CLEAR
+		* Purges persistent caches to prevent memory leaks across worker requests.
+		*/
+		public static function clear() : void {
+			self::$structure_context_cache = [];
+			self::$matrix_table_from_tipo = [];
+			self::$ar_tables_with_relations_cache = null;
+			self::$current_main_lang = [];
+			self::$ar_related_by_model_data = [];
+			self::$resolved_request_properties_parsed = [];
+			self::$get_tools_cache = [];
+			self::$pdata = null;
+		}
+
 
 
 	# ACCESSORS

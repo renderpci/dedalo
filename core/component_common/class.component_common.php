@@ -100,6 +100,15 @@ abstract class component_common extends common {
 		public static $ar_list_of_values_data_cache = [];
 		public static $list_of_values_data_cache = [];
 
+		/**
+		* CLEAR
+		* Purges persistent caches to prevent memory leaks across worker requests.
+		*/
+		public static function clear() : void {
+			self::$ar_list_of_values_data_cache = [];
+			self::$list_of_values_data_cache = [];
+		}
+
 
 
 	/**

@@ -316,6 +316,13 @@ if (isset($rqo->pretty_print)) {
 	$options |= JSON_PRETTY_PRINT;
 }
 $streamed = true;
+
+// Disable streaming in RR worker because native ob_start intercepts everything anyway.
+// Native json_handler::encode provides massively lower CPU latency vs chunking in PHP.
+if (defined('DEDALO_RR_WORKER')) {
+	$streamed = false;
+}
+
 if($streamed) {
 	// With the streaming response handler, we avoid building the entire JSON string in memory before outputting it,
 	// adding memory stability benefits for large objects.
