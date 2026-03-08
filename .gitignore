@@ -182,3 +182,4 @@ cline_mcp_settings.json
 .tmp
 .continue
 .markdownlint.json
+.rr.yaml
