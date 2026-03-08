@@ -14309,8 +14309,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_portal .drop.dragover,
 .portal .drop.dragover {
-  background-color: #cccccc;
-  outline: 4px dotted #f78a1c;
+  background-color: rgba(204, 204, 204, 0.3);
+  outline: 3px dotted #f78a1c;
   z-index: 3;
   width: 100%;
 }
