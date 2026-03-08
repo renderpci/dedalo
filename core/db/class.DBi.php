@@ -94,6 +94,16 @@ abstract class DBi {
 			return false;
 		}
 
+		// When using persistent connections (pg_pconnect), we must ensure we aren't inheriting
+		// an aborted transaction block from a previous request (worker instance pool overlap).
+		if (defined('PERSISTENT_CONNECTION') && PERSISTENT_CONNECTION === true) {
+			$txn_status = pg_transaction_status($pg_conn_real);
+			if ($txn_status === PGSQL_TRANSACTION_INTRANS || $txn_status === PGSQL_TRANSACTION_INERROR) {
+				debug_log(__METHOD__ . " Notice: Rolling back abandoned transaction from pooled connection.", logger::WARNING);
+				pg_query($pg_conn_real, "ROLLBACK");
+			}
+		}
+
 		// If caching is not requested, return the fresh connection immediately
 		if (!$cache) {
 			return $pg_conn_real;
