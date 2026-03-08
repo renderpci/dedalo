@@ -905,15 +905,18 @@ abstract class common {
 	*/
 	public function get_properties() : ?object {
 
-		$properties = isset($this->properties)
-			? $this->properties // already fixed
-			: $this->ontology_node->get_properties(); // already parsed
-
-		if ($properties===false) {
-			$properties = null;
+		if (isset($this->properties)) {
+			// Ensure we don't return false or non-object if it was previously set as such
+			return is_object($this->properties) ? $this->properties : null;
 		}
 
-		return $properties;
+		$raw_properties = $this->ontology_node->get_properties();
+		if ($raw_properties) {
+			// Cache the properties for the lifetime of this component instance
+			$this->properties = $raw_properties;
+		}
+
+		return (isset($this->properties) && is_object($this->properties)) ? $this->properties : null;
 	}//end get_properties
 
 
@@ -1223,7 +1226,7 @@ abstract class common {
 				);
 				if(isset($ar_terms[0])) {
 					$ontology_node	= ontology_node::get_instance($ar_terms[0]);
-					$properties		= $ontology_node->get_properties();
+					$properties		= $ontology_node->get_properties() ?? new stdClass();
 				}else{
 					// in cases that section_list is not present (usually component_portal)
 					// remove the edit css, it happens because the main term, by default, defines the edit behavior in ontology
