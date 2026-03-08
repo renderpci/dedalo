@@ -27,7 +27,6 @@ Information regarding project tasks and migration progress. NOT for agents.
 10. **Activity Log**: Remove `component_filter` (project) from activity logging, the ontology, and `component_filter->save`.
 11. **Activity Optimization**: Implement `matrix_activity` exceptions to minimize size (exclude counters, ID values, section data columns, projects, etc.).
 12. **Publication Logger**: Consolidate into a single logger for the entire process. Avoid per-component logging to reduce noise and memory overhead during batch processing.
-13. **Portal Component**: Support linking multiple items from the chain within a portal (Contributed by Manuel).
 14. **Search with Children**: Fix "propagate and publish" logic where currently only the parent is affected.
 15. **Naming Inconsistency**: Resolve structural naming differences between platforms:
     *   **Server-side (PHP)**: `data` -> `[data_elements]` -> `data_element` -> `{value, lang, ...}`

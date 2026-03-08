@@ -352,7 +352,7 @@ if (SHOW_DEBUG && defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 
 	// log real execution time
 	$id	= $rqo->id ?? $rqo->source->tipo ?? '';
-	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' - ' . dd_memory_usage();
+	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' ms - ' . dd_memory_usage();
 	$line = 'API END POINT FINISHED 2: ' . PHP_EOL . $text . PHP_EOL;
 	debug_log($line, logger::DEBUG);
 
