@@ -658,7 +658,7 @@ const _update_link_button = async function(initiator, link_icon, link_button, se
 		return
 	}
 
-	// 0. Cache Invalidation Check
+	// Cache Invalidation Check
 	// If the parent component's data reference or total changed (e.g. user manually unlinked/linked externally),
 	// we wipe the cached state so it reliably regenerates with fresh component state on reopening the iframe.
 	const current_entries_ref = caller_instance.data?.entries
@@ -676,7 +676,7 @@ const _update_link_button = async function(initiator, link_icon, link_button, se
 		caller_instance._linked_cache_total = current_total
 	}
 
-	// 1. Instant Return Optimization
+	// Instant Return Optimization
 	// If the session Map already exists, just update the UI and return.
 	if (caller_instance.session_linked_items) {
 		const item_key = String(section_tipo) + '_' + String(section_id)
