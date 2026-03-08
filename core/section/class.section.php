@@ -84,6 +84,16 @@ class section extends common {
 		public static $cache_ar_children_tipo = [];
 		public static $section_map_cache = [];
 
+		/**
+		* CLEAR
+		* Purges persistent caches to prevent memory leaks across worker requests.
+		*/
+		public static function clear() : void {
+			self::$ar_section_instances = [];
+			self::$cache_ar_children_tipo = [];
+			self::$section_map_cache = [];
+		}
+
 
 
 	# DIFFUSION INFO
