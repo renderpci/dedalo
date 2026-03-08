@@ -2635,7 +2635,7 @@ final class dd_core_api {
 
 		$plain_vars = [
 			'DEDALO_ENVIRONMENT'					=> true,
-			'DEDALO_API_URL'						=> DEDALO_PROTOCOL . ($_SERVER['HTTP_HOST'] ?? DEDALO_HOST) . DEDALO_ROOT_WEB . '/core/api/v1/json/',
+			'DEDALO_API_URL'						=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_PROTOCOL . ($_SERVER['HTTP_HOST'] ?? DEDALO_HOST) . DEDALO_ROOT_WEB . '/core/api/v1/json/'),
 			'DEDALO_DIFFUSION_API_URL'				=> defined('DEDALO_DIFFUSION_API_URL') ? DEDALO_DIFFUSION_API_URL : (DEDALO_ROOT_WEB . '/diffusion/api/v1/'),
 			'DEDALO_CORE_URL'						=> DEDALO_CORE_URL,
 			'DEDALO_ROOT_WEB'						=> DEDALO_ROOT_WEB,
