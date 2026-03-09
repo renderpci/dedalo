@@ -122,6 +122,8 @@ export const render_column_id = function(options) {
 		const font_size	= get_font_fit_size(section_id, base_size, 4)
 		if (font_size!==base_size) {
 			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
+			// Change the root CSS variable
+			document.documentElement.style.setProperty('--column_id_width', '8rem');
 		}
 
 	// buttons
