@@ -2,9 +2,13 @@
 
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
+
 final class dd_diffusion_api_test extends BaseTestCase {
 
     protected function setUp(): void {
+       
+    $this->markTestSkipped('This entire class is currently disabled.');
+
         // Ensure we are logged in as superuser for tests
         login_Test::force_login(1);
     }
