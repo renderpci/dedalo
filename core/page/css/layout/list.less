@@ -566,8 +566,7 @@
 				padding-right: 3px;
 				padding-left: 2px;
 				pointer-events: none;
-				--font_size: 1.25rem;
-				font-size: var(--font_size);
+				font-size: var(--section_id_font_size); // Default 1.25rem defined in vars.less
 				height: 1.4rem;
 				line-height: 1.4rem;
 
@@ -585,13 +584,17 @@
 			}
 		}//end >button
 
-		>.section_id_container {
+		// section_id_container (activity dd542)
+ 		>.section_id_container {
 			padding: 0.12rem;
-			font-size: 0.96rem;
+			padding-top: 0.04rem;
 			text-align: right;
 			width: 100%;
-		}
 
+			>.section_id {
+				font-size: 1.02rem;
+			}
+		}
 	}//end .column_section_id
 
 // column_remove

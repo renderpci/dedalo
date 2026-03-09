@@ -480,6 +480,8 @@ template {
   --media_min_width: 102px;
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
+  --column_id_width: 6rem;
+  --section_id_font_size: 1.25rem;
 }
 /**
 * functions
@@ -5836,8 +5838,7 @@ dd-modal .footer.distribute {
   padding-right: 3px;
   padding-left: 2px;
   pointer-events: none;
-  --font_size: 1.25rem;
-  font-size: var(--font_size);
+  font-size: var(--section_id_font_size);
   height: 1.4rem;
   line-height: 1.4rem;
 }
@@ -5857,9 +5858,12 @@ dd-modal .footer.distribute {
 }
 .column.column_section_id > .section_id_container {
   padding: 0.12rem;
-  font-size: 0.96rem;
+  padding-top: 0.04rem;
   text-align: right;
   width: 100%;
+}
+.column.column_section_id > .section_id_container > .section_id {
+  font-size: 1.02rem;
 }
 .column.column_remove {
   display: flex;
