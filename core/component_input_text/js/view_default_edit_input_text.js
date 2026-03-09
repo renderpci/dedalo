@@ -129,7 +129,7 @@ const get_content_value = (i, current_value, self) => {
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
 			value			: current_value,
-			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
+			placeholder		: (current_value) ? '' : (self.data.fallback_value && self.data.fallback_value[i]) || '',
 			parent			: content_value
 		})
 		// mousedown event. Capture event propagation
@@ -307,7 +307,10 @@ const get_buttons = (self) => {
 
 				// no value case
 					if (!self.data.value || !self.data.value.length) {
-						self.node.content_data[0].querySelector('input').focus()
+						const first_input = self.node?.content_data?.[0]?.querySelector('input')
+						if (first_input) {
+							first_input.focus()
+						}
 						return
 					}
 

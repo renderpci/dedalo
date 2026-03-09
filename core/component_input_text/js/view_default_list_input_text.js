@@ -113,11 +113,11 @@ view_default_list_input_text.render = async function(self, options) {
 				}
 
 			// separator
-				if( i < value.length -1 ) {
+				if( i < fallback_length -1 ) {
 					// separator
 					ui.create_dom_element({
 						element_type	: 'span',
-						inner_html		: self.context.fields_separator,
+						inner_html		: self.context.fields_separator || ' | ',
 						parent			: content_value
 					})
 				}
