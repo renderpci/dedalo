@@ -10,7 +10,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		clone,
-		get_font_fit_size,
 		object_to_url_vars,
 		open_window
 	} from '../../common/js/utils/index.js'
@@ -117,13 +116,8 @@ export const render_column_id = function(options) {
 		if(SHOW_DEBUG===true) {
 			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
-		// adjust the font size to fit it into the column
-		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
-		const base_size	= 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
-		const font_size	= get_font_fit_size(section_id, base_size, 4)
-		if (font_size!==base_size) {
-			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
-		}
+		// font-size and column width are adapted once at the list level
+		// via scoped CSS variables set on list_body — see view_default_list_section.get_content_data
 
 	// buttons
 		switch(true){
