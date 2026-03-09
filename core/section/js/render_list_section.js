@@ -512,9 +512,11 @@ export const render_column_id = function(options) {
 										})//end then
 										*/
 							})
+
+					// Append span section_id_node to button_edit
 						button_edit.appendChild(section_id_node)
 
-					// edit_icon
+					// Append span icon edit to button_edit
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button edit icon',
