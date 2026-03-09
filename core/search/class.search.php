@@ -986,17 +986,8 @@ class search {
 				$sql_limit = '';
 				$sql_offset = 0;
 				$this->search_query_object->limit = 0;
-				$this->search_query_object->offset = 0;
+				// $this->search_query_object->offset = 0; // Do not apply offset 0 never (breaks the pagination)
 				$this->allow_sub_select_by_id = false;
-			}
-			$orig_sqo_limit = $this->search_query_object->limit;
-			$orig_sqo_offset = $this->search_query_object->offset;
-
-			if ($is_duplicated) {
-				$sql_limit = '';
-				$sql_offset = 0;
-				$this->search_query_object->limit = 0;
-				$this->search_query_object->offset = 0;
 			}
 
 			// order default add if not exists
