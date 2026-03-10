@@ -756,26 +756,6 @@ class component_date extends component_common {
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
-		// column explicit definition
-			// working sample 1 (using jsonb_array_elements):
-				// SELECT p.id, p.section_id, p.section_tipo, a.time
-				// from matrix p
-				//    left join lateral (
-				//       select item #> '{start,time}' as time
-				//       from jsonb_array_elements(p.datos#>'{components,rsc224,dato,lg-nolan}') as x(item)
-				//    ) a on true
-				// order by a.time DESC nulls last;
-
-			// working sample 2 (using jsonb_path_query):
-				// SELECT rs167.id, rs167.section_id, rs167.section_tipo
-				// ,jsonb_path_query(datos, 'lax $.components.rsc224.dato."lg-nolan"[0].start.time', silent => true) as time
-				// FROM matrix rs167
-				// WHERE rs167.section_tipo='rsc205'
-				// LIMIT 10;
-
-		// trim_section_tipo. Trim section name as search do to get safe name
-			$trim_section_tipo = search::trim_tipo($section_tipo);
-
 		// self path
 			$path = [
 				// self component path
@@ -783,8 +763,7 @@ class component_date extends component_common {
 					'component_tipo'	=> $component_tipo,
 					'model'				=> ontology_node::get_model_by_tipo($component_tipo,true),
 					'name'				=> ontology_node::get_term_by_tipo($component_tipo),
-					'section_tipo'		=> $section_tipo,
-					'column'			=> "jsonb_path_query_first({$trim_section_tipo}.datos, 'strict $.components.{$component_tipo}.dato.\"lg-nolan\"[0].start.time', silent => true)"
+					'section_tipo'		=> $section_tipo
 				]
 			];
 
