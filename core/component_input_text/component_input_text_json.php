@@ -126,11 +126,11 @@
 				$item->fallback_value		= $fallback_value;
 
 		// Transliterate components
-		// the main lang is set to nolan, the component has translatable property set to false.
-		// if the component has with_lang_versions = true in properties
-		// it could be transliterate to other languages (translatable with the tool_lang)
-		// transliterate_value is used to inform the users than this data has a translation
-		// or inside the tool_lang, inform what is the original data in nolan.
+		// If the component has with_lang_versions = true in properties,
+		// it could be transliterated to other languages (e.g., used into translate component inside tool_lang).
+		// transliterate_value is used to inform the users that this data has a translation
+		// or, inside the tool_lang, to show the original data in DEDALO_DATA_NOLAN.
+			$with_lang_versions = $this->with_lang_versions;
 			$with_lang_versions	= $this->with_lang_versions;
 			if($with_lang_versions===true) {
 
@@ -145,8 +145,6 @@
 				$this->set_lang($tranliterable_lang);
 				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
 
-				// restore the component lang to the original value
-				// $this->set_lang($original_lang);
 			}
 
 		// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
