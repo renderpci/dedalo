@@ -1,42 +1,21 @@
 <?php declare(strict_types=1);
 /**
- * TRAIT SEARCH_COMPONENT_MEDIA_COMMON
- * From class component_media_common
- * Common search methods for media components
- */
-trait search_component_media_common {
-
-
-
-	/**
-	* RESOLVE_QUERY_OBJECT_SQL
-	* Parses component SQO query
-	* @param object $query_object
-	* @return object|false $query_object
-	* Edited/parsed version of received object
-	*/
-	public static function resolve_query_object_sql(object $query_object) : object|false {
-
-		// media components are not searchable at now
-		debug_log(__METHOD__
-			. " media components are not searchable at now " . PHP_EOL
-			. ' query_object: ' . to_string($query_object)
-			, logger::ERROR
-		);
-
-
-		return false;
-	}//end resolve_query_object_sql
+* TRAIT SEARCH_COMPONENT_COMMON
+* From class component_common
+* Common search methods for components
+*/
+trait search_component_common {
 
 
 
 	/**
 	* BUILD_ORDER_SELECT
 	* Build the SELECT column sentence used to ORDER BY a component's value.
-	* It extracts the file info original_file_name from the component's JSONB data.
+	* It extracts the value from the component's JSONB data.
 	* @param object $options {
 	* 	@var string $table_name The alias or name of the table (e.g., 'mix' or 'rs197_rs279_dd64').
 	* 	@var string $column The data column name (e.g., 'string', 'text', 'section_id').
+	* 	@var string $lang The language code to filter by (e.g., 'lg-spa', 'nolan').
 	* 	@var string $component_tipo The ontology tipo of the component.
 	* 	@var string $alias The alias for the resulting sort column.
 	* }
@@ -46,6 +25,7 @@ trait search_component_media_common {
 
 		$table_name		= $options->table_name;
 		$column			= $options->column;
+		$lang			= $options->lang;
 		$component_tipo	= $options->component_tipo;
 		$alias			= $options->alias;
 
@@ -60,14 +40,10 @@ trait search_component_media_common {
 		* Note: We use jsonb_path_query_first with a filter to efficiently extract the specific language value.
 		*/
 
-		// entry point. Default is 'original_file_name'
-		// @TODO: Dynamically change to use others for sort records.
-		$entry_point = 'original_file_name';
-
 		// select sentence add as order column
 		$select_sentence  = "(jsonb_path_query_first(";
 		$select_sentence .= "{$table_name}.{$column}->'{$component_tipo}',";
-		$select_sentence .= "'$[*].files_info.[*].{$entry_point}'";
+		$select_sentence .= "'$[*].value'";
 		$select_sentence .= ") #>> '{}') AS $alias";
 
 
@@ -76,5 +52,4 @@ trait search_component_media_common {
 
 
 
-
-}//end search_component_media_common
+}//end search_component_common

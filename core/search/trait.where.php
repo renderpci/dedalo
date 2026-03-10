@@ -235,13 +235,16 @@ trait where {
 	*			"component_tipo": "dd62"
 	*		}
 	*	]
-	* @return void
+	* @return string|null $last_table_name
+	* E.g. 'rs197_rs279_dd64'
 	*/
-	public function build_sql_join(array $path) : void {
+	public function build_sql_join(array $path) : ?string {
 
 		$ar_key_join	= [];
 		$base_key		= '';
 		$total_paths	= count($path);
+
+		$last_table_name = null;
 
 		foreach ($path as $key => $step_object) {
 
@@ -275,23 +278,32 @@ trait where {
 
 			// if (!isset($this->ar_sql_joins[$t_name])) {
 
-				$sql_join  = "\n";
+				// Note: joins must be 'LEFT JOIN' to do not exclude results on use ORDER clauses
+
+				$sql_join = '';
 				if(SHOW_DEBUG===true) {
 					$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
-					$sql_join  .= "-- JOIN GROUP $matrix_table - $t_name - $section_name\n";
+					$sql_join .= "-- JOIN GROUP $matrix_table - $t_name - $section_name";
 				}
 
+				// join array_elements as relations
 				$component_tipo = $path[$key-1]->component_tipo;
-				$sql_lateral = "JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
+				$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
 
-				$sql_join = "JOIN {$matrix_table} AS {$t_name} ON
-					{$t_name}.section_id = ({$t_relation}->>'section_id')::bigint
-					AND {$t_name}.section_tipo =({$t_relation}->>'section_tipo')";
+				// join table by setion_tipo and section_id matches
+				$sql_join .= PHP_EOL . "LEFT JOIN {$matrix_table} AS {$t_name} ON" . PHP_EOL;
+				$sql_join .= " {$t_name}.section_id = ({$t_relation}->>'section_id')::bigint";
+				$sql_join .= " AND {$t_name}.section_tipo = ({$t_relation}->>'section_tipo')::text";
 
-
-				$this->sql_obj->join[] = $sql_lateral.PHP_EOL.$sql_join;
+				$this->sql_obj->join[] = $sql_join;
 			// }
+
+			// Override on every iteration
+			$last_table_name = $t_name;
 		}//end foreach ($path as $key => $step_object)
+
+
+		return $last_table_name;
 	}//end build_sql_join
 
 

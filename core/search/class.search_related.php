@@ -24,7 +24,6 @@ class search_related extends search {
 	* @return string $sql_query
 	*/
 	public function parse_sql_query() : string {
-		$start_time=start_time();
 
 		// tables where to search
 			$ar_tables_to_search = $this->sqo->tables ?? common::get_matrix_tables_with_relations();
@@ -76,41 +75,36 @@ class search_related extends search {
 				$query	 = '';
 
 				// SELECT
-				$query	 .= PHP_EOL . 'SELECT ';
+				$query .= 'SELECT ';
+
 				// add group_by
 				// every concept need to be separated by commas
-				$query	.= ( isset($group_by) )
-					? implode(', ', $group_by).', '
+				$query .= !empty($group_by)
+					? PHP_EOL . implode(', ', $group_by).', '
 					: '';
 
 				// add full count when is set
 				// else get the row
-				$query	.= (isset($this->sqo->full_count) && $this->sqo->full_count===true)
+				$query .= (isset($this->sqo->full_count) && $this->sqo->full_count===true)
 					? 'COUNT(*) as full_count'
 					: ( $breakdown===true
 						? 'section_tipo, section_id, locator_data'
 						: 'section_tipo, section_id, relation');
 
-				// columns
-				if (!empty($this->order_columns)) {
-					foreach ((array)$this->order_columns as $select_line) {
-						// $ar_sql_select[] = $select_line;
-						$query	.= PHP_EOL .','. $select_line;
-					}
+				// add regular sql_obj->select
+				if (!empty($this->sql_obj->select)) {
+					$query .= ',' . implode(',', $this->sql_obj->select );
 				}
 
 				// FROM
-				$query	.= PHP_EOL . 'FROM "'.$table.'"';
+				$query .= PHP_EOL . 'FROM "'.$table.'"';
 
 				// Breakdown
 				if( $breakdown===true ){
-					$query	.= PHP_EOL;
-					// $query	.= 'cross join jsonb_array_elements( relation->\'relations\' ) as locator_data';
-					$query	.= 'cross join jsonb_path_query(relation, \'$.*[*]\') as locator_data';
+					$query .= PHP_EOL;
+					// $query .= 'cross join jsonb_array_elements( relation->\'relations\' ) as locator_data';
+					$query .= 'cross join jsonb_path_query(relation, \'$.*[*]\') as locator_data';
 				}
-
-				// WHERE
-				$query	.= PHP_EOL . 'WHERE ';
 
 				$locators_query = [];
 				foreach ($ar_locators as $locator) {
@@ -213,14 +207,24 @@ class search_related extends search {
 					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
 					// $locators_query[]	= PHP_EOL.'relation#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
 				}//end foreach ($ar_locators as $locator)
-				$query .= '(' . implode(' '.$filter_by_locators_op.' ', $locators_query) . ')';
+
+				$where_clauses = [];
+				if (!empty($locators_query)) {
+					$where_clauses[] = '(' . implode(' '.$filter_by_locators_op.' ', $locators_query) . ')';
+				}
 
 				if ($section_filter!==false) {
-					$query .= PHP_EOL . 'AND (' . $section_filter . ')';
+					$where_clauses[] = '(' . $section_filter . ')';
 				}
+
+				// WHERE
+				if (!empty($where_clauses)) {
+					$query .= PHP_EOL . 'WHERE ' . implode(' AND ', $where_clauses);
+				}
+
 				// group by
 				// when is set use GROUP BY clause
-				$query	.= ( isset($group_by) )
+				$query .= !empty($group_by)
 					? PHP_EOL . 'GROUP BY '.implode(', ', $group_by)
 					: '';
 
@@ -232,7 +236,7 @@ class search_related extends search {
 
 		// establish order to maintain stable results
 		// count and pagination are optional
-			if(isset($this->sqo->full_count) && $this->sqo->full_count===false) {
+			if(empty($this->sqo->full_count)) {
 
 				// order
 				if(!empty($this->sql_obj->order)){
@@ -254,8 +258,6 @@ class search_related extends search {
 
 		$str_query .= ';';
 
-		// debug
-			// dump(null, 'null str_query ++ '.to_string($str_query));
 
 		return $str_query;
 	}//end parse_sql_query

@@ -145,11 +145,6 @@ final class search_test extends BaseTestCase {
 		$sqo = $prop_sqo->getValue($search_obj);
 		$this->assertIsObject($sqo);
 		$this->assertEquals($this->section_tipo, $sqo->section_tipo);
-		
-		// order_columns (protected)
-		$prop_order_columns = $reflection->getProperty('order_columns');
-		$this->assertIsArray($prop_order_columns->getValue($search_obj));
-
 
 		// 2. Test Exception on missing section_tipo
 		$this->expectException(Exception::class);

@@ -1,10 +1,14 @@
 <?php declare(strict_types=1);
+include 'trait.search_component_common.php';
 /**
 * COMPONENT_COMMON
 * Common methods of all components
 *
 */
 abstract class component_common extends common {
+
+	// traits. Files added to current class file to split the large code.
+	use search_component_common;
 
 
 

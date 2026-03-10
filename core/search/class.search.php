@@ -56,9 +56,6 @@ class search {
 	// ar_matrix_tables : array
 	protected array $ar_matrix_tables;
 
-	// order_columns : array
-	protected array $order_columns;
-
 	// params counter for prepared statements
 	protected int $params_counter = 1;
 
@@ -218,9 +215,6 @@ class search {
 			: (isset($search_query_object->skip_projects_filter)
 				? $search_query_object->skip_projects_filter
 				: false);
-
-		// order_columns. Set order_columns as empty array
-		$this->order_columns = [];
 	}//end set_up
 
 
@@ -248,7 +242,8 @@ class search {
 		// execute search. Perform a SQL query in DB using pg_execute and parameters.
 		$result	= matrix_db_manager::exec_search(
 			$sql_query,
-			array_keys($this->params) // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+			array_keys($this->params), // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+			true
 		);
 		if ($result===false) {
 			return false;
@@ -793,10 +788,10 @@ class search {
 	*/
 	public function parse_sql_default() : string {
 
-		// 1 order
-		$this->build_sql_query_order();
-		// 2 select
+		// 1 select
 		$this->build_sql_query_select();
+		// 2 order
+		$this->build_sql_query_order();
 		// 3 from
 		$this->build_main_from_sql();
 		// 4 where
@@ -804,6 +799,8 @@ class search {
 		$this->build_sql_filter();
 		$this->build_sql_projects_filter();
 		$this->build_filter_by_user_records();
+
+		$use_window = true;
 
 		// sql_query
 		$sql_query = '';
@@ -834,30 +831,34 @@ class search {
 				$query_inside = $this->build_union_query($query_inside);
 			}
 
-			// order (default for maintain result consistency)
+			// order by default (for maintain result consistency)
 			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );
+
 			// order union case for various tables
 			if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
 				$order_query = str_replace('mix.', '', $order_query);
 			}
+
 			$query_inside .= $order_query;
 
-			// limit
-			if (isset($this->sqo->limit) && $this->sqo->limit>0) {
-				$query_inside .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
-			}
+			if (!$use_window) {
+				// limit
+				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
+					$query_inside .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
+				}
 
-			// offset
-			if (isset($this->sqo->offset) && $this->sqo->offset>0) {
-				$query_inside .= ' OFFSET ' . $this->sqo->offset;
+				// offset
+				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
+					$query_inside .= ' OFFSET ' . $this->sqo->offset;
+				}
 			}
 			// end query_inside
 
-		// main select
-			$use_window = false;
+		// main select.
+		// Note that the use of the window is necessary to order when SELECT contains 'DISTINCT ON'
 			if ($use_window) {
 				$sql_query .= 'SELECT * FROM (';
-				$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+				$sql_query .= PHP_EOL . $query_inside . PHP_EOL;
 				$sql_query .= ') main_select';
 				// order
 				if(!empty($this->sql_obj->order)){
@@ -866,6 +867,10 @@ class search {
 				// limit
 				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
 					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
+				}
+				// offset
+				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
+					$sql_query .= ' OFFSET ' . $this->sqo->offset;
 				}
 			}else{
 				$sql_query = $query_inside;
