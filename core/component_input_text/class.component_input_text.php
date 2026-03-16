@@ -109,7 +109,7 @@ class component_input_text extends component_string_common {
 
 		// Root user special resolution in 'tm' mode.
 		// In inspector's 'Component history' the root user is not displayed if not force hard resolution.
-		if($this->mode=='tm' && empty($value) && $this->section_tipo===DEDALO_SECTION_USERS_TIPO && $this->section_id==-1) {
+		if($this->section_tipo===DEDALO_SECTION_USERS_TIPO && empty($value) && $this->section_id==-1) {
 			$value = [(object)[
 				'value' => 'Root',
 				'lang' => $this->lang
