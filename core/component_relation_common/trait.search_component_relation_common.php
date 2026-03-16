@@ -99,6 +99,7 @@ trait search_component_relation_common {
         $ctx->component_tipo = $component_tipo;
         $ctx->column         = section_record_data::get_column_name(get_called_class());
         $ctx->table_alias    = $query_object->table_alias;
+        $ctx->table          = $query_object->table;
         $ctx->q_operator     = $query_object->q_operator ?? null;
 
         // Set defaults on query_object
@@ -117,6 +118,11 @@ trait search_component_relation_common {
     */
     protected static function dispatch_relation_operator_sql(object $query_object, string $q, object $ctx) : object {
 
+        if($ctx->table === 'matrix_time_machine'){
+            // Use time machine specific dispatcher from trait search_component_relation_common_tm
+            return self::dispatch_relation_operator_sql_tm($query_object, $q, $ctx);
+        }
+        
         switch (true) {
             case ($ctx->q_operator === '!*'):
                 return self::resolve_relation_empty_value_sql($query_object, $ctx);

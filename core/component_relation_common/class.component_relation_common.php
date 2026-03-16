@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include 'trait.search_component_relation_common.php';
+include 'trait.search_component_relation_common_tm.php';
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component data
@@ -13,6 +14,7 @@ class component_relation_common extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_relation_common;
+	use search_component_relation_common_tm;
 
 
 	/**
@@ -1066,7 +1068,7 @@ class component_relation_common extends component_common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !method_exists($this, $fn) ){
+				if( !is_callable([$this, $fn]) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
@@ -1082,11 +1084,11 @@ class component_relation_common extends component_common {
 
 					switch ($fn) {
 						// add parents
-						case 'add_parents':		
+						case 'add_parents':
 							$data = $this->get_data();
 							$diffusion_data_object->set_value( $data );
 							$diffusion_data_object->parents = $diffusion_value;
-							
+
 							return $diffusion_data;
 						default:
 							break;
@@ -1461,17 +1463,17 @@ class component_relation_common extends component_common {
 	* @return array $parents_map
 	*/
 	protected function add_parents() : array {
-		
+
 		$start_time = start_time();
 
 		$data = $this->get_data();
 
 		$parents_map = [];
-		
+
 		if (empty($data)) return $parents_map;
 
 		foreach($data as $locator) {
-			
+
 			// 1. Resolve current item
 			$section_tipo 	= $locator->section_tipo;
 			$section_id 	= $locator->section_id;
@@ -1485,12 +1487,12 @@ class component_relation_common extends component_common {
 			// get map
 			$section_map = section::get_section_map( $section_tipo );
 				#dump($section_map, "section_map $section_tipo");
-		
+
 			if (empty($section_map)) {
 				debug_log(__METHOD__." section_map not found for section_tipo: $section_tipo", logger::WARNING);
 				continue;
 			}
-			
+
 			// Resolve Item Data
 			$current_item_data = $this->resolve_map_node_data($section_map, $section_id, $section_tipo);
 			if($current_item_data) {
@@ -1502,11 +1504,11 @@ class component_relation_common extends component_common {
 
 			if (!empty($parents_locators)) {
 				foreach($parents_locators as $parent_locator) {
-				
+
 					$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
-						
+
 					$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
-					
+
 					if($parent_data) {
 						$parents_chain[] = $parent_data;
 					}
@@ -1516,7 +1518,7 @@ class component_relation_common extends component_common {
 			// Save this locator's chain (may include only self if no parents found)
 			$parents_map[$parents_key] = $parents_chain;
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__." Time: $exec_time", logger::DEBUG);
@@ -1534,7 +1536,7 @@ class component_relation_common extends component_common {
 	* @return array|null
 	*/
 	protected function resolve_map_node_data( $map_node, $section_id, $section_tipo ) : ?array {
-		
+
 		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)) return null;
 
 		$term_tipo 	= $map_node->thesaurus->term;
@@ -1557,7 +1559,7 @@ class component_relation_common extends component_common {
 
 		// 2. Resolve Typology (Relation -> value)
 		// The model_tipo (e.g. hierarchy27) is usually a relation (component_relation) pointing to a Term.
-		// We need to get the relation data, then resolve THAT target's term.		
+		// We need to get the relation data, then resolve THAT target's term.
 		$typology_value			= null;
 		$typology_section_id	= null;
 		$typology_section_tipo	= null;
@@ -1572,10 +1574,10 @@ class component_relation_common extends component_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			
+
 			// Typology component is a relation, get its data (locators)
 			$typology_data = $typology_component->get_data();
-			
+
 			if(!empty($typology_data) && is_array($typology_data) && isset($typology_data[0])) {
 				$typology_locator 		= $typology_data[0];
 				$typology_section_id 	= $typology_locator->section_id;
@@ -1587,7 +1589,7 @@ class component_relation_common extends component_common {
 				if($typology_map && isset($typology_map->thesaurus->term)) {
 					$typology_term_tipo = $typology_map->thesaurus->term;
 					$typology_term_model= ontology_node::get_model_by_tipo($typology_term_tipo, true);
-					
+
 					$typology_term_component = component_common::get_instance(
 						$typology_term_model,
 						$typology_term_tipo,
@@ -1611,8 +1613,8 @@ class component_relation_common extends component_common {
 		];
 	}
 
-	
-	
+
+
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* Resolve component search values (parent recursive) to easy search.
