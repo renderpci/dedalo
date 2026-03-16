@@ -2115,8 +2115,7 @@ abstract class common {
 								// data add
 									$ar_subdata[]		= $data_item;
 									$ar_subcontext[]	= $dd_object;
-
-							break;
+								break;
 
 							// others case
 							default:
