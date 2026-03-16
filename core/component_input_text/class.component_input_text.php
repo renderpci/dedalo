@@ -36,9 +36,19 @@ class component_input_text extends component_string_common {
 			$data = $this->get_data_lang();
 
 		// flat_value (array of one value full resolved)
-			$flat_value = empty($data)
-				? []
-				: [implode( $records_separator, array_column($data, 'value') )];
+			$flat_value = [];
+			if (!empty($data)) {
+				$ar_values = [];
+				foreach ($data as $item) {
+					$value = $item->value ?? '';
+					// Handle case where value is an object (convert to JSON string)
+					if (is_object($value)) {
+						$value = json_encode($value);
+					}
+					$ar_values[] = $value;
+				}
+				$flat_value = [implode($records_separator, $ar_values)];
+			}
 
 		// get the fallback value
 			$fallback_value	= $this->get_component_data_fallback(
@@ -47,9 +57,19 @@ class component_input_text extends component_string_common {
 			);
 
 		// flat_fallback_value (array of one value full resolved)
-			$flat_fallback_value = empty($fallback_value)
-				? []
-				: [implode( $records_separator, array_column($fallback_value, 'value') )];
+			$flat_fallback_value = [];
+			if (!empty($fallback_value)) {
+				$ar_fallback_values = [];
+				foreach ($fallback_value as $item) {
+					$value = $item->value ?? '';
+					// Handle case where value is an object (convert to JSON string)
+					if (is_object($value)) {
+						$value = json_encode($value);
+					}
+					$ar_fallback_values[] = $value;
+				}
+				$flat_fallback_value = [implode($records_separator, $ar_fallback_values)];
+			}
 
 		// class_list
 			$class_list = $ddo->class_list ?? null;
