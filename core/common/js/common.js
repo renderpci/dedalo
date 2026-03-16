@@ -131,8 +131,7 @@ common.prototype.build = async function(autoload=false) {
 		})
 
 	return self._build_waiter
-}
-//end common.prototype.build
+}//end common.prototype.build
 
 
 
