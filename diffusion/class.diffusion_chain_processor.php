@@ -17,7 +17,7 @@ class diffusion_chain_processor {
 
 	/**
 	 * @var array $resolved_sections_cache Static cache for resolved sections
-	 * Key format: "{section_tipo}_{section_id}"
+	 * Key format: [$section_tipo][$byte] = $bit
 	 */
 	private static array $resolved_sections_cache = [];
 
@@ -34,9 +34,9 @@ class diffusion_chain_processor {
 	/**
 	 * @var int $current_depth Current recursion depth for cross-section resolution
 	 */
-	private int $current_depth = 0;
 
 	private ?object $properties;
+
 
 	/**
 	 * RESOLVE_CHAIN
