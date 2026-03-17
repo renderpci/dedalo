@@ -34,6 +34,11 @@ if (!class_exists('dd_ontology_db_manager')) {
 	die("Error: class 'dd_ontology_db_manager' not found.\n");
 }
 
+include_once __DIR__ . '/v1_get_dato.php';
+include_once __DIR__ . '/v1_get_diffusion_dato.php';
+include_once __DIR__ . '/v1_get_diffusion_value.php';
+include_once __DIR__ . '/v1_get_valor.php';
+
 force_login(-1);
 
 $root_tipo = DEDALO_DIFFUSION_TIPO; // Diffusion Root
