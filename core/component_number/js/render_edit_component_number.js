@@ -308,7 +308,7 @@ export const change_handler = function(e, key, self) {
 
 	// update value item
 	const item = self.data.entries
-		? self.data.entries[key]
+		? (self.data.entries[key] || {})
 		: {}
 
 	const action = self.data.entries

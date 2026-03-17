@@ -986,7 +986,6 @@ class dd_date extends stdClass {
 
 
 
-
 	/**
 	* GET_SHAPE
 	* Get the structure of the date. Using for check if any of his values is set or not.

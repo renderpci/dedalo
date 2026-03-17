@@ -48,7 +48,7 @@ class lock_components {
 			$sql = 'SELECT data FROM "'.$table.'" WHERE id = $1 LIMIT 1';
 			$res = matrix_db_manager::exec_search($sql, [$id]);
 
-			$num_rows	= $res===false
+			$num_rows = $res===false
 				? 0
 				: pg_num_rows($res);
 
@@ -329,12 +329,11 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql	= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
-			$res	= matrix_db_manager::exec_search($sql, [$id]);
-			$num_rows	= $res===false
+			$sql = "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$res = matrix_db_manager::exec_search($sql, [$id]);
+			$num_rows = $res===false
 				? 0
 				: pg_num_rows($res);
-
 
 		// create first row on empty table
 		if ($num_rows<1) {
@@ -430,12 +429,11 @@ class lock_components {
 			$table	= self::LOCK_COMPONENTS_TABLE;
 
 		// load current db elements
-			$sql	= "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
-			$res	= matrix_db_manager::exec_search($sql, [$id]);
-			$num_rows	= $res===false
+			$sql = "SELECT data FROM \"$table\" WHERE id = $1 LIMIT 1";
+			$res = matrix_db_manager::exec_search($sql, [$id]);
+			$num_rows = $res===false
 				? 0
 				: pg_num_rows($res);
-
 
 		// create FIRST ROW ON EMPTY TABLE
 		if ($num_rows<1) {
