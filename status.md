@@ -32,3 +32,6 @@ Information regarding project tasks and migration progress. NOT for agents.
     *   **Server-side (PHP)**: `data` -> `[data_elements]` -> `data_element` -> `{value, lang, ...}`
     *   **Client-side (JS)**: `datum` -> `data` -> `[entries]` -> `entry` -> `{value, lang, ...}`
 16. **component_date**: Mode is wrong. Review the logic.
+17. **component_input_text**: list mode fallback value is wrong for non translatable components. Review the logic. (rsc197 Name/Surname)
+18. **search**: order do not works
+

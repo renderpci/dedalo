@@ -81,13 +81,6 @@ trait select {
 
 			$this->sql_obj->select[] = $sentence;
 		}
-
-		// Add order columns sentences
- 		if ( !empty($this->order_columns) ) {
-			foreach ($this->order_columns as $sentence) {
-				$this->sql_obj->select[] = $sentence;
-			}
-		}
 	}//end build_sql_query_select
 
 

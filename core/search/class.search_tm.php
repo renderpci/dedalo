@@ -85,18 +85,8 @@ class search_tm extends search {
 			return;
 		}
 
-		$ar_sql_select = [];
-
-		// Add all columns
-		$ar_sql_select[] = '*';
-
-		// Add order columns to select when needed
-		foreach ((array)$this->order_columns as $select_line) {
-			$ar_sql_select[] = $select_line;
-		}
-
 		// Join all
-		$this->sql_obj->select[] = implode(','.PHP_EOL, $ar_sql_select);
+		$this->sql_obj->select[] = '*';
 	}//end build_sql_query_select
 
 

@@ -32,7 +32,7 @@ export const view_default_list_input_text = function() {
 view_default_list_input_text.render = async function(self, options) {
 
 	// short vars
-		const data					= self.data
+		const data					= self.data || {}
 		const entries				= data.entries || []
 		const fallback_value		= data.fallback_value || []
 		const fallback				= get_fallback_value(entries, fallback_value)
@@ -40,11 +40,9 @@ view_default_list_input_text.render = async function(self, options) {
 
 	// transliterate components
 	// add the translation of the data
-		const transliterate_value = (with_lang_versions && self.data.transliterate_value && entries.length)
-			? ' (' + self.data.transliterate_value + ')'
+		const transliterate_value = (with_lang_versions && self.data.transliterate_value?.[0].value && entries.length)
+			? ' (' + self.data.transliterate_value[0].value + ')'
 			: ''
-
-		// const value_string = fallback.join(self.context.fields_separator) + transliterate_value
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self)
