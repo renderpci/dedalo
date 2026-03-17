@@ -3170,6 +3170,126 @@ function process_node($node, $level) {
 							}
 							break;
 
+						case 'component_section_id':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion::map_section_id_to_subtitles_url"){							
+
+								$parser_process = (object)[											
+									'fn' => 'map_section_id_to_subtitles_url'
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = "/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
+								break;
+							}
+							// 2 "process_dato" = "diffusion_sql::map_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_to_terminoID"){							
+
+									$parser_process = (object)[											
+										'fn' => 'get_diffusion_data_info',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_term_id'
+											],
+											(object)[
+												'fn' => 'parser_locator::get_first'
+											]
+										],
+										"output_format" => "string"
+									];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "es1_1";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_to_terminoID\n";
+								break;
+							}
+
+							// 3 "process_dato" = "diffusion_sql::map_to_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_to_section_tipo"){							
+
+									$parser_process = (object)[											
+										'fn' => 'get_diffusion_data_info',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_section_tipo'
+											],
+											(object)[
+												'fn' => 'parser_locator::get_first'
+											]
+										],
+										"output_format" => "string"
+									];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "es1";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_to_terminoID\n";
+								break;
+							}
+
+							break;
+						
+							default:
+							break;
+					}
+				}
+			}
+		}
+
 	// Process result and save
 	if (
 		$new_props 
@@ -3205,6 +3325,8 @@ function process_node($node, $level) {
 		]);
 	}
 }
+
+
 
 // Execution
 try {
@@ -3330,7 +3452,6 @@ function get_ddo_map($current_tipo) {
 
 	return count($ddo_map) > 0 ? $ddo_map : null;
 }
-
 
 
 	/**
