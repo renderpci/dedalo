@@ -1527,20 +1527,35 @@ class component_relation_common extends component_common {
 
 	/**
 	* RESOLVE_MAP_NODE_DATA
-	* Helper to resolve term and typology given a map node and instance info
-	* @param object $map_node
-	* @param int $section_id
-	* @param string $section_tipo
-	* @return array|null
+	* Resolves visual and category descriptive data for a specific section node record.
+	*
+	* Fetches the primary term (string label) of the item. Additionally, if a typology 
+	* relation is populated, fetches the related locator and pulls the term label 
+	* of that target typology section entry setup.
+	*
+	* @param object $map_node       Ontology node configuration data containing thesaurus targets.
+	* @param int $section_id        Target section instance record numerical identification.
+	* @param string $section_tipo   Target section layout configuration layout index.
+	*
+	* @return array|null Pack dictionary list item definitions of structure:
+	*	- section_id (int): item descriptive locator structure.
+	*	- section_tipo (string): layout item descriptive locator structure layout.
+	*	- term (string|null): descriptive term primary identifying labels descriptive.
+	*	- typology (string|null): supporting descriptive typology identifiers reference string.
+	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
+	*	- typology_section_tipo (string|null): definitions descriptive typology target structure type.
 	*/
-	protected function resolve_map_node_data( $map_node, $section_id, $section_tipo ) : ?array {
-		
+	protected function resolve_map_node_data( object $map_node, int $section_id, string $section_tipo ) : ?array {
+
+		// Ensure the map node has required thesaurus mappings for term and model
 		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)) return null;
 
-		$term_tipo 	= $map_node->thesaurus->term;
-		$model_tipo = $map_node->thesaurus->model;
+		// Normalize types to strings (assumes first if array is provided)
+		$term_tipo 	= is_array($map_node->thesaurus->term) ? reset($map_node->thesaurus->term) : $map_node->thesaurus->term;
+		$model_tipo = is_array($map_node->thesaurus->model) ? reset($map_node->thesaurus->model) : $map_node->thesaurus->model;
 
 		// 1. Resolve Term (String)
+		// Fetches the primary text/label for this section node item
 		$term_value = null;
 		$term_model = ontology_node::get_model_by_tipo($term_tipo, true);
 		if($term_model) {
@@ -1549,15 +1564,15 @@ class component_relation_common extends component_common {
 				$term_tipo,
 				$section_id,
 				'list',
-				DEDALO_DATA_LANG, // Current lang
+				DEDALO_DATA_LANG, // Current language
 				$section_tipo
 			);
 			$term_value = $term_component->get_data();
 		}
 
 		// 2. Resolve Typology (Relation -> value)
-		// The model_tipo (e.g. hierarchy27) is usually a relation (component_relation) pointing to a Term.
-		// We need to get the relation data, then resolve THAT target's term.		
+		// The model_tipo (e.g. hierarchy27) is usually a relation (e.g., pointing from term node to typology definition).
+		// We resolve the relation, go to the related entry, and pull THAT entry's Term label.
 		$typology_value			= null;
 		$typology_section_id	= null;
 		$typology_section_tipo	= null;
@@ -1572,22 +1587,23 @@ class component_relation_common extends component_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
-			
-			// Typology component is a relation, get its data (locators)
+
+			// Typology component saves related items. Fetch its relation matrix references (locators)
 			$typology_data = $typology_component->get_data();
-			
+
 			if(!empty($typology_data) && is_array($typology_data) && isset($typology_data[0])) {
-				$typology_locator 		= $typology_data[0];
+				$typology_locator 		= $typology_data[0]; // Take first relation reference
 				$typology_section_id 	= $typology_locator->section_id;
 				$typology_section_tipo 	= $typology_locator->section_tipo;
 
-				// Resolve the Term of this Typology
-				// The typology points to another section (e.g. 'es2'). We need to find the 'term' field of that section.
+				// Resolve descriptive Term of the Typology node target
+				// Typology target section (e.g., 'es2') has its own 'term'. We find and resolve it.
 				$typology_map = section::get_section_map($typology_section_tipo);
 				if($typology_map && isset($typology_map->thesaurus->term)) {
-					$typology_term_tipo = $typology_map->thesaurus->term;
-					$typology_term_model= ontology_node::get_model_by_tipo($typology_term_tipo, true);
-					
+					$typology_term_tipo  = $typology_map->thesaurus->term;
+					$typology_term_tipo  = is_array($typology_term_tipo) ? reset($typology_term_tipo) : $typology_term_tipo;
+					$typology_term_model = ontology_node::get_model_by_tipo($typology_term_tipo, true);
+
 					$typology_term_component = component_common::get_instance(
 						$typology_term_model,
 						$typology_term_tipo,
@@ -1601,6 +1617,7 @@ class component_relation_common extends component_common {
 			}
 		}
 
+		// Return combined description pack
 		return [
 			"typology_section_id"  	=> $typology_section_id,
 			"typology_section_tipo"	=> $typology_section_tipo,
@@ -1611,8 +1628,8 @@ class component_relation_common extends component_common {
 		];
 	}
 
-	
-	
+
+
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
 	* Resolve component search values (parent recursive) to easy search.
