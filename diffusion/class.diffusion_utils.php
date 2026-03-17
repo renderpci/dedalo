@@ -87,12 +87,6 @@ class diffusion_utils {
             return reset($ar_section_tipos);
         }
 
-        // Check parent recursively if no direct relation (standard Dédalo pattern)
-        $parent = $node->get_parent();
-        if ($parent) {
-            return self::get_related_section_tipo($parent);
-        }
-
         return null;
     }
 
