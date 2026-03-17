@@ -273,29 +273,40 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 			parent			: input_wrap
 		})
 		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
+			const mousedown_handler = function(e) {
 				e.stopPropagation()
-			})
+			}
+			input.addEventListener('mousedown', mousedown_handler)
 		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
+			const click_handler = function(e) {
 				e.stopPropagation()
-			})
+			}
+			input.addEventListener('click', click_handler)
 		// focus event
-			input.addEventListener('focus', function(e) {
+			const focus_handler = function(e) {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
 					ui.component.activate(self, false)
 				}
-			})
+			}
+			input.addEventListener('focus', focus_handler)
 		// keydown event. Prevent to fire page events like open search panel
-			input.addEventListener('keydown', function(e) {
+			const keydown_handler = function(e) {
 				e.stopPropagation()
 				if(e.key==='Tab' ){
 					ui.component.deactivate(self)
 				}
-			})
+			}
+			input.addEventListener('keydown', keydown_handler)
+		// input event. Prevent to input invalid characters like '>'
+			const input_handler = function(e) {				
+				// remove non accepted chars
+				const cleaned = input.value.replace(/[^0-9-\/\.,]/g, '');
+				input.value = cleaned;
+			}
+			input.addEventListener('input', input_handler)	
 		// change event
-			const fn_change = function(e) {
+			const change_event_handler = function(e) {
 				return change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -305,7 +316,7 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 					type		: 'date'
 				})
 			}
-			input.addEventListener('change', fn_change)
+			input.addEventListener('change', change_event_handler)
 
 	// button_calendar
 		const button_calendar = render_button_calendar()
