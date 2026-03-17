@@ -175,7 +175,7 @@ const get_content_data = async function(self) {
 
 				// is valid
 					const is_invalid = (instance, condition_fn) => {
-						if (!instance.data?.value || !condition_fn(instance.data?.value)) {
+						if (!instance.data?.entries || !condition_fn(instance.data?.entries)) {
 							set_error(instance)
 							return true
 						}

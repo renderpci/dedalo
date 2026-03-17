@@ -316,6 +316,13 @@ if (isset($rqo->pretty_print)) {
 	$options |= JSON_PRETTY_PRINT;
 }
 $streamed = true;
+
+// Disable streaming in RR worker because native ob_start intercepts everything anyway.
+// Native json_handler::encode provides massively lower CPU latency vs chunking in PHP.
+if (defined('DEDALO_RR_WORKER')) {
+	$streamed = false;
+}
+
 if($streamed) {
 	// With the streaming response handler, we avoid building the entire JSON string in memory before outputting it,
 	// adding memory stability benefits for large objects.
@@ -345,7 +352,7 @@ if (SHOW_DEBUG && defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 
 	// log real execution time
 	$id	= $rqo->id ?? $rqo->source->tipo ?? '';
-	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' - ' . dd_memory_usage();
+	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' ms - ' . dd_memory_usage();
 	$line = 'API END POINT FINISHED 2: ' . PHP_EOL . $text . PHP_EOL;
 	debug_log($line, logger::DEBUG);
 

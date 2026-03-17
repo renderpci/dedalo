@@ -156,16 +156,36 @@ const get_content_data = async function(self) {
 						}
 
 						// build (load data)
-						await current_instance.build(true)
+						try {
+							const build_result = await current_instance.build(true)
+							if (build_result === false) {
+								const parts = []
+								if(current_instance.section_tipo) parts.push(current_instance.section_tipo)
+								if(current_instance.section_id) parts.push(current_instance.section_id)
+								const _id = parts.join(' - ')
+								return ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'error_alert',
+									inner_html		: `Error: Could not build element "${current_instance.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
+								})
+							}
 
-						// render node
-						const node = await current_instance.render()
+							// render node
+							const node = await current_instance.render()
 
-						return node || ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'error',
-							inner_html		: 'Error on render element ' + current_instance.model
-						})
+							return node || ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error_alert',
+								inner_html		: 'Error on render element ' + current_instance.model
+							})
+						} catch (e) {
+							console.error(`Exception building/rendering "${current_instance.model}":`, e)
+							return ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'error_alert',
+								inner_html		: `Exception on element "${current_instance.model}": ` + e.message
+							})
+						}
 					}
 				})
 				render_promises.push(render_promise)

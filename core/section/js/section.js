@@ -984,7 +984,10 @@ export const get_section_records = async function(options) {
 				ar_promises.push((async () => {
 					const current_section_record = await get_instance(instance_options)
 					if (current_section_record) {
-						await current_section_record.build()
+						const build_result = await current_section_record.build()
+						if (build_result === false) {
+							return null
+						}
 						return current_section_record
 					}
 					return null

@@ -7,6 +7,6 @@
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
 
-	define('DEDALO_BUILD'	, '2025-08-06T18:05:22+02:00');
+	define('DEDALO_BUILD'	, '2026-03-09T13:52:19+02:00');
 	define('DEDALO_MAJOR_VERSION', '7');
 

@@ -256,7 +256,7 @@ final class Ffmpeg {
 			if (!empty($ref)) {
 				// sample: '30000/1001'
 				$beats = explode('/', $ref);
-				if (isset($beats[0]) && isset($beats[1])) {
+				if (isset($beats[0], $beats[1]) && intval($beats[1]) > 0) {
 					$ratio	= intval($beats[0]) / intval($beats[1]);
 					$fps	= intval($ratio);
 				}
@@ -423,11 +423,8 @@ final class Ffmpeg {
 				}
 				if($is_all_ok){
 					//$src_file	= 'concat:$(echo '.$src_file.'/VIDEO_TS/*.VOB|tr \  \|)';
-					$concat = '';
-					foreach ($vob_files as $vob_file) {
-						$concat .= $vob_file.'|';
-					}
-					$src_file = '\'concat:'.$concat.'\'';
+					$concat = implode('|', $vob_files);
+					$src_file = "concat:$concat";
 				}else{
 					$response->msg .= " Error: is necessary the DVD structure (.VOB files)";
 					debug_log(__METHOD__
@@ -483,6 +480,12 @@ final class Ffmpeg {
 
 		// shell command
 		$command = '';
+		$src_file_esc    = escapeshellarg($src_file);
+		$target_file_esc = escapeshellarg($target_file);
+		$tmp_file_esc    = escapeshellarg($tmp_file);
+		$sh_file_esc     = escapeshellarg($sh_file);
+		$log_file_esc    = escapeshellarg($log_file);
+
 		if($setting_name==='audio' || $setting_name==='audio_tr') {
 
 			switch (true) {
@@ -493,10 +496,10 @@ final class Ffmpeg {
 					return $response;
 				case ($setting_name==='audio_tr'):
 
-					$command	.= "nice -n 19 $ffmpeg_path -i $src_file -vn -ar 16000 -ac 1 $target_file ";
+					$command	.= "nice -n 19 $ffmpeg_path -i $src_file_esc -vn -ar 16000 -ac 1 $target_file_esc ";
 
 					// delete self sh file
-					$command	.= "&& rm -f " . $sh_file;
+					$command	.= "&& rm -f " . $sh_file_esc;
 					break;
 
 				case ($setting_name==='audio'):
@@ -505,15 +508,15 @@ final class Ffmpeg {
 					# SOURCE CONTAINS ANY AUDIO TRACK
 
 					# paso 1 extraer el audio
-					#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";
+					#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file_esc -vn -acodec copy $tmp_file_esc ";
 					# convert format always
-					$command	.= "nice -n 19 $ffmpeg_path -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command	.= "nice -n 19 $ffmpeg_path -i $src_file_esc -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file_esc ";
 					# fast-start
-					#$command	.= "&& ".$faststart_path." $tmp_file $target_file ";
+					#$command	.= "&& ".$faststart_path." $tmp_file_esc $target_file_esc ";
 					# delete media temp
-					#$command	.= "&& rm -f $tmp_file ";
+					#$command	.= "&& rm -f $tmp_file_esc ";
 					# delete self sh file
-					$command	.= "&& rm -f " . $sh_file;
+					$command	.= "&& rm -f " . $sh_file_esc;
 					break;
 			}
 		}else{
@@ -523,7 +526,7 @@ final class Ffmpeg {
 				case ($source_with_video===false):
 					#
 					# CASE ORIGINAL HAVE ONLY AUDIO
-					$command .= "nice -n 19 $ffmpeg_path -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command .= "nice -n 19 $ffmpeg_path -i $src_file_esc -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file_esc ";
 					break;
 
 				default:
@@ -554,26 +557,26 @@ final class Ffmpeg {
 					$ar_cmn = [];
 
 					// step 1 only video
-					$ar_cmn[] = "nice -n 19 $ffmpeg_path -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file -y /dev/null";
+					$ar_cmn[] = "nice -n 19 $ffmpeg_path -i $src_file_esc -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file_esc -y /dev/null";
 
 					// step 2 video / audio
 					// video
-					$av_cm  = "nice -n 19 $ffmpeg_path -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file -y ";
+					$av_cm  = "nice -n 19 $ffmpeg_path -i $src_file_esc -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file_esc -y ";
 					// audio
-					$av_cm .= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file";
+					$av_cm .= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file_esc";
 					// add
 					$ar_cmn[] = $av_cm;
 
 					// fast-start
-					$ar_cmn[] = "nice -n 19 $faststart_path $tmp_file $target_file";
+					$ar_cmn[] = "nice -n 19 $faststart_path $tmp_file_esc $target_file_esc";
 
 					// delete
 					// delete media temp
-					$ar_cmn[] = "rm -f $tmp_file";
+					$ar_cmn[] = "rm -f $tmp_file_esc";
 					// delete log temps (all generated logs files)
-					$ar_cmn[] = "rm -f $log_file*";
+					$ar_cmn[] = "rm -f {$log_file_esc}*";
 					// delete self sh file
-					$ar_cmn[] = "rm -f " . $sh_file;
+					$ar_cmn[] = "rm -f " . $sh_file_esc;
 
 					// compose final command
 					$command = implode(" &&\n", $ar_cmn);
@@ -716,8 +719,8 @@ final class Ffmpeg {
 					$beats	= explode(':', $aspect_ratio);
 					// $aspect	= implode('x', $beats);
 
-					$width	= $beats[0];
-					$height	= $beats[1];
+					$width	= $beats[0] ?? 0;
+					$height	= $beats[1] ?? 0;
 
 				// debug
 					debug_log(__METHOD__
@@ -888,10 +891,12 @@ final class Ffmpeg {
 
 		// ffmpeg_path
 			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
+			$src_file_esc = escapeshellarg($src_file);
+			$posterframe_filepath_esc = escapeshellarg($posterframe_filepath);
 
 		// commands shell
 			// command (use video track only)
-			$command = $ffmpeg_path . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_filepath";
+			$command = escapeshellcmd($ffmpeg_path) . " -ss $timecode -i $src_file_esc -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_filepath_esc";
 			// exec command (return boolean)
 			$posterFrame_command_exc = exec_::exec_command($command);
 			// debug
@@ -958,6 +963,9 @@ final class Ffmpeg {
 			);
 
 		// command
+			$source_file_path_esc = escapeshellarg($source_file_path);
+			$target_file_path_esc = escapeshellarg($target_file_path);
+
 			if ($watermark===true) {
 
 				// check watermark file
@@ -973,13 +981,14 @@ final class Ffmpeg {
 
 				// temporal fragment file
 				$target_file_path_temp = $fragments_dir_path .'/temp_'. $target_filename;
+				$target_file_path_temp_esc = escapeshellarg($target_file_path_temp);
 
-				$command  = "   nice -n 19 $ffmpeg_path -ss $tc_in  -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp ";
-				$command .= "&& nice -n 19 $ffmpeg_path -i $target_file_path_temp -vf 'movie=$watermark_file [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]' -y $target_file_path";
+				$command  = "   nice -n 19 $ffmpeg_path -ss $tc_in  -i $source_file_path_esc -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_temp_esc ";
+				$command .= "&& nice -n 19 $ffmpeg_path -i $target_file_path_temp_esc -vf \"movie={$watermark_file} [watermark]; [in][watermark] overlay=main_w-overlay_w-10:10 [out]\" -y $target_file_path_esc";
 
 			}else{
 
-				$command = "$ffmpeg_path -ss $tc_in -i $source_file_path -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path";
+				$command = "$ffmpeg_path -ss $tc_in -i $source_file_path_esc -t ".$duration_tc." -vcodec copy -acodec copy -y $target_file_path_esc";
 			}
 
 		// exec command and wait to finish
@@ -1047,18 +1056,22 @@ final class Ffmpeg {
 
 		// command
 			$sentences = [];
+			$source_file_path_esc    = escapeshellarg($source_file_path);
+			$file_path_temp_esc      = escapeshellarg($file_path_temp);
+			$file_path_untouched_esc = escapeshellarg($file_path_untouched);
+			$target_file_path_esc    = escapeshellarg($target_file_path);
 
 			// Copy file
-			$sentences[] = "$ffmpeg_path -i $source_file_path -c:v copy -c:a copy $file_path_temp"; # && rm -f $file_path && mv $file_path_temp $file_path # -y
+			$sentences[] = "$ffmpeg_path -i $source_file_path_esc -c:v copy -c:a copy $file_path_temp_esc"; # && rm -f $file_path && mv $file_path_temp $file_path # -y
 
 			// Rename original to preserve the original file untouched
-			$sentences[] = "mv $source_file_path $file_path_untouched";
+			$sentences[] = "mv $source_file_path_esc $file_path_untouched_esc";
 
 			// faststart (build final file)
-			$sentences[] = "$faststart_path $file_path_temp $target_file_path";
+			$sentences[] = "$faststart_path $file_path_temp_esc $target_file_path_esc";
 
 			// Remove temp file
-			$sentences[] = "rm -f $file_path_temp";
+			$sentences[] = "rm -f $file_path_temp_esc";
 
 			$command = implode(' && ', $sentences);
 
@@ -1098,6 +1111,8 @@ final class Ffmpeg {
 
 		// command
 			$command  = '';
+			$uploaded_file_path_esc = escapeshellarg($uploaded_file_path);
+			$output_file_path_esc   = escapeshellarg($output_file_path);
 
 			// ffmpeg -i INPUT_FILE.EXT -aq 500 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
 			// ffmpeg -i INPUT_FILE.EXT -aq 70 -acodec libfaac -map_meta_data OUTPUT_FILE.EXT:INPUT_FILE.EXT OUTPUT_FILE.EXT
@@ -1108,10 +1123,10 @@ final class Ffmpeg {
 			$acodec = Ffmpeg::get_audio_codec();
 
 			// convert file
-			$command .= "$ffmpeg_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
+			$command .= "$ffmpeg_path -i $uploaded_file_path_esc -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path_esc ";
 
 			// faststart
-			$command .= "&& $faststart_path $output_file_path $output_file_path ";
+			$command .= "&& $faststart_path $output_file_path_esc $output_file_path_esc ";
 
 		// exec
 			$result = shell_exec( $command );
@@ -1151,13 +1166,17 @@ final class Ffmpeg {
 
 		$heigth = DEDALO_AV_QUALITY_DEFAULT; // 404, 240 ..
 
+		$source_file_esc = escapeshellarg($source_file);
+		$target_file_esc = escapeshellarg($target_file);
+		$temp_target_file_esc = escapeshellarg($temp_target_file);
+
 		# COMMAND: Full process
-		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file ";
-		#$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
-		$command  = "nice $ffmpeg_path -y -i $source_file -vf \"yadif=0:-1:0, scale=-2:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file ";
-		$command .= "&& mv $temp_target_file $target_file ";
+		#$command  = "nice $ffmpeg_path -y -i $source_file_esc -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $target_file_esc ";
+		#$command  = "nice $ffmpeg_path -y -i $source_file_esc -vf \"yadif=0:-1:0, scale=720:404:-1\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file_esc ";
+		$command  = "nice $ffmpeg_path -y -i $source_file_esc -vf \"yadif=0:-1:0, scale=-2:{$heigth}\" -vb 960k -g 75 -f mp4 -vcodec libx264 -acodec $acodec -ar 44100 -ab 128k -ac 2 -movflags faststart $temp_target_file_esc ";
+		$command .= "&& mv $temp_target_file_esc $target_file_esc ";
 		# Processed command only fast start
-		#$command = "nice $faststart_path $source_file $target_file";
+		#$command = "nice $faststart_path $source_file_esc $target_file_esc";
 
 		debug_log(__METHOD__." command:".PHP_EOL. $command, logger::DEBUG);
 
@@ -1204,8 +1223,9 @@ final class Ffmpeg {
 	public static function get_media_attributes( string $source_file ) : ?object {
 
 		$ffprove_path = Ffmpeg::get_ffprove_installed_path();
+		$source_file_esc = escapeshellarg($source_file);
 
-		$command = $ffprove_path . ' -v quiet -print_format json -show_format ' . $source_file . ' 2>&1';
+		$command = escapeshellcmd($ffprove_path) . ' -v quiet -print_format json -show_format ' . $source_file_esc . ' 2>&1';
 		$output  = json_decode( shell_exec($command) );
 
 		return $output;
@@ -1260,9 +1280,10 @@ final class Ffmpeg {
 
 		// ffprove_path
 			$ffprove_path = Ffmpeg::get_ffprove_installed_path();
+			$source_file_esc = escapeshellarg($source_file);
 
 		// exec command
-			$command	= $ffprove_path . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
+			$command	= escapeshellcmd($ffprove_path) . ' -v quiet -show_streams -print_format json ' . $source_file_esc . ' 2>&1';
 			$result		= shell_exec($command);
 			$output		= !empty($result)
 				? json_decode( $result )

@@ -40,7 +40,7 @@ export const on_dragstart = function(self, event) {
 	const data = {
 		source_type			: 'default',
 		moving_instance_id	: self.id, // moving instance is self
-		parent_instance_id	: self.caller.id // parent is the current caller
+		parent_instance_id	: self.caller?.id // parent is the current caller
 	}
 
 	// Transfer data as JSON stringified string

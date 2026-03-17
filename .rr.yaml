@@ -4,7 +4,7 @@ rpc:
   listen: tcp://127.0.0.1:6001
 
 http:
-  address: :8080
+  address: :8081
   middleware: [ "forwarded", "headers" ]
   pool:
     num_workers: 1 # Start with 1 for stability during development

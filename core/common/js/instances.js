@@ -282,6 +282,8 @@ export const get_instance_by_id = function (key) {
 
 	return null
 }//end get_instance_by_key
+// Set window function to allow window or iframe access
+window.get_instance_by_id = get_instance_by_id
 
 
 

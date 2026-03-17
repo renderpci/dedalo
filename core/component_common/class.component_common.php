@@ -100,6 +100,15 @@ abstract class component_common extends common {
 		public static $ar_list_of_values_data_cache = [];
 		public static $list_of_values_data_cache = [];
 
+		/**
+		* CLEAR
+		* Purges persistent caches to prevent memory leaks across worker requests.
+		*/
+		public static function clear() : void {
+			self::$ar_list_of_values_data_cache = [];
+			self::$list_of_values_data_cache = [];
+		}
+
 
 
 	/**
@@ -140,6 +149,7 @@ abstract class component_common extends common {
 	* @param string|null $section_tipo = null
 	* @param bool $cache = true
 	* @param object|null $caller_dataframe = null
+	* @param bool $is_temporal = false
 	* @return object|null $component
 	*/
 	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null, bool $is_temporal=false ) : ?object {
@@ -214,11 +224,12 @@ abstract class component_common extends common {
 						}
 						if ( abs(intval($section_id))<1 ) {
 							debug_log(__METHOD__
-								." Error: Trying to use wrong var: section_id: '$section_id' to load as component " . PHP_EOL
+								." Error: Trying to use invalid value for section_id: '$section_id' to load as component " . PHP_EOL
 								.' backtrace: '.to_string($bt)
 								, logger::ERROR
 							);
-							throw new Exception("Error Processing Request. trying to use wrong var: '$section_id' as section_id to load as component", 1);
+							$msg = "Error Processing Request. Trying to use: '$section_id' as section_id to load as component. Minimum value required is 1";
+							throw new Exception($msg, 1);
 						}
 					}
 
@@ -232,14 +243,14 @@ abstract class component_common extends common {
 					);
 					if ( empty($mode) || !in_array($mode, $ar_valid_mode) ) {
 						if(SHOW_DEBUG===true) {
-							throw new Exception("Error Processing Request. trying to use wrong var: '$mode' as mode to load as component", 1);	;
+							throw new Exception("Error Processing Request. Trying to use invalid mode: '$mode' to load as component", 1);
 						}
 						debug_log(__METHOD__." trying to use empty or invalid mode: '$mode' as mode to load component $tipo. mode: ".to_string($mode), logger::DEBUG);
 					}
 				// lang format check
 					if ( empty($lang) || strpos($lang, 'lg-')===false ) {
 						dump($lang," lang");
-						throw new Exception("Error Processing Request. trying to use wrong var: '$lang' as lang to load as component", 1);
+						throw new Exception("Error Processing Request. Trying to use invalid lang: '$lang' to load as component", 1);
 					}
 				// section_tipo format check
 					if (!empty($section_tipo)) {
@@ -324,7 +335,7 @@ abstract class component_common extends common {
 			}//end if ($cache===false || empty($section_id) || $mode==='update')
 
 		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
-			$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
+			$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode, $is_temporal ? 'tmp' : '']);
 			if(isset($caller_dataframe)) {
 				// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
 				$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->main_component_tipo;
@@ -339,7 +350,8 @@ abstract class component_common extends common {
 				$mode,
 				$lang,
 				$section_tipo,
-				$cache
+				$cache,
+				$is_temporal
 			);
 			// dataframe
 			if(isset($caller_dataframe)) {
@@ -360,6 +372,8 @@ abstract class component_common extends common {
 	* @param string $mode = 'edit'
 	* @param string $lang = DEDALO_DATA_LANG
 	* @param string|null $section_tipo = null
+	* @param bool $cache = true
+	* @param bool $is_temporal = false
 	* @return void
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, bool $is_temporal=false ) {
@@ -654,16 +668,15 @@ abstract class component_common extends common {
 	* Empty array cases: [null], [''] return null
 	* Empty values cases: like [{"value":""}] [{"value":null}] are valid and will be stored as is
 	* this is to allow empty values to preserve the number of items in multi-value components
-	* and allow to asing dataframe to empty values.
-	* @param array|null data
+	* and allow to assign dataframe to empty values.
+	* @param array|null $data
 	* @return bool $result
 	*/
 	public function set_data( ?array $data ) : bool {
 
 		// unset previous calculated ar_list_of_values
-		if (isset($this->ar_list_of_values)) {
-			unset($this->ar_list_of_values);
-		}
+		unset($this->ar_list_of_values);
+
 		// empty data: [] to null
 		if (empty($data)) {
 			$data = null;
@@ -674,14 +687,23 @@ abstract class component_common extends common {
 			$data = null;
 		}
 
-		// resolved set
-			// $this->data_resolved = $data;
-
 		// db_data
 		// Store data before change it with new one.
 		if(!isset($this->db_data)) {
 			// clone the data array for safe.
-			$this->db_data = json_decode( json_encode($this->get_data()) );
+			$encoded = json_encode($this->get_data());
+			if ($encoded !== false) {
+				$this->db_data = json_decode($encoded);
+			}else{
+				debug_log(__METHOD__
+					. " Failed to json_encode current data for db_data backup" . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				$this->db_data = null;
+			}
 		}
 
 		// Counter
@@ -692,7 +714,8 @@ abstract class component_common extends common {
 			$ar_id = [];
 			foreach( $data as $element ){
 
-				// Check if the data is an object before attempting property access
+				// Check if the data is an object before attempting property access.
+				// Non-object values are wrapped into a stdClass for uniform processing.
 				if( !is_object($element) ) {
 					$new_element = new stdClass();
 						$new_element->value = $element;
@@ -702,14 +725,14 @@ abstract class component_common extends common {
 					// Replace element with new_element
 					$element = $new_element;
 					debug_log(__METHOD__
-						. " New element created (is not object and not has id): " . json_encode($element)
-						, logger::ERROR
+						. " New element created (is not object): " . json_encode($element)
+						, logger::WARNING
 					);
 				}
 
 				// Determine if the value has a valid, non-empty ID to be treated as existing data.
-				// This ensures objects with an 'id' property set to null/0/empty are treated as new.
-				$has_id = ( property_exists($element, 'id') && $element->id) ? true : false;
+				// This ensures objects with an 'id' property set to null or empty string are treated as new.
+				$has_id = property_exists($element, 'id') && $element->id !== null && $element->id !== '';
 				$element_to_validate = $has_id
 					? $element
 					: $this->set_data_item_counter( $element );
@@ -718,13 +741,15 @@ abstract class component_common extends common {
 				if( $safe_element ) {
 					$data_to_set[] = $safe_element;
 					// Set every id of data into the array
-					$ar_id[] = $safe_element->id;
+					if (isset($safe_element->id)) {
+						$ar_id[] = $safe_element->id;
+					}
 				}
 
 				$init = false;
 			}
 
-			// Set the counter with the max id when the counter is bellow it.
+			// Set the counter with the max id when the counter is below it.
 			if (!empty($ar_id)) {
 				$max_id = max($ar_id);
 				$counter = $this->get_counter();
@@ -733,9 +758,6 @@ abstract class component_common extends common {
 					$this->set_counter( $max_id );
 				}
 			}
-		}else{
-			// Replace data_to_set with empty data (null)
-			$data_to_set = $data;
 		}
 
 		// section record: set component data into section record.
@@ -743,10 +765,10 @@ abstract class component_common extends common {
 		$result = $section_record->set_component_data(
 			$this->tipo,
 			$this->data_column_name,
-			$data_to_set
+			!empty($data_to_set) ? $data_to_set : null
 		);
 
-		$this->data_resolved = $data_to_set;
+		$this->data_resolved = !empty($data_to_set) ? $data_to_set : null;
 
 
 		return $result;
@@ -858,83 +880,84 @@ abstract class component_common extends common {
 	public function get_data() : ?array {
 
 		// data_resolved. Already resolved case
-			if(isset($this->data_resolved)) {
-				return $this->data_resolved;
-			}
+		if(isset($this->data_resolved)) {
+			return $this->data_resolved;
+		}
 
 		// time machine mode case. data_source='tm'
-			if (isset($this->data_source) && $this->data_source==='tm') {
+		if (isset($this->data_source) && $this->data_source==='tm') {
 
-				// matrix_id check
-					if (empty($this->matrix_id)) {
-						debug_log(__METHOD__
-							." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
-							. ' class: ' . get_called_class() . PHP_EOL
-							. ' tipo: ' . $this->tipo . PHP_EOL
-							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-							. ' section_id: ' . $this->section_id
-							, logger::ERROR
-						);
-						return null;
-					}
-
-				// If the component is a dataframe
-				// its data is saved with the main component data in time machine
-				// is those cases, tipo to search in time machine is the main component tipo of the dataframe
-				// all other is its own tipo
-					$component_tipo			=  $this->tipo;
-					$search_component_tipo	= ($this->get_model()==='component_dataframe')
-						? $this->get_main_component_tipo()
-						: $component_tipo;
-
-				// tm data. Note that no lang or section_id is needed, only matrix_id
-				// data_tm is a full data stored into tm row
-				// it will need to be filter to remove possible dataframe data
-					$data_tm = component_common::get_component_tm_data(
-						$search_component_tipo,
-						$this->section_tipo,
-						$this->matrix_id
-					);
-
-				// Main components with dataframe and other relation components.
-					$relation_components = component_relation_common::get_components_with_relations();
-					$relation_components[] = 'component_iri';// add the component_iri
-					if ( is_array($data_tm) && in_array( $this->get_model(), $relation_components) ){
-
-						// Get only the component data. Remove possible dataframe data
-						// component_iri exception, it doesn't has from_componnet_tipo to select its own tm data
-						if($this->get_model()==='component_iri'){
-							$data_tm = array_values( array_filter( $data_tm, function($el) {
-								// return only the objects with iri property
-								return property_exists($el, 'iri');;
-							}));
-						}else{
-							// any other relation component
-							$data_tm = array_values( array_filter( $data_tm, function($el) use($component_tipo) {
-								return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
-							}));
-						}
-
-						// If the component is a dataframe filter the tm data with the section_id_key also.
-						if($this->get_model()==='component_dataframe'){
-
-							$section_id_key			= $this->caller_dataframe->section_id_key;
-							$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
-							$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
-
-							$data_tm = array_values( array_filter( $data_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
-								return ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
-									&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
-									&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
-							}));
-						}
-					}
-
-					// inject data to component
-					$this->data_resolved = $data_tm;
-
-				return $this->data_resolved;
+			// matrix_id check
+			if (empty($this->matrix_id)) {
+				debug_log(__METHOD__
+					." ERROR. 'matrix_id' IS MANDATORY IN TIME MACHINE MODE. " .PHP_EOL
+					. ' class: ' . get_called_class() . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				return null;
 			}
+
+			// If the component is a dataframe
+			// its data is saved with the main component data in time machine
+			// in those cases, tipo to search in time machine is the main component tipo of the dataframe
+			// all other is its own tipo
+			$component_tipo			=  $this->tipo;
+			$search_component_tipo	= ($this->get_model()==='component_dataframe')
+				? $this->get_main_component_tipo()
+				: $component_tipo;
+
+			// tm data. Note that no lang or section_id is needed, only matrix_id
+			// data_tm is a full data stored into tm row
+			// it will need to be filter to remove possible dataframe data
+			$data_tm = component_common::get_component_tm_data(
+				$search_component_tipo,
+				$this->section_tipo,
+				$this->matrix_id
+			);
+
+			// Main components with dataframe and other relation components.
+			$relation_components = component_relation_common::get_components_with_relations();
+			$relation_components[] = 'component_iri';// add the component_iri
+			if ( is_array($data_tm) && in_array( $this->get_model(), $relation_components) ){
+
+				// Get only the component data. Remove possible dataframe data
+				// component_iri exception, it doesn't have from_component_tipo to select its own tm data
+				if($this->get_model()==='component_iri'){
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						// return only the objects with iri property
+						return is_object($el) && property_exists($el, 'iri');
+					}));
+				}else{
+					// any other relation component
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($component_tipo) {
+						return is_object($el) && isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+					}));
+				}
+
+				// If the component is a dataframe filter the tm data with the section_id_key also.
+				if($this->get_model()==='component_dataframe' && isset($this->caller_dataframe)){
+
+					$section_id_key			= $this->caller_dataframe->section_id_key;
+					$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
+					$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
+
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
+						return is_object($el)
+							&& ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
+							&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
+							&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
+					}));
+				}
+			}
+
+			// inject data to component
+			$this->data_resolved = is_array($data_tm) ? $data_tm : null;
+
+			return $this->data_resolved;
+		}
 
 		// MATRIX DATA : Load matrix data
 		$this->load_component_data();
@@ -964,9 +987,10 @@ abstract class component_common extends common {
 						, logger::WARNING
 					);
 				}
+				// Force to array to prevent fatal TypeError on return
+				$data = [$data];
 			}
 		}
-
 
 		return $data;
 	}//end get_data
@@ -1160,8 +1184,8 @@ abstract class component_common extends common {
 				// If an object with an 'id' property was found, but the id value itself is
 				// invalid (null, 0, or non-numeric), log the error.
 				$log_message = (null !== $id)
-					? ' iri data with invalid id value: ' . var_export($id, true)
-					: ' iri data without id';
+					? ' data with invalid id value: ' . var_export($id, true)
+					: ' data without id';
 				// Log detailed information about the missing/invalid id.
 				debug_log(__METHOD__
 					. $log_message . PHP_EOL
@@ -1209,7 +1233,7 @@ abstract class component_common extends common {
 			// // Skip non-objects. Validate current_value is an object with id property
 			if (!is_object($current_value)) {
 				debug_log(__METHOD__
-					. ' iri malformed data (non-object)' . PHP_EOL
+					. ' malformed data (non-object)' . PHP_EOL
 					. ' section_id: '. $this->section_id . PHP_EOL
 					. ' section_tipo: '. $this->section_tipo . PHP_EOL
 					. ' tipo: '. $this->tipo . PHP_EOL
@@ -1225,7 +1249,7 @@ abstract class component_common extends common {
 			// Check the current value of the 'id' property and notify if it is malformed.
 			if( empty($valid_id) ){
 				debug_log(__METHOD__
-					. " iri malformed data (missing id)" . PHP_EOL
+					. " malformed data (missing id)" . PHP_EOL
 					. " section_id: ". $this->section_id . PHP_EOL
 					. " section_tipo: ". $this->section_tipo . PHP_EOL
 					. " tipo: ". $this->tipo . PHP_EOL
@@ -2181,55 +2205,29 @@ abstract class component_common extends common {
 			$fields_separator			= ', ';
 			$components_with_relations	= component_relation_common::get_components_with_relations();
 
-		// search_query_object cases
-			switch (true) {
+		// target_section_tipo
+			$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
+			$target_section_tipo	= reset($ar_target_section_tipo);
 
-				case isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search):
+		// new search_query_object
+			$search_query_object = new search_query_object();
+				$search_query_object->set_section_tipo($ar_target_section_tipo);
+				$search_query_object->set_limit(0);
+				$search_query_object->set_skip_projects_filter(true);
 
-					// filter . expected array
-						$filter = (isset($this->properties->filtered_by_search_dynamic))
-							? $this->parse_search_dynamic($this->properties->filtered_by_search_dynamic)
-							: json_decode( json_encode($this->properties->filtered_by_search));
+		// filter cases
+			if (isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search)) {
 
-					// target_section_tipo
-						$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
-						$target_section_tipo	= reset($ar_target_section_tipo);
+				// filter . expected array
+					$filter = (isset($this->properties->filtered_by_search_dynamic))
+						? $this->parse_search_dynamic($this->properties->filtered_by_search_dynamic)
+						: json_decode( json_encode($this->properties->filtered_by_search));
 
-					// new search_query_object
-						// $search_query_object = new stdClass();
-						// 	$search_query_object->section_tipo 			= $target_section_tipo;
-						// 	$search_query_object->limit 				= 0;
-						// 	$search_query_object->skip_projects_filter 	= true;
-						// 	$search_query_object->filter 				= $filter;
-						$search_query_object = new search_query_object();
-							$search_query_object->set_section_tipo($ar_target_section_tipo);
-							$search_query_object->set_limit(0);
-							$search_query_object->set_skip_projects_filter(true);
-							$search_query_object->set_filter($filter);
+					$search_query_object->set_filter($filter);
 
-					$hash_id = '_'.md5(json_encode($filter));
-					break;
-
-				default:
-
-					// target_section_tipo
-						// get_ar_related_by_model: $model_name, $tipo, $strict=true
-						// $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
-						$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
-						$target_section_tipo	= reset($ar_target_section_tipo);
-
-					// new search_query_object
-						// $search_query_object = new stdClass();
-						// 	$search_query_object->section_tipo 			= $target_section_tipo;
-						// 	$search_query_object->limit 				= 0;
-						// 	$search_query_object->skip_projects_filter 	= true;
-						$search_query_object = new search_query_object();
-							$search_query_object->set_section_tipo($ar_target_section_tipo);
-							$search_query_object->set_limit(0);
-							$search_query_object->set_skip_projects_filter(true);
-
-					$hash_id = '';
-					break;
+				$hash_id = '_'.md5(json_encode($filter));
+			} else {
+				$hash_id = '';
 			}
 
 		// check target_section_tipo
@@ -2250,7 +2248,7 @@ abstract class component_common extends common {
 			}
 
 		// cache
-			$cache_key = isset($target_section_tipo)
+			$cache_key = !empty($target_section_tipo)
 				? $target_section_tipo .'_'. $lang . $hash_id
 				: $this->tipo .'_'. $lang . $hash_id;
 			if (isset(self::$ar_list_of_values_data_cache[$cache_key])) {
@@ -2276,7 +2274,6 @@ abstract class component_common extends common {
 					);
 					// add selector lag 'all' to last element of path
 					$end_path = end($path);
-					// $end_path->lang = 'all';
 
 				// selected item
 					$column = section_record_data::get_column_name($end_path->model);
@@ -2305,20 +2302,12 @@ abstract class component_common extends common {
 				$value->section_id		= $current_row->section_id;
 				$value->section_tipo	= $current_row->section_tipo;
 
-			// get_locator_value: $locator, $lang, $show_parents=false, $ar_components_related, $fields_separator=', '
-			// $label = component_relation_common::get_locator_value(
-			// 	$value, // object locator
-			// 	$lang, // string lang
-			// 	false, // bool show_parents
-			// 	$ar_components_related, // array|null ar_components_related
-			// );
-
 			// Build label
 				$ar_label = [];
 				foreach ($ar_components_related as $related_tipo) {
 
 					$model_name = ontology_node::get_model_by_tipo($related_tipo,true);
-					// if ($model_name==='component_autocomplete_hi') {
+					// relation components validation
 					if (in_array($model_name, $components_with_relations)) {
 
 						// resolve locator_value
@@ -2335,12 +2324,12 @@ abstract class component_common extends common {
 					}elseif ($model_name==='component_section_id') {
 
 						// direct value
-						$current_label = $current_row->{$related_tipo};
+						$current_label = $current_row->{$related_tipo} ?? null;
 					}else{
 
 						// use query select value
-						$data = $current_row->{$related_tipo};
-						if( is_string($data) ) {
+						$data = $current_row->{$related_tipo} ?? null;
+						if (is_string($data)) {
 							// decode raw db column data to object or array format. (json)
 							$data = json_decode($data);
 						}
@@ -2368,18 +2357,22 @@ abstract class component_common extends common {
 		}
 
 		// Sort result for easy user select
-			if(isset($this->properties->sort_by)){
+			if (isset($this->properties->sort_by)) {
 				$custom_sort = reset($this->properties->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
 					usort($result, function($a,$b) use($custom_sort){
-						return strnatcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+						$val_a = $a->{$custom_sort->path} ?? '';
+						$val_b = $b->{$custom_sort->path} ?? '';
+						return strnatcmp((string)$val_b, (string)$val_a);
 					});
-				}else{
+				} else {
 					usort($result, function($a,$b) use($custom_sort){
-						return strnatcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+						$val_a = $a->{$custom_sort->path} ?? '';
+						$val_b = $b->{$custom_sort->path} ?? '';
+						return strnatcmp((string)$val_a, (string)$val_b);
 					});
 				}
-			}else{
+			} else {
 				// Default. Alphabetic ascendant label
 				usort($result, function($a,$b){
 					return strnatcmp($a->label, $b->label);
@@ -2389,7 +2382,7 @@ abstract class component_common extends common {
 		// response OK
 			$response->result	= (array)$result;
 			$response->msg		= 'OK';
-			if(SHOW_DEBUG===true) {
+			if (SHOW_DEBUG===true) {
 				$response->search_query_object	= json_encode($search_query_object, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 				$response->debug				= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 			}
@@ -2427,13 +2420,14 @@ abstract class component_common extends common {
 			$request_config = $this->request_config ?? [];
 
 		// dedalo_request_config
-			$dedalo_request_config = array_find($request_config, function($el){
+			$dedalo_request_config = array_find((array)$request_config, function($el){
 				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
 			// if the component has not created his own request_config, create new one
-			$dedalo_request_config = isset($dedalo_request_config)
-				? $dedalo_request_config
-				: $this->build_request_config()[0];
+			if (!isset($dedalo_request_config)) {
+				$built_config = $this->build_request_config();
+				$dedalo_request_config = !empty($built_config) ? $built_config[0] : null;
+			}
 
 		// empty request config case (ERROR). Stop execution
 			if (empty($dedalo_request_config)) {
@@ -2461,7 +2455,7 @@ abstract class component_common extends common {
 			// for any other components will be the request config definition in sqo.
 			$ar_target_section = $this->get_model()==='component_relation_model'
 				? $this->get_ar_target_section_tipo()
-				: $dedalo_request_config->sqo->section_tipo;
+				: ($dedalo_request_config->sqo->section_tipo ?? []);
 
 				// ar_sections_tipo. All target sections defined
 				$ar_sections_tipo = [];
@@ -2541,16 +2535,16 @@ abstract class component_common extends common {
 					$locator->set_section_id($row->section_id);
 
 				// get the values of the show
-				$show_ddo_map = $dedalo_request_config->show->ddo_map;
+				$show_ddo_map = $dedalo_request_config->show->ddo_map ?? [];
 
 				$ar_label = [];
 				foreach ($show_ddo_map as $ddo) {
 
 					// ignore non component ddo
-					if (strpos($ddo->model, 'component_')===false) {
+					if (empty($ddo->model) || strpos($ddo->model, 'component_')===false) {
 						debug_log(__METHOD__
 							. " Ignored non component model ddo in get_list_of_values " . PHP_EOL
-							. ' model: ' . to_string($ddo->model) . PHP_EOL
+							. ' model: ' . to_string($ddo->model ?? null) . PHP_EOL
 							. ' ddo: ' . to_string($ddo)
 							, logger::ERROR
 						);
@@ -2574,7 +2568,7 @@ abstract class component_common extends common {
 				// hide component are used as internal data of the component, it doesn't show into the list.
 				$ar_hide = [];
 				if(isset($dedalo_request_config->hide)){
-					$hide_ddo_map = $dedalo_request_config->hide->ddo_map;
+					$hide_ddo_map = $dedalo_request_config->hide->ddo_map ?? [];
 
 					foreach ($hide_ddo_map as $ddo) {
 
@@ -2610,18 +2604,28 @@ abstract class component_common extends common {
 			}
 
 		// Sort result for easy user select
-			if(isset($this->properties->sort_by)){
+			if (isset($this->properties->sort_by)) {
 				$custom_sort = reset($this->properties->sort_by); // Only one at this time
 				if ($custom_sort->direction==='DESC') {
 					usort($result, function($a,$b) use($custom_sort){
-						return $b->{$custom_sort->path} - $a->{$custom_sort->path};
+						$val_a = $a->{$custom_sort->path} ?? 0;
+						$val_b = $b->{$custom_sort->path} ?? 0;
+						if (is_numeric($val_a) && is_numeric($val_b)) {
+							return $val_b <=> $val_a;
+						}
+						return strnatcmp((string)$val_b, (string)$val_a);
 					});
-				}else{
+				} else {
 					usort($result, function($a,$b) use($custom_sort){
-						  return $a->{$custom_sort->path} - $b->{$custom_sort->path};
+						$val_a = $a->{$custom_sort->path} ?? 0;
+						$val_b = $b->{$custom_sort->path} ?? 0;
+						if (is_numeric($val_a) && is_numeric($val_b)) {
+							return $val_a <=> $val_b;
+						}
+						return strnatcmp((string)$val_a, (string)$val_b);
 					});
 				}
-			}else{
+			} else {
 				// Default. Alphabetic ascendant label
 				usort($result, function($a,$b){
 					return strnatcmp($a->label, $b->label);
@@ -3354,6 +3358,17 @@ abstract class component_common extends common {
 				$cache, // bool cache (synced whit this component)
 				$this->caller_dataframe ?? null
 			);
+
+			if ($section === false) {
+				debug_log(__METHOD__
+					. " Error Processing Request. Section could not be instantiated. " . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' component tipo: ' . $this->tipo
+					, logger::ERROR
+				);
+				throw new Exception("Error Processing Request. Section could not be instantiated for section_tipo: " . $this->section_tipo, 1);
+			}
+
 			$this->section_obj = $section;
 
 		return $this->section_obj;
@@ -3373,13 +3388,15 @@ abstract class component_common extends common {
 				return $this->section_record;
 			}
 
+		// section_id validation for strict types
+			$section_id = is_scalar($this->section_id) ? (int)$this->section_id : 0;
+
 		// section record build instance
 			$this->section_record = section_record::get_instance(
 				$this->section_tipo,
-				(int)$this->section_id,
+				$section_id,
 				$this->is_temporal
 			);
-
 
 		return $this->section_record;
 	}//end get_my_section_record
@@ -3487,7 +3504,7 @@ abstract class component_common extends common {
 				*/
 
 				$data[] = $changed_data->value;
-
+				// set the data in current lang
 				$this->set_data_lang( $data, $lang );
 
 				//set the observable data used to send other components that observe you, if insert it will need the final data, with new references
@@ -4019,26 +4036,30 @@ abstract class component_common extends common {
 
 	/**
 	* IS_EMPTY
-	* Generic check if given value is or not empty considering
-	* @param object|null $data_item
+	* Generic check if given value is or not empty considering.
+	* Use only for data entries.
+	* @param mixed $data_item
 	* @return bool
 	*/
-	public function is_empty( ?object $data_item ) : bool {
+	public function is_empty( mixed $data_item ) : bool {
 
 		// null case explicit
 		if( $data_item===null ) {
 			return true;
 		}
 
-		// object|array case
-		if ( is_object($data_item) || is_array($data_item)) {
-			foreach ($data_item as $key => $value) {
-				if($key!=='value'){
-					continue;
-				}
-				if( !empty($value) || $value==='0' || $value===0 || $value===0.0 ) {
-					return false;
-				}
+		// non object case. As data entry, is considered empty.
+		if ( !is_object($data_item) ) {
+			return true;
+		}
+
+		// object case
+		foreach ($data_item as $key => $value) {
+			if($key!=='value'){
+				continue;
+			}
+			if( !empty($value) || $value==='0' || $value===0 || $value===0.0 ) {
+				return false;
 			}
 		}
 

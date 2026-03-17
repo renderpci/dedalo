@@ -19,17 +19,18 @@
 	top: -0.1px;
 	left: 0px;
 	z-index: 4;
+	background-color: @color_grey_1;
+	box-shadow: 0 2px 3px @color_grey_7;
 
 	>.content_data {
 		// vars
 		--menu_heigth: 2.2rem;
 
+		position: relative;
 		width: 100%;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		box-shadow: 0 2px 3px @color_grey_7;
-		background-color: @color_grey_1;
 		font-size: 1rem;
 		color: @color_white;
 		line-height: 1.2em;
@@ -39,12 +40,12 @@
 		}
 
 		// prevents menu don't scroll in mobile
-		@media screen and (max-width: @width_break_point_0) { // 1024px
-			position: relative;
-			--menu_heigth: 3rem
+		@media screen and (max-width: @width_break_point_3) { // 1185px
+			// position: relative;
+			// --menu_heigth: 3rem
 		}
 
-		&.wrapping {
+		&.compact {
 			>.menu_hierarchy, >.ontology {
 				display: none;
 			}
@@ -113,9 +114,7 @@
 				margin-left: 0.5rem;
 				z-index: 2;
 
-				@media screen and (max-width: @width_break_point_0) { // 1024px
-					display: none;
-				}
+
 
 				ul {
 					display: none;
@@ -295,9 +294,7 @@
 					opacity: 0.5;
 				}
 
-				@media screen and (min-width: @width_break_point_0) { // 1024px
-					display: none;
-				}
+				display: none;
 			}
 			>.menu_mobile_wrapper {
 				width: 100%;
@@ -306,9 +303,7 @@
 				font-size: 1.25rem;
 				padding: 1rem;
 
-				@media screen and (min-width: @width_break_point_0) { // 1024px
-					display: none;
-				}
+				display: none;
 
 				.menu_mobile_item {
 					display: block;
@@ -337,7 +332,7 @@
 							right: 0.66em;
 							pointer-events: none;
 
-							@media screen and (min-width: @width_break_point_0) { // 1024px
+							@media screen and (min-width: @width_break_point_3) { // 1185px
 								top: 0.66em;
 							}
 						}
@@ -363,7 +358,7 @@
 				cursor: pointer;
 
 				&.top_item {
-					@media screen and (max-width: @width_break_point_0) { // 1024px
+					@media screen and (max-width: @width_break_point_3) { // 1185px
 						display: none;
 					}
 				}
@@ -391,7 +386,7 @@
 				background-color: transparent;
 				height: auto;
 				max-width: 99.9%;
-				padding-left: 0.6em;
+				padding-left: 0px;
 				padding-right: 1em;
 				color: @color_grey_11;
 				border: none;
@@ -412,7 +407,7 @@
 					margin-left: 0.5rem;
 				}
 
-				@media screen and (max-width: @width_break_point_0) { // 1024px
+				@media screen and (max-width: @width_break_point_3) { // 1185px
 					text-overflow: ellipsis;
 					width: 6rem;
 					font-size: 1rem;
@@ -431,134 +426,146 @@
 		// spacer
 			>.menu_spacer {
 				flex: 1;
-
-				@media screen and (max-width: @width_break_point_0) { // 1024px
-					display: none;
-				}
-			}
-
-		// section label. Current section name
-			>.section_label {
-				cursor: pointer;
-				margin-right: 1rem;
-				user-select: none;
-
-				@media screen and (max-width: @width_break_point_0) { // 1024px
-					font-size: 1rem;
-					text-align: right;
-					flex: 1;
-				}
-
-				&:hover {
-					opacity: 1;
-				}
-				&:active {
-					opacity: 0.4;
-				}
-
-				&.inactive {
-					cursor: default;
-					pointer-events: none;
-					opacity: 0.9;
-				}
-			}
-
-		// inspector toggle button
-			>.button_toggle_inspector {
-				background-image: url('../../themes/default/icons/inspector.svg');
-				background-repeat: no-repeat;
-				background-size: contain;
-				background-position: center;
-				width: 1.4rem;
-				height: 1rem;
-				margin-right: 1rem;
-				margin-left: 0px;
-				cursor: pointer;
-
-				&:active {
-					opacity: 0.4;
-				}
-
-				@media screen and (max-width: @width_break_point_0) { // 1024px
-					display: none;
-				}
-			}
-
-		// debug info bar
-			>.debug_info_bar {
-				background-color: lighten(@color_grey_4, 2%);
-				width: 100%;
 				margin: 0px;
-				padding: 0px;
-				padding-right: 0.5rem;
+
+				@media screen and (max-width: @width_break_point_3) { // 1185px
+					display: none;
+				}
+			}
+
+		// section label container
+			>.section_label_container {
 				display: flex;
-				flex-wrap: wrap;
-				flex-basis: 100%;
-				line-height: var(--menu_heigth);
-				min-height: var(--menu_heigth);
-				font-size: 1rem;
+				flex-direction: row;
+				align-items: center;
+				justify-content: center;
 
-				@media screen and (max-width: @width_break_point_0) { // 1024px
-					line-height: 1.5rem;
-					padding: 0.5rem;
-				}
-
-				>div {
-					padding-left: 1em;
-					color: @color_grey_8;
-					font-size: 94%;
-				}
-
-				>.dedalo_version {
-
-					&.beta {
-						// color: #d14546;
-					}
-				}
-
-				>.service_worker_active {
-					.fn_build_button('gears.svg');
-
-					width: 1.3rem;
-					height: 2.2rem;
-					display: inline-block;
-					margin-left: 0.9rem;
-					margin-right: 0px;
-					opacity: 1;
-					cursor: default;
-					background-color: @color_orange_dedalo;
-
-					@media screen and (max-width: @width_break_point_0) { // 1024px
-						height: 1.5rem;
-					}
-				}
-
-				>.environment {
-					.fn_build_button('gear.svg');
-
+				// section label. Current section name
+				>.section_label {
 					cursor: pointer;
-					width: 1rem;
-					height: 2.2rem;
-					display: inline-block;
-					margin-left: 0.9rem;
-					background-color: @color_grey_8;
+					margin-right: 1rem;
+					user-select: none;
+					// min-width: 5rem;
 
-					@media screen and (max-width: @width_break_point_0) { // 1024px
-						height: 1.5rem;
+					@media screen and (max-width: @width_break_point_1) { // 960px
+						font-size: 1rem;
+						text-align: right;
+						flex: 1;
+					}
+
+					&:hover {
+						opacity: 1;
+					}
+					&:active {
+						opacity: 0.4;
+					}
+
+					&.inactive {
+						cursor: default;
+						pointer-events: none;
+						opacity: 0.9;
 					}
 				}
 
-				.ip_server {
-					position: absolute;
-					right: 1rem;
+				// inspector toggle button
+				>.button_toggle_inspector {
+					background-image: url('../../themes/default/icons/inspector.svg');
+					background-repeat: no-repeat;
+					background-size: contain;
+					background-position: center;
+					width: 1.4rem;
+					height: 2rem;
+					margin-right: 1rem;
+					margin-left: 0px;
+					cursor: pointer;
 
-					@media screen and (max-width: @width_break_point_0) { // 1024px
-						position: relative;
-						margin-left: 1rem;
+					&:active {
+						opacity: 0.4;
+					}
+
+					@media screen and (max-width: @width_break_point_3) { // 1185px
+						display: none;
 					}
 				}
 			}
 	}//end content_data
+
+	// debug info bar
+	>.debug_info_bar {
+		contain: content;
+		background-color: lighten(@color_grey_4, 2%);
+		width: 100%;
+		margin: 0px;
+		padding: 0.35rem;
+		padding-left: 0px;
+		padding-bottom: 0.5rem;
+		display: flex;
+		flex-wrap: wrap;
+		flex-basis: 100%;
+		align-items: center;
+		// line-height: var(--menu_heigth);
+		line-height: 1.3rem;
+		min-height: var(--menu_heigth);
+		font-size: 1rem;
+
+		@media screen and (max-width: @width_break_point_3) { // 1185px
+			// line-height: 1.5rem;
+			// padding: 0.5rem;
+		}
+
+		>div {
+			padding-left: 1em;
+			color: @color_grey_8;
+			font-size: 94%;
+		}
+
+		>.dedalo_version {
+
+			&.beta {
+				// color: #d14546;
+			}
+		}
+
+		>.service_worker_active {
+			.fn_build_button('gears.svg');
+
+			width: 1.3rem;
+			height: 2.2rem;
+			display: inline-block;
+			margin-left: 0.9rem;
+			margin-right: 0px;
+			opacity: 1;
+			cursor: default;
+			background-color: @color_orange_dedalo;
+
+			@media screen and (max-width: @width_break_point_3) { // 1185px
+				height: 1.5rem;
+			}
+		}
+
+		>.environment {
+			.fn_build_button('gear.svg');
+			// width: 1rem;
+			// height: 2.2rem;
+			// display: inline-block;
+			margin-left: 0.75rem;
+			background-color: @color_grey_9;
+
+			@media screen and (max-width: @width_break_point_3) { // 1185px
+				// height: 1.5rem;
+			}
+		}
+
+		.ip_server {
+			position: absolute;
+			right: 1rem;
+
+			@media screen and (max-width: @width_break_point_3) { // 1185px
+				position: relative;
+				margin-left: 1rem;
+			}
+		}
+	}
 }//end .menu_wrapper
 
 // out of element styles

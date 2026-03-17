@@ -2672,7 +2672,7 @@ export const ui = {
 		// defaults definitions by model
 		// if ddo width is not defined, use this defaults
 			const width_defaults = {
-				section_id				: 'minmax(auto, 6rem)',
+				section_id				: 'minmax(auto, var(--column_id_width))', // 6rem default from var.less root
 				component_publication	: '5rem',
 				component_info			: 'minmax(9rem, 1fr)',
 				component_3d			: '102px',
@@ -2952,9 +2952,12 @@ export const ui = {
 			class_name		: 'exit_button',
 			parent			: node
 		})
-		const click_handler = function(e) {
-			e.stopPropagation()
-
+		// set exit event
+		const exit_fullscreen = function(e) {
+			if (e && e.key !== 'Escape') {
+				return
+			}
+			document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 			node.classList.remove('fullscreen')
 			if (menu_wrapper) {
 				menu_wrapper.classList.remove('hide')
@@ -2964,26 +2967,13 @@ export const ui = {
 				exit_callback()
 			}
 		}
-		exit_button.addEventListener('click', click_handler)
-
-		// set exit event
-		const exit_fullscreen = function(e) {
-
-			if (e.key==='Escape') {
-				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
-
-				node.classList.remove('fullscreen')
-				if (menu_wrapper) {
-					menu_wrapper.classList.remove('hide')
-				}
-				exit_button.remove()
-				if(exit_callback){
-					exit_callback()
-				}
-			}
-		}
 		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 
+		const click_handler = function(e) {
+			e.stopPropagation()
+			exit_fullscreen()
+		}
+		exit_button.addEventListener('click', click_handler)
 
 		return true
 	},//end enter_fullscreen
@@ -2998,7 +2988,7 @@ export const ui = {
 	*/
 	get_ontology_term_link(tipo) {
 
-		const url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+		const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${tipo}`
 
 		const ontology_term_link = ui.create_dom_element({
 			element_type	: 'a',

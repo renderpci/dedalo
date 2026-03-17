@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global SHOW_DEBUG, DEDALO_CORE_URL */
+/*global SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB, DEDALO_API_URL, DEVELOPMENT_SERVER, page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -21,29 +21,20 @@
 */
 export const login = function() {
 
-	this.id
-
-	// element properties declare
-	this.model
-	this.type
-	this.tipo
-	this.mode
-	this.lang
-
-	this.datum
-	this.context
-	this.data
-
-	this.node
+	this.id = null
+	this.model = null
+	this.tipo = null
+	this.mode = null
+	this.lang = null
+	this.datum = null
+	this.context = null
+	this.data = null
+	this.node = null
 	this.ar_instances = []
-
-	this.custom_action_dispatch
-	this.add_select_lang
-	this.select_lang
-
-	this.status
-
-	// use_service_worker. default is true
+	this.custom_action_dispatch = null
+	this.add_select_lang = null
+	this.select_lang = null
+	this.status = null
 	this.use_service_worker = true
 }//end login
 
@@ -243,7 +234,7 @@ login.prototype.login = async function(options) {
 * }
 * @return void
 */
-login.quit = async function(options={}) {
+login.quit = async function() {
 
 	const self = this
 
@@ -254,7 +245,7 @@ login.quit = async function(options={}) {
 	event_manager.publish('quit', self)
 
 	// is_developer. Determine if the user is a developer
-	const is_developer = page_globals.is_developer ?? false;
+	const is_developer = typeof page_globals !== 'undefined' ? (page_globals.is_developer ?? false) : false;
 
 	try {
 
@@ -365,7 +356,7 @@ login.prototype.action_dispatch = async function(api_response) {
 			const is_development_server	= typeof DEVELOPMENT_SERVER!=='undefined' && DEVELOPMENT_SERVER===true
 
 			// hide component_message OK
-				const component_message = self.node.content_data.querySelector('.component_message.ok')
+				const component_message = self.node?.content_data?.querySelector('.component_message.ok')
 				if (component_message) {
 					component_message.classList.add('hide')
 				}
@@ -379,11 +370,11 @@ login.prototype.action_dispatch = async function(api_response) {
 					await (()=>{
 						return new Promise(function(resolve, reject){
 							const img = document.createElement('img')
-							img.addEventListener('load', function(e) {
+							img.addEventListener('load', function() {
 								img.remove()
 								resolve(true)
 							})
-							img.addEventListener('error', function(e) {
+							img.addEventListener('error', function() {
 								reject(false)
 							})
 							requestAnimationFrame(()=>{
@@ -397,7 +388,7 @@ login.prototype.action_dispatch = async function(api_response) {
 					})();
 					// CSS
 					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
-					if (user_id===-1 && is_development_server===true) {
+					if (user_id===-1 && is_development_server===true && self.node) {
 						self.node.classList.add('raspa_loading')
 					}
 					// wait for some extra time to allow CSS transitions to be completed
@@ -444,19 +435,25 @@ login.prototype.action_dispatch = async function(api_response) {
 
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (updated by messages info)
 				const files_loader = render_files_loader()
-				self.node.content_data.top.appendChild(files_loader)
+				if (self.node?.content_data?.top) {
+					self.node.content_data.top.appendChild(files_loader)
+				}
 
 			// handlers
 				// ready handler. Fired when ready status is triggered in workers
 					const ready_handler = () => {
 						// hide things
-						if (self.node.content_data.select_lang) {
-							self.node.content_data.select_lang.classList.add('hide')
+						if (self.node?.content_data) {
+							if (self.node.content_data.select_lang) {
+								self.node.content_data.select_lang.classList.add('hide')
+							}
+							if (self.node.content_data.form) {
+								self.node.content_data.form.classList.add('hide')
+							}
 						}
-						self.node.content_data.form.classList.add('hide')
 
 						// show things
-						self.node.content_data.top.classList.remove('hide')
+						self.node?.content_data?.top?.classList.remove('hide')
 
 						// raspa_loading Development local only
 						if (user_id===-1) {
@@ -583,6 +580,7 @@ export const run_service_worker = async (options) => {
 			// serviceWorker is ready. Post message 'update_files' to
 			// force serviceWorker to reload the Dédalo main files
 			navigator.serviceWorker.ready.then((registration) => {
+				if (!registration.active) return;
 				console.log('Service worker is ready. Posting message update_files');
 				// posting 'update_files' message, tells serviceWorker that cache files
 				// must to be updated.

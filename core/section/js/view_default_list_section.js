@@ -7,7 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -159,6 +159,9 @@ view_default_list_section.render = async function(self, options) {
 		}//end set_list_body_css
 		set_list_body_css(true)
 
+		// Adapt section_id column width/font to the longest ID on this page (first render)
+		view_default_list_section.adapt_section_id_column(list_body, self)
+
 	// list_header_node. Create and append if ar_instances is not empty
 		const list_header_node = ui.render_list_header(columns_map, self)
 		list_body.appendChild(list_header_node)
@@ -233,9 +236,55 @@ view_default_list_section.get_content_data = async function(self, ar_section_rec
 			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
+	// Re-adapt section_id column on every content refresh (pagination).
+	// self.node_body is set on first render; on pagination it is the existing list_body.
+		if (self.node_body) {
+			view_default_list_section.adapt_section_id_column(self.node_body, self)
+		}
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+ * ADAPT_SECTION_ID_COLUMN
+ * Computes the font-size and column-width CSS variables needed to fit
+ * the longest section_id in the current page into the id column.
+ * @param {HTMLElement} list_body_node
+ * @param {Object} self - The section instance
+ */
+view_default_list_section.adapt_section_id_column = function(list_body_node, self) {
+	if (!list_body_node || !self) return
+
+	const ar_entries = self.data?.entries || []
+	if (ar_entries.length === 0) return
+
+	const base_size = 1.25 // matches --section_id_font_size default in vars.less
+
+	// find the entry whose section_id has the most characters
+	const longest_id = ar_entries.reduce((longest, el) => {
+		const current = String(el.section_id ?? '')
+		return current.length > longest.length ? current : longest
+	}, '')
+
+	if (longest_id.length > 5) {
+		const font_size = get_font_fit_size(longest_id, base_size, 4)
+		if (font_size !== base_size) {
+			const non_button_tipos = ['dd542']
+			if (!non_button_tipos.includes(self.tipo)) {
+				list_body_node.style.setProperty('--section_id_font_size', `${font_size}rem`)
+				const column_id_width = longest_id.length * font_size + 0.25
+				list_body_node.style.setProperty('--column_id_width', `${column_id_width}rem`)
+				return
+			}
+		}
+	}
+
+	// reset: new page has short IDs — undo any previously applied enlargement
+	list_body_node.style.removeProperty('--section_id_font_size')
+	list_body_node.style.removeProperty('--column_id_width')
+}//end adapt_section_id_column
 
 
 
@@ -262,7 +311,7 @@ view_default_list_section.rebuild_columns_map = async function(self) {
 		label		: 'Id',
 		tipo		: 'section_id', // used to sort only
 		sortable	: true,
-		width		: 'minmax(auto, 7rem)',
+		width		: 'minmax(auto, var(--column_id_width))',
 		path		: [{
 			// note that component_tipo=section_id is valid here
 			// because section_id is a direct column in search

@@ -6,10 +6,10 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		clone,
-		get_font_fit_size,
 		object_to_url_vars,
 		open_window
 	} from '../../common/js/utils/index.js'
@@ -116,13 +116,8 @@ export const render_column_id = function(options) {
 		if(SHOW_DEBUG===true) {
 			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
-		// adjust the font size to fit it into the column
-		// @see https://www.freecodecamp.org/news/learn-css-units-em-rem-vh-vw-with-code-examples/#what-are-vw-units
-		const base_size	= 1.25 // defined as --font_size: 1.25rem; into CSS (list.less)
-		const font_size	= get_font_fit_size(section_id, base_size, 4)
-		if (font_size!==base_size) {
-			section_id_node.style.setProperty('--font_size', `${font_size}rem`);
-		}
+		// font-size and column width are adapted once at the list level
+		// via scoped CSS variables set on list_body — see view_default_list_section.get_content_data
 
 	// buttons
 		switch(true){
@@ -130,34 +125,95 @@ export const render_column_id = function(options) {
 			// initiator. is a url var used in iframe containing section list to link to opener portal
 			case (self.initiator && self.initiator.indexOf('component_')!==-1): {
 
+				const top_window 	= window.parent
+				const initiator		= self.initiator
+				const caller_instance = top_window ? top_window.get_instance_by_id(initiator) : null
+
+				// link_icon
+					const link_icon = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button link icon hide_opacity'
+					})
+
 				// link_button. component portal caller (link)
 					const link_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'link_button',
 						parent			: fragment
 					})
-					link_button.addEventListener('click', function(e) {
+
+				// update link button
+					_update_link_button(initiator, link_icon, link_button, section_tipo, section_id)
+
+				// Click event
+					const link_click_handler = (e) => {
 						e.stopPropagation()
 
-						const top_window = window.parent
-						if (!top_window.event_manager) {
+						if (!top_window || !top_window.event_manager) {
 							console.error('Unable to get top_window event_manager:', top_window);
 							return
 						}
 
-						// top window event
-						top_window.event_manager.publish('initiator_link_' + self.initiator, {
-							section_tipo	: section_tipo,
-							section_id		: section_id
-						})
-					})
+						const item_key = String(section_tipo) + '_' + String(section_id)
+						const is_added = caller_instance && caller_instance.session_linked_items
+							? caller_instance.session_linked_items.get(item_key) === true
+							: false
+
+						if (is_added) {
+							// top window event to unlink
+							top_window.event_manager.publish('initiator_unlink_' + initiator, {
+								section_tipo	: section_tipo,
+								section_id		: section_id,
+								close_modal		: false
+							})
+							// update session state
+							if (caller_instance && caller_instance.session_linked_items) {
+								caller_instance.session_linked_items.set(item_key, false)
+							}
+							// keep entries_full synchronized (remove item)
+							if (caller_instance && Array.isArray(caller_instance.data?.entries_full)) {
+								const index = caller_instance.data.entries_full.findIndex(
+									item => String(item.section_tipo) === String(section_tipo) && String(item.section_id) === String(section_id)
+								)
+								if (index !== -1) caller_instance.data.entries_full.splice(index, 1)
+							}
+							if (caller_instance && caller_instance.data?.pagination?.total !== undefined) {
+								caller_instance.data.pagination.total = Math.max(0, caller_instance.data.pagination.total - 1)
+								caller_instance._linked_cache_total = caller_instance.data.pagination.total
+							}
+							// optimistically update UI
+							_set_link_button_state(false, link_icon, link_button)
+						} else {
+							// top window event to link
+							top_window.event_manager.publish('initiator_link_' + initiator, {
+								section_tipo	: section_tipo,
+								section_id		: section_id,
+								close_modal		: false
+							})
+							// update session state
+							if (caller_instance && caller_instance.session_linked_items) {
+								caller_instance.session_linked_items.set(item_key, true)
+							}
+							// keep entries_full synchronized (add item)
+							if (caller_instance && Array.isArray(caller_instance.data?.entries_full)) {
+								const exists = caller_instance.data.entries_full.some(
+									item => String(item.section_tipo) === String(section_tipo) && String(item.section_id) === String(section_id)
+								)
+								if (!exists) caller_instance.data.entries_full.push({ section_tipo, section_id })
+							}
+							if (caller_instance && caller_instance.data?.pagination?.total !== undefined) {
+								caller_instance.data.pagination.total += 1
+								caller_instance._linked_cache_total = caller_instance.data.pagination.total
+							}
+							// optimistically update UI
+							_set_link_button_state(true, link_icon, link_button)
+						}
+					}
+					link_button.addEventListener('click', link_click_handler)
+					// Append nodes
 					link_button.appendChild(section_id_node)
-					// link_icon
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button link icon',
-						parent			: link_button
-					})
+					link_button.appendChild(link_icon)
+
 
 				// button_edit
 					// const button_edit = ui.create_dom_element({
@@ -566,6 +622,179 @@ export const render_column_id = function(options) {
 
 	return fragment
 }//end render_column_id
+
+
+
+/**
+ * Updates the visual state of a link button and its icon based on whether a record is already linked.
+ * This function fetches the caller component's full data if not already present and uses a Map (session_linked_items)
+ * for efficient lookup of linked records.
+ *
+ * @private
+ * @async
+ * @param {string} initiator - Unique ID of the caller component instance.
+ * @param {HTMLElement} link_icon - The icon element to update.
+ * @param {HTMLElement} [link_button] - Optional button element wrapping the icon.
+ * @param {string|number} section_tipo - The section type of the record being checked.
+ * @param {string|number} section_id - The ID of the record being checked.
+ * @returns {Promise<void>}
+ */
+const _update_link_button = async function(initiator, link_icon, link_button, section_tipo, section_id) {
+
+	if (!initiator) return
+
+	const top_window = window.parent
+	if (!top_window || typeof top_window.get_instance_by_id !== 'function') return
+
+	const caller_instance = top_window.get_instance_by_id(initiator)
+	if (!caller_instance) {
+		console.error('Caller instance not found for initiator:', initiator)
+		return
+	}
+
+	// Cache Invalidation Check
+	// If the parent component's data reference or total changed (e.g. user manually unlinked/linked externally),
+	// we wipe the cached state so it reliably regenerates with fresh component state on reopening the iframe.
+	const current_entries_ref = caller_instance.data?.entries
+	const current_total = caller_instance.data?.pagination?.total
+	if (
+		caller_instance._linked_cache_entries_ref !== current_entries_ref ||
+		caller_instance._linked_cache_total !== current_total
+	) {
+		caller_instance.session_linked_items = null
+		delete caller_instance._loading_full_data
+		if (caller_instance.data) {
+			caller_instance.data.entries_full = null
+		}
+		caller_instance._linked_cache_entries_ref = current_entries_ref
+		caller_instance._linked_cache_total = current_total
+	}
+
+	// Instant Return Optimization
+	// If the session Map already exists, just update the UI and return.
+	if (caller_instance.session_linked_items) {
+		const item_key = String(section_tipo) + '_' + String(section_id)
+		const is_added = caller_instance.session_linked_items.get(item_key) === true
+		_set_link_button_state(is_added, link_icon, link_button)
+
+		requestAnimationFrame(() => link_icon?.classList.remove('hide_opacity'))
+		return
+	}
+
+	// Ensure caller_instance.data exists
+	if (!caller_instance.data) {
+		caller_instance.data = {}
+	}
+
+	// Try to get the full data from the caller instance
+	const total = caller_instance.data.pagination?.total
+	const limit = caller_instance.data.pagination?.limit || 10
+	// Check if the data is below the limit.
+	// If so, fetch the full data from component data, and prevent fetching full data from API.
+	if (total !== undefined && (total <= limit)) {
+		caller_instance.data.entries_full = caller_instance.data.entries || []
+	} else if (!caller_instance.section_id || caller_instance.section_id === '0') {
+		// Optimization: if it is a new record, it cannot have linked items.
+		caller_instance.data.entries_full = []
+	}
+
+	try {
+		// Race condition protection: If data is being loaded, wait for the existing loading promise.
+		// This prevents redundant API calls when multiple buttons (rows) are initialized simultaneously.
+		if (caller_instance._loading_full_data) {
+			await caller_instance._loading_full_data
+		} else if (!caller_instance.data.entries_full) {
+
+			// Create a shared promise for the API request
+			caller_instance._loading_full_data = (async () => {
+				const rqo = {
+					action	: 'read_raw',
+					options	: {
+						type			: 'component',
+						section_tipo	: caller_instance.section_tipo,
+						tipo			: caller_instance.tipo,
+						model			: caller_instance.model
+					},
+					sqo : {
+						select 				: [],
+						section_tipo		: [caller_instance.section_tipo],
+						filter_by_locators 	: [{
+							section_tipo : caller_instance.section_tipo,
+							section_id : caller_instance.section_id
+						}]
+					}
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				// Expecting result[0] to contain the array of linked items
+				caller_instance.data.entries_full = api_response.result?.[0] || []
+			})()
+
+			try {
+				await caller_instance._loading_full_data
+			} finally {
+				delete caller_instance._loading_full_data
+			}
+		}
+
+		// Initialize session_linked_items Map once from the full data array
+		if (!caller_instance.session_linked_items) {
+			caller_instance.session_linked_items = new Map()
+			if (Array.isArray(caller_instance.data.entries_full)) {
+				caller_instance.data.entries_full.forEach(item => {
+					if (item.section_tipo && item.section_id) {
+						const key = String(item.section_tipo) + '_' + String(item.section_id)
+						caller_instance.session_linked_items.set(key, true)
+					}
+				})
+			}
+		}
+
+		// Final UI update
+		const item_key = String(section_tipo) + '_' + String(section_id)
+		const is_added = caller_instance.session_linked_items.get(item_key) === true
+
+		_set_link_button_state(is_added, link_icon, link_button)
+
+	} catch (error) {
+		console.error('Error in _update_link_button:', error)
+	} finally {
+		// Ensure the icon is at least revealed if it was hidden via hide_opacity
+		requestAnimationFrame(() => {
+			link_icon?.classList.remove('hide_opacity')
+		})
+	}
+}//end _update_link_button
+
+
+
+/**
+ * Sync helper to set the visual state of the link button/icon.
+ *
+ * @private
+ * @param {boolean} is_added - Whether the record is currently linked.
+ * @param {HTMLElement} link_icon - The icon element.
+ * @param {HTMLElement} [link_button] - Optional button element.
+ */
+const _set_link_button_state = function(is_added, link_icon, link_button) {
+
+	if (is_added) {
+		if (link_button) {
+			link_button.classList.add('added')
+			link_button.title = 'Remove'
+		}
+		link_icon.classList.add('check')
+		link_icon.classList.remove('link')
+	} else {
+		if (link_button) {
+			link_button.classList.remove('added')
+			link_button.title = ''
+		}
+		link_icon.classList.add('link')
+		link_icon.classList.remove('check')
+	}
+}//end _set_link_button_state
 
 
 

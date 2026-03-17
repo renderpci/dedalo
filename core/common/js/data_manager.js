@@ -53,7 +53,8 @@ data_manager.mode = 'cors'
 */
 Object.defineProperty(data_manager, 'url', {
 	get: function() {
-		return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : '../api/v1/json/'
+		const baseUrl = window.location.origin + '/' + window.location.pathname.split('/')[1];
+		return typeof DEDALO_API_URL !== 'undefined' ? DEDALO_API_URL : baseUrl + '/core/api/v1/json/'
 	}
 });
 

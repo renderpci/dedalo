@@ -111,6 +111,9 @@
 	.hide {
 		display: none !important;
 	}
+	.hide_opacity {
+		opacity: 0 !important;
+	}
 	.invisible {
 		visibility: hidden !important;
 		opacity: 0 !important;
@@ -582,7 +585,7 @@
 	.error {
 		background-color: @color_danger !important;
 		transition: background-color 0.3s ease;
-		color: @color_white;
+		color: @color_white !important;
 	}
 	.error_alert {
 		.error();
@@ -753,6 +756,7 @@
 		padding: 1rem;
 		position: relative;
 		padding-left: 3.5rem !important;
+		margin-top: 0.33rem;
 		overflow: hidden;
 
 		>.spinner {

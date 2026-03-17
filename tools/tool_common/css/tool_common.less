@@ -16,11 +16,13 @@
 	min-height: inherit;
 
 	>.content_data {
+		contain: content;
 		width: 100%;
 		padding: 1rem;
 
 		// common footer
 		>.footer_node {
+			contain: content;
 			padding: 3rem;
 			padding-top: 4rem;
 			display: flex;
@@ -42,6 +44,7 @@
 		display: block;
 		background-color: @color_white;
 		color: @color_danger;
+
 		>.icon {
 			vertical-align: bottom;
 			margin-right: 0.75rem;

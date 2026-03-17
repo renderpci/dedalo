@@ -46,9 +46,14 @@ final class dd_ts_api {
 		// data
 			// children. Calculated from given locator
 				$locator = new locator();
-					$locator->set_section_tipo($section_tipo);
-					$locator->set_section_id($section_id);
+
+				$locator->set_section_tipo($section_tipo);
+
+				$locator->set_section_id($section_id);
+
+				if (!empty($children_tipo)) {
 					$locator->set_from_component_tipo($children_tipo);
+				}
 
 			// parse_child_data
 				$ar_children_data = ts_object::parse_child_data(

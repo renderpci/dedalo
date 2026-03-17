@@ -46,7 +46,7 @@ class relation_list extends common {
 		// sections
 		$sections = sections::get_instance(null, $sqo, $this->section_tipo, $this->mode);
 		$db_result = $sections->get_data();
-		
+
 		$inverse_sections = $db_result->fetch_all();
 
 
@@ -57,7 +57,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
-	* 
+	*
 	* @param array $ar_inverse_references
 	* @return object $json
 	*/
@@ -267,7 +267,7 @@ class relation_list extends common {
 			? (array)$process_dato_arguments->filter_component
 			: null;
 
-		// cache			
+		// cache
 			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$process_dato_arguments_key.'_'.to_string($filter_section).'_'.to_string($filter_component);
 			if (isset(self::$diffusion_dato_cache[$cache_key])) {
 				return self::$diffusion_dato_cache[$cache_key];
@@ -417,7 +417,7 @@ class relation_list extends common {
 			: '';
 
 		// cache
-			
+
 			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$data_to_be_used.'_'.$diffusion_properties_key;
 			if (isset(self::$diffusion_value_cache[$cache_key])) {
 				return self::$diffusion_value_cache[$cache_key];
@@ -792,24 +792,24 @@ class relation_list extends common {
 
 							if ($component_method==='get_diffusion_value') {
 								// sample at 'dmmgobes31'
-								// {
-								//   "data_to_be_used": "filtered_values",
-								//   "process_dato_arguments": {
-								//     "output": "string",
-								//     "direct_value": true,
-								//     "filter_section": "dmm480",
-								//     "target_component_tipo": "dmm500",
-								//     "component_method": "get_diffusion_value",
-								//     "options": {
-								//       "custom_parents": {
-								//         "info": " Select by model code (province '8870' from es2)",
-								//         "select_model": [
-								//           "es2_8870"
-								//         ]
-								//       }
-								//     }
-								//   }
-								// }
+									// {
+									//   "data_to_be_used": "filtered_values",
+									//   "process_dato_arguments": {
+									//     "output": "string",
+									//     "direct_value": true,
+									//     "filter_section": "dmm480",
+									//     "target_component_tipo": "dmm500",
+									//     "component_method": "get_diffusion_value",
+									//     "options": {
+									//       "custom_parents": {
+									//         "info": " Select by model code (province '8870' from es2)",
+									//         "select_model": [
+									//           "es2_8870"
+									//         ]
+									//       }
+									//     }
+									//   }
+									// }
 								$ar_value[] = $current_component->{$component_method}($lang, $options);
 							}else if ( isset($component_method) ) {
 								$component_data = $current_component->{$component_method}();
@@ -837,7 +837,7 @@ class relation_list extends common {
 
 						}else{
 
-							// default related value case (portals, etc.)
+							// default related value case (portals, etc.) @see 'numisdata1302'
 
 							$current_component = component_common::get_instance(
 								$model,

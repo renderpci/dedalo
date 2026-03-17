@@ -1,3 +1,7 @@
+---
+trigger: model_decision
+---
+
 # Quota Preservation & Execution Rules
 
 ## 1. Terminal Command Policy

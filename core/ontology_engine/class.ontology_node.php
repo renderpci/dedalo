@@ -433,7 +433,13 @@ class ontology_node {
 	 */
 	public function get_properties() : ?object {
 		$this->load_data();
-		return $this->data->properties ?? null;
+		$properties = $this->data->properties ?? null;
+		if ($properties) {
+			// Always return a deep clone to prevent accidental mutations
+			// of this cached properties object across worker requests.
+			return json_decode(json_encode($properties));
+		}
+		return null;
 	}//end get_properties
 
 
@@ -1204,8 +1210,7 @@ class ontology_node {
 				break;
 
 			case 'related' :
-				$ontology_node = ontology_node::get_instance($tipo);
-				$ar_targets    = $ontology_node->get_relation_nodes($tipo, true, true);
+				$ar_targets = ontology_node::get_relation_nodes($tipo, true, true);
 				break;
 
 			case 'parent' :

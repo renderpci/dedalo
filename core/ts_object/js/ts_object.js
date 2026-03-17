@@ -341,7 +341,7 @@ ts_object.prototype.get_node_data = async function() {
 
 	// short vars
 		const caller				= self.caller
-		const thesaurus_view_mode	= caller.thesaurus_view_mode
+		const thesaurus_view_mode	= caller?.thesaurus_view_mode
 		const terms_are_model		= thesaurus_view_mode==='model'
 		const section_tipo			= self.section_tipo
 		const section_id			= self.section_id
@@ -436,8 +436,8 @@ ts_object.prototype.get_children_data = async function(options) {
 		const section_tipo			= self.section_tipo
 		const children_tipo			= self.children_tipo
 		const caller				= self.caller
-		const model					= caller.model
-		const thesaurus_view_mode	= caller.thesaurus_view_mode
+		const model					= caller?.model
+		const thesaurus_view_mode	= caller?.thesaurus_view_mode
 		const terms_are_model		= thesaurus_view_mode==='model'
 
 	// cache
@@ -909,7 +909,7 @@ ts_object.prototype.refresh_element = async function(hilite=true, callback) {
 	})
 
 	// element to hilite
-	if (hilite) {
+	if (hilite && self.term_node) {
 		requestAnimationFrame( () => { self.hilite_element(self.term_node) })
 	}
 
@@ -961,9 +961,7 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 			left	: (width - 1280),
 			on_blur : () => {
 				// refresh the instance
-				const instance = (self.section_id==section_id && self.section_tipo===section_tipo)
-					? self
-					: get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object')
+				const instance = get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object') || self
 				if (instance) {
 					instance.refresh_element()
 				}else{
@@ -1102,7 +1100,7 @@ ts_object.prototype.delete_term = async function(options) {
 
 	// refresh parent children data
 		if (delete_section_result && self.caller) {
-			self.caller.remove_children_item(self.data)
+			self.caller?.remove_children_item(self.data)
 		}
 	return delete_section_result
 }//end delete_term
@@ -1389,8 +1387,22 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 				}
 
 				// build and render component
-					await current_component.build(true)
-					const component_node = await current_component.render()
+					const build_result = await current_component.build(true)
+					const component_node = !build_result
+						? (function(){
+							const parts = []
+							if(current_component.section_tipo) parts.push(current_component.section_tipo)
+							if(current_component.section_id) parts.push(current_component.section_id)
+							const _id = parts.join(' - ')
+							const node = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'wrapper_component error_alert',
+								inner_html		: `Error: Could not build element "${current_component.model}" (missing context or data). Maybe your user doesn't have permissions to access to this element: ${_id}`
+							})
+							node.failed = true
+							return node
+						  })()
+						: await current_component.render()
 					// set pointer instance to DOM node
 					component_node.instance = current_component
 
@@ -1419,11 +1431,18 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 			for (let i = all_element_data_div_len - 1; i >= 0; i--) {
 				const component_wrapper = all_element_data_div[i]
+
+				// Error messages case
+				if (component_wrapper.failed) {
+					component_wrapper.remove()
+				}
+
 				if (component_wrapper.instance.tipo===tipo) {
 					// this component already exists. Remove it and stop
 					component_wrapper.instance.destroy(true, true, true)
 					return true
 				}
+
 				// destroy component instance
 				component_wrapper.instance.destroy(true, true, true)
 			}
@@ -1961,7 +1980,7 @@ ts_object.prototype.save_order = async function( value ) {
 
 	// short vars
 	// children nodes of type 'wrap_ts_object'
-	const child_nodes		= [...self.caller.children_container.childNodes].filter(el => el.classList.contains('wrap_ts_object'))
+	const child_nodes		= [...(self.caller?.children_container?.childNodes || [])].filter(el => el.classList.contains('wrap_ts_object'))
 	const child_nodes_len	= child_nodes.length
 
 	// new_value. Prevent set invalid values
@@ -2026,7 +2045,7 @@ ts_object.prototype.save_order = async function( value ) {
 		// Update parent instance children data order
 
 		// current_ar_children_data from caller (parent instance)
-		const current_ar_children_data = self.caller.children_data.ar_children_data
+		const current_ar_children_data = self.caller?.children_data?.ar_children_data || []
 
 		// order_reference as [ts1_7,ts1_25]
 		const order_reference = ar_locators.map(el => el.section_tipo + '_' + el.section_id)
@@ -2046,7 +2065,9 @@ ts_object.prototype.save_order = async function( value ) {
 		});
 
 		// overwrite value
-		self.caller.children_data.ar_children_data = order_children
+		if (self.caller?.children_data) {
+			self.caller.children_data.ar_children_data = order_children
+		}
 
 		// Create a custom instances list with only ts_object instances
 		const ts_object_instances_list = get_all_instances().filter(el => {
