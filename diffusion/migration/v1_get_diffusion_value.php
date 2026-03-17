@@ -784,7 +784,69 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			break;
 		case 'component_relation_related':
 			$fields_separator =' | ';
-			$record_separator ='<br>';
+			$records_separator ='<br>';
+
+			if(empty($option_obj)) {
+				$ontology_node = ontology_node::get_instance($tipo);
+				$properties = $ontology_node->get_properties();
+				
+				$show = $properties->source->request_config[0]->show ?? null;
+				dump($show,'show------------------>>');
+				if(!empty($show)) {
+					$deep_ddo = [];
+					foreach ($show->ddo_map as $ddo) {
+						if($ddo->parent === 'self') {
+							$ddo->parent = $tipo;
+						}
+						$deep_ddo[] = $ddo;
+					}
+
+					$letter_ids = [];
+					foreach ($deep_ddo as $i => $ddo) {					
+
+						$children = array_find($deep_ddo, fn($ddo) => $ddo->parent === $ddo->tipo);
+
+						if(empty($children)) {
+
+							$letter_id = chr(ord('a') + $i);
+							$letter_ids[] = $letter_id;
+
+							$ddo_map[] = (object)[
+								'id' => $letter_id,
+								'tipo' => $ddo->tipo,
+								'parent' => $ddo->parent
+							];
+						}else{
+							$ddo_map[] = (object)[
+								'tipo' => $ddo->tipo,
+								'parent' => $ddo->parent
+							];
+
+						}
+					}
+				}
+
+				$parser_process = (object)[					
+					'parser' => [
+						(object)[
+							'fn' => 'parser_text::text_format',
+							'options' => (object)[
+								'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? [])),
+								'records_separator' => $records_separator,
+								'fields_separator' => $fields_separator
+							]
+						]
+					],
+					"output_format" => "string"
+				];
+				$process = $parser_process;
+				if(!empty($ddo_map)){
+					$process->ddo_map = $ddo_map;
+				}
+				$process->output_sample = "Castulo | Kastilo<br>Uncertain mint. Imitations of Castulo";			
+
+			}
+
 			break;
 		case 'component_section_id':
 		case 'component_select':    
