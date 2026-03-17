@@ -1847,44 +1847,222 @@ function process_node($node, $level) {
 								}
 							}
 							break;
+						case 'component_portal':
 
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] component_autocomplete_hi relation (fn=add_parents) -> parser_locator::add_parents\n";
-					}
-				}
-			}
+							$is_empty_cp = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-			// --- Rule: map_locator_to_terminoID_parent (parser_locator::get_parent_term_id) ---
-			// When process_dato is map_locator_to_terminoID_parent, resolve parent hierarchy
-			// and return first parent's term_id (section_tipo_section_id)
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_map_parent = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_locator_to_terminoID_parent';
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cp($props)) {
 
-				if ($is_map_parent) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-					$new_props->process->fn = 'add_parents';
-					$new_props->process->parser = [
-						(object)['fn' => 'parser_locator::get_parent_term_id']
-					];
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_portal',
+									null, null, null, null, null, null
+								);
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID_parent -> parser_locator::get_parent_term_id\n";
-				}
-			}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
-			// --- Rule: Geolocation (get_geojson_data) ---
-			// When process_dato is build_geolocation_data_geojson and relation is component_text_area
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_geojson = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::build_geolocation_data_geojson';
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal empty props -> get_diffusion_value\n";
+								break;
+							}
 
-				if ($is_geojson) {
-					// Verify relation is component_text_area
-					$is_text_area = false;
-					if (!empty($relations_info)) {
-						foreach ($relations_info as $rel_info) {
-							if ($rel_info['model'] === 'component_text_area') {
-								$is_text_area = true;
+							$data_to_be_used_cp = $props->data_to_be_used ?? null;
+
+							// 1 "data_to_be_used" cases without process_dato
+							$process_dato_cp = $props->process_dato ?? null;
+							if(!$process_dato_cp && $data_to_be_used_cp) {
+								if ($data_to_be_used_cp === 'value' || $data_to_be_used_cp === 'valor') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$rel_info['tipo'],
+										'component_portal',
+										null, null, null, $data_to_be_used_cp, null, null
+									);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] portal data_to_be_used={$data_to_be_used_cp} -> get_diffusion_value\n";
+									break;
+								}
+								
+								if ($data_to_be_used_cp === 'dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_portal', null, null, null);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal data_to_be_used=dato -> get_diffusion_dato\n";
+								break;
+								}
+							}
+
+							// 2 "process_dato" present
+							
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cp
+								&& ($process_dato_cp === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cp === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_portal', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal map_locator_to_term_id -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cp && $process_dato_cp === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" -> deep nested ddo_map building
+							if($process_dato_cp && $process_dato_cp === 'diffusion_sql::resolve_value') {
+								
+								$ddo_map_cp = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+								
+								$output_options_cp = new stdClass();
+								$final_method_cp = null;
+								$parent_tipo = $rel_info['tipo'];
+								$args_node = $props->process_dato_arguments;
+								$custom_parents_config = null;
+								$final_target = null;
+								$final_args = null;
+								$is_publicable_cp = $props->process_dato_arguments->is_publicable ?? null;
+								
+								while($args_node) {
+									$method = $args_node->component_method ?? null;
+									$target = trim($args_node->target_component_tipo ?? "");
+									
+									if($target) {
+										$ddo_map_cp[] = (object)['tipo' => $target, 'parent' => $parent_tipo];
+										$parent_tipo = $target;
+										$final_target = $target;
+									}
+									
+									if(isset($args_node->split_string_value)) {
+										$output_options_cp->records_separator = $args_node->split_string_value;
+									}
+									
+									$ca = $args_node->custom_arguments[0] ?? null;
+									if($ca && isset($ca->custom_parents)) {
+										$custom_parents_config = $ca->custom_parents;
+									}
+									
+									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value') {
+										$final_method_cp = $method;
+										$final_args = $args_node;
+										break;
+									}
+									
+									if($ca && isset($ca->process_dato_arguments)) {
+										$args_node = $ca->process_dato_arguments;
+									} else if ($ca && isset($ca->process_dato) && $ca->process_dato === 'diffusion_sql::resolve_value') {
+										$args_node = $ca->process_dato_arguments ?? null;
+									} else {
+										break;
+									}
+								}
+								
+								if($final_method_cp === 'get_diffusion_dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+										$final_target,
+										null,
+										$final_args,
+										null
+									);
+								} else { // get_diffusion_value or fallback
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									
+									// Reconstruct add_parents if found in hierarchy
+									if($custom_parents_config) {
+										$parser_options = new stdClass();
+										$parser_options->value = "term";
+										if(isset($custom_parents_config->select_model)) {
+											$parser_options->parent_typology_term_id = $custom_parents_config->select_model;
+										}
+										if(isset($custom_parents_config->slice)) {
+											$parser_options->parents_slice = $custom_parents_config->slice;
+										}
+										if(isset($custom_parents_config->parent_end_by_model)) {
+											$parser_options->parent_end_by_typology_term_id = $custom_parents_config->parent_end_by_model;
+										}
+										$output_options_cp->add_parents = $parser_options;
+									}
+									
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$final_target,
+										$model_cp,
+										null,
+										$final_args,
+										null, null,
+										(empty((array)$output_options_cp) ? null : $output_options_cp),
+										$ddo_map_cp
+									);
+								}
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true || $is_publicable_cp === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal resolve_value nested loop -> {$final_method_cp}\n";
+								break;
+							}
+							break;
 								break;
 							}
 						}
