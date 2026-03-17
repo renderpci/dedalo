@@ -273,7 +273,7 @@ class relation_list extends common {
 				return self::$diffusion_dato_cache[$cache_key];
 			}
 
-		// sqo . COmmon used to get inverse locators
+		// sqo . Common used to get inverse locators
 			$sqo = (object)[
 				'section_tipo'			=> ['all'],
 				'mode'					=> 'related',
@@ -904,7 +904,7 @@ class relation_list extends common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* Resolve the inverse references (who are calling to this section)
 	* and creates its own data with the result as an array of locators
 	* data is not filtered, it get the inverse references as its own data
@@ -912,7 +912,7 @@ class relation_list extends common {
 	*
 	* @test false
 	*/
-	public function get_dato() : array {
+	public function get_data() : array {
 
 		// sqo . Common used to get inverse locators
 			$sqo = (object)[
@@ -934,17 +934,14 @@ class relation_list extends common {
 				// {
 				//     "section_tipo": "numisdata300",
 				//     "section_id": "1",
-				//     "datos": {
-				//         "label": "Catalog",
-				//         "relations": [
-				//             {
-				//                 "type": "dd675",
-				//                 "section_id": "1",
-				//                 "section_tipo": "dd153",
-				//                 "from_component_tipo": "numisdata304"
-				//             }, ...
-				//          ]
-				//     }
+				//     "realtion": [
+				//         {
+				//             "type": "dd675",
+				//             "section_id": "1",
+				//             "section_tipo": "dd153",
+				//             "from_component_tipo": "numisdata304"
+				//         }, ...
+				//     ]
 				// }
 
 		// create its data with the inverse references
@@ -957,7 +954,8 @@ class relation_list extends common {
 
 
 		return $data;
-	}//end get_dato
+	}//end get_data
+
 
 
 }//end class relation_list
