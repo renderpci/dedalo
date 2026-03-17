@@ -921,6 +921,15 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$process = $parser_process;
 			$process->ddo_map = $ddo_map;
 			$process->output_sample = "English";
+
+			break; 	if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}			
+			$process->output_sample = "Hi<br>My text";
+
+
+			break;
+
 		case 'component_html_text':
 
 			$ontology_node = ontology_node::get_instance($tipo);
