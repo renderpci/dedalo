@@ -960,7 +960,110 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			break;
 		case 'relation_list':
+
+			switch($data_to_be_used){
+				case 'filtered_values':
+
+					$fields_separator =' | ';
+
+					$output 				= $process_dato_arguments->output ?? "string";
+					$direct_value 			= $process_dato_arguments->direct_value ?? true;
+					$filter_section 		= $process_dato_arguments->filter_section ?? "";
+					$target_component_tipo 	= trim($process_dato_arguments->target_component_tipo ?? "");
+					$component_method 		= $process_dato_arguments->component_method ?? "get_value";
+
+					if($component_method === 'get_value'){
+
+						// add the direct reference
+						$ddo_map[] = (object)[
+							'tipo' => $target_component_tipo,
+							'parent' => $tipo,
+							'section' => $filter_section
+						];
+
+						$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
+						if(in_array($model, component_relation_common::get_components_with_relations())){
+
+							// get the related components
+							$related_component = ontology_node::get_ar_tipo_by_model_and_relation($target_component_tipo, 'component_','related', false);	
+
+							$letter_ids = [];
+							foreach ($related_component as $i => $current_component_tipo) {
+								$letter_id = chr(ord('a') + $i);
+								$letter_ids[] = $letter_id;
+								$ddo_map[] = (object)[
+									'id' => $letter_id,
+									'tipo' => $current_component_tipo,
+									'parent' => $target_component_tipo
+								]; 
+							}						
+
+							$parser_process = (object)[					
+								'parser' => [
+									(object)[
+										'fn' => 'parser_text::text_format',
+										'options' => (object)[
+											'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+										]
+									]
+								],
+								"output_format" => "string"
+							];
+							$process = $parser_process;
+						}else{
+							$process = new stdClass();
+						}
+						if(!empty($ddo_map)){
+							$process->ddo_map = $ddo_map;
+						}
+						$process->output_sample = "Raspa";
+
+						break;
+					}else if($component_method === 'get_dato'){
+						$ddo_map[] = (object)[
+							'tipo' => $target_component_tipo,
+							'parent' => $tipo,
+							'section' => $filter_section
+						];
+
+						// component with relations
+						$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
+						if(in_array($model, component_relation_common::get_components_with_relations())){
+							
+							$parser_process = (object)[
+								"parser" => [
+									(object)[
+										'fn' => 'parser_locator::get_section_id'
+									]
+								],
+								"output_format" => "json"
+							];
+							$process = $parser_process;
+						}else{
+							$process = new stdClass();
+						}
+						if(!empty($ddo_map)){
+							$process->ddo_map = $ddo_map;
+						}
+						$process->output_sample = ["1", "2"];
+
+						
+						
+					}else if($component_method === 'get_diffusion_value'){
+						// Manual
+					}
+
+					
+				break;
+				case 'dato':
+					$filter_section 		= $process_dato_arguments->filter_section ?? "";
+					$filter_component 		= $process_dato_arguments->filter_component ?? "";
+					$format 				= $process_dato_arguments->format ?? "";	
+					
+					break;
+			}
 			break;
 	}
 	
+	return $process;
 }
