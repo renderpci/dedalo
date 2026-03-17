@@ -921,8 +921,44 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$process = $parser_process;
 			$process->ddo_map = $ddo_map;
 			$process->output_sample = "English";
+		case 'component_html_text':
 
-			break; 
+			$ontology_node = ontology_node::get_instance($tipo);
+			$properties = $ontology_node->get_properties();
+			$tags_reference_tipo = $properties->tags_reference->tipo;
+
+			if( !empty($tags_reference_tipo) ){
+				$parser_process = (object)[
+					'fn' => 'get_diffusion_v5_references_html',
+					'parser' => [
+						(object)[
+							'fn' => 'parser_text::v5_html'
+						]
+					],
+					"output_format" => "string"
+				];
+				$process = $parser_process;
+				if(!empty($ddo_map)){
+					$process->ddo_map = $ddo_map;
+				}
+				$process->output_sample = "Hi<br>My html text";
+			}else{
+				$parser_process = (object)[
+					'parser' => [
+						(object)[
+							'fn' => 'parser_text::v5_html'
+						]
+					],
+					"output_format" => "string"
+				];
+				$process = $parser_process;
+				if(!empty($ddo_map)){
+					$process->ddo_map = $ddo_map;
+				}
+				$process->output_sample = "Hi<br>My html text";
+			}
+
+			break;
 		case 'relation_list':
 			break;
 	}
