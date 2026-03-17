@@ -212,15 +212,12 @@ class component_security_access extends component_common {
 					$children = self::get_element_datalist($current_area->tipo);
 					// add already calculated section parents to the chain
 					foreach ($children as &$child) {
-						$section_parents = array_merge( $ar_parent, $child['ar_parent']);
+						$section_parents = [...$ar_parent, ...$child['ar_parent']];
 						$child['ar_parent'] = $section_parents;
 					}
 					unset($child); // break reference
 
-					$datalist = array_merge(
-						$datalist,
-						$children
-					);
+					$datalist = [...$datalist, ...$children];
 				}
 			}//end for ($i=0; $i < $ar_areas_length ; $i++)
 
@@ -291,7 +288,7 @@ class component_security_access extends component_common {
 						$filtered = array_filter($ddo_map, function($el) use ($section_tipo){
 							return ($el->parent === 'self' || $el->parent === $section_tipo);
 						});
-						$v6_children = array_merge($v6_children, $filtered);
+						$v6_children = [...$v6_children, ...$filtered];
 					}
 				}
 
@@ -396,7 +393,7 @@ class component_security_access extends component_common {
 						false, // bool recursive
 						false // bool search_exact
 					);
-					$ar_ts_children	= array_merge($ar_ts_children, $ar_ts_children_v);
+					$ar_ts_children	= [...$ar_ts_children, ...$ar_ts_children_v];
 				}
 				break;
 
@@ -453,7 +450,10 @@ class component_security_access extends component_common {
 				];
 				$ar_elements[] = $item;
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_access($element_tipo, $ar_tipo_to_be_exclude) );
+			$ar_elements = [
+				...$ar_elements,
+				...self::get_children_recursive_security_access($element_tipo, $ar_tipo_to_be_exclude)
+			];
 		}
 
 
@@ -702,7 +702,7 @@ class component_security_access extends component_common {
 					$unique_values[] = $value;
 				}
 			}
-			$new_data = array_merge($component_security_access_data, $unique_values);
+			$new_data = [...$component_security_access_data, ...$unique_values];
 
 		// Save calculated data
 			$component_security_access->set_data($new_data);

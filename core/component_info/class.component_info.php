@@ -71,7 +71,7 @@ class component_info extends component_common {
 				// Widget data
 					$widget_value = $widget->get_data();
 					if (!empty($widget_value)) {
-						$data = array_merge($data, $widget_value);
+						$data = [...$data, ...$widget_value];
 					}
 			}//end foreach ($widgets as $widget)
 
@@ -126,7 +126,7 @@ class component_info extends component_common {
 				// Widget data
 					$widget_value = $widget->get_data_parsed();
 					if (!empty($widget_value)) {
-						$data_parsed = array_merge($data_parsed, $widget_value);
+						$data_parsed = [...$data_parsed, ...$widget_value];
 					}
 			}//end foreach ($widgets as $widget)
 
@@ -347,7 +347,7 @@ class component_info extends component_common {
 				: null;
 
 			if($widget_data_list!==null){
-				$data_list = array_merge($data_list, $widget_data_list);
+				$data_list = [...$data_list, ...$widget_data_list];
 			}
 		}//end foreach ($widgets as $widget_obj)
 

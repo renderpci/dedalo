@@ -194,7 +194,7 @@ class area extends area_common  {
 
 					// calculate recursive
 					$ar_temp = self::get_ar_children_areas_recursive($children_tipo);
-					$ar_children_areas_recursive = array_merge($ar_children_areas_recursive, $ar_temp);
+					$ar_children_areas_recursive = [...$ar_children_areas_recursive, ...$ar_temp];
 				}
 			}//end for ($i=0; $i < $ar_ts_children_size; $i++)
 		}

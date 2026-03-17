@@ -73,7 +73,7 @@ class descriptors extends widget_common {
 
 							if (!empty($source_data)) {
 								// add
-								$ar_locator = array_merge($ar_locator, $source_data);
+								$ar_locator = [...$ar_locator, ...$source_data];
 							}
 						}
 						break;
@@ -108,8 +108,8 @@ class descriptors extends widget_common {
 						$component_data			= $component->get_data() ?? [];
 						$component_grid_value	= $component->get_grid_value();
 
-						$ar_component_data		 = array_merge($ar_component_data, $component_data);
-						$ar_component_grid_value = array_merge($ar_component_grid_value, $component_grid_value->value);
+						$ar_component_data		 = [...$ar_component_data, ...$component_data];
+						$ar_component_grid_value = [...$ar_component_grid_value, ...$component_grid_value->value];
 					}
 
 					// prevent empty locators value continue execution generating errors
