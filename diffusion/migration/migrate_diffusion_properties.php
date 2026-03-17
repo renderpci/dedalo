@@ -2370,26 +2370,78 @@ function process_node($node, $level) {
 							}
 
 							break;
+						case 'component_relation_model':
 
-                        if (in_array($rel_info['model'], $relation_components)) {
-                            // Ensure we don't pick up excluded comps as "generic relation"
-                            // Note: component_portal is excluded from generic list but we handle it specifically
-                            if (!in_array($rel_info['model'], $excluded_components) && $rel_info['model'] !== 'component_portal') {
-                                $is_relation_component = true;
-                                $target_model = $rel_info['model'];
-                                break; // Found valid relation component
-                            }
-                        }
-                    }
-                }
+							$is_empty_rm = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-                if ($is_portal) {
-                     if (!$new_props) $new_props = new stdClass();
-                     if (!isset($new_props->process)) $new_props->process = new stdClass();
-                     
-                     $new_props->process->parser = [
-                        (object)['fn' => 'parser_locator::get_section_id']
-                     ];
+							$ddo_map_rm = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rm($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_model',
+									null, null, null, null, null,
+									$ddo_map_rm
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rm = $props->process_dato ?? null;
+
+							// 1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rm
+								&& ($process_dato_rm === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rm === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							break;
+
 
                      echo "{$indent}- [$tipo] $model_name\n";
                      echo "{$indent}  [RULE APPLIED] Component Portal -> parser_locator::get_section_id\n";
