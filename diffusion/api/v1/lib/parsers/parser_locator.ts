@@ -641,24 +641,3 @@ function term_id_from_locator(locator: locator | null): string | null {
 
 
 
-
-
-/**
- * FLAT_PARENTS
- * Global convenience parser that chains all filtering operations and then
- * builds the final string via `parents`.
- *
- * Delegates to `parents`, which handles all filtering and string-building
- * internally (apply_chain_filters + multilingual term extraction).
- *
- * @param options - Combined options for all sub-parsers
- */
-export function flat_parents(data: data_item[] | null, options: parser_options): data_item[] | null {
-
-	if (!data || data.length === 0) return null;
-
-	// Delegate fully to `parents` — it applies all filters and builds the output.
-	return parents(data, options);
-}
-
-
