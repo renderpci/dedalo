@@ -883,6 +883,18 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$process->output_sample = "Goméz Pérez, Raspa";
 
 			break;  
+		
+		case 'component_text_area':
+
+			$parser_process = (object)[
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::v5_html'
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
 		case 'component_select_lang':
 
 			$fields_separator = $custom_arguments[0]->divisor ?? ', ';
