@@ -1,6 +1,8 @@
 <?php
 
-function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to_be_used, $option_obj, $ddo_map){
+use PhpParser\Node\Stmt\Switch_;
+
+function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arguments, $output, $data_to_be_used, $option_obj, $ddo_map){
 
 	$process = new stdClass();
 
@@ -16,6 +18,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "/dedalo/media/image.jpg";
 
 			break;
@@ -45,13 +50,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
 						]
 					]
 				],
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "Goméz Pérez, Raspa";
 
 			break;
@@ -72,6 +80,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "2026-02-26 19:39:16";
 
 			break;
@@ -80,13 +91,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 		case 'component_email':
 
 			$fields_separator =', ';
-			$record_separator =' | ';
+			$records_separator =' | ';
 
 			$parser_process = (object)[
 				"output_format" => "string"
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "raspa@dedalo.dev | boss@dedalo.dev";
 
 			break;
@@ -94,7 +108,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			break;
 		case 'component_filter':
 
-			$record_separator =' | ';
+			$records_separator =' | ';
 
 			$ddo_map[] = (object)[
 				'tipo' => DEDALO_PROJECTS_NAME_TIPO,
@@ -106,6 +120,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "My project | Another project";
 			break;
 		case 'component_geolocation':
@@ -120,17 +137,20 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
-			$process->output_sample = {"lat"=> 41.3851, "long"=> 2.1734};
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
+			$process->output_sample = ["lat"=> 41.3851, "long"=> 2.1734];
 			break;
 
 		case 'component_info':
-			$record_separator =', ';
+			$records_separator =', ';
 
 			$arguments = $custom_arguments[0];
 
 			$options = new stdClass();
 			if($arguments->separator){
-				$options->record_separator = $arguments->separator ?? $record_separator;
+				$options->records_separator = $arguments->separator ?? $records_separator;
 			}
 			if($arguments->key_values){
 				$options->keys = $arguments->key_values;
@@ -147,20 +167,36 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "1 year, 2 months, 3 days";
 			
 			break;
 		case 'component_input_text':
-			$record_separator =' | ';
+			$records_separator =' | ';
 			// nothing to do, the default proceess is compatible with the v6
 			break;
 		case 'component_inverse':
 			break;
 		case 'component_iri':
 			$fields_separator =', ';							
-			$record_separator =' | ';
+			$records_separator =' | ';
 
-			//@TODO: 
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_iri::flat',
+						'options' => (object)[]
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
+			$process->output_sample = "dedalo.dev, https://dedalo.dev";
 			
 			break;
 		case 'component_json':
@@ -170,6 +206,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "{\"key\":\"value\"}";
 			break;
 		case 'component_number':
@@ -184,6 +223,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "123";
 			break;
 		case 'component_portal':
@@ -191,7 +233,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			switch($data_to_be_used){
 				case 'valor_list':
 					$fields_separator = $custom_arguments[0]->divisor ??' ';
-					$record_separator =' | ';
+					$records_separator =' | ';
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
@@ -215,18 +257,21 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 							(object)[
 								'fn' => 'parser_text::text_format',
 								'options' => (object)[
-									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
 								]
 							]
 						],
 						"output_format" => "string"
 					];
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Goméz Pérez, Raspa";
 					break;
 				case 'valor':
 					$fields_separator = $custom_arguments[0]->divisor ??', ';
-					$record_separator =' | ';
+					$records_separator =' | ';
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
@@ -250,13 +295,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 							(object)[
 								'fn' => 'parser_text::text_format',
 								'options' => (object)[
-									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
 								]
 							]
 						],
 						"output_format" => "string"
 					];
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Goméz Pérez, Raspa";
 					break;
 				case 'dato_full':
@@ -265,6 +313,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					];
 
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}, {"section_id":"2", "section_tipo":"rsc197"}]';
 					break;
 				case 'dato':
@@ -279,6 +330,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					];
 
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = ["1", "2"];
 					break;
 			}
@@ -286,7 +340,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 		case 'component_autocomplete':
 			// @TODO: the exception is_publicable is not handled here!! check if it is needed
 			$fields_separator = $custom_arguments[0]->divisor ??' ';
-			$record_separator =' | ';
+			$records_separator =' | ';
 									
 			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
@@ -310,29 +364,38 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
 						]
 					]
 				],
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "Goméz Pérez, Raspa";
 			
 			break;
 		case 'component_autocomplete_hi':
 		case 'component_autocomplete_ts':
 			$fields_separator =' - ';
-			$record_separator =', ';
+			$records_separator =', ';
 
-			if($option_obj) {
+			if($option_obj || $custom_arguments) {
+				$option_obj = $option_obj ?? new stdClass();
 
 				$add_parents 					= $option_obj->add_parents ?? null;
-				// $resolve_value 					= $option_obj->resolve_value ?? null;
 				$parent_section_tipo 			= $option_obj->parent_section_tipo ?? null;
 				$process_dato_arguments 		= $option_obj->process_dato_arguments ?? null;
 				$check_publishable 				= $option_obj->check_publishable ?? null;
-				$custom_parents 				= $option_obj->custom_parents ?? null;
+				
+				$custom_parents = $option_obj->custom_parents ?? null;
+				if (!$custom_parents && isset($custom_arguments)) {
+					$first_custom_arg = is_array($custom_arguments) ? ($custom_arguments[0] ?? null) : $custom_arguments;
+					$custom_parents = $first_custom_arg->custom_parents ?? null;
+				}
+
 				$divisor 						= $option_obj->divisor ?? null;
 				$parent_term_id 				= $option_obj->parent_term_id ?? null;
 				$divisor_parents 				= $option_obj->divisor_parents ?? null;
@@ -364,6 +427,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 						]
 					;
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
 
 				break;
@@ -393,9 +459,11 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 							"output_format" => "string"
 						];
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
 
-					
 					break;
 				}// end if( check_publishable alone and true)
 
@@ -412,8 +480,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					$parent_end_by_term_id 		= $custom_parents->parent_end_by_term_id ?? null;
 					$parent_end_by_model 		= $custom_parents->parent_end_by_model ?? null;
 					
-					$parser_process = [
-						(object)[
+					$parser_process = (object)[
 							'is_publishable' => true,
 							'fn' => 'add_parents',
 							'parser' => [
@@ -428,8 +495,11 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 							],
 							"output_format" => "string"
 						]
-					];
+					;
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
 
 					break;
@@ -470,7 +540,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 						$parser_options->parent_term_id = $parent_term_id;
 					}
 
-					$parser_process = [
+					$parser_process = (object)[
 						(object)[
 							'fn' => 'add_parents',
 							'parser' => [
@@ -483,6 +553,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 						]
 					];
 					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
 					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
 
 					break;
@@ -498,6 +571,9 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 			];
 
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}]';
 		
 			break;
@@ -527,13 +603,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $output, $data_to
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
 						]
 					]
 				],
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			if(!empty($ddo_map)){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_sample = "Goméz Pérez, Raspa";
 
 			break;
