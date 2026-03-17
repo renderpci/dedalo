@@ -118,6 +118,10 @@ trait search_component_string_common {
     */
     protected static function dispatch_operator_sql(object $query_object, string $q, object $ctx) : object {
 
+        if($ctx->table==='matrix_time_machine') {
+            return self::dispatch_operator_sql_tm($query_object, $q, $ctx);
+        }
+
         switch (true) {
             case ($q==='!*' || $ctx->q_operator==='!*'):
                 return self::resolve_empty_value_sql($query_object, $ctx);

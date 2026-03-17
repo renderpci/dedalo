@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include 'trait.search_component_string_common.php';
+include 'trait.search_component_string_common_tm.php';
 /**
 * INTERFACE COMPONENT_STRING_COMMON
 * Used as common base from all components that works with media
@@ -27,6 +28,7 @@ class component_string_common extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_string_common;
+	use search_component_string_common_tm;
 
 
 	/**
