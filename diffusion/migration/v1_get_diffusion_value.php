@@ -849,8 +849,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			break;
 		case 'component_section_id':
-		case 'component_select':    
-		case 'component_select_lang':
+			break;
+		case 'component_select':
 		case 'component_radio_button':
 			$fields_separator = $custom_arguments[0]->divisor ??', ';
 
