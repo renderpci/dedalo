@@ -1457,66 +1457,101 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_PARENTS
-	* Resolve hierarchy for component values (term + parents)
-	* @return array $parents_map
+	* Resolves the hierarchical ancestor chain for related items.
+	*
+	* Iterates through current relation locators. For each locator, resolves its data Node 
+	* (term and typology) and maps the element. Then, if enabled, walks the node tree 
+	* upwards fetching all parent locators to build a list representing the structural path 
+	* from item up to root.
+	* 
+	* The output array structure maps locator keys to their full descriptive lists.
+	*
+	* @return array Mapped chains indexing keys "{section_tipo}_{section_id}" to list items of structure:
+	*	- section_id (int): Item ID
+	*	- section_tipo (string): Item layout Type
+	*	- term (string|null): resolved visual descriptor string
+	*	- typology (string|null): descriptive typology label
+	*	- typology_section_id (int|null): relation definition target group
+	*	- typology_section_tipo (string|null): relation definition target type
 	*/
 	protected function add_parents() : array {
-		
+
+		// Track execution time for debugging/optimization
 		$start_time = start_time();
 
-		$data = $this->get_data();
+		// Flag to control whether to resolve the full ancestor chain
+		$resolve_parent_chain = true;
 
+		// Map to hold results: [locator_key => [current_item, parent1, parent2, ...]]
 		$parents_map = [];
-		
+
+		// Get current component data (usually an array of locators)
+		$data = $this->get_data();		
+
+		// Fallback for empty data in hierarchy components to find root node (compatibility)
+		if ( empty($data) && $this->model==='component_relation_parent') {
+			$hierarchy_parent = $this->get_possible_root_hierarchy();
+			if (!empty($hierarchy_parent)) {
+				$data[] = $hierarchy_parent;
+			}
+			// Skip parent chain resolution if dealing with root fallback
+			$resolve_parent_chain = false;
+		}
+
 		if (empty($data)) return $parents_map;
 
+		// Process each relation locator item
 		foreach($data as $locator) {
-			
 			// 1. Resolve current item
 			$section_tipo 	= $locator->section_tipo;
 			$section_id 	= $locator->section_id;
 
-			// key for parents map "es1_967"
+			// Generate unique map key based on target section type and ID (e.g., "es1_967")
 			$parents_key = $section_tipo . '_' . $section_id;
-
-			// Reset the chain for each locator (each gets its own chain)
+			
+			// Chain array holds the hierarchy list for this item (starts with self)
 			$parents_chain = [];
 
-			// get map
+			// Get the ontology map for the target section type
 			$section_map = section::get_section_map( $section_tipo );
-				#dump($section_map, "section_map $section_tipo");
-		
+
 			if (empty($section_map)) {
 				debug_log(__METHOD__." section_map not found for section_tipo: $section_tipo", logger::WARNING);
 				continue;
 			}
-			
-			// Resolve Item Data
+
+			// Resolve current item's descriptive data (term, typology, etc.)
 			$current_item_data = $this->resolve_map_node_data($section_map, $section_id, $section_tipo);
+
 			if($current_item_data) {
 				$parents_chain[] = $current_item_data;
 			}
 
-			// 2. Resolve Parents Chain
-			$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
+			// 2. Resolve Parents Chain (Ancestors)
+			if ($resolve_parent_chain===true) {
+				// Fetch recursive list of parent locators going up the tree
+				$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
+			
+				if (!empty($parents_locators)) {
+					foreach($parents_locators as $parent_locator) {
 
-			if (!empty($parents_locators)) {
-				foreach($parents_locators as $parent_locator) {
-				
-					$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
-						
-					$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
-					
-					if($parent_data) {
-						$parents_chain[] = $parent_data;
+						// Get section map for the parent item
+						$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
+
+						// Resolve parent item data
+						$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
+
+						if($parent_data) {
+							$parents_chain[] = $parent_data;
+						}
 					}
 				}
 			}
 
-			// Save this locator's chain (may include only self if no parents found)
+			// Save the resolved chain for this locator in the response map
 			$parents_map[$parents_key] = $parents_chain;
 		}
-		
+
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__." Time: $exec_time", logger::DEBUG);
@@ -1524,6 +1559,8 @@ class component_relation_common extends component_common {
 
 		return $parents_map;
 	}
+
+
 
 	/**
 	* RESOLVE_MAP_NODE_DATA
