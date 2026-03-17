@@ -81,6 +81,8 @@ function traverse_ontology_recursive($current_tipo, $level = 0) {
 function process_node($node, $level) {
 	$indent = str_repeat("  ", $level);
 	$tipo       = $node->get_tipo();
+	$data_to_be_used = null;
+	$letter_ids      = [];
 	$model_tipo = $node->get_model_tipo(); // Keep for reference if needed
 	$model_name = $node->get_legacy_model();      // Human readable name: component_input_text
 	$propiedades = $node->get_propiedades();
@@ -130,6 +132,7 @@ function process_node($node, $level) {
 		case 'diffusion_domain':
 			$diffusion_type = 'diffusion_domain';
 			break;
+
 		case 'diffusion_group':
 			$diffusion_type = 'diffusion_group';
 			break;
