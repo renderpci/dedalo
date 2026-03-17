@@ -157,10 +157,11 @@ class diffusion_chain_processor {
 	 * @param bool $is_publishable
 	 * @return array Array containing a single diffusion_data_object wrapping all resolved relational values
 	 */
-	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level,bool $is_publishable): array {
+	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level, bool $is_publishable): array {
 		
 		$current_tipo 	= $ddo->tipo;
-		$diffusion_data = $element->get_diffusion_data($ddo);
+		$diffusion_data = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
+		$element_model 	= $element->get_model(); 
 		$ar_locators 	= $diffusion_data[0]->get_value() ?? [];
 
 		if (!is_array($ar_locators)) {
@@ -176,7 +177,15 @@ class diffusion_chain_processor {
 		$new_diffusion_data[0]->set_value([]);
 
 		$relation_values     = [];
-		$valid_sections_tipo = array_map(fn($child) => $child->section_tipo, $children);
+		
+		// Create a "whitelist" of section_tipo values authorized for recursive data extraction
+		// based on the child nodes defined in the DDO map for this relation component.
+		$valid_sections_tipo = [];
+		foreach ($children as $child) {
+			if(!empty($child->section_tipo)) {
+				$valid_sections_tipo[] = $child->section_tipo;
+			}
+		}
 
 		foreach ($ar_locators as $locator) {
 
@@ -194,8 +203,9 @@ class diffusion_chain_processor {
 			// A. QUEUE: Always queue publishable locators for later diffusion of linked sections.
 			// Unpublishable locators are queued too so they can be marked for deletion.
 			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
-			if ($level > 0 && !empty($target_diffusion_tipo)) {
-				dd_diffusion_api::$datum_unresolved[$target_diffusion_tipo][] = $locator;
+			if ($level > 0 && !empty($target_diffusion_tipo) && $element_model !== 'relation_list') {				
+				$target_level = $level - 1;
+				dd_diffusion_api::$datum_unresolved["$target_level:$target_diffusion_tipo"][] = $locator;
 			}
 
 			// Skip unpublishable locators from value collection.
@@ -204,17 +214,23 @@ class diffusion_chain_processor {
 				continue;
 			}
 
+			// Validate locator
+			$validated = empty($valid_sections_tipo)
+				? true
+				: in_array($locator->section_tipo, $valid_sections_tipo);
+
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
+			// We only recurse if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo).
 			$child_results = [];
-			if (in_array($locator->section_tipo, $valid_sections_tipo)) {
+			if ($validated === true) {
 				$child_results = $this->resolve_chain((object)[
 					'ddo_map'      		=> $ddo_map,
 					'parent'       		=> $current_tipo,
 					'section_tipo' 		=> $locator->section_tipo,
 					'section_id'   		=> $locator->section_id,
-					'level'        		=> $level - 1,
+					'level'        		=> $level,
 					'is_publishable' 	=> $current_is_publishable
-				]);
+				]);				
 			}
 
 			if (!empty($child_results)) {
@@ -228,9 +244,22 @@ class diffusion_chain_processor {
 					}
 				}
 			} else {
-				// Fallback: Always return at least the raw locator if no children resolved
-				$new_diffusion_data[0]->value[] = $locator;
-				$relation_values = $new_diffusion_data;
+
+				// If no children resolved, check if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo)
+				// If not mapped, skip the locator.
+				// check if valid_sections_tipo is defined because the ddo_map has it,
+				// but the children is empty and the locator needs to be filtered by section_tipo
+				// relation_list case or component_auto_complete_hi with a end ddo only with the section_tipo defined.
+				// in those cases only the locator filtered by the section_tipo defined is the value.
+				if(!empty($valid_sections_tipo) && !in_array($locator->section_tipo, $valid_sections_tipo)){
+					continue;
+				}else{
+					// Fallback: If no children resolved (either bypassed due to not being in the 
+					// whitelist, or child resolution returned empty), simply return the raw 
+					// locator object itself without extracting deeper data of that linked section.
+					$new_diffusion_data[0]->value[] = $locator;
+					$relation_values = $new_diffusion_data;
+				}
 			}
 		}
 
