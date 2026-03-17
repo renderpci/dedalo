@@ -1597,8 +1597,7 @@
 
 	// By table, specific index for tables
 
-		// id matrix_activity
-
+		// id : matrix_activity / matrix_activity_diffusion
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix_activity',

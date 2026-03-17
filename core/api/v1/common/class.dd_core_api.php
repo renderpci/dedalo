@@ -1250,7 +1250,7 @@ final class dd_core_api {
 
 				// observers_data
 					if (isset($component->observers_data)) {
-						$element_json->data = array_merge($element_json->data, $component->observers_data);
+						$element_json->data = [...$element_json->data, ...$component->observers_data];
 					}
 
 				// context and data set

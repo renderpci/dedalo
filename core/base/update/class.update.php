@@ -508,7 +508,7 @@ class update {
 							}
 
 							// log line
-								$log_line  = PHP_EOL . 'result: script executed: ' . to_string($run_scripts_response->result);
+								$log_line = PHP_EOL . 'result: script executed: ' . to_string($run_scripts_response->result);
 								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
 							// let GC do the memory job

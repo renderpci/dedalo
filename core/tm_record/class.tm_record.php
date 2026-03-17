@@ -435,7 +435,7 @@ class tm_record {
 				$section_record
 			);
 
-		// When.
+		// When. (timestamp)
 			// The time of the record was created in Time Machine.
 			// dd559 - component_date
 			$date = dd_date::get_dd_date_from_timestamp( $timestamp );
@@ -449,7 +449,7 @@ class tm_record {
 				$section_record
 			);
 
-		// Where
+		// Where. (tipo)
 			// The tipo of the component/section where the change was done.
 			// Resolve the term of the tipo and use it as data of the component
 			// dd577 - component_input_text
@@ -472,7 +472,7 @@ class tm_record {
 			);
 
 
-		// Who
+		// Who. (user_id)
 			// User. The user who made the change.
 			// dd578 - component_autocomplete
 			$user_locator = new locator();

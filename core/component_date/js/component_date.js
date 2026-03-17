@@ -116,8 +116,8 @@ component_date.prototype.load_editor = async function() {
 * 	"month" 4,
 * 	"year": 2022
 * }
-* this method convert specific date to string format
-* the "start" or "end" object is not accepted here.
+* This method converts specific date to string format.
+* The "start" or "end" object is not accepted here.
 * @return string string_date 25/04/2022
 */
 component_date.prototype.date_to_string = function (date) {
@@ -127,7 +127,7 @@ component_date.prototype.date_to_string = function (date) {
 	const date_order = page_globals.dedalo_date_order || 'dmy'
 
 	// day. check if the date has defined the day and pad the start with 0 when the day has only 1 digit
-		const day	= (date.day && date.day>0)
+		const day = (date.day && date.day>0)
 			? `${date.day}`.padStart(2, '0')
 			: null
 	// month. check if the date has defined the month and pad the start with 0 when the month has only 1 digit
@@ -135,7 +135,7 @@ component_date.prototype.date_to_string = function (date) {
 			? `${date.month}`.padStart(2, '0')
 			: null
 	// year. check if the date has defined the year
-		const year	= (date.year)
+		const year = (date.year)
 			? date.year
 			: null
 
@@ -252,6 +252,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 					date_obj.year	= parseInt(ar_date_values[2])
 				}
 				break;
+			
 			case 'ymd':
 				// year and month  : 2022/04
 				if(ar_date_values.length === 2){
@@ -265,6 +266,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 					date_obj.day	= parseInt(ar_date_values[2])
 				}
 				break;
+			
 			case 'dmy':
 			default:
 				// month and year : 04/2022
@@ -282,7 +284,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 		}
 	}
 
-	//date checks
+	// date checks
 
 	// check id the day is in valid range 1 <> 31, or 1 <>30 checking the months
 	// check if the day in February are 28 or 29 in leap years
@@ -314,28 +316,28 @@ component_date.prototype.parse_string_date = function(string_date) {
 		const error = []
 		// when the user intro other things than dates
 		if(string_date.length >1 && !dd_date.year){
-			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 				error.push({
-					msg		: error_msg +'. '+ string_date +': '+ date_obj.day,
-					type	: 'full'
+					msg	 : error_msg +'. '+ string_date +': '+ date_obj.day,
+					type : 'full'
 				})
 		}
 		// if the user introduce days out of valid range (>29, >30, >31 etc)
 		if(day_ok === false){
-			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
 			const error_msg_day	= get_label.day || 'day'
 			error.push({
-				msg		: error_msg +'. '+ error_msg_day +': '+ date_obj.day,
-				type	: 'day'
+				msg	 : error_msg +'. '+ error_msg_day +': '+ date_obj.day,
+				type : 'day'
 			})
 		}
 
 		if(month_ok === false){
-			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
-			const error_msg_month	= get_label.month || 'month'
+			const error_msg = get_label.error_invalid_date_format || 'Error: Date format is invalid'
+			const error_msg_month = get_label.month || 'month'
 			error.push({
-				msg		: error_msg +'. '+ error_msg_month +': '+ date_obj.month,
-				type	: 'month'
+				msg	 : error_msg +'. '+ error_msg_month +': '+ date_obj.month,
+				type : 'month'
 			})
 		}
 
