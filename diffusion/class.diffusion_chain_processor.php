@@ -11,18 +11,13 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 class diffusion_chain_processor {
 
 	/**
-	 * Maximum recursion depth for cross-section resolution
-	 */
-	private const MAX_DEPTH = 5;
-
-	/**
 	 * @var array $debug_chain Internal storage for chain trace
 	 */
 	private array $debug_chain = [];
 
 	/**
 	 * @var array $resolved_sections_cache Static cache for resolved sections
-	 * Key format: "{section_tipo}_{section_id}"
+	 * Key format: [$section_tipo][$byte] = $bit
 	 */
 	private static array $resolved_sections_cache = [];
 
@@ -39,9 +34,9 @@ class diffusion_chain_processor {
 	/**
 	 * @var int $current_depth Current recursion depth for cross-section resolution
 	 */
-	private int $current_depth = 0;
 
 	private ?object $properties;
+
 
 	/**
 	 * RESOLVE_CHAIN
@@ -73,9 +68,9 @@ class diffusion_chain_processor {
 		$is_publishable 	= $options->is_publishable;
 
 		// Find children of this parent node that belong to the current section_tipo
-		$children = array_filter($ddo_map, function($item) use($parent, $section_tipo) {
-			return $item->parent === $parent && $item->section_tipo === $section_tipo;
-		});
+		$children = array_filter($ddo_map, fn($item) => 
+			$item->parent === $parent && (empty($item->section_tipo) || $item->section_tipo === $section_tipo)
+		);
 
 		$ar_results = [];
 		foreach ($children as $ddo) {
@@ -102,8 +97,15 @@ class diffusion_chain_processor {
 	 * @return array
 	 */
 	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level, bool $is_publishable): array {
-		
+
 		$current_tipo = $ddo->tipo;
+		
+		// if the ddo has not a tipo defined, the ddo indicate a filter locator with section_tipo only.
+		// stop here and return an empty array
+		if(empty($current_tipo)){
+			return [];
+		}
+
 		$model_name   = ontology_node::get_model_by_tipo($current_tipo);
 
 		// Add to debug chain
@@ -116,7 +118,7 @@ class diffusion_chain_processor {
 				$model_name,
 				$current_tipo,
 				$section_id,
-				'list',
+				'diffusion',
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
@@ -155,10 +157,11 @@ class diffusion_chain_processor {
 	 * @param bool $is_publishable
 	 * @return array Array containing a single diffusion_data_object wrapping all resolved relational values
 	 */
-	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level,bool $is_publishable): array {
+	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level, bool $is_publishable): array {
 		
 		$current_tipo 	= $ddo->tipo;
-		$diffusion_data = $element->get_diffusion_data($ddo);
+		$diffusion_data = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
+		$element_model 	= $element->get_model(); 
 		$ar_locators 	= $diffusion_data[0]->get_value() ?? [];
 
 		if (!is_array($ar_locators)) {
@@ -174,7 +177,15 @@ class diffusion_chain_processor {
 		$new_diffusion_data[0]->set_value([]);
 
 		$relation_values     = [];
-		$valid_sections_tipo = array_map(fn($child) => $child->section_tipo, $children);
+		
+		// Create a "whitelist" of section_tipo values authorized for recursive data extraction
+		// based on the child nodes defined in the DDO map for this relation component.
+		$valid_sections_tipo = [];
+		foreach ($children as $child) {
+			if(!empty($child->section_tipo)) {
+				$valid_sections_tipo[] = $child->section_tipo;
+			}
+		}
 
 		foreach ($ar_locators as $locator) {
 
@@ -192,8 +203,9 @@ class diffusion_chain_processor {
 			// A. QUEUE: Always queue publishable locators for later diffusion of linked sections.
 			// Unpublishable locators are queued too so they can be marked for deletion.
 			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
-			if ($level > 0 && !empty($target_diffusion_tipo)) {
-				dd_diffusion_api::$datum_unresolved[$target_diffusion_tipo][] = $locator;
+			if ($level > 0 && !empty($target_diffusion_tipo) && $element_model !== 'relation_list') {				
+				$target_level = $level - 1;
+				dd_diffusion_api::$datum_unresolved["$target_level:$target_diffusion_tipo"][] = $locator;
 			}
 
 			// Skip unpublishable locators from value collection.
@@ -202,17 +214,23 @@ class diffusion_chain_processor {
 				continue;
 			}
 
+			// Validate locator
+			$validated = empty($valid_sections_tipo)
+				? true
+				: in_array($locator->section_tipo, $valid_sections_tipo);
+
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
+			// We only recurse if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo).
 			$child_results = [];
-			if (in_array($locator->section_tipo, $valid_sections_tipo)) {
+			if ($validated === true) {
 				$child_results = $this->resolve_chain((object)[
 					'ddo_map'      		=> $ddo_map,
 					'parent'       		=> $current_tipo,
 					'section_tipo' 		=> $locator->section_tipo,
 					'section_id'   		=> $locator->section_id,
-					'level'        		=> $level - 1,
+					'level'        		=> $level,
 					'is_publishable' 	=> $current_is_publishable
-				]);
+				]);				
 			}
 
 			if (!empty($child_results)) {
@@ -226,9 +244,22 @@ class diffusion_chain_processor {
 					}
 				}
 			} else {
-				// Fallback: Always return at least the raw locator if no children resolved
-				$new_diffusion_data[0]->value[] = $locator;
-				$relation_values = $new_diffusion_data;
+
+				// If no children resolved, check if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo)
+				// If not mapped, skip the locator.
+				// check if valid_sections_tipo is defined because the ddo_map has it,
+				// but the children is empty and the locator needs to be filtered by section_tipo
+				// relation_list case or component_auto_complete_hi with a end ddo only with the section_tipo defined.
+				// in those cases only the locator filtered by the section_tipo defined is the value.
+				if(!empty($valid_sections_tipo) && !in_array($locator->section_tipo, $valid_sections_tipo)){
+					continue;
+				}else{
+					// Fallback: If no children resolved (either bypassed due to not being in the 
+					// whitelist, or child resolution returned empty), simply return the raw 
+					// locator object itself without extracting deeper data of that linked section.
+					$new_diffusion_data[0]->value[] = $locator;
+					$relation_values = $new_diffusion_data;
+				}
 			}
 		}
 
@@ -248,7 +279,7 @@ class diffusion_chain_processor {
 	private function process_terminal_component(object $ddo, object $element): array {
 		
 		$current_tipo     = $ddo->tipo;
-		$terminal_results = $element->get_diffusion_data($ddo);
+		$terminal_results = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
 		
 		return [$this->wrap_into_diffusion_data_object($ddo, $current_tipo, $terminal_results)];
 	}
@@ -401,8 +432,8 @@ class diffusion_chain_processor {
 	 * @return void
 	 */
 	public static function reset_cache(): void {
-		self::$resolved_sections_cache = [];
 		self::$section_diffusion_map = [];
+		self::$resolved_sections_cache = [];
 		self::$diffusion_element_tipo = null;
 	}
 
@@ -500,108 +531,48 @@ class diffusion_chain_processor {
 
 
 	/**
-	 * GET_CACHED_SECTION
-	 * Returns cached resolution for a section if available.
-	 * 
-	 * @param string $section_tipo
-	 * @param int|string $section_id
-	 * @return array|null Cached result or null
-	 */
-	public static function get_cached_section(string $section_tipo, int|string $section_id): ?array {
-		$cache_key = "{$section_tipo}_{$section_id}";
-		return self::$resolved_sections_cache[$cache_key] ?? null;
-	}
-
-	/**
-	 * SET_CACHED_SECTION
-	 * Stores resolved section data in cache.
-	 * 
-	 * @param string $section_tipo
-	 * @param int|string $section_id
-	 * @param array $resolved_data
+	 * MARK_USED
+	 * Marks a numeric value as utilized within a specific ID context.
+	 * Uses a bitmask approach stored in $used_cache to minimize memory footprint.
+	 *
+	 * @param string $section_tipo Context identifier (e.g., section_tipo or sequence ID)
+	 * @param int $section_id The numeric value to mark
 	 * @return void
 	 */
-	public static function set_cached_section(string $section_tipo, int|string $section_id, array $resolved_data): void {
-		$cache_key = "{$section_tipo}_{$section_id}";
-		self::$resolved_sections_cache[$cache_key] = $resolved_data;
+	public static function mark_used(string $section_tipo, int $section_id): void
+	{
+		$byte = $section_id >> 3; // which byte/char index
+		$bit  = $section_id & 7;  // which bit inside that byte
+
+		if (!isset(self::$resolved_sections_cache[$section_tipo][$byte])) {
+			self::$resolved_sections_cache[$section_tipo][$byte] = "\x00"; // init byte as 00000000
+		}
+
+		// OR the bit in — flips that specific bit to 1
+		self::$resolved_sections_cache[$section_tipo][$byte] = chr(ord(self::$resolved_sections_cache[$section_tipo][$byte]) | (1 << $bit));
 	}
 
-	/**
-	 * RESOLVE_CROSS_SECTION
-	 * Resolves a portal target section using its own diffusion node definition.
-	 * Only resolves if the target section has a diffusion node in the current scope.
-	 * 
-	 * @param object $locator The locator pointing to the target section
-	 * @param int $depth Current recursion depth
-	 * @return array|null Resolved data or null if not resolvable
-	 */
-	public function resolve_cross_section(object $locator, int $depth = 0): ?array {
-		
-		// Depth protection
-		if ($depth >= self::MAX_DEPTH) {
-			debug_log(__METHOD__ . " Max depth reached for section: {$locator->section_tipo}_{$locator->section_id}", logger::WARNING);
-			return null;
-		}
 
-		$section_tipo = $locator->section_tipo;
-		$section_id   = $locator->section_id;
-
-		// Check if target section has a diffusion node in scope
-		$diffusion_tipo = self::get_section_diffusion_node($section_tipo);
-		if (!$diffusion_tipo) {
-			// Section not in scope, return null (caller should use raw locator data)
-			return null;
-		}
-
-		// Check cache first
-		$cached = self::get_cached_section($section_tipo, $section_id);
-		if ($cached !== null) {
-			return $cached;
-		}
-
-		// Get the ddo_map for this diffusion node
-		$ddo_map = diffusion_data::get_ddo_map($diffusion_tipo, $section_tipo);
-		if (empty($ddo_map)) {
-			return null;
-		}
-
-		// Create new processor instance for nested resolution
-		$nested_processor = new self();
-		$nested_processor->current_depth = $depth + 1;
-
-		// Resolve the chain for this section
-		$resolved = $nested_processor->resolve_chain((object)[
-			'ddo_map'      => $ddo_map,
-			'parent'       => $section_tipo,
-			'section_tipo' => $section_tipo,
-			'section_id'   => $section_id
-		]);
-
-		// Cache the result
-		self::set_cached_section($section_tipo, $section_id, $resolved);
-
-		return $resolved;
-	}
 
 	/**
-	 * GET_CURRENT_DEPTH
-	 * Returns current recursion depth.
-	 * 
-	 * @return int
+	 * IS_USED
+	 * Verifies if a numeric value has been previously marked as used within an ID context.
+	 *
+	 * @param string $section_tipo Context identifier
+	 * @param int $section_id The numeric value to check
+	 * @return bool True if the bit is set in the bitmask, false otherwise
 	 */
-	public function get_current_depth(): int {
-		return $this->current_depth;
-	}
+	public static function is_used(string $section_tipo, int $section_id): bool
+	{
+		$byte = $section_id >> 3;
+		$bit  = $section_id & 7;
 
-	/**
-	 * SET_CURRENT_DEPTH
-	 * Sets current recursion depth (used when creating nested processors).
-	 * 
-	 * @param int $depth
-	 * @return void
-	 */
-	public function set_current_depth(int $depth): void {
-		$this->current_depth = $depth;
+		if (!isset(self::$resolved_sections_cache[$section_tipo][$byte])) {
+			return false; // byte never set = unused
+		}
+
+		// AND to isolate the bit — non-zero means it was set
+		return (ord(self::$resolved_sections_cache[$section_tipo][$byte]) & (1 << $bit)) !== 0;
 	}
 
 }

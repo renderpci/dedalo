@@ -551,6 +551,59 @@ class component_iri extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_DATA
+	* Resolve the default diffusion data
+	* is used by the `diffusion_data`
+	* for component_section_id the default is its own data
+	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
+	* @return array $diffusion_data
+	*
+	* @see class.diffusion_data.php
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$diffusion_data = [];
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id ?? null
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		// Resolve the data by default
+			// If the ddo doesn't provide any specific function the component will use a get_url as default.
+			$data = $this->get_data();
+			if(!empty($data)) {
+				foreach ($data as $current_data) {
+					if(!empty($current_data)) {
+
+						$current_data->title = $this->resolve_title($current_data);
+
+						$diffusion_data_object = new diffusion_data_object( (object)[
+							'tipo'	=> $this->tipo,
+							'lang'	=> $current_data->lang ?? null,
+							'value'	=> $current_data ?? null,
+							'id'	=> $ddo->id ?? null
+						]);
+
+						$diffusion_data[] = $diffusion_data_object;
+					}
+				}
+			}
+
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
+
+
+	/**
 	* RESOLVE_TITLE
 	* Resolve the IRI title using the dataframe value when is available.
 	* @param object $value

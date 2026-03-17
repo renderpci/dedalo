@@ -1,6 +1,7 @@
 <?php
 
 use PhpParser\Node\Stmt\Switch_;
+use Symfony\Component\Console\Formatter\NullOutputFormatter;
 /**
  * Migration Script: Diffusion Ontology Properties (v6 -> v7)
  * 
@@ -14,6 +15,14 @@ if (!file_exists($config_path)) {
 }
 require_once $config_path;
 
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) return false;
+    echo "\nERROR [$errno] $errstr in $errfile on line $errline\n";
+    debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    return true;
+});
+
+
 if (!class_exists('ontology_node')) {
 	die("Error: class 'ontology_node' not found. Check environment.\n");
 }
@@ -25,6 +34,11 @@ if (!class_exists('dd_ontology_db_manager')) {
 	die("Error: class 'dd_ontology_db_manager' not found.\n");
 }
 
+include_once __DIR__ . '/v1_get_dato.php';
+include_once __DIR__ . '/v1_get_diffusion_dato.php';
+include_once __DIR__ . '/v1_get_diffusion_value.php';
+include_once __DIR__ . '/v1_get_valor.php';
+
 force_login(-1);
 
 $root_tipo = DEDALO_DIFFUSION_TIPO; // Diffusion Root
@@ -35,7 +49,13 @@ $total_nodes = 0;
 
 function traverse_ontology_recursive($current_tipo, $level = 0) {
 	global $total_nodes;
-	
+    $total_nodes++;
+    
+    $model = ontology_node::get_model_by_tipo($current_tipo);
+    $term = ontology_node::get_term_by_tipo($current_tipo, DEDALO_DATA_LANG);
+    echo "\nProcessing [{$current_tipo}] {$model} ({$term})...\n";
+    
+	$children = ontology_node::get_ar_children($current_tipo);
 	// Process current node
 	$node = ontology_node::get_instance($current_tipo);
 	if ($node) {
@@ -57,9 +77,12 @@ function traverse_ontology_recursive($current_tipo, $level = 0) {
 	}
 }
 
+
 function process_node($node, $level) {
 	$indent = str_repeat("  ", $level);
 	$tipo       = $node->get_tipo();
+	$data_to_be_used = null;
+	$letter_ids      = [];
 	$model_tipo = $node->get_model_tipo(); // Keep for reference if needed
 	$model_name = $node->get_legacy_model();      // Human readable name: component_input_text
 	$propiedades = $node->get_propiedades();
@@ -109,6 +132,7 @@ function process_node($node, $level) {
 		case 'diffusion_domain':
 			$diffusion_type = 'diffusion_domain';
 			break;
+
 		case 'diffusion_group':
 			$diffusion_type = 'diffusion_group';
 			break;
@@ -170,715 +194,3101 @@ function process_node($node, $level) {
 			if (isset($props_check->is_publicable)) unset($props_check->is_publicable);
 			$clean_count = count((array)$props_check);
 
-			// --- Rule: Enum Relation ---
-			if ($model_name === 'field_enum' || $model_name === 'field_text' && isset($props->enum)) {
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				// search in relations if works with relation component
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-							$is_relation_component = true;
-							break;
-						}
-					}
-				}
+			if (!empty($relations_info)) {
+				foreach ($relations_info as $rel_info) {
+					switch ($rel_info['model']) {
+						case 'component_publication':
 
-				if ($is_relation_component) {
-					$new_props = new stdClass();
-					
-					// Specific complex object for Enum + Relation
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_locator::get_first',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_text::map_value',
-							'options' => (object)[
-								'map' => [
-									(object)[
-										'a' => $props->enum
+							// Specific complex object for Enum + Relation
+							$parser_process = [
+								(object)[
+									'fn' => 'parser_locator::get_section_id',
+									'id' => 'a'
+								],
+								(object)[
+									'fn' => 'parser_helper::get_first',
+									'id' => 'a'
+								],
+								(object)[
+									'fn' => 'parser_text::map_value',
+									'options' => (object)[
+										'map' => [
+											(object)[
+												'a' => $props->enum
+											]
+										]
 									]
 								]
-							]
-						]
-					];
+							];
 
-					$new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
+							$new_props = new stdClass();
+							$new_props->process = new stdClass();
+							$new_props->process->parser = $parser_process;
+							$new_props->process->output_sample = "Yes";
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
-				}
-			}
-
-			// --- Case 1: Simple data_to_be_used: "dato" (Relation) OR "map_project_to_section_id" ---
-			if (
-				($new_props === null && isset($props->data_to_be_used) && $props->data_to_be_used === 'dato' && $clean_count === 1)
-				||
-				(isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_project_to_section_id')
-			) {
-				
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				// search in relations if works with relation component
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-							$is_relation_component = true;
+							echo "{$indent}- [$tipo] $model_name\n";
+							echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
 							break;
-						}
-					}
-				}
 
-				if ($is_relation_component) {
-					if (!$new_props) $new_props = new stdClass();
-					
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id'
-						]
-					];
+						case 'component_autocomplete_hi':
+							// 
+							$is_empty = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-					if (!isset($new_props->process)) $new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
+							// 0 emtpy propiedades
+							if($is_empty($props)) {
 
-					// If explicitly 'dato', map this explicitly to output_format: 'json'
-					if (isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
-						$new_props->process->output_format = 'json';
-					}
+								$parser_process = (object)[
+									'fn' => 'add_parents',
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::parents',
+											'options' => (object)[
+												'value' => 'term',
+												'fields_separator' => $props->source->divisor ?? ' - ',
+												'records_separator' => $props->source->records_separator ?? ', '
+											]
+										]
+									],
+									'output_format' => 'string'
+								];
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] Case 1: 'dato' OR 'map_project_to_section_id' (relation) -> parser_locator::get_section_id\n";
-				}
-			}
-			
-			// --- Case 4: process_dato: "diffusion_sql::map_quality_to_int" (Relation) ---
-			if ($new_props === null && isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_quality_to_int' && $clean_count === 1) {
-				
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "Bilbao - Bizkaia - País Vasco - España, Abergement-Clémenciat (L') - Bourg-en-Bresse - Ain - France";
 
-							$is_relation_component = true;
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// with propiedades
+							$value								= 'term'; // What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
+							$include_parents					= true; // If true, include all parents in the chain. Default: true.
+							$include_self						= true; // If true, include the item itself (index 0). Default: true.
+							$records_separator					= ', '; // Separator between different parent chains. Default: ", ". Set to false for array output.
+							$fields_separator					= ' - '; // Separator between values in the same chain. Default: "								// ".
+							$parents_splice						= []; // Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
+							$parent_end_by_term_id				= []; // Array of term_ids to truncate the parent chain at. Default: [].
+							$parent_section_tipo				= []; // Array section_tipo to keep to Default: [].
+							$parent_end_by_typology_term_id		= []; // Array 
+							$merge								= null; // Define the way to merger the parents. nested | flat | pipe Default: null.
+
+							// 1 "option_obj" first level
+							$option_obj = isset($props->option_obj) ? $props->option_obj : null;
+							if($option_obj) {								
+								
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$custom_arguments       = $process_dato_arguments->custom_arguments ?? null;
+								$output                 = $process_dato_arguments->output ?? null;
+								$data_to_be_used        = $props->data_to_be_used ?? null;
+								$ddo_map = null;
+
+								$new_props = new stdClass();
+								$new_props->process = get_diffusion_value(
+									$tipo,
+									'component_autocomplete_hi',
+									$custom_arguments,
+									$process_dato_arguments,
+									$output,
+									$data_to_be_used,
+									$option_obj,
+									$ddo_map
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// 2 "process_dato" first level
+							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_locator_to_terminoID"
+								|| $process_dato === 'diffusion_sql::map_locator_to_term_id'){
+
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$add_parents = $process_dato_arguments->custom_arguments->add_parents ?? null;
+								$use_parent = $process_dato_arguments->use_parent ?? null;
+
+								// 2.1.1 "add_parents" = true (implicit "use_parent" = true)
+								if(isset($process_dato_arguments) && isset($add_parents) && $add_parents === true){
+									$divisor = $process_dato_arguments;
+
+									$parser_options = new stdClass();
+										$parser_options->value = "term_id";
+										$parser_options->include_parents = true;
+
+									$parser_process = (object)[											
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+												'options' => $parser_options
+											]
+										],
+										"output_format" => "json"
+									];
+
+									$new_props = new stdClass();
+										$new_props->process = new stdClass();
+										$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->output_sample = ["es1_1257","es1_8844","es1_8864","es1_1","fr1_3","fr1_36686","fr1_37027","fr1_37147","fr1_1"];
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+									break;
+								}
+
+								// 2.1.2 "use_parent" = true "add_parents" = false
+								if(isset($process_dato_arguments) && isset($use_parent) && $use_parent === true && isset($add_parents) && $add_parents === false){
+									$divisor = $process_dato_arguments;
+
+									$parser_options = new stdClass();
+										$parser_options->value 			= "term_id";
+										$parser_options->parents_splice = [2];
+										$parser_options->include_self   = false;
+
+									$parser_process = (object)[							
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+													'options' => $parser_options
+												]
+											],
+											"output_format" => "json"
+										];
+
+									$new_props = new stdClass();
+										$new_props->process = new stdClass();
+										$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->output_sample = ["es1_8844","fr1_36686"];
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+									break;
+								}
+
+								// 2.1.3 "add_parents" = false or not defined
+								$parser_options = new stdClass();
+
+								$parser_process = (object)[					
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::get_term_id'
+										]
+									],
+									"output_format" => "json"
+								];
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["es1_1257","fr1_3"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+								break;
+
+
+							}
+
+							// 2.2 "process_dato" = "diffusion_sql::count_data_elements"
+							if($process_dato && $process_dato=== "diffusion_sql::count_data_elements"){
+
+								$parser_process = (object)[									
+									'parser' => [
+										(object)[
+											'fn' => 'parser_helper::count'
+										]
+									],
+									"output_format" => "int"
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = 2;
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::count_data_elements\n";
+								break;
+
+							}
+
+							// 2.3 "process_dato" = "diffusion_sql::resolve_component_value"
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_component_value"){
+
+								$process_dato_arguments = $props->process_dato_arguments;
+								$component_method = $process_dato_arguments->component_method ?? null;
+
+								$custom_arguments = $process_dato_arguments->custom_arguments[0] ?? new stdClass();
+								$custom_parents = $custom_arguments->custom_parents ?? null;
+
+								$select_model = $custom_parents->select_model ?? null;
+								$parents_slice = $custom_parents->slice ?? null;
+								$parent_end_by_model = $custom_parents->parent_end_by_model ?? null;
+
+								if($component_method === 'get_dato'){
+
+									$new_props = new stdClass();
+									$new_props->process = get_dato(										
+										'component_autocomplete_hi',
+										null,
+										null,
+										null,
+										null									
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+									break;
+
+								}
+
+								$parser_options = new stdClass();
+								if(isset($value_to_extract)){
+									$parser_options->value =($component_method==="get_diffusion_value") ? "term" : "term_id" ;
+								}
+								if(isset($select_model)){
+									$parser_options->parent_typology_term_id = $select_model;
+								}
+								if(isset($parents_slice)){
+									$parser_options->parents_slice = $parents_slice;
+								}
+		
+								if(isset($parent_end_by_model)){
+									$parser_options->parent_end_by_typology_term_id = $parent_end_by_model;
+								}								
+
+								$parser_process = (object)[
+									'fn' => 'add_parents',
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::parents',
+												'options' => $parser_options
+											]
+										],
+									'output_format' => 'string'							
+								];
+								
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "Bilbao";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// 2.4 "process_dato" = "diffusion_sql::resolve_value"
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_value"){
+
+								// direct properties
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$component_method = $process_dato_arguments->component_method ?? 'get_diffusion_value';
+								$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? "");
+								$output = $process_dato_arguments->output ?? null;
+								$custom_arguments = $process_dato_arguments->custom_arguments[0] ?? null;
+								$is_publicable = $process_dato_arguments->is_publicable ?? null;
+								
+								$ddo_map = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'         => $target_component_tipo,
+										'label'        => 'Term',
+										'parent'       => $rel_info['tipo']
+									]
+								];
+
+								//2.4.1 "component_method" = "get_diffusion_dato"
+								if($component_method === "get_diffusion_dato" && !isset($custom_arguments)){
+
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+									$new_props = new stdClass();
+									$new_props->process = get_diffusion_dato(										
+										$model,
+										$custom_arguments,
+										$process_dato_arguments,
+										$output										
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+									break;
+								}
+
+								// 2.4.2  "component_method" = "get_diffusion_value"
+								if($component_method === "get_diffusion_value"){	
+									
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+
+									$new_props = new stdClass(); 
+									$new_props->process = get_diffusion_value(
+										$target_component_tipo,
+										$model,
+										$custom_arguments,
+										$process_dato_arguments,
+										$output,
+										$data_to_be_used,
+										$option_obj,
+										$ddo_map
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::resolve_value with get_diffusion_value\n";
+									break;
+								}
+
+								// 2.4.4 "component_method" = "get_dato"
+								if($component_method === "get_dato"){
+
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+
+									$output_options = $process_dato_arguments->output_options ?? null;
+									$new_props = new stdClass();
+									$new_props->process = get_dato(
+										$model,
+										$custom_arguments,
+										$output,
+										$output_options,
+										$ddo_map
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+									break;
+									
+								}
+
+								// // 2.4.5 "component_method" = "get_dato" && output" = "split_date_range" && "output_options
+								// if($component_method === "get_dato" && !isset($custom_arguments) && $output === "split_date_range" && isset($output_options)){
+
+								// 	$date_format 	= $output_options->date_format ?? "year";
+								// 	$selected_key 	= $output_options->selected_key ?? 0;
+								// 	$selected_date 	= $output_options->selected_date ?? "start";
+
+								// 	$select = [$selected_date];
+								// 	$keys = [$selected_key];
+									
+								// 	// date_format
+								// 		switch ($date_format) {
+								// 			case 'year':
+								// 				$pattern	= "Y";												
+								// 				break;
+								// 			case 'unix_timestamp':
+								// 				$pattern	= "unix_timestamp";
+								// 				break;
+								// 			case 'time':
+								// 				$pattern	= "H:i:s";
+								// 				break;
+								// 			case 'date':
+								// 				$pattern	= "Y-m-d";
+								// 				break;
+								// 			case 'full':
+								// 			default:
+								// 				$pattern	= "Y-m-d H:i:s";
+								// 				break;
+								// 		}
+										
+								// 	$parser_process = [
+								// 		(object)[											
+								// 			'parser' => [
+								// 				(object)[
+								// 					'fn' => 'parser_date::string_date',
+								// 					'options' => (object)[
+								// 						'select' => $select,
+								// 						'keys' => $keys,
+								// 						'pattern' => $pattern
+								// 					]
+								// 				]
+								// 			],
+								// 			'output_format' => 'string'							
+								// 		]
+								// 	];
+
+								// 	$new_props = new stdClass();
+								// 		$new_props->process = new stdClass();
+								// 		$new_props->process = $parser_process;
+								// 		$new_props->process->ddo_map = $ddo_map;
+								// 		$new_props->process->output_sample = "Emproion | Arse";
+
+								// 	// "is_publicable" = true
+								// 	if(isset($is_publicable) && $is_publicable === true){
+								// 		$new_props->is_publishable = $is_publicable;
+								// 	}
+
+								// 	// "varchar" = 256
+								// 	if(isset($varchar)){
+								// 		$new_props->varchar = $props->varchar;
+								// 	}
+
+								// 	echo "{$indent}- [$tipo] $model_name\n";
+								// 	echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								// 	break;
+									
+								// }
+
+								// 2.4.6 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
+								// second deep component
+								if($component_method === "get_diffusion_resolve_value" && isset($custom_arguments)){
+
+									$first_custom_arg = is_array($custom_arguments) ? ($custom_arguments[0] ?? null) : $custom_arguments;
+									$process_dato_arguments_2 = $first_custom_arg->process_dato_arguments ?? null;
+									if ($process_dato_arguments_2) {
+										$component_method_2 = $process_dato_arguments_2->component_method;
+										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
+										$output_2 = $process_dato_arguments_2->output;
+										$output_options_2 = $process_dato_arguments_2->output_options;
+											// $date_format_2 = $output_options_2->date_format;
+											// $selected_key_2 = $output_options_2->selected_key;
+											// $selected_date_2 = $output_options_2->selected_date;
+										$empty_value_2 = $process_dato_arguments_2->empty_value;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
+										$process_dato_2 = $process_dato_arguments_2->process_dato ?? null;
+										$fallback_2 = $process_dato_arguments_2->fallback ?? null;
+											// $tipo_2 = $fallback_2->tipo;
+											// $method_2 = $fallback_2->method;
+										$target_component_properties_2 = $process_dato_arguments_2->target_component_properties ?? null;
+											// $separator_rows_2 = $target_component_properties_2->separator_rows ?? null;
+											$data_to_be_used_2 = $target_component_properties_2->data_to_be_used ?? null;
+											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
+										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
+										
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+											// $dato_3 = $process_dato_arguments_3->dato;
+											// $options_3 = $process_dato_arguments_3->options;
+										
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+
+
+										$ddo_map2 = [
+											(object)[
+												'tipo'         => $rel_info['tipo'],
+												'section_tipo' => 'self'
+											],
+											(object)[
+												'tipo'         => $target_component_tipo,							
+												'parent'       => $rel_info['tipo']
+											],
+											(object)[
+												'tipo'         => $target_component_tipo_2,
+												'parent'       => $target_component_tipo
+											]
+										];
+
+									// 2.4.5
+									// geojson
+									if(isset($fallback_2)&& $fallback_2->method === 'get_diffusion_value_as_geojson'){
+										$component_tipo = $fallback_2->tipo;
+
+										$ddo_map3 = [
+											(object)[
+												'tipo'         => $rel_info['tipo'],
+												'section_tipo' => 'self'
+											],
+											(object)[
+												'tipo'         => $component_tipo,							
+												'parent'       => $rel_info['tipo']
+											]
+										];
+
+										$parser_process = (object)[
+											'parser' => [
+												(object)[
+													'fn' => 'parser_geo::geojson'
+												]
+											],
+											'output_format' => 'json'							
+										];
+									
+										$new_props = new stdClass();
+											$new_props->process = $parser_process;
+											$new_props->process->ddo_map = $ddo_map3;
+											$new_props->process->output_sample = '[{"layer_id":1,"layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-2.923972570429317,43.257925269216365]}}]}}]';
+
+										// "is_publicable" = true
+										if(isset($props->is_publicable) && $props->is_publicable === true){
+											$new_props->is_publishable = $props->is_publicable;
+										}
+
+										// "varchar" = 256
+										if(isset($props->varchar)){
+											$new_props->varchar = $props->varchar;
+										}
+
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+										break;
+									}
+
+
+
+									// 2.4.6.1 "component_method" = "get_diffusion_value"
+									if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
+
+										$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
+
+										$new_props = new stdClass();
+										$new_props->process = get_diffusion_value(
+											$target_component_tipo_2,
+											$model,
+											$custom_arguments_2,
+											$process_dato_arguments_2,
+											$output_2,
+											$data_to_be_used_2,
+											$option_obj,
+											$ddo_map2
+										);
+
+										// "is_publicable" = true
+										if(isset($props->is_publicable) && $props->is_publicable === true){
+											$new_props->is_publishable = $props->is_publicable;
+										}
+
+										// "varchar" = 256
+										if(isset($props->varchar)){
+											$new_props->varchar = $props->varchar;
+										}
+
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+										break;
+										
+									}
+									// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
+									// second deep component
+									if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
+
+										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
+										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
+										if ($process_dato_arguments_3) {
+											$component_method_3 = $process_dato_arguments_3->component_method;
+											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
+											$output_3 = $process_dato_arguments_3->output;
+											$output_options_3 = $process_dato_arguments_3->output_options;
+
+											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
+											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
+											$process_dato_3 = $process_dato_arguments_3->process_dato ?? null;
+											$fallback_3 = $process_dato_arguments_3->fallback ?? null;
+											$target_component_properties_3 = $process_dato_arguments_3->target_component_properties ?? null;
+											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
+											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
+											
+											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
+											
+											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
+
+											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
+
+
+											$ddo_map3 = [
+												(object)[
+													'tipo'         => $rel_info['tipo'],
+													'section_tipo' => 'self'
+												],
+												(object)[
+													'tipo'         => $target_component_tipo,							
+													'parent'       => $rel_info['tipo']
+												],
+												(object)[
+													'tipo'         => $target_component_tipo_2,
+													'parent'       => $target_component_tipo
+												],
+												(object)[
+													'tipo'         => $target_component_tipo_3,
+													'parent'       => $target_component_tipo_2
+												]
+											];
+
+
+										// 2.5.1 "component_method" = "get_diffusion_value"
+										if($component_method_3 === "get_diffusion_value" && !isset($custom_arguments_3)){
+
+											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_3);
+
+											$new_props = new stdClass();
+											$new_props->process = get_diffusion_value(
+												$target_component_tipo_3,
+												$model,
+												$custom_arguments_3,
+												$process_dato_arguments_3,
+												$output_3,
+												$data_to_be_used_3,
+												$option_obj,
+												$ddo_map3
+											);
+
+											// "is_publicable" = true
+											if(isset($props->is_publicable) && $props->is_publicable === true){
+												$new_props->is_publishable = $props->is_publicable;
+											}
+
+											// "varchar" = 256
+											if(isset($props->varchar)){
+												$new_props->varchar = $props->varchar;
+											}
+
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+											break;
+											
+										}
+									}
+								}
+							}
+
+							}
+							}
+							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
+							if($data_to_be_used && $data_to_be_used === "dato"){
+								
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+									]								
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_sample = ["1","55"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
+								break;
+
+								
+							}
+
+
+
 							break;
-						}
-					}
-				}
+						case 'component_autocomplete':
+							// 
+							$is_empty = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-				if ($is_relation_component) {
-					$new_props = new stdClass();
-					
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_locator::get_first',
-							'id' => 'a'
-						]
-					];
+							// 0 emtpy propiedades
+							if($is_empty($props)) {
 
-					$new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
-					$new_props->process->output_format = 'int';
+								$fields_separator = $props->source->divisor ?? ' ';
+								$records_separator = ' | ';
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first (int)\n";
-				}
-			}
+								$ddo_map = [
+									(object)[
+										'tipo'         => $rel_info['tipo'] ?? $tipo,
+										'section_tipo' => 'self'
+									]
+								];
+														
+								$related_component = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'component_','related', false);
+								$related_section = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'section','related', true);
 
-			// --- Case: component_select_lang (Relation) ---
-			// Resolves languages through lg1 matrix and its term (hierarchy25)
-			if ($new_props === null) {
-				$has_select_lang = false;
-				$target_rel_tipo = null;
+								if (!empty($related_section)) {
+									$letter_ids = [];
+									foreach ($related_component as $i => $component_tipo) {
+										$letter_id = chr(ord('a') + $i);
+										$letter_ids[] = $letter_id;
+										$ddo_map[] = (object)[
+											'id' => $letter_id,
+											'tipo' => $component_tipo,
+											'parent' => $rel_info['tipo'],
+											'section' => $related_section[0]
+										]; 
+									}
+								}
 
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if ($rel_info['model'] === 'component_select_lang') {
-							$has_select_lang = true;
-							$target_rel_tipo = $rel_info['tipo'];
+								$parser_process = (object)[					
+									'parser' => [
+										(object)[
+											'fn' => 'parser_text::text_format',
+											'options' => (object)[
+												'pattern' => implode($records_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+											]
+										]
+									],
+									"output_format" => "string"
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									if (!empty($ddo_map)) $new_props->process->ddo_map = $ddo_map;
+									$new_props->process->output_sample = "Goméz Pérez, Raspa";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// with propiedades
+							$value								= 'term'; // What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
+							$include_parents					= true; // If true, include all parents in the chain. Default: true.
+							$include_self						= true; // If true, include the item itself (index 0). Default: true.
+							$records_separator					= ', '; // Separator between different parent chains. Default: ", ". Set to false for array output.
+							$fields_separator					= ' - '; // Separator between values in the same chain. Default: "								// ".
+							$parents_splice						= []; // Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
+							$parent_end_by_term_id				= []; // Array of term_ids to truncate the parent chain at. Default: [].
+							$parent_section_tipo				= []; // Array section_tipo to keep to Default: [].
+							$parent_end_by_typology_term_id		= []; // Array 
+							$merge								= null; // Define the way to merger the parents. nested | flat | pipe Default: null.
+
+							// 1 "option_obj" first level
+							$option_obj = isset($props->option_obj) ? $props->option_obj : null;
+							if($option_obj) {								
+								
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$custom_arguments       = $process_dato_arguments->custom_arguments ?? null;
+								$output                 = $process_dato_arguments->output ?? null;
+								$data_to_be_used        = $props->data_to_be_used ?? null;
+								$ddo_map = [
+									(object)[
+										'tipo'         => $rel_info['tipo'] ?? $tipo,
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$tipo,
+									'component_autocomplete_hi',
+									$custom_arguments,
+									$process_dato_arguments,
+									$output,
+									$data_to_be_used,
+									$option_obj,
+									$ddo_map
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// 2 "process_dato" first level
+							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_locator_to_terminoID"
+								|| $process_dato === 'diffusion_sql::map_locator_to_term_id'){
+
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$add_parents = $process_dato_arguments->custom_arguments->add_parents ?? null;
+								$use_parent = $process_dato_arguments->use_parent ?? null;
+
+								// 2.1.1 "add_parents" = true (implicit "use_parent" = true)
+								if(isset($process_dato_arguments) && isset($add_parents) && $add_parents === true){
+									$divisor = $process_dato_arguments;
+
+									$parser_options = new stdClass();
+									$parser_options->value = "term_id";
+									$parser_options->include_parents = true;
+
+									$parser_process = (object)[											
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+												'options' => $parser_options
+											]
+										],
+										"output_format" => "json"
+									];
+
+									$new_props = new stdClass();
+										$new_props->process = new stdClass();
+										$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->output_sample = ["es1_1257","es1_8844","es1_8864","es1_1","fr1_3","fr1_36686","fr1_37027","fr1_37147","fr1_1"];
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+									break;
+								}
+
+								// 2.1.2 "use_parent" = true "add_parents" = false
+								if(isset($process_dato_arguments) && isset($use_parent) && $use_parent === true && isset($add_parents) && $add_parents === false){
+									$divisor = $process_dato_arguments;
+
+									$parser_options = new stdClass();
+									$parser_options->value 			= "term_id";
+									$parser_options->parents_splice = [2];
+									$parser_options->include_self   = false;
+
+									$parser_process = (object)[							
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+													'options' => $parser_options
+												]
+											],
+											"output_format" => "json"
+										];
+
+									$new_props = new stdClass();
+										$new_props->process = new stdClass();
+										$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->output_sample = ["es1_8844","fr1_36686"];
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+									break;
+								}
+
+								// 2.1.3 "add_parents" = false or not defined
+								$parser_options = new stdClass();
+
+								$parser_process = (object)[					
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::get_term_id'
+										]
+									],
+									"output_format" => "json"
+								];
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["es1_1257","fr1_3"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+								break;
+
+
+							}
+
+							// 2.2 "process_dato" = "diffusion_sql::count_data_elements"
+							if($process_dato && $process_dato=== "diffusion_sql::count_data_elements"){
+
+								$parser_process = (object)[									
+									'parser' => [
+										(object)[
+											'fn' => 'parser_helper::count'
+										]
+									],
+									"output_format" => "int"
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = 2;
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::count_data_elements\n";
+								break;
+
+							}
+
+							// 2.3 "process_dato" = "diffusion_sql::resolve_component_value"
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_component_value"){
+
+								$process_dato_arguments = $props->process_dato_arguments;
+								$component_method = $process_dato_arguments->component_method ?? null;
+
+								$custom_arguments = $process_dato_arguments->custom_arguments[0] ?? new stdClass();
+								$custom_parents = $custom_arguments->custom_parents ?? null;
+
+								$select_model = $custom_parents->select_model ?? null;
+								$parents_slice = $custom_parents->slice ?? null;
+								$parent_end_by_model = $custom_parents->parent_end_by_model ?? null;
+
+								$parser_options = new stdClass();
+								if(isset($value_to_extract)){
+									$parser_options->value =($component_method==="get_diffusion_value") ? "term" : "term_id" ;
+								}
+								if(isset($select_model)){
+									$parser_options->parent_typology_term_id = $select_model;
+								}
+								if(isset($parents_slice)){
+									$parser_options->parents_slice = $parents_slice;
+								}
+		
+								if(isset($parent_end_by_model)){
+									$parser_options->parent_end_by_typology_term_id = $parent_end_by_model;
+								}								
+
+								$parser_process = (object)[
+									'fn' => 'add_parents',
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::parents',
+												'options' => $parser_options
+											]
+										],
+									'output_format' => 'string'							
+								];
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "Bilbao";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+								break;
+							}
+
+							// 2.4 "process_dato" = "diffusion_sql::resolve_value"
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_value"){
+
+								// direct properties
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+								$component_method = $process_dato_arguments->component_method ?? 'get_diffusion_value';
+								$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? "");
+								$output = $process_dato_arguments->output ?? null;
+								$custom_arguments = $process_dato_arguments->custom_arguments[0] ?? null;
+								$is_publicable = $process_dato_arguments->is_publicable ?? null;
+								
+								$ddo_map = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'         => $target_component_tipo,
+										'label'        => 'Term',
+										'parent'       => $rel_info['tipo']
+									]
+								];
+
+								//2.4.1 "component_method" = "get_diffusion_dato"
+								if($component_method === "get_diffusion_dato" && !isset($custom_arguments)){
+
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(										
+										$model,
+										$custom_arguments,
+										$process_dato_arguments,
+										$output										
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+									break;
+								}
+
+								// 2.4.2  "component_method" = "get_diffusion_value"
+								if($component_method === "get_diffusion_value"){	
+									
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$target_component_tipo,
+										$model,
+										$custom_arguments,
+										$process_dato_arguments,
+										$output,
+										$data_to_be_used,
+										$option_obj,
+										$ddo_map
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::resolve_value with get_diffusion_value\n";
+									break;
+								}
+
+								// 2.4.4 "component_method" = "get_dato"
+								if($component_method === "get_dato"){
+
+									$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+
+									$output_options = $process_dato_arguments->output_options ?? null;
+									$new_props = new stdClass(); $new_props->process = get_dato(
+										$model,
+										$custom_arguments,
+										$output,
+										$output_options,
+										$ddo_map
+									);
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+									break;
+									
+								}
+							
+
+								// 2.4.6 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
+								// second deep component
+								if($component_method === "get_diffusion_resolve_value" && isset($custom_arguments)){
+
+									$process_dato_arguments_2 = $custom_arguments->process_dato_arguments;
+										$component_method_2 = $process_dato_arguments_2->component_method;
+										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
+										$output_2 = $process_dato_arguments_2->output;
+										$output_options_2 = $process_dato_arguments_2->output_options;
+											// $date_format_2 = $output_options_2->date_format;
+											// $selected_key_2 = $output_options_2->selected_key;
+											// $selected_date_2 = $output_options_2->selected_date;
+										$empty_value_2 = $process_dato_arguments_2->empty_value;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
+										$process_dato_2 = $process_dato_arguments_2->process_dato;
+										$fallback_2 = $process_dato_arguments_2->fallback;
+											// $tipo_2 = $fallback_2->tipo;
+											// $method_2 = $fallback_2->method;
+										$target_component_properties_2 = $process_dato_arguments_2->target_component_properties ?? null;
+											// $separator_rows_2 = $target_component_properties_2->separator_rows ?? null;
+											$data_to_be_used_2 = $target_component_properties_2->data_to_be_used ?? null;
+											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
+										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
+										
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+											// $dato_3 = $process_dato_arguments_3->dato;
+											// $options_3 = $process_dato_arguments_3->options;
+										
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+
+
+										$ddo_map2 = [
+											(object)[
+												'tipo'         => $rel_info['tipo'],
+												'section_tipo' => 'self'
+											],
+											(object)[
+												'tipo'         => $target_component_tipo,							
+												'parent'       => $rel_info['tipo']
+											],
+											(object)[
+												'tipo'         => $target_component_tipo_2,
+												'parent'       => $target_component_tipo
+											]
+										];
+
+
+									// 2.4.6.1 "component_method" = "get_diffusion_value"
+									if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
+
+										$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
+
+										$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+											$target_component_tipo_2,
+											$model,
+											$custom_arguments_2,
+											$process_dato_arguments_2,
+											$output_2,
+											$data_to_be_used_2,
+											$option_obj,
+											$ddo_map2
+										);
+
+										// "is_publicable" = true
+										if(isset($props->is_publicable) && $props->is_publicable === true){
+											$new_props->is_publishable = $props->is_publicable;
+										}
+
+										// "varchar" = 256
+										if(isset($props->varchar)){
+											$new_props->varchar = $props->varchar;
+										}
+
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+										break;
+										
+									}
+									// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
+									// second deep component
+									if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
+
+										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
+										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
+										if ($process_dato_arguments_3) {
+											$component_method_3 = $process_dato_arguments_3->component_method;
+											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
+											$output_3 = $process_dato_arguments_3->output;
+											$output_options_3 = $process_dato_arguments_3->output_options;
+
+											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
+											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
+											$process_dato_3 = $process_dato_arguments_3->process_dato ?? null;
+											$fallback_3 = $process_dato_arguments_3->fallback ?? null;
+											$target_component_properties_3 = $process_dato_arguments_3->target_component_properties ?? null;
+											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
+											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
+											
+											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
+											
+											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
+
+											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
+
+
+											$ddo_map3 = [
+												(object)[
+													'tipo'         => $rel_info['tipo'],
+													'section_tipo' => 'self'
+												],
+												(object)[
+													'tipo'         => $target_component_tipo,							
+													'parent'       => $rel_info['tipo']
+												],
+												(object)[
+													'tipo'         => $target_component_tipo_2,
+													'parent'       => $target_component_tipo
+												],
+												(object)[
+													'tipo'         => $target_component_tipo_3,
+													'parent'       => $target_component_tipo_2
+												]
+											];
+
+
+										// 2.5.1 "component_method" = "get_diffusion_value"
+										if($component_method_3 === "get_diffusion_value" && !isset($custom_arguments_3)){
+
+											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_3);
+
+											$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+												$target_component_tipo_3,
+												$model,
+												$custom_arguments_3,
+												$process_dato_arguments_3,
+												$output_3,
+												$data_to_be_used_3,
+												$option_obj,
+												$ddo_map3
+											);
+
+											// "is_publicable" = true
+											if(isset($props->is_publicable) && $props->is_publicable === true){
+												$new_props->is_publishable = $props->is_publicable;
+											}
+
+											// "varchar" = 256
+											if(isset($props->varchar)){
+												$new_props->varchar = $props->varchar;
+											}
+
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+											break;
+											
+										}
+									}
+								}
+							}
+
+							}
+							// 2.5 "process_dato" = "diffusion_sql::resolve_multiple"
+							if($process_dato && $process_dato === "diffusion_sql::resolve_multiple"){
+								$process_dato_arguments = $props->process_dato_arguments ?? [];
+								$separator = $props->separator ?? ' # ';
+								
+								$ddo_map = [
+									(object)[
+										'tipo'         => $rel_info['tipo'] ?? $tipo,
+										'section_tipo' => 'self'
+									]
+								];
+								
+								$multiple_parsers = [];
+								
+								foreach($process_dato_arguments as $arg_group) {
+									$sub_process_dato = $arg_group->process_dato ?? null;
+									$sub_args = $arg_group->process_dato_arguments ?? null;
+									
+									if ($sub_process_dato === 'diffusion_sql::resolve_value' && $sub_args) {
+										$target_tipo = trim($sub_args->target_component_tipo ?? "");
+										$model = ontology_node::get_legacy_model_by_tipo($target_tipo);
+										
+										$target_props = $sub_args->target_component_properties ?? null;
+										$sub_option_obj = $target_props->option_obj ?? null;
+										
+										$ddo_map[] = (object)[
+											'tipo'         => $target_tipo,
+											'label'        => 'Term',
+											'parent'       => $rel_info['tipo'] ?? $tipo
+										];
+										
+										$sub_resolved = get_diffusion_value(
+											$target_tipo,
+											$model,
+											null, // custom_arguments
+											$sub_args,
+											null, // output
+											null, // data_to_be_used
+											$sub_option_obj,
+											$ddo_map
+										);
+										
+										if (isset($sub_resolved->process)) {
+											$multiple_parsers[] = $sub_resolved->process;
+										}
+									}
+								}
+								
+								$parser_process = (object)[
+									'fn' => 'parser_helper::merge',
+									'options' => (object)[ 'separator' => $separator ],
+									'parser' => $multiple_parsers,
+									'output_format' => 'string'
+								];
+								
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->ddo_map = $ddo_map;
+									$new_props->process->output_sample = "Value 1 # Value 2";
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::resolve_multiple";
+								break;
+							}
+
+							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
+							if($data_to_be_used && $data_to_be_used === "dato"){
+								
+								$parser_process = (object)[
+										'fn' => 'parser_locator::get_section_id',
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_sample = ["1","55"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
+								break;								
+							}
 							break;
-						}
-					}
-				}
+						
+						case 'component_select_lang':
 
-				if ($has_select_lang) {
-					$new_props = new stdClass();
-					$new_props->process = new stdClass();
+							$is_empty_sl = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-					$new_props->process->ddo_map = [
-						(object)[
-							'tipo'         => $target_rel_tipo,
-							'section_tipo' => 'self'
-						],
-						(object)[
-							'tipo'         => 'hierarchy25', // Standard term component for lg1
-							'label'        => 'Term',
-							'parent'       => $target_rel_tipo,
-							'section_tipo' => 'lg1'
-						]
-					];
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_sl($props)) {
 
-					// The value extracted is the term name, ensure it's unboxed properly
-					$new_props->process->parser = [
-						(object)[
-							'fn' => 'parser_locator::get_first',
-							'id' => 'a'
-						]
-					];
+								$ddo_map_cb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] component_select_lang relation -> ddo_map (hierarchy25) + get_first\n";
-				}
-			}
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select_lang',
+									null,
+									null,
+									null,
+									null,
+									null,
+									$ddo_map_cb
+								);
 
-			// --- Case: process_dato: "diffusion_sql::map_locator_to_value" (Relation) ---
-			// Maps section_id to a value using a provided map (similar to enum logic)
-			if (
-				$new_props === null
-				&& isset($props->process_dato)
-				&& $props->process_dato === 'diffusion_sql::map_locator_to_value'
-				&& isset($props->process_dato_arguments->map)
-			) {
-				$new_props = new stdClass();
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
 
-				$map_data = $props->process_dato_arguments->map;
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_select_lang (empty props) → get_diffusion_value\n";
+								break;
+							}
 
-				$parser_process = [
-					(object)[
-						'fn' => 'parser_locator::get_section_id',
-						'id' => 'a'
-					],
-					(object)[
-						'fn' => 'parser_locator::get_first',
-						'id' => 'a'
-					],
-					(object)[
-						'fn' => 'parser_text::map_value',
-						'options' => (object)[
-							'map' => [
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cb && $data_to_be_used_cb === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_select_lang',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_select_lang data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+							
+							// 2 "process_dato" = "diffusion_sql::resolve_component_value"
+							$process_dato = $props->process_dato ?? null;
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_component_value"){
+
+								$process_dato_arguments = $props->process_dato_arguments;
+								$component_method = $process_dato_arguments->component_method ?? null;
+
+								if($component_method === 'get_value_code'){
+
+									$ddo_map_sl = [
+										(object)[
+											'tipo'         => $rel_info['tipo'] ?? $tipo,
+											'section_tipo' => 'self'
+										],
+										(object)[
+											'id'		=> 'a',
+											'tipo'		=> 'hierarchy41', // Standard code component for lg1
+											'label'		=> 'code',
+											'parent'	=> $rel_info['tipo'],
+										]
+									];
+									
+									$parser_process = (object)[					
+										'parser' => [
+											(object)[
+												'fn' => 'parser_text::text_format',
+												'options' => (object)[
+													'pattern' => 'lg-${a}'
+												]
+											]
+										],
+										"output_format" => "string"
+									];
+
+									$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->ddo_map = $ddo_map_sl;
+										$new_props->process->output_sample = "lg-cat";
+
+										// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] component_select_lang data_to_be_used=dato -> get_dato()\n";
+									break;
+								}
+							}
+							break;
+						case 'component_portal':
+
+							$is_empty_cp = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cp($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_portal',
+									null, null, null, null, null, null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							$data_to_be_used_cp = $props->data_to_be_used ?? null;
+
+							// 1 "data_to_be_used" cases without process_dato
+							$process_dato_cp = $props->process_dato ?? null;
+							if(!$process_dato_cp && $data_to_be_used_cp) {
+								if ($data_to_be_used_cp === 'value' || $data_to_be_used_cp === 'valor') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$rel_info['tipo'],
+										'component_portal',
+										null, null, null, $data_to_be_used_cp, null, null
+									);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] portal data_to_be_used={$data_to_be_used_cp} -> get_diffusion_value\n";
+									break;
+								}
+								
+								if ($data_to_be_used_cp === 'dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_portal', null, null, null);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal data_to_be_used=dato -> get_diffusion_dato\n";
+								break;
+								}
+							}
+
+							// 2 "process_dato" present
+							
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cp
+								&& ($process_dato_cp === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cp === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_portal', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal map_locator_to_term_id -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cp && $process_dato_cp === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" -> deep nested ddo_map building
+							if($process_dato_cp && $process_dato_cp === 'diffusion_sql::resolve_value') {
+								
+								$ddo_map_cp = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+								
+								$output_options_cp = new stdClass();
+								$final_method_cp = null;
+								$parent_tipo = $rel_info['tipo'];
+								$args_node = $props->process_dato_arguments;
+								$custom_parents_config = null;
+								$final_target = null;
+								$final_args = null;
+								$is_publicable_cp = $props->process_dato_arguments->is_publicable ?? null;
+								
+								while($args_node) {
+									$method = $args_node->component_method ?? null;
+									$target = trim($args_node->target_component_tipo ?? "");
+									
+									if($target) {
+										$ddo_map_cp[] = (object)['tipo' => $target, 'parent' => $parent_tipo];
+										$parent_tipo = $target;
+										$final_target = $target;
+									}
+									
+									if(isset($args_node->split_string_value)) {
+										$output_options_cp->records_separator = $args_node->split_string_value;
+									}
+									
+									$ca = $args_node->custom_arguments[0] ?? null;
+									if($ca && isset($ca->custom_parents)) {
+										$custom_parents_config = $ca->custom_parents;
+									}
+									
+									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value') {
+										$final_method_cp = $method;
+										$final_args = $args_node;
+										break;
+									}
+									
+									if($ca && isset($ca->process_dato_arguments)) {
+										$args_node = $ca->process_dato_arguments;
+									} else if ($ca && isset($ca->process_dato) && $ca->process_dato === 'diffusion_sql::resolve_value') {
+										$args_node = $ca->process_dato_arguments ?? null;
+									} else {
+										break;
+									}
+								}
+								
+								if($final_method_cp === 'get_diffusion_dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+										$final_target,
+										null,
+										$final_args,
+										null
+									);
+								} else { // get_diffusion_value or fallback
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									
+									// Reconstruct add_parents if found in hierarchy
+									if($custom_parents_config) {
+										$parser_options = new stdClass();
+										$parser_options->value = "term";
+										if(isset($custom_parents_config->select_model)) {
+											$parser_options->parent_typology_term_id = $custom_parents_config->select_model;
+										}
+										if(isset($custom_parents_config->slice)) {
+											$parser_options->parents_slice = $custom_parents_config->slice;
+										}
+										if(isset($custom_parents_config->parent_end_by_model)) {
+											$parser_options->parent_end_by_typology_term_id = $custom_parents_config->parent_end_by_model;
+										}
+										$output_options_cp->add_parents = $parser_options;
+									}
+									
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$final_target,
+										$model_cp,
+										null,
+										$final_args,
+										null, null,
+										(empty((array)$output_options_cp) ? null : $output_options_cp),
+										$ddo_map_cp
+									);
+								}
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true || $is_publicable_cp === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal resolve_value nested loop -> {$final_method_cp}\n";
+								break;
+							}
+							break;
+						case 'component_check_box':
+
+							$is_empty_cb = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_cb($props)) {
+
+								$ddo_map_cb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_check_box',
+									null,
+									null,
+									null,
+									null,
+									null,
+									$ddo_map_cb
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cb && $data_to_be_used_cb === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_check_box',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cb = $props->process_dato ?? null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cb
+								&& ($process_dato_cb === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cb === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_check_box',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id -> get_diffusion_dato()\n";
+								break;
+							}
+
+							// 2.2 "process_dato" = "diffusion_sql::map_quality_to_int"
+							if($process_dato_cb && $process_dato_cb === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_quality_to_int -> get_diffusion_dato()\n";
+								break;
+							}
+
+							break;
+						case 'component_select':
+
+							$is_empty_cs = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_cs = [
 								(object)[
-									'a' => $map_data
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
 								]
-							]
-						]
-					]
-				];
+							];
 
-				$new_props->process = new stdClass();
-				$new_props->process->parser = $parser_process;
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cs($props)) {
 
-				echo "{$indent}- [$tipo] $model_name\n";
-				echo "{$indent}  [RULE APPLIED] map_locator_to_value -> get_section_id + get_first + map_value\n";
-			}
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select',
+									null, null, null, null, null,
+									$ddo_map_cs
+								);
 
-			// --- Case: component_autocomplete_hi + map_locator_to_terminoID (combined) ---
-			// When autocomplete_hi has map_locator_to_terminoID with add_parents:false in custom_arguments,
-			// output only term_id parsers (no parent resolution).
-			// When add_parents is true/default, skip and let the existing autocomplete_hi rule handle it.
-			if (
-				$new_props === null
-				&& isset($props->process_dato)
-				&& (
-					$props->process_dato === 'diffusion_sql::map_locator_to_terminoID'
-					|| $props->process_dato === 'diffusion_sql::map_locator_to_term_id'
-				)
-				&& !empty($relations_info)
-			) {
-				// Detect component_autocomplete_hi in relations
-				$is_autocomplete_hi_combined = false;
-				foreach ($relations_info as $rel_info) {
-					if ($rel_info['model'] === 'component_autocomplete_hi') {
-						$is_autocomplete_hi_combined = true;
-						break;
-					}
-				}
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
-				if ($is_autocomplete_hi_combined) {
-					// Check add_parents flag in process_dato_arguments.custom_arguments
-					$add_parents_flag = true; // default: resolve parents
-					if (
-						isset($props->process_dato_arguments->custom_arguments->add_parents)
-						&& $props->process_dato_arguments->custom_arguments->add_parents === false
-					) {
-						$add_parents_flag = false;
-					}
-					// Also check if custom_arguments is an array (alternative format)
-					if (
-						isset($props->process_dato_arguments->custom_arguments)
-						&& is_array($props->process_dato_arguments->custom_arguments)
-					) {
-						foreach ($props->process_dato_arguments->custom_arguments as $arg) {
-							if (is_object($arg) && isset($arg->add_parents) && $arg->add_parents === false) {
-								$add_parents_flag = false;
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select empty props -> get_diffusion_value\n";
 								break;
 							}
-						}
-					}
 
-					if (!$add_parents_flag) {
-						// add_parents: false → only term_id, no parent resolution
-						$new_props = new stdClass();
+							// 1 "data_to_be_used" = "value"
+							$data_to_be_used_cs = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cs && $data_to_be_used_cs === 'value') {
 
-						$parser_process = [
-							(object)[
-								'fn' => 'parser_locator::get_section_id',
-								'id' => 'a'
-							],
-							(object)[
-								'fn' => 'parser_locator::get_section_tipo',
-								'id' => 'b'
-							],
-							(object)[
-								'fn' => 'parser_text::text_format',
-								'options' => (object)[
-									'pattern' => '${b}_${a}'
-								]
-							]
-						];
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select',
+									null, null, null, null, null,
+									$ddo_map_cs
+								);
 
-						$new_props->process = new stdClass();
-						$new_props->process->parser = $parser_process;
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:false) -> term_id only\n";
-					} else {
-						// add_parents: true/default → resolve parents + output as term_id
-						$new_props = new stdClass();
-
-						$new_props->process = new stdClass();
-						$new_props->process->fn = 'add_parents';
-						$new_props->process->parser = [
-							(object)[
-								'fn' => 'parser_locator::get_parent_term_id',
-								'options' => (object)[
-									'include_self' => true
-								]
-							]
-						];
-
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] autocomplete_hi + map_locator_to_terminoID (add_parents:true) -> add_parents + term_id\n";
-					}
-				}
-			}
-
-			// --- Case: process_dato: "diffusion_sql::map_locator_to_terminoID" OR "diffusion_sql::map_locator_to_term_id" (Relation) ---
-			if (
-				$new_props === null 
-				&& isset($props->process_dato) 
-				&& (
-					$props->process_dato === 'diffusion_sql::map_locator_to_terminoID'
-					|| $props->process_dato === 'diffusion_sql::map_locator_to_term_id'
-				)
-				&& $clean_count === 1
-			) {
-				
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-							$is_relation_component = true;
-							break;
-						}
-					}
-				}
-
-				if ($is_relation_component) {
-					$new_props = new stdClass();
-					
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_locator::get_section_tipo',
-							'id' => 'b'
-						],
-						(object)[
-							'fn' => 'parser_text::text_format',
-							'options' => (object)[
-								'pattern' => '${b}_${a}'
-							]
-						]
-					];
-
-					$new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
-
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID OR map_locator_to_term_id (relation) -> get_section_id + get_section_tipo + text_format\n";
-				}
-			}
-
-			// --- Rule: Varchar ---
-			if ($model_name === 'field_varchar' && isset($props->varchar)) {
-				if (!$new_props) $new_props = new stdClass();
-				$new_props->varchar = $props->varchar;
-				
-				echo "{$indent}- [$tipo] $model_name\n";
-				echo "{$indent}  [RULE APPLIED] field_varchar -> keep varchar: {$props->varchar}\n";
-			}
-
-            // --- Rule: Component Autocomplete Hierarchy (Relation) ---
-			// Also handles option_obj configurations for parent chain customization
-			if (($new_props === null || !isset($new_props->process)) && !empty($relations_info)) {
-
-				// Check for option_obj in propiedades
-				$option_obj = isset($props->option_obj) ? $props->option_obj : null;
-
-				// Detect component_autocomplete_hi in relations
-				$is_autocomplete_hi = false;
-				foreach ($relations_info as $rel_info) {
-					if ($rel_info['model'] === 'component_autocomplete_hi') {
-						$is_autocomplete_hi = true;
-						break;
-					}
-				}
-
-				// When option_obj.add_parents is explicitly false, skip this rule
-				$add_parents_false = $option_obj && isset($option_obj->add_parents) && $option_obj->add_parents === false;
-
-				// When process_dato is resolve_component_value, data returns as-is — clear any old properties
-				$is_resolve_component = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::resolve_component_value';
-				if ($is_resolve_component) {
-					// Force save empty props to clear any previously migrated incorrect data
-					if (!$new_props) $new_props = new stdClass();
-
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
-				}
-
-				if (!$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
-
-					if (!$new_props) $new_props = new stdClass();
-					if (!isset($new_props->process)) $new_props->process = new stdClass();
-					$new_props->process->fn = 'add_parents';
-
-					if (!isset($new_props->process->parser)) $new_props->process->parser = [];
-
-					if ($option_obj || $is_autocomplete_hi) {
-						// Build parser options from option_obj — only include present values
-						$parser_options = new stdClass();
-
-						// include_parents (V7 TS parser option)
-						if ($add_parents_false) {
-							$parser_options->include_parents = false;
-						}
-
-						// resolve_value
-						if ($option_obj && isset($option_obj->resolve_value)) {
-							$parser_options->resolve_value = $option_obj->resolve_value;
-						}
-
-						// parent_section_tipo
-						if (isset($option_obj->parent_section_tipo)) {
-							$parser_options->parent_section_tipo = $option_obj->parent_section_tipo;
-						}
-
-						// records_separator (unify divisor and records_separator)
-						if (isset($option_obj->divisor)) {
-							$parser_options->records_separator = $option_obj->divisor;
-						}
-						if (isset($option_obj->records_separator)) {
-							$parser_options->records_separator = $option_obj->records_separator;
-						}
-
-						// custom_parents — normalize from multiple possible locations
-						$custom_parents = null;
-						if (isset($option_obj->custom_parents)) {
-							// Direct: option_obj.custom_parents
-							$custom_parents = $option_obj->custom_parents;
-						} elseif (isset($option_obj->process_dato_arguments->custom_parents)) {
-							// Nested: option_obj.process_dato_arguments.custom_parents
-							$custom_parents = $option_obj->process_dato_arguments->custom_parents;
-						}
-
-						if ($custom_parents) {
-							if (isset($custom_parents->parents_splice)) {
-								$parser_options->parents_splice = $custom_parents->parents_splice;
-							}
-							if (isset($custom_parents->parent_end_by_term_id)) {
-								$parser_options->parent_end_by_term_id = $custom_parents->parent_end_by_term_id;
-							}
-							if (isset($custom_parents->parent_end_by_model)) {
-								$parser_options->parent_end_by_model = $custom_parents->parent_end_by_model;
-							}
-						}
-
-						// Build parser definition
-						$parser_def = (object)['fn' => 'parser_locator::flat_parents'];
-						if (count((array)$parser_options) > 0) {
-							$parser_def->options = $parser_options;
-						}
-						$new_props->process->parser = [$parser_def];
-
-						$options_str = count((array)$parser_options) > 0 ? ' options: ' . json_encode($parser_options) : '';
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] option_obj -> parser_locator::flat_parents{$options_str}\n";
-
-					} else {
-						// Default: no option_obj, simple add_parents
-						$new_props->process->parser = [
-							(object)['fn' => 'parser_locator::add_parents']
-						];
-
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] component_autocomplete_hi relation (fn=add_parents) -> parser_locator::add_parents\n";
-					}
-				}
-			}
-
-			// --- Rule: map_locator_to_terminoID_parent (parser_locator::get_parent_term_id) ---
-			// When process_dato is map_locator_to_terminoID_parent, resolve parent hierarchy
-			// and return first parent's term_id (section_tipo_section_id)
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_map_parent = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_locator_to_terminoID_parent';
-
-				if ($is_map_parent) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-					$new_props->process->fn = 'add_parents';
-					$new_props->process->parser = [
-						(object)['fn' => 'parser_locator::get_parent_term_id']
-					];
-
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] map_locator_to_terminoID_parent -> parser_locator::get_parent_term_id\n";
-				}
-			}
-
-			// --- Rule: Geolocation (get_geojson_data) ---
-			// When process_dato is build_geolocation_data_geojson and relation is component_text_area
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_geojson = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::build_geolocation_data_geojson';
-
-				if ($is_geojson) {
-					// Verify relation is component_text_area
-					$is_text_area = false;
-					if (!empty($relations_info)) {
-						foreach ($relations_info as $rel_info) {
-							if ($rel_info['model'] === 'component_text_area') {
-								$is_text_area = true;
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select data_to_be_used=value -> get_diffusion_value\n";
 								break;
 							}
-						}
-					}
 
-					if ($is_text_area) {
-						if (!$new_props) $new_props = new stdClass();
-						$new_props->process = new stdClass();
-						$new_props->process->fn = 'get_geojson_data';
+							// 2 "process_dato" present
+							$process_dato_cs = $props->process_dato ?? null;
 
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] build_geolocation_data_geojson -> fn: get_geojson_data\n";
-					}
-				}
-			}
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cs
+								&& ($process_dato_cs === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cs === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
 
-			// --- Rule: Unix Timestamp (parser_date::unix_timestamp) ---
-			// When process_dato is get_publication_unix_timestamp
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_unix_timestamp = isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp';
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
 
-				if ($is_unix_timestamp) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-					$new_props->process->parser = [
-						(object)['fn' => 'parser_date::unix_timestamp']
-					];
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] get_publication_unix_timestamp -> parser_date::unix_timestamp\n";
-				}
-			}
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select map_locator_to_term_id\n";
+								break;
+							}
 
-			// --- Rule: Component Date (parser_date::string_date) ---
-			// When related component is component_date and no functional properties,
-			// or when process_dato is split_date_range
-			if ($new_props === null || !isset($new_props->process)) {
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cs && $process_dato_cs === 'diffusion_sql::map_quality_to_int') {
 
-				$is_date_component = false;
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
 
-				// Check if related component is component_date
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if ($rel_info['model'] === 'component_date') {
-							$is_date_component = true;
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" with target_component_tipo → custom ddo_map chain
+							if($process_dato_cs && $process_dato_cs === 'diffusion_sql::resolve_value') {
+
+								$process_dato_arguments_cs = $props->process_dato_arguments ?? null;
+								$target_component_tipo_cs  = trim($process_dato_arguments_cs->target_component_tipo ?? "");
+								$is_publicable_cs          = $process_dato_arguments_cs->is_publicable ?? null;
+
+								$ddo_map_rv = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'   => $target_component_tipo_cs,
+										'parent' => $rel_info['tipo']
+									]
+								];
+
+								$model_cs = ontology_node::get_legacy_model_by_tipo($target_component_tipo_cs);
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$target_component_tipo_cs,
+									$model_cs,
+									null,
+									$process_dato_arguments_cs,
+									null, null, null,
+									$ddo_map_rv
+								);
+
+								if($is_publicable_cs === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select resolve_value -> custom ddo_map chain\n";
+								break;
+							}
+
 							break;
-						}
+						case 'component_relation_model':
+
+							$is_empty_rm = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_rm = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rm($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_model',
+									null, null, null, null, null,
+									$ddo_map_rm
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rm = $props->process_dato ?? null;
+
+							// 1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rm
+								&& ($process_dato_rm === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rm === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							break;
+
+						case 'component_relation_parent':
+
+							$is_empty_rp = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_rp = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rp($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_parent',
+									null, null, null, null, null,
+									$ddo_map_rp
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "option_obj" present
+							$option_obj_rp = $props->option_obj ?? null;
+							if($option_obj_rp){
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_parent',
+									null, null, null, null, $option_obj_rp,
+									null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+								
+							}
+							
+							// 2 "process_dato" present
+							$process_dato_rp = $props->process_dato ?? null;
+
+							// 3 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rp
+								&& ($process_dato_rp === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rp === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							break;
+						
+						case 'component_radio_button':
+
+							$is_empty_rb = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_rb = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rb($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_radio_button',
+									null, null, null, null, null,
+									$ddo_map_rb
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "value"
+							$data_to_be_used_rb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'value') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_radio_button',
+									null, null, null, null, null,
+									$ddo_map_rb
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button data_to_be_used=value -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1.5 "data_to_be_used" = "dato" with "enum" → custom enum map resolution
+							$enum_rb = $props->enum ?? null;
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'dato' && !empty($enum_rb)) {
+
+								$parser_process_rb = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_text::map_value',
+										'options' => (object)[
+											'map' => [
+												(object)[
+													'a' => $enum_rb
+												]
+											]
+										]
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process_rb;
+								$new_props->process->output_sample = "Yes";
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button dato+enum -> map_value\n";
+								break;
+							}
+
+							// 1.6 "data_to_be_used" = "dato" (without enum) → get_diffusion_dato()
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_radio_button', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button data_to_be_used=dato -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rb = $props->process_dato ?? null;
+
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rb
+								&& ($process_dato_rb === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rb === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::map_quality_to_int'
+								|| $process_dato_rb === 'diffusion_sql::map_locator_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.25 "diffusion_sql::map_locator_to_value" with map → same enum map resolution
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::map_locator_to_value') {
+
+								$process_dato_arguments_rb_mv = $props->process_dato_arguments ?? null;
+								$map_rb = $process_dato_arguments_rb_mv->map ?? null;
+
+								$parser_process_rb_mv = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_text::map_value',
+										'options' => (object)[
+											'map' => [
+												(object)[
+													'a' => $map_rb
+												]
+											]
+										]
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process_rb_mv;
+								$new_props->process->output_sample = "1";
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_locator_to_value -> map_value\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" with target_component_tipo → custom ddo_map chain
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::resolve_value') {
+
+								$process_dato_arguments_rb = $props->process_dato_arguments ?? null;
+								$target_component_tipo_rb  = trim($process_dato_arguments_rb->target_component_tipo ?? "");
+								$is_publicable_rv_rb       = $process_dato_arguments_rb->is_publicable ?? null;
+
+								$ddo_map_rv_rb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'   => $target_component_tipo_rb,
+										'parent' => $rel_info['tipo']
+									]
+								];
+
+								$model_rb = ontology_node::get_legacy_model_by_tipo($target_component_tipo_rb);
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$target_component_tipo_rb,
+									$model_rb,
+									null,
+									$process_dato_arguments_rb,
+									null, null, null,
+									$ddo_map_rv_rb
+								);
+
+								if($is_publicable_rv_rb === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button resolve_value -> custom ddo_map chain\n";
+								break;
+							}
+
+							break;
+
+						case 'component_relation_related':
+
+							$is_empty_rr = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_rr = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rr($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_related',
+									null, null, null, null, null,
+									$ddo_map_rr
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_related empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rr = $props->process_dato ?? null;
+
+							// 1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rr
+								&& ($process_dato_rr === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rr === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_related map_locator_to_term_id\n";
+								break;
+							}
+
+							break;
+						
+						case 'component_filter':
+
+							$is_empty_cf = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cf($props)) {
+
+								$ddo_map_cf = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_filter',
+									null, null, null, null, null,
+									$ddo_map_cf
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cf = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cf && $data_to_be_used_cf === 'dato') {				
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_filter',
+									null,
+									null,
+									null,
+									null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cf = $props->process_dato ?? null;
+
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cf
+								&& ($process_dato_cf === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cf === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cf && $process_dato_cf === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter map_quality_to_int -> get_diffusion_dato()\n";
+								break;
+							}
+
+							break;
+						
+							case 'component_date':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cd($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_date',
+									null, null, null, null, null, null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cd = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cd && $data_to_be_used_cd === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_date', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date data_to_be_used=dato -> get_diffusion_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cd = $props->process_dato ?? null;
+
+							// 2.3 "diffusion_sql::resolve_value" -> "split_date_range" output
+							if($process_dato_cd && $process_dato_cd === 'diffusion_sql::resolve_value') {
+								$process_dato_args_cd = $props->process_dato_arguments ?? null;
+								$output_cd = $process_dato_args_cd->output ?? null;
+								
+								if($output_cd === 'split_date_range') {
+									$output_options_cd = $process_dato_args_cd->output_options ?? null;
+									
+									$new_props = new stdClass(); $new_props->process = get_dato(
+										'component_date',
+										null,
+										'split_date_range',
+										$output_options_cd,
+										null
+									);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] date resolve_value -> split_date_range -> get_dato()\n";
+									break;
+								}
+							}
+
+							// 2.2 "diffusion_sql::split_date_range"
+							if($process_dato_cd && $process_dato_cd === 'diffusion_sql::split_date_range') {
+								
+								$process_dato_args_cd = $props->process_dato_arguments ?? null;
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'component_date',
+									null,
+									'split_date_range',
+									$process_dato_args_cd,
+									null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date split_date_range -> get_dato()\n";
+								break;
+							}
+
+							break;
+						case 'component_email':
+							break;
+						
+						case 'component_input_text':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_target_section_tipo"){							
+
+								$parser_process = (object)[											
+									'fn' => 'map_target_section_tipo'
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = "ts_onomastic";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_target_section_tipo\n";
+								break;
+							}
+
+							break;
+						case 'component_text_area':
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cd($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_text_area',
+									null, null, null, null, null, null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date empty props -> get_diffusion_value\n";
+								break;
+							}
+							break;
+
+						case 'component_section_id':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion::map_section_id_to_subtitles_url"){							
+
+								$parser_process = (object)[											
+									'fn' => 'map_section_id_to_subtitles_url'
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = "/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
+								break;
+							}
+							// 2 "process_dato" = "diffusion_sql::map_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_to_terminoID"){							
+
+									$parser_process = (object)[											
+										'fn' => 'get_diffusion_data_info',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_term_id'
+											],
+											(object)[
+												'fn' => 'parser_locator::get_first'
+											]
+										],
+										"output_format" => "string"
+									];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "es1_1";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_to_terminoID\n";
+								break;
+							}
+
+							// 3 "process_dato" = "diffusion_sql::map_to_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_to_section_tipo"){							
+
+									$parser_process = (object)[											
+										'fn' => 'get_diffusion_data_info',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_section_tipo'
+											],
+											(object)[
+												'fn' => 'parser_locator::get_first'
+											]
+										],
+										"output_format" => "string"
+									];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = "es1";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_to_terminoID\n";
+								break;
+							}
+
+							break;
+						
+							default:
+							break;
 					}
 				}
-
-				// Check if process_dato is split_date_range
-				$is_split_date = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::split_date_range';
-
-				if ($is_date_component && ($clean_count === 0 || $is_split_date)) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-
-					// Build parser definition
-					$parser_def = (object)['fn' => 'parser_date::string_date'];
-
-					// Preserve selected_date from legacy split_date_range arguments
-					// Default is "start", so only add options when it's different
-					if ($is_split_date
-						&& isset($props->process_dato_arguments->selected_date)
-						&& $props->process_dato_arguments->selected_date !== 'start'
-					) {
-						$parser_def->options = (object)[
-							'properties' => [$props->process_dato_arguments->selected_date]
-						];
-					}
-
-					$new_props->process->parser = [$parser_def];
-
-					$selected_info = isset($parser_def->options) ? ' (properties: [' . $props->process_dato_arguments->selected_date . '])' : '';
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] component_date -> parser_date::string_date{$selected_info}\n";
-				}
 			}
-
-            // --- Rule: Default Diffusion Element (ddo_map) ---
-            // When no transformative properties exist (only meta/schema props), build default DDO map
-            // Excludes specific components: autocomplete_hi, filter, portal, relation_children
-            
-            // Check: any functional properties?
-            $props_functional = is_object($props) ? clone $props : (object)[];
-            $non_functional_keys = [
-                'varchar', 'enum', 'length', // Schema
-                'exclude_column', 'info', 'is_publicable', 'orders', 'labels',
-                'option_obj' // Parent chain config (handled by autocomplete_hi/flat_parents rule)
-            ];
-            foreach ($non_functional_keys as $key) {
-                if (isset($props_functional->$key)) unset($props_functional->$key);
-            }
-            
-            // Allow these process_dato values to be replaced by downstream rules
-            if (isset($props_functional->process_dato) && in_array($props_functional->process_dato, [
-                'diffusion_sql::resolve_value',
-                'diffusion_sql::split_date_range',
-                'diffusion::get_publication_unix_timestamp',
-                'diffusion_sql::map_locator_to_terminoID_parent'
-            ])) {
-                unset($props_functional->process_dato);
-                // Also ignore arguments associated with these if they exist
-                if (isset($props_functional->process_dato_arguments)) unset($props_functional->process_dato_arguments);
-            }
-            
-            $functional_count = count((array)$props_functional);
-
-            // Condition: No functional properties AND not already processed (process block)
-            if ($functional_count === 0 && (!isset($new_props->process))) {
-                
-                $is_relation_component = false;
-                $is_portal = false;
-                $target_model = '';
-                
-                 if (!empty($relations_info)) {
-                    $relation_components = component_relation_common::get_components_with_relations();
-                    $excluded_components = [
-                        'component_autocomplete_hi', 
-                        'component_filter', 
-                        // 'component_portal', // Handled explicitly now
-                        'component_relation_children'
-                    ];
-                    
-                    foreach ($relations_info as $rel_info) {
-                        // Check for Portal specifically first
-                        if ($rel_info['model'] === 'component_portal') {
-                            $is_portal = true;
-                            $target_model = 'component_portal';
-                            break;
-                        }
-
-                        if (in_array($rel_info['model'], $relation_components)) {
-                            // Ensure we don't pick up excluded comps as "generic relation"
-                            // Note: component_portal is excluded from generic list but we handle it specifically
-                            if (!in_array($rel_info['model'], $excluded_components) && $rel_info['model'] !== 'component_portal') {
-                                $is_relation_component = true;
-                                $target_model = $rel_info['model'];
-                                break; // Found valid relation component
-                            }
-                        }
-                    }
-                }
-
-                if ($is_portal) {
-                     if (!$new_props) $new_props = new stdClass();
-                     if (!isset($new_props->process)) $new_props->process = new stdClass();
-                     
-                     $new_props->process->parser = [
-                        (object)['fn' => 'parser_locator::get_section_id']
-                     ];
-
-                     echo "{$indent}- [$tipo] $model_name\n";
-                     echo "{$indent}  [RULE APPLIED] Component Portal -> parser_locator::get_section_id\n";
-                }
-                elseif ($is_relation_component) {
-                    $ddo_map_data = get_ddo_map($tipo);
-                    
-                    if ($ddo_map_data) {
-                        if (!$new_props) $new_props = new stdClass();
-                        if (!isset($new_props->process)) $new_props->process = new stdClass();
-                        
-                        // Assign IDs to children (a, b, c...)
-                        $char_code = 97; // 'a'
-                        $formatted_ddo_map = [];
-                        foreach ($ddo_map_data as $index => $ddo_node) {
-                            $node_obj = clone $ddo_node;
-                            if ($index > 0) { // Skip root (self)
-                                $node_obj->id = chr($char_code++);
-                            }
-                            $formatted_ddo_map[] = $node_obj;
-                        }
-
-                        $new_props->process->ddo_map = $formatted_ddo_map;
-
-                        echo "{$indent}- [$tipo] $model_name\n";
-                        echo "{$indent}  [RULE APPLIED] Default Relation -> generated ddo_map\n";
-                    } else {
-                         // Debug: ddo_map empty
-                         // echo "{$indent}  [DEBUG] ddo_map empty for $tipo\n";
-                    }
-                }
-            } else {
-                // Debug: functional count not 0 or already processed
-            }
-
-			// --- Rule: Field Int (Length) ---
-			if ($model_name === 'field_int' && isset($props->length)) {
-				if (!$new_props) $new_props = new stdClass();
-				$new_props->length = $props->length;
-				
-				echo "{$indent}- [$tipo] $model_name\n";
-				echo "{$indent}  [RULE APPLIED] field_int -> keep length: {$props->length}\n";
-			}
-
-			break;
-			
-		default:
-			$diffusion_type = 'unknown';
-			break;
-	}
-
-
+		}
 
 	// Process result and save
 	if (
@@ -915,6 +3325,8 @@ function process_node($node, $level) {
 		]);
 	}
 }
+
+
 
 // Execution
 try {
@@ -1040,7 +3452,6 @@ function get_ddo_map($current_tipo) {
 
 	return count($ddo_map) > 0 ? $ddo_map : null;
 }
-
 
 
 	/**

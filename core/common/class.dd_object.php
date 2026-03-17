@@ -1065,6 +1065,7 @@ class dd_object extends stdClass {
 	}//end get_value_with_parents
 
 
+
 	/**
 	* SET_SHOW_IN_COMPONENT
 	* Used by tools
@@ -1394,6 +1395,17 @@ class dd_object extends stdClass {
 
 
 	/**
+	* GET_FN
+	* @return string|null $this->fn
+	*/
+	public function get_fn() : ?string {
+
+		return $this->fn ?? null;
+	}//end get_fn
+
+
+
+	/**
 	* SET_DIFFUSION_TIPO
 	* @param string|null $value
 	* @return bool
@@ -1416,17 +1428,6 @@ class dd_object extends stdClass {
 
 		return $this->diffusion_tipo ?? null;
 	}//end get_diffusion_tipo
-
-
-
-	/**
-	* GET_FN
-	* @return string|null $this->fn
-	*/
-	public function get_fn() : ?string {
-
-		return $this->fn ?? null;
-	}//end get_fn
 
 
 

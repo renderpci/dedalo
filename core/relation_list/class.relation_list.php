@@ -273,7 +273,7 @@ class relation_list extends common {
 				return self::$diffusion_dato_cache[$cache_key];
 			}
 
-		// sqo . COmmon used to get inverse locators
+		// sqo . Common used to get inverse locators
 			$sqo = (object)[
 				'section_tipo'			=> ['all'],
 				'mode'					=> 'related',
@@ -904,7 +904,7 @@ class relation_list extends common {
 
 
 	/**
-	* GET_DATO
+	* GET_DATA
 	* Resolve the inverse references (who are calling to this section)
 	* and creates its own data with the result as an array of locators
 	* data is not filtered, it get the inverse references as its own data
@@ -912,7 +912,7 @@ class relation_list extends common {
 	*
 	* @test false
 	*/
-	public function get_dato() : array {
+	public function get_data() : array {
 
 		// sqo . Common used to get inverse locators
 			$sqo = (object)[
@@ -934,17 +934,14 @@ class relation_list extends common {
 				// {
 				//     "section_tipo": "numisdata300",
 				//     "section_id": "1",
-				//     "datos": {
-				//         "label": "Catalog",
-				//         "relations": [
-				//             {
-				//                 "type": "dd675",
-				//                 "section_id": "1",
-				//                 "section_tipo": "dd153",
-				//                 "from_component_tipo": "numisdata304"
-				//             }, ...
-				//          ]
-				//     }
+				//     "realtion": [
+				//         {
+				//             "type": "dd675",
+				//             "section_id": "1",
+				//             "section_tipo": "dd153",
+				//             "from_component_tipo": "numisdata304"
+				//         }, ...
+				//     ]
 				// }
 
 		// create its data with the inverse references
@@ -957,7 +954,105 @@ class relation_list extends common {
 
 
 		return $data;
-	}//end get_dato
+	}//end get_data
+
+
+
+	/**
+	* GET_DIFFUSION_DATA
+	* Resolve the default diffusion data
+	* is used by the `diffusion_data`
+	* for component_section_id the default is its own data
+	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
+	* @return array $diffusion_data
+	*
+	* @see class.diffusion_data.php
+	* @test false
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		$diffusion_data = [];
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id ?? null
+		]);
+
+		$diffusion_data[] = $diffusion_data_object;
+
+		// Custom function case
+			// If ddo provide a specific function to get its diffusion data
+			// check if it exists and can be used by diffusion environment
+			// if all is ok, use this function and return the value returned by this function
+			$fn = $ddo->fn ?? null;
+
+			if( $fn ){
+				// check if the function exist
+				// if not, return a null value in diffusion data
+				// and stop the resolution
+				if( !is_callable([$this, $fn]) ){
+					debug_log(__METHOD__
+						. " function doesn't exist " . PHP_EOL
+						. " function name: ". $fn
+						, logger::ERROR
+					);
+
+					return $diffusion_data;
+				}
+
+				// execute the function directly since it's already validated
+				try {
+					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
+
+					switch ($fn) {
+						// add parents
+						case 'add_parents':		
+							$data = $this->get_data();
+							$diffusion_data_object->set_value( $data );
+							$diffusion_data_object->parents = $diffusion_value;
+
+							return $diffusion_data;
+						case 'get_data_with_references':		
+							$diffusion_data_object->set_value( $diffusion_value );
+
+							return $diffusion_data;						
+						default:
+							break;
+					}
+				} catch (Throwable $e) {
+					// fallback when method does not expect $diffusion_data_object
+					debug_log(__METHOD__
+						. " error executing diffusion function " . PHP_EOL
+						. " function name: ". $fn . PHP_EOL
+						. " error: " . $e->getMessage()
+						, logger::ERROR
+						);
+						$diffusion_value = null;
+				}
+
+				// set the diffusion value and return the diffusion data
+				$diffusion_data_object->set_value( $diffusion_value );
+				return $diffusion_data;
+			}
+
+		// Resolve the data by default
+			// If the ddo doesn't provide any specific function the component will use a get_url as default.
+			$data = $this->get_data();
+
+			$diffusion_value = !empty($data)
+				? $data
+				: null;
+
+			$diffusion_data_object->set_value( $diffusion_value );
+
+
+		return $diffusion_data;
+	}//end get_diffusion_data
+
 
 
 }//end class relation_list

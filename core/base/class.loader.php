@@ -86,6 +86,7 @@ include DEDALO_DIFFUSION_PATH . '/class.diffusion_utils.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_data.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_data_object.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_datum.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_fn.php';
 // Dédalo API
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_manager.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_core_api.php';

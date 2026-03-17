@@ -97,19 +97,38 @@ class dd_diffusion_api {
 			self::process_datum($source_tipo, $db_result, $levels, $options);
 
 			while (!empty(self::$datum_unresolved)) {
-				foreach ( self::$datum_unresolved as $diffusion_tipo => $locators ) {
+				
+				// Get the first available key from the queue (format: "level:diffusion_tipo")
+				$keys = array_keys(self::$datum_unresolved);
+				$key  = reset($keys);
+				
+				$locators = self::$datum_unresolved[$key];
+				unset(self::$datum_unresolved[$key]);
 
-					$unique_locators=[];
-					foreach ($locators as $locator) {
-						if(!locator::in_array_locator($locator, $unique_locators,['section_tipo','section_id'])) {
-							$unique_locators[] = $locator;
-						}
-					}
-
-					self::process_datum($diffusion_tipo, $unique_locators, $levels, $options);
-
-					unset(self::$datum_unresolved[$diffusion_tipo]);
+				// Parse level and tipo
+				$parts = explode(':', $key);
+				if (count($parts) === 2) {
+					$current_level   = (int)$parts[0];
+					$diffusion_tipo = $parts[1];
+				} else {
+					// Fallback for unexpected formats
+					$current_level   = $levels;
+					$diffusion_tipo = $key;
 				}
+
+				// Deduplicate locators for this batch
+				$unique_locators = [];
+				foreach ($locators as $locator) {
+					if(!locator::in_array_locator($locator, $unique_locators, ['section_tipo', 'section_id'])) {
+						$unique_locators[] = $locator;
+					}
+				}
+
+				if(SHOW_DEBUG) {
+					dump($diffusion_tipo, "Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators');
+				}
+
+				self::process_datum($diffusion_tipo, $unique_locators, $current_level, $options);
 			}
 
 			// 6. Final response
@@ -126,6 +145,8 @@ class dd_diffusion_api {
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
+
+		dump($response, 'response +//////');
 
 		return $response;
 	}
@@ -304,16 +325,40 @@ class dd_diffusion_api {
 		if (!$source_node) {
 			throw new Exception("Ontology node not found for tipo: $source_tipo");
 		}
+
 		$parent = $source_node->get_parent();
 		$main_section_tipo = diffusion_utils::get_related_section_tipo($source_tipo);
 
+		$properties = $source_node->get_properties();
+
+		$diffusion_node_model = $source_node->get_model();
+		$diffusion_name = $source_node->get_term(DEDALO_STRUCTURE_LANG);
+
 		// Identify all section-level diffusion nodes (children of source_tipo)
-		$ar_children = ontology_node::get_ar_children($source_tipo);			
+		$ar_children = ontology_node::get_ar_children($source_tipo);	
+
+		if( str_contains( $diffusion_node_model, '_alias') ){
+
+			$search_model = str_replace('_alias','',$diffusion_node_model);
+			$related_tipo = ontology_node::get_ar_tipo_by_model_and_relation($source_tipo, $search_model, 'related', true)[0] ?? null;
+
+			if(!empty($related_tipo)){
+				$target_node = ontology_node::get_instance($related_tipo);
+				$diffusion_node_model = $target_node->get_model();
+				if(empty($properties)){
+					$properties = $target_node->get_properties();
+				}
+				if(empty($main_section_tipo)){
+					$main_section_tipo = diffusion_utils::get_related_section_tipo($related_tipo);
+				}
+				$ar_target_children = ontology_node::get_ar_children($related_tipo);			
+				$ar_children = array_merge($ar_target_children, $ar_children);
+			}
+		}
 
 		// Build combined ddo_map from all nodes for this section
 		$combined_ddo_map = [];
 		$context = [];
-		
 		foreach ($ar_children as $node_tipo) {
 			$ddo_map = diffusion_data::get_ddo_map($node_tipo, $main_section_tipo);
 			$combined_ddo_map[$node_tipo] = $ddo_map;
@@ -326,17 +371,25 @@ class dd_diffusion_api {
 		$datum_object = new diffusion_datum();
 			$datum_object->set_diffusion_tipo($source_tipo);
 			$datum_object->set_section_tipo($main_section_tipo);
-			$datum_object->set_term($source_node->get_term(DEDALO_STRUCTURE_LANG));
-			$datum_object->set_model($source_node->get_model());
+			$datum_object->set_term($diffusion_name);
+			$datum_object->set_model($diffusion_node_model);
 			$datum_object->set_parent($parent);
 			$datum_object->set_context($context);
 
-		$properties = $source_node->get_properties();
 		$publishable = $properties->is_publishable ?? null;
 
+				
 		$data = [];
 		// Process each record and group by section
-		foreach ($iterable_data as $locator) {		
+		foreach ($iterable_data as $locator) {
+			
+			// Check if the locator has already been used
+			if (diffusion_chain_processor::is_used($locator->section_tipo, intval($locator->section_id))) {
+				continue;
+			}
+
+			// set the locator as used
+			diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
 
 			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 			
