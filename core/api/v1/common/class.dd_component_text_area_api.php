@@ -70,7 +70,7 @@ final class dd_component_text_area_api {
 			);
 			$n_deleted			= count($ar_tag_deleted) ?? 0;
 			$response->msg[]	= $n_deleted>0
-				? "Deleted tag: $tag_id ($type) in $n_deleted langs: ".to_string($ar_tag_deleted)." ($model_name - $tipo)"
+				? "Deleted tag: $tag_id ($type) in ".(string)$n_deleted." langs: ".to_string($ar_tag_deleted)." ($model_name - $tipo)"
 				: "No tags are deleted in $model_name tipo: '$tipo' tag_id: '$tag_id' type: '$type'";
 
 			debug_log(__METHOD__." AR_TAG_DELETED: ".to_string($ar_tag_deleted), logger::DEBUG);

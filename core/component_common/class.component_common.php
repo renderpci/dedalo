@@ -613,8 +613,8 @@ abstract class component_common extends common {
 
 						// debug
 							debug_log(__METHOD__
-								." Created ".get_called_class()." \"$this->label\" id:$this->section_id, tipo:$this->tipo, section_tipo:$this->section_tipo, mode:$this->mode".PHP_EOL
-								." with default data from 'properties':"
+								.' Created '.get_called_class().' "'.$this->label.'" id:'.$this->section_id.', tipo:'.$this->tipo.', section_tipo:'.$this->section_tipo.', mode:'.$this->mode.PHP_EOL
+								.' with default data from "properties":'
 								. to_string($data_default)
 								, logger::DEBUG
 							);
@@ -1705,9 +1705,9 @@ abstract class component_common extends common {
 				);
 			} catch (Exception $e) {
 				debug_log(__METHOD__
-					." Exception saving activity caught. " .PHP_EOL
-					. " tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id" .PHP_EOL
-					. ' exception: '.$e->getMessage()
+					.' Exception saving activity caught. ' .PHP_EOL
+					.' tipo: '.$this->tipo.', section_tipo: '.$this->section_tipo.', section_id: '.$this->section_id .PHP_EOL
+					.' exception: '.$e->getMessage()
 					, logger::DEBUG
 				);
 			}//end try catch
