@@ -883,8 +883,34 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$process->output_sample = "Goméz Pérez, Raspa";
 
 			break;  
-			break;
+		case 'component_select_lang':
 
+			$fields_separator = $custom_arguments[0]->divisor ?? ', ';
+
+			$ddo_map[] = (object)[
+				'id'		=> 'a',
+				'tipo'		=> 'hierarchy25', // Standard term component for lg1
+				'label'		=> 'Term',
+				'parent'	=> $tipo,
+			];
+			
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::text_format',
+						'options' => (object)[
+							'pattern' => '${a}'
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+
+			$process = $parser_process;
+			$process->ddo_map = $ddo_map;
+			$process->output_sample = "English";
+
+			break; 
 		case 'relation_list':
 			break;
 	}
