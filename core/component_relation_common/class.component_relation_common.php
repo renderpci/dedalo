@@ -1037,12 +1037,13 @@ class component_relation_common extends component_common {
 	* is used by the `diffusion_data`
 	* for component_section_id the default is its own data
 	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
 	* @see class.diffusion_data.php
 	* @test false
 	*/
-	public function get_diffusion_data( object $ddo ) : array {
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
 
 		$diffusion_data = [];
 
@@ -1056,6 +1057,18 @@ class component_relation_common extends component_common {
 
 		$diffusion_data[] = $diffusion_data_object;
 
+		// Resolve the data by default
+		// If the ddo doesn't provide any specific function the component will use a get_url as default.
+		$data = $this->get_data();
+
+		// Try hierarchy1 resolution (v5 thesaurus compatibility)
+		if (empty($data) && $this->model==='component_relation_parent') {
+			$hierarchy_parent = $this->get_possible_root_hierarchy();
+			if (!empty($hierarchy_parent)) {
+				$data = [$hierarchy_parent];
+			}
+		}
+
 		// Custom function case
 			// If ddo provide a specific function to get its diffusion data
 			// check if it exists and can be used by diffusion environment
@@ -1066,7 +1079,7 @@ class component_relation_common extends component_common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !method_exists($this, $fn) ){
+				if( !is_callable([$this, $fn]) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
@@ -1078,17 +1091,22 @@ class component_relation_common extends component_common {
 
 				// execute the function directly since it's already validated
 				try {
-					$diffusion_value = $this->$fn();
+					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
 
 					switch ($fn) {
 						// add parents
-						case 'add_parents':		
-							$data = $this->get_data();
+						case 'add_parents':
 							$diffusion_data_object->set_value( $data );
-							$diffusion_data_object->parents = $diffusion_value;
-							
+							$diffusion_data_object->parents = $fn_data;
+
+							return $diffusion_data;
+						case 'get_data_with_references':
+							$diffusion_data_object->set_value( $fn_data );
+
 							return $diffusion_data;
 						default:
+							// overwrite default diffusion data
+							$diffusion_data = $fn_data;
 							break;
 					}
 				} catch (Throwable $e) {
@@ -1099,17 +1117,12 @@ class component_relation_common extends component_common {
 						. " error: " . $e->getMessage()
 						, logger::ERROR
 						);
-						$diffusion_value = null;
+						$fn_data = null;
 				}
 
 				// set the diffusion value and return the diffusion data
-				$diffusion_data_object->set_value( $diffusion_value );
 				return $diffusion_data;
 			}
-
-		// Resolve the data by default
-			// If the ddo doesn't provide any specific function the component will use a get_url as default.
-			$data = $this->get_data();
 
 			$diffusion_value = !empty($data)
 				? $data
