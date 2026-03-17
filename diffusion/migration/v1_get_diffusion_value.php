@@ -618,7 +618,169 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			break;
 		case 'component_relation_parent':
 			$fields_separator =', ';
-			$record_separator =', ';
+			$records_separator =', ';
+
+			if($option_obj) {
+
+				$add_parents 					= $option_obj->add_parents ?? null;
+				$parent_section_tipo 			= $option_obj->parent_section_tipo ?? null;
+				$process_dato_arguments 		= $option_obj->process_dato_arguments ?? null;
+				$check_publishable 				= $option_obj->check_publishable ?? null;
+				$custom_parents 				= $option_obj->custom_parents ?? null;
+				$divisor 						= $option_obj->divisor ?? null;
+				$parent_term_id 				= $option_obj->parent_term_id ?? null;
+				$divisor_parents 				= $option_obj->divisor_parents ?? null;
+				$records_separator 				= $option_obj->records_separator ?? null;
+
+				$resolve_value 					= $option_obj->resolve_value ?? false;
+				
+				// 1.1 "add_parents" with resolve_value false
+				if( isset($add_parents) 
+					&& $resolve_value !== true
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $check_publishable === null
+					&& $custom_parents === null								
+					&& $parent_term_id === null												
+					) {
+					
+					$parser_process = (object)[
+						'fn' => 'add_parents',
+						'parser' => [
+							(object)[
+								'fn' => 'parser_locator::parents',
+								'options' => (object)[
+									'value' => 'section_id',
+									"include_parents" => $add_parents,
+									'fields_separator' => $fields_separator ?? ', ',
+									'records_separator' => $records_separator ?? ', '
+								]
+							]
+						],
+						'output_format' => 'json'							
+					];
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = '["1", "4", "5"]';
+
+				break;
+				}// end if( add_parents alone and true or false)
+
+				// 1.2 "add_parents" with resolve_value true
+				if( isset($add_parents) 
+					&& $resolve_value === true
+					&& $check_publishable === null
+					&& $custom_parents === null								
+					&& $parent_term_id === null												
+					) {
+
+					$parser_options = (object)[
+						'value' => 'term',
+						"include_parents" => $add_parents,
+						'fields_separator' => $fields_separator ?? ', ',
+						'records_separator' => $records_separator ?? ', ',
+						'merge' => 'flat'
+					];
+					if($parent_section_tipo !== false) {
+						$parser_options->parent_section_tipo = $parent_section_tipo;
+					}
+
+					$parents_splice = $process_dato_arguments->custom_parents->parents_splice ?? null;
+					$parent_end_by_term_id = $process_dato_arguments->custom_parents->parent_end_by_term_id ?? null;
+					$parent_end_by_model = $process_dato_arguments->custom_parents->parent_end_by_model ?? null;
+
+					if(isset($parents_splice)){
+						$parser_options->parents_splice = $parents_splice;
+					}
+					if(isset($parent_end_by_term_id)){
+						$parser_options->parent_end_by_term_id = $parent_end_by_term_id;
+					}
+					if(isset($parent_end_by_model)){
+						$parser_options->parent_end_by_typology_term_id = $parent_end_by_model;
+					}
+					
+					$parser_process = (object)[
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => $parser_options
+								]
+							],
+							'output_format' => 'json'							
+						]
+					;
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = '["Bilbao, Bizkaia, Pais Vasco, España"]';
+
+				break;
+				}// end if( add_parents alone and true or false)
+
+
+				// 1.3 "add_parents" with resolve_value false
+				if( !isset($add_parents)
+					&& $resolve_value !== true
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $check_publishable === null
+					&& $custom_parents === null								
+					&& $parent_term_id === null												
+					) {
+					
+					$parser_process = (object)[
+							'output_format' => 'json'							
+						]
+					;
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}]';
+
+				break;
+				}// end if( add_parents alone and true or false)
+
+				// 1.4 "add_parents" with resolve_value true
+				if( !isset($add_parents)
+					&& $resolve_value === true
+					&& $parent_section_tipo === null
+					&& $process_dato_arguments === null
+					&& $check_publishable === null
+					&& $custom_parents === null								
+					&& $parent_term_id === null												
+					) {
+					
+					$parser_process = (object)[
+							'fn' => 'add_parents',
+							'parser' => [
+								(object)[
+									'fn' => 'parser_locator::parents',
+									'options' => (object)[
+										'value' => 'term',
+										"include_parents" => false,
+										'fields_separator' => $fields_separator ?? ', ',
+										'records_separator' => $records_separator ?? ', '
+									]
+								]
+							],
+							'output_format' => 'json'							
+						]
+					;
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = '["Bilbao"]';
+
+				break;
+				}// end if( add_parents alone and true or false)
+
+			}//end if($option_obj)
 			break;
 		case 'component_relation_related':
 			$fields_separator =' | ';
