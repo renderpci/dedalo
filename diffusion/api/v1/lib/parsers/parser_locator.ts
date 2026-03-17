@@ -143,8 +143,8 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
  * @param options.value - What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
  * @param options.include_parents - If true, include all parents in the chain. Default: true.
  * @param options.include_self - If true, include the item itself (index 0). Default: true.
- * @param options.records_separator - Separator between different parent chains. Default: ", ". Set to false for array output.
- * @param options.fields_separator - Separator between values in the same chain. Default: " - ".
+ * @param options.records_separator - Separator between different parent chains. Default: " - ". Set to false for array output.
+ * @param options.fields_separator - Separator between values in the same chain. Default: ", ".
  * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
  * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: [].
  * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: [].
@@ -168,8 +168,8 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	const value_to_extract: string   = (options.value as string) ?? 'term';
 	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
 	const include_self: boolean      = (options.include_self as boolean)    ?? true;
-	const records_separator: string  = (options.records_separator as string) ?? ', ';
-	const fields_separator: string   = (options.fields_separator as string)  ?? ' - ';
+	const fields_separator: string   = (options.fields_separator as string)  ?? ', ';
+	const records_separator: string  = (options.records_separator as string) ?? ' - ';	
 	const merge: string | undefined  = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
 
 	// langs
@@ -373,30 +373,16 @@ function apply_chain_filters(chain: any[], options: parser_options): any[] {
 	processed = filter_chain_by_term_id(processed, options);
 
 	// 4. Splice chain (only if NO truncation matched)
+	// Mirrors PHP: splice applied only on parents (chain[1..]), self (chain[0]) is preserved.
 	const splice_args = options.parents_splice as number[];
 	if (!truncation_applied && splice_args && Array.isArray(splice_args) && splice_args.length > 0) {
-		const copy = [...processed];
-		if (splice_args.length === 1) {
-			copy.splice(splice_args[0]);
-		} else {
-			copy.splice(splice_args[0], splice_args[1]);
-		}
-		processed = copy;
+		processed = splice_chain(processed, splice_args);
 	}
 
 	// 5. Slice chain (only if NO truncation matched)
 	const slice_args = options.parents_slice as number[];
 	if (!truncation_applied && slice_args && Array.isArray(slice_args) && slice_args.length > 0) {
-		const start_arg = slice_args[0];
-		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
-
-		const s = start_arg < 0 ? Math.max(processed.length + start_arg, 0) : start_arg;
-		let e = processed.length;
-		if (length_arg !== undefined && length_arg !== null) {
-			e = length_arg < 0 ? processed.length + length_arg : s + length_arg;
-		}
-
-		processed = processed.slice(s, Math.max(s, e));
+		processed = slice_array(processed, slice_args);
 	}
 
 	return processed;
