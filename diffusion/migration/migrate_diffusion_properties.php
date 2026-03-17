@@ -49,7 +49,13 @@ $total_nodes = 0;
 
 function traverse_ontology_recursive($current_tipo, $level = 0) {
 	global $total_nodes;
-	
+    $total_nodes++;
+    
+    $model = ontology_node::get_model_by_tipo($current_tipo);
+    $term = ontology_node::get_term_by_tipo($current_tipo, DEDALO_DATA_LANG);
+    echo "\nProcessing [{$current_tipo}] {$model} ({$term})...\n";
+    
+	$children = ontology_node::get_ar_children($current_tipo);
 	// Process current node
 	$node = ontology_node::get_instance($current_tipo);
 	if ($node) {
@@ -70,6 +76,7 @@ function traverse_ontology_recursive($current_tipo, $level = 0) {
 		}
 	}
 }
+
 
 function process_node($node, $level) {
 	$indent = str_repeat("  ", $level);
