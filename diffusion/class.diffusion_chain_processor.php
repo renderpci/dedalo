@@ -531,108 +531,48 @@ class diffusion_chain_processor {
 
 
 	/**
-	 * GET_CACHED_SECTION
-	 * Returns cached resolution for a section if available.
-	 * 
-	 * @param string $section_tipo
-	 * @param int|string $section_id
-	 * @return array|null Cached result or null
-	 */
-	public static function get_cached_section(string $section_tipo, int|string $section_id): ?array {
-		$cache_key = "{$section_tipo}_{$section_id}";
-		return self::$resolved_sections_cache[$cache_key] ?? null;
-	}
-
-	/**
-	 * SET_CACHED_SECTION
-	 * Stores resolved section data in cache.
-	 * 
-	 * @param string $section_tipo
-	 * @param int|string $section_id
-	 * @param array $resolved_data
+	 * MARK_USED
+	 * Marks a numeric value as utilized within a specific ID context.
+	 * Uses a bitmask approach stored in $used_cache to minimize memory footprint.
+	 *
+	 * @param string $section_tipo Context identifier (e.g., section_tipo or sequence ID)
+	 * @param int $section_id The numeric value to mark
 	 * @return void
 	 */
-	public static function set_cached_section(string $section_tipo, int|string $section_id, array $resolved_data): void {
-		$cache_key = "{$section_tipo}_{$section_id}";
-		self::$resolved_sections_cache[$cache_key] = $resolved_data;
+	public static function mark_used(string $section_tipo, int $section_id): void
+	{
+		$byte = $section_id >> 3; // which byte/char index
+		$bit  = $section_id & 7;  // which bit inside that byte
+
+		if (!isset(self::$resolved_sections_cache[$section_tipo][$byte])) {
+			self::$resolved_sections_cache[$section_tipo][$byte] = "\x00"; // init byte as 00000000
+		}
+
+		// OR the bit in — flips that specific bit to 1
+		self::$resolved_sections_cache[$section_tipo][$byte] = chr(ord(self::$resolved_sections_cache[$section_tipo][$byte]) | (1 << $bit));
 	}
 
-	/**
-	 * RESOLVE_CROSS_SECTION
-	 * Resolves a portal target section using its own diffusion node definition.
-	 * Only resolves if the target section has a diffusion node in the current scope.
-	 * 
-	 * @param object $locator The locator pointing to the target section
-	 * @param int $depth Current recursion depth
-	 * @return array|null Resolved data or null if not resolvable
-	 */
-	public function resolve_cross_section(object $locator, int $depth = 0): ?array {
-		
-		// Depth protection
-		if ($depth >= self::MAX_DEPTH) {
-			debug_log(__METHOD__ . " Max depth reached for section: {$locator->section_tipo}_{$locator->section_id}", logger::WARNING);
-			return null;
-		}
 
-		$section_tipo = $locator->section_tipo;
-		$section_id   = $locator->section_id;
-
-		// Check if target section has a diffusion node in scope
-		$diffusion_tipo = self::get_section_diffusion_node($section_tipo);
-		if (!$diffusion_tipo) {
-			// Section not in scope, return null (caller should use raw locator data)
-			return null;
-		}
-
-		// Check cache first
-		$cached = self::get_cached_section($section_tipo, $section_id);
-		if ($cached !== null) {
-			return $cached;
-		}
-
-		// Get the ddo_map for this diffusion node
-		$ddo_map = diffusion_data::get_ddo_map($diffusion_tipo, $section_tipo);
-		if (empty($ddo_map)) {
-			return null;
-		}
-
-		// Create new processor instance for nested resolution
-		$nested_processor = new self();
-		$nested_processor->current_depth = $depth + 1;
-
-		// Resolve the chain for this section
-		$resolved = $nested_processor->resolve_chain((object)[
-			'ddo_map'      => $ddo_map,
-			'parent'       => $section_tipo,
-			'section_tipo' => $section_tipo,
-			'section_id'   => $section_id
-		]);
-
-		// Cache the result
-		self::set_cached_section($section_tipo, $section_id, $resolved);
-
-		return $resolved;
-	}
 
 	/**
-	 * GET_CURRENT_DEPTH
-	 * Returns current recursion depth.
-	 * 
-	 * @return int
+	 * IS_USED
+	 * Verifies if a numeric value has been previously marked as used within an ID context.
+	 *
+	 * @param string $section_tipo Context identifier
+	 * @param int $section_id The numeric value to check
+	 * @return bool True if the bit is set in the bitmask, false otherwise
 	 */
-	public function get_current_depth(): int {
-		return $this->current_depth;
-	}
+	public static function is_used(string $section_tipo, int $section_id): bool
+	{
+		$byte = $section_id >> 3;
+		$bit  = $section_id & 7;
 
-	/**
-	 * SET_CURRENT_DEPTH
-	 * Sets current recursion depth (used when creating nested processors).
-	 * 
-	 * @param int $depth
-	 * @return void
-	 */
-	public function set_current_depth(int $depth): void {
-		$this->current_depth = $depth;
+		if (!isset(self::$resolved_sections_cache[$section_tipo][$byte])) {
+			return false; // byte never set = unused
+		}
+
+		// AND to isolate the bit — non-zero means it was set
+		return (ord(self::$resolved_sections_cache[$section_tipo][$byte]) & (1 << $bit)) !== 0;
 	}
 
 }
