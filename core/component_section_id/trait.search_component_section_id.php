@@ -9,6 +9,29 @@ trait search_component_section_id {
 
 
 	/**
+	* BUILD_ORDER_SELECT
+	* Build the SELECT column sentence used to ORDER BY a component's value.
+	* For component_section_id, the column 'section_id' is a direct integer, not JSONB.
+	* @param object $options
+	* @return string $select_sentence
+	*/
+	public static function build_order_select(object $options) : string {
+
+		$table_name		= $options->table_name;
+		$column			= $options->column;
+		$alias			= $options->alias;
+
+		// section_id is a direct integer column, not JSONB.
+		// We just return the column name with alias.
+		$select_sentence = "{$table_name}.{$column} AS {$alias}";
+
+		return $select_sentence;
+	}
+
+
+
+
+	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object|false $query_object
