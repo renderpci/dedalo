@@ -1,6 +1,6 @@
 <?php
 
-function get_diffusion_dato($model, $custom_arguments, $output){
+function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, $output){
 
     $process = new stdClass();
 
@@ -76,7 +76,15 @@ function get_diffusion_dato($model, $custom_arguments, $output){
 					"output_format" => "json"
 				];
 			$process = $parser_process;
-			$process->output_sample = ["1257","3"];
+			$process->output_sample = ["1","55"];
+			break;
+
+		case 'relation_list':
+
+			$filter_section 		= $process_dato_arguments->filter_section ?? "";
+			$filter_component 		= $process_dato_arguments->filter_component ?? "";
+			$format 				= $process_dato_arguments->format ?? "";
+
 			break;
 		
 	}
