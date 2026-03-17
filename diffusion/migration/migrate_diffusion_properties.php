@@ -2442,56 +2442,99 @@ function process_node($node, $level) {
 
 							break;
 
+						case 'component_relation_parent':
 
-                     echo "{$indent}- [$tipo] $model_name\n";
-                     echo "{$indent}  [RULE APPLIED] Component Portal -> parser_locator::get_section_id\n";
-                }
-                elseif ($is_relation_component) {
-                    $ddo_map_data = get_ddo_map($tipo);
-                    
-                    if ($ddo_map_data) {
-                        if (!$new_props) $new_props = new stdClass();
-                        if (!isset($new_props->process)) $new_props->process = new stdClass();
-                        
-                        // Assign IDs to children (a, b, c...)
-                        $char_code = 97; // 'a'
-                        $formatted_ddo_map = [];
-                        foreach ($ddo_map_data as $index => $ddo_node) {
-                            $node_obj = clone $ddo_node;
-                            if ($index > 0) { // Skip root (self)
-                                $node_obj->id = chr($char_code++);
-                            }
-                            $formatted_ddo_map[] = $node_obj;
-                        }
+							$is_empty_rp = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-                        $new_props->process->ddo_map = $formatted_ddo_map;
+							$ddo_map_rp = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
 
-                        echo "{$indent}- [$tipo] $model_name\n";
-                        echo "{$indent}  [RULE APPLIED] Default Relation -> generated ddo_map\n";
-                    } else {
-                         // Debug: ddo_map empty
-                         // echo "{$indent}  [DEBUG] ddo_map empty for $tipo\n";
-                    }
-                }
-            } else {
-                // Debug: functional count not 0 or already processed
-            }
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rp($props)) {
 
-			// --- Rule: Field Int (Length) ---
-			if ($model_name === 'field_int' && isset($props->length)) {
-				if (!$new_props) $new_props = new stdClass();
-				$new_props->length = $props->length;
-				
-				echo "{$indent}- [$tipo] $model_name\n";
-				echo "{$indent}  [RULE APPLIED] field_int -> keep length: {$props->length}\n";
-			}
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_parent',
+									null, null, null, null, null,
+									$ddo_map_rp
+								);
 
-			break;
-			
-		default:
-			$diffusion_type = 'unknown';
-			break;
-	}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "option_obj" present
+							$option_obj_rp = $props->option_obj ?? null;
+							if($option_obj_rp){
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_parent',
+									null, null, null, null, $option_obj_rp,
+									null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model empty props -> get_diffusion_value\n";
+								break;
+								
+							}
+							
+							// 2 "process_dato" present
+							$process_dato_rp = $props->process_dato ?? null;
+
+							// 3 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rp
+								&& ($process_dato_rp === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rp === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							break;
 
 
 
