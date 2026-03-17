@@ -2063,33 +2063,149 @@ function process_node($node, $level) {
 								break;
 							}
 							break;
+						case 'component_check_box':
+
+							$is_empty_cb = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_cb($props)) {
+
+								$ddo_map_cb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_check_box',
+									null,
+									null,
+									null,
+									null,
+									null,
+									$ddo_map_cb
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box empty props -> get_diffusion_value (letter-id ddo_map)\n";
 								break;
 							}
-						}
-					}
 
-					if ($is_text_area) {
-						if (!$new_props) $new_props = new stdClass();
-						$new_props->process = new stdClass();
-						$new_props->process->fn = 'get_geojson_data';
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cb && $data_to_be_used_cb === 'dato') {
 
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] build_geolocation_data_geojson -> fn: get_geojson_data\n";
-					}
-				}
-			}
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_check_box',
+									null,
+									null,
+									null
+								);
 
-			// --- Rule: Unix Timestamp (parser_date::unix_timestamp) ---
-			// When process_dato is get_publication_unix_timestamp
-			if ($new_props === null || !isset($new_props->process)) {
-				$is_unix_timestamp = isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp';
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
 
-				if ($is_unix_timestamp) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-					$new_props->process->parser = [
-						(object)['fn' => 'parser_date::unix_timestamp']
-					];
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cb = $props->process_dato ?? null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cb
+								&& ($process_dato_cb === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cb === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_check_box',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id -> get_diffusion_dato()\n";
+								break;
+							}
+
+							// 2.2 "process_dato" = "diffusion_sql::map_quality_to_int"
+							if($process_dato_cb && $process_dato_cb === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_quality_to_int -> get_diffusion_dato()\n";
+								break;
+							}
+
+							break;
 
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] get_publication_unix_timestamp -> parser_date::unix_timestamp\n";
