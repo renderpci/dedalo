@@ -335,9 +335,9 @@ abstract class filter {
 		// debug
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__
-					." Total time on calculate user_authorized_projects: "
-					.exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id " . PHP_EOL
-					." from_component_tipo: $from_component_tipo"
+					.' Total time on calculate user_authorized_projects: '
+					.exec_time_unit($start_time,'ms').' ms. ---- user_id:'.(string)$user_id. PHP_EOL
+					.' from_component_tipo:'.(string)$from_component_tipo
 					, logger::DEBUG
 				);
 			}

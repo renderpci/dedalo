@@ -2278,7 +2278,7 @@ class component_media_common extends component_common {
 					}
 				}
 				if(!isset($ext)) {
-					trigger_error("Error Processing Request. Too much original files found and all have invalid extension ($n)");
+					trigger_error('Error Processing Request. Too much original files found and all have invalid extension ('.$n.')');
 					#throw new Exception("Error Processing Request. Too much original files found", 1);
 				}
 			}

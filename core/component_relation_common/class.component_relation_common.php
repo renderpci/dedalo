@@ -805,7 +805,7 @@ class component_relation_common extends component_common {
 				$locator->type = $this->relation_type;
 
 				debug_log(__METHOD__
-					." Received locator to remove, don't have 'type'. Auto-set type: $this->relation_type to locator: " . PHP_EOL
+					.' Received locator to remove, don\'t have "type". Auto-set type:'. $this->relation_type . ' to locator: ' . PHP_EOL
 					.to_string($locator)
 					, logger::WARNING
 				);

@@ -35,7 +35,7 @@ abstract class counter {
 		}else{
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__
-					." counter not found in db ($matrix_table). Value $counter_number is returned instead (".str_replace(array('$1'), array($tipo), $strQuery).") "
+					." counter not found in db ($matrix_table). Value ".(string)$counter_number." is returned instead (".str_replace(array('$1'), array($tipo), $strQuery).") "
 					, logger::DEBUG
 				);
 			}
@@ -81,7 +81,7 @@ abstract class counter {
 			if ($result===false) {
 				throw new Exception("Error Processing Request. DB error on update counter. Insert into '$matrix_table'", 1);
 			}
-			debug_log(__METHOD__." Created new counter with value: counter_number:'$value' ($strQuery) ", logger::DEBUG);
+			debug_log(__METHOD__." Created new counter with value: counter_number:'".(string)$value." ($strQuery) ", logger::DEBUG);
 
 		}else{
 
@@ -92,7 +92,7 @@ abstract class counter {
 			if ($result===false) {
 				throw new Exception("Error Processing Request. DB error on update counter. Update '$matrix_table'", 1);
 			}
-			debug_log(__METHOD__." Updated counter with value: counter_number:'$value', tipo:$tipo (".str_replace(array('$1','$2'), array($value,$tipo), $strQuery).") ", logger::DEBUG);
+			debug_log(__METHOD__." Updated counter with value: counter_number:'".(string)$value."', tipo:$tipo (".str_replace(array('$1','$2'), array($value,$tipo), $strQuery).") ", logger::DEBUG);
 		}
 
 
@@ -153,7 +153,7 @@ abstract class counter {
 			$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $bigger_section_id, $section_tipo ));
 			if(!$result)throw new Exception("Error Processing Request. DB error on update counter value", 1);
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Consolidated counter with value: counter_number:$bigger_section_id, section_tipo:$section_tipo (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__." Consolidated counter with value: counter_number:'".(string)$bigger_section_id."', section_tipo:'".(string)$section_tipo."' (".str_replace(array('$1','$2'), array($bigger_section_id,$section_tipo), $strQuery).") ".to_string(), logger::DEBUG);
 			}
 		}
 
@@ -337,7 +337,7 @@ abstract class counter {
 				'time'				=> exec_time_unit($start_time,'ms')
 			];
 			debug_log(__METHOD__
-				." check_counters TOTAL ($i)" . PHP_EOL
+				.' check_counters TOTAL ('.(string)$i.')' . PHP_EOL
 				.' time ms: ' . exec_time_unit($start_time,'ms')
 				, logger::DEBUG
 			);
