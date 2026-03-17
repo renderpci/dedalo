@@ -1,6 +1,7 @@
 <?php
 
 use PhpParser\Node\Stmt\Switch_;
+use Symfony\Component\Console\Formatter\NullOutputFormatter;
 /**
  * Migration Script: Diffusion Ontology Properties (v6 -> v7)
  * 
