@@ -2869,6 +2869,129 @@ function process_node($node, $level) {
 							}
 
 							break;
+						
+						case 'component_filter':
+
+							$is_empty_cf = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cf($props)) {
+
+								$ddo_map_cf = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_filter',
+									null, null, null, null, null,
+									$ddo_map_cf
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cf = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cf && $data_to_be_used_cf === 'dato') {				
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_filter',
+									null,
+									null,
+									null,
+									null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cf = $props->process_dato ?? null;
+
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cf
+								&& ($process_dato_cf === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cf === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cf && $process_dato_cf === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] filter map_quality_to_int -> get_diffusion_dato()\n";
+								break;
+							}
+
+							break;
 	// Process result and save
 	if (
 		$new_props 
