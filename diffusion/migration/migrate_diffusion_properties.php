@@ -2206,110 +2206,170 @@ function process_node($node, $level) {
 							}
 
 							break;
+						case 'component_select':
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] get_publication_unix_timestamp -> parser_date::unix_timestamp\n";
-				}
-			}
+							$is_empty_cs = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-			// --- Rule: Component Date (parser_date::string_date) ---
-			// When related component is component_date and no functional properties,
-			// or when process_dato is split_date_range
-			if ($new_props === null || !isset($new_props->process)) {
+							$ddo_map_cs = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
 
-				$is_date_component = false;
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cs($props)) {
 
-				// Check if related component is component_date
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if ($rel_info['model'] === 'component_date') {
-							$is_date_component = true;
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select',
+									null, null, null, null, null,
+									$ddo_map_cs
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "value"
+							$data_to_be_used_cs = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cs && $data_to_be_used_cs === 'value') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select',
+									null, null, null, null, null,
+									$ddo_map_cs
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select data_to_be_used=value -> get_diffusion_value\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cs = $props->process_dato ?? null;
+
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_cs
+								&& ($process_dato_cs === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_cs === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_cs && $process_dato_cs === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" with target_component_tipo → custom ddo_map chain
+							if($process_dato_cs && $process_dato_cs === 'diffusion_sql::resolve_value') {
+
+								$process_dato_arguments_cs = $props->process_dato_arguments ?? null;
+								$target_component_tipo_cs  = trim($process_dato_arguments_cs->target_component_tipo ?? "");
+								$is_publicable_cs          = $process_dato_arguments_cs->is_publicable ?? null;
+
+								$ddo_map_rv = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'   => $target_component_tipo_cs,
+										'parent' => $rel_info['tipo']
+									]
+								];
+
+								$model_cs = ontology_node::get_legacy_model_by_tipo($target_component_tipo_cs);
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$target_component_tipo_cs,
+									$model_cs,
+									null,
+									$process_dato_arguments_cs,
+									null, null, null,
+									$ddo_map_rv
+								);
+
+								if($is_publicable_cs === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select resolve_value -> custom ddo_map chain\n";
+								break;
+							}
+
 							break;
-						}
-					}
-				}
-
-				// Check if process_dato is split_date_range
-				$is_split_date = isset($props->process_dato) && $props->process_dato === 'diffusion_sql::split_date_range';
-
-				if ($is_date_component && ($clean_count === 0 || $is_split_date)) {
-					if (!$new_props) $new_props = new stdClass();
-					$new_props->process = new stdClass();
-
-					// Build parser definition
-					$parser_def = (object)['fn' => 'parser_date::string_date'];
-
-					// Preserve selected_date from legacy split_date_range arguments
-					// Default is "start", so only add options when it's different
-					if ($is_split_date
-						&& isset($props->process_dato_arguments->selected_date)
-						&& $props->process_dato_arguments->selected_date !== 'start'
-					) {
-						$parser_def->options = (object)[
-							'properties' => [$props->process_dato_arguments->selected_date]
-						];
-					}
-
-					$new_props->process->parser = [$parser_def];
-
-					$selected_info = isset($parser_def->options) ? ' (properties: [' . $props->process_dato_arguments->selected_date . '])' : '';
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] component_date -> parser_date::string_date{$selected_info}\n";
-				}
-			}
-
-            // --- Rule: Default Diffusion Element (ddo_map) ---
-            // When no transformative properties exist (only meta/schema props), build default DDO map
-            // Excludes specific components: autocomplete_hi, filter, portal, relation_children
-            
-            // Check: any functional properties?
-            $props_functional = is_object($props) ? clone $props : (object)[];
-            $non_functional_keys = [
-                'varchar', 'enum', 'length', // Schema
-                'exclude_column', 'info', 'is_publicable', 'orders', 'labels',
-                'option_obj' // Parent chain config (handled by autocomplete_hi/flat_parents rule)
-            ];
-            foreach ($non_functional_keys as $key) {
-                if (isset($props_functional->$key)) unset($props_functional->$key);
-            }
-            
-            // Allow these process_dato values to be replaced by downstream rules
-            if (isset($props_functional->process_dato) && in_array($props_functional->process_dato, [
-                'diffusion_sql::resolve_value',
-                'diffusion_sql::split_date_range',
-                'diffusion::get_publication_unix_timestamp',
-                'diffusion_sql::map_locator_to_terminoID_parent'
-            ])) {
-                unset($props_functional->process_dato);
-                // Also ignore arguments associated with these if they exist
-                if (isset($props_functional->process_dato_arguments)) unset($props_functional->process_dato_arguments);
-            }
-            
-            $functional_count = count((array)$props_functional);
-
-            // Condition: No functional properties AND not already processed (process block)
-            if ($functional_count === 0 && (!isset($new_props->process))) {
-                
-                $is_relation_component = false;
-                $is_portal = false;
-                $target_model = '';
-                
-                 if (!empty($relations_info)) {
-                    $relation_components = component_relation_common::get_components_with_relations();
-                    $excluded_components = [
-                        'component_autocomplete_hi', 
-                        'component_filter', 
-                        // 'component_portal', // Handled explicitly now
-                        'component_relation_children'
-                    ];
-                    
-                    foreach ($relations_info as $rel_info) {
-                        // Check for Portal specifically first
-                        if ($rel_info['model'] === 'component_portal') {
-                            $is_portal = true;
-                            $target_model = 'component_portal';
-                            break;
-                        }
 
                         if (in_array($rel_info['model'], $relation_components)) {
                             // Ensure we don't pick up excluded comps as "generic relation"
