@@ -852,8 +852,37 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 		case 'component_select':    
 		case 'component_select_lang':
 		case 'component_radio_button':
-			break;
-		case 'component_text_area':     
+			$fields_separator = $custom_arguments[0]->divisor ??', ';
+
+			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);	
+
+			$letter_ids = [];
+			foreach ($related_component as $i => $component_tipo) {
+				$letter_id = chr(ord('a') + $i);
+				$letter_ids[] = $letter_id;
+				$ddo_map[] = (object)[
+					'id' => $letter_id,
+					'tipo' => $component_tipo,
+					'parent' => $tipo
+				]; 
+			}			
+
+			$parser_process = (object)[					
+				'parser' => [
+					(object)[
+						'fn' => 'parser_text::text_format',
+						'options' => (object)[
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+						]
+					]
+				],
+				"output_format" => "string"
+			];
+			$process = $parser_process;
+			$process->ddo_map = $ddo_map;
+			$process->output_sample = "Goméz Pérez, Raspa";
+
+			break;  
 			break;
 
 		case 'relation_list':
