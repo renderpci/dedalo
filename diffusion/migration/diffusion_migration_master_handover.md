@@ -38,7 +38,7 @@ The script [migrate_diffusion_properties.php](file:///Users/render/Desktop/traba
 1.  **Component Date**: Maps to `parser_date::string_date`.
 2.  **Enum Fields**: Maps to `parser_locator::get_section_id` + `parser_text::map_value`.
 3.  **Hierarchy (Thesaurus/Locators)**:
-    -   If `add_parents: true` or [map_locator_to_terminoID](file:///Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/diffusion/class.diffusion_sql.php#3602-3770) is used, it maps to `parser_locator::flat_parents` or `parser_locator::get_parent_term_id`.
+    -   If `add_parents: true` or [map_locator_to_terminoID](file:///Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/diffusion/class.diffusion_sql.php#3602-3770) is used, it maps to `parser_locator::parents` or `parser_locator::get_parent_term_id`.
 4.  **Chained Relations**: Maps to [add_parents](file:///Users/render/Desktop/trabajos/dedalo/v7/master_dedalo/core/component_relation_common/class.component_relation_common.php#1458-1527) or [ds](file:///Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/diffusion/class.diffusion_sql.php#725-783) (Double Step) logic in V7.
 
 ---
@@ -49,7 +49,7 @@ V7 utilizes a chain of TypeScript parsers. The result of one parser can be passe
 
 ### Key Parsers in [parser_locator.ts](file:///Users/render/Desktop/trabajos/dedalo/v7/master_dedalo/diffusion/api/v1/lib/parsers/parser_locator.ts)
 - **[add_parents](file:///Users/render/Desktop/trabajos/dedalo/v7/master_dedalo/core/component_relation_common/class.component_relation_common.php#1458-1527)**: The fundamental wrapper for hierarchical resolution.
-- **[flat_parents](file:///Users/render/Desktop/trabajos/dedalo/v7/master_dedalo/diffusion/api/v1/lib/parsers/parser_locator.ts#471-532)**: A complex orchestrator that handles:
+- **[parents](file:///Users/render/Desktop/trabajos/dedalo/v7/master_dedalo/diffusion/api/v1/lib/parsers/parser_locator.ts#18-53)**: A complex orchestrator that handles:
     -   `parent_end_by_term_id`: Clipping the hierarchy at a specific node.
     -   `parents_splice`: Slicing the parent chain.
     -   [resolve_value](file:///Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/diffusion/class.diffusion_sql.php#4985-5314): Deciding whether to return the label (term) or the ID.
