@@ -1720,84 +1720,133 @@ function process_node($node, $level) {
 							}
 							break;
 						
+						case 'component_select_lang':
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] resolve_component_value -> no process (data as-is)\n";
-				}
+							$is_empty_sl = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
-				if (!$is_resolve_component && ($is_autocomplete_hi || $option_obj)) {
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_sl($props)) {
 
-					if (!$new_props) $new_props = new stdClass();
-					if (!isset($new_props->process)) $new_props->process = new stdClass();
-					$new_props->process->fn = 'add_parents';
+								$ddo_map_cb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
 
-					if (!isset($new_props->process->parser)) $new_props->process->parser = [];
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_select_lang',
+									null,
+									null,
+									null,
+									null,
+									null,
+									$ddo_map_cb
+								);
 
-					if ($option_obj || $is_autocomplete_hi) {
-						// Build parser options from option_obj — only include present values
-						$parser_options = new stdClass();
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
 
-						// include_parents (V7 TS parser option)
-						if ($add_parents_false) {
-							$parser_options->include_parents = false;
-						}
-
-						// resolve_value
-						if ($option_obj && isset($option_obj->resolve_value)) {
-							$parser_options->resolve_value = $option_obj->resolve_value;
-						}
-
-						// parent_section_tipo
-						if (isset($option_obj->parent_section_tipo)) {
-							$parser_options->parent_section_tipo = $option_obj->parent_section_tipo;
-						}
-
-						// records_separator (unify divisor and records_separator)
-						if (isset($option_obj->divisor)) {
-							$parser_options->records_separator = $option_obj->divisor;
-						}
-						if (isset($option_obj->records_separator)) {
-							$parser_options->records_separator = $option_obj->records_separator;
-						}
-
-						// custom_parents — normalize from multiple possible locations
-						$custom_parents = null;
-						if (isset($option_obj->custom_parents)) {
-							// Direct: option_obj.custom_parents
-							$custom_parents = $option_obj->custom_parents;
-						} elseif (isset($option_obj->process_dato_arguments->custom_parents)) {
-							// Nested: option_obj.process_dato_arguments.custom_parents
-							$custom_parents = $option_obj->process_dato_arguments->custom_parents;
-						}
-
-						if ($custom_parents) {
-							if (isset($custom_parents->parents_splice)) {
-								$parser_options->parents_splice = $custom_parents->parents_splice;
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_select_lang (empty props) → get_diffusion_value\n";
+								break;
 							}
-							if (isset($custom_parents->parent_end_by_term_id)) {
-								$parser_options->parent_end_by_term_id = $custom_parents->parent_end_by_term_id;
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cb && $data_to_be_used_cb === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_select_lang',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_select_lang data_to_be_used=dato -> get_dato()\n";
+								break;
 							}
-							if (isset($custom_parents->parent_end_by_model)) {
-								$parser_options->parent_end_by_model = $custom_parents->parent_end_by_model;
+							
+							// 2 "process_dato" = "diffusion_sql::resolve_component_value"
+							$process_dato = $props->process_dato ?? null;
+							if($process_dato && $process_dato=== "diffusion_sql::resolve_component_value"){
+
+								$process_dato_arguments = $props->process_dato_arguments;
+								$component_method = $process_dato_arguments->component_method ?? null;
+
+								if($component_method === 'get_value_code'){
+
+									$ddo_map_sl = [
+										(object)[
+											'tipo'         => $rel_info['tipo'] ?? $tipo,
+											'section_tipo' => 'self'
+										],
+										(object)[
+											'id'		=> 'a',
+											'tipo'		=> 'hierarchy41', // Standard code component for lg1
+											'label'		=> 'code',
+											'parent'	=> $rel_info['tipo'],
+										]
+									];
+									
+									$parser_process = (object)[					
+										'parser' => [
+											(object)[
+												'fn' => 'parser_text::text_format',
+												'options' => (object)[
+													'pattern' => 'lg-${a}'
+												]
+											]
+										],
+										"output_format" => "string"
+									];
+
+									$new_props = new stdClass();
+										$new_props->process = $parser_process;
+										$new_props->process->ddo_map = $ddo_map_sl;
+										$new_props->process->output_sample = "lg-cat";
+
+										// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] component_select_lang data_to_be_used=dato -> get_dato()\n";
+									break;
+								}
 							}
-						}
-
-						// Build parser definition
-						$parser_def = (object)['fn' => 'parser_locator::flat_parents'];
-						if (count((array)$parser_options) > 0) {
-							$parser_def->options = $parser_options;
-						}
-						$new_props->process->parser = [$parser_def];
-
-						$options_str = count((array)$parser_options) > 0 ? ' options: ' . json_encode($parser_options) : '';
-						echo "{$indent}- [$tipo] $model_name\n";
-						echo "{$indent}  [RULE APPLIED] option_obj -> parser_locator::flat_parents{$options_str}\n";
-
-					} else {
-						// Default: no option_obj, simple add_parents
-						$new_props->process->parser = [
-							(object)['fn' => 'parser_locator::add_parents']
-						];
+							break;
 
 						echo "{$indent}- [$tipo] $model_name\n";
 						echo "{$indent}  [RULE APPLIED] component_autocomplete_hi relation (fn=add_parents) -> parser_locator::add_parents\n";
