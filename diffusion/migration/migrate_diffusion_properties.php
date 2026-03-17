@@ -3097,6 +3097,47 @@ function process_node($node, $level) {
 						case 'component_email':
 							break;
 						
+						case 'component_input_text':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_target_section_tipo"){							
+
+								$parser_process = (object)[											
+									'fn' => 'map_target_section_tipo'
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = "ts_onomastic";
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_target_section_tipo\n";
+								break;
+							}
+
+							break;
 	// Process result and save
 	if (
 		$new_props 
