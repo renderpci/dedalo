@@ -562,7 +562,7 @@ class tool_export extends tool_common {
 
 		// section_grid_values
 			$section_grid_values[] = $section_grid_row;
-			$section_grid_values = array_merge($section_grid_values, $ar_row_values);
+			$section_grid_values = [...$section_grid_values, ...$ar_row_values];
 
 
 		return $section_grid_values;

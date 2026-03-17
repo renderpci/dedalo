@@ -319,7 +319,7 @@ class search {
 				null // string|null component_tipo
 			);
 
-			$ar_row_children = array_merge($ar_row_children, $row_children);
+			$ar_row_children = [...$ar_row_children, ...$row_children];
 		}
 
 		// No children found case. Return the main search result.
@@ -328,7 +328,7 @@ class search {
 		}
 
 		// Merges parent and children records
-		$ar_rows_mix = array_merge($ar_row_children, $ar_records);
+		$ar_rows_mix = [...$ar_row_children, ...$ar_records];
 
 		// Generates the new SQO with all section_id.
 		$new_sqo = $this->generate_children_recursive_search($ar_rows_mix);
@@ -578,7 +578,7 @@ class search {
 					$ar_query_object = $model_name::get_search_query($search_object);
 				}
 
-				$new_query_object->$op = array_merge($new_query_object->$op, $ar_query_object);
+				$new_query_object->$op = [...$new_query_object->$op, ...$ar_query_object];
 			}
 		}//end for ($i=0; $i < $filter_items_size; $i++)
 
@@ -821,7 +821,7 @@ class search {
 
 			// where
 			// merge main_where and where and remove empty sentences
-			$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
+			$all_where_sentences = array_filter([...$this->sql_obj->main_where, ...$this->sql_obj->where]);
 			if( !empty( $all_where_sentences )){
 				$query_inside .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
 			}
@@ -922,7 +922,7 @@ class search {
 
 		// where
 		// merge main_where and where and remove empty sentences
-		$all_where_sentences = array_filter(array_merge($this->sql_obj->main_where, $this->sql_obj->where));
+		$all_where_sentences = array_filter([...$this->sql_obj->main_where, ...$this->sql_obj->where]);
 		if( !empty( $all_where_sentences )){
 			$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL.' AND ', $all_where_sentences);
 		}

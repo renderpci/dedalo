@@ -57,7 +57,7 @@ class update_ontology {
 			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 			// force to add 'ontology' to the list
 			$DEDALO_PREFIX_TIPOS = array_values(array_unique(
-				array_merge($DEDALO_PREFIX_TIPOS, ['ontology'])
+				[...$DEDALO_PREFIX_TIPOS, 'ontology']
 			));
 
 		// current_ontology: dd1 properties

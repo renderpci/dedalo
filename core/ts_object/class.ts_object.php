@@ -730,7 +730,7 @@ class ts_object {
 			$data = $component->get_data();
 
 			if (!empty($data)) {
-				$ar_value = array_merge($ar_value, $data);
+				$ar_value = [...$ar_value, ...$data];
 			}
 		}//end foreach ($ar_tipo as $tipo) {
 
@@ -1170,7 +1170,7 @@ class ts_object {
 				$type_rel = $component->get_type_rel();
 				if ($type_rel !== DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO) {
 					$component_rel = $component->get_references();
-					$component_data = array_merge($component_data, $component_rel);
+					$component_data = [...$component_data, ...$component_rel];
 				}
 				break;
 

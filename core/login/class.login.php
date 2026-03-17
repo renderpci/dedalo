@@ -1410,7 +1410,7 @@ class login extends common {
 			];
 			// append activity_data if exists
 			if(!empty($activity_data) && is_array($activity_data)) {
-				$data = array_merge($data, $activity_data);
+				$data = [...$data, ...$activity_data];
 			}
 
 		// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATA(array of related info)

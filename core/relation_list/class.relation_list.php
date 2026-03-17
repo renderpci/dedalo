@@ -133,7 +133,7 @@ class relation_list extends common {
 				);
 			}
 			$ar_data_result = $this->get_ar_data($current_record, $ar_components);
-			$ar_data 		= array_merge($ar_data, $ar_data_result);
+			$ar_data = [...$ar_data, ...$ar_data_result];
 		}// end foreach
 
 		// $context = 'context';
@@ -826,7 +826,7 @@ class relation_list extends common {
 								}
 								if(!empty($component_data)){
 									if(is_array($component_data)){
-										$ar_value = array_merge($ar_value, $component_data);
+										$ar_value = [...$ar_value, ...$component_data];
 									}else{
 										$ar_value[] = $component_data;
 									}

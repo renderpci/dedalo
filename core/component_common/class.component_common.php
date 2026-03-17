@@ -125,10 +125,10 @@ abstract class component_common extends common {
 	*/
 	public static function get_direct_data_components() : array {
 
-		$direct_data = array_merge(
-			component_relation_common::get_components_with_relations(),
-			component_media_common::get_media_components()
-		);
+		$direct_data = [
+			...component_relation_common::get_components_with_relations(),
+			...component_media_common::get_media_components()
+		];
 		$direct_data[] = 'component_date';
 		$direct_data[] = 'component_security_access';
 		$direct_data[] = 'component_filter_records';
@@ -862,7 +862,7 @@ abstract class component_common extends common {
 			}
 
 		// Merge filtered data with new language data
-			$merged_data = array_merge($filtered_data, $safe_data_lang);
+			$merged_data = [...$filtered_data, ...$safe_data_lang];
 
 		 // Set the final data (null if empty)
 			$final_data = $this->is_empty_data($merged_data)
@@ -1316,11 +1316,11 @@ abstract class component_common extends common {
 				// as any other component
 				$dataframe_data = $dataframe_component->get_data();
 				if( !empty($dataframe_data) ){
-					$ar_dataframe_data = array_merge( $ar_dataframe_data, $dataframe_data );
+					$ar_dataframe_data = [...$ar_dataframe_data, ...$dataframe_data];
 				}
 			}
 			$time_machine_data_to_save = is_array($time_machine_data_to_save)
-				? array_merge( $time_machine_data_to_save, $ar_dataframe_data )
+				? [...$time_machine_data_to_save, ...$ar_dataframe_data]
 				: $ar_dataframe_data;
 		}
 
@@ -1790,7 +1790,7 @@ abstract class component_common extends common {
 					$observable_data, // ?array $observable_data
 					$this->tipo // string observable_tipo
 				);
-				$observers_data = array_merge($observers_data, $current_observer_data);
+				$observers_data = [...$observers_data, ...$current_observer_data];
 			}
 
 		// store data to access later in api
@@ -1930,7 +1930,7 @@ abstract class component_common extends common {
 					case (((isset($config->use_observable_dato) && $config->use_observable_dato===true)
 						 && (isset($config->use_self_section) && $config->use_self_section===true))):
 						if (!empty($observable_data)) {
-							$ar_section = array_merge($ar_section, $observable_data);
+							$ar_section = [...$ar_section, ...$observable_data];
 						}
 						break;
 
@@ -2031,7 +2031,7 @@ abstract class component_common extends common {
 					if($current_section->section_id == $locator->section_id && $current_section->section_tipo === $locator->section_tipo){
 						// get the JSON of the component to send with the save of the observable component data
 						$component_json = $component->get_json();
-						$ar_data = array_merge($ar_data, $component_json->data);
+						$ar_data = [...$ar_data, ...$component_json->data];
 					}
 				}//end foreach ($ar_section as $current_section)
 			}// end if(!empty($ar_section ))
@@ -2699,8 +2699,8 @@ abstract class component_common extends common {
 		// config_context. Get_config_context normalized
 			$ar_request_config = $this->get_ar_request_config();
 			foreach ($ar_request_config as $config_context_item) {
-				$ar_current_section_tipo	= $config_context_item->sqo->section_tipo;
-				$ar_target_section_ddo		= array_merge($ar_target_section_ddo, $ar_current_section_tipo);
+				$ar_current_section_tipo = $config_context_item->sqo->section_tipo ?? [];
+				$ar_target_section_ddo = [ ...$ar_target_section_ddo, ...$ar_current_section_tipo];
 			}
 
 		// empty case

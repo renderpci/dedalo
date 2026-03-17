@@ -1783,7 +1783,7 @@ abstract class common {
 							$ar_children[] = $ddo;
 							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
-								$ar_children = array_merge($ar_children, $result);
+								$ar_children = [...$ar_children, ...$result];
 							}
 						}
 					}
@@ -1808,16 +1808,10 @@ abstract class common {
 					continue;
 				}
 				// merge all ddo of all request_config
-				$full_ddo_map = array_merge(
-					$full_ddo_map,
-					$request_config_object->show->ddo_map
-				);
+				$full_ddo_map = [...$full_ddo_map, ...$request_config_object->show->ddo_map];
 				// hide ddo_map add. If request config has 'hide' property defined, add his ddo_map to be resolved
 				if( isset($request_config_object->hide) && isset($request_config_object->hide->ddo_map) ){
-					$full_ddo_map = array_merge(
-						$full_ddo_map,
-						$request_config_object->hide->ddo_map
-					);
+					$full_ddo_map = [...$full_ddo_map, ...$request_config_object->hide->ddo_map];
 				}
 			}//end foreach ($request_config as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
@@ -2211,7 +2205,7 @@ abstract class common {
 								$element_json = $related_element->get_json($item_options);
 
 							// ar_subcontext
-								$ar_subcontext = array_merge($ar_subcontext, $element_json->context);
+								$ar_subcontext = [...$ar_subcontext, ...$element_json->context];
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
@@ -2234,7 +2228,7 @@ abstract class common {
 								}
 
 							// data add
-								$ar_subdata = array_merge($ar_subdata, $ar_final_subdata);
+								$ar_subdata = [...$ar_subdata, ...$ar_final_subdata];
 						}//end if (isset($related_element))
 
 					// debug
@@ -2886,7 +2880,7 @@ abstract class common {
 									return $ddo->tipo === $current_component_tipo;
 								});
 								if (is_object($to_change_ddo)) {
-									$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+									$to_change_ddo->section_tipo = [...(array)$to_change_ddo->section_tipo, $current_section_tipo];
 								}
 
 							}else{
@@ -3031,7 +3025,7 @@ abstract class common {
 				'children',
 				false // bool search_exact
 			);
-			$section_info_elements = array_merge([DEDALO_SECTION_INFO_SECTION_GROUP], $ar_elements);
+			$section_info_elements = [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
@@ -3086,7 +3080,7 @@ abstract class common {
 						false // bool add_rqo
 					)
 				];
-				$context = array_merge($context, $item_context);
+				$context = [...$context, ...$item_context];
 
 			// section children
 				$ar_elements = section::get_ar_children_tipo_by_model_name_in_section(
@@ -3236,7 +3230,7 @@ abstract class common {
 								$el_section_tipo
 							);
 
-							$ar_el_target_section_tipo = array_merge( $ar_el_target_section_tipo, $element->get_ar_target_section_tipo() );
+							$ar_el_target_section_tipo = [...$ar_el_target_section_tipo, ...$element->get_ar_target_section_tipo()];
 						}
 						// add all target_section possibilities to the ddo
 						// see in get_component_instance() in search.js
@@ -3247,7 +3241,7 @@ abstract class common {
 					$item_context = [$ddo];
 
 				// context add
-					$context = array_merge($context, $item_context);
+					$context = [...$context, ...$item_context];
 
 			}//end foreach ($ar_elements as $element_tipo)
 		}//end foreach ((array)$ar_section_tipo as $section_tipo)

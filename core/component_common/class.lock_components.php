@@ -101,7 +101,7 @@ class lock_components {
 					}
 					// fix data - reindex array after unset operations, then add new event
 					$data = array_values($data); // Reindex array after unset operations
-					$new_data = array_merge($data, [$event_element]);
+					$new_data = [...$data, $event_element];
 					break;
 
 				case 'blur':

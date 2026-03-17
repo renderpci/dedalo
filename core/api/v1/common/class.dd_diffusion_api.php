@@ -351,8 +351,8 @@ class dd_diffusion_api {
 				if(empty($main_section_tipo)){
 					$main_section_tipo = diffusion_utils::get_related_section_tipo($related_tipo);
 				}
-				$ar_target_children = ontology_node::get_ar_children($related_tipo);			
-				$ar_children = array_merge($ar_target_children, $ar_children);
+				$ar_target_children = ontology_node::get_ar_children($related_tipo);
+				$ar_children = [...$ar_target_children, ...$ar_children];
 			}
 		}
 
@@ -362,11 +362,11 @@ class dd_diffusion_api {
 		foreach ($ar_children as $node_tipo) {
 			$ddo_map = diffusion_data::get_ddo_map($node_tipo, $main_section_tipo);
 			$combined_ddo_map[$node_tipo] = $ddo_map;
-			
+
 			// Build context for each node (field definitions)
 			$node_context = self::build_datum_context($node_tipo, $ddo_map);
-			$context = array_merge($context, $node_context);
-		}			
+			$context = [...$context, ...$node_context];
+		}
 
 		$datum_object = new diffusion_datum();
 			$datum_object->set_diffusion_tipo($source_tipo);
@@ -408,14 +408,14 @@ class dd_diffusion_api {
 					'level'        		=> $levels,
 					'is_publishable' 	=> $is_publishable
 				]);
-				
+
 				// Get the value directly from get_diffusion_data() result
 				$all_values = [];
 				foreach ($resolved_results as $ddo_res) {
 					$value = $ddo_res->value ?? [];
 					if (!empty($value)) {
 						// Merge all child values into one array
-						$all_values = array_merge($all_values, $value);
+						$all_values = [...$all_values, ...$value];
 					}
 				}
 				if (!empty($all_values) || ($options->include_empty ?? false) === true) {
