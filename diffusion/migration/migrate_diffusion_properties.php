@@ -2535,8 +2535,268 @@ function process_node($node, $level) {
 							}
 
 							break;
+						
+						case 'component_radio_button':
 
+							$is_empty_rb = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
 
+							$ddo_map_rb = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_rb($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_radio_button',
+									null, null, null, null, null,
+									$ddo_map_rb
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "value"
+							$data_to_be_used_rb = $props->data_to_be_used ?? null;
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'value') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_radio_button',
+									null, null, null, null, null,
+									$ddo_map_rb
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button data_to_be_used=value -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1.5 "data_to_be_used" = "dato" with "enum" → custom enum map resolution
+							$enum_rb = $props->enum ?? null;
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'dato' && !empty($enum_rb)) {
+
+								$parser_process_rb = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_text::map_value',
+										'options' => (object)[
+											'map' => [
+												(object)[
+													'a' => $enum_rb
+												]
+											]
+										]
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process_rb;
+								$new_props->process->output_sample = "Yes";
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button dato+enum -> map_value\n";
+								break;
+							}
+
+							// 1.6 "data_to_be_used" = "dato" (without enum) → get_diffusion_dato()
+							if($data_to_be_used_rb && $data_to_be_used_rb === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_radio_button', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button data_to_be_used=dato -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rb = $props->process_dato ?? null;
+
+							// 2.1 "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rb
+								&& ($process_dato_rb === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rb === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "diffusion_sql::map_quality_to_int"
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::map_quality_to_int'
+								|| $process_dato_rb === 'diffusion_sql::map_locator_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
+							// 2.25 "diffusion_sql::map_locator_to_value" with map → same enum map resolution
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::map_locator_to_value') {
+
+								$process_dato_arguments_rb_mv = $props->process_dato_arguments ?? null;
+								$map_rb = $process_dato_arguments_rb_mv->map ?? null;
+
+								$parser_process_rb_mv = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_text::map_value',
+										'options' => (object)[
+											'map' => [
+												(object)[
+													'a' => $map_rb
+												]
+											]
+										]
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process_rb_mv;
+								$new_props->process->output_sample = "1";
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button map_locator_to_value -> map_value\n";
+								break;
+							}
+
+							// 2.3 "diffusion_sql::resolve_value" with target_component_tipo → custom ddo_map chain
+							if($process_dato_rb && $process_dato_rb === 'diffusion_sql::resolve_value') {
+
+								$process_dato_arguments_rb = $props->process_dato_arguments ?? null;
+								$target_component_tipo_rb  = trim($process_dato_arguments_rb->target_component_tipo ?? "");
+								$is_publicable_rv_rb       = $process_dato_arguments_rb->is_publicable ?? null;
+
+								$ddo_map_rv_rb = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									],
+									(object)[
+										'tipo'   => $target_component_tipo_rb,
+										'parent' => $rel_info['tipo']
+									]
+								];
+
+								$model_rb = ontology_node::get_legacy_model_by_tipo($target_component_tipo_rb);
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$target_component_tipo_rb,
+									$model_rb,
+									null,
+									$process_dato_arguments_rb,
+									null, null, null,
+									$ddo_map_rv_rb
+								);
+
+								if($is_publicable_rv_rb === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] radio_button resolve_value -> custom ddo_map chain\n";
+								break;
+							}
+
+							break;
 
 	// Process result and save
 	if (
