@@ -72,9 +72,9 @@ final class dd_date_test extends BaseTestCase {
 			];
 			$dd_date = new dd_date($options);
 			$this->assertTrue(
-				!empty($dd_date->errors),
+				!empty($dd_date->get_errors()),
 					'expected true, but received is: ' . PHP_EOL
-					. to_string( !empty($dd_date->errors) ) . PHP_EOL
+					. to_string( !empty($dd_date->get_errors()) ) . PHP_EOL
 					. to_string( $dd_date )
 			);
 
@@ -86,8 +86,8 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 		// invalid day
@@ -98,8 +98,8 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 		// invalid hour
@@ -110,8 +110,8 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 		// invalid minute
@@ -122,8 +122,8 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 		// invalid second
@@ -134,8 +134,8 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 		// invalid ms
@@ -146,14 +146,14 @@ final class dd_date_test extends BaseTestCase {
 				'expected true, but received is: ' . to_string( $result===false )
 			);
 			$this->assertTrue(
-				!empty($dd_date->errors),
-				'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+				!empty($dd_date->get_errors()),
+				'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			);
 
 
 			// $this->assertTrue(
-			// 	!empty($dd_date->errors),
-			// 	'expected true, but received is: ' . to_string( !empty($dd_date->errors) )
+			// 	!empty($dd_date->get_errors()),
+			// 	'expected true, but received is: ' . to_string( !empty($dd_date->get_errors()) )
 			// );
 
 
