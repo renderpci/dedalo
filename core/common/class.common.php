@@ -193,6 +193,12 @@ abstract class common {
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
+		if (is_callable(['diffusion_fn', $strFunction])) {
+			// Forward the call: pass the instance as first argument,
+			// then the original arguments (if any)
+			return diffusion_fn::$strFunction($this, ...$arArguments);
+		}
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
