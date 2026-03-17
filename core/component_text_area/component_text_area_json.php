@@ -58,7 +58,7 @@
 				// lang (related_component_lang)
 					$original_lang = $this->get_original_lang();
 					if (!empty($original_lang)) {
-						if (!property_exists($this->context, 'options')) {
+						if (!isset($this->context->options)) {
 							$this->context->options = new stdClass();
 						}
 						// set original lang

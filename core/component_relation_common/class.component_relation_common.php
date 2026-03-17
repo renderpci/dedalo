@@ -374,7 +374,8 @@ class component_relation_common extends component_common {
 				// }
 
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
-				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
+				$tmp_section_tipo 		= $ddo->section_tipo;
+				$ddo_section_tipo		= is_array($tmp_section_tipo) ? reset($tmp_section_tipo) : $tmp_section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
 				// set the path that will be used to create the column_obj id
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;

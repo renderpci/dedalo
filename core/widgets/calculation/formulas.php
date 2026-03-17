@@ -124,7 +124,11 @@ function summarize( string|object $request_options) : array {
 				$total = new dd_date();
 				foreach ($shape as $key => $value) {
 					if($value === true){
-						$total->$key = $total_full->$key;
+						$method_get = 'get_' . $key;
+						$method_set = 'set_' . $key;
+						if (method_exists($total_full, $method_get) && method_exists($total, $method_set)) {
+							$total->$method_set($total_full->$method_get());
+						}
 					}
 				}
 			}else{
