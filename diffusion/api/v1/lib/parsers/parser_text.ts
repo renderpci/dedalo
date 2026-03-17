@@ -257,3 +257,94 @@ export function map_value(data: data_item[] | null, options: parser_options): an
 
 	return result.length > 0 ? result : null;
 }
+
+
+
+/**
+ * V5_HTML
+ * Cleans and normalises CKEditor/TinyMCE HTML for v5-compatible diffusion output.
+ * Port of PHP component_text_area::get_diffusion_value (L1995-L2036).
+ *
+ * Processing pipeline (mirrors PHP logic exactly):
+ *  1. Decode HTML entities on the raw string value.
+ *  2. Return null when the result is empty.
+ *  3. Remove empty paragraphs (`<p></p>` / `<p> </p>`).
+ *  4. Convert `<p>` and `<p style="…">` opening tags → `<br>`.
+ *  5. Strip all `</p>` closing tags.
+ *  6. Remove a leading `<br />` or `<br>`.
+ *  7. Remove a trailing `<br />` or `<br>`.
+ *  8. Trim leading/trailing `&nbsp;` and whitespace.
+ *
+ * @param data    - Array of data items; only the first item's value is processed.
+ * @param options - Standard parser options (unused but kept for interface consistency).
+ * @returns Cleaned string wrapped in a data_item array, or null.
+ */
+export function v5_html(data: data_item[] | null, options: parser_options): any {
+
+	if (!data || data.length === 0) return null;
+
+	const first = data[0];
+	const raw   = first.value;
+
+	if (raw === null || raw === undefined) return null;
+
+	// 1. Decode HTML entities (mirrors PHP html_entity_decode)
+	let value = decode_html_entities(String(raw));
+
+	// 2. Empty guard
+	if (!value || value.trim() === '') return null;
+
+	// 3. Remove empty paragraphs
+	if (value === '<p></p>' || value === '<p> </p>') {
+		value = '';
+	}
+
+	// 4. Convert <p> / <p style="…"> → <br>
+	value = value.replace(/<p( style="[^"]*")?>/gi, '<br>');
+
+	// 5. Strip </p>
+	value = value.replace(/<\/p>/gi, '');
+
+	// 6. Remove leading <br /> or <br>
+	if (value.startsWith('<br />')) {
+		value = value.slice('<br />'.length);
+	} else if (value.startsWith('<br>')) {
+		value = value.slice('<br>'.length);
+	}
+
+	// 7. Remove trailing <br /> or <br>
+	if (value.endsWith('<br />')) {
+		value = value.slice(0, -'<br />'.length);
+	} else if (value.endsWith('<br>')) {
+		value = value.slice(0, -'<br>'.length);
+	}
+
+	// 8. Trim &nbsp; at boundaries and surrounding whitespace
+	value = value.replace(/^&nbsp;|&nbsp;$/g, '').trim();
+
+	if (!value) return null;
+
+	return [{
+		id:    null,
+		value: value,
+		tipo:  first.tipo,
+		lang:  first.lang
+	}];
+}
+
+
+/**
+ * DECODE_HTML_ENTITIES
+ * Converts common HTML entities to their character equivalents.
+ * Mirrors PHP html_entity_decode behaviour for the subset used in diffusion text.
+ */
+function decode_html_entities(str: string): string {
+	return str
+		.replace(/&amp;/g,   '&')
+		.replace(/&lt;/g,    '<')
+		.replace(/&gt;/g,    '>')
+		.replace(/&quot;/g,  '"')
+		.replace(/&#039;/g,  "'")
+		.replace(/&apos;/g,  "'")
+		.replace(/&nbsp;/g,  '\u00a0');
+}

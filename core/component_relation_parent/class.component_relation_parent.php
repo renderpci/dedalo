@@ -98,7 +98,7 @@ class component_relation_parent extends component_relation_common {
 	}//end remove_parent
 
 
-	
+
 	/**
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
 	* @param string $component_tipo
@@ -346,6 +346,77 @@ class component_relation_parent extends component_relation_common {
 		// Note: $visited state for this node automatically disappears when this function call returns,
 		// because it was passed by value. This correctly allows the node to be visited again via a *different* path.
 	}//end fetch_ancestors_recursive
+
+
+
+	/**
+	* GET_POSSIBLE_ROOT_HIERARCHY
+	* Searches if the current section is defined as a root node in any hierarchy.
+	* It is used mainly for diffusion compatibility.
+	* Key steps:
+	* 1. Resolves the hierarchy section ID associated with the current section tipo via hierarchy::get_hierarchy_section.
+	* 2. Loads the 'hierarchy_children' portal (DEDALO_HIERARCHY_CHILDREN_TIPO) for that hierarchy section.
+	* 3. Iterates through the children portal data to see if it contains a locator pointing to the current section record.
+	* 4. If found, returns a locator object representing the link to the root hierarchy.
+	*
+	* @return object|null A locator-like object {section_tipo, section_id, from_component_tipo, type} or null if not found.
+	*/
+	public function get_possible_root_hierarchy() : ?object {
+
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+		$tipo			= $this->tipo;
+		$relation_type	= $this->default_relation_type;
+
+		$component_target_section_tipo = DEDALO_HIERARCHY_TARGET_SECTION_TIPO; // hierarchy53
+
+		$hierarchy_section_id = hierarchy::get_hierarchy_section(
+			$section_tipo,
+			$component_target_section_tipo
+		);
+		if (empty($hierarchy_section_id)) {
+			return null;
+		}
+
+		// Component portal
+		$component_portal_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO; // hierarchy45
+		$current_model			= ontology_node::get_model_by_tipo($component_portal_tipo);
+		if (empty($current_model)) {
+			return null;
+		}
+
+		$current_component = component_common::get_instance(
+			$current_model,
+			$component_portal_tipo,
+			$hierarchy_section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_HIERARCHY_SECTION_TIPO // hierarchy1
+		);
+		if (empty($current_component)) {
+			return null;
+		}
+
+		$data = $current_component->get_data();
+		if(empty($data)) {
+			return null;
+		}
+
+		foreach ($data as $current_locator) {
+
+			if (is_object($current_locator) && isset($current_locator->section_tipo) && isset($current_locator->section_id) && $current_locator->section_tipo === $section_tipo && (int)$current_locator->section_id === (int)$section_id) {
+
+				return (object)[
+					'section_tipo' => DEDALO_HIERARCHY_SECTION_TIPO,
+					'section_id' => $hierarchy_section_id,
+					'from_component_tipo' => $tipo,
+					'type' => $relation_type
+				];
+			}
+		}
+
+		return null;
+	}//end get_possible_root_hierarchy
 
 
 

@@ -208,6 +208,12 @@ abstract class common {
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
+		if (is_callable(['diffusion_fn', $strFunction])) {
+			// Forward the call: pass the instance as first argument,
+			// then the original arguments (if any)
+			return diffusion_fn::$strFunction($this, ...$arArguments);
+		}
+
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
@@ -388,6 +394,44 @@ abstract class common {
 
 		return true;
 	}//end load_structure_data
+
+
+
+	/**
+	* GET_INFO
+	* Returns a basic element information
+	* @return object $info
+	*/
+	public function get_info() : object {
+		return (object)[	
+			'section_tipo' 	=> $this->section_tipo ?? $this->tipo,
+			'tipo' 			=> $this->tipo,
+			'label' 		=> $this->label,
+			'model' 		=> $this->model
+		];
+	}//end get_info
+
+
+
+	/**
+	* GET_DIFFUSION_DATA_INFO
+	* Returns a basic element information for diffusion
+	* formatted for diffusion data compatibility
+	* @return array $diffusion_data_object
+	*/
+	public function get_diffusion_data_info() : array {
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> $this->get_info(),
+			'id'	=> 'a'
+		]);
+
+		return [$diffusion_data_object];
+	}//end get_diffusion_data_info
+
 
 
 

@@ -2863,12 +2863,13 @@ abstract class component_common extends common {
 	* is used by the `diffusion_data`
 	* for component_section_id the default is its own data
 	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
 	* @see class.diffusion_data.php
 	* @test false
 	*/
-	public function get_diffusion_data( object $ddo ) : array {
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
 
 		$diffusion_data = [];
 
@@ -2892,7 +2893,8 @@ abstract class component_common extends common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !method_exists($this, $fn) ){
+				// 'is_callable' allows magic methods
+				if( !is_callable([$this, $fn]) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
@@ -2904,7 +2906,7 @@ abstract class component_common extends common {
 
 				// execute the function directly since it's already validated
 				try {
-					$diffusion_value = $this->$fn();
+					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
 				} catch (Throwable $e) {
 					debug_log(__METHOD__
 						. " error executing diffusion function " . PHP_EOL
@@ -2912,11 +2914,10 @@ abstract class component_common extends common {
 						. " error: " . $e->getMessage()
 						, logger::ERROR
 					);
-					$diffusion_value = null;
+					$fn_data = null;
 				}
-
-				// set the diffusion value and return the diffusion data
-				$diffusion_data_object->set_value( $diffusion_value );
+				// overwrite default diffusion data
+				$diffusion_data = $fn_data;
 
 				return $diffusion_data;
 			}
@@ -2925,6 +2926,7 @@ abstract class component_common extends common {
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 			$data = $this->get_data();
 			if(!empty($data)) {
+				$diffusion_data = [];
 				foreach ($data as $current_data) {
 					if(!empty($current_data)) {
 
@@ -3108,6 +3110,23 @@ abstract class component_common extends common {
 
 		return $this->permissions;
 	}//end get_component_permissions
+
+
+
+	/**
+	* GET_INFO
+	* Returns a basic element information
+	* @return object $info
+	*/
+	public function get_info() : object {
+
+		$info = parent::get_info();
+		$info->section_id = $this->section_id;
+
+		return $info;
+	}//end get_info
+
+
 
 
 

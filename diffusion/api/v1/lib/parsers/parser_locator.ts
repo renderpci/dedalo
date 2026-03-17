@@ -143,8 +143,8 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
  * @param options.value - What to extract: "term" (default), "term_id", "section_id", "typology", "typology_section_id".
  * @param options.include_parents - If true, include all parents in the chain. Default: true.
  * @param options.include_self - If true, include the item itself (index 0). Default: true.
- * @param options.records_separator - Separator between different parent chains. Default: ", ". Set to false for array output.
- * @param options.fields_separator - Separator between values in the same chain. Default: " - ".
+ * @param options.records_separator - Separator between different parent chains. Default: " - ". Set to false for array output.
+ * @param options.fields_separator - Separator between values in the same chain. Default: ", ".
  * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
  * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: [].
  * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: [].
@@ -168,8 +168,8 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	const value_to_extract: string   = (options.value as string) ?? 'term';
 	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
 	const include_self: boolean      = (options.include_self as boolean)    ?? true;
-	const records_separator: string  = (options.records_separator as string) ?? ', ';
-	const fields_separator: string   = (options.fields_separator as string)  ?? ' - ';
+	const fields_separator: string   = (options.fields_separator as string)  ?? ', ';
+	const records_separator: string  = (options.records_separator as string) ?? ' - ';	
 	const merge: string | undefined  = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
 
 	// langs
@@ -373,30 +373,16 @@ function apply_chain_filters(chain: any[], options: parser_options): any[] {
 	processed = filter_chain_by_term_id(processed, options);
 
 	// 4. Splice chain (only if NO truncation matched)
+	// Mirrors PHP: splice applied only on parents (chain[1..]), self (chain[0]) is preserved.
 	const splice_args = options.parents_splice as number[];
 	if (!truncation_applied && splice_args && Array.isArray(splice_args) && splice_args.length > 0) {
-		const copy = [...processed];
-		if (splice_args.length === 1) {
-			copy.splice(splice_args[0]);
-		} else {
-			copy.splice(splice_args[0], splice_args[1]);
-		}
-		processed = copy;
+		processed = splice_chain(processed, splice_args);
 	}
 
 	// 5. Slice chain (only if NO truncation matched)
 	const slice_args = options.parents_slice as number[];
 	if (!truncation_applied && slice_args && Array.isArray(slice_args) && slice_args.length > 0) {
-		const start_arg = slice_args[0];
-		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
-
-		const s = start_arg < 0 ? Math.max(processed.length + start_arg, 0) : start_arg;
-		let e = processed.length;
-		if (length_arg !== undefined && length_arg !== null) {
-			e = length_arg < 0 ? processed.length + length_arg : s + length_arg;
-		}
-
-		processed = processed.slice(s, Math.max(s, e));
+		processed = slice_array(processed, slice_args);
 	}
 
 	return processed;
@@ -527,40 +513,68 @@ export function filter_by_section_tipo(data: data_item[] | null, options: parser
 
 /**
  * SPLICE_CHAIN
- * Apply Array.splice() on the parent chain.
- * Accepts 1 or 2 arguments matching the legacy parents_splice format:
- *   [start]         → chain.splice(start)
- *   [start, count]  → chain.splice(start, count)
+ * Mirrors legacy PHP behavior where `array_splice` is applied only to the
+ * parents sub-array (i.e. the chain WITHOUT the first/self node at index 0),
+ * and the self-term is then re-prepended to the result.
  *
- * @param options.parents_splice - Array of 1-2 numbers, e.g. [0, -1] or [2]
+ * e.g. chain=[1,2,3,4,5,6], splice=[1,-1]:
+ *   parents=[2,3,4,5,6] → splice(1,-1) → [2,6] → prepend self → [1,2,6]
+ *
+ * @param chain      - The full chain including the self node at index 0
+ * @param splice_args - Array of 1–2 numbers matching PHP parents_splice format
  */
-export function splice_chain(data: data_item[] | null, options: parser_options): data_item[] | null {
+function splice_chain(chain: any[], splice_args: number[]): any[] {
 
-	if (!data || data.length === 0) return null;
+	if (chain.length === 0) return chain;
 
-	const splice_args = options.parents_splice as number[];
-	if (!splice_args || !Array.isArray(splice_args) || splice_args.length === 0) return data;
+	const self_node = chain[0];
+	const parents   = chain.slice(1);
 
-	return map_chains(data, (chain) => {
-		const copy = [...chain];
+	const start = splice_args[0];
 
-		if (splice_args.length === 1) {
-			// splice(start) — remove from index to end
-			copy.splice(splice_args[0]);
-		} else {
-			// splice(start, deleteCount)
-			copy.splice(splice_args[0], splice_args[1]);
+	if (splice_args.length === 1) {
+		// PHP array_splice($a, start) — remove from start to end
+		parents.splice(start);
+	} else {
+		let delete_count = splice_args[1];
+		// PHP semantics: negative deleteCount means "leave that many at the tail"
+		// e.g. array_splice([2,3,4,5,6], 1, -1) → removes [3,4,5] → [2,6]
+		// JS splice ignores negative deleteCount (treats as 0), so we translate:
+		if (delete_count < 0) {
+			delete_count = Math.max(0, parents.length - start + delete_count);
 		}
+		parents.splice(start, delete_count);
+	}
 
-		return copy;
-	});
+	return [self_node, ...parents];
 }
 
 
 
 /**
+ * SLICE_ARRAY
+ * PHP-compatible array_slice on a plain array.
+ * @param chain      - Source array
+ * @param slice_args - [offset] or [offset, length] matching PHP array_slice semantics
+ */
+function slice_array(chain: any[], slice_args: number[]): any[] {
+
+	const start_arg  = slice_args[0];
+	const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+	const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
+	let e = chain.length;
+	if (length_arg !== undefined && length_arg !== null) {
+		e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
+	}
+
+	return chain.slice(s, Math.max(s, e));
+}
+
+
+/**
  * SLICE_CHAIN
- * Apply Array.slice() on the parent chain mimicking PHP array_slice.
+ * Apply PHP array_slice() on the parent chain.
  * Accepts 1 or 2 arguments matching the parents_slice format:
  *   [offset]         → mimics array_slice(chain, offset)
  *   [offset, length] → mimics array_slice(chain, offset, length)
@@ -574,18 +588,7 @@ export function slice_chain(data: data_item[] | null, options: parser_options): 
 	const slice_args = options.parents_slice as number[];
 	if (!slice_args || !Array.isArray(slice_args) || slice_args.length === 0) return data;
 
-	return map_chains(data, (chain) => {
-		const start_arg = slice_args[0];
-		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
-
-		const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
-		let e = chain.length;
-		if (length_arg !== undefined && length_arg !== null) {
-			e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
-		}
-
-		return chain.slice(s, Math.max(s, e));
-	});
+	return map_chains(data, (chain) => slice_array(chain, slice_args));
 }
 
 
@@ -622,26 +625,5 @@ function term_id_from_locator(locator: locator | null): string | null {
 	return term_id;
 }
 
-
-
-
-
-/**
- * FLAT_PARENTS
- * Global convenience parser that chains all filtering operations and then
- * builds the final string via `parents`.
- *
- * Delegates to `parents`, which handles all filtering and string-building
- * internally (apply_chain_filters + multilingual term extraction).
- *
- * @param options - Combined options for all sub-parsers
- */
-export function flat_parents(data: data_item[] | null, options: parser_options): data_item[] | null {
-
-	if (!data || data.length === 0) return null;
-
-	// Delegate fully to `parents` — it applies all filters and builds the output.
-	return parents(data, options);
-}
 
 

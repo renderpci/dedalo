@@ -2,25 +2,25 @@
 // USE V6 CODEBASE
 require_once '/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/config/config.php';
 
-$diffusion_element_tipo = 'oh63';
-$section_tipo = 'rsc197';
-$section_id = 1;
+$diffusion_element_tipo = $argv[1] ?? 'oh63';
+$section_tipo = $argv[2] ?? 'rsc167';
+$section_id = (int)($argv[3] ?? 1);
 $levels = 1;
 $target_db = 'web_default';
-$target_table = 'informant';
+$target_table = 'audiovisual';
 
 try {
-    echo "\n1. Dropping MariaDB tables for $section_tipo" . PHP_EOL;
+    echo "\n1. Dropping ALL MariaDB tables in $target_db" . PHP_EOL;
     $conn = DBi::_getConnection_mysql();
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
     
-    $drop_query = "DROP TABLE IF EXISTS `$target_db`.`$target_table`";
-    if ($conn->query($drop_query) === TRUE) {
-        echo "Table '$target_db.$target_table' dropped successfully." . PHP_EOL;
-    } else {
-        echo "Error dropping table: " . $conn->error . PHP_EOL;
+    $tables_res = $conn->query("SHOW TABLES FROM `$target_db`");
+    while ($table_row = $tables_res->fetch_array()) {
+        $found_table = $table_row[0];
+        $conn->query("DROP TABLE `$target_db`.`$found_table`");
+        echo "Table '$target_db.$found_table' dropped." . PHP_EOL;
     }
 
     echo "\n2. Running v6 Diffusion using dd_tools_api" . PHP_EOL;

@@ -294,12 +294,13 @@ class component_media_common extends component_common {
 	* is used by the `diffusion_data`
 	* for component_section_id the default is its own data
 	* @param object $ddo
+	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
 	* @see class.diffusion_data.php
 	* @test false
 	*/
-	public function get_diffusion_data( object $ddo ) : array {
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
 
 		$diffusion_data = [];
 
@@ -323,7 +324,7 @@ class component_media_common extends component_common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
-				if( !function_exists($this->$fn) ){
+				if( !is_callable([$this, $fn]) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
 						. " function name: ". $fn
@@ -332,35 +333,39 @@ class component_media_common extends component_common {
 
 					return $diffusion_data;
 				}
+				try {
+					// not all functions are available for diffusion
+					// in the function is allowed get its value and return
+					// if the function is NOT allowed (default) return a diffusion value as null
+					switch ($fn) {
+						// functions allowed for diffusion environment
+						case 'get_posterframe_url':
 
-				// not all functions are available for diffusion
-				// in the function is allowed get its value and return
-				// if the function is NOT allowed (default) return a diffusion value as null
-				switch ($fn) {
-					// functions allowed for diffusion environment
-					case 'get_posterframe_url':
+							$test_file		= $ddo->options->test_file ?? false;
+							$absolute		= $ddo->options->absolute ?? false;
+							$avoid_cache	= $ddo->options->avoid_cache ?? false;
 
-						$test_file		= $ddo->options->test_file ?? false;
-						$absolute		= $ddo->options->absolute ?? false;
-						$avoid_cache	= $ddo->options->avoid_cache ?? false;
+							$fn_data = $this->{$fn}($test_file, $absolute, $avoid_cache);
 
-						$diffusion_value = $this->{$fn}($test_file, $absolute, $avoid_cache);
+							break;
 
-						break;
-
-					default:
-						// function is not allowed for diffusion environment
-						debug_log(__METHOD__
-							. " function is can not be used by diffusion " . PHP_EOL
-							. " function name: ". $fn
-							, logger::ERROR
+						default:
+							$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
+							break;
+					}
+				} catch (Throwable $e) {
+					// fallback when method does not expect $diffusion_data_object
+					debug_log(__METHOD__
+						. " error executing diffusion function " . PHP_EOL
+						. " function name: ". $fn . PHP_EOL
+						. " error: " . $e->getMessage()
+						, logger::ERROR
 						);
-						$diffusion_value = null;
-
-						break;
+						$fn_data = null;
 				}
+
+				$diffusion_data = $fn_data;
 				// set the diffusion value and return the diffusion data
-				$diffusion_data_object->set_value( $diffusion_value );
 				return $diffusion_data;
 			}
 
