@@ -68,9 +68,9 @@ class diffusion_chain_processor {
 		$is_publishable 	= $options->is_publishable;
 
 		// Find children of this parent node that belong to the current section_tipo
-		$children = array_filter($ddo_map, function($item) use($parent, $section_tipo) {
-			return $item->parent === $parent && $item->section_tipo === $section_tipo;
-		});
+		$children = array_filter($ddo_map, fn($item) => 
+			$item->parent === $parent && (empty($item->section_tipo) || $item->section_tipo === $section_tipo)
+		);
 
 		$ar_results = [];
 		foreach ($children as $ddo) {
