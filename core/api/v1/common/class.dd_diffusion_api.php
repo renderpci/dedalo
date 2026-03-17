@@ -146,6 +146,8 @@ class dd_diffusion_api {
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
 
+		dump($response, 'response +//////');
+
 		return $response;
 	}
 
@@ -357,7 +359,6 @@ class dd_diffusion_api {
 		// Build combined ddo_map from all nodes for this section
 		$combined_ddo_map = [];
 		$context = [];
-		
 		foreach ($ar_children as $node_tipo) {
 			$ddo_map = diffusion_data::get_ddo_map($node_tipo, $main_section_tipo);
 			$combined_ddo_map[$node_tipo] = $ddo_map;
