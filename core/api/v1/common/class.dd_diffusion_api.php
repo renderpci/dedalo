@@ -370,17 +370,25 @@ class dd_diffusion_api {
 		$datum_object = new diffusion_datum();
 			$datum_object->set_diffusion_tipo($source_tipo);
 			$datum_object->set_section_tipo($main_section_tipo);
-			$datum_object->set_term($source_node->get_term(DEDALO_STRUCTURE_LANG));
-			$datum_object->set_model($source_node->get_model());
+			$datum_object->set_term($diffusion_name);
+			$datum_object->set_model($diffusion_node_model);
 			$datum_object->set_parent($parent);
 			$datum_object->set_context($context);
 
-		$properties = $source_node->get_properties();
 		$publishable = $properties->is_publishable ?? null;
 
+				
 		$data = [];
 		// Process each record and group by section
-		foreach ($iterable_data as $locator) {		
+		foreach ($iterable_data as $locator) {
+			
+			// Check if the locator has already been used
+			if (diffusion_chain_processor::is_used($locator->section_tipo, intval($locator->section_id))) {
+				continue;
+			}
+
+			// set the locator as used
+			diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
 
 			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 			
