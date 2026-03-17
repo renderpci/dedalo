@@ -323,11 +323,36 @@ class dd_diffusion_api {
 		if (!$source_node) {
 			throw new Exception("Ontology node not found for tipo: $source_tipo");
 		}
+
 		$parent = $source_node->get_parent();
 		$main_section_tipo = diffusion_utils::get_related_section_tipo($source_tipo);
 
+		$properties = $source_node->get_properties();
+
+		$diffusion_node_model = $source_node->get_model();
+		$diffusion_name = $source_node->get_term(DEDALO_STRUCTURE_LANG);
+
 		// Identify all section-level diffusion nodes (children of source_tipo)
-		$ar_children = ontology_node::get_ar_children($source_tipo);			
+		$ar_children = ontology_node::get_ar_children($source_tipo);	
+
+		if( str_contains( $diffusion_node_model, '_alias') ){
+
+			$search_model = str_replace('_alias','',$diffusion_node_model);
+			$related_tipo = ontology_node::get_ar_tipo_by_model_and_relation($source_tipo, $search_model, 'related', true)[0] ?? null;
+
+			if(!empty($related_tipo)){
+				$target_node = ontology_node::get_instance($related_tipo);
+				$diffusion_node_model = $target_node->get_model();
+				if(empty($properties)){
+					$properties = $target_node->get_properties();
+				}
+				if(empty($main_section_tipo)){
+					$main_section_tipo = diffusion_utils::get_related_section_tipo($related_tipo);
+				}
+				$ar_target_children = ontology_node::get_ar_children($related_tipo);			
+				$ar_children = array_merge($ar_target_children, $ar_children);
+			}
+		}
 
 		// Build combined ddo_map from all nodes for this section
 		$combined_ddo_map = [];
