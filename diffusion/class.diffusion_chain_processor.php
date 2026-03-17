@@ -97,8 +97,15 @@ class diffusion_chain_processor {
 	 * @return array
 	 */
 	private function resolve_ddo_value(object $ddo, array $ddo_map, string $section_tipo, string|int $section_id, int $level, bool $is_publishable): array {
-		
+
 		$current_tipo = $ddo->tipo;
+		
+		// if the ddo has not a tipo defined, the ddo indicate a filter locator with section_tipo only.
+		// stop here and return an empty array
+		if(empty($current_tipo)){
+			return [];
+		}
+
 		$model_name   = ontology_node::get_model_by_tipo($current_tipo);
 
 		// Add to debug chain
@@ -111,7 +118,7 @@ class diffusion_chain_processor {
 				$model_name,
 				$current_tipo,
 				$section_id,
-				'list',
+				'diffusion',
 				DEDALO_DATA_LANG,
 				$section_tipo
 			);
