@@ -18,7 +18,10 @@
 */
 class dd_iri extends stdClass {
 
-
+	public ?string $iri = null;
+	public ?string $title = null;
+	public ?int $id = null;
+	public ?int $label_id = null;
 
 	const DELIMITER = '_';
 
@@ -187,12 +190,11 @@ class dd_iri extends stdClass {
 			#	break;
 			case 'get_' :
 				return($this->GetAccessor($strMethodMember));
-				break;
 		}
 		return(false);
 	}
 	private function GetAccessor(string $variable) {
-		if(property_exists($this, $variable)) {
+		if(property_exists($this, $variable) && $this->$variable !== null) {
 			return (string)$this->$variable;
 		}else{
 			return false;
