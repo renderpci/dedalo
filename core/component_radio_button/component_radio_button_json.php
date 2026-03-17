@@ -1,4 +1,5 @@
 <?php
+/** @var component_radio_button $this */
 // JSON data component controller
 
 

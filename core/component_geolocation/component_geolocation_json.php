@@ -1,4 +1,5 @@
 <?php
+/** @var component_geolocation $this */
 // JSON data component controller
 
 

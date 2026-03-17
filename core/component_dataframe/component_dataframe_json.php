@@ -1,4 +1,5 @@
 <?php
+/** @var component_dataframe $this */
 // JSON data component controller
 
 

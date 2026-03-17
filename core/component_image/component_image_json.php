@@ -1,4 +1,5 @@
 <?php
+/** @var component_image $this */
 // JSON data component controller
 
 
