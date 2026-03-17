@@ -279,7 +279,7 @@ class diffusion_chain_processor {
 	private function process_terminal_component(object $ddo, object $element): array {
 		
 		$current_tipo     = $ddo->tipo;
-		$terminal_results = $element->get_diffusion_data($ddo);
+		$terminal_results = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
 		
 		return [$this->wrap_into_diffusion_data_object($ddo, $current_tipo, $terminal_results)];
 	}
