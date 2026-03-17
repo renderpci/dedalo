@@ -432,8 +432,8 @@ class diffusion_chain_processor {
 	 * @return void
 	 */
 	public static function reset_cache(): void {
-		self::$resolved_sections_cache = [];
 		self::$section_diffusion_map = [];
+		self::$resolved_sections_cache = [];
 		self::$diffusion_element_tipo = null;
 	}
 
