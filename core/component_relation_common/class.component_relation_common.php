@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include 'trait.search_component_relation_common.php';
+include 'trait.search_component_relation_common_tm.php';
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component data
@@ -13,6 +14,7 @@ class component_relation_common extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_relation_common;
+	use search_component_relation_common_tm;
 
 
 	/**

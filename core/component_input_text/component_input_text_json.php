@@ -41,7 +41,6 @@
 					$add_rqo
 				);
 				$context[] = $this->context;
-
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -89,7 +88,7 @@
 						$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
 						$value[0]->value = $term . ' ['. $first_value."]";
 					}
-				}
+				}				
 			}
 
 		// dataframe. If it exists, calculate the subdatum
@@ -127,27 +126,22 @@
 				$item->fallback_value		= $fallback_value;
 
 		// Transliterate components
-		// the main lang is set to nolan, the component has translatable property set to false.
-		// if the component has with_lang_versions = true in properties
-		// it could be transliterate to other languages (translatable with the tool_lang)
-		// transliterate_value is used to inform the users than this data has a translation
-		// or inside the tool_lang, inform what is the original data in nolan.
-			$with_lang_versions	= $this->with_lang_versions;
+		// If the component has with_lang_versions = true in properties,
+		// it could be transliterated to other languages (e.g., used into translate component inside tool_lang).
+		// transliterate_value is used to inform the users that this data has a translation
+		// or, inside the tool_lang, to show the original data in DEDALO_DATA_NOLAN.
+			$with_lang_versions = $this->with_lang_versions;
 			if($with_lang_versions===true) {
 
 				$original_lang = $this->lang;
 
-				// if the original_lang is nolan change to get the transliterable data in current data lang.
-				// if the original_lang is any lang set to nolan (is use into translate component inside tool_lang)
-				$tranliterable_lang = ($original_lang === DEDALO_DATA_NOLAN)
+				// If the original_lang is nolan, get the transliterable data in current data lang.
+				// If the original_lang is any other lang, get it in nolan (used into translate component inside tool_lang)
+				$transliterable_lang = ($original_lang === DEDALO_DATA_NOLAN)
 					? DEDALO_DATA_LANG
 					: DEDALO_DATA_NOLAN;
 
-				$this->set_lang($tranliterable_lang);
-				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
-
-				// restore the component lang to the original value
-				// $this->set_lang($original_lang);
+				$item->transliterate_value = $this->get_data_lang($transliterable_lang);
 			}
 
 		// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;

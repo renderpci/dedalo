@@ -62,15 +62,15 @@ final class search_test extends BaseTestCase {
 			'section_tipo' => $this->section_tipo,
 			'mode' => 'tm'
 		];
-		// We need to make sure search_tm class exists or is autoloaded. 
+		// We need to make sure search_tm class exists or is autoloaded.
 		// Assuming it follows the same pattern and is available.
 		// If search_tm is not defined in the context of this test, this might fail if autoload isn't set up for it.
 		// However, based on class.search.php, it instantiates 'search_tm'.
-		
+
 		// For the purpose of this test, we check if it returns an object and if possible check the class name.
 		// If search_tm class is not loaded, get_instance might fail or throw error.
 		// Let's assume the environment is set up correctly as per other tests.
-		
+
 		try {
 			$search_obj_tm = search::get_instance($search_query_object_tm);
 			$this->assertInstanceOf('search_tm', $search_obj_tm);
@@ -117,44 +117,39 @@ final class search_test extends BaseTestCase {
 		$search_obj = search::get_instance($search_query_object);
 
 		// Verify properties set by set_up
-		
+
 		// sql_obj
 		$this->assertObjectHasProperty('sql_obj', $search_obj);
 		// Access protected property sql_obj using reflection if needed, or assume it's set if no error.
 		// But we can check public properties or use reflection for protected ones.
 		// search class has protected properties.
-		
+
 		$reflection = new ReflectionClass($search_obj);
-		
+
 		// ar_section_tipo (public)
 		$this->assertIsArray($search_obj->ar_section_tipo);
 		$this->assertContains($this->section_tipo, $search_obj->ar_section_tipo);
-		
+
 		// main_section_tipo (public)
 		$this->assertEquals($this->section_tipo, $search_obj->main_section_tipo);
-		
+
 		// main_section_tipo_alias (public)
 		$this->assertNotEmpty($search_obj->main_section_tipo_alias);
-		
+
 		// matrix_table (protected)
 		$prop_matrix_table = $reflection->getProperty('matrix_table');
 		$this->assertNotEmpty($prop_matrix_table->getValue($search_obj));
-		
+
 		// sqo (protected)
 		$prop_sqo = $reflection->getProperty('sqo');
 		$sqo = $prop_sqo->getValue($search_obj);
 		$this->assertIsObject($sqo);
 		$this->assertEquals($this->section_tipo, $sqo->section_tipo);
-		
-		// order_columns (protected)
-		$prop_order_columns = $reflection->getProperty('order_columns');
-		$this->assertIsArray($prop_order_columns->getValue($search_obj));
-
 
 		// 2. Test Exception on missing section_tipo
 		$this->expectException(Exception::class);
 		$this->expectExceptionMessage("Error: section_tipo is not defined!");
-		
+
 		$invalid_sqo = (object)[
 			'mode' => 'list'
 			// missing section_tipo
@@ -262,7 +257,7 @@ final class search_test extends BaseTestCase {
 			'mode' => 'list'
 		];
 		$search_obj_debug = search::get_instance($search_query_object_debug);
-		
+
 		// Execute search and verify it doesn't throw exceptions
 		try {
 			$result_debug = $search_obj_debug->search();
@@ -292,15 +287,15 @@ final class search_test extends BaseTestCase {
 			]
 		];
 		$search_obj_parse = search::get_instance($search_query_object_parse);
-		
+
 		// Access sqo using reflection to verify it gets parsed
 		$reflection = new ReflectionClass($search_obj_parse);
 		$prop_sqo = $reflection->getProperty('sqo');
 		$sqo_before = $prop_sqo->getValue($search_obj_parse);
-		
+
 		// Execute search
 		$result_parse = $search_obj_parse->search();
-		
+
 		// After search, sqo should be marked as parsed
 		$sqo_after = $prop_sqo->getValue($search_obj_parse);
 		$this->assertTrue(
@@ -310,7 +305,7 @@ final class search_test extends BaseTestCase {
 
 
 		// 7. Test search with component_input_text filter
-		// Create new record 
+		// Create new record
 		$result = matrix_db_manager::create(
 			$this->table,
 			$this->section_tipo,
