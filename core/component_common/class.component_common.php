@@ -3103,6 +3103,23 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_INFO
+	* Returns a basic element information
+	* @return object $info
+	*/
+	public function get_info() : object {
+
+		$info = parent::get_info();
+		$info->section_id = $this->section_id;
+
+		return $info;
+	}//end get_info
+
+
+
+
+
 	################################## SEARCH ########################################################
 
 
