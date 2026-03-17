@@ -2992,6 +2992,108 @@ function process_node($node, $level) {
 							}
 
 							break;
+						
+							case 'component_date':
+
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cd($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_date',
+									null, null, null, null, null, null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date empty props -> get_diffusion_value\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_cd = $props->data_to_be_used ?? null;
+							if($data_to_be_used_cd && $data_to_be_used_cd === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato('component_date', null, null, null);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date data_to_be_used=dato -> get_diffusion_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_cd = $props->process_dato ?? null;
+
+							// 2.3 "diffusion_sql::resolve_value" -> "split_date_range" output
+							if($process_dato_cd && $process_dato_cd === 'diffusion_sql::resolve_value') {
+								$process_dato_args_cd = $props->process_dato_arguments ?? null;
+								$output_cd = $process_dato_args_cd->output ?? null;
+								
+								if($output_cd === 'split_date_range') {
+									$output_options_cd = $process_dato_args_cd->output_options ?? null;
+									
+									$new_props = new stdClass(); $new_props->process = get_dato(
+										'component_date',
+										null,
+										'split_date_range',
+										$output_options_cd,
+										null
+									);
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] date resolve_value -> split_date_range -> get_dato()\n";
+									break;
+								}
+							}
+
+							// 2.2 "diffusion_sql::split_date_range"
+							if($process_dato_cd && $process_dato_cd === 'diffusion_sql::split_date_range') {
+								
+								$process_dato_args_cd = $props->process_dato_arguments ?? null;
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'component_date',
+									null,
+									'split_date_range',
+									$process_dato_args_cd,
+									null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] date split_date_range -> get_dato()\n";
+								break;
+							}
+
+							break;
 	// Process result and save
 	if (
 		$new_props 
