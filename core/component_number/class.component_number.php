@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include 'trait.search_component_number.php';
+include 'trait.search_component_number_tm.php';
 /**
 * CLASS COMPONENT_NUMBER
 * Manage numbers with specific precision
@@ -22,6 +23,7 @@ class component_number extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_number;
+	use search_component_number_tm;
 
 	// decimal separator
 
