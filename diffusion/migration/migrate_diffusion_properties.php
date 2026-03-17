@@ -3094,6 +3094,9 @@ function process_node($node, $level) {
 							}
 
 							break;
+						case 'component_email':
+							break;
+						
 	// Process result and save
 	if (
 		$new_props 
