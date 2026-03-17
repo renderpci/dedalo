@@ -563,13 +563,32 @@ function splice_chain(chain: any[], splice_args: number[]): any[] {
 	return [self_node, ...parents];
 }
 
-}
 
+
+/**
+ * SLICE_ARRAY
+ * PHP-compatible array_slice on a plain array.
+ * @param chain      - Source array
+ * @param slice_args - [offset] or [offset, length] matching PHP array_slice semantics
+ */
+function slice_array(chain: any[], slice_args: number[]): any[] {
+
+	const start_arg  = slice_args[0];
+	const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
+
+	const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
+	let e = chain.length;
+	if (length_arg !== undefined && length_arg !== null) {
+		e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
+	}
+
+	return chain.slice(s, Math.max(s, e));
+}
 
 
 /**
  * SLICE_CHAIN
- * Apply Array.slice() on the parent chain mimicking PHP array_slice.
+ * Apply PHP array_slice() on the parent chain.
  * Accepts 1 or 2 arguments matching the parents_slice format:
  *   [offset]         → mimics array_slice(chain, offset)
  *   [offset, length] → mimics array_slice(chain, offset, length)
@@ -583,18 +602,7 @@ export function slice_chain(data: data_item[] | null, options: parser_options): 
 	const slice_args = options.parents_slice as number[];
 	if (!slice_args || !Array.isArray(slice_args) || slice_args.length === 0) return data;
 
-	return map_chains(data, (chain) => {
-		const start_arg = slice_args[0];
-		const length_arg = slice_args.length > 1 ? slice_args[1] : undefined;
-
-		const s = start_arg < 0 ? Math.max(chain.length + start_arg, 0) : start_arg;
-		let e = chain.length;
-		if (length_arg !== undefined && length_arg !== null) {
-			e = length_arg < 0 ? chain.length + length_arg : s + length_arg;
-		}
-
-		return chain.slice(s, Math.max(s, e));
-	});
+	return map_chains(data, (chain) => slice_array(chain, slice_args));
 }
 
 
