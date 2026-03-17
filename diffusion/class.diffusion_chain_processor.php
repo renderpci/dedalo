@@ -11,11 +11,6 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 class diffusion_chain_processor {
 
 	/**
-	 * Maximum recursion depth for cross-section resolution
-	 */
-	private const MAX_DEPTH = 5;
-
-	/**
 	 * @var array $debug_chain Internal storage for chain trace
 	 */
 	private array $debug_chain = [];
