@@ -1,4 +1,5 @@
 <?php
+/** @var component_relation_parent $this */
 // JSON data component controller
 
 

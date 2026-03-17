@@ -1,4 +1,5 @@
 <?php
+/** @var component_check_box $this */
 // JSON data component controller
 
 

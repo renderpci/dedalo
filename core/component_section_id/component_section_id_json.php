@@ -1,4 +1,5 @@
 <?php
+/** @var component_section_id $this */
 // JSON data component controller
 
 

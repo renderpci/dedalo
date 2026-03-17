@@ -1,4 +1,5 @@
 <?php
+/** @var component_number $this */
 // JSON data component controller
 
 

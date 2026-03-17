@@ -1,4 +1,5 @@
 <?php
+/** @var component_inverse $this */
 // JSON data component controller
 
 

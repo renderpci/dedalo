@@ -1,4 +1,5 @@
 <?php
+/** @var component_publication $this */
 // JSON data component controller
 
 // component configuration vars

@@ -1,4 +1,5 @@
 <?php
+/** @var component_text_area $this */
 // JSON data component controller
 
 

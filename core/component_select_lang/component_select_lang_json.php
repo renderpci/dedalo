@@ -1,4 +1,5 @@
 <?php
+/** @var component_select_lang $this */
 // JSON data component controller
 
 
