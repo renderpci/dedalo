@@ -15,6 +15,14 @@ if (!file_exists($config_path)) {
 }
 require_once $config_path;
 
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) return false;
+    echo "\nERROR [$errno] $errstr in $errfile on line $errline\n";
+    debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    return true;
+});
+
+
 if (!class_exists('ontology_node')) {
 	die("Error: class 'ontology_node' not found. Check environment.\n");
 }
