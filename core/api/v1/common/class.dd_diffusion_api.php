@@ -97,19 +97,38 @@ class dd_diffusion_api {
 			self::process_datum($source_tipo, $db_result, $levels, $options);
 
 			while (!empty(self::$datum_unresolved)) {
-				foreach ( self::$datum_unresolved as $diffusion_tipo => $locators ) {
+				
+				// Get the first available key from the queue (format: "level:diffusion_tipo")
+				$keys = array_keys(self::$datum_unresolved);
+				$key  = reset($keys);
+				
+				$locators = self::$datum_unresolved[$key];
+				unset(self::$datum_unresolved[$key]);
 
-					$unique_locators=[];
-					foreach ($locators as $locator) {
-						if(!locator::in_array_locator($locator, $unique_locators,['section_tipo','section_id'])) {
-							$unique_locators[] = $locator;
-						}
-					}
-
-					self::process_datum($diffusion_tipo, $unique_locators, $levels, $options);
-
-					unset(self::$datum_unresolved[$diffusion_tipo]);
+				// Parse level and tipo
+				$parts = explode(':', $key);
+				if (count($parts) === 2) {
+					$current_level   = (int)$parts[0];
+					$diffusion_tipo = $parts[1];
+				} else {
+					// Fallback for unexpected formats
+					$current_level   = $levels;
+					$diffusion_tipo = $key;
 				}
+
+				// Deduplicate locators for this batch
+				$unique_locators = [];
+				foreach ($locators as $locator) {
+					if(!locator::in_array_locator($locator, $unique_locators, ['section_tipo', 'section_id'])) {
+						$unique_locators[] = $locator;
+					}
+				}
+
+				if(SHOW_DEBUG) {
+					dump($diffusion_tipo, "Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators');
+				}
+
+				self::process_datum($diffusion_tipo, $unique_locators, $current_level, $options);
 			}
 
 			// 6. Final response
