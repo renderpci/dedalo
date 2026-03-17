@@ -28,8 +28,10 @@ class diffusion_data {
 
 				// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
 				// If not defined or empty, assume it's the main section_tipo
-				$ddo->section_tipo	= (empty($ddo->section_tipo) || $ddo->section_tipo === 'self') ? $section_tipo : $ddo->section_tipo;
-				$ddo->parent		= (empty($ddo->parent) || $ddo->parent === 'self') ? $section_tipo : $ddo->parent;
+				if(isset($ddo->section_tipo) && $ddo->section_tipo === 'self'){
+					$ddo->section_tipo = $section_tipo;
+				}
+				$ddo->parent = (empty($ddo->parent) || $ddo->parent === 'self') ? $section_tipo : $ddo->parent;
 
 				// set diffusion_tipo to be used as final entry key
 				$ddo->diffusion_tipo = $diffusion_tipo;
@@ -40,7 +42,7 @@ class diffusion_data {
 
 		}else{
 
-			// check if the node has defined any general funtion
+			// check if the node has defined any general function
 			$fn = $properties->process->fn ?? null;
 			$ar_related_dd_tipo	= ontology_node::get_relation_nodes(
 				$diffusion_tipo,
@@ -65,6 +67,8 @@ class diffusion_data {
 			}
 		}
 
+		// dump($diffusion_tipo, '$diffusion_tipo-----------------------_>>');
+		// dump($section_tipo, '$section_tipo-----------------------_>>');
 
 		return $ddo_map;
 	}//end get_ddo_map
