@@ -12,10 +12,8 @@ class Accessors {
 			case 'set_' :
 				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
 				return $this->SetAccessor($strMethodMember, $arArguments[0]);
-				break;
 			case 'get_' :
 				return $this->GetAccessor($strMethodMember);
-				break;
 		}
 		return false;
 	}
