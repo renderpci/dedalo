@@ -194,129 +194,42 @@ function process_node($node, $level) {
 			if (isset($props_check->is_publicable)) unset($props_check->is_publicable);
 			$clean_count = count((array)$props_check);
 
-			// --- Rule: Enum Relation ---
-			if ($model_name === 'field_enum' || $model_name === 'field_text' && isset($props->enum)) {
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				// search in relations if works with relation component
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-							$is_relation_component = true;
-							break;
-						}
-					}
-				}
+			if (!empty($relations_info)) {
+				foreach ($relations_info as $rel_info) {
+					switch ($rel_info['model']) {
+						case 'component_publication':
 
-				if ($is_relation_component) {
-					$new_props = new stdClass();
-					
-					// Specific complex object for Enum + Relation
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_locator::get_first',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_text::map_value',
-							'options' => (object)[
-								'map' => [
-									(object)[
-										'a' => $props->enum
+							// Specific complex object for Enum + Relation
+							$parser_process = [
+								(object)[
+									'fn' => 'parser_locator::get_section_id',
+									'id' => 'a'
+								],
+								(object)[
+									'fn' => 'parser_helper::get_first',
+									'id' => 'a'
+								],
+								(object)[
+									'fn' => 'parser_text::map_value',
+									'options' => (object)[
+										'map' => [
+											(object)[
+												'a' => $props->enum
+											]
+										]
 									]
 								]
-							]
-						]
-					];
+							];
 
-					$new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
+							$new_props = new stdClass();
+							$new_props->process = new stdClass();
+							$new_props->process->parser = $parser_process;
+							$new_props->process->output_sample = "Yes";
 
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
-				}
-			}
-
-			// --- Case 1: Simple data_to_be_used: "dato" (Relation) OR "map_project_to_section_id" ---
-			if (
-				($new_props === null && isset($props->data_to_be_used) && $props->data_to_be_used === 'dato' && $clean_count === 1)
-				||
-				(isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_project_to_section_id')
-			) {
-				
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				// search in relations if works with relation component
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-							$is_relation_component = true;
+							echo "{$indent}- [$tipo] $model_name\n";
+							echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
 							break;
-						}
-					}
-				}
 
-				if ($is_relation_component) {
-					if (!$new_props) $new_props = new stdClass();
-					
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id'
-						]
-					];
-
-					if (!isset($new_props->process)) $new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
-
-					// If explicitly 'dato', map this explicitly to output_format: 'json'
-					if (isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
-						$new_props->process->output_format = 'json';
-					}
-
-					echo "{$indent}- [$tipo] $model_name\n";
-					echo "{$indent}  [RULE APPLIED] Case 1: 'dato' OR 'map_project_to_section_id' (relation) -> parser_locator::get_section_id\n";
-				}
-			}
-			
-			// --- Case 4: process_dato: "diffusion_sql::map_quality_to_int" (Relation) ---
-			if ($new_props === null && isset($props->process_dato) && $props->process_dato === 'diffusion_sql::map_quality_to_int' && $clean_count === 1) {
-				
-				$is_relation_component = false;
-				$relation_components = component_relation_common::get_components_with_relations();
-				
-				if (!empty($relations_info)) {
-					foreach ($relations_info as $rel_info) {
-						if (in_array($rel_info['model'], $relation_components)) {
-
-							$is_relation_component = true;
-							break;
-						}
-					}
-				}
-
-				if ($is_relation_component) {
-					$new_props = new stdClass();
-					
-					$parser_process = [
-						(object)[
-							'fn' => 'parser_locator::get_section_id',
-							'id' => 'a'
-						],
-						(object)[
-							'fn' => 'parser_locator::get_first',
-							'id' => 'a'
-						]
-					];
-
-					$new_props->process = new stdClass();
-					$new_props->process->parser = $parser_process;
-					$new_props->process->output_format = 'int';
 
 					echo "{$indent}- [$tipo] $model_name\n";
 					echo "{$indent}  [RULE APPLIED] Case 4: map_quality_to_int (relation) -> parser_locator::get_section_id + get_first (int)\n";
