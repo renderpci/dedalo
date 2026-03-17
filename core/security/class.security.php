@@ -120,7 +120,8 @@ class security {
 		// time machine dd15 records
 			if ($parent_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO) {
 				/**
-				 * @todo working here to decide the proper permissions for time machine dd15 records
+				 * @todo working here to decide the proper permissions for time machine 'dd15' records
+				 * Temporal permissions assignation !
 				 */
 				return 1;
 			}

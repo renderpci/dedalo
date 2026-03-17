@@ -96,7 +96,17 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 		// specific actions.. like fix main_element for convenience
 			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
-			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			if (!main_element_ddo) {
+				console.warn('main_element_ddo not found in tool_config.ddo_map', self.tool_config.ddo_map)
+				return common_build
+			}
+
+			self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+			if (!self.main_element) {
+				console.warn('main_element not found in ar_instances', self.ar_instances)
+				return common_build
+			}
+
 
 			// self.main_element_quality.
 			// (!) It's used to force a specific quality for main_element before render the component
@@ -106,31 +116,32 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 		// main_element. fix important vars about
 			const data	= self.main_element.data || {}
-			const value	= data.value || []
+			const entries	= data.entries || []
 
 			// files info from DB data
-				self.files_info_db = value[0]?.files_info
+				self.files_info_db = entries[0]?.files_info
 
 			// files info real (read from disk)
 				self.files_info_disk = await self.get_files_info()
 
 			// original_file_name
-				self.original_file_name = value[0]?.original_file_name
+				self.original_file_name = entries[0]?.original_file_name
 
 			// original_normalized_name
-				self.original_normalized_name = value[0]?.original_normalized_name
+				self.original_normalized_name = entries[0]?.original_normalized_name
 
 			// ar_quality
-				self.ar_quality	= self.caller.context.features.ar_quality
+				self.ar_quality	= self.caller?.context?.features?.ar_quality
 
 			// files_info_safe. filtered by allowed extension
-				self.files_info_safe = self.files_info_disk
-					? self.files_info_disk.filter(el => el.extension===self.main_element.context.features.extension)
+				const main_extension = self.main_element.context?.features?.extension
+				self.files_info_safe = self.files_info_disk && main_extension
+					? self.files_info_disk.filter(el => el.extension===main_extension)
 					: []
 
 			// files_info_alternative. filtered by alternative extension
-				self.files_info_alternative = self.files_info_disk
-					? self.files_info_disk.filter(el => el.extension!==self.main_element.context.features.extension)
+				self.files_info_alternative = self.files_info_disk && main_extension
+					? self.files_info_disk.filter(el => el.extension!==main_extension)
 					: []
 
 			// files_info_original
@@ -139,13 +150,8 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 					: []
 
 			// self.file_info_normalized_name
-				const original_normalized_name = value[0] && value[0].original_normalized_name
-					? value[0].original_normalized_name
-					: null
-				self.file_info_normalized_name = original_normalized_name
-					? value[0] && value[0].files_info
-						? value[0].files_info.find(el => el.file_name===original_normalized_name)
-						: null
+				self.file_info_normalized_name = self.original_normalized_name
+					? self.files_info_db?.find(el => el.file_name===self.original_normalized_name)
 					: null
 
 	} catch (error) {
@@ -153,9 +159,8 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 		console.error(error)
 	}
 
-
 	return common_build
-}//end build_custom
+}//end build
 
 
 
@@ -268,7 +273,7 @@ tool_media_versions.prototype.get_files_info = async function() {
 
 
 /**
-* DELETE_quality
+* DELETE_QUALITY
 * Delete version of given quality
 * @param string quality
 * @return promise

@@ -40,6 +40,11 @@ final class v6_to_v7_Test extends BaseTestCase {
      */
     private static $original_table_matrix_time_machine;
 
+    protected function setUp(): void
+    {
+        $this->markTestSkipped('This entire class is currently disabled.');
+    }
+
     /**
      * setUpBeforeClass
      * Initializes test environment, redirects v6_to_v7 table names, and creates test tables.

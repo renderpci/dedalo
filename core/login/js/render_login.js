@@ -106,7 +106,7 @@ const get_content_data = function(self) {
 								}
 							}
 						})
-						window.location.reload(false);
+						window.location.reload();
 					}
 				}
 			})
@@ -449,7 +449,7 @@ const get_content_data = function(self) {
 		link.target = '_blank'
 
 	// messages_container
-		const messages_container = ui.create_dom_element({
+	const messages_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'messages_container',
 			parent			: fragment
@@ -521,7 +521,7 @@ const validate_browser = function() {
 
 	// function msg
 	const msg = (browser, version, min_version) => {
-		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
+		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or newer.`
 	}
 
 	try {
@@ -592,7 +592,7 @@ export const render_files_loader = function() {
 		</svg>`
 
 		const parser	= new DOMParser();
-		const svg		= parser.parseFromString(svg_string, 'image/svg+xml').firstChild;
+		const svg		= parser.parseFromString(svg_string, 'image/svg+xml').firstElementChild;
 		cont.appendChild( svg )
 
 	// update. receive worker messages data
@@ -618,7 +618,7 @@ export const render_files_loader = function() {
 
 	// bar_circle animation
 		const bar_circle		= svg.querySelector('#bar')
-		const radio				= bar_circle.getAttribute('r');
+		const radio				= parseFloat(bar_circle.getAttribute('r'));
 		const cst				= Math.PI*(radio*2);
 		const animate_circle	= (value) => {
 
@@ -676,8 +676,8 @@ export const render_relogin = async function(options={}) {
 			main_container.classList.add('loading')
 		}
 
-	// loggin_instance
-		const loggin_instance = await get_instance({
+	// login_instance
+		const login_instance = await get_instance({
 			model					: 'login',
 			tipo					: 'dd229',
 			mode					: 'edit',
@@ -685,7 +685,7 @@ export const render_relogin = async function(options={}) {
 			custom_action_dispatch	: function() {
 
 				// work done! Destroy this login instance and DOM
-				loggin_instance.destroy(true, true, true)
+				login_instance.destroy(true, true, true)
 
 				// unlock main container (normally page)
 				if (main_container) {
@@ -698,18 +698,18 @@ export const render_relogin = async function(options={}) {
 				}
 			}
 		})
-		await loggin_instance.build(true)
-		const loggin_node = await loggin_instance.render()
-		loggin_node.content_data.classList.add('overlay')
+		await login_instance.build(true)
+		const login_node = await login_instance.render()
+		login_node.content_data.classList.add('overlay')
 
 		// powered_by
-		loggin_node.querySelector('.powered_by').classList.add('hide')
+		login_node.querySelector('.powered_by').classList.add('hide')
 
 	// add to DOM
-		document.body.appendChild(loggin_node)
+		document.body.appendChild(login_node)
 
 
-	return loggin_instance
+	return login_instance
 }//end render_relogin
 
 

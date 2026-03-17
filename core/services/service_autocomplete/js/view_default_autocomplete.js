@@ -63,11 +63,11 @@ view_default_autocomplete.render = async function (self, options) {
 			e.stopPropagation()
 		})
 
-		if(self.caller.mode==='search'){
+		if(self.caller?.mode==='search'){
 			wrapper.classList.add('search')
 		}
 
-		if(self.caller.node.classList.contains('hilite_element')){
+		if(self.caller?.node?.classList.contains('hilite_element')){
 			wrapper.classList.add('hilite_element')
 		}
 
@@ -177,7 +177,7 @@ const get_content_data = function(self) {
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
 			// deactivate when the caller is not focused, it block keydown of other components.
-			if (!self.caller.active) {
+			if (!self.caller?.active) {
 				return
 			}
 			self.service_autocomplete_keys(e)
@@ -1157,7 +1157,7 @@ const render_datalist = async function(self, result) {
 					// default click action
 
 					// add value. Don't wait here
-						self.caller.add_value(value)
+						self.caller?.link_record(value)
 
 					// clean the last list
 						while (datalist.firstChild) {
@@ -1584,7 +1584,11 @@ const get_grid_choose_data = async function(self, section_record, params) {
 		}
 
 	// rqo
-		const rqo_search = await self.caller.build_rqo_search(request_config, 'search')
+		const rqo_search = await self.caller?.build_rqo_search(request_config, 'search')
+		if (!rqo_search) {
+			console.warn('[get_grid_choose_data] Unable to build rqo_search')
+			return null
+		}
 
 		// remove non used search params
 		delete rqo_search.sqo_options.filter_free

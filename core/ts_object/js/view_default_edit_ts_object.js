@@ -349,6 +349,17 @@ const render_ts_line = function(self) {
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
+	// Empty ar_elements case
+	if (ar_elements.length === 0) {
+		const id_info = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'id_info ontology',
+			inner_html		: '['+ self.section_tipo +'] non-installed hierarchy',
+			parent			: fragment
+		})
+		return fragment
+	}
+
 	// LIST_THESAURUS_ELEMENTS
 	// Iterate child data switch between custom  render elements (buttons, etc)
 	const ar_elements_len = ar_elements.length
@@ -1066,6 +1077,20 @@ const render_id_column = function(self) {
 				// mousedown event
 				const mousedown_handler = (e) => {
 					e.stopPropagation()
+
+					// Get hierarchy1 from 'area_thesaurus' caller data value
+					if(self.data?.ar_elements?.length === 0) {
+						const value = self.caller?.data?.[0]?.value || []
+						const hierarchy1 = value.find(item => item.target_section_tipo === self.section_tipo)
+						if(hierarchy1) {
+							self.open_record(
+								hierarchy1.section_id,
+								hierarchy1.section_tipo
+							)
+						}
+						return
+					}
+
 					// edit call
 					self.open_record(
 						self.section_id,

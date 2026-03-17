@@ -814,14 +814,11 @@ class v6_to_v7 {
 				$tipo			= $row['tipo'] ?? null;
 				$lang			= $row['lang'] ?? null;
 
-				if( empty($tipo) ) {
-					$response->errors[] = "Ignored empty column tipo for matrix_time_machine ID $id";
-					return;
-				}
-
-				// Old data garbage
-				if( $tipo === 'termino') {
-					$response->errors[] = "Ignored old data garbage for matrix_time_machine ID $id";
+				// garbage old data
+				if( empty($tipo) || $tipo === 'termino' ) {
+					// Delete it because it is old data garbage
+					$deleted = tm_db_manager::delete($id);
+					debug_log(__METHOD__ . " Ignored old data garbage for matrix_time_machine ID $id. Deleted: " . json_handler::encode($deleted), logger::DEBUG);
 					return;
 				}
 

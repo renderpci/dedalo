@@ -297,7 +297,7 @@ class component_relation_index extends component_relation_common {
 				continue;
 			}
 			$current_matrix_table = common::get_matrix_table_from_tipo($section_tipo_value);
-			if(empty($current_matrix_table)){				
+			if(empty($current_matrix_table)){
 				continue;
 			}
 
@@ -339,8 +339,16 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_SECTION_DATUM_FROM_LOCATOR
-	* @param locator $locator
-	* @return object $datum
+	* Retrieves the data and context of a related section identified by the provided locator.
+	* It also dynamically updates the component's internal request configuration by merging
+	* the target section's 'ddo_map' and 'section_tipo'. This ensures that any subsequent
+	* data resolution processes have the adequate config to format the related section properly.
+	*
+	* If the target section cannot be found or instantiated, it gracefully returns an empty
+	* datum object structure rather than throwing a fatal error.
+	*
+	* @param locator $locator The reference object containing the target `section_tipo` and `section_id`
+	* @return stdClass $datum An object containing the solved `context` (array) and `data` (object/array) for the target section.
 	*/
 	public function get_section_datum_from_locator( locator $locator ) : object {
 
@@ -359,14 +367,26 @@ class component_relation_index extends component_relation_common {
 			// this will be changed (ddo_map and section_tipo) on every subcontext resolution in the ar_subcontext loop
 			// this var is not used here, its used only to modify/update the component context->request_config
 			$final_request_config = array_find($this->context->request_config ?? [], function($el){
-				return $el->api_engine==='dedalo';
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
 
 		// short vars
-			$current_section_tipo	= $locator->section_tipo;
-			$current_section_id		= $locator->section_id;
+			$current_section_tipo	= $locator->section_tipo ?? null;
+			$current_section_id		= $locator->section_id ?? null;
 
 		// section
+			if (empty($current_section_tipo)) {
+				debug_log(__METHOD__
+					. " Error. current_section_tipo is empty. "
+					. " Trace: " . to_string($locator)
+					, logger::ERROR
+				);
+				// datum object
+				$datum = new stdClass();
+					$datum->context	= [];
+					$datum->data	= [];
+				return $datum;
+			}
 			$section = section::get_instance(
 				$current_section_tipo,
 				'related_list'
@@ -374,55 +394,85 @@ class component_relation_index extends component_relation_common {
 
 		// section record, Add section record to section instance to get the subdatum with current locator
 			$section_record	= section_record::get_instance($current_section_tipo, (int)$current_section_id);
+
+			// section check
+			if (!is_object($section)) {
+				debug_log(__METHOD__
+					. " Error. Unable to create section instance for tipo: '$current_section_tipo'. "
+					. " Trace: " . to_string($locator)
+					, logger::ERROR
+				);
+				// datum object
+				$datum = new stdClass();
+					$datum->context	= [];
+					$datum->data	= [];
+				return $datum;
+			}
+
 			$section->add_section_record($section_record);
 
 		$section_datum	= $section->get_json();
-		$ar_subcontext	= $section_datum->context;
+		$ar_subcontext	= $section_datum->context ?? [];
 
 		// the the different request_config to be used as configured request_config of the component
 		$context = [];
-		foreach ($ar_subcontext as $current_context) {
+		foreach ((array)$ar_subcontext as $current_context) {
 
-			if ($current_context->model==='section'
-				&& $current_context->tipo===$current_section_tipo
+			if (is_object($current_context)
+				&& isset($current_context->model) && $current_context->model==='section'
+				&& isset($current_context->tipo) && $current_context->tipo===$current_section_tipo
 				&& !in_array($current_section_tipo, $solved_section_datum_tipo)) {
 
 				// get the section request config (we will use his request config)
 				// if the locator has more than 1 section_tipo, will be stored the new request inside the request_config array
 				// select api_engine dedalo only config
 				$section_request_config = array_find($current_context->request_config ?? [], function($el){
-					return $el->api_engine==='dedalo';
+					return isset($el->api_engine) && $el->api_engine==='dedalo';
 				});
 
 				// invalid or empty request_config case
 					if (!is_object($section_request_config)) {
 						debug_log(__METHOD__
 							. " Error. Invalid request_config " . PHP_EOL
-							. " No valid api_engine dedalo request config found ! Ignored current_context " . PHP_EOL
+							. " No valid api_engine dedalo request config found ! Ignored current_context configuration update " . PHP_EOL
 							. ' current_context: ' . to_string($current_context)
 							, logger::ERROR
 						);
-						continue;
-					}
+						// We don't 'continue' here anymore so we don't accidentally drop $current_context from the final $context array
+					} else {
+						// update the component request_config ddo_map and section_tipo with the current subcontext
+						// because ddo_map if fulfilled with calculated subcontext ddo
+						// add once the section_tipo
+							if (is_object($final_request_config)) {
+								$sr_section_tipos = $section_request_config->sqo->section_tipo ?? [];
 
-				// update the component request_config ddo_map and section_tipo with the current subcontext
-				// because ddo_map if fulfilled with calculated subcontext ddo
-				// add once the section_tipo
-					if (is_object($final_request_config)) {
-						foreach ((array)$section_request_config->sqo->section_tipo as $current_sr_section_tipo) {
+								foreach ((array)$sr_section_tipos as $current_sr_section_tipo) {
 
-							if (!in_array($current_sr_section_tipo, $final_request_config->sqo->section_tipo)) {
+									$final_sqo = $final_request_config->sqo ?? new stdClass();
+									$final_section_tipos = $final_sqo->section_tipo ?? [];
 
-								// add section tipo
-								$final_request_config->sqo->section_tipo[] = $current_sr_section_tipo;
+									if (!in_array($current_sr_section_tipo, (array)$final_section_tipos)) {
 
-								// add ddo_map
-								$final_request_config->show->ddo_map = array_merge(
-									$final_request_config->show->ddo_map,
-									$section_request_config->show->ddo_map
-								);
+										// add section tipo
+										if (!isset($final_request_config->sqo)) {
+											$final_request_config->sqo = new stdClass();
+										}
+										if (!isset($final_request_config->sqo->section_tipo)) {
+											$final_request_config->sqo->section_tipo = (array)$final_section_tipos;
+										}
+										$final_request_config->sqo->section_tipo[] = $current_sr_section_tipo;
+
+										// add ddo_map
+										if (!isset($final_request_config->show)) {
+											$final_request_config->show = new stdClass();
+										}
+										$final_request_config->show->ddo_map = array_merge(
+											(array)($final_request_config->show->ddo_map ?? []),
+											(array)($section_request_config->show->ddo_map ?? [])
+										);
+									}
+								}
 							}
-						}
 					}
 
 				// track as solved to prevent duplicates section_tipo in subcontext
@@ -430,7 +480,9 @@ class component_relation_index extends component_relation_common {
 			}
 
 			// set parent to engage this tipo to be used by JS instance to get his context and data
-			$current_context->parent = $this->tipo;
+			if(is_object($current_context)) {
+				$current_context->parent = $this->tipo;
+			}
 
 			// add resolved subcontext to component context
 			$context[] = $current_context;
@@ -439,8 +491,7 @@ class component_relation_index extends component_relation_common {
 		// datum object
 			$datum = new stdClass();
 				$datum->context	= $context;
-				$datum->data	= $section_datum->data;
-
+				$datum->data	= $section_datum->data ?? [];
 
 		return $datum;
 	}//end get_section_datum_from_locator

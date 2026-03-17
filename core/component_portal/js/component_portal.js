@@ -140,17 +140,53 @@ component_portal.prototype.init = async function(options) {
 						console.log('-> event fn_initiator_link locator:', locator);
 					}
 				// add locator selected
-					const result = await self.add_value(locator)
+					const result = await self.link_record(locator)
 					if (result===false) {
 						return
 					}
 				// modal close
-					if (self.modal) {
+					if (self.modal && locator.close_modal !== false) {
 						self.modal.close()
 					}
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('initiator_link_' + self.id, initiator_link_handler)
+			)
+
+		// initiator_unlink. Observes user click over list record to remove from portal
+			const initiator_unlink_handler = async (locator) => {
+				// debug
+					if (SHOW_DEBUG===true) {
+						console.log('-> event fn_initiator_unlink locator:', locator);
+					}
+				// remove locator
+					const current_entries = self.data.entries || []
+					const paginated_key = current_entries.findIndex(item => item.section_tipo === locator.section_tipo && item.section_id == locator.section_id)
+
+					if (paginated_key === -1) {
+						console.warn('Value to unlink not found in current entries');
+						return
+					}
+
+				// row_key
+					const row_key = current_entries[paginated_key].id || null
+
+				// remove locator selected
+					const result = await self.unlink_record({
+						paginated_key 	: paginated_key,
+						row_key 		: row_key,
+						section_id 		: locator.section_id
+					})
+					if (result===false) {
+						return
+					}
+				// modal close
+					if (self.modal && locator.close_modal !== false) {
+						self.modal.close()
+					}
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('initiator_unlink_' + self.id, initiator_unlink_handler)
 			)
 
 		// link_term. Observes thesaurus tree link index button click
@@ -208,7 +244,7 @@ component_portal.prototype.init = async function(options) {
 					}
 
 				// add locator selected
-					self.add_value(locator)
+					self.link_record(locator)
 					.then(function(result){
 						if (result===false) {
 							alert("Value already exists! "+ JSON.stringify(locator));
@@ -692,12 +728,12 @@ component_portal.prototype.build = async function(autoload=false) {
 * 	(locator)
 * @return bool
 */
-component_portal.prototype.add_value = async function(value) {
+component_portal.prototype.link_record = async function(value) {
 
 	const self = this
 
 	// current_value. Get the current_value of the component
-		const current_entries	= self.data.entries || []
+		const current_entries = self.data.entries || []
 
 	// data_limit. Maximum records allowed by this portal
 		if (data_limit_reached(self)) {
@@ -708,10 +744,10 @@ component_portal.prototype.add_value = async function(value) {
 	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
 		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
 		if (typeof exists!=='undefined') {
-			console.log('[add_value] Value already exists (1) !');
+			console.log('[link_record] Value already exists (1) !');
 			if(SHOW_DEBUG===true) {
-				console.log('add_value current_entries:', current_entries);
-				console.log('add_value value:', value);
+				console.log('link_record current_entries:', current_entries);
+				console.log('link_record value:', value);
 			}
 			return false
 		}
@@ -736,7 +772,7 @@ component_portal.prototype.add_value = async function(value) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log("[component_portal.add_value] value:", value, " - changed_data:", changed_data);
+			console.log("[component_portal.link_record] value:", value, " - changed_data:", changed_data);
 		}
 
 	// total_before
@@ -758,7 +794,7 @@ component_portal.prototype.add_value = async function(value) {
 		})
 
 		if (!api_response || !api_response.result) {
-			console.error('Invalid API response on add_value:', api_response);
+			console.error('Invalid API response on link_record:', api_response);
 			return false
 		}
 
@@ -769,14 +805,14 @@ component_portal.prototype.add_value = async function(value) {
 			: 0
 		// error on add value case
 		if (total===0) {
-			console.warn("// add_value api_response.result.data (unexpected total):", api_response.result.data);
+			console.warn("// link_record api_response.result.data (unexpected total):", api_response.result.data);
 			return false
 		}
 		// value already exists case. Check if value already exist.
 		// (!) Note that here, the whole portal data has been compared in server
 		if (parseInt(total) <= parseInt(total_before)) {
 			// self.update_pagination_values('remove') // remove added pagination value
-			console.log("[add_value] Value already exists (2) !");
+			console.log("[link_record] Value already exists (2) !");
 			return false
 		}
 
@@ -812,7 +848,7 @@ component_portal.prototype.add_value = async function(value) {
 
 
 	return true
-}//end add_value
+}//end link_record
 
 
 

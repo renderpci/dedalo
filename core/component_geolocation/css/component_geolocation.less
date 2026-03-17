@@ -208,7 +208,13 @@
 		height: 30.5rem;
 
 		>.content_data {
+			display: block;
 			height: 100% !important;
+			overflow: hidden;
+
+			>.content_value {
+				height: calc(30.5rem - 1rem);
+			}
 		}
 	}
 

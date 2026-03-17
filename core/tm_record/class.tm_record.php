@@ -582,8 +582,25 @@ class tm_record {
 					if($column === 'data' || empty($components)){
 						continue;
 					}
-					foreach ($components as $compnonent_tipo => $component_data) {
-						$section_record->set_component_data( $compnonent_tipo, $column, $component_data );
+					// Ensure components is an array or object before iterating
+					if(!is_array($components) && !is_object($components)) {
+						debug_log(__METHOD__ . " Ignored invalid components: $components"
+							. 'data: ' . json_encode($data, JSON_PRETTY_PRINT)
+							, logger::ERROR
+						);
+						continue;
+					}
+					foreach ($components as $component_tipo => $component_data) {
+						$safe_tipo = safe_tipo($component_tipo);
+						if($safe_tipo === false){
+							debug_log(__METHOD__ . " Ignored invalid tipo: $component_tipo", logger::ERROR);
+							continue;
+						}
+						// Ensure component data is an array as expected by set_component_data
+						$component_data_array = (is_array($component_data) || $component_data === null)
+							? $component_data
+							: [$component_data];
+						$section_record->set_component_data( $safe_tipo, $column, $component_data_array );
 					}
 				}
 
@@ -599,5 +616,7 @@ class tm_record {
 
 		return $section_record;
 	}//end get_section_record
+
+
 
 }//end tm_record

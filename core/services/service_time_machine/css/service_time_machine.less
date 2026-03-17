@@ -110,6 +110,7 @@
 						&.column_dd577 {
 							grid-column: 2;
 							.span_value();
+							word-break: normal;
 						}
 
 						// Value
@@ -163,6 +164,10 @@
 
 	// view_tool. Used in tool_time_machine section and components list
 	&.view_tool {
+
+		>.list_body {
+			height: auto;
+		}
 
 		.content_data > .section_record {
 

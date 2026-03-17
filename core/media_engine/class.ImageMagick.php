@@ -33,8 +33,16 @@ final class ImageMagick {
 	* @return string
 	*/
 	public static function get_imagemagick_installed_path() : string {
+		static $path;
+		if (isset($path)) return $path;
 
-		return MAGICK_PATH . 'convert';
+		$path = MAGICK_PATH . 'magick';
+		if(file_exists($path)) {
+			return $path;
+		}
+
+		$path = MAGICK_PATH . 'convert';
+		return $path;
 	}//end get_imagemagick_installed_path
 
 
@@ -44,8 +52,18 @@ final class ImageMagick {
 	* @return string
 	*/
 	public static function get_imagemagick_identify_path() : string {
+		static $path;
+		if (isset($path)) return $path;
 
-		return MAGICK_PATH . 'identify';
+		// If 'magick' exists, use 'magick identify'.
+		// Note: get_imagemagick_installed_path() returns the full path to the binary.
+		if (str_ends_with(self::get_imagemagick_installed_path(), 'magick')) {
+			$path = self::get_imagemagick_installed_path() . ' identify';
+		} else {
+			$path = MAGICK_PATH . 'identify';
+		}
+
+		return $path;
 	}//end get_imagemagick_identify_path
 
 
@@ -109,7 +127,7 @@ final class ImageMagick {
 		// command
 		$command = implode(' ', [
 			'nice -n 19',
-			ImageMagick::get_imagemagick_installed_path()." -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" "
+			ImageMagick::get_imagemagick_installed_path()." -define jpeg:size=400x400 " . escapeshellarg($source_file) . " -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 " . escapeshellarg($target_file)
 		]);
 
 		// run command
@@ -167,7 +185,13 @@ final class ImageMagick {
 			$is_opaque = self::is_opaque($source_file);
 		}
 
-		//check if the original image has a meta channel (transparent channel, alpha channel)
+		// Valid source file verify
+		if (!file_exists($source_file)) {
+			debug_log(__METHOD__ . " Source file does not exist: $source_file", logger::ERROR);
+			return false;
+		}
+
+		// check if the original image has a meta channel (transparent channel, alpha channel)
 		$has_meta_channel = self::has_meta_channel($source_file);
 
 		// Valid path verify
@@ -186,20 +210,20 @@ final class ImageMagick {
 		// Get info about source file color space
 		$command = implode(' ', [
 			'nice -n 19',
-			ImageMagick::get_imagemagick_identify_path() . " -quiet -format '%[colorspace]' " .$source_file. "[0]"
+			ImageMagick::get_imagemagick_identify_path() . " -quiet -format '%[colorspace]' " . escapeshellarg($source_file) . "[0]"
 		]);
 		$colorspace_info = shell_exec($command);	//-format "%[EXIF:DateTimeOriginal]"
 
 		// set layer
-			$source_file = isset($ar_layers)
-				? $source_file.json_encode($ar_layers)
-				: $source_file;
+			$source_file_magick = isset($ar_layers)
+				? escapeshellarg($source_file) . (is_array($ar_layers) ? '['.implode(',', $ar_layers).']' : '['.(string)$ar_layers.']')
+				: escapeshellarg($source_file);
 
 		// begin flags : Command flags before source file.
 			$begin_flags = '';
 
 			$begin_flags .= isset($density)
-				? '-density '. $density.' '
+				? '-density '. escapeshellarg((string)$density).' '
 				: '';
 			$begin_flags .= isset($antialias)
 				? '-antialias '
@@ -271,7 +295,8 @@ final class ImageMagick {
 					$profile_file	= COLOR_PROFILES_PATH.$profile_out; // sRGB_Profile
 
 					# Test profile exists
-					if(!file_exists($profile_source)) {
+					$has_profile_source = file_exists($profile_source);
+					if(!$has_profile_source) {
 						// throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
 						debug_log(__METHOD__
 							. " Error Processing Request. Color profile not found in " . PHP_EOL
@@ -279,7 +304,8 @@ final class ImageMagick {
 							, logger::ERROR
 						);
 					}
-					if(!file_exists($profile_file)) {
+					$has_profile_file = file_exists($profile_file);
+					if(!$has_profile_file) {
 						// throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
 						debug_log(__METHOD__
 							. " Error Processing Request. Color profile not found in " . PHP_EOL
@@ -290,8 +316,12 @@ final class ImageMagick {
 
 
 					# Command middle_flags
-					$middle_flags	.= ' -profile "'.$profile_source.'" ';
-					$middle_flags	.= ' -profile "'.$profile_file.'" ';
+					if ($has_profile_source) {
+						$middle_flags .= ' -profile '. escapeshellarg((string)$profile_source) .' ';
+					}
+					if ($has_profile_file) {
+						$middle_flags .= ' -profile '. escapeshellarg((string)$profile_file) .' ';
+					}
 					$middle_flags	.= ($flatten === true && $is_opaque === true)
 						? " -flatten "
 						: '';
@@ -308,17 +338,17 @@ final class ImageMagick {
 					break;
 			}
 
-			$middle_flags .= ' -quality '.$quality.' ';
+			$middle_flags .= ' -quality '.escapeshellarg((string)$quality).' ';
 			$middle_flags .= ' -auto-orient '; // Always add
 			$middle_flags .= ' -quiet ';
 			$middle_flags .= isset($resize)
-				? ' -resize '. $resize.' ' // sample: 25% | 1024x756
+				? ' -resize '. escapeshellarg((string)$resize).' ' // sample: 25% | 1024x756
 				: '';
 
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				ImageMagick::get_imagemagick_installed_path().' '.$begin_flags.' "'.$source_file.'" '.$middle_flags.' "'.$target_file.'" '
+				ImageMagick::get_imagemagick_installed_path().' '.$begin_flags.' '.$source_file_magick.' '.$middle_flags.' '. escapeshellarg($target_file)
 			]);
 
 		// debug
@@ -372,7 +402,7 @@ final class ImageMagick {
 	public static function get_layers_file_info( string $source_file ) : int {
 
 		// tiff info. Get the layer number of TIFF (PSD use the same property) :
-			$command		= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
+			$command		= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%n %[tiff:has-layers]\n" '. escapeshellarg($source_file) .' | tail -1';
 			$tiff_format	= shell_exec($command);
 
 		// debug
@@ -417,22 +447,37 @@ final class ImageMagick {
 	*/
 	public static function has_meta_channel( string $source_file ) : bool {
 
+		if (!file_exists($source_file)) {
+			debug_log(__METHOD__ . " Source file does not exist: $source_file", logger::ERROR);
+			return false;
+		}
+
+		// extension check. Prevent to process files that are not tif or psd, eg. 'svg'
+		$extension = strtolower(pathinfo($source_file, PATHINFO_EXTENSION));
+		$valid_extensions = ['tif', 'tiff', 'psd'];
+		if (!in_array($extension, $valid_extensions)) {
+			debug_log(__METHOD__ . " Ignored has_meta_channel check for source file. It's not a tif or psd file: $source_file", logger::WARNING);
+			return false;
+		}
+
 		// tiff info. Get the channel number of TIFF (PSD use the same property) :
-			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[channels]" '. '"'. $source_file . '"';
-			$string_channels	= shell_exec($command);
+			$command = ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[channels]" ' . escapeshellarg($source_file);
+			exec($command . ' 2>&1', $output, $worked_result);
+			$string_channels = implode(PHP_EOL, $output);
 
 			debug_log(__METHOD__
 				. " has_meta_channel command " . PHP_EOL
-				. 'command: ' .to_string($command) . PHP_EOL
+				. 'command: ' . $command . PHP_EOL
 				. 'channels: ' . json_encode($string_channels)
 				, logger::WARNING
 			);
 
-			if (empty($string_channels)) {
+			if ($worked_result !== 0 || empty($string_channels)) {
 				debug_log(__METHOD__
-					. " Unable to get command execution result on get channels. Empty result " . PHP_EOL
-					. 'command: ' .to_string($command) . PHP_EOL
-					. 'channels: ' . json_encode($string_channels)
+					. " Unable to get command execution result on get channels, or error occurred. " . PHP_EOL
+					. 'command: ' . $command . ' 2>&1' . PHP_EOL
+					. 'worked_result: ' . (string)$worked_result . PHP_EOL
+					. 'output: ' . json_encode($string_channels)
 					, logger::ERROR
 				);
 				return false;
@@ -444,16 +489,18 @@ final class ImageMagick {
 		// srgba 6.2 -> 6 channels 2 of them is meta channel (transparent channel)
 
 		// find every number into the string 3.1
-		preg_match_all('/\d+.\d+/', $string_channels, $ar_channels_info);
+		preg_match_all('/\d+\.\d+/', $string_channels, $ar_channels_info);
 
 		$meta_channel = false;
-		foreach ($ar_channels_info[0] as $channels_data) {
-			$ar_channel_info	= explode('.', $channels_data);
-			$meta_channel_info	= (int)$ar_channel_info[1];
+		if (!empty($ar_channels_info[0])) {
+			foreach ($ar_channels_info[0] as $channels_data) {
+				$ar_channel_info	= explode('.', $channels_data);
+				$meta_channel_info	= (int)$ar_channel_info[1];
 
-			if($meta_channel_info > 0){
-				$meta_channel = true;
-				break;
+				if($meta_channel_info > 0){
+					$meta_channel = true;
+					break;
+				}
 			}
 		}
 
@@ -489,16 +536,18 @@ final class ImageMagick {
 
 		// command
 			$color = isset($background_color)
-				? "-virtual-pixel background -background '$background_color' -interpolate Mesh"
+				? "-virtual-pixel background -background " . escapeshellarg((string)$background_color) . " -interpolate Mesh"
 				: '';
 			// if alpha is set and true replace the background color to transparent
 			if(isset($alpha) && $alpha === true){
 				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
 			};
+
+			$safe_degrees = escapeshellarg((string)$degrees);
 			if($rotation_mode === 'expanded'){
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color +distort SRT $degrees +repage '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color +distort SRT $safe_degrees +repage ". escapeshellarg($target);
 			}else{
-				$command = ImageMagick::get_imagemagick_installed_path() ." '$source' $color -distort SRT $degrees +repage '$target'";
+				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color -distort SRT $safe_degrees +repage ". escapeshellarg($target);
 			}
 
 			$result = shell_exec($command);
@@ -547,8 +596,10 @@ final class ImageMagick {
 		$x		= $crop_area->x;
 		$y		= $crop_area->y;
 
+		$geometry = escapeshellarg("{$width}x{$height}+{$x}+{$y}");
+
 		// command
-		$command = ImageMagick::get_imagemagick_installed_path() ." '$source' -crop {$width}x{$height}+{$x}+{$y} +repage '$target'";
+		$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." -crop {$geometry} +repage ". escapeshellarg($target);
 
 		$result = shell_exec($command);
 
@@ -587,7 +638,7 @@ final class ImageMagick {
 	public static function get_media_attributes( string $file_path ) : ?array {
 
 		// convert image.jpg[1x1+0+0] json:
-			$command		= ImageMagick::get_imagemagick_installed_path() . " '$file_path' json: ";
+			$command		= ImageMagick::get_imagemagick_installed_path() . " ". escapeshellarg($file_path) ." json: ";
 			$exec_result	= shell_exec($command);
 
 		// debug
@@ -624,7 +675,7 @@ final class ImageMagick {
 		$is_opaque = true;
 
 		// get all layers opacity
-			$command	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[opaque]" '. $source_file;
+			$command	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[opaque]" '. escapeshellarg($source_file);
 			$output		= shell_exec($command);
 
 		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.
@@ -650,12 +701,12 @@ final class ImageMagick {
 	*/
 	public static function get_date_time_original( string $file ) : ?dd_date {
 
-		$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[EXIF:DateTimeOriginal]" ' .'"'.$file.'"';
+		$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[EXIF:DateTimeOriginal]" ' . escapeshellarg($file);
 		$DateTimeOriginal	= shell_exec($command);
 		$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
 
 		if(empty($DateTimeOriginal)){
-			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[date:modify]" ' .'"'.$file.'"';
+			$command			= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[date:modify]" ' . escapeshellarg($file);
 			$DateTimeOriginal	= shell_exec($command);
 			$regex = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
 		}
@@ -700,13 +751,13 @@ final class ImageMagick {
 
 		$image_dimensions = new stdClass();
 
-		$command_orientation	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[orientation]" ' .'"'.$file_path.'"[0]';
+		$command_orientation	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[orientation]" ' . escapeshellarg($file_path) .'[0]';
 		$orientation			= shell_exec($command_orientation);
 
-		$commnad_w	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %w ' .'"'.$file_path.'"[0]';
+		$commnad_w	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %w ' . escapeshellarg($file_path) .'[0]';
 		$width		= shell_exec($commnad_w);
 
-		$commnad_h	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %h ' .'"'.$file_path.'"[0]';
+		$commnad_h	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %h ' . escapeshellarg($file_path) .'[0]';
 		$height		= shell_exec($commnad_h);
 
 			// Undefined  - 0
@@ -726,8 +777,9 @@ final class ImageMagick {
 			switch( $orientation ) {
 				case 'LeftBottom':// rotate 90
 				case 'RightTop':// rotate 270 || -90
-					$width 	= $height;
-					$height = $width;
+					$tmp_width = $width;
+					$width 	   = $height;
+					$height    = $tmp_width;
 					break;
 				case 'TopLeft':	// rotate 0
 				case 'BottomRight': // rotate 180
