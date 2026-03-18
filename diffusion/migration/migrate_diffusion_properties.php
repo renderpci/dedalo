@@ -2446,6 +2446,24 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 1 data_to_be_used present: default V6 behavior → get_diffusion_value() trait
+							if(isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_relation_model',
+									null, null, null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model data_to_be_used -> get_diffusion_dato\n";
+								break;
+							}
+
 							// 2 "process_dato" present
 							$process_dato_rm = $props->process_dato ?? null;
 
