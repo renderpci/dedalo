@@ -3860,7 +3860,9 @@ abstract class component_common extends common {
 		$search = search::get_instance($sqo);
 		$db_result = $search->search();
 
-		$record = $db_result->fetch_one();
+		$record = $db_result
+			? ($db_result->fetch_one() ?? null)
+			: null;
 
 		$tm_data = !empty($record)
 			? $record->data

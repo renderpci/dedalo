@@ -506,7 +506,7 @@ class tools_register {
 		$search = search::get_instance($sqo);
 		$result = $search->search();
 
-		return $result->fetch_one() ?: null;
+		return $result ? $result->fetch_one() : null;
 	}
 
 

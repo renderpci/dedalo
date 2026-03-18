@@ -811,7 +811,13 @@ class hierarchy extends ontology {
 		// search
 			$search		= search::get_instance($search_query_object);
 			$db_result	= $search->search();
-			$record		= $db_result->fetch_one();
+			$record		= $db_result
+				? ($db_result->fetch_one() ?? null)
+				: null;
+
+			if(empty($record)) {
+				return null;
+			}
 
 		// section id
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
