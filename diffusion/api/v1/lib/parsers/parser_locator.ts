@@ -5,7 +5,7 @@
 
 import type { parser_options, data_item } from '../types';
 import { langs_config } from '../diffusion_processor';
-import { get_first } from './parser_helper';
+
 
 interface locator {
 	section_tipo: string;
