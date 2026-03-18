@@ -2167,27 +2167,25 @@ function process_node($node, $level) {
 								&& ($process_dato_cb === 'diffusion_sql::map_locator_to_term_id'
 									|| $process_dato_cb === 'diffusion_sql::map_locator_to_terminoID'))
 							{
-								
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
 
-								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
-									'component_check_box',
-									null,
-									null,
-									null
-								);
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
 
-								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
 								}
-
-								// "varchar" = 256
-								if(isset($props->varchar)){
-									$new_props->varchar = $props->varchar;
-								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id -> get_diffusion_dato()\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id\n";
 								break;
 							}
 
