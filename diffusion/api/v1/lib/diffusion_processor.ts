@@ -303,8 +303,9 @@ function process_record(
 				// No parser — use join_items_to_string (default behavior) or apply specific format to the whole set
 				if (ctx.output_format === 'json') {
 					// Just JSON encode the values
-					const raw_values = data_items.map(d => d.value);
+					const raw_values = data_items.flatMap(d => d.value);
 					column_value = JSON.stringify(raw_values);
+
 				} else if (ctx.output_format === 'int') {
 					// Parse first value as int
 					const first_val = data_items[0]?.value;
