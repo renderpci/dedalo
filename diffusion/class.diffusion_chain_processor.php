@@ -38,6 +38,8 @@ class diffusion_chain_processor {
 	private ?object $properties;
 
 
+	
+
 	/**
 	 * RESOLVE_CHAIN
 	 * Standard recursive resolution of DDO map chains.
@@ -80,6 +82,8 @@ class diffusion_chain_processor {
 
 		return $ar_results;
 	}
+
+
 
 	/**
 	 * RESOLVE_DDO_VALUE
@@ -142,6 +146,8 @@ class diffusion_chain_processor {
 		return $this->process_terminal_component($ddo, $element);
 	}
 
+
+
 	/**
 	 * PROCESS_RELATION_COMPONENT
 	 * Handles components that establish relationships with other sections (Portals, Relations, etc.).
@@ -160,19 +166,24 @@ class diffusion_chain_processor {
 	private function process_relation_component(object $ddo, object $element, array $ddo_map, array $children, int $level, bool $is_publishable): array {
 		
 		$current_tipo 	= $ddo->tipo;
+
+		// Extract raw data (locators referring to linked sections)
 		$diffusion_data = $element->get_diffusion_data($ddo, self::$diffusion_element_tipo);
 		$element_model 	= $element->get_model(); 
 		$ar_locators 	= $diffusion_data[0]->get_value() ?? [];
 
+		// Normalize locators to array for uniform processing iteration
 		if (!is_array($ar_locators)) {
 			$ar_locators = [$ar_locators];
 		}
 
+		// Fetch linked diffusion node settings to check for explicit publish override
 		$diffusion_tipo = $ddo->diffusion_tipo;
 		$diffusion_node = ontology_node::get_instance($diffusion_tipo);
 		$properties = $diffusion_node->get_properties();
 		$publishable = $properties->is_publishable ?? null;
 
+		// Reset value on temporary container to accumulate validated/resolved items later
 		$new_diffusion_data = $diffusion_data;
 		$new_diffusion_data[0]->set_value([]);
 
@@ -267,6 +278,8 @@ class diffusion_chain_processor {
 		return [$this->wrap_into_diffusion_data_object($ddo, $current_tipo, $relation_values)];
 	}
 
+
+
 	/**
 	 * PROCESS_TERMINAL_COMPONENT
 	 * Handles standard components that do not define children in the ddo_map.
@@ -284,6 +297,8 @@ class diffusion_chain_processor {
 		return [$this->wrap_into_diffusion_data_object($ddo, $current_tipo, $terminal_results)];
 	}
 
+
+
 	/**
 	 * WRAP_INTO_DIFFUSION_DATA_OBJECT
 	 * Standardizes the structure of a resolved value into a diffusion_data_object.
@@ -296,17 +311,22 @@ class diffusion_chain_processor {
 	 */
 	private function wrap_into_diffusion_data_object(object $ddo, string $current_tipo, mixed $value): diffusion_data_object {
 		
+		// Fallback to current component tipo if explicit diffusion override is not supplied
 		$meta_tipo      = $ddo->diffusion_tipo ?? $current_tipo;
 		
+		// Obtain readable title label translation belonging to the original source component
 		$component_node = ontology_node::get_instance($current_tipo);
 		$label          = $component_node->get_term(DEDALO_DATA_LANG);
 
+		// Obtain readable export term identifier title from targeted API dataset schema
 		$diffusion_node = ontology_node::get_instance($meta_tipo);
 		$term           = $diffusion_node->get_term(DEDALO_STRUCTURE_LANG);
 		
+		// Map readable component model descriptor reference for diagnostics inside output payload
 		$model_tipo     = $diffusion_node->get_model_tipo();
 		$model_name     = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG);
 
+		// Pack everything inside structured output object wrapper standard payload container
 		$res = new diffusion_data_object();
 			$res->set_diffusion_tipo($meta_tipo);
 			$res->set_id($ddo->id ?? $meta_tipo);
@@ -317,6 +337,8 @@ class diffusion_chain_processor {
 
 		return $res;
 	}
+
+
 
 	/**
 	 * BUILD_ENTRIES
@@ -359,6 +381,8 @@ class diffusion_chain_processor {
 		return $entries;
 	}
 
+
+
 	/**
 	 * GET_DEBUG_CHAIN
 	 * @return object
@@ -369,17 +393,25 @@ class diffusion_chain_processor {
 		];
 	}
 
+
+
 	/**
 	 * DISPATCH_CLASS_METHOD
-	 * Calls a static class method in the format "ClassName::methodName".
+	 * Calls a custom static class method handler configured in the DDO map.
+	 * format "ClassName::methodName"
 	 * 
-	 * @param string $fn e.g. "diffusion_sql::map_to_terminoID"
-	 * @param object $element Component instance
-	 * @param object $ddo DDO configuration
-	 * @return array<diffusion_data_object>
+	 * Enables executing specialized external resolution hooks (e.g., custom SQL mappings, 
+	 * thesaurus lookups, or value transformations) where standard component getters 
+	 * do not suffice for the export format structure.
+	 * 
+	 * @param string $fn Static method identifier string (e.g., "diffusion_sql::map_to_terminoID")
+	 * @param object $element The Component instance executing within the scope
+	 * @param object $ddo DDO configuration map context
+	 * @return array<diffusion_data_object> Uniform array of resolved output payload items
 	 */
 	private function dispatch_class_method(string $fn, object $element, object $ddo): array {
 		
+		// Parse string for static method call convention segments
 		$parts = explode('::', $fn);
 		if (count($parts) !== 2) {
 			debug_log(__METHOD__ . " Invalid class method format: $fn", logger::ERROR);
@@ -389,16 +421,17 @@ class diffusion_chain_processor {
 		$class_name  = $parts[0];
 		$method_name = $parts[1];
 
+		// Verify execution target safely prior to attempting dynamic call triggers
 		if (!class_exists($class_name) || !method_exists($class_name, $method_name)) {
 			debug_log(__METHOD__ . " Class or method not found: $fn", logger::ERROR);
 			return [];
 		}
 
 		try {
-			// Call static method with component and ddo
+			// Call static method supplying the active component and configuration DDO
 			$result = $class_name::$method_name($element, $ddo);
 
-			// Normalize result to array of diffusion_data_object
+			// Normalize single result items into iterable containers standard arrays
 			if (!is_array($result)) {
 				$result = [$result];
 			}
@@ -408,7 +441,8 @@ class diffusion_chain_processor {
 				if ($item instanceof diffusion_data_object) {
 					$ar_results[] = $item;
 				} else {
-					// Wrap raw values
+					
+					// Wrap raw values into structured datasets standard output container payload structs
 					$ar_results[] = new diffusion_data_object((object)[
 						'tipo'  => $ddo->tipo,
 						'lang'  => null,
@@ -425,6 +459,8 @@ class diffusion_chain_processor {
 		}
 	}
 
+
+
 	/**
 	 * RESET_CACHE
 	 * Clears all static caches. Call at start of each API request.
@@ -436,6 +472,8 @@ class diffusion_chain_processor {
 		self::$resolved_sections_cache = [];
 		self::$diffusion_element_tipo = null;
 	}
+
+
 
 	/**
 	 * SET_DIFFUSION_ELEMENT_SCOPE
@@ -451,6 +489,8 @@ class diffusion_chain_processor {
 		// Build section -> diffusion_node map from all diffusion nodes under this element
 		self::$section_diffusion_map = self::build_section_diffusion_map($diffusion_element_tipo);
 	}
+
+
 
 	/**
 	 * BUILD_SECTION_DIFFUSION_MAP
