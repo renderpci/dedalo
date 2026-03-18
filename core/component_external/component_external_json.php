@@ -1,4 +1,5 @@
 <?php
+/** @var component_external $this */
 // JSON data component controller
 
 

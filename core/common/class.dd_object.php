@@ -57,13 +57,73 @@
 * Runtime
 * - @property array|null  $errors              Collected error messages
 */
-class dd_object extends stdClass {
+class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	 * Identifies this structure as a DDO.
 	 * @var string
 	 */
 	public $typo = 'ddo';
+
+	// Core identity
+	protected ?string $type = null;
+	protected ?string $tipo = null;
+	protected string|array|null $section_tipo = null;
+	protected ?string $parent = null;
+	protected ?string $parent_grouper = null;
+	protected ?string $lang = null;
+	protected ?string $mode = null;
+	protected ?string $model = null;
+	protected ?string $id = null;
+	protected ?string $info = null;
+	protected object|array|null $properties = null;
+	protected ?int $permissions = null;
+
+	// Labels & translation
+	protected ?string $label = null;
+	protected ?array $labels = null;
+	protected ?bool $translatable = null;
+
+	// Composition / context
+	protected ?array $tools = null;
+	protected ?array $buttons = null;
+	protected ?object $css = null;
+	protected ?array $target_sections = null;
+	protected ?array $request_config = null;
+	protected ?array $columns_map = null;
+
+	// View
+	protected ?string $view = null;
+	protected ?string $children_view = null;
+
+	// Tools specifics
+	protected ?string $name = null;
+	protected ?string $description = null;
+	protected ?string $icon = null;
+	protected ?string $developer = null;
+	protected ?bool $show_in_inspector = null;
+	protected ?bool $value_with_parents = null;
+	protected ?bool $show_in_component = null;
+	protected ?object $config = null;
+	protected ?bool $sortable = null;
+	protected ?string $fields_separator = null;
+	protected ?string $records_separator = null;
+	protected ?bool $autoload = null;
+	protected ?string $role = null;
+	protected ?object $section_map = null;
+	protected ?string $color = null;
+	protected ?string $matrix_table = null;
+	protected ?string $data_fn = null;
+	protected ?string $legacy_model = null;
+
+	// Execution & Parsing
+	protected ?string $fn = null;
+	protected ?string $diffusion_tipo = null;
+	protected ?object $options = null;
+	protected ?object $parser_args = null;
+
+	// Errors
+	protected ?array $errors = null;
 
 
 
@@ -1679,4 +1739,70 @@ class dd_object extends stdClass {
 
 
 
-}//end dd_object
+	/**
+	* SET METHODS
+	* Magic mutator used as a safe fallback for dynamic properties writting.
+	*
+	* Maps direct property assignments to their corresponding set_* methods if available,
+	* otherwise falls back to creating a dynamic property (backward compatibility).
+	*
+	* @param string $name Property name
+	* @param mixed $value Property value
+	* @return mixed
+	*/
+	final public function __set(string $name, mixed $value) {
+
+		$method = 'set_' . $name;
+		if (method_exists($this, $method)) {
+			return $this->{$method}($value);
+		}
+		$this->$name = $value; 
+	}
+
+
+
+	/**
+	* ISSET METHODS
+	* Magic accessor to support isset() and empty() on protected properties.
+	*
+	* @param string $name Property name
+	* @return bool
+	*/
+	final public function __isset(string $name) : bool {
+
+		return isset($this->$name);
+	}
+
+
+
+	/**
+	* UNSET METHODS
+	* Magic accessor to support unset() on protected properties.
+	*
+	* @param string $name Property name
+	* @return void
+	*/
+	final public function __unset(string $name) : void {
+
+		unset($this->$name);
+	}
+
+
+
+	/**
+	* JSON_SERIALIZE
+	* @return mixed
+	*/
+	public function jsonSerialize() : mixed {
+
+		$vars = get_object_vars($this);
+		
+		// filter out null values to keep payload small (as dynamic properties behaved before)
+		return array_filter($vars, function($val) {
+			return $val !== null;
+		});
+	}
+
+
+
+} //end dd_object

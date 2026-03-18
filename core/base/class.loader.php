@@ -41,7 +41,6 @@ include DEDALO_CORE_PATH . '/common/class.locator.php';
 include DEDALO_CORE_PATH . '/common/class.dd_date.php';
 include DEDALO_CORE_PATH . '/common/class.request_config_presets.php';
 include DEDALO_CORE_PATH . '/common/class.dd_object.php'; // new 12-06-2019
-include DEDALO_CORE_PATH . '/common/class.ddo_map_object.php'; // new 28-07-2019
 include DEDALO_CORE_PATH . '/common/class.request_query_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021

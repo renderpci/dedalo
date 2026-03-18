@@ -1,4 +1,5 @@
 <?php
+/** @var component_select $this */
 // JSON data component controller
 
 

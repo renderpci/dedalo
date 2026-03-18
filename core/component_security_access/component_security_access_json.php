@@ -1,4 +1,5 @@
 <?php
+/** @var component_security_access $this */
 // JSON data component controller
 
 

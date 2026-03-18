@@ -1,4 +1,5 @@
 <?php
+/** @var component_iri $this */
 // JSON data component controller
 
 

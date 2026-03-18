@@ -350,16 +350,16 @@ class component_date extends component_common {
 					$dd_date = new dd_date($data_item->period);
 
 					// year
-					$ar_string_period[] = isset($dd_date->year)
-						? $dd_date->year .' '. label::get_label('years')
+					$ar_string_period[] = $dd_date->get_year() !== null
+						? $dd_date->get_year() .' '. label::get_label('years')
 						: '';
 					// month
-					$ar_string_period[] = isset($dd_date->month)
-						? $dd_date->month .' '. label::get_label('months')
+					$ar_string_period[] = $dd_date->get_month() !== null
+						? $dd_date->get_month() .' '. label::get_label('months')
 						: '';
 					// day
-					$ar_string_period[] = isset($dd_date->day)
-						? $dd_date->day .' '. label::get_label('days')
+					$ar_string_period[] = $dd_date->get_day() !== null
+						? $dd_date->get_day() .' '. label::get_label('days')
 						: '';
 
 					$item_value = implode(' ', $ar_string_period);
@@ -458,22 +458,22 @@ class component_date extends component_common {
 		}
 
 		# Time
-		if (isset($dd_date->second)) {
+		if ($dd_date->get_second() !== null) {
 
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date);
 
 		}
-		elseif (isset($dd_date->minute)) {
+		elseif ($dd_date->get_minute() !== null) {
 
 			$dd_date_clone = clone $dd_date;
-			$dd_date_clone->second = 59;
+			$dd_date_clone->set_second(59);
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
-		elseif (isset($dd_date->hour)) {
+		elseif ($dd_date->get_hour() !== null) {
 
 			$dd_date_clone = clone $dd_date;
-			$dd_date_clone->minute = 59;
-			$dd_date_clone->second = 59;
+			$dd_date_clone->set_minute(59);
+			$dd_date_clone->set_second(59);
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone);
 		}
 
@@ -481,22 +481,22 @@ class component_date extends component_common {
 		# the calculation of the seconds for the end of the period always need to be seconds -1
 		# ex: year 2000 in seconds is: start = 64281600000 end = 64313740800 -1 or 64313740799
 		# because 64313740800 = 2001
-		if (isset($dd_date->day)) {
+		if ($dd_date->get_day() !== null) {
 
 			$dd_date_clone = clone $dd_date;
-			$dd_date_clone->day = $dd_date_clone->day+1;
+			$dd_date_clone->set_day( ($dd_date_clone->get_day() ?? 0) + 1 );
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
-		}elseif (isset($dd_date->month)) {
+		}elseif ($dd_date->get_month() !== null) {
 
 			$dd_date_clone = clone $dd_date;
-			$dd_date_clone->month = $dd_date_clone->month+1;
+			$dd_date_clone->set_month( ($dd_date_clone->get_month() ?? 0) + 1 );
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
-		}elseif (isset($dd_date->year)) {
+		}elseif ($dd_date->get_year() !== null) {
 
 			$dd_date_clone = clone $dd_date;
-			$dd_date_clone->year = $dd_date_clone->year+1;
+			$dd_date_clone->set_year( ($dd_date_clone->get_year() ?? 0) + 1 );
 			$final_search_range_seconds = dd_date::convert_date_to_seconds($dd_date_clone)-1;
 
 		}
@@ -547,7 +547,7 @@ class component_date extends component_common {
 				$time 	 = dd_date::convert_date_to_seconds($dd_date);
 				if (isset($current_data->period->time) && $current_data->period->time!=$time) {
 					debug_log(__METHOD__
-						." Unequal time seconds value: current: ".to_string($current_data->period->time).", calculated: $time. Used calculated time. []"
+						.' Unequal time seconds value: current: '.to_string($current_data->period->time).', calculated: '.$time.'. Used calculated time. []'
 						, logger::WARNING
 					);
 				}
@@ -561,7 +561,7 @@ class component_date extends component_common {
 				$time 	 = dd_date::convert_date_to_seconds($dd_date);
 				if (isset($current_data->start->time) && $current_data->start->time!=$time) {
 					debug_log(__METHOD__
-						." Unequal time seconds value: current: ".to_string($current_data->start->time).", calculated: $time. Used calculated time. []"
+						.' Unequal time seconds value: current: '.to_string($current_data->start->time).', calculated: '.$time.'. Used calculated time. []'
 						, logger::WARNING
 					);
 				}
@@ -573,7 +573,7 @@ class component_date extends component_common {
 				$time 	 = dd_date::convert_date_to_seconds($dd_date);
 				if (isset($current_data->end->time) && $current_data->end->time!=$time) {
 					debug_log(__METHOD__
-						." Unequal time seconds value: current: ".to_string($current_data->end->time).", calculated: $time. Used calculated time. []"
+						.' Unequal time seconds value: current: '.to_string($current_data->end->time).', calculated: '.$time.'. Used calculated time. []'
 						, logger::WARNING
 					);
 				}
@@ -588,7 +588,7 @@ class component_date extends component_common {
 
 				if (isset($current_data->time) && $current_data->time!=$time) {
 					debug_log(__METHOD__
-						." Unequal time seconds value: current: ".to_string($current_data->time).", calculated: $time. Used calculated time. []" . PHP_EOL
+						.' Unequal time seconds value: current: '.to_string($current_data->time).', calculated: '.$time.'. Used calculated time. []' . PHP_EOL
 						.' $current_data->time: ' . to_string($current_data->time) . PHP_EOL
 						.' calculated: ' . $time
 						, logger::WARNING

@@ -1,4 +1,5 @@
 <?php
+/** @var component_av $this */
 // JSON data component controller
 
 

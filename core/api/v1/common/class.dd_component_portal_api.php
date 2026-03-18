@@ -95,7 +95,7 @@ final class dd_component_portal_api {
 				$current_data = $component->get_data();
 				$total = count($original_data) - count($current_data);
 				$component->Save();
-				$response->msg[] = "Deleted $total locators ($model_name - $tipo)";
+				$response->msg[] = "Deleted " . (string)$total . " locators ($model_name - $tipo)";
 				// response result
 				$response->result = $total;
 			}else{

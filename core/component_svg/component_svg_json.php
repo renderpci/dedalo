@@ -1,4 +1,5 @@
 <?php
+/** @var component_svg $this */
 // JSON data component controller
 
 
