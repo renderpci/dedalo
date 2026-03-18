@@ -120,6 +120,7 @@ trait search_component_date {
 		$ctx->component_tipo = $component_tipo;
 		$ctx->column         = section_record_data::get_column_name(get_called_class());
 		$ctx->table_alias    = $query_object->table_alias;
+		$ctx->table          = $query_object->table;
 		$ctx->date_mode      = $properties->date_mode ?? 'date';
 		$ctx->operator       = !empty($query_object->q_operator) ? trim($query_object->q_operator) : '=';
 
@@ -137,26 +138,11 @@ trait search_component_date {
 	*/
 	protected static function dispatch_date_mode_sql(object $query_object, ?object $q_object, object $ctx) : object {
 
-		/**
-		 * @TODO
-		 * Work in progress
-		 * Experimental case where column is 'timestamp' (Time machine table)
-		 * ! NOT finished
-		 */
-		// column 'timestamp' case (Time machine table)
-		 if($ctx->table_alias==='dd15') {
-			dump($ctx, ' ctx +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
-			dump($query_object, ' query_object +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
-
-			[$dd_date, $time] = self::extract_time_from_q($q_object);
-			$Q1 = $dd_date->get_dd_timestamp("Y-m-d");
-			$query_object->params   = ['_Q1_' => $Q1];
-			$query_object->sentence = "DATE(\"timestamp\") $ctx->operator $1";
-
-			dump($query_object, ' query_object 2 +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
-			return $query_object;
-		}
-
+		if($ctx->table === 'matrix_time_machine'){
+            // Use time machine specific dispatcher from trait search_component_relation_common_tm
+            return self::dispatch_date_mode_sql_tm($query_object, $q_object, $ctx);
+        }
+		
 		switch ($ctx->date_mode) {
 			case 'date':
 			case 'range':

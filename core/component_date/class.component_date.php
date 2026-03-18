@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include 'trait.search_component_date.php';
+include 'trait.search_component_date_tm.php';
 /**
 * CLASS COMPONENT DATE
 * data_column_name : 'date'
@@ -45,6 +46,7 @@ class component_date extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_date;
+	use search_component_date_tm;
 
 
 

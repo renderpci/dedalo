@@ -142,7 +142,7 @@
 								$tags_persons_config = $properties->tags_persons;
 								foreach ($tags_persons_config as $related_section_tipo => $current_value) {
 									$ar_tags_persons =  $this->get_tags_persons($related_section_tipo, $ar_related_sections);
-									$tags_persons = array_merge($tags_persons, $ar_tags_persons);
+									$tags_persons = [...$tags_persons, ...$ar_tags_persons];
 								}
 						}
 

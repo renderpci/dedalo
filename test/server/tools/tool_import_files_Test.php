@@ -8,6 +8,16 @@ final class tool_import_files_test extends BaseTestCase {
 
     public static $model = 'tool_import_files';
 
+
+
+    protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
     /**
     * TEST_USER_LOGIN
     * @return void

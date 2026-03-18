@@ -1030,10 +1030,10 @@ class component_media_common extends component_common {
 		$extensions = [$this->get_extension()];
 
 		$allowed_extensions		= $this->get_allowed_extensions();
-		$extensions				= array_merge($extensions, $allowed_extensions);
+		$extensions				= [...$extensions, ...$allowed_extensions];
 
 		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
-		$extensions				= array_merge( $extensions, $alternative_extensions);
+		$extensions				= [...$extensions, ...$alternative_extensions];
 
 		$unique_extensions		= array_unique($extensions);
 		$data					= $this->get_data();
@@ -1437,11 +1437,11 @@ class component_media_common extends component_common {
 			$normalized_extension	= $this->get_extension();
 			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 			$allowed_extensions 	= $this->get_allowed_extensions();
-			$ar_extensions			= array_merge(
-				[$normalized_extension],
-				$alternative_extensions,
-				$allowed_extensions
-			);
+			$ar_extensions			= [
+				$normalized_extension,
+				...$alternative_extensions,
+				...$allowed_extensions
+			];
 
 		// data
 			$data = $this->get_data();
@@ -1610,11 +1610,11 @@ class component_media_common extends component_common {
 			$normalized_extension	= $this->get_extension();
 			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 			$allowed_extensions 	= $this->get_allowed_extensions();
-			$ar_extensions			= array_merge(
-				[$normalized_extension],
-				$alternative_extensions,
-				$allowed_extensions
-			);
+			$ar_extensions			= [
+				$normalized_extension,
+				...$alternative_extensions,
+				...$allowed_extensions
+			];
 
 		// data
 			$data = $this->get_data();

@@ -45,7 +45,7 @@
 			// section JSON context
 				$section_json = $section->get_json();
 
-			$context = array_merge($context, $section_json->context);
+			$context = [...$context, ...$section_json->context];
 		}
 	}else{
 
@@ -209,7 +209,7 @@
 					}
 
 				// data
-					$data = array_merge($data, $section_json->data);
+					$data = [...$data, ...$section_json->data];
 			}
 
 	}//end if (empty($sections_data))

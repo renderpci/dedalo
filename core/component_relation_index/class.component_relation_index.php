@@ -328,7 +328,7 @@ class component_relation_index extends component_relation_common {
 
 			// context become calculated and merged with previous
 			if (isset($datum->context) && is_array($datum->context)) {
-				$context = array_merge($context, $datum->context);
+				$context = [...$context, ...$datum->context];
 			}
 		}
 
@@ -466,10 +466,10 @@ class component_relation_index extends component_relation_common {
 										if (!isset($final_request_config->show)) {
 											$final_request_config->show = new stdClass();
 										}
-										$final_request_config->show->ddo_map = array_merge(
-											(array)($final_request_config->show->ddo_map ?? []),
-											(array)($section_request_config->show->ddo_map ?? [])
-										);
+										$final_request_config->show->ddo_map = [
+											...($final_request_config->show->ddo_map ?? []),
+											...($section_request_config->show->ddo_map ?? [])
+										];
 									}
 								}
 							}

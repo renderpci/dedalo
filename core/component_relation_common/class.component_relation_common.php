@@ -222,6 +222,7 @@ class component_relation_common extends component_common {
 							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
 								$ar_children = [...$ar_children, ...$result];
+								$ar_children = [...$ar_children, ...$result];
 							}
 						}
 					}
