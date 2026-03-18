@@ -493,6 +493,11 @@ class diffusion_chain_processor {
 	 * GET_SECTION_DIFFUSION_NODE
 	 * Returns the diffusion_tipo for a section within current scope.
 	 * 
+	 * When multiple candidates target the same section, priority is given to
+	 * alias models (e.g., `table_alias` over generic `table`). This ensures that 
+	 * explicit contextual mappings or alternate views defined in the ontology 
+	 * take precedence over standard generic mappings during resolution.
+	 * 
 	 * @param string $section_tipo
 	 * @return string|null diffusion_tipo or null if not in scope
 	 */
@@ -502,32 +507,43 @@ class diffusion_chain_processor {
 			return self::$section_diffusion_map[$section_tipo];
 		}
 
+		// Fetch all children nodes defined recursively under the current diffusion element scope
 		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
 			self::$diffusion_element_tipo		
 		);
 
+		$candidates = [];
 		foreach ($ar_diffusion_nodes as $current_tipo) {
-			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
+			
+			// Resolve the target section_tipo that this node is configured to represent
+			$current_target_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 				$current_tipo,
 				'section',
 				'related',
 				true
-			);
+			)[0] ?? null;
 
-			if(empty($ar_sections)) {
-				continue;
+			// Store matches indexed by model_name for priority scoring and overrides below
+			if($current_target_section_tipo && $current_target_section_tipo === $section_tipo) {
+
+				$model_name = ontology_node::get_model_by_tipo($current_tipo);
+				$candidates[$model_name] = $current_tipo;
 			}
-			
-			foreach ($ar_sections as $current_section_tipo) {
-				// Store the mapping (first diffusion_node wins if multiple)
-				if($section_tipo === $current_section_tipo) {
-					return $current_tipo;
-				}
+		}
+
+		// Note: Giving priority to the table alias when more than one item (e.g. table) 
+		// is targeting to the dessired section tipo (E.g. 'table' => 'ts' and 'table_alias' => 'ts_themes').
+		if( !empty($candidates) ) {
+			$aliasKey = array_find($candidates, fn($k) => str_contains($k, '_alias'));
+			if($aliasKey) {
+				return $candidates[$aliasKey];
 			}
+			return array_key_first($candidates);
 		}
 
 		return null;
 	}
+	
 
 
 	/**
