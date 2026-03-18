@@ -114,7 +114,9 @@ trait order {
 				}
 			}
 
-			$this->sql_obj->order[] = $sql_query_order;
+			if (!empty($sql_query_order) && !in_array($sql_query_order, $this->sql_obj->order)) {
+				$this->sql_obj->order[] = $sql_query_order;
+			}
 		}
 
 		// default order
@@ -126,7 +128,9 @@ trait order {
 			? $sql_query_order_default . ' -- default order'
 			: $sql_query_order_default;
 
-		$this->sql_obj->order_default[] = $sentence;
+		if (!in_array($sentence, $this->sql_obj->order_default)) {
+			$this->sql_obj->order_default[] = $sentence;
+		}
 	}//end build_sql_query_order
 
 
