@@ -27,6 +27,7 @@ export interface rqo_options {
 	levels?:        number;
 	total?:         number;       // client-provided total records (main section)
 	chunk_size?:    number;       // records per PHP call (default: 100)
+	process_id?:    string;
 }
 
 

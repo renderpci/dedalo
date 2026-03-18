@@ -53,7 +53,17 @@ const encoder = new TextEncoder();
  */
 function encode_sse_chunk(data: progress_data): Uint8Array {
 	const json = JSON.stringify(data);
-	return encoder.encode(`data:\n${json}\n\n`);
+	let payload = `data:\n${json}`;
+
+	// Fix Apache reverse-proxy buffering dropping early short chunks
+	// by filling out the payload with harmless JSON trailing spaces 
+	// up to the common 4096 HTTP/1.1 flush boundary.
+	if (payload.length < 4096) {
+		payload += ' '.repeat(4096 - payload.length);
+	}
+
+	payload += '\n\n';
+	return encoder.encode(payload);
 }
 
 
@@ -254,7 +264,8 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 	const total       = (options as any).total       ?? 0;
 	const estimated_total = total > 0 ? total : 0;
 	
-	const process_id = create_process(estimated_total);
+	const process_id = options.process_id || crypto.randomUUID();
+	create_process(estimated_total, process_id);
 
 	// 1. Kick off the background process independently
 	run_background_diffusion(process_id, request_rqo, cookie_header, start_time, estimated_total)
@@ -266,7 +277,10 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 
 			// Heartbeat to prevent ERR_INCOMPLETE_CHUNKED_ENCODING timeouts in proxies
 			const heartbeat = setInterval(() => {
-				try { controller.enqueue(encoder.encode(':\n')); } catch { /* ignore */ }
+				const current_state = get_progress(process_id);
+				if (current_state) {
+					try { controller.enqueue(encode_sse_chunk(current_state)); } catch { /* ignore */ }
+				}
 			}, 15000); // 15s ping
 
 			const on_update = (snapshot: progress_data) => {

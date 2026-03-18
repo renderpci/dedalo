@@ -282,8 +282,8 @@ export const render_publication_items = function(self) {
 				continue;
 			}
 
-			// local_db_id like 'process_diffusion_mht2_rsc170'
-			const local_db_id = 'process_diffusion_' + item.element_tipo + '_' + self.caller.section_tipo
+			// process_id like 'process_diffusion_8_mht2_rsc170'
+			const process_id = 'process_diffusion_' + page_globals.user_id + '_' + item.element_tipo + '_' + self.caller.section_tipo
 
 			const current_diffusion_element_tipo = item.element_tipo
 
@@ -622,7 +622,7 @@ export const render_publication_items = function(self) {
 				}
 
 			// container_bottom
-				const container_bottom = render_container_bottom(self, item, lock_items, local_db_id, current_diffusion_element_tipo, data_item)
+				const container_bottom = render_container_bottom(self, item, lock_items, process_id, current_diffusion_element_tipo, data_item)
 				publication_items_grid.appendChild(container_bottom)
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 
@@ -640,10 +640,10 @@ export const render_publication_items = function(self) {
 * Render container_bottom nodes
 * @param object item
 * @param array lock_items
-* @param string local_db_id
+* @param string process_id
 * @return HTMLElement container_bottom
 */
-export const render_container_bottom = function (self, item, lock_items, local_db_id, current_diffusion_element_tipo, data_item) {
+export const render_container_bottom = function (self, item, lock_items, process_id, current_diffusion_element_tipo, data_item) {
 
 	const container_bottom = ui.create_dom_element({
 		element_type	: 'div',
@@ -654,6 +654,13 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_container',
+			parent			: container_bottom
+		})
+
+	// response_message
+		const response_message = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_message',
 			parent			: container_bottom
 		})
 
@@ -680,7 +687,7 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 				publication_button		: publication_button,
 				diffusion_element_tipo	: current_diffusion_element_tipo,
 				diffusion_tipo			: data_item.table_tipo,
-				local_db_id				: local_db_id
+				process_id				: process_id
 			})
 		}
 		publication_button.addEventListener('click', click_handler)
@@ -699,20 +706,18 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 
 	// check process status always (reconnection after page reload)
 		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value && local_data.value.process_id) {
-					update_process_status({
-						process_id	: local_data.value.process_id,
-						local_db_id	: local_db_id,
-						container	: response_message,
-						lock_items	: lock_items
-					})
-				}
-			})
+			const processes = self.active_processes || []
+			// Sort descending so the most recent is checked first
+			const sorted_processes = [...processes].sort((a,b) => b.started_at - a.started_at)
+			const my_process = sorted_processes.find(p => p.process_id === process_id)
+
+			if (my_process) {
+				update_process_status({
+					process_id	: process_id,
+					container	: response_message,
+					lock_items	: lock_items
+				})
+			}
 		}
 		check_process_data()
 
@@ -755,13 +760,6 @@ export const render_container_bottom = function (self, item, lock_items, local_d
 				break;
 		}
 
-	// response_message
-		const response_message = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'response_message',
-			parent			: container_bottom
-		})
-
 
 	return container_bottom;
 }//end render_container_bottom
@@ -782,7 +780,7 @@ const publish_content = async (self, options) => {
 		const publication_button		= options.publication_button
 		const diffusion_element_tipo	= options.diffusion_element_tipo
 		const diffusion_tipo			= options.diffusion_tipo
-		const local_db_id				= options.local_db_id
+		const process_id				= options.process_id
 
 	// clean previous messages
 		response_message.classList.remove('error')
@@ -797,10 +795,9 @@ const publish_content = async (self, options) => {
 	// export API call — now returns a ReadableStream
 		const stream = await self.export({
 			diffusion_element_tipo	: diffusion_element_tipo,
-			diffusion_tipo			: diffusion_tipo
+			diffusion_tipo			: diffusion_tipo,
+			process_id				: process_id
 		})
-
-	// check stream
 		if (!stream) {
 			ui.update_node_content(response_message, 'Error: no stream received from server')
 			response_message.classList.add('error')
@@ -817,7 +814,7 @@ const publish_content = async (self, options) => {
 	// render base nodes for stream display
 		const render_response = render_stream({
 			container	: response_message,
-			id			: local_db_id
+			id			: process_id
 		})
 
 	// average process time for record
@@ -834,19 +831,7 @@ const publish_content = async (self, options) => {
 	// last_sse_response
 		let last_sse_response
 
-	// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
-
-			// Save process_id to IndexedDB for reconnection on page reload
-			if (sse_response.process_id && sse_response.is_running) {
-				data_manager.set_local_db_data(
-					{
-						id		: local_db_id,
-						value	: { process_id: sse_response.process_id }
-					},
-					'status'
-				)
-			}
 
 			// fire update_info_node on every reader read chunk
 			render_response.update_info_node(
@@ -922,11 +907,6 @@ const publish_content = async (self, options) => {
 			lock_items.map(el =>{
 				el.classList.remove('loading')
 			})
-			// remove process_id from IndexedDB
-			data_manager.delete_local_db_data(
-				local_db_id,
-				'status'
-			)
 			// render_process_report
 			render_process_report({
 				last_sse_response,
@@ -952,7 +932,6 @@ const publish_content = async (self, options) => {
 const update_process_status = (options) => {
 
 	const process_id	= options.process_id
-	const local_db_id	= options.local_db_id
 	const container		= options.container
 	const lock_items	= options.lock_items
 
@@ -993,7 +972,7 @@ const update_process_status = (options) => {
 		// the stream reader events
 		const render_response = render_stream({
 			container	: container,
-			id			: local_db_id
+			id			: process_id
 		})
 
 		// average process time for record
@@ -1087,11 +1066,6 @@ const update_process_status = (options) => {
 			lock_items.map(el =>{
 				el.classList.remove('loading')
 			})
-			// remove process_id from IndexedDB
-			data_manager.delete_local_db_data(
-				local_db_id,
-				'status'
-			)
 			// render_process_report
 			render_process_report({
 				last_sse_response,
