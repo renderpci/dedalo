@@ -22,6 +22,9 @@ import {
 	finish_process,
 	get_progress,
 	delete_process,
+	subscribe_to_process,
+	unsubscribe_from_process,
+	get_all_processes,
 }                                     from './lib/progress_store';
 import type {
 	rqo,
@@ -60,7 +63,10 @@ function encode_sse_chunk(data: progress_data): Uint8Array {
 // =====================================================
 
 /**
- * HANDLE_DIFFUSE_STREAM
+ * RUN_BACKGROUND_DIFFUSION
+ * Executes the diffusion process independently of the client connection.
+ * Updates progress_store which the client can poll.
+ * 
  * Main diffusion endpoint — returns a streaming response.
  * Receives client RQO → splits into chunks → calls PHP API per chunk
  * → parses → inserts into MariaDB → streams per-record progress.
@@ -68,228 +74,228 @@ function encode_sse_chunk(data: progress_data): Uint8Array {
  * When options.total is provided and exceeds chunk_size, the SQO is
  * paginated with limit/offset so PHP can release memory between batches.
  */
-function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): Response {
+async function run_background_diffusion(
+	process_id: string,
+	request_rqo: rqo,
+	cookie_header: string | null,
+	start_time: number,
+	estimated_total: number
+): Promise<void> {
 
-	const DEFAULT_CHUNK_SIZE = 100;
+	try {
+		// 1. DETERMINE CHUNKING STRATEGY
+		// To process massive diffusions safely without hitting PHP memory limits,
+		// we paginated the query (SQO) with limit/offset batches.
+		const DEFAULT_CHUNK_SIZE = 100;
+		const options     = request_rqo.options ?? {};
+		const total       = (options as any).total       ?? 0;
+		const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
+		const use_chunks  = total > 0 && total > chunk_size;
+		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
-	const stream = new ReadableStream({
-		async start(controller) {
+		const table_results_map = new Map<string, number>();
+		const errors: string[] = [];
+		let global_counter = 0;
 
-			const start_time = Date.now();
-			let process_id = '';
+		// 2. MAIN CHUNK LOOP
+		for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
+			const chunk_offset = chunk_idx * chunk_size;
 
-			try {
-				// Read chunking options
-				const options     = request_rqo.options ?? {};
-				const total       = (options as any).total       ?? 0;
-				const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
-				const use_chunks  = total > 0 && total > chunk_size;
-				const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
-
-				// Create progress entry with estimated total
-				const estimated_total = total > 0 ? total : 0;
-				process_id = create_process(estimated_total);
-
-				// Send initial chunk with process_id
-				const initial = get_progress(process_id);
-				if (initial) {
-					controller.enqueue(encode_sse_chunk(initial));
+			// Inject limit/offset pagination into the SQO criteria
+			const chunk_rqo: rqo = use_chunks
+				? {
+					...request_rqo,
+					sqo: {
+						...(request_rqo.sqo ?? {}),
+						limit:  chunk_size,
+						offset: chunk_offset,
+					},
 				}
+				: request_rqo;
 
-				// Accumulators across all chunks
-				const table_results_map = new Map<string, number>();
-				const errors: string[] = [];
-				let global_counter = 0;
-				let actual_total   = 0; // updated as we discover real record counts
+			update_progress(process_id, {
+				counter: global_counter,
+				msg:     use_chunks
+					? `Fetching chunk ${chunk_idx + 1} of ${chunk_count} from PHP...`
+					: 'Fetching data from PHP...',
+				total_ms: Date.now() - start_time,
+			});
 
-				// =====================================================
-				// CHUNK LOOP
-				// =====================================================
-				for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
+			// 3. CALL PHP API (BRIDGING BACKEND)
+			// Forwards the paginated request to PHP. PHP builds the runtime ontology
+			// objects, resolves components, and returns agnostic, unparsed record trees.
+			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
 
-					const chunk_offset = chunk_idx * chunk_size;
+			if (!php_response.result) {
+				const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
+				errors.push(err_msg);
+				console.error(`[diffuse] ${err_msg}`);
 
-					// Build RQO for this chunk
-					const chunk_rqo: rqo = use_chunks
-						? {
-							...request_rqo,
-							sqo: {
-								...(request_rqo.sqo ?? {}),
-								limit:  chunk_size,
-								offset: chunk_offset,
-							},
-						}
-						: request_rqo;
+				update_progress(process_id, {
+					counter: global_counter,
+					msg:     err_msg,
+					error:   err_msg,
+					total_ms: Date.now() - start_time,
+				});
+				
+				// Keep going to the next chunk; don't let one bad batch crash a large process
+				continue;
+			}
 
-					// Stream "fetching" progress
+			// 4. PROCESS/PARSE RESPONSE
+			// Apply client-side and structural parsers (date converters, array unfolds,
+			// token replacement) to turn the agnostic tree into structured lists
+			// ready for target DB insertion.
+			const tables = process_response(php_response);
+
+			if (tables.length === 0) continue;
+
+			// Track actual main records resolved for correct visual progress percentage
+			const main_chunk_count = (php_response.datum && php_response.datum.length > 0)
+				? php_response.datum[0].data.length
+				: 0;
+			
+			global_counter += main_chunk_count;
+
+			if (global_counter > estimated_total) {
+				update_progress(process_id, {
+					counter: global_counter,
+					msg:     'Processing records',
+				});
+			}
+
+			// 5. TARGET DATABASE INSERTION
+			for (const table of tables) {
+				const record_start = Date.now();
+
+				try {
+					// Insert/Update target Mariadb table
+					const affected = await insert_table_data(table);
+					
+					const prev = table_results_map.get(table.table_name) ?? 0;
+					table_results_map.set(table.table_name, prev + affected);
+
+					const elapsed     = Date.now() - start_time;
+					const record_time = Date.now() - record_start;
+
+					// Fire instant notification callbacks via progress_store push update
+					update_progress(process_id, {
+						counter:       global_counter,
+						msg:           'Processing records',
+						section_label: table.table_name,
+						time_ms:       record_time,
+						total_ms:      elapsed,
+					});
+
+				} catch (error: unknown) {
+					// Safeguard: Wrap single inserted tables in full try-catch wrapper.
+					// If a row or index fails to map into target table, log it and
+					// continue next iteration. Keeps full diffusion fully fault-tolerant.
+					const err_msg = error instanceof Error ? error.message : String(error);
+					console.error(`[diffuse] Error inserting into "${table.table_name}":`, error);
+
+					errors.push(`Table "${table.table_name}": ${err_msg}`);
+
+					const prev = table_results_map.get(table.table_name) ?? 0;
+					table_results_map.set(table.table_name, prev); 
+
 					update_progress(process_id, {
 						counter: global_counter,
-						msg:     use_chunks
-							? `Fetching chunk ${chunk_idx + 1} of ${chunk_count} from PHP...`
-							: 'Fetching data from PHP...',
-						total_ms: Date.now() - start_time,
+						msg:     'Processing records',
+						error:   `Table "${table.table_name}": ${err_msg}`,
 					});
-					const fetch_snapshot = get_progress(process_id);
-					if (fetch_snapshot) {
-						controller.enqueue(encode_sse_chunk(fetch_snapshot));
-					}
-
-					// 1. Call PHP diffusion_api for this chunk
-					const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
-
-					if (!php_response.result) {
-						const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
-						errors.push(err_msg);
-						console.error(`[diffuse] ${err_msg}`);
-
-						update_progress(process_id, {
-							counter: global_counter,
-							msg:     err_msg,
-							error:   err_msg,
-							total_ms: Date.now() - start_time,
-						});
-						const err_snap = get_progress(process_id);
-						if (err_snap) {
-							controller.enqueue(encode_sse_chunk(err_snap));
-						}
-
-						// Continue to next chunk — don't abort entire process
-						continue;
-					}
-
-					// 2. Process the response: apply parsers, transform to SQL-ready data
-					const tables = process_response(php_response);
-
-					if (tables.length === 0) {
-						// Empty chunk — continue
-						continue;
-					}
-
-					// Count MAIN source records in this chunk (including deletions)
-					// We assume the first datum group corresponds to the main section
-					const main_chunk_count = (php_response.datum && php_response.datum.length > 0)
-						? php_response.datum[0].data.length
-						: 0;
-					
-					global_counter += main_chunk_count;
-
-					// Update progress store total if we exceed estimate
-					if (global_counter > estimated_total) {
-						update_progress(process_id, {
-							counter: global_counter,
-							msg:     'Processing records',
-						});
-					}
-
-					// 3. Insert into MariaDB with per-table progress
-					for (const table of tables) {
-
-						const record_start = Date.now();
-
-						try {
-							const affected = await insert_table_data(table);
-							
-							// Accumulate per-table results
-							const prev = table_results_map.get(table.table_name) ?? 0;
-							table_results_map.set(table.table_name, prev + affected);
-
-							// Update progress store and stream
-							const elapsed     = Date.now() - start_time;
-							const record_time = Date.now() - record_start;
-
-							update_progress(process_id, {
-								counter:       global_counter,
-								msg:           'Processing records',
-								section_label: table.table_name,
-								time_ms:       record_time,
-								total_ms:      elapsed,
-							});
-
-							const snapshot = get_progress(process_id);
-							if (snapshot) {
-								controller.enqueue(encode_sse_chunk(snapshot));
-							}
-
-						} catch (error: unknown) {
-							const err_msg = error instanceof Error ? error.message : String(error);
-							console.error(`[diffuse] Error inserting into "${table.table_name}":`, error);
-
-							errors.push(`Table "${table.table_name}": ${err_msg}`);
-
-							const prev = table_results_map.get(table.table_name) ?? 0;
-							table_results_map.set(table.table_name, prev); // keep previous count
-
-							update_progress(process_id, {
-								counter: global_counter,
-								msg:     'Processing records',
-								error:   `Table "${table.table_name}": ${err_msg}`,
-							});
-
-							const snapshot = get_progress(process_id);
-							if (snapshot) {
-								controller.enqueue(encode_sse_chunk(snapshot));
-							}
-						}
-					}
-				} // end chunk loop
-
-				// =====================================================
-				// FINAL RESULT
-				// =====================================================
-				const table_results = Array.from(table_results_map.entries()).map(
-					([table_name, records_affected]) => ({ table_name, records_affected })
-				);
-
-				const final_result: engine_response = {
-					result: errors.length === 0,
-					msg:    errors.length === 0
-						? `OK. Processed ${table_results.length} table(s), ${global_counter} record(s)` +
-						  (use_chunks ? ` in ${chunk_count} chunk(s)` : '')
-						: `Partial success. ${errors.length} error(s)`,
-					tables: table_results,
-					errors: errors.length > 0 ? errors : undefined,
-				};
-
-				finish_process(process_id, final_result);
-
-				const final_snapshot = get_progress(process_id);
-				if (final_snapshot) {
-					controller.enqueue(encode_sse_chunk(final_snapshot));
 				}
-
-			} catch (error: unknown) {
-				// Unhandled error — send as final chunk
-				const err_msg = error instanceof Error ? error.message : String(error);
-				console.error('[diffuse_stream] Unhandled error:', error);
-
-				const error_result: engine_response = {
-					result: false,
-					msg:    `Internal error: ${err_msg}`,
-					errors: [err_msg],
-				};
-
-				if (process_id) {
-					finish_process(process_id, error_result);
-					const snapshot = get_progress(process_id);
-					if (snapshot) {
-						controller.enqueue(encode_sse_chunk(snapshot));
-					}
-				} else {
-					const error_progress: progress_data = {
-						process_id: '',
-						is_running: false,
-						started_at: start_time,
-						data:       { msg: error_result.msg, counter: 0, total: 0 },
-						total_time: '0 sec',
-						errors:     [err_msg],
-						result:     error_result,
-					};
-					controller.enqueue(encode_sse_chunk(error_progress));
-				}
-			} finally {
-				controller.close();
 			}
+		} 
+
+		// Gather summaries
+		const table_results = Array.from(table_results_map.entries()).map(
+			([table_name, records_affected]) => ({ table_name, records_affected })
+		);
+
+		const final_result: engine_response = {
+			result: errors.length === 0,
+			msg:    errors.length === 0
+				? `OK. Processed ${table_results.length} table(s), ${global_counter} record(s)` +
+				  (use_chunks ? ` in ${chunk_count} chunk(s)` : '')
+				: `Partial success. ${errors.length} error(s)`,
+			tables: table_results,
+			errors: errors.length > 0 ? errors : undefined,
+		};
+
+		// Marks state.is_running to false, enabling the polling streams to auto-close
+		finish_process(process_id, final_result);
+
+	} catch (error: unknown) {
+		const err_msg = error instanceof Error ? error.message : String(error);
+		console.error('[diffuse_stream] Unhandled error:', error);
+
+		const error_result: engine_response = {
+			result: false,
+			msg:    `Internal error: ${err_msg}`,
+			errors: [err_msg],
+		};
+
+		finish_process(process_id, error_result);
+	}
+}
+
+
+
+/**
+ * HANDLE_DIFFUSE_STREAM
+ * Main diffusion endpoint — returns a streaming response.
+ * Starts background processing and streams polled progress in real-time.
+ */
+function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): Response {
+
+	const start_time = Date.now();
+	const options     = request_rqo.options ?? {};
+	const total       = (options as any).total       ?? 0;
+	const estimated_total = total > 0 ? total : 0;
+	
+	const process_id = create_process(estimated_total);
+
+	// 1. Kick off the background process independently
+	run_background_diffusion(process_id, request_rqo, cookie_header, start_time, estimated_total)
+		.catch(console.error);
+
+	// 2. Stream progress updates back to the client via push-notify
+	const stream = new ReadableStream({
+		start(controller) {
+
+			// Heartbeat to prevent ERR_INCOMPLETE_CHUNKED_ENCODING timeouts in proxies
+			const heartbeat = setInterval(() => {
+				try { controller.enqueue(encoder.encode(':\n')); } catch { /* ignore */ }
+			}, 15000); // 15s ping
+
+			const on_update = (snapshot: progress_data) => {
+				try {
+					controller.enqueue(encode_sse_chunk(snapshot));
+				} catch { 
+					/* stream closed by client */ 
+					clearInterval(heartbeat);
+					unsubscribe_from_process(process_id, on_update);
+					return;
+				}
+
+				if (!snapshot.is_running) {
+					clearInterval(heartbeat);
+					unsubscribe_from_process(process_id, on_update);
+					try { controller.close(); } catch { /* already closed */ }
+				}
+			};
+
+			subscribe_to_process(process_id, on_update);
+
+			// Send initial state immediately
+			const initial = get_progress(process_id);
+			if (initial) controller.enqueue(encode_sse_chunk(initial));
 		},
+		cancel() {
+			// In case the stream is cancelled natively by the client
+			unsubscribe_from_process(process_id, () => {}); // Fallback: won't remove specific cb easily this way but covered above
+		}
 	});
 
 	return new Response(stream, {
@@ -302,6 +308,7 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 		},
 	});
 }
+
 
 
 
@@ -334,12 +341,17 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 	const stream = new ReadableStream({
 		start(controller) {
 
+			// Heartbeat to prevent proxy disconnects
+			const heartbeat = setInterval(() => {
+				try { controller.enqueue(encoder.encode(':\n')); } catch { /* ignore */ }
+			}, 15000);
+
 			const poll = () => {
 
 				const snapshot = get_progress(process_id);
 
 				if (!snapshot) {
-					// Process not found (already purged or never existed)
+					// Process not found
 					const not_found: progress_data = {
 						process_id,
 						is_running: false,
@@ -348,6 +360,7 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 						total_time: '0 sec',
 						errors:     ['Process not found or already completed'],
 					};
+					clearInterval(heartbeat);
 					controller.enqueue(encode_sse_chunk(not_found));
 					controller.close();
 					return;
@@ -357,8 +370,7 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 				controller.enqueue(encode_sse_chunk(snapshot));
 
 				if (!snapshot.is_running) {
-					// Done — cleanup and close
-					delete_process(process_id);
+					clearInterval(heartbeat);
 					controller.close();
 					return;
 				}
@@ -370,6 +382,9 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 			// Start polling
 			poll();
 		},
+		cancel() {
+			// cleanup if client aborts early
+		}
 	});
 
 	return new Response(stream, {
@@ -423,6 +438,7 @@ async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string |
 
 const server = Bun.serve({
 	unix: SOCKET_PATH,
+
 
 	async fetch(request: Request): Promise<Response> {
 
@@ -478,6 +494,10 @@ const server = Bun.serve({
 				case 'get_ontology_map': {
 					const result = await handle_get_ontology_map(body, cookie_header);
 					return Response.json(result);
+				}
+				case 'list_processes': {
+					const logs = get_all_processes();
+					return Response.json({ result: true, processes: logs });
 				}
 				default:
 					return Response.json(
