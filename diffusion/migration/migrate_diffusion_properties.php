@@ -2015,6 +2015,26 @@ function process_node($node, $level) {
 										break;
 									}
 								}
+
+								if(empty($final_method_cp)) {
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+									$new_props->process->ddo_map = $ddo_map_cp;
+									
+
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id\n";
+									break;
+									
+								}
 								
 								if($final_method_cp === 'get_diffusion_dato') {
 									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
