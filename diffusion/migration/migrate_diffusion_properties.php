@@ -3455,6 +3455,88 @@ function process_node($node, $level) {
 							
 							break;
 
+						case 'component_iri':
+
+							$is_empty_iri = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_iri($props)) {
+
+								$ddo_map_iri = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_iri',
+									null,
+									null,
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_iri = $props->data_to_be_used ?? null;
+							if($data_to_be_used_iri && $data_to_be_used_iri === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'component_iri',
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+							
+
+							break;
+					}
 				}
 			}
 		}
