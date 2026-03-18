@@ -2001,7 +2001,7 @@ function process_node($node, $level) {
 										$custom_parents_config = $ca->custom_parents;
 									}
 									
-									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value') {
+									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value' || $method === 'get_diffusion_resolve_value') {
 										$final_method_cp = $method;
 										$final_args = $args_node;
 										break;
@@ -2043,7 +2043,53 @@ function process_node($node, $level) {
 										$final_args,
 										null
 									);
-								} else { // get_diffusion_value or fallback
+								} else if($final_method_cp === 'get_diffusion_resolve_value') {
+									$separator = $final_args->separator ?? ' ';
+									$custom_arguments = $final_args->custom_arguments ?? [];
+									
+									$pattern_parts = [];
+									$letters = range('a', 'z');
+									
+									foreach ($custom_arguments as $index => $arg) {
+										$sub_args = $arg->process_dato_arguments ?? null;
+										if ($sub_args && isset($sub_args->target_component_tipo)) {
+											$sub_target = trim($sub_args->target_component_tipo);
+											$letter = $letters[$index] ?? 'z';
+											
+											$ddo_map_cp[] = (object)[
+												'tipo' => $sub_target,
+												'parent' => $final_target,
+												'id' => $letter
+											];
+											
+											$pattern_parts[] = '${' . $letter . '}';
+										}
+									}
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = [
+										(object)[
+											'fn' => 'parser_text::text_format',
+											'options' => (object)[
+												'pattern' => implode($separator, $pattern_parts)
+											]
+										]
+									];
+									$new_props->process->ddo_map = $ddo_map_cp;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["Name Surname"];
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true) {
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									break;
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
 									
 									// Reconstruct add_parents if found in hierarchy
