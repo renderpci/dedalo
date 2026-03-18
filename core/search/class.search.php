@@ -71,9 +71,9 @@ class search {
 	* GET_INSTANCE
 	* Returns a new instance of the class based on the mode
 	* @param object $search_query_object
-	* @return class instance
+	* @return search instance
 	*/
-	public static function get_instance(object $search_query_object) : object {
+	public static function get_instance(object $search_query_object) : search {
 
 		// switch class from mode
 		$mode = $search_query_object->mode ?? null;
