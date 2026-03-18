@@ -551,7 +551,7 @@ class tool_import_dedalo_csv extends tool_common {
 						'section_id' => $section_id ? (int)$section_id : null
 					]);
 				}
-				
+
 			// set the information about the process
 				$process_info->section_id = $section_id;
 				$process_info->msg = ($exists===true)

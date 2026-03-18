@@ -3478,6 +3478,16 @@ abstract class component_common extends common {
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
+
+		if(!is_array($changed_data->value) && $changed_data->value!==null) {
+			debug_log(__METHOD__
+			   .' Invalid value type for component: ' . get_called_class() . PHP_EOL
+			   .' value: ' . json_encode($changed_data->value, JSON_PRETTY_PRINT)
+			   , logger::ERROR
+			);
+			return false;
+		}
+
 		switch ($changed_data->action) {
 
 			// insert given value in data

@@ -36,7 +36,9 @@ class db_tasks {
 				'session_data',
 				'matrix_counter',
 				'matrix_counter_dd',
-				'temp'
+				'temp',
+				'relations',
+				'relations_DES'
 			];
 
 			// Find and iterate all db tables

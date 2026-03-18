@@ -7,6 +7,16 @@ final class tool_lang_test extends BaseTestCase {
 
 	public $tool;
 
+
+
+	protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
 	/**
 	* TEST_USER_LOGIN
 	* @return void
