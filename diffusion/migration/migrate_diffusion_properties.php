@@ -3128,6 +3128,8 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
+							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
+
 							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
 							if( $process_dato 
 								&& $process_dato=== "diffusion_sql::map_target_section_tipo"){							
@@ -3183,6 +3185,11 @@ function process_node($node, $level) {
 								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] text_area empty props -> get_diffusion_value\n";
+								break;
+							}
+							break;
+
 						case 'component_html_text':
 							$is_empty_cd = function($props) {
 								if (empty($props)) return true;
