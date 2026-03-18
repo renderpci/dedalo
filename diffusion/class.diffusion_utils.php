@@ -87,6 +87,17 @@ class diffusion_utils {
             return reset($ar_section_tipos);
         }
 
+		$model = $node->get_model();
+		if (str_contains($model, '_alias')) {
+
+			$search_model = str_replace('_alias','',$model);
+			$related_tipo = ontology_node::get_ar_tipo_by_model_and_relation($tipo, $search_model, 'related', true)[0] ?? null;
+			if (empty($related_tipo)) {
+				return null;
+			}
+			return self::get_related_section_tipo($related_tipo);
+		}
+
         return null;
     }
 
