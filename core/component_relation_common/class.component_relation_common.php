@@ -221,7 +221,7 @@ class component_relation_common extends component_common {
 							$ar_children[] = $ddo;
 							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
-								$ar_children = array_merge($ar_children, $result);
+								$ar_children = [...$ar_children, ...$result];
 							}
 						}
 					}
@@ -307,7 +307,7 @@ class component_relation_common extends component_common {
 				$current_ddo_map = is_object($dd_request_config) && isset($dd_request_config->show)
 					? ($dd_request_config->show->ddo_map ?? [])
 					: [];
-				$ddo_map = array_merge([$ddo_section_id], $current_ddo_map);
+				$ddo_map = [$ddo_section_id, ...$current_ddo_map];
 				$ddo_direct_children = array_filter($ddo_map, function($el){
 					return $el->parent === $this->tipo;
 				});
@@ -454,7 +454,7 @@ class component_relation_common extends component_common {
 				// 	$current_column = get_last_column_recursive([$current_column]);
 				// }
 				// get the value and fallback_value of the component and stored to be joined
-				$locator_column_obj	= array_merge($locator_column_obj, $current_column->ar_columns_obj);
+				$locator_column_obj	= [...$locator_column_obj, ...$current_column->ar_columns_obj];
 
 				// store the columns into the full columns array
 				$ar_columns[] = $current_column;
@@ -462,7 +462,7 @@ class component_relation_common extends component_common {
 
 			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
 			if(isset($this->sub_columns_divison) && $this->sub_columns_divison || $this->section_id === null){
-				$ar_cells = array_merge($ar_cells, $ar_columns);
+				$ar_cells = [...$ar_cells, ...$ar_columns];
 			}else{
 				//create the row of the portal for the main locator only
 				$grid_row = new dd_grid_cell_object();
@@ -1582,8 +1582,8 @@ class component_relation_common extends component_common {
 	* RESOLVE_MAP_NODE_DATA
 	* Resolves visual and category descriptive data for a specific section node record.
 	*
-	* Fetches the primary term (string label) of the item. Additionally, if a typology 
-	* relation is populated, fetches the related locator and pulls the term label 
+	* Fetches the primary term (string label) of the item. Additionally, if a typology
+	* relation is populated, fetches the related locator and pulls the term label
 	* of that target typology section entry setup.
 	*
 	* @param object $map_node       Ontology node configuration data containing thesaurus targets.
@@ -2064,12 +2064,12 @@ class component_relation_common extends component_common {
 
 				case 'hierarchy_types':
 					$hierarchy_types = component_relation_common::get_hierarchy_sections_from_types($source_item->value);
-					$ar_section_tipo = array_merge($ar_section_tipo, $hierarchy_types);
+					$ar_section_tipo = [...$ar_section_tipo, ...$hierarchy_types];
 					break;
 
 				case 'ontology_sections':
 					$ontolgoy_sections = ontology::get_all_ontology_sections();
-					$ar_section_tipo = array_merge($ar_section_tipo, $ontolgoy_sections);
+					$ar_section_tipo = [...$ar_section_tipo, ...$ontolgoy_sections];
 					break;
 
 				case 'field_value':
@@ -2215,7 +2215,7 @@ class component_relation_common extends component_common {
 							}
 						}
 
-					$ar_section_tipo = array_merge($ar_section_tipo, $valid_sections_tipo);
+					$ar_section_tipo = [...$ar_section_tipo, ...$valid_sections_tipo];
 					break;
 			}
 		}//end foreach($ar_section_tipo_sources as $source_item)
@@ -2499,7 +2499,7 @@ class component_relation_common extends component_common {
 					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $element);
 					// join the result data with the siblings resolution.
 					if (!empty($result_compnent_data)) {
-						$current_compnent_data = array_merge($current_compnent_data, $result_compnent_data);
+						$current_compnent_data = [...$current_compnent_data, ...$result_compnent_data];
 					}
 				}
 			}
@@ -2526,7 +2526,7 @@ class component_relation_common extends component_common {
 				$ar_children[] = $ddo;
 				$result = component_relation_common::get_ddo_children_recursive($ar_ddo, $ddo);
 				if (!empty($result)) {
-					$ar_children = array_merge($ar_children, $result);
+					$ar_children = [...$ar_children, ...$result];
 				}
 			}
 		}
@@ -2930,7 +2930,7 @@ class component_relation_common extends component_common {
 							$new_data[] = $parent_locator;
 						}
 					}
-					$data = array_merge($data, $new_data);
+					$data = [...$data, ...$new_data];
 				}
 
 			// send to diffusion for normalize formats
@@ -3003,7 +3003,7 @@ class component_relation_common extends component_common {
 				$current_locator
 			);
 
-			$ar_data = array_merge($ar_data, $result_compnent_data);
+			$ar_data = [...$ar_data, ...$result_compnent_data];
 		}
 
 
