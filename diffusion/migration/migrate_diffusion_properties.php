@@ -2005,6 +2005,8 @@ function process_node($node, $level) {
 										$final_method_cp = $method;
 										$final_args = $args_node;
 										break;
+									}else if($method === 'get_dato'){
+										$final_method_cp = $args_node->process_dato ?? null;
 									}
 									
 									if($ca && isset($ca->process_dato_arguments)) {
@@ -2090,6 +2092,33 @@ function process_node($node, $level) {
 									echo "{$indent}- [$tipo] $model_name\n";
 									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
 									break;
+								} else if($final_method_cp === 'diffusion::map_section_id_to_subtitles_url') {
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();;
+
+									if (!empty($ddo_map_cp)) {
+										$ddo_map_cp[count($ddo_map_cp) - 1]->fn = 'map_section_id_to_subtitles_url';
+									}
+
+									$new_props->process->ddo_map = $ddo_map_cp;
+									$new_props->process->output_sample = "/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng";
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
+									break;
+								} 
+								else { // get_diffusion_value or fallback
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
 									
 									// Reconstruct add_parents if found in hierarchy
