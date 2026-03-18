@@ -454,32 +454,40 @@ class diffusion_chain_processor {
 
 	/**
 	 * BUILD_SECTION_DIFFUSION_MAP
-	 * Finds all diffusion nodes under a diffusion_element and maps their target sections.
+	 * Maps section_tipo identifiers to their corresponding top-level diffusion nodes.
 	 * 
-	 * @param string $diffusion_element_tipo
-	 * @return array Map of section_tipo => diffusion_tipo
+	 * Scans the full diffusion template tree definitions to build direct lookups, 
+	 * prioritizing `*_alias` model variations. If multiple containers target synonym 
+	 * sections, alias views take precedence over generic structures for disambiguation.
+	 * 
+	 * @param string $diffusion_element_tipo The parent diffusion element configuration anchor
+	 * @return array Map of [section_tipo => diffusion_tipo]
 	 */
 	private static function build_section_diffusion_map(string $diffusion_element_tipo): array {
 		
 		$map = [];
 		
-		// Get all children of the diffusion_element with model 'diffusion_node'
+		// Get all recursive children nodes under the element scope node tree
 		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
 			$diffusion_element_tipo			
 		);
 		
 		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
-			// Get the section_tipo this diffusion_node targets
+			
+			// Resolve which section_tipo this diffusion container node targets and maps
 			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_tipo,
 				'section',
 				'related',
 				true
 			);
+
+			$model_name = ontology_node::get_model_by_tipo($diffusion_tipo);
 			
 			foreach ($ar_sections as $section_tipo) {
-				// Store the mapping (first diffusion_node wins if multiple)
-				if (!isset($map[$section_tipo])) {
+				
+				// Keep first match fallback default; let alias variants override generic models
+				if (!isset($map[$section_tipo]) || str_contains($model_name, '_alias')) {
 					$map[$section_tipo] = $diffusion_tipo;
 				}
 			}
@@ -487,6 +495,7 @@ class diffusion_chain_processor {
 		
 		return $map;
 	}
+
 
 
 	/**
