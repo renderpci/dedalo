@@ -11,8 +11,10 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 		case 'component_pdf':
 		case 'component_svg':
 		case 'component_check_box':
+			if($ddo_map){
 				$process->ddo_map = $ddo_map;
-				$process->output_format = 'json';  
+			}
+			$process->output_format = 'json';  
 			break;
 		case 'component_date':
 
@@ -64,7 +66,9 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 				break;
 			}
 
-			$process->ddo_map = $ddo_map;
+			if($ddo_map){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_format = 'json'; 
 			break;
 		case 'component_dataframe':
@@ -92,7 +96,9 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 		case 'component_select_lang':
 		case 'component_radio_button':		
 		case 'component_text_area':
-			$process->ddo_map = $ddo_map;
+			if($ddo_map){
+				$process->ddo_map = $ddo_map;
+			}
 			$process->output_format = 'json'; 
 			break;
 	}
