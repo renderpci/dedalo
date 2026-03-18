@@ -3270,7 +3270,7 @@ function process_node($node, $level) {
 
 							break;
 						case 'component_text_area':
-							$is_empty_cd = function($props) {
+							$is_empty_ta = function($props) {
 								if (empty($props)) return true;
 								$v5_props = is_object($props) ? clone($props) : (object)$props;
 								unset($v5_props->source);
@@ -3282,7 +3282,7 @@ function process_node($node, $level) {
 							};
 
 							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
-							if($is_empty_cd($props)) {
+							if($is_empty_ta($props)) {
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],

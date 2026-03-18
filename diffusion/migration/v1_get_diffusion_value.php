@@ -894,6 +894,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			break;
 		case 'component_select_lang':
 
 			$fields_separator = $custom_arguments[0]->divisor ?? ', ';
