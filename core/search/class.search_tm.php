@@ -48,8 +48,12 @@ class search_tm extends search {
 
 		$string_query = 'id DESC';
 
-		$this->sql_obj->order[] = $string_query;
-		$this->sql_obj->order_default[] = $string_query;
+		if (!in_array($string_query, $this->sql_obj->order)) {
+			$this->sql_obj->order[] = $string_query;
+		}
+		if (!in_array($string_query, $this->sql_obj->order_default)) {
+			$this->sql_obj->order_default[] = $string_query;
+		}
 	}//end build_sql_query_order
 
 
@@ -62,7 +66,9 @@ class search_tm extends search {
 
 		$string_query = 'id DESC';
 
-		$this->sql_obj->order[] = $string_query;
+		if (!in_array($string_query, $this->sql_obj->order)) {
+			$this->sql_obj->order[] = $string_query;
+		}
 	}//end build_sql_filter_by_locators_order
 
 
