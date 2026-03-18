@@ -574,7 +574,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			if(!empty($ddo_map)){
 				$process->ddo_map = $ddo_map;
 			}
-			$process->output_sample = '[{"section_id":"1", "section_tipo":"rsc197"}]';
+			$process->output_sample = (object)["section_id"=>"1", "section_tipo"=>"rsc197"];
 		
 			break;
 		case 'component_relation_model':
@@ -791,7 +791,6 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				$properties = $ontology_node->get_properties();
 				
 				$show = $properties->source->request_config[0]->show ?? null;
-				dump($show,'show------------------>>');
 				if(!empty($show)) {
 					$deep_ddo = [];
 					foreach ($show->ddo_map as $ddo) {
