@@ -31,9 +31,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
  * @param total - Total number of records to process
  * @returns process_id (UUID)
  */
-export function create_process(total: number): string {
-
-	const process_id = crypto.randomUUID();
+export function create_process(total: number, process_id: string): string {
 
 	const entry: progress_data = {
 		process_id,
