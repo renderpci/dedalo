@@ -1621,15 +1621,14 @@
 				'info' => 'Used to search by id ordered descendant.'
 			];
 
-		// tipo
+		// tipo : matrix_counter / matrix_counter_dd
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix_counter',
-					'matrix_counter_dd',
-					'matrix_time_machine'
+					'matrix_counter_dd'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tipo_idx
 					ON {$table}
 					USING btree (tipo ASC NULLS LAST);
 				',
@@ -1642,7 +1641,31 @@
 					WHERE tipo = \'oh1\'
 					LIMIT 1;
 				',
-				'name' => 'counters_tm_tipo_idx',
+				'name' => 'matrix_counter_tipo_idx',
+				'info' => 'Used to search by tipo.'
+			];
+
+		// tipo : time_machine (includes tipo and id for performance)
+			$ar_index[] = (object)[
+				'tables' => [
+					'matrix_time_machine'
+				],
+				'add' => '
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tipo_idx
+					ON {$table}
+					USING btree (tipo, id DESC);
+				',
+				'drop' => '
+					DROP INDEX IF EXISTS {$table}_tipo_idx;
+				',
+				'sample' => '
+					SELECT *
+					FROM matrix_time_machine
+					WHERE tipo = \'oh1\'
+					ORDER BY id DESC
+					LIMIT 1;
+				',
+				'name' => 'matrix_time_machine_tipo_idx',
 				'info' => 'Used to search by tipo.'
 			];
 
@@ -1693,26 +1716,49 @@
 			];
 
 		// timestamp
+		// Note that use function DATE(timestamp) is usefull to deal with time_machine searches in 'dd15'
+			// $ar_index[] = (object)[
+			// 	'tables' => [
+			// 		'matrix_time_machine'
+			// 	],
+			// 	'add' => '
+			// 		CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
+			// 		ON {$table}
+			// 		USING btree ("timestamp" DESC NULLS LAST );
+			// 	',
+			// 	'drop' => '
+			// 		DROP INDEX IF EXISTS {$table}_timestamp_idx;
+			// 	',
+			// 	'sample' => '
+			// 		SELECT *
+			// 		FROM matrix_time_machine
+			// 		WHERE timestamp = \'2025-08-18 19:09:05\'
+			// 		LIMIT 1;
+			// 	',
+			// 	'name' => 'matrix_time_machine_timestamp_idx',
+			// 	'info' => 'Used to search by timestamp, in time machine always descendant.'
+			// ];
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_timestamp_date_idx
 					ON {$table}
-					USING btree ("timestamp" DESC NULLS LAST );
+					(DATE("timestamp"));
 				',
 				'drop' => '
 					DROP INDEX IF EXISTS {$table}_timestamp_idx;
+					DROP INDEX IF EXISTS {$table}_timestamp_date_idx;
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
-					WHERE timestamp = \'2025-08-18 19:09:05\'
+					WHERE DATE(timestamp) = \'2025-08-18 19:09:05\'
 					LIMIT 1;
 				',
 				'name' => 'matrix_time_machine_timestamp_idx',
-				'info' => 'Used to search by timestamp, in time machine always descendant.'
+				'info' => 'Used to search by date in time machine timestamp column.'
 			];
 
 		// user_id
