@@ -1757,7 +1757,7 @@ function safe_tipo(mixed $tipo) : string|false {
 */
 function safe_section_id( string|int $section_id ) : string|int|bool {
 
-	preg_match("/^[0-9]+$/", (string)$section_id, $output_array);
+	preg_match("/^-?[0-9]+$/", (string)$section_id, $output_array);
 	if ( empty($output_array) || empty($output_array[0]) ) {
 		return false;
 	}

@@ -1750,7 +1750,7 @@ final class dd_utils_api {
 
 		// include the widget class
 			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/update_code/class.update_code.php';
-			if( !include $widget_class_file ) {
+			if( !include_once $widget_class_file ) {
 				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
 			}

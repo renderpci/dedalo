@@ -709,7 +709,7 @@ class component_text_area extends component_string_common {
 			if (!empty($ar_indexations_tag_id)) {
 
 				$all_text_tags = array_unique(
-					array_merge($matches_indexIn[$index_tag_id], $matches_indexOut[$index_tag_id])
+					[...$matches_indexIn[$index_tag_id], ...$matches_indexOut[$index_tag_id]]
 				);
 
 				foreach ($ar_indexations_tag_id as $current_tag_id) {

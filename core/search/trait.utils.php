@@ -293,7 +293,7 @@ trait utils {
 			$component_data = $component->get_data();
 
 			if (!empty($component_data)) {
-				$result = array_merge($result, $component_data);
+				$result = [...$result, ...$component_data];
 			}
 		}
 

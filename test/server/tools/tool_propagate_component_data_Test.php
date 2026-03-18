@@ -9,6 +9,16 @@ final class tool_propagate_component_data_test extends BaseTestCase {
     public static $component_tipo = 'test52'; // component_input_text
     public static $lang           = 'lg-spa';
 
+
+
+    protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
     /**
     * TEST_USER_LOGIN
     */

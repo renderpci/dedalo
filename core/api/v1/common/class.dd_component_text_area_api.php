@@ -166,7 +166,7 @@ final class dd_component_text_area_api {
 						$tags_persons_config = $properties->tags_persons;
 						foreach ($tags_persons_config as $related_section_tipo => $current_value) {
 							$ar_tags_persons =  $component_text_area->get_tags_persons($related_section_tipo, $ar_related_sections);
-							$tags_info->tags_persons = array_merge($tags_persons, $ar_tags_persons);
+							$tags_info->tags_persons = [...$tags_persons, ...$ar_tags_persons];
 						}
 				}
 

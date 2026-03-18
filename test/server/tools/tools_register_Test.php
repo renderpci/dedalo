@@ -8,6 +8,14 @@ final class tools_register_test extends BaseTestCase {
 
 
 
+	protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
+
 	/**
 	* TEST_USER_LOGIN
 	* @return void

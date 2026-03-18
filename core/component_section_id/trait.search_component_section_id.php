@@ -9,6 +9,29 @@ trait search_component_section_id {
 
 
 	/**
+	* BUILD_ORDER_SELECT
+	* Build the SELECT column sentence used to ORDER BY a component's value.
+	* For component_section_id, the column 'section_id' is a direct integer, not JSONB.
+	* @param object $options
+	* @return string $select_sentence
+	*/
+	public static function build_order_select(object $options) : string {
+
+		$table_name		= $options->table_name;
+		$column			= $options->column;
+		$alias			= $options->alias;
+
+		// section_id is a direct integer column, not JSONB.
+		// We just return the column name with alias.
+		$select_sentence = "{$table_name}.{$column} AS {$alias}";
+
+		return $select_sentence;
+	}
+
+
+
+
+	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object|false $query_object
@@ -95,7 +118,7 @@ trait search_component_section_id {
     /**
     * DISPATCH_SECTION_ID_OPERATOR_SQL
     */
-    protected static function dispatch_section_id_operator_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function dispatch_section_id_operator_sql(object $query_object, string $q, object $ctx) : object|false {
 
         $between_separator  = '...';
         $sequence_separator = ',';
@@ -189,10 +212,14 @@ trait search_component_section_id {
 	* Technical Logic: column != X
 	* What it returns: All records except the one with the specified section_id.
     */
-    protected static function resolve_section_id_different_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_different_sql(object $query_object, string $q, object $ctx) : object|false {
 
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer != _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -209,10 +236,14 @@ trait search_component_section_id {
 	* Technical Logic: column >= X
 	* What it returns: Records with section_id equal to or higher than X.
     */
-    protected static function resolve_section_id_bigger_or_equal_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_bigger_or_equal_sql(object $query_object, string $q, object $ctx) : object|false {
 
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer >= _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -229,10 +260,14 @@ trait search_component_section_id {
 	* Technical Logic: column <= X
 	* What it returns: Records with section_id equal to or lower than X.
     */
-    protected static function resolve_section_id_smaller_or_equal_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_smaller_or_equal_sql(object $query_object, string $q, object $ctx) : object|false {
 
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer <= _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -249,10 +284,14 @@ trait search_component_section_id {
 	* Technical Logic: column > X
 	* What it returns: Records with section_id strictly higher than X.
     */
-    protected static function resolve_section_id_bigger_than_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_bigger_than_sql(object $query_object, string $q, object $ctx) : object|false {
 
         // remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer > _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -269,10 +308,14 @@ trait search_component_section_id {
 	* Technical Logic: column < X
 	* What it returns: Records with section_id strictly lower than X.
     */
-    protected static function resolve_section_id_smaller_than_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_smaller_than_sql(object $query_object, string $q, object $ctx) : object|false {
 
 		// remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
 		$query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer < _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];
@@ -289,10 +332,14 @@ trait search_component_section_id {
 	* Technical Logic: column = X
 	* What it returns: The specific record matching the provided section_id.
     */
-    protected static function resolve_section_id_equal_sql(object $query_object, string $q, object $ctx) : object {
+    protected static function resolve_section_id_equal_sql(object $query_object, string $q, object $ctx) : object|false {
 
 		// remove non valid characters. Accepted: 0-9
 		$q_clean = preg_replace('/[^0-9]/', '', $q);
+
+		if ($q_clean === '') {
+			return false;
+		}
 
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column}::integer = _Q1_";
         $query_object->params   = ['_Q1_' => $q_clean];

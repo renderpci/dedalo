@@ -84,7 +84,7 @@ class component_filter extends component_relation_common {
 				// merge final data
 				$final_data = empty($data)
 					? $non_access_locators
-					: array_merge( (array)$data, $non_access_locators );
+					: [...(array)$data, ...$non_access_locators];
 			}
 
 

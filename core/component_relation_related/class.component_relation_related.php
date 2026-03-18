@@ -41,7 +41,7 @@ class component_relation_related extends component_relation_common {
 		$data		= $this->get_data();
 		$references	= $this->get_calculated_references(true);
 
-		$data_with_references = array_merge($data, $references);
+		$data_with_references = [...$data, ...$references];
 
 		return $data_with_references;
 	}//end get_data_with_references
@@ -207,7 +207,7 @@ class component_relation_related extends component_relation_common {
 					// References to data
 					// Recursion (data)
 					$ar_result		= self::get_references_recursive($tipo, $data_locator, $type_rel, true, $lang);
-					$ar_references	= array_merge($ar_references, $ar_result);
+					$ar_references	= [...$ar_references, ...$ar_result];
 				}
 			}
 
@@ -215,7 +215,7 @@ class component_relation_related extends component_relation_common {
 			foreach ($ar_references as $current_locator) {
 				// Recursion (references)
 				$ar_result		= self::get_references_recursive($tipo, $current_locator, $type_rel, true, $lang);
-				$ar_references	= array_merge($ar_references, $ar_result);
+				$ar_references	= [...$ar_references, ...$ar_result];
 			}
 		}//end if ($type_rel===DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
 

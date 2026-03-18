@@ -497,7 +497,7 @@ class component_relation_children extends component_relation_common {
 
 		foreach ($all_children as $child) {
 			$descendants = component_relation_children::get_children_recursive($child->section_id, $child->section_tipo, $component_tipo, $visited); // Recursively get descendants
-			$all_children = array_merge($all_children, $descendants);
+			$all_children = [...$all_children, ...$descendants];
 		}
 
 		return $all_children;

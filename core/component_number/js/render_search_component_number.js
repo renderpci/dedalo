@@ -92,7 +92,7 @@ const get_content_data = function(self) {
 		const inputs_value	= entries
 		const value_length	= entries.length || 1
 		for (let i = 0; i < value_length; i++) {
-			const input_element_node = get_input_element(i, inputs_value[i], self)
+			const input_element_node = get_input_element(i, entries[i], self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -146,27 +146,29 @@ const get_input_element = (i, current_value, self) => {
 		// Do not fix_number_format here to preserve between operator (...) like '1...7'
 		const parsed_value = e.target.value
 
-		if (parsed_value != e.target.value) {
-			// replace changed value
-			e.target.value = parsed_value
-		}
-
 		// Prevent to save values without numbers like '..', '-', ...
 		const has_digit = /\d/.test(parsed_value);
 
 		if (!has_digit) {
-			e.target.value = null
+			e.target.value = ''
 		}
 
 		const safe_value = (has_digit)
 			? parsed_value
 			: null;
 
+		// update value item
+		const item = self.data?.entries
+			? (self.data.entries[i] || {})
+			: {}
+
+		item.value = safe_value
+
 		// changed_data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: i,
-			value	: safe_value
+			value	: safe_value ? item : null
 		})
 
 		// update the instance data (previous to save)

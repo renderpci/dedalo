@@ -171,7 +171,7 @@ class free_node extends stdClass {
 			$ar_fragments = $this->find_word_in_text($word, $raw_text_sure, $this->av_section_id, $n_chars=400, $this->appearances_limit, $this->match_select);
 				#dump($ar_fragments, ' $ar_fragments ++ '.to_string($word));
 			if (is_array($ar_fragments)) {
-				$reel_fragments = array_merge($reel_fragments, $ar_fragments);
+				$reel_fragments = [...$reel_fragments, ...$ar_fragments];
 			}
 		}
 

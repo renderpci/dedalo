@@ -74,7 +74,7 @@ require_once 'components/elements.php';
 // logout. Delete sessions and cache files
 	$user_id = TEST_USER_ID; // Defined in bootstrap
 	if (login::is_logged()) {
-		$result = login_test::logout($user_id);
+		login_test::logout($user_id);
 	}
 
 // add PostgreSQL function to duplicate table with independent sequences

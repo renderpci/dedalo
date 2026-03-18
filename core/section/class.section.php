@@ -2359,9 +2359,9 @@ class section extends common {
 					$model_name = ontology_node::get_model_by_tipo($element_tipo, true);
 					if($model_name==='section_group' || $model_name === 'section_tab' || $model_name === 'tab') {
 						$ar_recursive_children	= section::get_ar_recursive_children($element_tipo, $ar_exclude_models);
-						$additional_excludes	= array_merge($additional_excludes, $ar_recursive_children);
+						$additional_excludes	= [...$additional_excludes, ...$ar_recursive_children];
 					}
-					$ar_elements_to_be_exclude = array_merge($ar_elements_to_be_exclude, $additional_excludes);
+					$ar_elements_to_be_exclude = [...$ar_elements_to_be_exclude, ...$additional_excludes];
 				}//end foreach ($ar_elements_to_be_exclude as $key => $element_tipo)
 			}
 		}//end if($resolve_virtual)
@@ -2482,7 +2482,7 @@ class section extends common {
 
 		# Current elements and children are not considerate part of section and must be excluded in children results
 		$exclude_models = !empty($ar_exclude_models)
-			? array_merge($default_ar_exclude_models, $ar_exclude_models)
+			? [...$default_ar_exclude_models, ...$ar_exclude_models]
 			: $default_ar_exclude_models;
 
 
@@ -2558,7 +2558,7 @@ class section extends common {
 					$ar_excluded_tipo // ar_tipo_exclude_elements
 				);
 
-			$ar_buttons_tipo = array_merge( $children_real_tipos, $children_virtual_tipos );
+			$ar_buttons_tipo = [...$children_real_tipos, ...$children_virtual_tipos];
 
 		}else{
 
