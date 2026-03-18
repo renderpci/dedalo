@@ -2725,7 +2725,7 @@ class ontology {
 			}
 
 		// set the overwrite node locator with the row
-			$overwrite_row = $db_result->fetch_one();
+			$overwrite_row = $db_result ? $db_result->fetch_one() : null;
 			if ( empty($overwrite_row) ) {
 				return null;
 			}

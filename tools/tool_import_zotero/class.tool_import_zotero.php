@@ -923,6 +923,11 @@ class tool_import_zotero extends tool_common {
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
 
+			if(!$db_result) {
+				debug_log(__METHOD__."Error on search record with requested code: ".to_string($zotero_id), logger::ERROR);
+				return null;
+			}
+
 		$section_id = null; // Default
 		if ($db_result->row_count() > 0) {
 			// Found it in database

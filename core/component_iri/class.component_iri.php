@@ -1293,8 +1293,11 @@ class component_iri extends component_common {
 			$search = search::get_instance($search_query_object);
 			$db_result = $search->search();
 
-			$record = $db_result->fetch_one();
-			return ($record !== false) ? $record : null;
+			$record = $db_result
+				? ($db_result->fetch_one() ?? null)
+				: null;
+			
+			return $record;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__
