@@ -3165,7 +3165,34 @@ function process_node($node, $level) {
 								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] date empty props -> get_diffusion_value\n";
+						case 'component_html_text':
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cd($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_html_text',
+									null, null, null, null, null, null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] html_text empty props -> get_diffusion_value\n";
 								break;
 							}
 							break;
