@@ -422,13 +422,12 @@ class area_graph extends area_common {
 		$result = self::walk_hierarchy_data($ar_data_combined);
 
 		// response
-			$response->msg 	  	= "Records found: $total_records";
+			$response->msg 	  	= 'Records found: '.$total_records;
 			$response->result 	= $result;
 			$response->total  	= $total_records;
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				$response->strQuery = $search_result->strQuery;
 				$response->debug = [exec_time_unit($start_time)];
 			}
 

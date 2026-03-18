@@ -821,7 +821,6 @@ class update {
 								case 0:
 									// skip all updates of current component because don't have update to this version
 									continue 4;
-									break;
 
 								case 1:
 									// component data is modified. Set and save
