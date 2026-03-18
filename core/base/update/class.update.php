@@ -484,7 +484,7 @@ class update {
 
 								// errors
 									if (isset($run_scripts_response->errors)) {
-										$response->errors = array_merge($response->errors, $run_scripts_response->errors);
+										$response->errors = [...$response->errors, ...$run_scripts_response->errors];
 									}
 
 								// stop_on_error

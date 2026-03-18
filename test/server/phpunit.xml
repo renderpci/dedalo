@@ -8,9 +8,6 @@
     <php>
         <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_WARNING &amp; ~E_DEPRECATED"/>
     </php>
-    <extensions>
-        <extension class="TestTimeExtension" file="TestTimeExtension.php"/>
-    </extensions>
     <source>
         <exclude>
             <directory>*/acc</directory>
@@ -34,6 +31,10 @@
             <directory>common</directory>
         </testsuite>
 
+        <testsuite name="components">
+            <directory>components</directory>
+        </testsuite>
+
         <testsuite name="core">
             <directory>core</directory>
         </testsuite>
@@ -47,16 +48,36 @@
             <directory>dd_grid</directory>
         </testsuite>
 
+        <testsuite name="diffusion">
+            <directory>diffusion</directory>
+        </testsuite>
+
         <testsuite name="hierarchy">
             <directory>hierarchy</directory>
+        </testsuite>
+
+        <testsuite name="logger">
+            <directory>logger</directory>
         </testsuite>
 
         <testsuite name="login">
             <directory>login</directory>
         </testsuite>
 
+        <testsuite name="media_engine">
+            <directory>media_engine</directory>
+        </testsuite>
+
+        <testsuite name="menu">
+            <directory>menu</directory>
+        </testsuite>
+
         <testsuite name="ontology">
             <directory>ontology</directory>
+        </testsuite>
+
+        <testsuite name="ontology_engine">
+            <directory>ontology_engine</directory>
         </testsuite>
 
         <testsuite name="search">

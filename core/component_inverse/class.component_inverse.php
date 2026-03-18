@@ -55,7 +55,7 @@ class component_inverse extends component_common {
 	public function save() : bool {
 
 		debug_log(__METHOD__
-			. " Ignored save command for component (" . get_called_class($this) . ")"
+			. " Ignored save command for component (" . get_called_class() . ")"
 			, logger::WARNING
 		);
 

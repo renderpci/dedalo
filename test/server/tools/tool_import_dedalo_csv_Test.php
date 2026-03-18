@@ -7,6 +7,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
+	protected function setUp(): void   {
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
+	}
+
+
 
 	/**
 	* GET_TEST_FILES_PATH
@@ -39,6 +46,8 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 	* @return object $options
 	*/
 	private function get_import_files_options($file_name) : object {
+
+		$files_path = DEDALO_ROOT_PATH . '/test/server/files/import_csv';
 
 		$options = json_handler::decode('
 		{
@@ -364,33 +373,14 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 	                ]
 	            }
 	        ],
-	        "time_machine_save": false
+	        "time_machine_save": false,
+			"files_path": "'.$files_path.'"
 	    }
 		');
 
 
 		return $options;
 	}//end get_import_files_options
-
-
-
-	/**
-	* TEST_USER_LOGIN
-	* @return void
-	*/
-	public function test_user_login() {
-
-		$user_id = TEST_USER_ID; // Defined in bootstrap
-
-		if (login::is_logged()===false) {
-			login_test::force_login($user_id);
-		}
-
-		$this->assertTrue(
-			login::is_logged()===true ,
-			'expected login true'
-		);
-	}//end test_user_login
 
 
 
@@ -508,6 +498,8 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 	*/
 	public function test_import_files() {
 
+		$this->user_login();
+
 		$file_names = $this->get_test_file_names();
 
 		foreach ($file_names as $file_name) {
@@ -540,22 +532,23 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 				$this->assertTrue(
 					gettype($value->result)==='boolean',
-					'expected gettype result is boolean'
+					'expected gettype value->result is boolean'
 						.' and is : '.gettype($value->result)
 				);
 				$this->assertTrue(
 					$value->result===true,
-					'expected result is true'
-						.' and is : '.to_string($value->result)
+					'expected value->result is true'
+						.' and is: '.json_encode($value->result) . PHP_EOL
+						. ' value: ' . json_encode($value, JSON_PRETTY_PRINT)
 				);
 				$this->assertTrue(
 					$value->updated_rows[0]===1,
-					'expected updated_rows[0] is 1'
-						.' and is : '.to_string($value->updated_rows[0])
+					'expected value->updated_rows[0] is 1'
+						.' and is : '.json_encode($value->updated_rows[0])
 				);
 				$this->assertTrue(
 					gettype($value->errors)==='array',
-					'expected gettype errors is array'
+					'expected gettype value->errors is array'
 						.' and is : '.gettype($value->errors)
 				);
 			}

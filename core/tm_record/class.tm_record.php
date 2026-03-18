@@ -460,6 +460,10 @@ class tm_record {
 				true // bool fallback
 			);
 
+			if(SHOW_DEBUG) {
+				$component_value = "$component_value [$tipo]";
+			}
+
 			$where_value = new stdClass();
 				$where_value->id = 1;
 				$where_value->lang = DEDALO_DATA_NOLAN;
