@@ -1,4 +1,5 @@
 <?php
+/** @var component_date $this */
 // JSON data component controller
 
 

@@ -1,4 +1,5 @@
 <?php
+/** @var component_filter $this */
 // JSON data component controller
 
 

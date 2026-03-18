@@ -306,7 +306,7 @@ class lock_components {
 
 			// response OK
 				$response->result	= true;
-				$response->msg		= "Updated db lock elements. Removed $removed_elements elements";
+				$response->msg		= 'Updated db lock elements. Removed '.$removed_elements.' elements';
 		}
 
 
@@ -467,7 +467,7 @@ class lock_components {
 				if ( $expires < $now ) {
 					$deleted_elements = true;
 					debug_log(__METHOD__
-						." Lock event for component: $event_element->component_tipo from ".$event_date->format('Y-m-d H:i:s')." has expired (> $hours hours). Removed from DB "
+						.' Lock event for component: '.$event_element->component_tipo.' from '.$event_date->format('Y-m-d H:i:s').' has expired (> '.$hours.' hours). Removed from DB '
 						, logger::WARNING
 					);
 				}else{

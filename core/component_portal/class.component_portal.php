@@ -534,15 +534,16 @@ class component_portal extends component_relation_common {
 					// dump($show, ' show empty first_item ++++++++ '.to_string($this->tipo));
 				}else{
 					// target component
+					$tmp_section_tipo = $first_item->section_tipo;
 					$path[] = (object)[
 						'component_tipo'	=> $first_item->tipo,
 						'model'				=> ontology_node::get_model_by_tipo($first_item->tipo,true),
 						'name'				=> ontology_node::get_term_by_tipo($first_item->tipo),
 						// note that section_tipo is used only to give a name to the join item.
 						// results are not really filtered by this section_tipo
-						'section_tipo'		=> is_array($first_item->section_tipo)
-							? reset($first_item->section_tipo)
-							: $first_item->section_tipo
+						'section_tipo'		=> is_array($tmp_section_tipo)
+							? reset($tmp_section_tipo)
+							: $tmp_section_tipo
 					];
 				}
 			}

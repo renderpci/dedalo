@@ -292,8 +292,8 @@ final class dd_core_api {
 
 							// overwrite (!)
 								$model	= 'section';
-								$tipo	= $properties->config->target_section_tipo ?? $tipo;
-								$config	= $properties->config ?? null;
+								$tipo	= $properties->get_config()->target_section_tipo ?? $tipo;
+								$config	= $properties->get_config() ?? null;
 
 							// tool_context
 								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
@@ -347,14 +347,14 @@ final class dd_core_api {
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set, inject the config into the context.
 								if (isset($config)) {
-									$current_context->config = $config;
+									$current_context->set_config($config);
 								}
 
 							// session_key. Restore previous SQO from session when it exists
 								if (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
 
 									// request_config
-										$request_config = array_find($current_context->request_config ?? [], function($el){
+										$request_config = array_find($current_context->get_request_config() ?? [], function($el){
 											return $el->api_engine==='dedalo';
 										});
 										if (is_object($request_config)) {
@@ -369,11 +369,11 @@ final class dd_core_api {
 							// and override default request_config SQO into the section context
 								if (!empty($section_id)) {
 
-									$current_context->mode			= 'edit'; // force edit mode
+									$current_context->set_mode('edit'); // force edit mode
 									$current_context->section_id	= $section_id; // set section_id in context
 
 									// request_config
-										$request_config = array_find($current_context->request_config ?? [], function($el){
+										$request_config = array_find($current_context->get_request_config() ?? [], function($el){
 											return $el->api_engine==='dedalo';
 										});
 										if (is_object($request_config)) {
@@ -417,16 +417,16 @@ final class dd_core_api {
 
 							// set properties with received vars
 								if (isset($search_obj->thesaurus_mode)) {
-									$current_context->properties->thesaurus_mode = $search_obj->thesaurus_mode;
+									$current_context->get_properties()->thesaurus_mode = $search_obj->thesaurus_mode;
 								}
 								if (isset($search_obj->hierarchy_types)) {
-									$current_context->properties->hierarchy_types = json_decode($search_obj->hierarchy_types);
+									$current_context->get_properties()->hierarchy_types = json_decode($search_obj->hierarchy_types);
 								}
 								if (isset($search_obj->hierarchy_sections)) {
-									$current_context->properties->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
+									$current_context->get_properties()->hierarchy_sections = json_decode($search_obj->hierarchy_sections);
 								}
 								if (isset($search_obj->hierarchy_terms)) {
-									$current_context->properties->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
+									$current_context->get_properties()->hierarchy_terms = json_decode($search_obj->hierarchy_terms);
 								}
 
 							// add to page context
@@ -521,7 +521,7 @@ final class dd_core_api {
 
 							// view. Overwrite default if is passed
 								if (!empty($view)) {
-									$current_context->view = $view;
+									$current_context->set_view($view);
 								}
 
 							// context add
@@ -669,7 +669,6 @@ final class dd_core_api {
 					$response->debug->sql_query_search = dd_core_api::$sql_query_search;
 				}
 			}
-
 
 		return $response;
 	}//end read

@@ -35,7 +35,7 @@ final class dd_manager {
 				$text			= 'API REQUEST ' . $action;
 				$text_length	= strlen($text) +1;
 				$nchars			= 200;
-				$line			= $text .' '. str_repeat(">", $nchars - $text_length).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", $nchars).PHP_EOL;
+				$line			= $text .' '. str_repeat(">", (int)$nchars - (int)$text_length).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).PHP_EOL.str_repeat("<", (int)$nchars).PHP_EOL;
 				debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 
 				// enable cache analytics

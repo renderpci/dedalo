@@ -4,7 +4,7 @@
 * Build dd_date objects like common dates but without restrictions/limitations of
 * negative dates and similar issues of timestamps
 */
-class dd_date extends stdClass {
+class dd_date implements JsonSerializable {
 
 
 
@@ -16,22 +16,30 @@ class dd_date extends stdClass {
 	static $virtual_year_days  = 372;
 	// Virtual month days
 	static $virtual_month_days = 31;
+
 	// day
-	// protected $day;
-	// // month
-	// protected $month;
-	// // year
-	// protected $year;
-	// // time
-	// protected $time;
-	// // hour
-	// protected $hour;
-	// // minute
-	// protected $minute;
-	// // second
-	// protected $second;
-	// // ms
-	// protected $ms;
+	private ?int $day = null;
+	// month
+	private ?int $month = null;
+	// year
+	private ?int $year = null;
+	// time
+	private ?int $time = null;
+	// hour
+	private ?int $hour = null;
+	// minute
+	private ?int $minute = null;
+	// second
+	private ?int $second = null;
+	// ms
+	private ?int $ms = null;
+	// errors
+	private array $errors = [];
+	// op (Only for search purposes)
+	private ?string $op = null;
+	// timestamp
+	private ?string $timestamp = null;
+
 
 
 
@@ -835,12 +843,12 @@ class dd_date extends stdClass {
 
 		$dd_date = clone $source_dd_date; // IMPORTANT : Clone always dd_date when you manipulate it
 
-		$year	= !empty($dd_date->year)   ? (int)$dd_date->year	: 0;
-		$month	= !empty($dd_date->month)  ? (int)$dd_date->month  	: 0;
-		$day	= !empty($dd_date->day)    ? (int)$dd_date->day    	: 0;
-		$hour	= !empty($dd_date->hour)   ? (int)$dd_date->hour    : 0;
-		$minute	= !empty($dd_date->minute) ? (int)$dd_date->minute  : 0;
-		$second	= !empty($dd_date->second) ? (int)$dd_date->second  : 0;
+		$year	= $dd_date->get_year()   ?? 0;
+		$month	= $dd_date->get_month()  ?? 0;
+		$day	= $dd_date->get_day()    ?? 0;
+		$hour	= $dd_date->get_hour()   ?? 0;
+		$minute	= $dd_date->get_minute() ?? 0;
+		$second	= $dd_date->get_second() ?? 0;
 
 			// Rectified 25-11-2017
 			if(!empty($month)) {
@@ -1048,4 +1056,34 @@ class dd_date extends stdClass {
 
 
 
+	/**
+	* SET_TIMESTAMP
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_timestamp(?string $value) : bool {
+		$this->timestamp = $value;
+		return true;
+	}//end set_timestamp
+
+	/**
+	* GET_TIMESTAMP
+	* @return string|null $this->timestamp
+	*/
+	public function get_timestamp() : ?string {
+		return $this->timestamp ?? null;
+	}//end get_timestamp
+
+	/**
+	* JSON_SERIALIZE
+	* @return mixed
+	*/
+	public function jsonSerialize() : mixed {
+		$vars = get_object_vars($this);
+		return array_filter($vars, function($val) {
+			return $val !== null;
+		});
+	}//end jsonSerialize
+
 }//end class dd_date
+

@@ -1,4 +1,5 @@
 <?php
+/** @var component_portal $this */
 // JSON data component controller
 
 

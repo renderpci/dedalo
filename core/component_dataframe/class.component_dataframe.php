@@ -34,7 +34,6 @@ class component_dataframe extends component_portal {
 				, logger::WARNING
 			);
 			return $data;
-			return $data;
 		}
 
 		// filtered data

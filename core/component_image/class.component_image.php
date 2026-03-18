@@ -618,7 +618,7 @@ class component_image extends component_media_common implements component_media_
 				if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
 					sleep(1);
 					require( POSTPROCESSING_IMAGE_SCRIPT );
-					$result = custom_postprocessing_image($this);
+					custom_postprocessing_image($this);
 				}
 
 			// all is OK

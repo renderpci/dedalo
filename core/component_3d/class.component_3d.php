@@ -126,7 +126,7 @@ class component_3d extends component_media_common implements component_media_int
 	* the relation components need to process the locator to resolve the value
 	* @param object|null $ddo = null
 	*
-	* @return grid_cell_object $value
+	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
