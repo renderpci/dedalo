@@ -2649,6 +2649,7 @@ final class dd_core_api {
 			'DEDALO_LOCK_COMPONENTS'				=> DEDALO_LOCK_COMPONENTS,
 			'DEDALO_MAINTENANCE_MODE'				=> (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null), // DEPRECATED . legacy support only (remove early)
 			'DEDALO_NOTIFICATION'					=> null, // DEPRECATED . legacy support only (remove early)
+			'DEDALO_RR_WORKER'						=> defined('DEDALO_RR_WORKER') ? DEDALO_RR_WORKER : false,
 			// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 			'DD_TIPOS' => [
 				'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
