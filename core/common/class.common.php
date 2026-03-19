@@ -1997,19 +1997,25 @@ abstract class common {
 								// Get the permissions to inject to children.
 								// Situation :
 								// The user can access to the source portal (permissions 1 or 2), but he/she can not access to target section (permissions 0).
-								// in this situation the user need to read the data of the target section because he/she can access to the source portal
+								// In this situation, the user needs to read the data of the target section because he/she can access to the source portal
 								// and he/she will be able to search with autocomplete, to assign data to the portal (or link data).
 								// Behavior:
-								// When a component has data to show but the user don't has permissions to access to target section
-								// or target components, the target component need to be set as read (permissions 1)
-								// the user will need read the portal and his data, event if they can not change the target section.
+								// When a component has data to show but the user doesn't have permissions to access to target section
+								// or target components, the target component needs to be set as read (permissions 1).
+								// The user will need to read the portal and his data, even if they cannot change the target section.
 								// The same case happens with the searched section with autocomplete.
 								// The user will need to read the target section and his components to choose data.
 								// Exception:
-								// if the user can read or read/write permissions, do not change it.
+								// If the user can read or read/write permissions, do not change it.
 									$current_element_permissions = $current_element->get_component_permissions();
-									if( strpos(get_called_class(), 'component_')===0 && $current_element_permissions < 1 ){
+									$is_component_caller = str_starts_with(get_called_class(), 'component_');
+									// Grant minimum read permission when user lacks access to target section
+									if($is_component_caller && $current_element_permissions < 1) {
 										$current_element->set_permissions(1);
+									}
+									// Cap permissions at caller level when caller is read-only
+									if($is_component_caller && $this->permissions === 1 && $current_element_permissions > 1) {
+										$current_element->set_permissions($this->permissions);
 									}
 
 								// component_text_area lang case. Change lang before get data (!)
