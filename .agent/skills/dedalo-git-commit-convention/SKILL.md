@@ -9,6 +9,9 @@ All git commits in this project should follow the Conventional Commits format, s
 
 `<type>(<scope>): <subject>`
 
+## Important
+- Never use `hard reset` in the commit command. Double user validation is required before executing this command.
+
 ## Type and Scope
 - **refactor**: Changes that neither fix a bug nor add a feature
 - **feat**: New features
