@@ -166,8 +166,16 @@ define('DEDALO_VALUE_TYPE_IRI',							'dd1562');
 define('DEDALO_VALUE_TYPE_GEO',							'dd1564');
 define('DEDALO_VALUE_TYPE_MISC',						'dd1474');
 
-// Time machine
+// Time machine section tipos
 define('DEDALO_TIME_MACHINE_SECTION_TIPO', 				'dd15');
+define('DEDALO_TIME_MACHINE_COLUMN_ID', 				'dd1573');
+define('DEDALO_TIME_MACHINE_COLUMN_SECTION_ID', 		'dd1212');
+define('DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO',		'dd1772');
+define('DEDALO_TIME_MACHINE_COLUMN_TIPO',				'dd577');
+define('DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP',			'dd559');
+define('DEDALO_TIME_MACHINE_COLUMN_USER_ID',			'dd578');
+define('DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID',	'dd1371');
+define('DEDALO_TIME_MACHINE_COLUMN_DATA',				'dd1574');
 
 // Notes
 define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
