@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, Promise, SHOW_DEVELOPER, SHOW_DEBUG */
+/*global get_label, Promise, SHOW_DEVELOPER, SHOW_DEBUG, page_globals, DEDALO_CORE_URL, confirm */
 /*eslint no-undef: "error"*/
 
 
@@ -49,7 +49,7 @@ view_graph_solved_section.render = async function(self, options) {
 	// graph_map
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
-		self.graph_map = (self.properties.graph_map)
+		self.graph_map = (self.properties?.graph_map)
 			? self.properties.graph_map
 			: {
 				source		: 'nexus10',
@@ -63,7 +63,7 @@ view_graph_solved_section.render = async function(self, options) {
 	// from_map
 	// Used to show the name of the section caller
 	// name component is defined in ontology from_map property of the current section
-		self.from_map = (self.properties.from_map)
+		self.from_map = (self.properties?.from_map)
 			? self.properties.from_map
 			: {
 				name : 'nexus48'
@@ -95,7 +95,7 @@ view_graph_solved_section.render = async function(self, options) {
 			dd_request_idle_callback(
 				async () => {
 					const url_vars = url_vars_to_object()
-					if(url_vars.fst && url_vars.fsi){
+					if (url_vars.fst && url_vars.fsi) {
 
 						const section_tipo	= url_vars.fst
 						const section_id	= url_vars.fsi
@@ -112,14 +112,14 @@ view_graph_solved_section.render = async function(self, options) {
 
 						await component_name.build(true)
 
-						label_container.textContent = component_name.data.literal || self.label || component_name.tipo
+						label_container.textContent = component_name.data?.literal || self.label || component_name.tipo
 					}
 				}
 			)
 
 		// buttons
 			const buttons_node = get_buttons(self);
-			if(buttons_node){
+			if (buttons_node) {
 				right_node.appendChild(buttons_node)
 			}
 
@@ -146,7 +146,7 @@ view_graph_solved_section.render = async function(self, options) {
 			id				: self.id,
 			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode} view_${self.view}`
 		})
-		if (self.inspector===false) {
+		if (self.inspector === false) {
 			wrapper.classList.add('no_inspector')
 		}
 		wrapper.appendChild(left_node)
@@ -269,12 +269,12 @@ const get_graph = async function(options) {
 
 		// check the the link is calling to himself
 		// if yes, set it as self_linked and use 3 as link_number (small radius)
-		if(link.source === link.target){
+		if (link.source === link.target) {
 			link.link_number	= 3
 			link.self_linked	= true
 		}
 		// the the node has link_number assigned by previous link don't touch
-		if(link.link_number>=1){
+		if (link.link_number >= 1) {
 			continue
 		}
 		// found the links with the same source connected with the same target
@@ -284,7 +284,7 @@ const get_graph = async function(options) {
 		// join all duplicates to count the total
 		const duplicates = [...found_source, ...found_target]
 		// if the link has a duplicate add link_number, but leave the original without touch
-		if(duplicates.length > 1){
+		if (duplicates.length > 1) {
 			let link_number = 1
 			// don't change the original link (i≠0)
 			for (let i = 1; i < found_source.length; i++) {
@@ -527,7 +527,7 @@ const get_graph = async function(options) {
 			// if the user drop into empty node or the node has value:
 			// create new nexus section and assign the dragged value
 			// else (the node has not value) assign the dragged value into the empty node
-			if(!p || p.value){
+			if (!p || p.value) {
 				// data_manager. create new section
 					const rqo = {
 						action	: 'create',
@@ -555,7 +555,7 @@ const get_graph = async function(options) {
 						// target
 						// assign the target data for the target component with the section_record dragged
 						// when the user drop into empty space, the target will be not defined and it will be not assigned
-						if(target_value){
+						if (target_value) {
 							await set_component_data({
 								tipo			: self.graph_map.target,
 								value			: target_value,
@@ -634,7 +634,7 @@ const get_graph = async function(options) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					if(SHOW_DEBUG===true) {
+					if (SHOW_DEBUG === true) {
 						console.log('create new record api_response:', api_response);
 					}
 			}
@@ -673,7 +673,7 @@ const get_graph = async function(options) {
 		// when user click into the node, open the main section of the thing
 		function node_clicked(event, p) {
 			// if node has not a value (empty component) is not possible open the main section
-			if(!p.value){
+			if (!p.value) {
 				return null
 			}
 			// sort vars
@@ -729,7 +729,7 @@ const get_graph = async function(options) {
 			// (source -> target)
 			// if the link point two different nodes, every node will has his own role
 			// (source)
-			if(p.source.id === p.target.id){
+			if (p.source.id === p.target.id) {
 				// add source and target text node with role enclosed by "()"
 				const source_text = (p.source_role) ? `${p.source_role}` : '';
 				const target_text = (p.target_role) ? `${p.target_role}`: '';
@@ -992,12 +992,12 @@ const render_source_section = async function(options) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return array columns_map
+* @return {array} columns_map
 */
 const rebuild_columns_map = async function(self) {
 
 	// columns_map already rebuilt case
-		if (self.fixed_columns_map===true) {
+		if (self.fixed_columns_map === true) {
 			return self.columns_map
 		}
 
@@ -1155,8 +1155,8 @@ view_graph_solved_section.render_column_drag = function(options) {
 
 		const ar_instances_length = ar_instances.length
 		for (let i = 0; i < ar_instances_length; i++) {
-			const instace_node = ar_instances[i].node.cloneNode(true)
-			drag_node.appendChild(instace_node)
+			const instance_node = ar_instances[i].node.cloneNode(true)
+			drag_node.appendChild(instance_node)
 		}
 
 

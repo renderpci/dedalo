@@ -11,7 +11,7 @@
 
 /**
 * RENDER_SOLVED_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const render_solved_section = function() {
 
@@ -26,7 +26,7 @@ export const render_solved_section = function() {
 * @param object options
 * @return HTMLElement wrapper
 */
-render_solved_section.prototype.solved = async function(options) {
+render_solved_section.solved = async function(options) {
 
 	const self = this
 
@@ -75,16 +75,16 @@ export const get_d3_data = function(options) {
 	const sources_length = sources.length
 	for (let i = sources_length - 1; i >= 0; i--) {
 		// source
-			const current_souce = sources[i]
-			const ar_source_id = current_souce.value.map(el => {
+			const current_source = sources[i]
+			const ar_source_id = current_source.value.map(el => {
 				return `${el.section_tipo}_${el.section_id}`
 			})
 
-			const source_id = (current_souce.value[0]) ? ar_source_id.join('|') : `s${i}_s${i}`
+			const source_id = (current_source.value[0]) ? ar_source_id.join('|') : `s${i}_s${i}`
 			const source_found = nodes.find(el => el.id === source_id)
 
-			const source_section_tipo = (current_souce.value[0])
-				? current_souce.value[0].section_tipo
+			const source_section_tipo = (current_source.value[0])
+				? current_source.value[0].section_tipo
 				: null
 			const source_section = (sqo)
 				? sqo.section_tipo.find(el => el.tipo === source_section_tipo)
@@ -92,13 +92,13 @@ export const get_d3_data = function(options) {
 
 			const source = {
 				id				: source_id,
-				name			: current_souce.literal,
-				value			: current_souce.value[0],
+				name			: current_source.literal,
+				value			: current_source.value[0],
 				section_tipo	: source_section_tipo,
-				tipo			: current_souce.tipo,
+				tipo			: current_source.tipo,
 				from			: {
-					section_id		: current_souce.section_id,
-					section_tipo	: current_souce.section_tipo
+					section_id		: current_source.section_id,
+					section_tipo	: current_source.section_tipo
 				},
 				color 			: (source_section?.color) ? source_section.color : default_color
 			}
@@ -109,8 +109,8 @@ export const get_d3_data = function(options) {
 		// target
 			const current_target = datum.data.find(el =>
 				el.tipo			=== graph_map.target &&
-				el.section_id	=== current_souce.section_id &&
-				el.section_tipo	=== current_souce.section_tipo
+				el.section_id	=== current_source.section_id &&
+				el.section_tipo	=== current_source.section_tipo
 			)
 
 			const ar_target_id = current_target.value.map(el => {
@@ -145,42 +145,42 @@ export const get_d3_data = function(options) {
 		// source role
 			const source_role = datum.data.find(el =>
 				el.tipo			=== graph_map.source_role &&
-				el.section_id	=== current_souce.section_id &&
-				el.section_tipo	=== current_souce.section_tipo
+				el.section_id	=== current_source.section_id &&
+				el.section_tipo	=== current_source.section_tipo
 			)
 
 		// target role
 			const target_role = datum.data.find(el =>
 				el.tipo			=== graph_map.target_role &&
-				el.section_id	=== current_souce.section_id &&
-				el.section_tipo	=== current_souce.section_tipo
+				el.section_id	=== current_source.section_id &&
+				el.section_tipo	=== current_source.section_tipo
 			)
 
 
 		// typology
 			const typology = datum.data.find(el =>
 				el.tipo			=== graph_map.typology &&
-				el.section_id	=== current_souce.section_id &&
-				el.section_tipo	=== current_souce.section_tipo
+				el.section_id	=== current_source.section_id &&
+				el.section_tipo	=== current_source.section_tipo
 			)
 
 		// connection
-			const conection = datum.data.find(el =>
+			const connection = datum.data.find(el =>
 				el.tipo			=== graph_map.connection &&
-				el.section_id	=== current_souce.section_id &&
-				el.section_tipo	=== current_souce.section_tipo
+				el.section_id	=== current_source.section_id &&
+				el.section_tipo	=== current_source.section_tipo
 			)
 
 			const link = {
 				source		: source_id,
 				target		: target_id,
 				value		: {
-					section_id		: current_souce.section_id,
-					section_tipo	: current_souce.section_tipo
+					section_id		: current_source.section_id,
+					section_tipo	: current_source.section_tipo
 				},
 				weight : 18, // stroke-width
-				source_role	: source_role.literal || '',
-				target_role	: target_role.literal || ''
+				source_role	: source_role?.literal || '',
+				target_role	: target_role?.literal || ''
 			}
 
 			links.push(link)

@@ -13,7 +13,7 @@
 
 /**
 * RENDER_COMMON_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const render_common_section = function() {
 
@@ -28,10 +28,14 @@ export const render_common_section = function() {
 * @param object options
 * @return dd-modal modal
 */
-render_common_section.prototype.render_delete_record_dialog = async (options) => {
+render_common_section.render_delete_record_dialog = async (options) => {
 
 	// options
-		const section		= options.section
+		const section = options.section
+		if (!section) {
+			console.error("render_delete_record_dialog: section is required")
+			return false
+		}
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 		const sqo			= options.sqo
@@ -135,9 +139,9 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					delete_diffusion_records	: delete_diffusion_records_checkbox.checked
 				})
 				.then(async () => {
-					// force to recalculate total records
+					// force recalculation of total records
 					section.total = null
-					// refresh section section
+					// refresh section
 					await section.refresh()
 					// fire modal event on_close
 					modal.on_close()
@@ -174,9 +178,9 @@ render_common_section.prototype.render_delete_record_dialog = async (options) =>
 					delete_mode	: 'delete_data'
 				})
 				.then(async () => {
-					// force to recalculate total records
+					// force recalculation of total records
 					section.total = null
-					// refresh section section
+					// refresh section
 					await section.refresh()
 					// fire modal on_close
 					modal.on_close()
