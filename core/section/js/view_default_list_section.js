@@ -271,7 +271,7 @@ view_default_list_section.adapt_section_id_column = function(list_body_node, sel
 	if (longest_id.length > 5) {
 		const font_size = get_font_fit_size(longest_id, base_size, 4)
 		if (font_size !== base_size) {
-			const non_button_tipos = ['dd542']
+			const non_button_tipos = ['dd542','dd15']
 			if (!non_button_tipos.includes(self.tipo)) {
 				list_body_node.style.setProperty('--section_id_font_size', `${font_size}rem`)
 				const column_id_width = longest_id.length * font_size + 0.25
