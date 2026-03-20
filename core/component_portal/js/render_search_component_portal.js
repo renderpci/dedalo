@@ -186,7 +186,7 @@ const render_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * @return array columns_map
 */
@@ -199,11 +199,15 @@ const rebuild_columns_map = async function(self) {
 
 	// fixed_mode. To force section_record to preserve the search ddo_map items mode,
 	// add 'fixed_mode' to all if they don't already have it
-		const ddo_map_path = self.request_config_object.search && self.request_config_object.search.ddo_map
+		const search_config = self.request_config_object?.search
+		const show_config	= self.request_config_object?.show
+		const ddo_map_path	= search_config && search_config.ddo_map
 			? 'search'
 			: 'show'
-		if (self.request_config_object[ddo_map_path] && self.request_config_object[ddo_map_path].ddo_map) {
-			self.request_config_object[ddo_map_path].ddo_map.map(el => {
+
+		const config_to_process = self.request_config_object ? self.request_config_object[ddo_map_path] : null
+		if (config_to_process && config_to_process.ddo_map) {
+			config_to_process.ddo_map.map(el => {
 				el.fixed_mode = true
 			})
 		}
@@ -245,7 +249,7 @@ const rebuild_columns_map = async function(self) {
 * Render column_remove node
 * Shared across views
 * @param object options
-* @return HTMLElement button_remove
+* @return DocumentFragment
 */
 export const render_column_remove = function(options) {
 
@@ -275,11 +279,11 @@ export const render_column_remove = function(options) {
 					self.update_data_value(changed_data_item)
 				// set data.changed_data. The change_data to the instance
 					// self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
+				// publish search. Event to update the DOM elements of the instance
 					event_manager.publish('change_search_element', self)
 
 					self.refresh({
-						// build_autoload : true
+						build_autoload : true
 					})
 			}
 

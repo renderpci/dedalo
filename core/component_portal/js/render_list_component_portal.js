@@ -44,10 +44,11 @@ render_list_component_portal.prototype.list = async function(options) {
 			? 'dataframe_'
 			: ''
 
-		// get the view define in context if is not set use default
-		const view = self.context.view
-			? `${dataframe}${self.context.view}`
-			: 'default'
+		// get the view defined in context; if it is not set, use default
+		const current_view	= self.view || self.context?.view || 'default'
+		const view			= (dataframe && !current_view.startsWith('dataframe_'))
+			? `${dataframe}${current_view}`
+			: current_view
 
 	switch(view) {
 
