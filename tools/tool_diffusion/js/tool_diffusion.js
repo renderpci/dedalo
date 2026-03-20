@@ -92,6 +92,7 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 
 		// specific actions.. like fix main_element for convenience
 			self.diffusion_info = await self.get_diffusion_info()
+			self.active_processes = await self.get_active_processes()
 
 		 // fix value
 			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
@@ -202,7 +203,8 @@ tool_diffusion.prototype.export = function(options) {
 				levels							: resolve_levels,
 				skip_publication_state_check	: skip_publication_state_check,
 				additions_options				: additions_options,
-				total							: total
+				total							: total,
+				process_id						: options.process_id
 			}
 		}
 
@@ -217,6 +219,42 @@ tool_diffusion.prototype.export = function(options) {
 			})
 		})
 }//end export
+
+
+
+/**
+* GET_ACTIVE_PROCESSES
+* Fetch active diffusion processes from Bun middleware
+* @return promise: array
+*/
+tool_diffusion.prototype.get_active_processes = function() {
+
+	const self = this
+	const source = create_source(self, 'get_active_processes')
+
+	const rqo = {
+		dd_api	: 'dd_diffusion_api',
+		action	: 'list_processes',
+		source	: source
+	}
+
+	return new Promise(function(resolve){
+		data_manager.request({
+			url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+			body	: rqo
+		})
+		.then(function(response){
+			if(SHOW_DEBUG===true) {
+				console.log('-> get_active_processes API response:', response);
+			}
+			resolve(response.processes || [])
+		})
+		.catch(function(err){
+			console.error('get_active_processes error:', err)
+			resolve([])
+		})
+	})
+}//end get_active_processes
 
 
 

@@ -68,13 +68,13 @@ function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, 
 		case 'component_dataframe':
 
 			$parser_process = (object)[					
-					'parser' => [
-						(object)[
-							'fn' => 'parser_locator::get_section_id'
-						]
-					],
-					"output_format" => "json"
-				];
+				'parser' => [
+					(object)[
+						'fn' => 'parser_locator::get_section_id'
+					]
+				],
+				"output_format" => "json"
+			];
 			$process = $parser_process;
 			$process->output_sample = ["1","55"];
 			break;

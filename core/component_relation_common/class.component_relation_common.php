@@ -222,6 +222,7 @@ class component_relation_common extends component_common {
 							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
 								$ar_children = [...$ar_children, ...$result];
+								$ar_children = [...$ar_children, ...$result];
 							}
 						}
 					}
@@ -454,7 +455,7 @@ class component_relation_common extends component_common {
 				// 	$current_column = get_last_column_recursive([$current_column]);
 				// }
 				// get the value and fallback_value of the component and stored to be joined
-				$locator_column_obj = [...$locator_column_obj, ...$current_column->ar_columns_obj];
+				$locator_column_obj	= [...$locator_column_obj, ...$current_column->ar_columns_obj];
 
 				// store the columns into the full columns array
 				$ar_columns[] = $current_column;
@@ -1475,11 +1476,11 @@ class component_relation_common extends component_common {
 	* ADD_PARENTS
 	* Resolves the hierarchical ancestor chain for related items.
 	*
-	* Iterates through current relation locators. For each locator, resolves its data Node 
-	* (term and typology) and maps the element. Then, if enabled, walks the node tree 
-	* upwards fetching all parent locators to build a list representing the structural path 
+	* Iterates through current relation locators. For each locator, resolves its data Node
+	* (term and typology) and maps the element. Then, if enabled, walks the node tree
+	* upwards fetching all parent locators to build a list representing the structural path
 	* from item up to root.
-	* 
+	*
 	* The output array structure maps locator keys to their full descriptive lists.
 	*
 	* @return array Mapped chains indexing keys "{section_tipo}_{section_id}" to list items of structure:
@@ -1502,7 +1503,7 @@ class component_relation_common extends component_common {
 		$parents_map = [];
 
 		// Get current component data (usually an array of locators)
-		$data = $this->get_data();		
+		$data = $this->get_data();
 
 		// Fallback for empty data in hierarchy components to find root node (compatibility)
 		if ( empty($data) && $this->model==='component_relation_parent') {
@@ -1520,11 +1521,11 @@ class component_relation_common extends component_common {
 		foreach($data as $locator) {
 			// 1. Resolve current item
 			$section_tipo 	= $locator->section_tipo;
-			$section_id 	= $locator->section_id;
+			$section_id 	= (int)$locator->section_id;
 
 			// Generate unique map key based on target section type and ID (e.g., "es1_967")
 			$parents_key = $section_tipo . '_' . $section_id;
-			
+
 			// Chain array holds the hierarchy list for this item (starts with self)
 			$parents_chain = [];
 
@@ -1547,7 +1548,7 @@ class component_relation_common extends component_common {
 			if ($resolve_parent_chain===true) {
 				// Fetch recursive list of parent locators going up the tree
 				$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
-			
+
 				if (!empty($parents_locators)) {
 					foreach($parents_locators as $parent_locator) {
 
@@ -1555,7 +1556,7 @@ class component_relation_common extends component_common {
 						$parent_map_node = section::get_section_map( $parent_locator->section_tipo );
 
 						// Resolve parent item data
-						$parent_data = $this->resolve_map_node_data($parent_map_node, $parent_locator->section_id, $parent_locator->section_tipo);
+						$parent_data = $this->resolve_map_node_data($parent_map_node, (int)$parent_locator->section_id, $parent_locator->section_tipo);
 
 						if($parent_data) {
 							$parents_chain[] = $parent_data;
@@ -1582,8 +1583,8 @@ class component_relation_common extends component_common {
 	* RESOLVE_MAP_NODE_DATA
 	* Resolves visual and category descriptive data for a specific section node record.
 	*
-	* Fetches the primary term (string label) of the item. Additionally, if a typology 
-	* relation is populated, fetches the related locator and pulls the term label 
+	* Fetches the primary term (string label) of the item. Additionally, if a typology
+	* relation is populated, fetches the related locator and pulls the term label
 	* of that target typology section entry setup.
 	*
 	* @param object $map_node       Ontology node configuration data containing thesaurus targets.
