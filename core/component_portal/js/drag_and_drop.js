@@ -81,7 +81,7 @@ export const on_dragstart = function(node, event, options) {
 
 
 	return true
-}//end ondrag_start
+}//end on_dragstart
 
 
 
@@ -123,7 +123,7 @@ export const on_dragstart_mosaic = function(node, event, options) {
 	node.classList.add('dragging')
 
 	return true
-}//end ondrag_start
+}//end on_dragstart_mosaic
 
 
 
@@ -155,6 +155,8 @@ export const on_dragover = function(node, event, options) {
 	}
 
 	node.classList.add('dragover')
+
+	return true
 }//end on_dragover
 
 
@@ -205,6 +207,9 @@ export const on_dragend = function(node, event, options) {
 		current_drop.style.width	= 0
 		current_drop.classList.add('hide')
 	}
+
+	// clear tmp data
+	delete tmp.data
 }//end on_dragend
 
 
@@ -221,7 +226,7 @@ export const on_drop = function(node, event, options) {
 	event.preventDefault() // Necessary. Allows us to drop.
 	event.stopPropagation()
 
-	// self is the component_portat that call and it has the sort_order function
+	// self is the component_portal that call and it has the sort_order function
 	const self	= options.caller
 	const data	= event.dataTransfer.getData('text/plain');// element that's move
 
@@ -233,7 +238,7 @@ export const on_drop = function(node, event, options) {
 
 	// COPY
 		// copy data from other portal
-		if( data_parse.source_tipo !== self.tipo){
+		if( data_parse.source_tipo !== self.tipo ){
 
 			// check if the portal is compatible
 			// checking properties

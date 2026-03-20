@@ -27,9 +27,9 @@ export const view_indexation_list_portal = function() {
 */
 view_indexation_list_portal.render = async function(self, options) {
 
-	// wrapper. ui build_edit returns component wrapper
+	// wrapper. ui build_wrapper_list returns component wrapper
 		const wrapper = ui.component.build_wrapper_list(self)
-		wrapper.classList.add('portal')
+		wrapper.classList.add('portal', 'view_indexation')
 
 	// get the value of the total records
 		const value_string	= self.data?.pagination?.total || null

@@ -28,7 +28,7 @@
 
 /**
 * VIEW_DEFAULT_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_default_edit_portal = function() {
 
@@ -70,9 +70,9 @@ view_default_edit_portal.render = async function(self, options) {
 				: null;
 			if (header_wrapper_list) {
 				if (ar_section_record.length>0) {
-					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.remove('hide')
+					header_wrapper_list.classList.remove('hide')
 				}else{
-					self.node.list_body.querySelector(":scope >.header_wrapper_list").classList.add('hide')
+					header_wrapper_list.classList.add('hide')
 				}
 			}
 
@@ -126,7 +126,7 @@ view_default_edit_portal.render = async function(self, options) {
 			})
 		})
 		wrapper.addEventListener('dragleave',function(e){
-			on_dragleave(this, e,)
+			on_dragleave(this, e)
 		})
 		wrapper.addEventListener('drop',function(e){
 			on_drop( this, e, {
@@ -255,7 +255,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adds control columns to the columns_map that will processed by section_recods
+* Adds control columns to the columns_map that will be processed by section_records
 * @param object self
 * @return array columns_map
 */
@@ -277,7 +277,7 @@ const rebuild_columns_map = async function(self) {
 		})
 
 	// base_columns_map
-		const base_columns_map = await self.columns_map
+		const base_columns_map = self.columns_map || []
 		columns_map.push(...base_columns_map)
 
 	// column component_info check
@@ -290,7 +290,7 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// button_remove
-		if (self.context.properties.source?.mode!=='external' && self.permissions>1) {
+		if (self.context?.properties?.source?.mode!=='external' && self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',

@@ -36,43 +36,54 @@ view_text_list_portal.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// ddinfo. column component_info
-		if (self.add_component_info===true) {
-			self.columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info',
-				callback	: render_column_component_info
+	// columns_map
+		const columns_map = [...self.columns_map]
+		if (self.add_component_info === true) {
+			columns_map.push({
+				id       : 'ddinfo',
+				label    : 'Info',
+				callback : render_column_component_info
 			})
 		}
 
 	// ar_section_record
 		const ar_section_record = await get_section_records({
-			caller	: self,
-			mode	: 'list',
-			view	: self.context.view
+			caller      : self,
+			mode        : 'list',
+			view        : self.context.view,
+			columns_map : columns_map
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-	// wrapper. Set as span
+	// wrapper
 		const wrapper = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: `wrapper_component ${self.model} ${self.mode} portal view_${self.view}`
+			element_type : 'span',
+			class_name   : `wrapper_component ${self.model} ${self.mode} portal view_${self.view || self.context.view || 'default'}`
 		})
 
 	// add all nodes
 		const ar_section_record_length = ar_section_record.length
-		for (let i = 0; i < ar_section_record_length; i++) {
+		if (ar_section_record_length > 0) {
+			const fragment = new DocumentFragment()
+			const rendered_nodes = await Promise.all(ar_section_record.map(rec => rec.render()))
 
-			// child
-				const child_item = await ar_section_record[i].render()
-				wrapper.append(...child_item.childNodes)
-
-			// records_separator
-				if(i < ar_section_record_length-1) {
-					const node_records_separator = document.createTextNode(self.context.records_separator)
-					wrapper.appendChild(node_records_separator)
+			for (let i = 0; i < ar_section_record_length; i++) {
+				const rendered_node = rendered_nodes[i]
+				if (rendered_node) {
+					fragment.append(...rendered_node.childNodes)
 				}
+
+				// records_separator
+				if (i < ar_section_record_length - 1) {
+					const separator = self.context.records_separator || ''
+					if (separator) {
+						const node_records_separator = document.createTextNode(separator)
+						fragment.appendChild(node_records_separator)
+					}
+				}
+			}
+			wrapper.appendChild(fragment)
 		}
 
 
