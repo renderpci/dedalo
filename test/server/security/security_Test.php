@@ -52,6 +52,11 @@ final class security_test extends BaseTestCase {
 	*/
 	public function test_get_security_permissions() : void {
 
+		// force user id needed for security checks.
+		// (!) In this test is checked user 1 regardless of whether TEST_USER_ID is different
+		$current_user_id = $_SESSION['dedalo']['auth']['user_id'];
+		$_SESSION['dedalo']['auth']['user_id'] = 1;
+
 		// oh21
 			$parent_tipo	= 'oh1';
 			$tipo			= 'oh21'; // component_select 'Quality'
@@ -121,6 +126,9 @@ final class security_test extends BaseTestCase {
 				'expected equal 0 in result '. PHP_EOL
 				.' result: ' . json_encode($result)
 			);
+
+		// Restore previous user ID after the test
+		$_SESSION['dedalo']['auth']['user_id'] = $current_user_id;
 	}//end test_get_security_permissions
 
 
@@ -343,9 +351,12 @@ final class security_test extends BaseTestCase {
 	*/
 	public function test_get_section_new_permissions() : void {
 
+		$this->user_login();
+
 		$tipo = 'oh1';
 		// result
 		$result = security::get_section_new_permissions($tipo);
+		dump($result, ' result +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
 
 		$this->assertTrue(
 			gettype($result)==='integer',
@@ -354,11 +365,14 @@ final class security_test extends BaseTestCase {
 			.' tipo:' . $tipo
 		);
 
+		$expected = logged_user_id() === -1 ? 3 : 2;
+
 		$this->assertTrue(
-			$result===2,
-			'expected 2'. PHP_EOL
+			$result===$expected,
+			' expected ' . $expected. PHP_EOL
 			.' result: ' . to_string($result) . PHP_EOL
-			.' tipo:' . $tipo
+			.' tipo: ' . $tipo . PHP_EOL
+			.' user id: ' . logged_user_id()
 		);
 	}//end test_get_section_new_permissions
 
