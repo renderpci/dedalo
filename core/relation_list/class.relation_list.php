@@ -1012,16 +1012,16 @@ class relation_list extends common {
 
 					switch ($fn) {
 						// add parents
-						case 'add_parents':		
+						case 'add_parents':
 							$data = $this->get_data();
 							$diffusion_data_object->set_value( $data );
 							$diffusion_data_object->parents = $diffusion_value;
 
 							return $diffusion_data;
-						case 'get_data_with_references':		
+						case 'get_data_with_references':
 							$diffusion_data_object->set_value( $diffusion_value );
 
-							return $diffusion_data;						
+							return $diffusion_data;
 						default:
 							break;
 					}
