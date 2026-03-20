@@ -1905,11 +1905,12 @@ abstract class component_common extends common {
 					}
 
 				// sqo. Build the search_query_object to use in the search.
-					$sqo = new stdClass();
-						$sqo->section_tipo	= $observer->section_tipo;
-						$sqo->full_count	= false;
-						$sqo->limit			= 0;
-						$sqo->filter		= $current_observer->server->filter;
+					$sqo_data = new stdClass();
+						$sqo_data->section_tipo	= [$observer->section_tipo];
+						$sqo_data->full_count	= false;
+						$sqo_data->limit		= 0;
+						$sqo_data->filter		= $current_observer->server->filter;
+					$sqo = new search_query_object($sqo_data);
 
 				// search the sections that has reference to the observable component, the component that had changed
 					$search		= search::get_instance($sqo);
@@ -3823,29 +3824,28 @@ abstract class component_common extends common {
 	public static function get_component_tm_data( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
 
 		// search query object
-			$sqo = json_decode('{
-			  "mode": "tm",
-			  "section_tipo": [
-				"'.$section_tipo.'"
-			  ],
-			  "filter_by_locators": [
-				{
-				  "matrix_id": "'.$matrix_id.'",
-				  "section_tipo": "'.$section_tipo.'",
-				  "tipo": "'.$tipo.'"
-				}
-			  ],
-			  "order": [
-				{
-				  "direction": "DESC",
-				  "path": [
-					{
-					 "component_tipo": "id"
-					}
-				  ]
-				}
+		$sqo_data = (object)[
+			'mode' => 'tm',
+			'section_tipo' => [$section_tipo],
+			'filter_by_locators' => [
+			  (object)[
+				'matrix_id' => (string)$matrix_id,
+				'section_tipo' => $section_tipo,
+				'tipo' => $tipo
 			  ]
-			}');
+			],
+			'order' => [
+			(object)[
+				'direction' => 'DESC',
+				'path' => [
+				  (object)[
+					'component_tipo' => 'id'
+				  ]
+				]
+			]
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		$search = search::get_instance($sqo);
 		$db_result = $search->search();
