@@ -7,6 +7,7 @@
  */
 
 import { replace }             from './pattern_replacer';
+import { merge }               from './parser_helper';
 import type { parser_options, data_item } from '../types';
 
 
@@ -14,35 +15,15 @@ import type { parser_options, data_item } from '../types';
 
 /**
  * DEFAULT_JOIN
- * Creates a generic separator-concatenated string with all values.
- * Used as the default parser when no parser is configured in the ontology.
+ * Alias for `parser_helper::merge` with merge:"string".
+ * Collapses all data items into a single scalar string per lang.
  *
- * @param data    - Array of data items from the PHP response entries
+ * @param data    - Array of data items
  * @param options - { records_separator?: string, fields_separator?: string }
- * @returns Concatenated string or null if no data
- */
-/**
- * DEFAULT_JOIN
- * Creates a generic separator-concatenated string with all values.
- * Used as the default parser when no parser is configured in the ontology.
- *
- * @param data    - Array of data items from the PHP response entries
- * @param options - { records_separator?: string, fields_separator?: string }
- * @returns Concatenated string wrapped in a data_item
+ * @returns Single data_item with joined string value, wrapped in array
  */
 export function default_join(data: data_item[] | null, options: parser_options): any {
-
-	if (!data || data.length === 0) return null;
-
-	const str = join_items_to_string(data, options);
-	if (str === null) return null;
-
-	return [{
-		id:    null,
-		value: str,
-		tipo:  data[0].tipo,
-		lang:  data[0].lang
-	}];
+	return merge(data, { ...options, merge: 'string' });
 }
 
 
