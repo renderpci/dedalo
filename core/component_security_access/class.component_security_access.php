@@ -551,10 +551,10 @@ class component_security_access extends component_common {
 	/**
 	* CALCULATE_TREE
 	* @param int $user_id
-	* @param string $lang
+	* @param string $lang = DEDALO_DATA_LANG
 	* @return array $datalist
 	*/
-	public static function calculate_tree(int $user_id, string $lang) : array {
+	public static function calculate_tree(int $user_id, string $lang=DEDALO_DATA_LANG) : array {
 		$start_time = start_time();
 
 		// profile_section_id
@@ -568,6 +568,7 @@ class component_security_access extends component_common {
 			if (!empty($user_profile_locator)) {
 				$section_id = (int)$user_profile_locator->section_id;
 			}else{
+				$section_id = null;
 				debug_log(__METHOD__.
 					" ERROR on get user_profile_locator: user_id: ".to_string($user_id),
 					logger::ERROR
@@ -587,9 +588,9 @@ class component_security_access extends component_common {
 		$component_security_access	= component_common::get_instance(
 			$model, // string model
 			$tipo, // string tipo
-			$section_id, // string|null section_id
+			$section_id, // int|null section_id
 			'list', // string mode
-			DEDALO_DATA_NOLAN, // string lang
+			$lang, // string lang
 			$section_tipo, // string section_tipo
 			false
 		);
