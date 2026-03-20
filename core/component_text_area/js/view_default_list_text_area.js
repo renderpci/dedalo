@@ -41,7 +41,7 @@ view_default_list_text_area.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			// value_string : value_string
 		})
-		if (self.show_interface.read_only!==true) {
+		if (self.show_interface.read_only !== true && self.permissions > 1) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
 

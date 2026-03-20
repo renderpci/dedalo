@@ -233,7 +233,7 @@ component_text_area.prototype.init = async function(options) {
 					}
 
 				// read_only case
-					if (self.show_interface.read_only===true) {
+					if (self.show_interface.read_only===true || self.permissions < 2) {
 						return
 					}
 
