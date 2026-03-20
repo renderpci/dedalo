@@ -15,19 +15,10 @@
  *   "Official Dédalo web, https://dedalo.dev | other, https://other.es"
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
 
 
 
-/**
- * Data item as received from the PHP diffusion_api entries.
- */
-interface data_item {
-	id?:    string | null;
-	value:  unknown;
-	tipo?:  string;
-	lang?:  string | null;
-}
 
 /**
  * Shape of the IRI value object stored in data_item.value.
