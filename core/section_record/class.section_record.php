@@ -1844,4 +1844,22 @@ class section_record {
 		return $user_name;
 	}//end get_user_name_by_user_id
 
+
+
+	/**
+	* JSON_SERIALIZE
+	* @return mixed
+	*/
+	public function jsonSerialize() : mixed {
+
+		$vars = get_object_vars($this);
+
+		// filter out null values to keep payload small (as dynamic properties behaved before)
+		return array_filter($vars, function($val) {
+			return $val !== null;
+		});
+	}
+
+
+
 }//end section_record
