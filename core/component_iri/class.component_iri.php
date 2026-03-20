@@ -1298,7 +1298,7 @@ class component_iri extends component_common {
 			$record = $db_result
 				? ($db_result->fetch_one() ?? null)
 				: null;
-			
+
 			return $record;
 
 		} catch (Exception $e) {

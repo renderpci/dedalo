@@ -240,7 +240,7 @@ class tool_import_zotero extends tool_common {
 												DEDALO_DATA_NOLAN,
 												$section_tipo
 											);
-										
+
 											$component_data = [];
 											foreach((array)$data as $current_data) {
 												$component_data[] = (object)[
@@ -412,7 +412,7 @@ class tool_import_zotero extends tool_common {
 										$component_data = [(object)[
 											'value' => $current_value,
 											'lang' => $component->get_lang()
-										]];										
+										]];
 
 										$component->set_data( $component_data );
 										$component->save();
@@ -484,12 +484,12 @@ class tool_import_zotero extends tool_common {
 											$ddo->section_tipo
 										);
 										$current_value = $zotero_obj->$nam ?? null;
-																		
+
 										$component_data = [(object)[
 											'value' => $data ?? null,
 											'lang' => $component->get_lang()
-										]];									
-										
+										]];
+
 										$component->set_data( $component_data );
 										$component->save();
 										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from zotero import process";

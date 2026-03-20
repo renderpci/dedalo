@@ -114,7 +114,7 @@ class tool_ontology extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage()
 				, logger::ERROR

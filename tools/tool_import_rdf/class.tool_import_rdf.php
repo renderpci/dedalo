@@ -23,7 +23,7 @@ require_once dirname(__FILE__, 3) .'/lib/vendor/autoload.php';
 * @subpackage Tools
 */
 class tool_import_rdf extends tool_common {
-	
+
 	// EasyRdf files load (added in constructor for dynamic loading)
 	private static $easyrdf_loaded = false;
 

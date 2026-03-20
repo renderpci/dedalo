@@ -164,7 +164,7 @@ class get_coins_by_period extends widget_common {
 				}');
 
 				$hierarchies_search = search::get_instance($search_query_object);
-				$db_result = $hierarchies_search->search();				
+				$db_result = $hierarchies_search->search();
 
 				$ordered_hierarchy = [];
 				foreach ($db_result as $row) {
@@ -274,7 +274,7 @@ class get_coins_by_period extends widget_common {
 				foreach ($db_result as $row) {
 
 					$duplicated_value = $row->relation->$component_tipo_duplicated ?? [];
-					$duplicated_data = $duplicated_value[0] ?? null;					
+					$duplicated_data = $duplicated_value[0] ?? null;
 					// sample of duplicated data: object|null
 						// {
 						//     "type": "dd151",
