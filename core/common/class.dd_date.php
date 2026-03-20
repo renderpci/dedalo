@@ -1080,6 +1080,7 @@ class dd_date implements JsonSerializable {
 	*/
 	public function jsonSerialize() : mixed {
 		$vars = get_object_vars($this);
+		unset($vars['errors']); // non-serializable property
 		return array_filter($vars, function($val) {
 			return $val !== null;
 		});
