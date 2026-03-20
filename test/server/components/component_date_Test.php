@@ -506,7 +506,7 @@ final class component_date_test extends BaseTestCase {
 	}//end test_data_item_to_value
 
 
-	
+
 	/**
 	* TEST_search_operators_info
 	* @return void
@@ -596,7 +596,7 @@ final class component_date_test extends BaseTestCase {
 		);
 
 		// expected:
-		$expected = json_decode('
+		$dd_date_data = json_decode('
 			{
 			    "day": 8,
 			    "hour": 12,
@@ -607,6 +607,8 @@ final class component_date_test extends BaseTestCase {
 			    "time": 64638475292
 			}
 		');
+		$dd_date = new dd_date($dd_date_data);
+		$expected = $dd_date;
 
 		$this->assertTrue(
 			json_encode($result)===json_encode($expected),
@@ -614,6 +616,159 @@ final class component_date_test extends BaseTestCase {
 				. to_string($result)
 		);
 	}//end test_add_time
+
+
+
+	/**
+	* TEST_add_time_period_mode
+	* @return void
+	*/
+	public function test_add_time_period_mode() {
+
+		$data_item = json_decode('
+			{
+			    "period": {
+			        "year": 2,
+			        "month": 3,
+			        "day": 5
+			    }
+			}
+		');
+
+		$result = component_date::add_time($data_item);
+
+		$this->assertTrue(
+			gettype($result) === 'object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			isset($result->period),
+			'expected result->period to be set'
+		);
+
+		$this->assertTrue(
+			get_class($result->period) === 'dd_date',
+			'expected result->period class dd_date : ' . PHP_EOL
+				. get_class($result->period)
+		);
+
+		// time = 2*32140800 + (3-1)*31*86400 + (5-1)*86400 = 69984000
+		$this->assertTrue(
+			$result->period->get_time() === 69984000,
+			'expected time 69984000 : ' . PHP_EOL
+				. to_string($result->period->get_time())
+		);
+	}//end test_add_time_period_mode
+
+
+
+	/**
+	* TEST_add_time_date_mode
+	* @return void
+	*/
+	public function test_add_time_date_mode() {
+
+		$data_item = json_decode('
+			{
+			    "start": {
+			        "year": 2023,
+			        "month": 7,
+			        "day": 11
+			    }
+			}
+		');
+
+		$result = component_date::add_time($data_item);
+
+		$this->assertTrue(
+			gettype($result) === 'object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			isset($result->start),
+			'expected result->start to be set'
+		);
+
+		$this->assertFalse(
+			isset($result->end),
+			'expected result->end NOT to be set'
+		);
+
+		$this->assertTrue(
+			get_class($result->start) === 'dd_date',
+			'expected result->start class dd_date : ' . PHP_EOL
+				. get_class($result->start)
+		);
+
+		// time = 2023*32140800 + (7-1)*31*86400 + (11-1)*86400 = 65037772800
+		$this->assertTrue(
+			$result->start->get_time() === 65037772800,
+			'expected time 65037772800 : ' . PHP_EOL
+				. to_string($result->start->get_time())
+		);
+	}//end test_add_time_date_mode
+
+
+
+	/**
+	* TEST_add_time_range_mode
+	* @return void
+	*/
+	public function test_add_time_range_mode() {
+
+		$data_item = json_decode('
+			{
+			    "start": {
+			        "year": 2020,
+			        "month": 1,
+			        "day": 1
+			    },
+			    "end": {
+			        "year": 2020,
+			        "month": 12,
+			        "day": 31
+			    }
+			}
+		');
+
+		$result = component_date::add_time($data_item);
+
+		$this->assertTrue(
+			gettype($result) === 'object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			get_class($result->start) === 'dd_date',
+			'expected result->start class dd_date : ' . PHP_EOL
+				. get_class($result->start)
+		);
+
+		$this->assertTrue(
+			get_class($result->end) === 'dd_date',
+			'expected result->end class dd_date : ' . PHP_EOL
+				. get_class($result->end)
+		);
+
+		// start time = 2020*32140800 + 0 + 0 = 64924416000
+		$this->assertTrue(
+			$result->start->get_time() === 64924416000,
+			'expected start time 64924416000 : ' . PHP_EOL
+				. to_string($result->start->get_time())
+		);
+
+		// end time = 2020*32140800 + (12-1)*31*86400 + (31-1)*86400 = 64956470400
+		$this->assertTrue(
+			$result->end->get_time() === 64956470400,
+			'expected end time 64956470400 : ' . PHP_EOL
+				. to_string($result->end->get_time())
+		);
+	}//end test_add_time_range_mode
 
 
 
