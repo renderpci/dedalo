@@ -14,7 +14,7 @@
  *   5. null                        → no data exists at all
  */
 
-import { apply_parser, default_join, join_items_to_string } from './parsers/index';
+import { apply_parser, default_join, join_items_to_string, merge } from './parsers/index';
 import type {
 	php_api_response,
 	datum_group,
@@ -245,7 +245,7 @@ function process_record(
 			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
 
 			if (has_parser) {
-				const parser_result = apply_parser_chain(parser, data_items);
+				const parser_result = apply_parser_chain(parser, data_items, ctx.output_format);
 
 				if (parser_result !== null) {
 					// Final result should be data_item[], but apply_parser_chain returns any
@@ -457,8 +457,9 @@ function sanitize_column_name(term: string): string {
  * @returns Final result (array or primitive) or null
  */
 function apply_parser_chain(
-	parsers: parser_definition | parser_definition[] | Record<string, never>,
-	data: any[]
+	parsers:       parser_definition | parser_definition[] | Record<string, never>,
+	data:          any[],
+	output_format: string = 'string'
 ): any {
 
 	if (!parsers || (typeof parsers === 'object' && Object.keys(parsers).length === 0)) {
@@ -551,6 +552,39 @@ function apply_parser_chain(
 			}
 		}
 		return combined;
+	}
+
+	// ── DEFAULT COMPLETION CHAIN ─────────────────────────────────────────────
+	// If the last result still contains data_item[] with value:string[] (emitted
+	// by text_format or any other parser), auto-apply merge to collapse them.
+	//
+	// Strategy driven by output_format:
+	//   "json"         → merge(undefined/default) — keep as flat array, no string join
+	//   "string" / *  → merge("string")          — global collapse to one scalar string
+	//
+	// No-op when:
+	//   • An explicit parser_helper::merge step already ran (values are scalar/string)
+	//   • last_unmapped_result is null or has no array-valued items
+	if (Array.isArray(last_unmapped_result) && last_unmapped_result.length > 0) {
+		const has_array_values = last_unmapped_result.some(
+			(item: any) =>
+				item !== null &&
+				typeof item === 'object' &&
+				Array.isArray(item.value) &&
+				item.value.length > 0 &&
+				typeof item.value[0] === 'string'
+		);
+		if (has_array_values) {
+			if (output_format === 'json') {
+				// Keep structure: flatten nested arrays into a single flat array per lang
+				const merged = merge(last_unmapped_result, {});
+				if (merged) last_unmapped_result = merged;
+			} else {
+				// Default ("string"): global collapse — all rows joined into one scalar
+				const merged = merge(last_unmapped_result, { merge: 'string' });
+				if (merged) last_unmapped_result = merged;
+			}
+		}
 	}
 
 	return last_unmapped_result;
