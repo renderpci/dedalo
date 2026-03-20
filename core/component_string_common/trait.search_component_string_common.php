@@ -424,11 +424,26 @@ trait search_component_string_common {
 	*/
 	public static function build_order_select(object $options) : string {
 
+		$matrix_table	= $options->matrix_table;
 		$table_name		= $options->table_name;
 		$column			= $options->column;
 		$lang			= $options->lang;
 		$component_tipo	= $options->component_tipo;
 		$alias			= $options->alias;
+
+		// Time machine special case. Direct column mapping.
+		if($matrix_table==='matrix_time_machine') {
+			// column resolve
+			$column = match($component_tipo) {
+				DEDALO_TIME_MACHINE_COLUMN_TIPO  => 'tipo',
+				DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO => 'section_tipo',
+				default  => $column
+			};
+			// Build select sentence
+			$select_sentence = "{$table_name}.{$column} AS $alias";
+
+			return $select_sentence;
+		}
 
 		/*
 		* SQL Example:

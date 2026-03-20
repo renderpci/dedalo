@@ -292,6 +292,11 @@ abstract class common {
 				return 0;
 			}
 
+		// fixed read only cases
+			if($parent_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				return logged_user_is_global_admin() ? 1 : 0;
+			}
+
 		// check params
 			if( empty($parent_tipo) ) {
 				if(SHOW_DEBUG===true) {
@@ -3031,7 +3036,13 @@ abstract class common {
 				'children',
 				false // bool search_exact
 			);
-			$section_info_elements = [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
+			$first_section_tipo = $ar_section_tipo[0] ?? null;
+			if (empty($first_section_tipo)) {
+				return [];
+			}
+			$section_info_elements = $first_section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO
+				? []
+				: [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)

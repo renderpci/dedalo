@@ -421,4 +421,34 @@ class component_number extends component_common {
 
 
 
+	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @see https://habr.com/en/company/postgrespro/blog/500440/
+	* @see https://www.postgresql.org/docs/current/functions-json.html
+	* @see https://www.postgresql.org/docs/current/datatype-json.html#TYPE-JSONPATH-ACCESSORS
+	*
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// self path
+		$path = parent::get_order_path($component_tipo, $section_tipo);
+
+		// time machine cases. Do not resolve ddo_map. Tipo 'dd1212' is column `section_id`
+		if($this->tipo===DEDALO_TIME_MACHINE_COLUMN_SECTION_ID) {
+			// When `column` property is set, it will be used literally instead of parsing the path.
+			$path[0]->column = 'section_id';
+		}else if($this->tipo===DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID) {
+			$path[0]->column = 'bulk_process_id';
+		}
+
+
+		return $path;
+	}//end get_order_path
+
+
+
 }//end class component_number

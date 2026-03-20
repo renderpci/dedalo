@@ -137,6 +137,7 @@ trait order {
 						// 	'{"lang": "lg-spa"}'
 						// ) #>> '{}' AS sort_val  -- expose sort column
 						$select_sentence = $model::build_order_select((object)[
+							'matrix_table'		=> $this->matrix_table,
 							'table_name'		=> $table_name,
 							'column'			=> $column,
 							'lang'			 	=> $lang,

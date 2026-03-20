@@ -30,7 +30,12 @@ trait search_component_number_tm {
     */
     protected static function dispatch_number_operator_sql_tm(object $query_object, string $q, object $ctx) : object {
 
-        $ctx->column = 'id';
+        // column resolve. time machine cases
+        $ctx->column = match($ctx->component_tipo) {
+            DEDALO_TIME_MACHINE_COLUMN_ID => 'id', // dd1573
+            DEDALO_TIME_MACHINE_COLUMN_SECTION_ID => 'section_id', // dd1212
+            default  => $ctx->column
+        };
 
         switch (true) {
             case ($ctx->q_operator === '!*'):
@@ -118,7 +123,7 @@ trait search_component_number_tm {
     * @return object The query object wrapped in $and clause with range conditions
     */
     protected static function resolve_number_between_sql_tm(object $query_object, string $q, object $ctx) : object {
-            
+
         $between_separator = '...';
         $ar_parts          = explode($between_separator, $q);
         $first_val         = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
@@ -161,7 +166,7 @@ trait search_component_number_tm {
     protected static function resolve_number_greater_than_or_equal_sql_tm(object $query_object, string $q, object $ctx) : object {
         // Validate input parameters
         $q_object = json_decode($q);
-        
+
         // Check JSON decoding and required properties
         if (json_last_error() !== JSON_ERROR_NONE) {
             debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
@@ -176,14 +181,14 @@ trait search_component_number_tm {
             $query_object->sentence = "1=0"; // Always false
             return $query_object;
         }
-    
+
         $q_clean = str_replace(['>=', ','], ['', '.'], $q_object->value);
         if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
             $q_clean = '0';
         }
 
         $query_object->params   = ['_Q1_' => $q_clean];
-        $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} >= _Q1_";        
+        $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} >= _Q1_";
 
         return $query_object;
     }
@@ -211,7 +216,7 @@ trait search_component_number_tm {
     protected static function resolve_number_less_than_or_equal_sql_tm(object $query_object, string $q, object $ctx) : object {
        // Validate input parameters
         $q_object = json_decode($q);
-        
+
         // Check JSON decoding and required properties
         if (json_last_error() !== JSON_ERROR_NONE) {
             debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
@@ -226,15 +231,15 @@ trait search_component_number_tm {
             $query_object->sentence = "1=0"; // Always false
             return $query_object;
         }
-    
+
         $q_clean = str_replace(['<=', ','], ['', '.'], $q_object->value);
         if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
             $q_clean = '0';
         }
-        
+
         $query_object->params   = ['_Q1_' => $q_clean];
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} <= _Q1_";
-       
+
         return $query_object;
     }
 
@@ -261,7 +266,7 @@ trait search_component_number_tm {
     protected static function resolve_number_greater_than_sql_tm(object $query_object, string $q, object $ctx) : object {
         // Validate input parameters
         $q_object = json_decode($q);
-        
+
         // Check JSON decoding and required properties
         if (json_last_error() !== JSON_ERROR_NONE) {
             debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
@@ -276,12 +281,12 @@ trait search_component_number_tm {
             $query_object->sentence = "1=0"; // Always false
             return $query_object;
         }
-    
+
         $q_clean = str_replace(['>', ','], ['', '.'], $q_object->value);
         if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
             $q_clean = '0';
         }
-        
+
         $query_object->params   = ['_Q1_' => $q_clean];
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} > _Q1_";
 
@@ -311,7 +316,7 @@ trait search_component_number_tm {
     protected static function resolve_number_less_than_sql_tm(object $query_object, string $q, object $ctx) : object {
         // Validate input parameters
         $q_object = json_decode($q);
-        
+
         // Check JSON decoding and required properties
         if (json_last_error() !== JSON_ERROR_NONE) {
             debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
@@ -325,8 +330,8 @@ trait search_component_number_tm {
             $query_object->params   = [];
             $query_object->sentence = "1=0"; // Always false
             return $query_object;
-        }    
-    
+        }
+
         $q_clean = str_replace(['<', ','], ['', '.'], $q_object->value);
         if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
             $q_clean = '0';
@@ -361,7 +366,7 @@ trait search_component_number_tm {
     protected static function resolve_number_equal_sql_tm(object $query_object, string $q, object $ctx) : object {
         // Validate input parameters
         $q_object = json_decode($q);
-        
+
         // Check JSON decoding and required properties
         if (json_last_error() !== JSON_ERROR_NONE) {
             debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
