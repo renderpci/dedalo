@@ -65,22 +65,25 @@ export function join_items_to_string(data: data_item[] | null, options: parser_o
 /**
  * TEXT_FORMAT
  * Generic text pattern processor.
- * Processes an array of structured data objects and formats them
- * according to a specified pattern template using ${id} placeholders.
+ * Applies a pattern template to zipped id-keyed values.
+ *
+ * Always emits one data_item per zip row where value is a single-element
+ * string array: `{value: ["<replaced string>"]}`.  This uniform shape lets
+ * downstream merge steps (explicit or the executor's auto-completion) handle
+ * the output consistently regardless of how many placeholders the pattern has.
  *
  * @param data    - Array of data items with `id` and `value`
  * @param options - { pattern: string }
- * @returns Formatted string wrapped in data_item or null
+ * @returns data_item[] where each value is string[], or null
  *
  * @example
- *   const data = [
- *     { id: 'firstName', value: 'John' },
- *     { id: 'lastName',  value: 'Doe' },
- *     { id: 'city',      value: 'London' }
- *   ];
- *   const options = { pattern: '${firstName} ${lastName} from ${city}' };
- *   text_format(data, options);
- *   // Returns: [{ value: "John Doe from London", ... }]
+ *   // Multi-field zip
+ *   text_format([{id:'a',value:['Ana','Ger']},{id:'b',value:['Hero','Del']}], {pattern:'${a} ${b}'})
+ *   // → [{value:['Ana Hero']}, {value:['Ger Del']}]
+ *
+ *   // Single-field with literal prefix
+ *   text_format([{id:'a',value:'spa'}], {pattern:'lg-${a}'})
+ *   // → [{value:['lg-spa']}]
  */
 export function text_format(data: data_item[] | null, options: parser_options): any {
 
@@ -105,46 +108,53 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 	// Build values array in placeholder order, supporting parallel loops (zipping arrays of equal/variadic length)
 	const id_map = new Map<string, any[]>();
 	let max_len = 1;
-	let source_was_array = false;
 
 	for (const item of data) {
 		if (item.id) {
 			const val = item.value;
+			let new_vals: any[] = [];
+			
 			if (Array.isArray(val)) {
-				source_was_array = true;
-				max_len = Math.max(max_len, val.length);
-				id_map.set(item.id, val.map(v => v !== null && v !== undefined ? stringify_value(v) : null));
+				new_vals = val.map(v => v !== null && v !== undefined ? stringify_value(v) : null);
 			} else {
-				id_map.set(item.id, [val !== null && val !== undefined ? stringify_value(val) : null]);
+				new_vals = [val !== null && val !== undefined ? stringify_value(val) : null];
 			}
+
+			if (id_map.has(item.id)) {
+				id_map.get(item.id)!.push(...new_vals);
+			} else {
+				id_map.set(item.id, new_vals);
+			}
+			max_len = Math.max(max_len, id_map.get(item.id)!.length);
 		}
 	}
 
-	const zipped_results: string[] = [];
+	// One result per zip row. Always apply pattern replacement and wrap the
+	// result string in a single-element array so the shape is uniform regardless
+	// of placeholder count. Downstream merge (explicit or auto) handles joining.
+	const zipped_results: string[][] = [];
 
 	for (let i = 0; i < max_len; i++) {
 		const values = placeholder_names.map(name => {
 			const mapped = id_map.get(name);
 			if (!mapped) return null;
-			// If array has only 1 element, repeat it; otherwise zip sequence
+			// Repeat single-element values; otherwise zip positionally
 			return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
 		});
 
 		const result_str = replace(pattern, values);
-		if (result_str) {
-			zipped_results.push(result_str);
-		}
+		if (result_str) zipped_results.push([result_str]);
 	}
 
 	if (zipped_results.length === 0) return null;
 
-	// Output primitive or object wrapper based on original data type
-	return [{
+	// Each item's value is string[] — executor auto-applies merge based on output_format.
+	return zipped_results.map(row => ({
 		id:    null,
-		value: source_was_array ? zipped_results : zipped_results[0],
+		value: row,
 		tipo:  data[0].tipo,
 		lang:  data[0].lang
-	}];
+	}));
 }
 
 
