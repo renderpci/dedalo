@@ -1007,9 +1007,17 @@ class search {
 		$sql_query .= PHP_EOL . ') main_select';
 
 		// order (always present, either custom or default)
-		$sql_query .= !empty($this->sql_obj->order)
-			? PHP_EOL . 'ORDER BY ' . implode( ', ', $this->sql_obj->order )
-			: PHP_EOL . 'ORDER BY ' . implode( ', ', $this->sql_obj->order_default );
+		// Remove table aliases from outer ORDER BY since we're selecting from main_select subquery
+		$outer_order = !empty($this->sql_obj->order)
+			? $this->sql_obj->order
+			: $this->sql_obj->order_default;
+		
+		$outer_order_clean = array_map(function($order_clause) {
+			// Remove table alias prefix (e.g., 'te65.section_id' -> 'section_id')
+			return preg_replace('/^[a-z0-9_]+\./', '', $order_clause);
+		}, $outer_order);
+		
+		$sql_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $outer_order_clean );
 
 		// limit
 		if (isset($this->sqo->limit) && $this->sqo->limit>0) {
