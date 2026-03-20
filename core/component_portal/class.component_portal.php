@@ -492,6 +492,13 @@ class component_portal extends component_relation_common {
 				'section_tipo'		=> $section_tipo
 			];
 
+		// time machine cases. Do not resolve ddo_map. Tipo 'dd578' is column `user_id`
+			if($this->tipo===DEDALO_TIME_MACHINE_COLUMN_USER_ID) {
+				// When `column` property is set, it will be used literally instead of parsing the path.
+				$path[0]->column = 'user_id';
+				return $path;
+			}
+
 		// ddo_map. request_config show ddo_map first item is used to sort
 		// must be calculated previously by the get_structure_context method
 			$request_config			= $this->request_config ?? [];

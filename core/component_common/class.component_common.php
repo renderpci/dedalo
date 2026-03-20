@@ -3894,6 +3894,11 @@ abstract class component_common extends common {
 	*/
 	public function get_sortable() : bool {
 
+		// time machine cases. Do not resolve ddo_map. Tipo 'rsc329' is column `timestamp`
+		if($this->tipo===DEDALO_NOTES_TEXT_TIPO) {
+			return false;
+		}
+
 		return true;
 	}//end get_sortable
 

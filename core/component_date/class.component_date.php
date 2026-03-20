@@ -759,31 +759,13 @@ class component_date extends component_common {
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
 		// self path
-			$path = [
-				// self component path
-				(object)[
-					'component_tipo'	=> $component_tipo,
-					'model'				=> ontology_node::get_model_by_tipo($component_tipo,true),
-					'name'				=> ontology_node::get_term_by_tipo($component_tipo),
-					'section_tipo'		=> $section_tipo
-				]
-			];
+		$path = parent::get_order_path($component_tipo, $section_tipo);
 
-		// from_section_tipo. When is defined, this component is inside a portal and
-		// we need the parent portal path too to add at beginning
-			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
-				// recursion
-				// $pre_path = $this->get_order_path($this->from_component_tipo, $this->from_section_tipo);
-				// $pre_path = search::get_query_path($this->from_component_tipo, $this->from_section_tipo);
-				// array_unshift($path, ...$pre_path);
-				array_unshift($path, (object)[
-					'component_tipo'	=> $this->from_component_tipo,
-					'model'				=> ontology_node::get_model_by_tipo($this->from_component_tipo,true),
-					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
-					'section_tipo'		=> $this->from_section_tipo
-				]);
-			}
-
+		// time machine cases. Do not resolve ddo_map. Tipo 'dd559' is column `timestamp`
+		if($this->tipo===DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP) {
+			// When `column` property is set, it will be used literally instead of parsing the path.
+			$path[0]->column = 'timestamp';
+		}
 
 		return $path;
 	}//end get_order_path
