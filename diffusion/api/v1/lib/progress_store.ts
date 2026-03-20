@@ -1,10 +1,11 @@
 /**
  * PROGRESS_STORE
  * In-memory store for tracking active diffusion processes.
- * Used by handle_diffuse_stream (writes) and handle_get_process_status (reads).
+ * Used by run_background_diffusion (writes) and handle_diffuse_stream (reads).
  *
- * Entries auto-purge after MAX_AGE_MS (24 hours) to prevent memory leaks
- * from abandoned processes.
+ * Supports a push-notify pattern: callers can subscribe to a process and
+ * receive immediate callbacks on every state change, avoiding polling lag.
+ * Entries auto-purge after MAX_AGE_MS (24 hours) to prevent memory leaks.
  */
 
 import type { progress_data, engine_response } from './types';
@@ -17,6 +18,9 @@ import type { progress_data, engine_response } from './types';
 
 const store = new Map<string, progress_data>();
 
+// Listeners for push-notify: process_id → Set of callbacks
+const listeners = new Map<string, Set<(snapshot: progress_data) => void>>();
+
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 
@@ -27,9 +31,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
  * @param total - Total number of records to process
  * @returns process_id (UUID)
  */
-export function create_process(total: number): string {
-
-	const process_id = crypto.randomUUID();
+export function create_process(total: number, process_id: string): string {
 
 	const entry: progress_data = {
 		process_id,
@@ -96,6 +98,8 @@ export function update_progress(
 
 	// Update elapsed time
 	entry.total_time = format_elapsed(Date.now() - entry.started_at);
+
+	notify_listeners(process_id, entry);
 }
 
 
@@ -115,6 +119,8 @@ export function finish_process(process_id: string, result: engine_response): voi
 	entry.result     = result;
 	entry.total_time = format_elapsed(Date.now() - entry.started_at);
 	entry.data.msg   = result.msg;
+
+	notify_listeners(process_id, entry);
 }
 
 
@@ -136,13 +142,71 @@ export function get_progress(process_id: string): progress_data | null {
 
 
 /**
+ * GET_ALL_PROCESSES
+ * Returns all currently tracked processes in the store.
+ * Useful for building active process lists.
+ */
+export function get_all_processes(): progress_data[] {
+	return Array.from(store.values()).map(entry => ({ ...entry, data: { ...entry.data } }));
+}
+
+
+
+/**
  * DELETE_PROCESS
- * Removes a process entry from the store.
- * Called after the polling SSE stream finishes.
+ * Removes a process entry and all its listeners from the store.
  * @param process_id - The process ID
  */
 export function delete_process(process_id: string): void {
 	store.delete(process_id);
+	listeners.delete(process_id);
+}
+
+
+
+/**
+ * SUBSCRIBE_TO_PROCESS
+ * Register a callback fired immediately on every state change.
+ * The callback receives a shallow snapshot of progress_data.
+ * @param process_id - The process ID to subscribe to
+ * @param cb         - Callback invoked on every update
+ */
+export function subscribe_to_process(
+	process_id: string,
+	cb: (snapshot: progress_data) => void
+): void {
+	if (!listeners.has(process_id)) {
+		listeners.set(process_id, new Set());
+	}
+	listeners.get(process_id)!.add(cb);
+}
+
+
+
+/**
+ * UNSUBSCRIBE_FROM_PROCESS
+ * Remove a previously registered callback.
+ * @param process_id - The process ID
+ * @param cb         - The callback to remove
+ */
+export function unsubscribe_from_process(
+	process_id: string,
+	cb: (snapshot: progress_data) => void
+): void {
+	listeners.get(process_id)?.delete(cb);
+}
+
+
+
+/**
+ * NOTIFY_LISTENERS
+ * Fire all callbacks registered for process_id.
+ */
+function notify_listeners(process_id: string, entry: progress_data): void {
+	const cbs = listeners.get(process_id);
+	if (!cbs || cbs.size === 0) return;
+	const snapshot: progress_data = { ...entry, data: { ...entry.data } };
+	for (const cb of cbs) cb(snapshot);
 }
 
 

@@ -29,6 +29,10 @@ class dd_diffusion_api {
 	 * @return object Standardized JSON response
 	 */
 	public static function diffuse(object $rqo): object {
+		
+		// Release the session lock immediately so the frontend UI isn't blocked
+		// while this long-running diffusion chunk processes.
+		session_write_close();
 
 		$response = new stdClass();
 			$response->result = false;
@@ -328,7 +332,7 @@ class dd_diffusion_api {
 
 		$parent = $source_node->get_parent();
 		$main_section_tipo = diffusion_utils::get_related_section_tipo($source_tipo);
-
+		
 		$properties = $source_node->get_properties();
 
 		$diffusion_node_model = $source_node->get_model();

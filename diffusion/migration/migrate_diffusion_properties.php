@@ -2015,6 +2015,26 @@ function process_node($node, $level) {
 										break;
 									}
 								}
+
+								if(empty($final_method_cp)) {
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+									$new_props->process->ddo_map = $ddo_map_cp;
+									
+
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id\n";
+									break;
+									
+								}
 								
 								if($final_method_cp === 'get_diffusion_dato') {
 									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
@@ -2147,27 +2167,25 @@ function process_node($node, $level) {
 								&& ($process_dato_cb === 'diffusion_sql::map_locator_to_term_id'
 									|| $process_dato_cb === 'diffusion_sql::map_locator_to_terminoID'))
 							{
-								
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
 
-								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
-									'component_check_box',
-									null,
-									null,
-									null
-								);
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
 
-								// "is_publicable" = true
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
 								}
-
-								// "varchar" = 256
-								if(isset($props->varchar)){
-									$new_props->varchar = $props->varchar;
-								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id -> get_diffusion_dato()\n";
+								echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id\n";
 								break;
 							}
 
@@ -3110,6 +3128,8 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
+							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
+
 							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
 							if( $process_dato 
 								&& $process_dato=== "diffusion_sql::map_target_section_tipo"){							
@@ -3165,7 +3185,39 @@ function process_node($node, $level) {
 								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] date empty props -> get_diffusion_value\n";
+								echo "{$indent}  [RULE APPLIED] text_area empty props -> get_diffusion_value\n";
+								break;
+							}
+							break;
+
+						case 'component_html_text':
+							$is_empty_cd = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
+							if($is_empty_cd($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_html_text',
+									null, null, null, null, null, null
+								);
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] html_text empty props -> get_diffusion_value\n";
 								break;
 							}
 							break;
@@ -3284,6 +3336,230 @@ function process_node($node, $level) {
 							break;
 						
 							default:
+							break;
+						case 'component_relation_children':
+
+							$is_empty_rc = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_rc($props)) {
+
+								$ddo_map_rc = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_children',
+									null,
+									null,
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] check_box empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_rc = $props->data_to_be_used ?? null;
+							if($data_to_be_used_rc && $data_to_be_used_rc === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_relation_children',
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_children data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_rc = $props->process_dato ?? null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_rc
+								&& ($process_dato_rc === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_rc === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_children map_locator_to_term_id\n";
+								break;
+							}
+
+							// 2.2 "process_dato" = "diffusion_sql::map_quality_to_int"
+							if($process_dato_rc && $process_dato_rc === 'diffusion_sql::map_quality_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_children map_quality_to_int -> get_diffusion_dato()\n";
+								break;
+							}
+							
+							break;
+
+						case 'component_iri':
+
+							$is_empty_iri = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_iri($props)) {
+
+								$ddo_map_iri = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_iri',
+									null,
+									null,
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_iri = $props->data_to_be_used ?? null;
+							if($data_to_be_used_iri && $data_to_be_used_iri === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'component_iri',
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+							
+
 							break;
 					}
 				}
