@@ -13,6 +13,11 @@
 
 
 
+const LABEL_FALLBACK_TOKEN = '<mark>'
+const HTML_TAGS_REGEXP = /(<([^>]+)>)/ig
+
+
+
 /**
  * RENDER_TREE
  * Main entry point for rendering the menu tree.
@@ -47,6 +52,8 @@ export const render_tree = (options) => {
 			items_by_parent.get(item.parent).push(item)
 		})
 		self.items_by_parent = items_by_parent
+		self.rendered_levels = new Set()
+		self.base_menu_url = window.location.pathname
 
 	// render
 		render_level_hierarchy({
@@ -75,7 +82,17 @@ export const render_tree = (options) => {
 				// get the main ul nodes
 				const open_id =  main_li.dataset.children
 				if (open_id) {
-					const open_ul = document.getElementById(open_id)
+					let open_ul = document.getElementById(open_id)
+					if (!open_ul) {
+						render_level_hierarchy({
+							self			: self,
+							datalist	: datalist,
+							root_ul		: container,
+							current_tipo	: open_id,
+							parent_tipo	: tipo
+						})
+						open_ul = document.getElementById(open_id)
+					}
 					// set the css visibility for the ul
 					if (open_ul) {
 						open_ul.classList.remove('menu_ul_hidden');
@@ -153,12 +170,16 @@ const render_level_hierarchy = (options) => {
 		const datalist		= options.datalist
 		const root_ul		= options.root_ul
 		const current_tipo	= options.current_tipo
+		const rendered_levels = self.rendered_levels || (self.rendered_levels = new Set())
+
+	if (rendered_levels.has(current_tipo)) {
+		return true
+	}
 
 	// ul container
 		const ul = ui.create_dom_element({
 			element_type	: 'ul',
-			id				: current_tipo,
-			parent			: root_ul
+			id				: current_tipo
 		})
 
 	// store in the instance the new ul node
@@ -167,9 +188,10 @@ const render_level_hierarchy = (options) => {
 	// values (li nodes dependents of the ul)
 		const root_areas		= self.items_by_parent.get(current_tipo) || []
 		const root_areas_length	= root_areas.length
+		const level_fragment		= document.createDocumentFragment()
 		for (let i = 0; i < root_areas_length; i++) {
 			// create the li and a nodes inside the current ul
-			render_item_hierarchy({
+			const li = render_item_hierarchy({
 				self			: self,
 				datalist		: datalist,
 				root_ul			: root_ul,
@@ -177,7 +199,14 @@ const render_level_hierarchy = (options) => {
 				item			: root_areas[i],
 				current_tipo	: current_tipo
 			})
+			if (li) {
+				level_fragment.appendChild(li)
+			}
 		}
+
+	ul.appendChild(level_fragment)
+	root_ul.appendChild(ul)
+	rendered_levels.add(current_tipo)
 
 	return true
 }//end render_level_hierarchy
@@ -217,8 +246,7 @@ const render_item_hierarchy = (options) => {
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'menu_li_inactive',
-			parent			: ul_container
+			class_name		: 'menu_li_inactive'
 		})
 		// append to li_nodes
 		self.li_nodes.push(li)
@@ -234,72 +262,76 @@ const render_item_hierarchy = (options) => {
 				// get current node mouse is over (the li itself)
 				const active_li = e.currentTarget
 				// get immediate siblings inside ul
-				const siblings	= Array.from(ul_container.children)
-
-				siblings.forEach(node_li => {
-
+				const siblings = ul_container.children
+				for (let i = 0, len = siblings.length; i < len; i++) {
+					const node_li = siblings[i]
 					if (node_li === active_li) {
-						// active the current li
 						node_li.classList.add('menu_li_active')
 						node_li.classList.remove('menu_li_inactive')
-
-						// if the active li has children
-						const open_id = node_li.dataset.children
-						if(open_id) {
-
-							//get the ul node and active it
-							const open_ul = document.getElementById(open_id)
-							if (open_ul) {
-								open_ul.classList.remove('menu_ul_hidden')
-								open_ul.classList.add('menu_ul_displayed')
-
-								const active_rect = node_li.getBoundingClientRect()
-
-								//first menu li nodes has parent 'dd1' and the position in the screen is calculated by the end of the parent li node
-								if(node_li.parentNode.id === 'dd1'){
-
-									open_ul.style.left = (active_rect.left - 1) + 'px'
-
-								}else{
-									const root_rect = root_ul.getBoundingClientRect()
-									const top_position = Math.ceil(active_rect.top - root_rect.top)
-
-									// the node is totally visible and don't need move to the top
-									open_ul.style.top = top_position + 'px'
-
-									// normal calculation for the hierarchy menus
-									const ul_rect = open_ul.getBoundingClientRect()
-									// get the bottom position of the ul and remove the height of the window
-									const ul_bottom_dif = ul_rect.bottom - window.innerHeight
-									// if the position is outside of the window (>0)
-									if (ul_bottom_dif>0) {
-										// get the top of the current li and remove the oversize outsize of the window
-										const total_top		= top_position - ul_bottom_dif
-										open_ul.style.top	= total_top + 'px'
-									}
-									// move the node to the right position of the selected li
-									open_ul.style.left = active_rect.right + 'px'
-								}
-							}
-						}
-					} else {
-						// inactive sibling nodes
-						node_li.classList.add('menu_li_inactive')
-						node_li.classList.remove('menu_li_active')
-
-						// close all ul nodes dependent of this sibling li
-						const close_id = node_li.dataset.children
-						if (close_id) {
-							close_all_children(close_id)
-						}
+						continue
 					}
-				})
+
+					// inactive sibling nodes
+					node_li.classList.add('menu_li_inactive')
+					node_li.classList.remove('menu_li_active')
+
+					// close all ul nodes dependent of this sibling li
+					const close_id = node_li.dataset.children
+					if (close_id) {
+						close_all_children(close_id)
+					}
+				}
+
+				const open_id = active_li.dataset.children
+				if (!open_id) {
+					return true
+				}
+
+				if (active_li.dataset.childrenLoaded !== '1') {
+					render_level_hierarchy({
+						self			: self,
+						datalist	: datalist,
+						root_ul		: root_ul,
+						current_tipo	: open_id,
+						parent_tipo	: current_tipo
+					})
+					active_li.dataset.childrenLoaded = '1'
+				}
+
+				const open_ul = document.getElementById(open_id)
+				if (!open_ul) {
+					return true
+				}
+
+				const active_rect = active_li.getBoundingClientRect()
+				const is_first_level = active_li.parentNode.id === 'dd1'
+
+				open_ul.classList.remove('menu_ul_hidden')
+				open_ul.classList.add('menu_ul_displayed')
+
+				if (is_first_level) {
+					open_ul.style.left = (active_rect.left - 1) + 'px'
+					return true
+				}
+
+				const root_rect = root_ul.getBoundingClientRect()
+				const top_position = Math.ceil(active_rect.top - root_rect.top)
+				let final_top = top_position
+				const ul_rect = open_ul.getBoundingClientRect()
+				const ul_bottom_dif = ul_rect.bottom - window.innerHeight
+				if (ul_bottom_dif>0) {
+					final_top = top_position - ul_bottom_dif
+				}
+
+				open_ul.style.top = final_top + 'px'
+				open_ul.style.left = active_rect.right + 'px'
 			}
 			li.addEventListener('mouseenter', mouseenter_handler)
 
 		// mouseleave
 			const mouseleave_handler = (e) => {
-				if (e.clientY<0 || e.srcElement.id==='menu_wrapper') {
+				const related_target = e.relatedTarget
+				if (e.clientY<0 || related_target?.id==='menu_wrapper') {
 					close_all_drop_menu(self);
 				}
 			}
@@ -309,13 +341,14 @@ const render_item_hierarchy = (options) => {
 		// when the label is not in the current language
 		// and get the label with fallback
 		// and replace it for italic style
-			const is_fallback	= item.label.indexOf('<mark>')
-			const text_fallback	= is_fallback === -1 ? '' : 'mark'
-			const label_text	= item.label.replace(/(<([^>]+)>)/ig,"");
+			const has_html		= item.label.indexOf('<')!==-1
+			const is_fallback	= item.label.indexOf(LABEL_FALLBACK_TOKEN)!==-1
+			const text_fallback	= is_fallback ? 'mark' : ''
+			const label_text	= has_html ? item.label.replace(HTML_TAGS_REGEXP,"") : item.label
 
 		// url
-			const base_url	= window.location.pathname
-			const url		= base_url + '?tipo=' + item.tipo + '&mode=list'
+			const base_url	= self.base_menu_url || window.location.pathname
+			const url		= `${base_url}?tipo=${item.tipo}&mode=list`
 
 		// a element with the link to the area or section to go
 			const link = ui.create_dom_element({
@@ -377,15 +410,8 @@ const render_item_hierarchy = (options) => {
 
 			li.classList.add ('has-sub')
 			li.dataset.children	= item.tipo
-			render_level_hierarchy({
-				self			: self,
-				datalist		: datalist,
-				root_ul			: root_ul,
-				current_tipo	: item.tipo,
-				parent_tipo		: current_tipo
-			})
+			li.dataset.childrenLoaded = '0'
 		}//end has_children
-
 
 	return li
 }//end render_item_hierarchy
@@ -441,8 +467,11 @@ const close_all_children = function(tipo) {
 
 	// get the children nodes of the sent tipo and add/remove the css
 	const close_ul = document.getElementById(tipo)
-		  close_ul.classList.remove('menu_ul_displayed');
-		  close_ul.classList.add('menu_ul_hidden');
+	if (!close_ul) {
+		return
+	}
+	close_ul.classList.remove('menu_ul_displayed');
+	close_ul.classList.add('menu_ul_hidden');
 
 	// get the child nodes of the current ul
 	const ar_children_nodes	= Array.from(close_ul.children)
