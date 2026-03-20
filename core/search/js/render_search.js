@@ -393,9 +393,23 @@ render_search.prototype.render_search_buttons = function(){
 			value			: self.limit, // default 10
 			parent			: max_group
 		})
-		max_input.addEventListener('change',function(){
+		// input event
+		const max_input_input_handler = (e) => {
 			self.limit = parseInt(max_input.value)
-		})
+			if(self.limit<1) self.limit = 1
+			// update local DB pagination
+			self.update_local_db_pagination()
+		}
+		max_input.addEventListener('input', max_input_input_handler)
+		// change event
+		const change_handler = (e) => {
+			e.preventDefault()
+			// Update list
+			self.exec_search()
+		}
+		max_input.addEventListener('change', change_handler)
+		// set node pointer
+		self.max_input = max_input
 
 	// recursive children
 		if (self.caller.context?.section_map && self.caller.context.section_map.thesaurus) {
@@ -416,7 +430,7 @@ render_search.prototype.render_search_buttons = function(){
 					class_name		: 'children_recursive'
 				})
 				recursive_label.prepend(search_children_recursive_node)
-				// fix node
+				// set node pointer
 				self.search_children_recursive_node	= search_children_recursive_node
 			}
 		}
@@ -460,11 +474,14 @@ render_search.prototype.render_search_buttons = function(){
 		const submit_fn = (e) => {
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
-				document.activeElement.blur()
-			// exec search command (return promise resolved as bool)
+			document.activeElement.blur()
+			// exec decoupled
+			dd_request_idle_callback(()=>{
+				// exec search command (return promise resolved as bool)
 				self.exec_search()
-			// toggle filter container
+				// toggle filter container
 				toggle_search_panel(self) // toggle to open from default state close
+			})
 		}
 		const submit_button = ui.create_dom_element({
 			element_type	: 'button',
@@ -1203,8 +1220,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 			self.search_panel_is_open = true;
 
 			const data = {
-				id: status_id,
-				value: true
+				id : status_id,
+				value : true
 			};
 
 			await data_manager.set_local_db_data(data, status_table);

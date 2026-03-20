@@ -130,11 +130,14 @@ search.prototype.init = async function(options) {
 		self.search_container_selection_presets	= null
 		self.wrapper_sections_selector			= null
 		self.search_children_recursive_node		= null
+		self.max_input 							= null
 
 		self.node								= null
 
+	// other
 		self.id									= 'search'
 		self.section_id							= 0
+		self.pagination_id 						= `${self.section_tipo}_${self.mode}`
 
 		// ar_components_exclude. Custom list of elements to exclude in the left list (section fields)
 		self.ar_components_exclude = [
@@ -221,29 +224,41 @@ search.prototype.build = async function() {
 	try {
 
 		// editing_preset. Get json_filter from DDBB temp presets section
-			ar_promises.push( new Promise(function(resolve){
+		ar_promises.push( new Promise(function(resolve){
 
-				get_editing_preset_json_filter(self)
-				.then(function(json_filter){
+			get_editing_preset_json_filter(self)
+			.then(function(json_filter){
 
-					// debug
-						if(SHOW_DEBUG===true) {
-							if (!json_filter) {
-								console.log(
-									'[search.build] No preset was found (search editing_preset). Using default filter:',
-									self.section_tipo, json_filter
-								);
-							}
-						}
-
-					// Override self.json_filter if json_filter is valid
-					if (json_filter && typeof json_filter === 'object' && Object.keys(json_filter).length > 0) {
-						self.json_filter = json_filter;
+				// debug
+				if(SHOW_DEBUG===true) {
+					if (!json_filter) {
+						console.log(
+							'[search.build] No preset was found (search editing_preset). Using default filter:',
+							self.section_tipo, json_filter
+						);
 					}
+				}
 
-					resolve(self.json_filter)
-				})
-			}))
+				// Override self.json_filter if json_filter is valid
+				if (json_filter && typeof json_filter === 'object' && Object.keys(json_filter).length > 0) {
+					self.json_filter = json_filter;
+				}
+
+				resolve(self.json_filter)
+			})
+		}))
+
+		// pagination data. Get limit from local DB
+		ar_promises.push( new Promise(function(resolve){
+
+			data_manager.get_local_db_data(self.pagination_id, 'pagination')
+			.then(function(local_data){
+				if (local_data?.value?.limit) {
+					self.limit = local_data.value.limit
+				}
+				resolve(self.limit)
+			})
+		}))
 
 		// wait until all request are resolved or rejected
 		await Promise.allSettled(ar_promises);
@@ -260,6 +275,46 @@ search.prototype.build = async function() {
 
 	return true
 }//end build
+
+
+
+/**
+* UPDATE_LOCAL_DB_PAGINATION
+* Updates the pagination limit and offset values in the local database storage.
+* This function persists the current pagination settings so they can be restored
+* when the search is rebuilt or the page is reloaded.
+*
+* @return Promise<void> - Resolves when the local DB is updated
+*/
+search.prototype.update_local_db_pagination = async function() {
+
+	const self = this
+
+	// Get existing pagination data from local DB
+	const local_db_data = await data_manager.get_local_db_data(self.pagination_id, 'pagination')
+
+	if(local_db_data) {
+		// Update the limit value with current search limit
+		local_db_data.value.limit = self.limit
+
+		// Update the offset value with current search offset
+		local_db_data.value.offset = self.offset || 0
+
+		// Save the updated pagination data back to local DB
+		await data_manager.set_local_db_data(local_db_data, 'pagination')
+
+	} else {
+		// Create new pagination data if none exists
+		const new_pagination_data = {
+			id : self.pagination_id,
+			value : {
+				limit: self.limit,
+				offset: self.offset || 0
+			}
+		}
+		await data_manager.set_local_db_data(new_pagination_data, 'pagination')
+	}
+}
 
 
 
@@ -960,34 +1015,57 @@ search.prototype.update_state = async function(options) {
 
 		const self = this
 
-		// source search_action
+		// race condition prevention - return if already searching
+		if (self.searching===true) {
+			return Promise.resolve(false)
+		}
+		self.searching = true
+
+		try {
+
+			// source search_action
 			self.source.search_action = 'search'
 
-		// section || area thesaurus
+			// section || area thesaurus
 			const caller = self.caller
 
-		// Delete caller search_tipos (Ontology feature).
-		// This allow to re-create the RQO clean on build the caller again ignoring the URL search_tipos value.
-			if(caller.search_tipos) {
+			// caller null check
+			if (!caller) {
+				console.error('Error: caller is not defined');
+				return Promise.resolve(false)
+			}
+
+			// Delete caller search_tipos (Ontology feature).
+			// This allow to re-create the RQO clean on build the caller again ignoring the URL search_tipos value.
+			if (caller.search_tipos) {
 				caller.search_tipos = null
 			}
 
-		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
+			// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
 			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : 'search'
 			})
 
-		 // reset order
+			// reset order
 			json_query_obj.order = [];
 
-		const js_promise = update_caller(
-			caller,
-			json_query_obj,
-			null, // filter_by_locator
-			self
-		)
+			// pagination reset for section
+			if (caller.model === 'section') {
+				json_query_obj.offset = 0
+			}
 
-		return js_promise
+			const js_promise = await update_caller(
+				caller,
+				json_query_obj,
+				null, // filter_by_locator
+				self
+			)
+
+			return js_promise
+
+		} finally {
+			self.searching = false
+		}
 	}//end exec_search
 
 
@@ -1005,36 +1083,28 @@ search.prototype.update_state = async function(options) {
 		button_node.classList.add('loading')
 
 		// source search_action
-			self.source.search_action = 'show_all'
+		self.source.search_action = 'show_all'
 
 		// json_query_obj
-			const json_query_obj = {
-				filter	: {$and:[]}, // reset filter
-				order	: [] // reset order
-			}
+		const json_query_obj = {
+			filter	: {$and:[]}, // reset filter
+			order	: [] // reset order
+		}
 
 		// pagination
 		if(self.caller?.model === 'section') {
-
-			json_query_obj.limit = self.caller.tipo==='dd542' ? 30 : 10;
 			json_query_obj.offset = 0
-
-			// max_input update if available
-			const max_input = self.search_group_container?.querySelector("input.max_input")
-			if(max_input) {
-				max_input.value = json_query_obj.limit
-			}
 		}
 
 		// update_caller
-			const js_promise = await update_caller(
-				self.caller, // section_instance || area_thesaurus_instance,
-				json_query_obj, // json_query_obj
-				null, // filter_by_locators,
-				self
-			)
+		const js_promise = await update_caller(
+			self.caller, // section_instance || area_thesaurus_instance,
+			json_query_obj, // json_query_obj
+			null, // filter_by_locators,
+			self
+		)
 
-			button_node.classList.remove('loading')
+		button_node.classList.remove('loading')
 
 
 		return js_promise
@@ -1102,48 +1172,39 @@ search.prototype.update_state = async function(options) {
 					paginator_node.classList.add('loading')
 				}
 
-				// pagination. Reset other local DB offset values
-				// This is necessary because on changing mode, previous offset
-				// will be wrong, then we reset the opposite mode offset value
-					const pagination_id = caller_instance.mode==='edit'
-						? `${caller_instance.tipo}_list`
-						: `${caller_instance.tipo}_edit`
-					const saved_pagination = await data_manager.get_local_db_data(
-						pagination_id,
-						'pagination'
-					);
-					if (saved_pagination) {
-						await data_manager.set_local_db_data(
-							{
-								id		: pagination_id,
-								value	: {
-									limit	: saved_pagination.value.limit,
-									offset	: 0
-								}
-							},
-							'pagination'
-						)
-					}
+				// pagination. Reset opposite-mode local DB offset values so stale offsets are not reused
+				const opposite_mode = caller_instance.mode === 'edit' ? 'list' : 'edit'
+				const opposite_pagination_id = `${self.section_tipo}_${opposite_mode}`
+				const saved_pagination = await data_manager.get_local_db_data(
+					opposite_pagination_id,
+					'pagination'
+				);
+				if (saved_pagination?.value) {
+					// reset offset so next navigation for that mode starts at page 0
+					saved_pagination.value.offset = 0
+					saved_pagination.id = saved_pagination.id || opposite_pagination_id
+					await data_manager.set_local_db_data(saved_pagination, 'pagination')
+				}
 
 				// section. refresh current section and set history navigation
-					const section_promise = caller_instance.navigate({
-						callback			: null,
-						navigation_history	: true,
-						action				: 'search'
-					})
-					section_promise.then(()=>{
-						// loading css remove
-						if (paginator_node) {
-							paginator_node.classList.remove('loading')
-						}
-					})
+				const section_promise = caller_instance.navigate({
+					callback			: null,
+					navigation_history	: true,
+					action				: 'search'
+				})
+				section_promise.finally(()=>{
+					// loading css remove
+					if (paginator_node) {
+						paginator_node.classList.remove('loading')
+					}
+				})
 
 				return section_promise
 			}
 
 			default:
 
-				return new Promise(()=>{})
+				return Promise.resolve(false)
 		}
 	}//end update_caller
 
