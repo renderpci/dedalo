@@ -360,16 +360,18 @@ export const render_column_id = function(options) {
 				break;
 			}
 
-			case (self.tipo==='dd542'): {
+			case (self.tipo==='dd542' || self.tipo==='dd15'): {
 
-				// activity case
+				// activity | time_machine cases
+
+				const add_css = self.tipo==='dd15' ? 'time_machine' : 'activity'
 
 				const button_edit = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'section_id_container',
+					class_name		: 'section_id_container ' + add_css,
 					parent			: fragment
 				})
-
+				// Append generic section_id_node
 				button_edit.appendChild(section_id_node)
 				break;
 			}
