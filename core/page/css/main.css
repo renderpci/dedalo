@@ -5856,6 +5856,14 @@ dd-modal .footer.distribute {
   pointer-events: none;
   transition: opacity 0.3s ease-in-out;
 }
+.column.column_section_id:has(> .section_id_container.time_machine) {
+  background-color: #777bb3;
+  color: #ffffff;
+}
+.column.column_section_id:has(> .section_id_container.activity) {
+  background-color: #5cb85c;
+  color: #ffffff;
+}
 .column.column_section_id > .section_id_container {
   padding: 0.12rem;
   padding-top: 0.04rem;
@@ -5863,6 +5871,7 @@ dd-modal .footer.distribute {
   width: 100%;
 }
 .column.column_section_id > .section_id_container > .section_id {
+  position: relative;
   font-size: 1.02rem;
 }
 .column.column_remove {
@@ -11589,7 +11598,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 * Included from main.less file
 */
 .wrap_ts_object {
-  contain: content;
+  contain: style;
 }
 .wrap_ts_object .inline_common {
   display: flex;

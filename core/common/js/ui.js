@@ -2569,7 +2569,7 @@ export const ui = {
 
 				// order sqo build
 					const order = [{
-						direction: direction, // ASC|DESC
+						direction : direction, // ASC|DESC
 						path : path
 					}]
 
@@ -3218,7 +3218,9 @@ export const ui = {
 			})
 			await instance.build(true)
 			const node = await instance.render()
-			body.appendChild(node)
+			if(node) {
+				body.appendChild(node)
+			}
 			ui.component.activate(instance)
 
 		// footer

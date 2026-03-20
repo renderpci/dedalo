@@ -403,7 +403,7 @@ abstract class common {
 	* @return object $info
 	*/
 	public function get_info() : object {
-		return (object)[	
+		return (object)[
 			'section_tipo' 	=> $this->section_tipo ?? $this->tipo,
 			'tipo' 			=> $this->tipo,
 			'label' 		=> $this->label,
@@ -2995,7 +2995,7 @@ abstract class common {
 	public static function get_section_elements_context(object $options) : array {
 
 		// options
-			$ar_section_tipo			= $options->ar_section_tipo ?? null;
+			$ar_section_tipo			= $options->ar_section_tipo ?? [];
 			$use_real_sections			= $options->use_real_sections ?? false;
 			$skip_permissions			= $options->skip_permissions ?? false;
 			$caller_tipo				= $options->caller_tipo ?? null;

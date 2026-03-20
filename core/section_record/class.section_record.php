@@ -249,7 +249,6 @@ class section_record {
 
 		$component_data = $this->data_instance->get_key_data( $column, $tipo );
 
-
 		return $component_data;
 	}//end get_component_data
 

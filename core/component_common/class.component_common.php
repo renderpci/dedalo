@@ -3027,7 +3027,7 @@ abstract class component_common extends common {
 
 				$this->permissions = 2; // Allow all users to search with section info components
 
-			}elseif ( strpos((string)$this->section_id, 'search') === 0){
+			}elseif ( strpos((string)$this->section_id, 'search') === 0 ){
 
 				$this->permissions = 2;
 
@@ -3477,16 +3477,6 @@ abstract class component_common extends common {
 		$data				= $this->get_data_lang() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
-
-
-		if(!is_array($changed_data->value) && $changed_data->value!==null) {
-			debug_log(__METHOD__
-			   .' Invalid value type for component: ' . get_called_class() . PHP_EOL
-			   .' value: ' . json_encode($changed_data->value, JSON_PRETTY_PRINT)
-			   , logger::ERROR
-			);
-			return false;
-		}
 
 		switch ($changed_data->action) {
 

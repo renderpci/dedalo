@@ -1085,11 +1085,11 @@ search.prototype.update_state = async function(options) {
 			case 'area_ontology': {
 
 				// area. refresh current area using navigation
-					const area_ts_promise = caller_instance.navigate({
-						callback			: null,
-						navigation_history	: false,
-						action				: 'search'
-					})
+				const area_ts_promise = caller_instance.navigate({
+					callback			: null,
+					navigation_history	: false,
+					action				: 'search'
+				})
 
 				return area_ts_promise
 			}
@@ -1097,10 +1097,10 @@ search.prototype.update_state = async function(options) {
 			case 'section': {
 
 				// paginator_node (could exist or not --area_thesaurus case--)
-					const paginator_node = caller_instance?.paginator?.node || null
-					if (paginator_node) {
-						paginator_node.classList.add('loading')
-					}
+				const paginator_node = caller_instance?.paginator?.node || null
+				if (paginator_node) {
+					paginator_node.classList.add('loading')
+				}
 
 				// pagination. Reset other local DB offset values
 				// This is necessary because on changing mode, previous offset
