@@ -7,7 +7,7 @@
  * Supports modes: date, range, time_range, period.
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
 import { langs_config } from '../diffusion_processor';
 
 
@@ -15,14 +15,6 @@ import { langs_config } from '../diffusion_processor';
 // =====================================================
 // Data item type
 // =====================================================
-
-interface data_item {
-	id?:    string | null;
-	value:  any;
-	tipo?:  string;
-	lang?:  string | null;
-}
-
 interface dd_date_part {
 	year?:   number;
 	month?:  number;
