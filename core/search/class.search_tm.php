@@ -70,8 +70,7 @@ class search_tm extends search {
 
 	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* Backward compatibility method for tests
-	* Delegates to build_sql_query_order_default() to maintain consistency
+	* Custom default order for time machine
 	* @return void
 	*/
 	public function build_sql_filter_by_locators_order() : void {

@@ -77,7 +77,7 @@ trait search_component_string_common_tm {
     * @return object The query object with SQL sentence set to "column IS NULL"
     */
     protected static function resolve_empty_value_sql_tm(object $query_object, object $ctx) : object {
-        
+
         $query_object->sentence = "({$ctx->table_alias}.{$ctx->column} IS NULL";
         return $query_object;
     }
@@ -126,7 +126,7 @@ trait search_component_string_common_tm {
     * @return object The query object with SQL sentence and params set
     */
     protected static function resolve_different_sql_tm(object $query_object, string $q, object $ctx) : object {
-        $q_clean = trim(str_replace('!=', '', $q));        
+        $q_clean = trim(str_replace('!=', '', $q));
 
         $first_char = mb_substr($q_clean, 0, 1);
         $last_char  = mb_substr($q_clean, -1);
