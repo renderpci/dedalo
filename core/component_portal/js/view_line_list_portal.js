@@ -62,27 +62,28 @@ view_line_list_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-
 	// change_mode
-		wrapper.addEventListener('dblclick', function(e) {
-			e.stopPropagation()
+		if (self.show_interface.read_only !== true && self.permissions > 1) {
+			wrapper.addEventListener('dblclick', function(e) {
+				e.stopPropagation()
 
-			// self.show_interface.read_only = true
-			const change_mode = self.context.properties.with_value
-				&& self.context.properties.with_value.mode !== self.mode
-					? self.context.properties.with_value.mode
-					: 'edit'
+				// self.show_interface.read_only = true
+				const change_mode = self.context.properties.with_value
+					&& self.context.properties.with_value.mode !== self.mode
+						? self.context.properties.with_value.mode
+						: 'edit'
 
-			const change_view = self.context.properties.with_value
-				&& self.context.properties.with_value.view !== self.context.view
-					? self.context.properties.with_value.view
-					: 'line'
+				const change_view = self.context.properties.with_value
+					&& self.context.properties.with_value.view !== self.context.view
+						? self.context.properties.with_value.view
+						: 'line'
 
-			self.change_mode({
-				mode	: change_mode,
-				view	: change_view
+				self.change_mode({
+					mode	: change_mode,
+					view	: change_view
+				})
 			})
-		})
+		}
 
 
 	return wrapper

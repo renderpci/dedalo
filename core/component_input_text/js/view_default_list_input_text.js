@@ -46,7 +46,7 @@ view_default_list_input_text.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self)
-		if (self.show_interface.read_only!==true) {
+		if (self.show_interface.read_only !== true && self.permissions > 1) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
 
