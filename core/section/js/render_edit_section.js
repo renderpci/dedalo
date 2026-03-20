@@ -11,7 +11,7 @@
 
 /**
 * RENDER_EDIT_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const render_edit_section = function() {
 
@@ -26,7 +26,7 @@ export const render_edit_section = function() {
 * @param object options
 * @return HTMLElement wrapper
 */
-render_edit_section.prototype.edit = async function(options) {
+render_edit_section.edit = async function(options) {
 
 	const self = this
 
@@ -39,7 +39,7 @@ render_edit_section.prototype.edit = async function(options) {
 		case 'default':
 		default: {
 			// dynamic try
-				const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
+				const render_view = (self.render_views || []).find(el => el.view === view && el.mode === self.mode)
 				if (render_view) {
 					const path			= render_view.path || ('./' + render_view.render +'.js')
 					const render_method	= await import (path)

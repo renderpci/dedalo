@@ -13,7 +13,7 @@
 
 /**
 * VIEW_DEFAULT_EDIT_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const view_default_edit_section = function() {
 
@@ -24,7 +24,7 @@ export const view_default_edit_section = function() {
 
 /**
 * RENDER
-* Render node for use in edit
+* Render node for use in edit mode
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -60,22 +60,22 @@ view_default_edit_section.render = async function(self, options) {
 				class_name		: 'inspector_container',
 				parent			: fragment
 			})
-			self.inspector.build().then(()=>{
-				self.inspector.render().then(inspector_wrapper =>{
 
-					// inspector_wrapper append
-						inspector_container.appendChild(inspector_wrapper)
+			// build and render inspector
+			await self.inspector.build()
+			const inspector_wrapper = await self.inspector.render()
+			if (inspector_wrapper) {
+				inspector_container.appendChild(inspector_wrapper)
 
-					// paginator inside
-						if (self.paginator) {
-							self.paginator.build().then(()=>{
-								self.paginator.render().then(paginator_wrapper =>{
-									self.inspector.paginator_container.appendChild(paginator_wrapper)
-								})
-							})
-						}
-				})
-			})
+				// paginator inside inspector
+				if (self.paginator) {
+					await self.paginator.build()
+					const paginator_wrapper = await self.paginator.render()
+					if (paginator_wrapper) {
+						self.inspector.paginator_container.appendChild(paginator_wrapper)
+					}
+				}
+			}
 		}
 
 	// search filter
@@ -118,18 +118,18 @@ view_default_edit_section.render = async function(self, options) {
 				// }
 				if (self.context.css.add_class) {
 
-					for(const selector in self.context.css.add_class) {
-						const values = self.context.css.add_class[selector]
-						const element = selector==='wrapper'
+					for(const css_key in self.context.css.add_class) {
+						const values = self.context.css.add_class[css_key]
+						const element = css_key==='wrapper'
 							? wrapper
-							: selector==='content_data'
+							: css_key==='content_data'
 								? content_data
 								: null
 
 						if (element) {
-							element.classList.add(values)
+							element.classList.add(...values)
 						}else{
-							console.warn("Invalid css class selector was ignored:", selector);
+							console.warn("Invalid css class selector was ignored:", css_key);
 						}
 					}
 				}

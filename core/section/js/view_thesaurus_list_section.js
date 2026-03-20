@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, Promise */
+/*global get_label, Promise, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -38,7 +38,7 @@ export const view_thesaurus_list_section = function() {
 * RENDER
 * Render node for use current view
 * @param object self
-* @para object options
+* @param object options
 * sample:
 * {
 *    "render_level": "full",
@@ -67,7 +67,7 @@ view_thesaurus_list_section.render = async function(self, options) {
 			// list_header_node. Remove possible style 'hide' if not empty
 				if (self.ar_instances.length>0) {
 					const wrapper = self.node
-					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
+					if (wrapper?.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
 						wrapper.list_header_node.classList.remove('hide')
 					}
 				}
@@ -177,7 +177,7 @@ view_thesaurus_list_section.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * @param array ar_section_record
-* @para object self
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
@@ -229,7 +229,7 @@ const get_content_data = async function(self, ar_section_record) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return {array} columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -340,7 +340,7 @@ const render_column_id = function(options) {
 		const fragment = new DocumentFragment()
 
 	// linker
-		const linker = self.caller.area_thesaurus.linker
+		const linker = self.caller?.area_thesaurus?.linker
 	// section_id
 		const section_id_node = ui.create_dom_element({
 			element_type	: 'span',
@@ -380,9 +380,9 @@ const render_column_id = function(options) {
 							return false
 						}
 						// linker id. A component_portal instance is expected as linker
-						const linker_id = linker.id
+						const linker_id = linker?.id
 						// source_window.event_manager.publish('link_term_' + linker_id,
-						const window_base = !linker.caller
+						const window_base = !linker?.caller
 							? window.opener // case DS opening new window
 							: window // default case (indexation)
 						window_base.event_manager.publish('link_term_' + linker_id, {
