@@ -422,6 +422,9 @@ class component_relation_children extends component_relation_common {
 				$filter_locator->set_from_component_tipo($parent_tipo);
 				$filter_locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
 
+		// table
+			$table = common::get_matrix_table_from_tipo($section_tipo);
+
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
 				$sqo->set_section_tipo( ['all'] ); // open wide for Ontology cross section parents
@@ -430,6 +433,7 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_filter_by_locators( [$filter_locator] );
 				$sqo->set_limit( $limit ); // set limit for security. Overwrite when needed.
 				$sqo->set_offset( $offset );
+				$sqo->set_tables([$table]); // Search references only in current table
 
 			// order. It is defined in section 'section_map' item as {"order":"ontology41"}
 			// This tipo is used to build the JSON path for the search
@@ -756,6 +760,9 @@ class component_relation_children extends component_relation_common {
 				$filter_locator->set_from_component_tipo( $parent_tipo );
 				$filter_locator->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
 
+		// table
+			$table = common::get_matrix_table_from_tipo($section_tipo);
+
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
 			$sqo->set_section_tipo( ['all'] ); // open wide for Ontology cross section parents
@@ -764,6 +771,7 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_filter_by_locators( [$filter_locator, $is_descriptor_locator] );
 				$sqo->set_filter_by_locators_op( 'AND' );
 				$sqo->set_limit( 1 ); // set limit for security. Overwrite when needed.
+				$sqo->set_tables([$table]); // Search references only in current table
 
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
