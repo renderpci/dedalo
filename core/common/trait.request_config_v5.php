@@ -111,8 +111,10 @@ trait request_config_v5 {
 		$ar_section_tipo = is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
 		$ddo_section_tipo = $this->build_sqo_section_tipo_ddo($ar_section_tipo);
 
-		$sqo = new stdClass();
-			$sqo->section_tipo = $ddo_section_tipo;
+		$sqo = new search_query_object();
+			$sqo->set_section_tipo(
+				is_array($ddo_section_tipo) ? $ddo_section_tipo : [$ddo_section_tipo]
+			);
 
 		// STEP 7: Create request_config_object
 		$request_config_object = new request_config_object();

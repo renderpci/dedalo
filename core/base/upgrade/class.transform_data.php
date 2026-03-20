@@ -1959,36 +1959,31 @@ class transform_data {
 				}else{
 
 					// search in database (this prevents duplicates when user apply this update more than once)
-					$sqo = json_decode('
-						{
-							"section_tipo": [
-								"'.$section_tipo.'"
-							],
-							"select": [],
-							"limit": 10,
-							"offset": 0,
-							"filter": {
-								"$and": [
-									{
-										"q": [
-											"'.$q.'"
-										],
-										"q_operator": null,
-										"path": [
-											{
-												"section_tipo": "'.$section_tipo.'",
-												"component_tipo": "'.$component_tipo.'",
-												"model": "'.$model.'",
-												"name": "'.$name.'"
-											}
-										],
-										"q_split": true,
-										"type": "jsonb"
-									}
+					$sqo_data = (object)[
+						'section_tipo' => [$section_tipo],
+						'select' => [],
+						'limit' => 10,
+						'offset' => 0,
+						'filter' => (object)[
+							'$and' => [
+								(object)[
+									'q' => [$q],
+									'q_operator' => null,
+									'path' => [
+										(object)[
+											'section_tipo' => $section_tipo,
+											'component_tipo' => $component_tipo,
+											'model' => $model,
+											'name' => $name
+										]
+									],
+									'q_split' => true,
+									'type' => 'jsonb'
 								]
-							}
-						}
-					');
+							]
+						]
+					];
+					$sqo = new search_query_object($sqo_data);
 					$search = search::get_instance(
 						$sqo // object sqo
 					);

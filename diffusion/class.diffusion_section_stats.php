@@ -692,70 +692,79 @@ class diffusion_section_stats extends diffusion {
 			$dd_date_out->set_time($time);
 
 		// user filter
-			$user_filter = !is_null($user_id)
-				? ',{
-			        "q": [{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'","from_component_tipo":"'.USER_ACTIVITY_USER_TIPO.'"}],
-			        "q_operator": null,
-			        "path": [
-			          {
-			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			            "component_tipo": "'.USER_ACTIVITY_USER_TIPO.'",
-			            "model": "'. ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO,true) .'",
-			            "name": "User"
-			          }
-			        ]
-			      }'
-				: '';
+			$user_filter_data = null;
+			if (!is_null($user_id)) {
+				$user_filter_data = (object)[
+					'q' => [(object)['section_tipo' => DEDALO_SECTION_USERS_TIPO, 'section_id' => $user_id, 'from_component_tipo' => USER_ACTIVITY_USER_TIPO]],
+					'q_operator' => null,
+					'path' => [
+						(object)[
+							'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+							'component_tipo' => USER_ACTIVITY_USER_TIPO,
+							'model' => ontology_node::get_model_by_tipo(USER_ACTIVITY_USER_TIPO, true),
+							'name' => 'User'
+						]
+					]
+				];
+			}
+
+		// build filter parts
+			$filter_parts = [
+				(object)[
+					'q' => (object)['start' => (object)['op' => null, 'day' => $dd_date_in->day, 'month' => $dd_date_in->month, 'year' => $dd_date_in->year, 'time' => $dd_date_in->time]],
+					'q_operator' => '>',
+					'path' => [
+						(object)[
+							'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+							'component_tipo' => USER_ACTIVITY_DATE_TIPO,
+							'model' => 'component_date',
+							'name' => 'Date'
+						]
+					]
+				],
+				(object)[
+					'q' => (object)['start' => (object)['op' => null, 'day' => $dd_date_out->day, 'month' => $dd_date_out->month, 'year' => $dd_date_out->year, 'time' => $dd_date_out->time]],
+					'q_operator' => '<=',
+					'path' => [
+						(object)[
+							'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+							'component_tipo' => USER_ACTIVITY_DATE_TIPO,
+							'model' => 'component_date',
+							'name' => 'Date'
+						]
+					]
+				]
+			];
+
+			// add user filter if exists
+			if ($user_filter_data !== null) {
+				$filter_parts[] = $user_filter_data;
+			}
 
 		// get all user activity records from user_activity_section in the range
-			$sqo = json_decode('{
-			  "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			  "limit": 0,
-			  "offset": 0,
-			  "select": [],
-			  "filter": {
-			    "$and": [
-			      {
-	                "q": {"start":{"op":null,"day":'.$dd_date_in->day.',"month":'.$dd_date_in->month.',"year":'.$dd_date_in->year.',"time":'.$dd_date_in->time.'}},
-	                "q_operator": ">",
-	                "path": [
-			          {
-			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-			            "model": "component_date",
-			            "name": "Date"
-			          }
-			        ]
-			      },
-			      {
-	                "q": {"start":{"op":null,"day":'.$dd_date_out->day.',"month":'.$dd_date_out->month.',"year":'.$dd_date_out->year.',"time":'.$dd_date_out->time.'}},
-	                "q_operator": "<=",
-	                "path": [
-			          {
-			            "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			            "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'",
-			            "model": "component_date",
-			            "name": "Date"
-			          }
-			        ]
-			      }
-			      '.$user_filter.'
-			    ]
-			  },
-			  "order": [
-			    {
-			      "direction": "ASC",
-			      "path": [
-			        {
-			          "name": "Date",
-			          "model": "component_date",
-			          "section_tipo": "'.USER_ACTIVITY_SECTION_TIPO.'",
-			          "component_tipo": "'.USER_ACTIVITY_DATE_TIPO.'"
-			        }
-			      ]
-			    }
-			  ]
-			}');
+			$sqo_data = (object)[
+				'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+				'limit' => 0,
+				'offset' => 0,
+				'select' => [],
+				'filter' => (object)[
+					'$and' => $filter_parts
+				],
+				'order' => [
+					(object)[
+						'direction' => 'ASC',
+						'path' => [
+							(object)[
+								'name' => 'Date',
+								'model' => 'component_date',
+								'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+								'component_tipo' => USER_ACTIVITY_DATE_TIPO
+							]
+						]
+					]
+				]
+			];
+			$sqo = new search_query_object($sqo_data);
 
 			# Search records
 			$search	= search::get_instance(
