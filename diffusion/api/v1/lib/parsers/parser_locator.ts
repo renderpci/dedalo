@@ -5,6 +5,7 @@
 
 import type { parser_options, data_item } from '../types';
 import { langs_config } from '../diffusion_processor';
+import { merge as apply_merge } from './parser_helper';
 
 
 interface locator {
@@ -169,8 +170,8 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
 	const include_self: boolean      = (options.include_self as boolean)    ?? true;
 	const fields_separator: string   = (options.fields_separator as string)  ?? ', ';
-	const records_separator: string  = (options.records_separator as string) ?? ' - ';	
-	const merge: string | undefined  = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
+	const records_separator: string  = (options.records_separator as string) ?? ' - ';
+	const merge_style: string | undefined = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
 
 	// langs
 	const main_lang = langs_config.main_lang;
@@ -275,46 +276,23 @@ export function parents(data: data_item[] | null, options: parser_options): data
 			}
 		}
 
-		// Build final output per language
-		for (const [lang, collection] of Object.entries(lang_nodes)) {
-			let final_value: any;
-
-			switch (merge) {
-				case 'nested':
-					// [["Madrid", "Spain"], ["Paris", "France"]]
-					final_value = collection;
-					break;
-
-				case 'flat':
-					// ["Madrid - Spain", "Paris - France"]
-					final_value = collection.map(chain => chain.join(fields_separator));
-					break;
-
-				case 'pipe':
-					// ["Madrid", "Spain"] | ["Paris", "France"] (using records_separator as joiner)
-					final_value = collection.map(chain => JSON.stringify(chain)).join(records_separator);
-					break;
-
-				case 'string':
-					// "Madrid - Spain, Paris - France" (using fields_separator to separate the values and the records_separator to separate the pipe)
-					final_value = collection.map(chain => chain.join(fields_separator)).join(records_separator);
-					break;
-
-				default:
-					// Flat array output: ["Madrid", "Spain", "Paris", "France"]
-					final_value = collection.flat();
+		// Emit one data_item per chain per lang.
+		// parser_helper::merge handles the final aggregation via merge_style.
+		for (const [lang, chains] of Object.entries(lang_nodes)) {
+			for (const chain of chains) {
+				result.push({
+					...item,
+					lang:  lang === '__nolan__' ? null : lang,
+					value: chain	// string[] — the parent hierarchy chain
+				});
 			}
-
-			result.push({
-				...item,
-				lang: lang === '__nolan__' ? null : lang,
-				value: final_value
-			});
 		}
 	}
 
-	
-	return result.length > 0 ? result : null;
+	if (result.length === 0) return null;
+
+	// Delegate merge to parser_helper::merge, forwarding the configured style and separators.
+	return apply_merge(result, { merge: merge_style, fields_separator, records_separator });
 }
 
 

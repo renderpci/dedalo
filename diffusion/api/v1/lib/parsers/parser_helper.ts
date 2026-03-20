@@ -95,7 +95,9 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 
 		const val = item.value;
 		if (Array.isArray(val)) {
-			lang_nodes[lang_key].values.push(...val);
+			// Push the array as a single unit (chain) so merge styles can operate on it.
+			// default case uses flat(Infinity) to unpack when needed.
+			lang_nodes[lang_key].values.push(val);
 		} else if (val !== null && val !== undefined) {
 			lang_nodes[lang_key].values.push(val);
 		}
