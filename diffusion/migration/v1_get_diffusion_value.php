@@ -80,6 +80,13 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			];
 
 			$process = $parser_process;
+
+			if(isset($output) && $output==='merged'){
+				$process->output_format = "json";
+			}else{
+				$process->output_format = "string";
+			}
+			
 			if(!empty($ddo_map)){
 				$process->ddo_map = $ddo_map;
 			}
