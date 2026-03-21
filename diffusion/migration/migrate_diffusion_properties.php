@@ -2047,7 +2047,17 @@ function process_node($node, $level) {
 									);
 								} else if($final_method_cp === 'get_diffusion_resolve_value') {
 									$separator = $final_args->separator ?? ' ';
+									$output_v5 = $final_args->output ?? null;
 									$custom_arguments = $final_args->custom_arguments ?? [];
+									
+									$merge_option = null;
+									if ($output_v5 === 'merged') {
+										$merge_option = null;
+									} else if ($output_v5 === 'merged_group') {
+										$merge_option = 'flat';
+									} else if ($output_v5 === 'merged_unique') {
+										$merge_option = 'unique';
+									}
 									
 									$pattern_parts = [];
 									$letters = range('a', 'z');
@@ -2068,16 +2078,30 @@ function process_node($node, $level) {
 										}
 									}
 									
-									$new_props = new stdClass();
-									$new_props->process = new stdClass();
-									$new_props->process->parser = [
-										(object)[
-											'fn' => 'parser_text::text_format',
-											'options' => (object)[
-												'pattern' => implode($separator, $pattern_parts)
-											]
+									$parser_pipeline = [];
+									$parser_pipeline[] = (object)[
+										'fn' => 'parser_text::text_format',
+										'options' => (object)[
+											'pattern' => implode($separator, $pattern_parts)
 										]
 									];
+									
+									if ($merge_option !== null) {
+										$parser_pipeline[] = (object)[
+											'fn' => 'parser_helper::merge',
+											'options' => (object)[
+												'merge' => $merge_option
+											]
+										];
+									} else {
+										$parser_pipeline[] = (object)[
+											'fn' => 'parser_helper::merge'
+										];
+									}
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_pipeline;
 									$new_props->process->ddo_map = $ddo_map_cp;
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["Name Surname"];
