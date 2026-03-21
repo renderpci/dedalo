@@ -352,8 +352,11 @@ if (SHOW_DEBUG && defined('SHOW_DEBUG_PROFILER') && SHOW_DEBUG_PROFILER) {
 
 	// log real execution time
 	$id	= $rqo->id ?? $rqo->source->tipo ?? '';
-	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time .' ms - ' . dd_memory_usage();
-	$line = 'API END POINT FINISHED 2: ' . PHP_EOL . $text . PHP_EOL;
+	$color = $total_time > 50 ? ANSI_BOLD_RED : ANSI_BOLD_GREEN;
+	$text = 'API REQUEST (after_output) ' . $rqo->action . ' (' . $id . ') END IN ' . $color . $total_time . ANSI_RESET . ' ms - ' . dd_memory_usage() .' ';
+	$text_length = strlen($text) - 11; // subtract color codes length
+	$nchars = 200;
+	$line = 'API END POINT FINISHED 2: ' . PHP_EOL . $text .  str_repeat("⌲", (int)$nchars - (int)$text_length) . PHP_EOL;
 	debug_log($line, logger::DEBUG);
 
 	// Show response in debug log

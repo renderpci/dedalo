@@ -1034,7 +1034,9 @@ class matrix_db_manager {
 				$bt = debug_backtrace();
 				if (isset($bt[1]['function'])) {
 
-					$sql_prepend = '-- exec_search: ' . $total_time_ms . ' ms' . PHP_EOL;
+					$color = $total_time_ms > 15 ? ANSI_BOLD_RED : ANSI_BOLD_GREEN;
+
+					$sql_prepend = '-- exec_search: ' . $color . $total_time_ms . ANSI_RESET . ' ms' . PHP_EOL;
 
 					foreach ([1,2,3,4,5,6,7] as $key) {
 						if (isset($bt[$key]['function'])) {
@@ -1144,7 +1146,9 @@ class matrix_db_manager {
 				$bt = debug_backtrace();
 				if (isset($bt[1]['function'])) {
 
-					$sql_prepend = '-- exec_sql: ' . $total_time_ms . ' ms' . PHP_EOL;
+					$color = $total_time_ms > 15 ? ANSI_BOLD_RED : ANSI_BOLD_GREEN;
+
+					$sql_prepend = '-- exec_sql: ' . $color . $total_time_ms . ANSI_RESET . ' ms' . PHP_EOL;
 
 					foreach ([1,2,3,4,5,6,7] as $key) {
 						if (isset($bt[$key]['function'])) {
