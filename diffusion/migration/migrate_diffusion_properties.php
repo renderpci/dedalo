@@ -3151,7 +3151,7 @@ function process_node($node, $level) {
 
 							break;
 						
-							case 'component_date':
+						case 'component_date':
 
 							$is_empty_cd = function($props) {
 								if (empty($props)) return true;
