@@ -362,9 +362,8 @@ function process_node($node, $level) {
 										"output_format" => "json"
 									];
 
+
 									$new_props = new stdClass();
-										$new_props->process = new stdClass();
-										$new_props = new stdClass();
 										$new_props->process = $parser_process;
 										$new_props->process->output_sample = ["es1_1257","es1_8844","es1_8864","es1_1","fr1_3","fr1_36686","fr1_37027","fr1_37147","fr1_1"];
 
@@ -2681,6 +2680,54 @@ function process_node($node, $level) {
 									$new_props->process->parser = $parser_process;
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							// 3 "diffusion_sql::map_locator_to_int_recursive"
+							if($process_dato_rp
+								&& ($process_dato_rp === 'diffusion_sql::map_locator_to_int_recursive'))
+							{
+
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+
+								if($process_dato_arguments->custom_arguments->add_parents === true){
+									$parser_process = (object)[
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+												'options' => (object)[
+													'value' => 'section_id'
+												]
+											]
+										],
+										'output_format' => 'json'
+									];
+								}else{
+
+									$parser_process = (object)[
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_section_id'
+											]
+										],
+										'output_format' => 'json'
+									];
+
+
+								}
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["1"];
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
