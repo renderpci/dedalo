@@ -2136,13 +2136,18 @@ function process_node($node, $level) {
 										}
 										$output_options_cp->add_parents = $parser_options;
 									}
+
+									$output = $final_args->output ?? null;
+
+									
 									
 									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 										$final_target,
 										$model_cp,
 										null,
 										$final_args,
-										null, null,
+										$output,
+										null,
 										(empty((array)$output_options_cp) ? null : $output_options_cp),
 										$ddo_map_cp
 									);
