@@ -96,10 +96,8 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		// auto created by table sequence 'matrix_activity_section_id_seq', not by the counter.
 
 		// SQL query for insert
-		$sql = "
-			INSERT INTO $table (" . implode(', ', $columns) . ")
-			VALUES (" . implode(', ', $placeholders) . ")
-		";
+		$sql  = "INSERT INTO $table (" . implode(',', $columns) . ")" . PHP_EOL;
+		$sql .= "VALUES (" . implode(',', $placeholders) . ")";
 
 		// exec_search manages prepared statement recycling and error logging
 		$result = self::exec_search($sql, $params);

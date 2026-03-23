@@ -54,7 +54,7 @@ trait search_component_date_tm {
 			case '<':
 			case '>=':
 			case '>':
-			case '<=':			
+			case '<=':
 			case '=':
 			default:
 
@@ -112,6 +112,6 @@ trait search_component_date_tm {
 		return null;
 	}
 
-	
+
 
 }//end search_component_date_tm

@@ -1872,7 +1872,6 @@ final class dd_core_api {
 								);
 
 							// time machine matrix_id.
-								// if ($mode==='tm') {
 								if (isset($ddo_source->matrix_id)) {
 									// set matrix_id value to component to allow it search data in
 									// matrix_time_machine component function 'get_data' will be
@@ -1896,7 +1895,7 @@ final class dd_core_api {
 								}
 
 							// properties optional
-								if (!empty($properties)){
+								if (!empty($properties)) {
 									$element->set_properties($properties);
 								}
 
@@ -2042,9 +2041,6 @@ final class dd_core_api {
 							$get_json_options->get_context	= true;
 							$get_json_options->get_data		= true;
 						$element_json = $element->get_json($get_json_options);
-
-					// data add
-						// $data = array_merge($data, $element_json->data);
 
 					// context and data add
 						$context	= $element_json->context;

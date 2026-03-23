@@ -12,7 +12,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 
     public $table = 'matrix_activity_test';
     public $section_tipo = 'dd542';
-    
+
     public $last_section_id = 1;
 
 
@@ -33,7 +33,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 
 		// Create the test table if it doesn't exist
 		// Copy structure from dd_ontology table function
-		$sql = "			
+		$sql = "
 			DROP TABLE IF EXISTS matrix_activity_test CASCADE;
             DROP SEQUENCE IF EXISTS matrix_activity_test_id_seq;
 			DROP SEQUENCE IF EXISTS matrix_activity_test_section_id_seq;
@@ -42,12 +42,8 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
             ALTER TABLE \"matrix_activity_test\"
             ALTER \"id\" TYPE integer,
             ALTER \"id\" SET DEFAULT nextval('matrix_activity_test_id_seq'),
-            ALTER \"id\" SET NOT NULL,
-            ALTER \"search_string\" TYPE text,
-            ALTER \"search_string\" DROP DEFAULT,
-            ALTER \"search_string\" DROP NOT NULL;
+            ALTER \"id\" SET NOT NULL
             COMMENT ON COLUMN \"matrix_activity_test\".\"id\" IS '';
-            COMMENT ON COLUMN \"matrix_activity_test\".\"search_string\" IS '';
 		";
 		pg_query($conn, $sql);
 
@@ -64,7 +60,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 	public static function tearDownAfterClass(): void
 	{
 		// $conn = DBi::_getConnection();
-		
+
 		// // Drop test table and sequence
 		// $sql = "
 		// 	DROP TABLE IF EXISTS matrix_time_machine_test CASCADE;
@@ -91,7 +87,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 		$table = $this->table;
 		$section_tipo = $this->section_tipo;
 		$values = null; // default values is NULL
-       
+
         // 1 - Create basic record
 		$start_time = start_time();
 		$result = matrix_activity_db_manager::create(
@@ -120,7 +116,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 		);
 
 		$section_id = $result;
-		
+
         // 2 - Create record using values
 		$start_time = start_time();
 		// $values = (object)[
@@ -144,7 +140,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 		);
 
         $section_id2 = $result;
-      
+
 		// Check the time consuming. Expected value is around 1.5 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
