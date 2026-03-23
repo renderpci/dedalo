@@ -67,7 +67,7 @@ class section_record_temp extends section_record {
 			$this->record_in_the_database = false;
 			$this->is_loaded_data = false;
 			unset($this->data_instance);
-			
+
 			$cache_key = $section_tipo .'_' .$section_id . '_temp';
 			section_record_instances_cache::delete($cache_key);
 		}

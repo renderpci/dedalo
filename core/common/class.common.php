@@ -1676,7 +1676,7 @@ abstract class common {
 				metrics::$structure_context_total_time += $time;
 
 				$debug = new stdClass();
-					$debug->exec_time	= $time.' ms';
+					$debug->exec_time = $time.' ms';
 
 				$dd_object->debug = $debug;
 

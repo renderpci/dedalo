@@ -39,14 +39,18 @@ class section_record {
 
 
 	/**
-	* GET_INSTANCE
-	* Get an instance of a section_record object.
-	* It returns a cached instance if it exists.
-	* @param string $section_tipo
-	* @param int $section_id
-	* @param bool $is_temporal
-	* @return section_record $section_record
-	*/
+	 * GET_INSTANCE
+	 * Get an instance of a section_record object.
+	 *
+	 * It returns a cached instance from section_record_instances_cache if it exists for the given
+	 * combination of section_tipo, section_id and temporal state.
+	 * If not cached, it creates a new instance (section_record or section_record_temp).
+	 *
+	 * @param string $section_tipo The ontology tipo of the section
+	 * @param int|string $section_id The record ID. String is deprecated and will be cast to int.
+	 * @param bool $is_temporal Whether to use a temporal record instance (section_record_temp)
+	 * @return section_record The section record instance
+	 */
 	public static function get_instance( string $section_tipo, int|string $section_id, bool $is_temporal = false ) : section_record {
 
 		// debug
@@ -80,13 +84,17 @@ class section_record {
 
 
 	/**
-	* __CONSTRUCT
-	* Cache section instances (singleton pattern)
-	* On construction, it loads the section_record_data instance.
-	* @param string $section_tipo
-	* @param int $section_id
-	* @return void
-	*/
+	 * __CONSTRUCT
+	 * Initialize a new section_record instance.
+	 *
+	 * Sets the core identification properties, initializes the shared section_record_data instance,
+	 * determines the target database table based on the ontology tipo, and selects the
+	 * appropriate data handler (matrix_db_manager or matrix_activity_db_manager).
+	 *
+	 * @param string $section_tipo The ontology tipo of the section
+	 * @param int $section_id The record ID
+	 * @return void
+	 */
 	protected function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
