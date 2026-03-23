@@ -758,11 +758,11 @@ class dd_date implements JsonSerializable {
 	/**
 	* TIMESTAMP_TO_DATE
 	* timestamp to European date
-	* @param $timestamp
-	* @param $seconds (default false)
+	* @param string $timestamp
+	* @param bool $full (default false)
 	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
 	*/
-	public static function timestamp_to_date($timestamp, $full=true) : ?string {
+	public static function timestamp_to_date(string $timestamp, bool $full=true) : ?string {
 
 		if (empty($timestamp) || strlen($timestamp)<10) {
 			return null;

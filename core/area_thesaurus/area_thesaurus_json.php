@@ -1,4 +1,5 @@
 <?php
+/** @var area_thesaurus $this */
 // JSON data controller
 
 

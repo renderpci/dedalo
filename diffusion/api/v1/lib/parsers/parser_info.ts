@@ -3,20 +3,8 @@
  * Process diffusion object info values.
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
 
-
-
-/**
- * Data item as received from the PHP diffusion_api entries.
- * Each item may have an `id` (for pattern references) and a `value`.
- */
-interface data_item {
-	id?:    string | null;
-	value:  unknown;
-	tipo?:  string;
-	lang?:  string | null;
-}
 
 
 

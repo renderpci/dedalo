@@ -1,4 +1,5 @@
 <?php
+/** @var button $this */
 // JSON data button controller
 
 

@@ -3479,6 +3479,10 @@ abstract class component_common extends common {
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
+
+
+		// Type check moved to actions where it is strictly required (e.g. set_data)
+
 		switch ($changed_data->action) {
 
 			// insert given value in data
@@ -3645,6 +3649,15 @@ abstract class component_common extends common {
 
 			// set the whole data sent by the client without check the array key, bulk insert or update
 			case 'set_data':
+
+				if(!is_array($changed_data->value) && $changed_data->value!==null) {
+					debug_log(__METHOD__
+					   .' Invalid value type for component (set_data): ' . get_called_class() . PHP_EOL
+					   .' value: ' . json_encode($changed_data->value, JSON_PRETTY_PRINT)
+					   , logger::ERROR
+					);
+					return false;
+				}
 
 				$this->set_data_lang($changed_data->value, $lang);
 				// set the observable data used to send other components that observe you, if insert it will need the final data, with new references

@@ -1268,7 +1268,6 @@ class component_av extends component_media_common implements component_media_int
 					'msg'		=> 'conform_header av file',
 					'tipo'		=> $this->tipo,
 					'parent'	=> $this->section_id,
-					'top_id'	=> TOP_ID ?? null,
 					'id'		=> $id,
 					'quality'	=> $quality
 				],

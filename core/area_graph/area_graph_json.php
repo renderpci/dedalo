@@ -1,4 +1,5 @@
 <?php
+/** @var area_graph $this */
 // JSON data controller
 
 

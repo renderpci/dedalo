@@ -261,9 +261,8 @@ function process_node($node, $level) {
 									'output_format' => 'string'
 								];
 
+
 								$new_props = new stdClass();
-									$new_props->process = new stdClass();
-									$new_props = new stdClass();
 									$new_props->process = $parser_process;
 									$new_props->process->output_sample = "Bilbao - Bizkaia - País Vasco - España, Abergement-Clémenciat (L') - Bourg-en-Bresse - Ain - France";
 
@@ -362,9 +361,8 @@ function process_node($node, $level) {
 										"output_format" => "json"
 									];
 
+
 									$new_props = new stdClass();
-										$new_props->process = new stdClass();
-										$new_props = new stdClass();
 										$new_props->process = $parser_process;
 										$new_props->process->output_sample = ["es1_1257","es1_8844","es1_8864","es1_1","fr1_3","fr1_36686","fr1_37027","fr1_37147","fr1_1"];
 
@@ -684,74 +682,6 @@ function process_node($node, $level) {
 									break;
 									
 								}
-
-								// // 2.4.5 "component_method" = "get_dato" && output" = "split_date_range" && "output_options
-								// if($component_method === "get_dato" && !isset($custom_arguments) && $output === "split_date_range" && isset($output_options)){
-
-								// 	$date_format 	= $output_options->date_format ?? "year";
-								// 	$selected_key 	= $output_options->selected_key ?? 0;
-								// 	$selected_date 	= $output_options->selected_date ?? "start";
-
-								// 	$select = [$selected_date];
-								// 	$keys = [$selected_key];
-									
-								// 	// date_format
-								// 		switch ($date_format) {
-								// 			case 'year':
-								// 				$pattern	= "Y";												
-								// 				break;
-								// 			case 'unix_timestamp':
-								// 				$pattern	= "unix_timestamp";
-								// 				break;
-								// 			case 'time':
-								// 				$pattern	= "H:i:s";
-								// 				break;
-								// 			case 'date':
-								// 				$pattern	= "Y-m-d";
-								// 				break;
-								// 			case 'full':
-								// 			default:
-								// 				$pattern	= "Y-m-d H:i:s";
-								// 				break;
-								// 		}
-										
-								// 	$parser_process = [
-								// 		(object)[											
-								// 			'parser' => [
-								// 				(object)[
-								// 					'fn' => 'parser_date::string_date',
-								// 					'options' => (object)[
-								// 						'select' => $select,
-								// 						'keys' => $keys,
-								// 						'pattern' => $pattern
-								// 					]
-								// 				]
-								// 			],
-								// 			'output_format' => 'string'							
-								// 		]
-								// 	];
-
-								// 	$new_props = new stdClass();
-								// 		$new_props->process = new stdClass();
-								// 		$new_props->process = $parser_process;
-								// 		$new_props->process->ddo_map = $ddo_map;
-								// 		$new_props->process->output_sample = "Emproion | Arse";
-
-								// 	// "is_publicable" = true
-								// 	if(isset($is_publicable) && $is_publicable === true){
-								// 		$new_props->is_publishable = $is_publicable;
-								// 	}
-
-								// 	// "varchar" = 256
-								// 	if(isset($varchar)){
-								// 		$new_props->varchar = $props->varchar;
-								// 	}
-
-								// 	echo "{$indent}- [$tipo] $model_name\n";
-								// 	echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
-								// 	break;
-									
-								// }
 
 								// 2.4.6 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
 								// second deep component
@@ -1981,6 +1911,7 @@ function process_node($node, $level) {
 								$final_target = null;
 								$final_args = null;
 								$is_publicable_cp = $props->process_dato_arguments->is_publicable ?? null;
+								$check_general_merge = $args_node->output ?? null;
 								
 								while($args_node) {
 									$method = $args_node->component_method ?? null;
@@ -2001,10 +1932,31 @@ function process_node($node, $level) {
 										$custom_parents_config = $ca->custom_parents;
 									}
 									
-									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value') {
+									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value' || $method === 'get_diffusion_resolve_value') {
 										$final_method_cp = $method;
 										$final_args = $args_node;
-										break;
+
+										if( $method === 'get_diffusion_resolve_value' && isset($args_node->custom_arguments)){
+											foreach($args_node->custom_arguments as $current_ca){
+												$current_component_tipo = $current_ca->process_dato_arguments->target_component_tipo ?? null;
+												$current_compnent_method = $current_ca->process_dato_arguments->component_method ?? null;
+												if(isset($current_component_tipo)){
+													$target_model = ontology_node::get_model_by_tipo($current_component_tipo);
+													if($target_model==='component_date'){
+														break;// break the for and continue with the while
+													}
+													if($current_compnent_method === 'get_diffusion_value' && !in_array($target_model, component_relation_common::get_components_with_relations())) {
+														break 2;
+													}
+												}
+											}
+										}
+																			
+									}else if($method === 'get_dato' && isset($args_node->process_dato)){
+										$final_method_cp = $args_node->process_dato ?? null;
+									}else if($method === 'get_dato' && isset($args_node->output)){
+										$final_method_cp = $method;
+										$final_args = $args_node;
 									}
 									
 									if($ca && isset($ca->process_dato_arguments)) {
@@ -2043,6 +1995,117 @@ function process_node($node, $level) {
 										$final_args,
 										null
 									);
+								} else if($final_method_cp === 'get_diffusion_resolve_value') {
+									$separator = $final_args->separator ?? ' ';
+									$output_v5 = $final_args->output ?? null;
+									$custom_arguments = $final_args->custom_arguments ?? [];
+									
+									$merge_option = null;
+									if ($output_v5 === 'merged') {
+										$merge_option = null;
+									} else if ($output_v5 === 'merged_group') {
+										$merge_option = 'flat';
+									} else if ($output_v5 === 'merged_unique') {
+										$merge_option = 'unique';
+									}
+									
+									$pattern_parts = [];
+									$letters = range('a', 'z');
+									
+									foreach ($custom_arguments as $index => $arg) {
+										$sub_args = $arg->process_dato_arguments ?? null;
+										if ($sub_args && isset($sub_args->target_component_tipo)) {
+											$sub_target = trim($sub_args->target_component_tipo);
+											$letter = $letters[$index] ?? 'z';
+											
+											$ddo_map_cp[] = (object)[
+												'tipo' => $sub_target,
+												'parent' => $final_target,
+												'id' => $letter
+											];
+											
+											$pattern_parts[] = '${' . $letter . '}';
+										}
+									}
+									
+									$parser_pipeline = [];
+									$parser_pipeline[] = (object)[
+										'fn' => 'parser_text::text_format',
+										'options' => (object)[
+											'pattern' => implode($separator, $pattern_parts)
+										]
+									];
+									
+									if ($merge_option !== null) {
+										$parser_pipeline[] = (object)[
+											'fn' => 'parser_helper::merge',
+											'options' => (object)[
+												'merge' => $merge_option
+											]
+										];
+										$output_format = 'json';
+									}
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_pipeline;
+									$new_props->process->ddo_map = $ddo_map_cp;
+									$new_props->process->output_format = $output_format ?? 'string';
+									$new_props->process->output_sample = ["Name Surname"];
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true) {
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									break;
+								} else if($final_method_cp === 'diffusion::map_section_id_to_subtitles_url') {
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();;
+
+									if (!empty($ddo_map_cp)) {
+										$ddo_map_cp[count($ddo_map_cp) - 1]->fn = 'map_section_id_to_subtitles_url';
+									}
+
+									$new_props->process->ddo_map = $ddo_map_cp;
+									$new_props->process->output_sample = "/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng";
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
+									break;
+								} else if($final_method_cp === 'get_dato'){
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									$output = $final_args->output ?? null;
+									$output_options = $final_args->output_options ?? null;																
+									
+									$new_props = new stdClass(); $new_props->process = get_dato(										
+										$model_cp,
+										null,
+										null,
+										(empty((array)$output_options_cp) ? null : $output_options_cp),
+										$ddo_map_cp
+									);
+									if( isset($check_general_merge) 
+										&& ($check_general_merge==='merged'
+										|| $check_general_merge==='merged_group'
+										|| $check_general_merge==='merged_unique')){
+											$new_props->process->output_format = 'json';
+									}							
 								} else { // get_diffusion_value or fallback
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
 									
@@ -2061,16 +2124,19 @@ function process_node($node, $level) {
 										}
 										$output_options_cp->add_parents = $parser_options;
 									}
+
+									$output = $final_args->output ?? null;									
 									
 									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 										$final_target,
 										$model_cp,
 										null,
 										$final_args,
-										null, null,
+										$output,
+										null,
 										(empty((array)$output_options_cp) ? null : $output_options_cp),
 										$ddo_map_cp
-									);
+									);									
 								}
 								
 								if(isset($props->is_publicable) && $props->is_publicable === true || $is_publicable_cp === true){
@@ -2286,6 +2352,24 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 1 data_to_be_used present: default V6 behavior → get_diffusion_dato() trait
+							if(isset($data_to_be_used_cs) && $data_to_be_used_cs === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_select',
+									null, null, null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] select data_to_be_used -> get_diffusion_dato\n";
+								break;
+							}
+
 							// 2 "process_dato" present
 							$process_dato_cs = $props->process_dato ?? null;
 
@@ -2428,6 +2512,24 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 1 data_to_be_used present: default V6 behavior → get_diffusion_value() trait
+							if(isset($props->data_to_be_used) && $props->data_to_be_used === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+									'component_relation_model',
+									null, null, null
+								);
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model data_to_be_used -> get_diffusion_dato\n";
+								break;
+							}
+
 							// 2 "process_dato" present
 							$process_dato_rm = $props->process_dato ?? null;
 
@@ -2541,6 +2643,54 @@ function process_node($node, $level) {
 									$new_props->process->parser = $parser_process;
 									$new_props->process->output_format = 'json';
 									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
+								break;
+							}
+
+							// 3 "diffusion_sql::map_locator_to_int_recursive"
+							if($process_dato_rp
+								&& ($process_dato_rp === 'diffusion_sql::map_locator_to_int_recursive'))
+							{
+
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+
+								if($process_dato_arguments->custom_arguments->add_parents === true){
+									$parser_process = (object)[
+										'fn' => 'add_parents',
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::parents',
+												'options' => (object)[
+													'value' => 'section_id'
+												]
+											]
+										],
+										'output_format' => 'json'
+									];
+								}else{
+
+									$parser_process = (object)[
+										'parser' => [
+											(object)[
+												'fn' => 'parser_locator::get_section_id'
+											]
+										],
+										'output_format' => 'json'
+									];
+
+
+								}
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["1"];
 
 								if(isset($props->is_publicable) && $props->is_publicable === true){
 									$new_props->is_publishable = $props->is_publicable;
@@ -3011,7 +3161,7 @@ function process_node($node, $level) {
 
 							break;
 						
-							case 'component_date':
+						case 'component_date':
 
 							$is_empty_cd = function($props) {
 								if (empty($props)) return true;
@@ -3159,7 +3309,7 @@ function process_node($node, $level) {
 
 							break;
 						case 'component_text_area':
-							$is_empty_cd = function($props) {
+							$is_empty_ta = function($props) {
 								if (empty($props)) return true;
 								$v5_props = is_object($props) ? clone($props) : (object)$props;
 								unset($v5_props->source);
@@ -3171,7 +3321,7 @@ function process_node($node, $level) {
 							};
 
 							// 0 empty propiedades: default V6 behavior → get_diffusion_value() trait
-							if($is_empty_cd($props)) {
+							if($is_empty_ta($props)) {
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
@@ -3480,6 +3630,89 @@ function process_node($node, $level) {
 							
 							break;
 
+						case 'component_relation_index':
+
+							$is_empty_ri = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_ri($props)) {
+
+								$ddo_map_ri = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_relation_index',
+									null,
+									null,
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_index empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 2 "process_dato" present
+							$process_dato_ri = $props->process_dato ?? null;
+
+							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_term_id" (or legacy alias)
+							if($process_dato_ri
+								&& ($process_dato_ri === 'diffusion_sql::map_locator_to_term_id'
+									|| $process_dato_ri === 'diffusion_sql::map_locator_to_terminoID'))
+							{
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_term_id'
+									]
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_index map_locator_to_term_id\n";
+								break;
+							}
+
+							
+							break;
 						case 'component_iri':
 
 							$is_empty_iri = function($props) {
@@ -3566,12 +3799,58 @@ function process_node($node, $level) {
 			}
 		}
 
+	// GLOBAL RULE: merge_columns
+	if (isset($props->merge_columns)) {
+		$parser_process = (object)[
+			'fn' => 'parser_global::merge_columns',
+			'options' => (object)[
+				'columns' => is_array($props->merge_columns) ? $props->merge_columns : [$props->merge_columns]
+			]
+		];
+		if (isset($props->separator)) {
+			$parser_process->options->fields_separator = $props->separator;
+		}
+
+		if (!$new_props) {
+			$new_props = new stdClass();
+		}
+		if (!isset($new_props->process)) {
+			$new_props->process = new stdClass();
+		}
+		$new_props->process->parser = [$parser_process];
+
+		echo "{$indent}- [$tipo] " . ($model_name ? $model_name : "NO_MODEL") . " (merge_columns)\n";
+		echo "{$indent}  [RULE APPLIED] merge_columns mapped to parser_global::merge_columns\n";
+	}
+
+	// GLOBAL RULE: diffusion::get_publication_unix_timestamp
+	if (isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp') {
+		$parser_process = (object)[
+			'fn' => 'parser_global::publication_unix_timestamp'
+		];
+
+		if (!$new_props) {
+			$new_props = new stdClass();
+		}
+		if (!isset($new_props->process)) {
+			$new_props->process = new stdClass();
+		}
+		$new_props->process->parser = [$parser_process];
+		// Optional: if Dédalo expects int output globally we can set it:
+		$new_props->process->output_format = 'json';
+
+		echo "{$indent}- [$tipo] " . ($model_name ? $model_name : "NO_MODEL") . " (publication_unix_timestamp)\n";
+		echo "{$indent}  [RULE APPLIED] mapped to parser_global::publication_unix_timestamp\n";
+	}
+
 	// Process result and save
 	if (
 		$new_props 
 		|| (isset($props->exclude_column) && $props->exclude_column)
 		|| isset($props->info)
 		|| isset($props->is_publicable)
+		|| isset($props->merge_columns)
+		|| (isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp')
 	) {
 		if (!$new_props) {
 			$new_props = new stdClass();
