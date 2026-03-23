@@ -388,7 +388,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 		case 'component_autocomplete_ts':
 			$fields_separator =' - ';
 			$records_separator =', ';
-
+			
 			if($option_obj || $custom_arguments) {
 				$option_obj = $option_obj ?? new stdClass();
 

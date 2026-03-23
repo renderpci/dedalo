@@ -1911,6 +1911,7 @@ function process_node($node, $level) {
 								$final_target = null;
 								$final_args = null;
 								$is_publicable_cp = $props->process_dato_arguments->is_publicable ?? null;
+								$check_general_merge = $args_node->output ?? null;
 								
 								while($args_node) {
 									$method = $args_node->component_method ?? null;
@@ -1951,8 +1952,11 @@ function process_node($node, $level) {
 											}
 										}
 																			
-									}else if($method === 'get_dato'){
+									}else if($method === 'get_dato' && isset($args_node->process_dato)){
 										$final_method_cp = $args_node->process_dato ?? null;
+									}else if($method === 'get_dato' && isset($args_node->output)){
+										$final_method_cp = $method;
+										$final_args = $args_node;
 									}
 									
 									if($ca && isset($ca->process_dato_arguments)) {
@@ -2084,8 +2088,25 @@ function process_node($node, $level) {
 									echo "{$indent}- [$tipo] $model_name\n";
 									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
 									break;
-								} 
-								else { // get_diffusion_value or fallback
+								} else if($final_method_cp === 'get_dato'){
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									$output = $final_args->output ?? null;
+									$output_options = $final_args->output_options ?? null;																
+									
+									$new_props = new stdClass(); $new_props->process = get_dato(										
+										$model_cp,
+										null,
+										null,
+										(empty((array)$output_options_cp) ? null : $output_options_cp),
+										$ddo_map_cp
+									);
+									if( isset($check_general_merge) 
+										&& ($check_general_merge==='merged'
+										|| $check_general_merge==='merged_group'
+										|| $check_general_merge==='merged_unique')){
+											$new_props->process->output_format = 'json';
+									}							
+								} else { // get_diffusion_value or fallback
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
 									
 									// Reconstruct add_parents if found in hierarchy
@@ -3701,6 +3722,7 @@ function process_node($node, $level) {
 		|| (isset($props->exclude_column) && $props->exclude_column)
 		|| isset($props->info)
 		|| isset($props->is_publicable)
+		|| isset($props->merge_columns)
 	) {
 		if (!$new_props) {
 			$new_props = new stdClass();
