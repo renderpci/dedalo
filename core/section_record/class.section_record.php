@@ -1452,6 +1452,11 @@ class section_record {
 	public function read( bool $cache=true ) : ?object {
 
 		if ($cache && $this->is_loaded_data) {
+			// Fast path for caching: If we already know the record does not exist
+			// in the database from a previous read attempt, return null without querying again.
+			if (isset($this->record_in_the_database) && $this->record_in_the_database === false) {
+				return null;
+			}
 			return $this->data_instance->get_data();
 		}
 
@@ -1475,6 +1480,10 @@ class section_record {
 
 		// No results found
 		if (!$row) {
+			// Cache the database miss to prevent identical redundant queries
+			// from executing if this record is accessed multiple times during the request.
+			$this->is_loaded_data = true;
+			$this->record_in_the_database = false;
 			return null;
 		}
 
@@ -1496,6 +1505,8 @@ class section_record {
 
 		// Updates is_loaded_data
 		$this->is_loaded_data = true;
+		// Mark the record as successfully found in the database.
+		$this->record_in_the_database = true;
 
 
 		return $this->data_instance->get_data();
