@@ -214,7 +214,7 @@ function process_node($node, $level) {
 									'options' => (object)[
 										'map' => [
 											(object)[
-												'a' => $props->enum
+												'a' => $props->enum ?? (object)["1"=>"Yes", "0"=>"No"]
 											]
 										]
 									]
