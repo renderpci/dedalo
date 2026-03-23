@@ -99,13 +99,12 @@ view_default_list_section.render = async function(self, options) {
 				class_name		: 'paginator_container',
 				parent			: fragment
 			})
-
-			// build and render paginator
-			await self.paginator.build().then(async () => {
-				const paginator_wrapper = await self.paginator.render()
-				if (paginator_wrapper) {
+			self.paginator.build()
+			.then(function(){
+				self.paginator.render()
+				.then(paginator_wrapper =>{
 					paginator_container.appendChild(paginator_wrapper)
-				}
+				})
 			})
 		}
 
