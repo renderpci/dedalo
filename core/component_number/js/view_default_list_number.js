@@ -41,30 +41,32 @@ view_default_list_number.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
-		})		
-		const click_handler = (e) => {
-			e.stopPropagation()
+		})
+		if (self.show_interface.read_only !== true && self.permissions > 1) {
+			const click_handler = (e) => {
+				e.stopPropagation()
 
-			const wrapper_width	= wrapper.getBoundingClientRect().width
-			if (wrapper_width >= self.minimum_width_px) {
-				// inline way
-				self.change_mode({
-					mode	: 'edit',
-					view	: 'line'
-				})
-			}else{
-				// modal way
-				ui.render_edit_modal({
-					self		: self,
-					e			: e,
-					callback	: (dd_modal) => {
-						dd_modal.modal_content.style.width = '25rem'
-						dd_modal.modal_content.style.top = (e.clientY - 25) + 'px'
-					}
-				})
+				const wrapper_width	= wrapper.getBoundingClientRect().width
+				if (wrapper_width >= self.minimum_width_px) {
+					// inline way
+					self.change_mode({
+						mode	: 'edit',
+						view	: 'line'
+					})
+				}else{
+					// modal way
+					ui.render_edit_modal({
+						self		: self,
+						e			: e,
+						callback	: (dd_modal) => {
+							dd_modal.modal_content.style.width = '25rem'
+							dd_modal.modal_content.style.top = (e.clientY - 25) + 'px'
+						}
+					})
+				}
 			}
+			wrapper.addEventListener('click', click_handler)
 		}
-		wrapper.addEventListener('click', click_handler)
 
 
 	return wrapper

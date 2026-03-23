@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label*/
+/*global get_label, confirm */
 /*eslint no-undef: "error"*/
 
 
@@ -49,7 +49,7 @@ view_search_user_presets.render = async function(self, options) {
 
 	// content_data
 		const content_data = await get_content_data(self.ar_instances, self)
-		if (render_level==='content') {
+		if (render_level === 'content') {
 			return content_data
 		}
 
@@ -124,7 +124,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 	// add all section_record rendered nodes
 		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
+		if (ar_section_record_length === 0) {
 
 			// no records found case
 			const row_item = no_records_node()
@@ -165,7 +165,7 @@ const get_content_data = async function(ar_section_record, self) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return {array} columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -203,7 +203,7 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push(...base_columns_map)
 
 	// button_remove
-		if (self.permissions>1) {
+		if (self.permissions > 1) {
 			columns_map.push({
 				id			: 'delete',
 				label		: '',
@@ -233,7 +233,7 @@ const rebuild_columns_map = async function(self) {
 export const render_column_apply_preset = function(options) {
 
 	// options
-		const self			= options.caller.caller // object instance search
+		const self			= options.caller?.caller // object instance search
 		const section_id	= options.section_id
 
 	// button_apply
@@ -247,7 +247,7 @@ export const render_column_apply_preset = function(options) {
 			e.stopPropagation()
 
 			// loading
-			self.node.classList.add('loading')
+			self.node?.classList.add('loading')
 
 			// select_preset
 			await select_preset({
@@ -258,7 +258,7 @@ export const render_column_apply_preset = function(options) {
 			})
 
 			// loading
-			self.node.classList.remove('loading')
+			self.node?.classList.remove('loading')
 		}
 		button_apply.addEventListener('click', apply_preset_handler)
 
@@ -308,12 +308,12 @@ export const select_preset = async function (options) {
 
 	// reset all and set current as selected
 	if (button_apply) {
-		const section_record	= button_apply.parentNode.parentNode
-		const content_data		= section_record.parentNode
-		content_data.querySelectorAll('.section_record').forEach(el => {
+		const section_record	= button_apply.parentNode?.parentNode
+		const content_data		= section_record?.parentNode
+		content_data?.querySelectorAll('.section_record').forEach(el => {
 			el.classList.remove('selected')
 		});
-		section_record.classList.add('selected')
+		section_record?.classList.add('selected')
 	}
 
 	// fix user_preset_section_id
@@ -330,7 +330,7 @@ export const select_preset = async function (options) {
 * @param object options
 * {
 * 	caller: instance, (section)
-* 	section:id: string|int
+* 	section_id: string|int
 * }
 * @return HTMLElement button_edit
 */
@@ -367,7 +367,7 @@ export const render_column_id = function(options) {
 * @param object options
 * {
 * 	caller: instance, (section)
-* 	section:id: string|int
+* 	section_id: string|int
 * }
 * @return void
 */
@@ -474,11 +474,11 @@ export const render_column_remove = function(options) {
 					await section.refresh()
 
 					// search : update buttons and selections
-					const search_instance = options.caller.caller
+					const search_instance = options.caller?.caller
 					if (search_instance) {
 						// hide save button if is visible
 						const button_save_preset = search_instance.button_save_preset
-						if (!button_save_preset.classList.contains('hide')) {
+						if (button_save_preset && !button_save_preset.classList.contains('hide')) {
 							button_save_preset.classList.add('hide')
 						}
 						// unset user_preset_section_id selection

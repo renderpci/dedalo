@@ -240,7 +240,7 @@ class tool_import_zotero extends tool_common {
 												DEDALO_DATA_NOLAN,
 												$section_tipo
 											);
-										
+
 											$component_data = [];
 											foreach((array)$data as $current_data) {
 												$component_data[] = (object)[
@@ -412,7 +412,7 @@ class tool_import_zotero extends tool_common {
 										$component_data = [(object)[
 											'value' => $current_value,
 											'lang' => $component->get_lang()
-										]];										
+										]];
 
 										$component->set_data( $component_data );
 										$component->save();
@@ -484,12 +484,12 @@ class tool_import_zotero extends tool_common {
 											$ddo->section_tipo
 										);
 										$current_value = $zotero_obj->$nam ?? null;
-																		
+
 										$component_data = [(object)[
 											'value' => $data ?? null,
 											'lang' => $component->get_lang()
-										]];									
-										
+										]];
+
 										$component->set_data( $component_data );
 										$component->save();
 										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from zotero import process";
@@ -886,42 +886,47 @@ class tool_import_zotero extends tool_common {
 		$code 			= pg_escape_string(DBi::_getConnection(), $zotero_id);
 
 		// JSON seach_query_object to search
-		$sqo = json_decode('
-		{
-			"id": "get_section_id_from_code",
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 1,
-			"filter": {
-				"$or": [
-					{
-						"q": "='.$code.'",
-						"path": [
-							{
-								"section_tipo"		: "'.$section_tipo.'",
-								"component_tipo"	: "'.$tipo.'",
-								"model"				: "'.$model_name.'",
-								"name"				: "Code"
-							}
+		$sqo_data = (object)[
+			'id' => 'get_section_id_from_code',
+			'section_tipo' => $section_tipo,
+			'limit' => 1,
+			'filter' => (object)[
+				'$or' => [
+					(object)[
+						'q' => '='.$code,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Code'
+							]
 						]
-					},
-					{
-						"q": "*/'.$code.'",
-						"path": [
-							{
-								"section_tipo"		: "'.$section_tipo.'",
-								"component_tipo"	: "'.$tipo.'",
-								"model"				: "'.$model_name.'",
-								"name"				: "Code"
-							}
+					],
+					(object)[
+						'q' => '*/'.$code,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Code'
+							]
 						]
-					}
+					]
 				]
-			}
-		}');
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		// search the sections that has this title
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
+
+			if(!$db_result) {
+				debug_log(__METHOD__."Error on search record with requested code: ".to_string($zotero_id), logger::ERROR);
+				return null;
+			}
 
 		$section_id = null; // Default
 		if ($db_result->row_count() > 0) {
@@ -956,28 +961,28 @@ class tool_import_zotero extends tool_common {
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $zotero_container_title);
 
 		// JSON seach_query_object to search
-		$sqo = json_decode('
-		{
-			"id": "get_section_id_from_zotero_container_title",
-			"select": [],
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 1,
-			"filter": {
-				"$and": [
-					{
-						"q": "\''.$serie_name.'\'",
-						"path": [
-							{
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$tipo.'",
-								"model": "'.$model_name.'",
-								"name": "Series / Collections"
-							}
+		$sqo_data = (object)[
+			'id' => 'get_section_id_from_zotero_container_title',
+			'select' => [],
+			'section_tipo' => $section_tipo,
+			'limit' => 1,
+			'filter' => (object)[
+				'$and' => [
+					(object)[
+						'q' => '\''.$serie_name.'\'',
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Series / Collections'
+							]
 						]
-					}
+					]
 				]
-			}
-		}');
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		// search the sections that has this title
 		$search		= search::get_instance($sqo);

@@ -92,11 +92,35 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// ar_columns_map
 						$ar_columns_map = array_map(function($el) use($file_info){
-							$label = safe_tipo($el)
-								? ontology_node::get_term_by_tipo($el, DEDALO_APPLICATION_LANG, true)
-								: $el;
 
-							if (empty($el)) {
+							if ( empty($el) ) {
+								debug_log(__METHOD__
+									. " Empty tipo found in file_info " . PHP_EOL
+									. " tipo: " . to_string($el). PHP_EOL
+									. ' file_info: ' . json_encode($file_info, JSON_PRETTY_PRINT)
+									, logger::ERROR
+								);
+								return null;
+							}
+
+							// column `section_id` case
+							if($el==='section_id') {
+								return (object)[
+									'tipo'	=> 'section_id',
+									'label'	=> 'Section ID',
+									'model'	=> 'section_id'
+								];
+							}
+
+							// column with date format as `test145_dmy` are allowed here
+							$el_base = $el;
+							if (strpos($el, '_')!==false) {
+								$el_base = substr($el, 0, strpos($el, '_'));
+							}
+
+							$safe_tipo = safe_tipo($el_base);
+
+							if (empty( $safe_tipo )) {
 								debug_log(__METHOD__
 									. " Invalid tipo found in file_info " . PHP_EOL
 									. " tipo: " . to_string($el). PHP_EOL
@@ -105,10 +129,14 @@ class tool_import_dedalo_csv extends tool_common {
 								);
 								return null;
 							}
+
+							$label = ontology_node::get_term_by_tipo($safe_tipo, DEDALO_APPLICATION_LANG, true);
+							$model = ontology_node::get_model_by_tipo($safe_tipo, true);
+
 							return (object)[
 								'tipo'	=> $el,
 								'label'	=> $label,
-								'model'	=> $el!=='section_id' && !empty($el) ? ontology_node::get_model_by_tipo($el, true) : $el
+								'model'	=> $model
 							];
 						}, $file_info);
 

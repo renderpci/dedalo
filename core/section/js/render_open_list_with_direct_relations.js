@@ -17,9 +17,9 @@
 /**
 * RENDER_OPEN_LIST_WITH_DIRECT_RELATIONS
 * Builds the button nodes and events to get raw data of the target section selected by user
-* It show a modal with all target section and 2 options:
-* 	current: uses current record data of the component caller
-* 	found : uses the all records found data of the component caller
+* It shows a modal with all target sections and 2 options:
+* 	current: uses the current record data of the component caller
+* 	found : uses all records found data of the component caller
 * Open new window of the target section and the section_id data of
 * all components that are pointing to selected target section.
 * @param object options
@@ -28,8 +28,8 @@
 *	target_sections : array with all target section tipos // when the caller is the main section (fired in inspector) it will send all target sections that main section is pointed.
 *	rqo_options : {
 * 		type			: string, possible values: 'section' || 'component' || 'target_section',
-*		section_tipo	: string or null, when the caller is a component, its own section_tipo, if caller is a main section it will null (will change by the user selection in modal)
-*		tipo			: string or null, when the caller is a component, its own tipo, if caller is a main section it will null (will change by the user selection in modal)
+*		section_tipo	: string or null, when the caller is a component, its own section_tipo, if caller is a main section it will be null (will change by the user selection in modal)
+*		tipo			: string or null, when the caller is a component, its own tipo, if caller is a main section it will be null (will change by the user selection in modal)
 *		model			: string with the model of the caller as 'section' or 'component_portal'
 *	}
 *	caller_label 	: string with the caller label as 'Images'
@@ -97,8 +97,10 @@ export const render_open_list_with_direct_relations = ( options ) => {
 
 			// target section selected
 			const change_target_section_handler = (e)=> {
-				rqo_options.section_tipo	= e.target.value
-				rqo_options.tipo			= e.target.value
+				if (rqo_options) {
+					rqo_options.section_tipo	= e.target.value
+					rqo_options.tipo			= e.target.value
+				}
 			}
 			// if the caller is a component
 			// or the main section is not connected with any target section
@@ -242,7 +244,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 * 	}
 * 	modal : HTMLElement
 * }
-* @return bool
+* @return void
 */
 const open_related_data = async function( options ){
 
@@ -275,7 +277,7 @@ const open_related_data = async function( options ){
 
 			const raw_label = get_label.will_open_all_related_records || 'This will open all related data of {0} of all records in a new window without filtering. Are you sure?'
 			const label = printf(raw_label, caller_label)
-			const warning_label =  get_label.warning.toUpperCase() || 'WARNING'
+			const warning_label =  (get_label.warning || 'WARNING').toUpperCase()
 			const msg = warning_label
 			+ '\n' + label
 			if (!confirm(msg)){
@@ -329,14 +331,14 @@ const open_related_data = async function( options ){
 				ar_section_id	: ar_section_id,
 				target_window	: current_section_tipo,
 				left			: i*30,
-				top				: (i*30)+25 // MacOs menu has 25 pixels
+				top				: (i*30)+25 // macOS menu has 25 pixels
 			}
 
 			// open_records_in_window
 			open_records_in_window( window_options );
 			// open_records_in_window(self, current_section_tipo, ar_section_id, current_section_tipo);
 		}
-}
+}//end open_related_data
 
 
 

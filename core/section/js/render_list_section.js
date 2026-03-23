@@ -24,7 +24,7 @@
 
 /**
 * RENDER_LIST_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const render_list_section = function() {
 
@@ -44,7 +44,7 @@ export const render_list_section = function() {
 * }
 * @return HTMLElement wrapper
 */
-render_list_section.prototype.list = async function(options) {
+render_list_section.list = async function(options) {
 
 	const self = this
 
@@ -69,7 +69,7 @@ render_list_section.prototype.list = async function(options) {
 			case 'default':
 			default: {
 				// dynamic try
-					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
+					const render_view = (self.render_views || []).find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
 						const path			= render_view.path || ('./' + render_view.render +'.js')
 						const render_method	= await import (path)
@@ -123,7 +123,7 @@ export const render_column_id = function(options) {
 		switch(true){
 
 			// initiator. is a url var used in iframe containing section list to link to opener portal
-			case (self.initiator && self.initiator.indexOf('component_')!==-1): {
+			case (self.initiator?.includes('component_')): {
 
 				const top_window 	= window.parent
 				const initiator		= self.initiator
@@ -360,16 +360,18 @@ export const render_column_id = function(options) {
 				break;
 			}
 
-			case (self.tipo==='dd542'): {
+			case (self.tipo==='dd542' || self.tipo==='dd15'): {
 
-				// activity case
+				// activity | time_machine cases
+
+				const add_css = self.tipo==='dd15' ? 'time_machine' : 'activity'
 
 				const button_edit = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'section_id_container',
+					class_name		: 'section_id_container ' + add_css,
 					parent			: fragment
 				})
-
+				// Append generic section_id_node
 				button_edit.appendChild(section_id_node)
 				break;
 			}
@@ -456,7 +458,7 @@ export const render_column_id = function(options) {
 						}//end navigate
 
 						// contextmenu event
-							// Prevent to show the context menu
+							// Prevent showing the context menu
 							// open new window with the content
 							// if user has alt pressed, open new tab
 							button_edit.addEventListener('contextmenu', (e) => {

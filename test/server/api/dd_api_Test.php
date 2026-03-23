@@ -324,6 +324,8 @@ final class dd_api_Test extends BaseTestCase {
 	*/
 	public function test_read(): void {
 
+		$this->user_login();
+
 		// default search
 			$rqo = json_handler::decode('
 				{
@@ -453,7 +455,8 @@ final class dd_api_Test extends BaseTestCase {
 							"section_tipo": "test3",
 							"section_id": "1",
 							"section_id_key": 1,
-							"section_tipo_key": "rsc1242"
+							"section_tipo_key": "rsc1242",
+							"main_component_tipo": "test60"
 						},
 						"properties": {}
 					}
@@ -466,7 +469,8 @@ final class dd_api_Test extends BaseTestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				'expected running without errors' . PHP_EOL
+				.'error: ' . json_encode($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(
@@ -718,41 +722,59 @@ final class dd_api_Test extends BaseTestCase {
 	*/
 	public function test_read_invalid_tipo(): void {
 
-		$this->markTestSkipped(
-			'Disabled !'
-		);
+		// $this->markTestSkipped(
+		// 	'Disabled !'
+		// );
 
 		// rqo invalid tipo
-			$rqo = json_decode('
-				{
-					"action": "read",
-					"source": {
-						"typo": "source",
-						"type": "section",
-						"action": "search",
-						"model": "section",
-						"tipo": "x96wTrsc167pR7",
-						"section_tipo": "x96wTrsc167pR7k3",
-						"section_id": null,
-						"mode": "edit",
-						"view": null,
-						"lang": "lg-eng"
-					},
-					"sqo": {
-						"section_tipo": [
-							"x96wTrsc167pR7k3"
-						],
-						"limit": 1,
-						"offset": 0,
-						"select": [],
-						"full_count": false
-					}
+		$rqo = json_decode('
+			{
+				"action": "read",
+				"source": {
+					"typo": "source",
+					"type": "section",
+					"action": "search",
+					"model": "section",
+					"tipo": "x96wTrsc167pR7",
+					"section_tipo": "x96wTrsc167pR7k3",
+					"section_id": null,
+					"mode": "edit",
+					"view": null,
+					"lang": "lg-eng"
+				},
+				"sqo": {
+					"section_tipo": [
+						"x96wTrsc167pR7k3"
+					],
+					"limit": 1,
+					"offset": 0,
+					"select": [],
+					"full_count": false
 				}
-			');
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$response = null;
+		$exception_thrown = false;
+
+		try {
 			$response = dd_core_api::read($rqo);
-				// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
-				// dump($response, ' response ++ '.to_string());
+		} catch (Throwable $e) {
+			$exception_thrown = true;
+			// Expected behavior for invalid tipo
+		}
+
+		// expected running with errors (either in error env or exception thrown)
+		$this->assertTrue(
+			!empty($_ENV['DEDALO_LAST_ERROR']) || $exception_thrown,
+			'expected either errors in $_ENV[DEDALO_LAST_ERROR] or exception thrown' . PHP_EOL
+			. 'errors: ' . json_encode($_ENV['DEDALO_LAST_ERROR']) . PHP_EOL
+			. 'exception_thrown: ' . ($exception_thrown ? 'true' : 'false')
+		);
+
+		// Only check response structure if response is valid and no exception
+		if (!$exception_thrown && $response && $response->result) {
 			$context	= $response->result->context;
 			$data		= $response->result->data;
 
@@ -760,8 +782,7 @@ final class dd_api_Test extends BaseTestCase {
 				$this->assertTrue( gettype($context)==='array' );
 				$this->assertTrue( gettype($data)==='array' );
 				$this->assertTrue( count($data)===0 );
-				// expected running with errors
-				$this->assertTrue( !empty($_ENV['DEDALO_LAST_ERROR']) );
+		}
 	}//end test_read_invalid_tipo
 
 
@@ -825,7 +846,11 @@ final class dd_api_Test extends BaseTestCase {
 			// dump($response, ' response ++ '.to_string());
 
 		// expected running without errors
-			$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected empty errors in $_ENV[DEDALO_LAST_ERROR]'. PHP_EOL
+				.' errors: '. json_encode($_ENV['DEDALO_LAST_ERROR'], JSON_PRETTY_PRINT)
+			);
 
 		// expected running without errors
 			$this->assertTrue( gettype($response->result)==='array' );

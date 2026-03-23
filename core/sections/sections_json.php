@@ -77,7 +77,7 @@
 			foreach ($sections_data as $current_record) {
 				// when the caller is a Time Machine section
 				// $current_record is a Time Machine Record then we need to convert it into a Section Record
-				if( $mode === 'tm' || $this->caller_tipo ==='dd15' ){
+				if( $mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ){
 					$tm_record = tm_record::get_instance( $current_record->id );
 					$tm_record->set_data( $current_record );
 					// OVERWRITE! section_id and section_tipo to convert it into a regular section record
@@ -173,7 +173,7 @@
 						$key++;
 
 					// tm case: inject time machine record metadata
-						if ($mode === 'tm' || $this->caller_tipo ==='dd15' ) {
+						if ($mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ) {
 							$tm_data = $tm_record->get_data();
 							$current_value->matrix_id			= $tm_data->id ?? null;
 							$current_value->timestamp			= $tm_data->timestamp ?? null;

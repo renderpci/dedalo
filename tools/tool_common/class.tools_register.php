@@ -478,8 +478,7 @@ class tools_register {
 	 */
 	public static function get_tool_data_by_name(string $tool_name, string $section_tipo) : ?object {
 
-		$sqo = (object)[
-			'typo'         => 'sqo',
+		$sqo_data = (object)[
 			'section_tipo' => [$section_tipo],
 			'filter'       => (object)[
 				'$and' => [
@@ -502,11 +501,17 @@ class tools_register {
 			'limit'      => 1,
 			'full_count' => false
 		];
+		$sqo = new search_query_object($sqo_data);
 
 		$search = search::get_instance($sqo);
 		$result = $search->search();
 
-		return $result->fetch_one() ?: null;
+		if (!$result) {
+			return null;
+		}
+
+		$fetch_result = $result->fetch_one();
+		return $fetch_result !== false ? $fetch_result : null;
 	}
 
 
@@ -735,11 +740,12 @@ class tools_register {
 	 */
 	private static function get_config_list(string $section_tipo, string $config_tipo) : array {
 
-		$sqo = (object)[
+		$sqo_data = (object)[
 			'section_tipo' => [$section_tipo],
 			'limit'        => 0,
 			'full_count'   => false
 		];
+		$sqo = new search_query_object($sqo_data);
 
 		$search = search::get_instance($sqo);
 		$result = $search->search();

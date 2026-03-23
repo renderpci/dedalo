@@ -20,7 +20,7 @@
 
 /**
 * VIEW_DEFAULT_LIST_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const view_default_list_section = function() {
 
@@ -31,9 +31,9 @@ export const view_default_list_section = function() {
 
 /**
 * RENDER
-* Render node for use current view
+* Render node for the current view
 * @param object self
-* @para object options
+* @param object options
 * sample:
 * {
 *    "render_level": "full",
@@ -99,12 +99,13 @@ view_default_list_section.render = async function(self, options) {
 				class_name		: 'paginator_container',
 				parent			: fragment
 			})
-			self.paginator.build()
-			.then(function(){
-				self.paginator.render()
-				.then(paginator_wrapper =>{
+
+			// build and render paginator
+			await self.paginator.build().then(async () => {
+				const paginator_wrapper = await self.paginator.render()
+				if (paginator_wrapper) {
 					paginator_container.appendChild(paginator_wrapper)
-				})
+				}
 			})
 		}
 
@@ -192,8 +193,8 @@ view_default_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @param array ar_section_record
-* @para object self
 * @return HTMLElement content_data
 */
 view_default_list_section.get_content_data = async function(self, ar_section_record) {
@@ -211,24 +212,16 @@ view_default_list_section.get_content_data = async function(self, ar_section_rec
 		}else{
 
 			// rows
-
 			// parallel mode
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render({
-						add_hilite_row : true
-					})
-					ar_promises.push(render_promise_node)
-				}
+				const ar_promises = ar_section_record.map(el => el.render({
+					add_hilite_row : true
+				}))
 
 			// once rendered, append it preserving the order
-				await Promise.all(ar_promises)
-				.then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
+				const ar_nodes = await Promise.all(ar_promises)
+				for (const section_record_node of ar_nodes) {
 					fragment.appendChild(section_record_node)
-				  }
-				});
+				}
 		}
 
 	// content_data
@@ -271,7 +264,7 @@ view_default_list_section.adapt_section_id_column = function(list_body_node, sel
 	if (longest_id.length > 5) {
 		const font_size = get_font_fit_size(longest_id, base_size, 4)
 		if (font_size !== base_size) {
-			const non_button_tipos = ['dd542']
+			const non_button_tipos = ['dd542','dd15']
 			if (!non_button_tipos.includes(self.tipo)) {
 				list_body_node.style.setProperty('--section_id_font_size', `${font_size}rem`)
 				const column_id_width = longest_id.length * font_size + 0.25
@@ -290,7 +283,7 @@ view_default_list_section.adapt_section_id_column = function(list_body_node, sel
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * 	section instance
 * @return array columns_map

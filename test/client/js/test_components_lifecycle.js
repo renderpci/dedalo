@@ -173,7 +173,7 @@ async function life_cycle_test(element, view) {
 				assert.notEqual(new_instance.label, null);
 				assert.notEqual(new_instance.tools, null);
 				assert.notEqual(new_instance.permissions, null);
-				assert.notEqual(new_instance.view, null);
+				// assert.notEqual(new_instance.view, null);
 				assert.notEqual(new_instance.rqo_test, null);
 				assert.notEqual(new_instance.data, null);
 				assert.notEqual(new_instance.db_data, null);

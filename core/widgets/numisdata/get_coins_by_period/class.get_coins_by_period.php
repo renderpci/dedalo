@@ -164,7 +164,7 @@ class get_coins_by_period extends widget_common {
 				}');
 
 				$hierarchies_search = search::get_instance($search_query_object);
-				$db_result = $hierarchies_search->search();				
+				$db_result = $hierarchies_search->search();
 
 				$ordered_hierarchy = [];
 				foreach ($db_result as $row) {
@@ -239,31 +239,32 @@ class get_coins_by_period extends widget_common {
 				// use the section_id of the locators to get the filter by section_id into the search
 				// q = "1,4,77,17,34,..."
 				$q = implode(',', $ar_target_section_id);
-				$sqo_filter = json_decode('
-					{
-						"$and":[{
-								"q": "'.$q.'",
-				 				"q_operator": null,
-				 				"path": [
-				 					'.json_encode($target_component_section_id).'
-				 				],
-				 				"type": "number",
-				 				"component_path": [
-				 					"section_id"
-				 				],
-				 				"lang": "all",
-				 				"unaccent": false,
-				 				"format": "in_column",
-				 				"column_name": "section_id",
-				 				"operator": "IN"
-						}]}
-					');
+				$filter_data = (object)[
+					'$and' => [
+						(object)[
+							'q' => $q,
+							'q_operator' => null,
+							'path' => [$target_component_section_id],
+							'type' => 'number',
+							'component_path' => [
+								'section_id'
+							],
+							'lang' => 'all',
+							'unaccent' => false,
+							'format' => 'in_column',
+							'column_name' => 'section_id',
+							'operator' => 'IN'
+						]
+					]
+				];
 
-				$sqo = new search_query_object();
-					$sqo->set_section_tipo([$target_component_section_id->section_tipo]);
-					$sqo->offset	= 0;
-					$sqo->limit		= 0;
-					$sqo->set_filter( $sqo_filter );
+				$sqo_data = (object)[
+					'section_tipo' => [$target_component_section_id->section_tipo],
+					'filter' => $filter_data,
+					'offset' => 0,
+					'limit' => 0
+				];
+				$sqo = new search_query_object($sqo_data);
 
 				$search		= search::get_instance($sqo);
 				$db_result	= $search->search();
@@ -273,7 +274,7 @@ class get_coins_by_period extends widget_common {
 				foreach ($db_result as $row) {
 
 					$duplicated_value = $row->relation->$component_tipo_duplicated ?? [];
-					$duplicated_data = $duplicated_value[0] ?? null;					
+					$duplicated_data = $duplicated_value[0] ?? null;
 					// sample of duplicated data: object|null
 						// {
 						//     "type": "dd151",

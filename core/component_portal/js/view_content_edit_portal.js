@@ -19,7 +19,7 @@
 
 /**
 * VIEW_CONTENT_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_content_edit_portal = function() {
 
@@ -95,7 +95,7 @@ view_content_edit_portal.render = async function(self, options) {
 			list_body	: list_body,
 			label		: null
 		})
-		wrapper.classList.add('portal', 'view_'+self.context.view)
+		wrapper.classList.add('portal', 'view_' + (self.view || self.context.view || 'default'))
 
 	// set pointers
 		wrapper.list_body		= list_body
@@ -151,7 +151,7 @@ const get_content_data = async function(self, ar_section_record) {
 					// section record
 					fragment.appendChild(section_record_node)
 				}
-			}//end if (ar_section_record_length===0)
+			}//end if (ar_section_record_length>0)
 
 		// references. Build references if exists
 			if(self.data.references && self.data.references.length > 0){
@@ -170,7 +170,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_records
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * 	component instance
 * @return array columns_map
@@ -185,7 +185,7 @@ const rebuild_columns_map = async function(self) {
 	const columns_map = []
 
 	// base_columns_map
-		const base_columns_map = await self.columns_map
+		const base_columns_map = self.columns_map || []
 		columns_map.push(...base_columns_map)
 
 	// fixed as calculated

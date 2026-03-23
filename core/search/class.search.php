@@ -783,17 +783,39 @@ class search {
 	/**
 	* PARSE_SQL_DEFAULT
 	* Build full final SQL query to send to DB
+	*
+	* EXECUTION ORDER IS CRITICAL:
+	* ============================
+	* 1. FROM must be built first to establish table aliases
+	* 2. SELECT can then reference those aliases
+	* 3. ORDER must come after FROM because:
+	*    - Component-based ordering calls `build_sql_join()` to create table joins
+	*    - These joins need the base FROM to be established first
+	*    - Table aliases must exist before being referenced in ORDER BY
+	* 4. WHERE clauses are built last
+	*
+	* WINDOW FUNCTION PATTERN:
+	* ========================
+	* The final query uses a window/subquery pattern:
+	*   SELECT * FROM (
+	*     SELECT ... FROM ... WHERE ... ORDER BY order_default
+	*   ) main_select
+	*   ORDER BY order (or order_default if no custom order)
+	*   LIMIT ... OFFSET ...
+	*
+	* This ensures DISTINCT ON works correctly while allowing custom final ordering.
+	*
 	* @return string $sql_query string
 	*  parsed final SQL query string
 	*/
 	public function parse_sql_default() : string {
 
-		// 1 select
-		$this->build_sql_query_select();
-		// 2 order
-		$this->build_sql_query_order();
-		// 3 from
+		// 1 from (must be first to establish table aliases)
 		$this->build_main_from_sql();
+		// 2 select
+		$this->build_sql_query_select();
+		// 3 order (after FROM to ensure joins and aliases are available)
+		$this->build_sql_query_order();
 		// 4 where
 		$this->build_main_where();
 		$this->build_sql_filter();
@@ -831,8 +853,8 @@ class search {
 				$query_inside = $this->build_union_query($query_inside);
 			}
 
-			// order by default (for maintain result consistency)
-			$order_query = PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order_default );
+			// order by default like 'section_id DESC' (for maintain result consistency)
+			$order_query = PHP_EOL . 'ORDER BY ' . implode( ', ', $this->sql_obj->order_default );
 
 			// order union case for various tables
 			if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
@@ -860,14 +882,25 @@ class search {
 				$sql_query .= 'SELECT * FROM (';
 				$sql_query .= PHP_EOL . $query_inside . PHP_EOL;
 				$sql_query .= ') main_select';
-				// order
-				if(!empty($this->sql_obj->order)){
-					$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
-				}
+				
+				// order. Global order custom or default
+				// Remove table aliases from outer ORDER BY since we're selecting from main_select subquery
+				$outer_order = !empty($this->sql_obj->order)
+					? $this->sql_obj->order
+					: $this->sql_obj->order_default;
+				
+				$outer_order_clean = array_map(function($order_clause) {
+					// Remove table alias prefix (e.g., 'te65.section_id' -> 'section_id')
+					return preg_replace('/^[a-z0-9_]+\./', '', $order_clause);
+				}, $outer_order);
+				
+				$sql_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $outer_order_clean );
+				
 				// limit
 				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
 					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
 				}
+				
 				// offset
 				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
 					$sql_query .= ' OFFSET ' . $this->sqo->offset;
@@ -952,10 +985,13 @@ class search {
 		$this->build_main_from_sql();
 
 		$this->build_sql_filter_by_locators();
-		if ( empty($this->sqo->order) ) {
-			// $this->build_sql_filter_by_locators_order(); // only if empty order
-		} else {
+		
+		// Always build order to ensure deterministic results
+		if ( !empty($this->sqo->order) ) {
 			$this->build_sql_query_order();
+		} else {
+			// Build default order when no custom order is specified
+			$this->build_sql_query_order_default();
 		}
 
 		$sql_query = '';
@@ -970,10 +1006,18 @@ class search {
 		$sql_query .= PHP_EOL . 'WHERE ' . implode(PHP_EOL, $this->sql_obj->where);
 		$sql_query .= PHP_EOL . ') main_select';
 
-		// order
-		if( !empty($this->sqo->order) ){
-			$sql_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
-		}
+		// order (always present, either custom or default)
+		// Remove table aliases from outer ORDER BY since we're selecting from main_select subquery
+		$outer_order = !empty($this->sql_obj->order)
+			? $this->sql_obj->order
+			: $this->sql_obj->order_default;
+		
+		$outer_order_clean = array_map(function($order_clause) {
+			// Remove table alias prefix (e.g., 'te65.section_id' -> 'section_id')
+			return preg_replace('/^[a-z0-9_]+\./', '', $order_clause);
+		}, $outer_order);
+		
+		$sql_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $outer_order_clean );
 
 		// limit
 		if (isset($this->sqo->limit) && $this->sqo->limit>0) {

@@ -312,7 +312,9 @@ class component_relation_index extends component_relation_common {
 
 			$db_result = $search_instace->search();
 			// as the SQO is limited to 1, the result will be only 1
-			$row = $db_result->fetch_one();
+			$row = $db_result
+				? ($db_result->fetch_one() ?? null)
+				: null;
 
 			if (empty($row)) {
 				debug_log(__METHOD__ . ' - No row found for section_tipo: ' . to_string($current_section_tipo));

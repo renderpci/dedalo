@@ -20,7 +20,7 @@
 
 /**
 * VIEW_TREE_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_tree_edit_portal = function() {
 
@@ -82,9 +82,9 @@ view_tree_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-		// on-the-fly css
+		// size from style
 		// if expected number of columns (2) change, updates the columns CSS
-		// This happen, for sample, when user do not have enough permissions to delete
+		// This happens, for sample, when user do not have enough permissions to delete
 		if (self.columns_map.length!==2) {
 			const items				= ui.flat_column_items(self.columns_map);
 			const template_columns	= items.join(' '); // like 1fr auto'
@@ -206,21 +206,15 @@ const get_content_data = async function(self, ar_section_record) {
 				// const row_item = no_records_node()
 				// fragment.appendChild(row_item)
 			}else{
+				const ar_promises = ar_section_record.map(rec => rec.render())
+				const rendered_nodes = await Promise.all(ar_promises)
 
-				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise = ar_section_record[i].render()
-					ar_promises.push(render_promise)
+					if (rendered_nodes[i]) {
+						fragment.appendChild(rendered_nodes[i])
+					}
 				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-
-					const section_record = values[i]
-
-					fragment.appendChild(section_record)
-				  }
-				});
-			}//end if (ar_section_record_length===0)
+			}//end if (ar_section_record_length>0)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self,{button_close: null})
@@ -234,7 +228,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_records
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * @return array columns_map
 */
@@ -248,7 +242,7 @@ const rebuild_columns_map = async function(self) {
 	const columns_map = []
 
 	// base_columns_map
-		const base_columns_map = await self.columns_map
+		const base_columns_map = self.columns_map || []
 		columns_map.push(...base_columns_map)
 
 	// button_remove column

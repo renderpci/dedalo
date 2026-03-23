@@ -233,7 +233,7 @@ component_text_area.prototype.init = async function(options) {
 					}
 
 				// read_only case
-					if (self.show_interface.read_only===true) {
+					if (self.show_interface.read_only===true || self.permissions < 2) {
 						return
 					}
 
@@ -464,14 +464,14 @@ component_text_area.prototype.set_value = function(key, string_value) {
 	const data			= self.data || {}
 	const entries		= data.entries || []
 	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
-	
+
 	// set the new value changing the item.value
 	item_value.value = string_value
 
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		key		: key,
-		value	: item_value 
+		value	: item_value
 	})]
 	return self.change_value({
 		changed_data	: changed_data,
@@ -748,7 +748,7 @@ component_text_area.prototype.update_changed_data = function (options) {
 	const entries		= data.entries || []
 	const item_value	= (entries[key]) ? entries[key] : {lang: self.lang}
 	// get the text editor value
-	const string_value = text_editor.editor.getData();	
+	const string_value = text_editor.editor.getData();
 
 	// change the HTML string value to text value used as Dédalo data
 	self.preprocess_text_to_save(string_value)

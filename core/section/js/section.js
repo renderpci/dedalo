@@ -93,14 +93,15 @@ export const section = function() {
 	section.prototype.build_rqo_search	= common.prototype.build_rqo_search
 
 	// render
-	section.prototype.edit				= render_edit_section.prototype.edit
-	section.prototype.list				= render_list_section.prototype.list
-	section.prototype.list_portal		= render_list_section.prototype.list
-	section.prototype.tm				= render_list_section.prototype.list
-	section.prototype.list_header		= render_list_section.prototype.list_header
-	section.prototype.solved			= render_solved_section.prototype.solved
+	section.prototype.edit				= render_edit_section.edit
+	section.prototype.list				= render_list_section.list
+	section.prototype.list_portal		= render_list_section.list
+	section.prototype.tm				= render_list_section.list
+	section.prototype.activity			= render_list_section.list
+	section.prototype.list_header		= render_list_section.list_header
+	section.prototype.solved			= render_solved_section.solved
 
-	section.prototype.render_delete_record_dialog = render_common_section.prototype.render_delete_record_dialog
+	section.prototype.render_delete_record_dialog = render_common_section.render_delete_record_dialog
 
 
 
@@ -354,7 +355,7 @@ section.prototype.init = async function(options) {
 						dd_request_idle_callback( () => {
 							// Resolve the label of the section
 							// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
-							// it's stored into the tool_congext of the config.
+							// it's stored into the tool_context of the config.
 							// else get the section label
 							const section_label = self.config?.tool_context?.label
 								? self.config.tool_context.label
@@ -436,7 +437,7 @@ section.prototype.init = async function(options) {
 		}
 
 	// render_views
-		// Definition of the rendering views that could de used.
+		// Definition of the rendering views that could be used.
 		// Tools or another components could add specific views dynamically
 		self.render_views = [
 			{
@@ -594,7 +595,7 @@ section.prototype.build = async function(autoload=false) {
 				}
 				// server: bad build context
 				if(!api_response.result.context.length){
-					console.error("Error!!!!, section without context:", api_response);
+					console.error("Error, section without context:", api_response);
 					return false
 				}
 
@@ -611,7 +612,7 @@ section.prototype.build = async function(autoload=false) {
 			// set Context
 				// context is set only when the origin context is empty,
 				// if the instance has a previous context, it will need to be preserved.
-				// because the context could be modified by ddo configuration and it can no be changed
+				// because the context could be modified by ddo configuration and it can not be changed
 				// ddo_map -----> context
 				// ex: oh27 define the specific ddo_map for rsc368
 				// 		{ mode: list, view: line, children_view: text ... }
@@ -1086,7 +1087,7 @@ section.prototype.duplicate_section = async function (section_id) {
 	// source
 		const source = create_source(self, 'duplicate')
 		// add section_id used as data source to clone
-		source.section_id
+		source.section_id = section_id
 
 	// data_manager. delete
 		const rqo = {
@@ -1111,7 +1112,7 @@ section.prototype.duplicate_section = async function (section_id) {
 
 		}else{
 			console.error('api_response.errors:', api_response.errors);
-			console.error( api_response.msg || 'Error on create record!');
+			console.error( api_response.msg || 'Error on duplicate record!');
 		}
 
 
@@ -1338,7 +1339,7 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 		const filter_mode = 'legacy'
 		if (filter_mode==='preserve_filter') {
 
-			// Add existing filter items if they exists as $or / $and
+			// Add existing filter items if they exist as $or / $and
 			const current_filter_items = sqo.filter?.$and
 				? sqo.filter.$and.length
 				: sqo.filter?.$or
@@ -1415,7 +1416,7 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 		}
 
 		// save pagination
-		// Updates local DB pagination values to preserve consistence
+		// Updates local DB pagination values to preserve consistency
 		if (self.session_save===true) {
 			// list pagination
 			await data_manager.set_local_db_data(
@@ -1489,7 +1490,7 @@ section.prototype.change_mode = async function(options) {
 		const id_variant		= self.id_variant
 		const old_node			= self.node
 		if (!old_node) {
-			console.warn('Not old_node found!!');
+			console.warn('No old_node found!!');
 			return null
 		}
 

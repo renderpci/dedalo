@@ -299,7 +299,7 @@ class transform_data {
 			);
 			return false;
 		}
-	
+
 		$sql = "
 			SELECT id, section_id, datos FROM $table
 			WHERE section_tipo = $1
@@ -338,7 +338,7 @@ class transform_data {
 
 			// overwrite relations
 			$datos->relations = $clean_relations;
-			
+
 			$section_data_encoded = json_handler::encode($datos);
 
 			// save record
@@ -1959,36 +1959,31 @@ class transform_data {
 				}else{
 
 					// search in database (this prevents duplicates when user apply this update more than once)
-					$sqo = json_decode('
-						{
-							"section_tipo": [
-								"'.$section_tipo.'"
-							],
-							"select": [],
-							"limit": 10,
-							"offset": 0,
-							"filter": {
-								"$and": [
-									{
-										"q": [
-											"'.$q.'"
-										],
-										"q_operator": null,
-										"path": [
-											{
-												"section_tipo": "'.$section_tipo.'",
-												"component_tipo": "'.$component_tipo.'",
-												"model": "'.$model.'",
-												"name": "'.$name.'"
-											}
-										],
-										"q_split": true,
-										"type": "jsonb"
-									}
+					$sqo_data = (object)[
+						'section_tipo' => [$section_tipo],
+						'select' => [],
+						'limit' => 10,
+						'offset' => 0,
+						'filter' => (object)[
+							'$and' => [
+								(object)[
+									'q' => [$q],
+									'q_operator' => null,
+									'path' => [
+										(object)[
+											'section_tipo' => $section_tipo,
+											'component_tipo' => $component_tipo,
+											'model' => $model,
+											'name' => $name
+										]
+									],
+									'q_split' => true,
+									'type' => 'jsonb'
 								]
-							}
-						}
-					');
+							]
+						]
+					];
+					$sqo = new search_query_object($sqo_data);
 					$search = search::get_instance(
 						$sqo // object sqo
 					);
@@ -2002,7 +1997,7 @@ class transform_data {
 
 						// create new section to save new data
 						// new section will be the locator to add into the records
-						$new_section = section::get_instance(							
+						$new_section = section::get_instance(
 							$section_tipo // string section_tipo
 						);
 						$new_section_id = $new_section->create_record();

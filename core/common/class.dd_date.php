@@ -18,19 +18,19 @@ class dd_date implements JsonSerializable {
 	static $virtual_month_days = 31;
 
 	// day
-	private ?int $day = null;
+	public ?int $day = null;
 	// month
-	private ?int $month = null;
+	public ?int $month = null;
 	// year
-	private ?int $year = null;
+	public ?int $year = null;
 	// time
-	private ?int $time = null;
+	public ?int $time = null;
 	// hour
-	private ?int $hour = null;
+	public ?int $hour = null;
 	// minute
-	private ?int $minute = null;
+	public ?int $minute = null;
 	// second
-	private ?int $second = null;
+	public ?int $second = null;
 	// ms
 	private ?int $ms = null;
 	// errors
@@ -1080,6 +1080,7 @@ class dd_date implements JsonSerializable {
 	*/
 	public function jsonSerialize() : mixed {
 		$vars = get_object_vars($this);
+		unset($vars['errors']); // non-serializable property
 		return array_filter($vars, function($val) {
 			return $val !== null;
 		});

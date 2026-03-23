@@ -18,21 +18,16 @@ trait search_component_string_common_tm {
     * @param object $ctx The search context containing table_alias, column info, and metadata
     * @return object The modified query object with SQL sentence and params set
     */
-    protected static function dispatch_operator_sql_tm(object $query_object, string $q, object $ctx) : object {     
-        
-        // column resolve
-        switch ($ctx->component_tipo) {
-            case 'dd577':
-                $ctx->column = 'tipo';
-                break;
-            case 'dd1772': // master
-                $ctx->column = 'section_tipo';
-                break;
-            default:
-                // Other
-                break;
-        }        
-    
+    protected static function dispatch_operator_sql_tm(object $query_object, string $q, object $ctx) : object {
+
+        // column resolve. time machine cases
+        $ctx->column = match($ctx->component_tipo) {
+            DEDALO_TIME_MACHINE_COLUMN_TIPO  => 'tipo', // dd577
+            DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO => 'section_tipo', // dd1772
+            DEDALO_TIME_MACHINE_COLUMN_DATA => 'data', // dd1574
+            default  => $ctx->column
+        };
+
         switch (true) {
             case ($q==='!*' || $ctx->q_operator==='!*'):
                 return self::resolve_empty_value_sql_tm($query_object, $ctx);
@@ -57,7 +52,9 @@ trait search_component_string_common_tm {
 
             default:
                 // return self::resolve_contains_sql_tm($query_object, $q, $ctx);
-                return self::resolve_exactly_equal_sql_tm($query_object, $q, $ctx);
+                return $ctx->column==='data'
+                    ? self::resolve_contains_sql_tm($query_object, $q, $ctx)
+                    : self::resolve_exactly_equal_sql_tm($query_object, $q, $ctx);
         }
     }
 
@@ -77,7 +74,7 @@ trait search_component_string_common_tm {
     * @return object The query object with SQL sentence set to "column IS NULL"
     */
     protected static function resolve_empty_value_sql_tm(object $query_object, object $ctx) : object {
-        
+
         $query_object->sentence = "({$ctx->table_alias}.{$ctx->column} IS NULL";
         return $query_object;
     }
@@ -126,7 +123,7 @@ trait search_component_string_common_tm {
     * @return object The query object with SQL sentence and params set
     */
     protected static function resolve_different_sql_tm(object $query_object, string $q, object $ctx) : object {
-        $q_clean = trim(str_replace('!=', '', $q));        
+        $q_clean = trim(str_replace('!=', '', $q));
 
         $first_char = mb_substr($q_clean, 0, 1);
         $last_char  = mb_substr($q_clean, -1);
@@ -311,7 +308,7 @@ trait search_component_string_common_tm {
         $q_clean = str_replace(['+', '*', '='], '', $q);
         $query_object->params = ['_Q1_' => '%'.$q_clean.'%'];
 
-        $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} LIKE _Q1_";
+        $query_object->sentence = "CAST({$ctx->table_alias}.{$ctx->column} AS text) LIKE _Q1_";
 
         return $query_object;
     }

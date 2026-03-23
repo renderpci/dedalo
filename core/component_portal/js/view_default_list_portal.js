@@ -52,15 +52,16 @@ view_default_list_portal.render = async function(self, options) {
 		}
 
 	// columns_map
-		const columns_map = await self.columns_map
+		const columns_map = self.columns_map || []
 
 	// fragment container
 		const fragment = new DocumentFragment()
 
 	// list_body
+		const view_name = self.view || self.context.view || 'default'
 		const list_body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
+			class_name		: 'list_body ' + self.mode +  ' view_' + view_name,
 			parent			: fragment
 		})
 		// flat columns create a sequence of grid widths taking care of sub-column space
@@ -75,7 +76,7 @@ view_default_list_portal.render = async function(self, options) {
 					}
 				}
 				set_element_css(
-					`${self.section_tipo}_${self.tipo}.list.view_${self.view}`, // selector
+					`${self.section_tipo}_${self.tipo}.list.view_${view_name}`, // selector
 					css_object
 				)
 			}
@@ -100,7 +101,7 @@ view_default_list_portal.render = async function(self, options) {
 
 
 	return wrapper
-}//end list
+}//end render
 
 
 
@@ -114,8 +115,8 @@ view_default_list_portal.render = async function(self, options) {
 const get_content_data = async function(self, ar_section_record) {
 
 	// content_data
-	const content_data = document.createElement('div')
-		  content_data.classList.add('content_data', self.mode, self.type)
+	const content_data = ui.component.build_content_data(self)
+		  content_data.classList.add(self.mode, self.tipo)
 
 	const section_record_count	= ar_section_record.length
 

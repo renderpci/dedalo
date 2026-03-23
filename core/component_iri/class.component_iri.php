@@ -427,8 +427,10 @@ class component_iri extends component_common {
 			$sqo_section_tipo->value = [$this->section_tipo];
 			$sqo_section_tipo->source = 'section';
 
-		$sqo = new stdClass();
-			$sqo->section_tipo = [$sqo_section_tipo];
+		$sqo_data = (object)[
+			'section_tipo' => [$sqo_section_tipo]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		$ddo = new dd_object();
 			$ddo->set_info( 'Title dataframe' );
@@ -1293,8 +1295,11 @@ class component_iri extends component_common {
 			$search = search::get_instance($search_query_object);
 			$db_result = $search->search();
 
-			$record = $db_result->fetch_one();
-			return ($record !== false) ? $record : null;
+			$record = $db_result
+				? ($db_result->fetch_one() ?? null)
+				: null;
+
+			return $record;
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__

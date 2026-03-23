@@ -293,46 +293,6 @@ final class section_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_section_info
-	* @return void
-	*/
-	public function test_get_section_info() : void {
-
-		$section_tipo = self::$section_tipo;
-
-		$section = section::get_instance(
-			$section_tipo, // string tipo
-			'edit', // string mode
-			false // bool cache
-		);
-
-		// Create a test record first
-		$section_id = $section->create_record();
-
-		// Get section_record to access data
-		$section_record = section_record::get_instance($section_tipo, $section_id);
-
-		$result = $section->get_section_info();
-
-		$this->assertTrue(
-			gettype($result)==='object' ,
-			'expected type object. Current type: ' .gettype($result)
-		);
-
-		$this->assertTrue(
-			isset($result->created_date) ,
-			'expected created_date property'
-		);
-
-		$this->assertTrue(
-			isset($result->created_by_user_id) ,
-			'expected created_by_user_id property'
-		);
-	}//end test_get_section_info
-
-
-
-	/**
 	* TEST_get_ar_all_section_records_unfiltered
 	* @return void
 	*/

@@ -42,14 +42,20 @@ view_mini_portal.render = async function(self) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
+		wrapper.classList.add('portal', 'view_mini')
 
 	// add all nodes
 		const length = ar_section_record.length
-		for (let i = 0; i < length; i++) {
-			const child_item = await ar_section_record[i].render()
-			wrapper.appendChild(child_item)
+		if (length > 0) {
+			const fragment = new DocumentFragment()
+			const rendered_nodes = await Promise.all(ar_section_record.map(rec => rec.render()))
+			for (let i = 0; i < length; i++) {
+				if (rendered_nodes[i]) {
+					fragment.appendChild(rendered_nodes[i])
+				}
+			}
+			wrapper.appendChild(fragment)
 		}
-		
 
 	return wrapper
 }//end render

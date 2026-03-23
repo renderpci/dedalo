@@ -570,33 +570,41 @@ class tool_common {
 			}
 
 		// get all active and registered tools
-			$sqo_tool_active = json_decode('{
-				"select": [
-					{"column": "section_id"},
-					{"column": "section_tipo"}
+			$sqo_data = (object)[
+				'select' => [
+					(object)['column' => 'section_id'],
+					(object)['column' => 'section_tipo']
 				],
-				"section_tipo": ["'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'"],
-				"limit": 0,
-				"offset": 0,
-				"filter": {
-					"$and": [
-						{
-							"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"dd1354"},
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "'.DEDALO_REGISTER_TOOLS_SECTION_TIPO.'",
-									"component_tipo": "dd1354",
-									"model": "component_radio_button",
-									"name": "Active"
-								}
+				'section_tipo' => [DEDALO_REGISTER_TOOLS_SECTION_TIPO],
+				'limit' => 0,
+				'offset' => 0,
+				'filter' => (object)[
+					'$and' => [
+						(object)[
+							'q' => (object)[
+								'section_id' => '1',
+								'section_tipo' => 'dd64',
+								'type' => 'dd151',
+								'from_component_tipo' => 'dd1354'
+							],
+							'q_operator' => null,
+							'path' => [
+								(object)[
+									'section_tipo' => DEDALO_REGISTER_TOOLS_SECTION_TIPO,
+									'component_tipo' => 'dd1354',
+									'model' => 'component_radio_button',
+									'name' => 'Active'
+								]
 							]
-						}
+						]
 					]
-				},
-				"full_count": false
-			}');
-			$search	= search::get_instance($sqo_tool_active);
+				],
+				'full_count' => false
+			];
+			$sqo = new search_query_object($sqo_data);
+
+		// search
+			$search	= search::get_instance($sqo);
 			$db_result	= $search->search();
 
 		// cache

@@ -881,38 +881,38 @@ class tool_import_marc21 extends tool_common {
 		$code			= pg_escape_string(DBi::_getConnection(), $marc21_id);
 
 		// JSON search_query_object to search
-		$sqo = json_decode('
-		{
-			"id": "get_section_id_from_code",
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 1,
-			"filter": {
-				"$or": [
-					{
-						"q": "='.$code.'",
-						"path": [
-							{
-								"section_tipo"		: "'.$section_tipo.'",
-								"component_tipo"	: "'.$tipo.'",
-								"model"				: "'.$model_name.'",
-								"name"				: "Code"
-							}
+		$sqo_data = (object)[
+			'id' => 'get_section_id_from_code',
+			'section_tipo' => $section_tipo,
+			'limit' => 1,
+			'filter' => (object)[
+				'$or' => [
+					(object)[
+						'q' => '='.$code,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Code'
+							]
 						]
-					},
-					{
-						"q": "*/'.$code.'",
-						"path": [
-							{
-								"section_tipo"		: "'.$section_tipo.'",
-								"component_tipo"	: "'.$tipo.'",
-								"model"				: "'.$model_name.'",
-								"name"				: "Code"
-							}
+					],
+					(object)[
+						'q' => '*/'.$code,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Code'
+							]
 						]
-					}
+					]
 				]
-			}
-		}');
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		// search the sections that has this title
 			$search	= search::get_instance($sqo);
@@ -956,27 +956,27 @@ class tool_import_marc21 extends tool_common {
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $collection_title);
 
 		// JSON search_query_object to search
-		$sqo = json_decode('
-		{
-			"id": "get_section_id_from_collections_container_title",
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 1,
-			"filter": {
-				"$and": [
-					{
-						"q": "\''.$serie_name.'\'",
-						"path": [
-							{
-								"section_tipo": "'.$section_tipo.'",
-								"component_tipo": "'.$tipo.'",
-								"model": "'.$model_name.'",
-								"name": "Series / Collections"
-							}
+		$sqo_data = (object)[
+			'id' => 'get_section_id_from_collections_container_title',
+			'section_tipo' => $section_tipo,
+			'limit' => 1,
+			'filter' => (object)[
+				'$and' => [
+					(object)[
+						'q' => '\''.$serie_name.'\'',
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $tipo,
+								'model' => $model_name,
+								'name' => 'Series / Collections'
+							]
 						]
-					}
+					]
 				]
-			}
-		}');
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		// search the sections that has this title
 			$search	= search::get_instance($sqo);

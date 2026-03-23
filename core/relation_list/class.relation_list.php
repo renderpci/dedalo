@@ -274,18 +274,18 @@ class relation_list extends common {
 			}
 
 		// sqo . Common used to get inverse locators
-			$sqo = (object)[
-				'section_tipo'			=> ['all'],
-				'mode'					=> 'related',
-				'limit'					=> false,
-				'offset'				=> 0,
-				'filter_by_locators'	=> [
-					(object)[
-						'section_tipo'	=> $this->section_tipo,
-						'section_id'	=> $this->section_id
-					]
-				]
-			];
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo(['all']);
+				$sqo->set_mode('related');
+				$sqo->set_limit(null);
+				$sqo->set_offset(0);
+
+				// Create filter locator
+				$filter_locator = new locator();
+					$filter_locator->set_section_tipo($this->section_tipo);
+					$filter_locator->set_section_id($this->section_id);
+
+				$sqo->set_filter_by_locators([$filter_locator]);
 
 		// inverse_references
 			$ar_inverse_references = $this->get_inverse_references($sqo);
@@ -424,18 +424,19 @@ class relation_list extends common {
 			}
 
 		// sqo
-			$sqo = (object)[
-				'section_tipo'			=> ['all'],
-				'mode'					=> 'related',
-				'limit'					=> false,
-				'offset'				=> 0,
-				'filter_by_locators'	=> [
-					(object)[
-						'section_tipo'	=> $this->section_tipo,
-						'section_id'	=> $this->section_id
-					]
+		$sqo_data = (object)[
+			'section_tipo'			=> ['all'],
+			'mode'					=> 'related',
+			'limit'					=> false,
+			'offset'				=> 0,
+			'filter_by_locators'	=> [
+				(object)[
+					'section_tipo'	=> $this->section_tipo,
+					'section_id'	=> $this->section_id
 				]
-			];
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		switch ($data_to_be_used) {
 
@@ -915,18 +916,19 @@ class relation_list extends common {
 	public function get_data() : array {
 
 		// sqo . Common used to get inverse locators
-			$sqo = (object)[
-				'section_tipo'			=> ['all'],
-				'mode'					=> 'related',
-				'limit'					=> false,
-				'offset'				=> 0,
-				'filter_by_locators'	=> [
-					(object)[
-						'section_tipo'	=> $this->section_tipo,
-						'section_id'	=> $this->section_id
-					]
+		$sqo_data = (object)[
+			'section_tipo'			=> ['all'],
+			'mode'					=> 'related',
+			'limit'					=> false,
+			'offset'				=> 0,
+			'filter_by_locators'	=> [
+				(object)[
+					'section_tipo'	=> $this->section_tipo,
+					'section_id'	=> $this->section_id
 				]
-			];
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		// inverse_references
 			$ar_inverse_references = $this->get_inverse_references($sqo);
@@ -1010,16 +1012,16 @@ class relation_list extends common {
 
 					switch ($fn) {
 						// add parents
-						case 'add_parents':		
+						case 'add_parents':
 							$data = $this->get_data();
 							$diffusion_data_object->set_value( $data );
 							$diffusion_data_object->parents = $diffusion_value;
 
 							return $diffusion_data;
-						case 'get_data_with_references':		
+						case 'get_data_with_references':
 							$diffusion_data_object->set_value( $diffusion_value );
 
-							return $diffusion_data;						
+							return $diffusion_data;
 						default:
 							break;
 					}
