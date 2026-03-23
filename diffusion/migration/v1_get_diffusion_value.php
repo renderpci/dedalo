@@ -1008,7 +1008,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			$ontology_node = ontology_node::get_instance($tipo);
 			$properties = $ontology_node->get_properties();
-			$tags_reference_tipo = $properties->tags_reference->tipo;
+			$tags_reference_tipo = $properties->tags_reference->tipo ?? null;
 
 			if( !empty($tags_reference_tipo) ){
 				$parser_process = (object)[
