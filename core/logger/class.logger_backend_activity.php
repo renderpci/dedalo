@@ -132,6 +132,7 @@ class logger_backend_activity extends logger_backend {
 			self::$_COMPONENT_WHAT['tipo'],
 			self::$_COMPONENT_WHERE['tipo'],
 			self::$_COMPONENT_WHEN['tipo'],
+			self::$_COMPONENT_PROJECTS['tipo'],
 			self::$_COMPONENT_DATA['tipo']
 		];
 
@@ -265,7 +266,7 @@ class logger_backend_activity extends logger_backend {
 			);
 			if(SHOW_DEBUG===true) {
 				$bt = debug_backtrace();
-				dump($bt, ' bt ++ '.to_string());
+				dump($bt, ' bt ++ ' . to_string($message));
 			}
 		}
 
@@ -398,13 +399,17 @@ class logger_backend_activity extends logger_backend {
 			return;
 		}
 
-		// Capture and clear queue before processing
+		// Atomic queue capture to prevent race conditions
 		$batch = self::$log_queue;
 		self::$log_queue = [];
 
-		// Process all queued logs
+		// Process all queued logs with error handling
 		foreach ($batch as $options) {
-			logger::$obj['activity']->log_message_defer($options);
+			try {
+				logger::$obj['activity']->log_message_defer($options);
+			} catch (Exception $e) {
+				debug_log(__METHOD__ . " Error processing queued log: " . $e->getMessage(), logger::ERROR);
+			}
 		}
 	}//end flush_queue
 
