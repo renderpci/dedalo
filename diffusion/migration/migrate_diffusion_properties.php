@@ -3799,6 +3799,30 @@ function process_node($node, $level) {
 			}
 		}
 
+	// GLOBAL RULE: merge_columns
+	if (isset($props->merge_columns)) {
+		$parser_process = (object)[
+			'fn' => 'parser_global::merge_columns',
+			'options' => (object)[
+				'columns' => is_array($props->merge_columns) ? $props->merge_columns : [$props->merge_columns]
+			]
+		];
+		if (isset($props->separator)) {
+			$parser_process->options->fields_separator = $props->separator;
+		}
+
+		if (!$new_props) {
+			$new_props = new stdClass();
+		}
+		if (!isset($new_props->process)) {
+			$new_props->process = new stdClass();
+		}
+		$new_props->process->parser = [$parser_process];
+
+		echo "{$indent}- [$tipo] " . ($model_name ? $model_name : "NO_MODEL") . " (merge_columns)\n";
+		echo "{$indent}  [RULE APPLIED] merge_columns mapped to parser_global::merge_columns\n";
+	}
+
 	// Process result and save
 	if (
 		$new_props 
