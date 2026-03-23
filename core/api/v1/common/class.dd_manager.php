@@ -1,8 +1,25 @@
 <?php declare(strict_types=1);
 /**
 * DD_MANAGER
-* Manage API web
+* Central API manager for handling Dédalo web requests.
 *
+* Key features:
+* - Entry point for all API requests to the system
+* - Request validation and authentication enforcement
+* - Dynamic routing to appropriate API handlers
+* - Performance metrics and debug information collection
+* - Special handling for maintenance area access control
+*
+* Architecture:
+* - Receives request objects (rqo) from client via JSON API
+* - Validates structure and authenticates user sessions
+* - Routes to specific API classes (dd_core_api, dd_area_maintenance_api, etc.)
+* - Returns standardized response objects with debug info when enabled
+*
+* @package Dédalo
+* @subpackage API
+* @version 1.0.0
+* @date 05-06-2019
 */
 final class dd_manager {
 
@@ -23,8 +40,39 @@ final class dd_manager {
 
 	/**
 	* MANAGE_REQUEST
-	* @param object $rqo
-	* @return object $response
+	* Central API request handler that validates, authenticates, and routes
+	* incoming requests to the appropriate API class methods.
+	*
+	* Key features:
+	* - Validates request object (rqo) structure
+	* - Authentication check with whitelist for public actions
+	* - Dynamic routing to API classes based on `dd_api` property
+	* - Special permission handling for maintenance area
+	* - Debug and performance metrics collection
+	*
+	* Flow:
+	* 1. Logs request details when SHOW_DEBUG is enabled
+	* 2. Validates that rqo has required `action` property
+	* 3. Checks user authentication (skips for whitelisted actions)
+	* 4. Routes to appropriate API class (`dd_core_api` by default)
+	* 5. Validates target method exists and executes
+	* 6. Enforces maintenance area permissions if applicable
+	* 7. Attaches debug info and performance metrics to response
+	*
+	* @param object $rqo Request object containing:
+	*                    - action (string) Required. API method to invoke
+	*                    - dd_api (string) Optional. API class name, defaults to 'dd_core_api'
+	*                    - id (string) Optional. Request identifier
+	*                    - source (object) Optional. May contain tipo property
+	* @return object $response Standard response object with:
+	*                    - result (bool) Success/failure status
+	*                    - msg (string) Response message
+	*                    - errors (array) Error codes if any
+	*                    - action (string) The action that was processed
+	*                    - debug (object) Optional. Debug info when enabled
+	*
+	* @throws Exception If authentication or permission checks fail
+	*                   (returned as error response, not thrown)
 	*/
 	final public function manage_request( object $rqo ) : object {
 		$api_manager_start_time = start_time();
@@ -40,6 +88,19 @@ final class dd_manager {
 
 				// enable cache analytics
 				section_record_instances_cache::setAnalytics(false);
+			}
+
+		// rqo check
+			if (!property_exists($rqo,'action')) {
+
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= "Invalid action var (not found in rqo)";
+					$response->errors[]	= 'Undefined method';
+
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+
+				return $response;
 			}
 
 		// logged check
@@ -71,19 +132,6 @@ final class dd_manager {
 				}
 			}
 
-		// rqo check
-			if (!is_object($rqo) || !property_exists($rqo,'action')) {
-
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= "Invalid action var (not found in rqo)";
-					$response->errors[]	= 'Undefined method';
-
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
-
-				return $response;
-			}
-
 		// actions
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
@@ -93,7 +141,8 @@ final class dd_manager {
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
 					$response->errors[]	= 'Undefined method';
-					$response->action	= $rqo->action;
+					$response->action	= $action;
+				return $response;
 			}else{
 				// success
 				if($dd_api==='dd_area_maintenance_api'){
@@ -104,11 +153,12 @@ final class dd_manager {
 							$response->result	= false;
 							$response->msg		= 'Error. user has not permissions ! [action:'.$rqo->action.']';
 							$response->errors[]	= 'permissions error';
+							$response->action	= $action;
 						return $response;
 					}
 				}
 				$response			= $dd_api::{$rqo->action}( $rqo );
-				$response->action	= $rqo->action;
+				$response->action	= $action;
 			}
 
 		// debug
@@ -262,11 +312,8 @@ final class dd_manager {
 					}
 
 				// end line info
-					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
+					$id			= $rqo->id ?? $rqo->source?->tipo ?? '';
 					$text			= 'API REQUEST (dd_manager) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' .exec_time_unit($api_manager_start_time,'ms') . ' - ' . dd_memory_usage();
-					$text_length	= strlen($text) +1;
-					// $nchars		= 200;
-					// $repeat 		= ($nchars - $text_length) ?? 0;
 					$line			= $text .' '. PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}
