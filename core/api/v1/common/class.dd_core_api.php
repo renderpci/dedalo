@@ -640,7 +640,7 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// Init the DB connection (consumes 4 - 6 ms)
+		// Init the DB connection (consumes 4 - 8 ms)
 			$conn = DBi::_getConnection();
 
 		// redirect to the method
