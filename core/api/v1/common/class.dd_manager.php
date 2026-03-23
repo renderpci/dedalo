@@ -133,87 +133,124 @@ final class dd_manager {
 				}
 
 				// metrics
-					$metrics = [
-						// permissions stats
-						'Permissions',
-						'--> calculated permissions for user ' . logged_user_id(),
-						'--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms',
-						'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count,
-						'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms',
-						'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls,
-						// get_tools stats
-						'Tools',
-						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
-						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
-						'--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached,
-						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
-						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
-						// presets
-						'Presets (request config)',
-						'--> presets_total_time: '  . metrics::$presets_total_time.' ms',
-						'--> presets_total_calls: ' . metrics::$presets_total_calls,
-						// search stats
-						'Search',
-						'--> search_total_time: ' . metrics::$search_total_time.' ms',
-						'--> search_total_calls: '. metrics::$search_total_calls,
-						// ontology stats
-						'Ontology load',
-						'--> ontology_total_time: ' . metrics::$ontology_total_time.' ms',
-						'--> ontology_total_calls: '. metrics::$ontology_total_calls,
-						'--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached,
-						'--> ontology_total_calls_different: '. (metrics::$ontology_total_calls - metrics::$ontology_total_calls_cached),
-						// matrix stats
-						'matrix load',
-						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
-						'--> matrix_total_calls: '. metrics::$matrix_total_calls,
-						// exec_search stats
-						'Search exec_search (matrix_db_manager)',
-						'--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms',
-						'--> exec_search_total_calls: '. metrics::$exec_search_total_calls,
-						// exec_search stats
-						'Search exec_search (dd_ontology_db_manager)',
-						'--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms',
-						'--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls,
-						// search_free stats
-						'Search free (JSON_RecordDataBounceObject)',
-						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
-						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
-						// section_save stats
-						'section_save',
-						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
-						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
-						// Context
-						'Context (all)',
-						'--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms',
-						'--> structure_context_total_calls: ' . metrics::$structure_context_total_calls,
-						// data
-						'Data (components)',
-						'--> data_total_time: '  . metrics::$data_total_time.' ms',
-						'--> data_total_calls: ' . metrics::$data_total_calls,
-						// cache
-						'Cache',
-						'--> section_record_total: ' . section_record::$section_record_total,
-						'--> section_record_total_calls: ' . section_record::$section_record_total_calls,
-						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,
-						// '--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
-						// '--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
-						// Subdatum
-						// 'Subdatum',
-						// '--> subdatum_total_time: ' . metrics::$subdatum_total_time.' ms',
-						// '--> subdatum_total_calls: ' . metrics::$subdatum_total_calls,
-						// summary
-						'Summary',
-						'time: ' . (
+					$metrics = [];
+
+					// permissions stats
+						if(metrics::$security_permissions_total_calls > 0) {
+							$metrics[] = 'Permissions';
+							$metrics[] = '--> calculated permissions for user ' . logged_user_id();
+							$metrics[] = '--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms';
+							$metrics[] = '--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count;
+							$metrics[] = '--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms';
+							$metrics[] = '--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls;
+						}
+
+					// get_tools stats
+						if(metrics::$get_tools_total_calls > 0) {
+							$metrics[] = 'Tools';
+							$metrics[] = '--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms';
+							$metrics[] = '--> get_tools_total_calls: '. metrics::$get_tools_total_calls;
+							$metrics[] = '--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached;
+							$metrics[] = '--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms';
+							$metrics[] = '--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls;
+						}
+
+					// presets
+						if(metrics::$presets_total_calls > 0) {
+							$metrics[] = 'Presets (request config)';
+							$metrics[] = '--> presets_total_time: '  . metrics::$presets_total_time.' ms';
+							$metrics[] = '--> presets_total_calls: ' . metrics::$presets_total_calls;
+						}
+
+					// search stats
+						if(metrics::$search_total_calls > 0) {
+							$metrics[] = 'Search';
+							$metrics[] = '--> search_total_time: ' . metrics::$search_total_time.' ms';
+							$metrics[] = '--> search_total_calls: '. metrics::$search_total_calls;
+						}
+
+					// ontology stats
+						if(metrics::$ontology_total_calls > 0) {
+							$metrics[] = 'Ontology load';
+							$metrics[] = '--> ontology_total_time: ' . metrics::$ontology_total_time.' ms';
+							$metrics[] = '--> ontology_total_calls: '. metrics::$ontology_total_calls;
+							$metrics[] = '--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached;
+							$metrics[] = '--> ontology_total_calls_different: '. (metrics::$ontology_total_calls - metrics::$ontology_total_calls_cached);
+						}
+
+					// matrix stats
+						if(metrics::$matrix_total_calls > 0) {
+							$metrics[] = 'matrix load';
+							$metrics[] = '--> matrix_total_time: ' . metrics::$matrix_total_time.' ms';
+							$metrics[] = '--> matrix_total_calls: '. metrics::$matrix_total_calls;
+						}
+
+					// exec_search stats (matrix_db_manager)
+						if(metrics::$exec_search_total_calls > 0) {
+							$metrics[] = 'Search exec_search (matrix_db_manager)';
+							$metrics[] = '--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms';
+							$metrics[] = '--> exec_search_total_calls: '. metrics::$exec_search_total_calls;
+						}
+
+					// exec_search stats (dd_ontology_db_manager)
+						if(metrics::$exec_dd_ontology_search_total_calls > 0) {
+							$metrics[] = 'Search exec_search (dd_ontology_db_manager)';
+							$metrics[] = '--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms';
+							$metrics[] = '--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls;
+						}
+
+					// Context
+						if(metrics::$structure_context_total_calls > 0) {
+							$metrics[] = 'Context (all)';
+							$metrics[] = '--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms';
+							$metrics[] = '--> structure_context_total_calls: ' . metrics::$structure_context_total_calls;
+						}
+
+					// data
+						if(metrics::$data_total_calls > 0) {
+							$metrics[] = 'Data (components)';
+							$metrics[] = '--> data_total_time: '  . metrics::$data_total_time.' ms';
+							$metrics[] = '--> data_total_calls: ' . metrics::$data_total_calls;
+						}
+
+					// Section record cache
+						if(section_record::$section_record_total_calls > 0) {
+							$metrics[] = 'Section record cache';
+							$metrics[] = '--> section_record_total: ' . section_record::$section_record_total;
+							$metrics[] = '--> section_record_total_calls: ' . section_record::$section_record_total_calls;
+							$metrics[] = '--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls;
+						}
+
+					// section_save stats
+						if(metrics::$section_save_total_calls > 0) {
+							$metrics[] = 'section_save';
+							$metrics[] = '--> section_save_total_time: ' . metrics::$section_save_total_time.' ms';
+							$metrics[] = '--> section_save_total_calls: '. metrics::$section_save_total_calls;
+						}
+
+					// db connection
+						if(metrics::$db_connection_total_calls > 0) {
+							$metrics[] = 'DB connection (' . DEDALO_HOSTNAME_CONN . ')';
+							$metrics[] = '--> db_connection_total_time: ' . metrics::$db_connection_total_time.' ms';
+							$metrics[] = '--> db_connection_total_calls: '. metrics::$db_connection_total_calls;
+							$metrics[] = '--> db_connection_total_calls_cached: '. metrics::$db_connection_total_calls_cached;
+						}
+
+					// summary add always
+						$metrics[] = 'Summary';
+						$metrics[] = 'time: ' . (
 							metrics::$security_permissions_total_time +
 							metrics::$exec_search_total_time +
 							metrics::$exec_dd_ontology_search_total_time +
-							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
 							metrics::$matrix_total_time +
 							metrics::$get_tools_total_time +
-							metrics::$section_save_total_time
-						)
-					];
+							metrics::$section_save_total_time +
+							metrics::$db_connection_total_time +
+							metrics::$structure_context_total_time +
+							metrics::$presets_total_time
+						);
+
 					debug_log(__METHOD__ . PHP_EOL
 						. implode(PHP_EOL, $metrics)
 						, logger::WARNING
