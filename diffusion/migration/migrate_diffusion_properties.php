@@ -3823,6 +3823,26 @@ function process_node($node, $level) {
 		echo "{$indent}  [RULE APPLIED] merge_columns mapped to parser_global::merge_columns\n";
 	}
 
+	// GLOBAL RULE: diffusion::get_publication_unix_timestamp
+	if (isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp') {
+		$parser_process = (object)[
+			'fn' => 'parser_global::publication_unix_timestamp'
+		];
+
+		if (!$new_props) {
+			$new_props = new stdClass();
+		}
+		if (!isset($new_props->process)) {
+			$new_props->process = new stdClass();
+		}
+		$new_props->process->parser = [$parser_process];
+		// Optional: if Dédalo expects int output globally we can set it:
+		$new_props->process->output_format = 'json';
+
+		echo "{$indent}- [$tipo] " . ($model_name ? $model_name : "NO_MODEL") . " (publication_unix_timestamp)\n";
+		echo "{$indent}  [RULE APPLIED] mapped to parser_global::publication_unix_timestamp\n";
+	}
+
 	// Process result and save
 	if (
 		$new_props 
@@ -3830,6 +3850,7 @@ function process_node($node, $level) {
 		|| isset($props->info)
 		|| isset($props->is_publicable)
 		|| isset($props->merge_columns)
+		|| (isset($props->process_dato) && $props->process_dato === 'diffusion::get_publication_unix_timestamp')
 	) {
 		if (!$new_props) {
 			$new_props = new stdClass();
