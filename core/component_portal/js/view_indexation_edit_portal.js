@@ -21,7 +21,7 @@
 
 /**
 * VIEW_INDEXATION_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_indexation_edit_portal = function() {
 
@@ -35,7 +35,7 @@ export const view_indexation_edit_portal = function() {
 * Manages the component's logic and appearance in client side
 * @param component_portal instance self
 * @param object options
-* @return promise
+* @return HTMLElement wrapper
 * 	DOM node wrapper
 */
 view_indexation_edit_portal.render = async function(self, options) {
@@ -134,18 +134,17 @@ const get_content_data = async function(self, ar_section_record) {
 					const render_promise = ar_section_record[i].render()
 					ar_promises.push(render_promise)
 				}
-				await Promise.all(ar_promises).then(function(values) {
+				const values = await Promise.all(ar_promises)
 
-					// sort values alphabetically
-						values.sort((a,b)=>a.innerText>b.innerText?1:-1)
+				// sort values alphabetically
+					values.sort((a,b)=>a.innerText>b.innerText?1:-1)
 
-					for (let i = 0; i < ar_section_record_length; i++) {
+				for (let i = 0; i < ar_section_record_length; i++) {
 
-						const section_record = values[i]
+					const section_record = values[i]
 
-						fragment.appendChild(section_record)
-					}
-				});
+					fragment.appendChild(section_record)
+				}
 			}//end if (ar_section_record_length===0)
 
 		// build references
@@ -187,7 +186,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * @return array columns_map
 */
@@ -209,7 +208,7 @@ const rebuild_columns_map = async function(self) {
 		})
 
 	// regular columns add
-		const base_columns_map = await self.columns_map
+		const base_columns_map = self.columns_map || []
 		columns_map.push(...base_columns_map)
 
 	// tag column add
@@ -230,7 +229,7 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// info. render_info_column column add
-		const info_node = columns_map.push({
+		columns_map.push({
 			id			: 'info',
 			label		: 'Info',
 			callback	: render_info_column
@@ -250,7 +249,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM DocumentFragment
+* @return DocumentFragment
 */
 const render_column_id = function(options) {
 
@@ -303,7 +302,7 @@ const render_column_id = function(options) {
 /**
 * RENDER_TAG_COLUMN
 * @param object options
-* @return HTMLElement DocumentFragment
+* @return DocumentFragment
 */
 const render_tag_column = function(options) {
 
@@ -416,7 +415,7 @@ const render_tag_column = function(options) {
 /**
 * RENDER_INFO_COLUMN
 * @param object options
-* @return HTMLElement DocumentFragment
+* @return DocumentFragment
 */
 const render_info_column = function(options) {
 

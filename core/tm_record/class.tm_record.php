@@ -153,7 +153,7 @@ class tm_record {
 
 		// do not allow to save time machine records of the section_tipo dd15
 		// dd15 is used to represent the time machine records
-		if($this->data_instance->section_tipo === 'dd15') {
+		if($this->data_instance->section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
 			return false;
 		}
 
@@ -206,7 +206,7 @@ class tm_record {
 
 		// do not allow to save time machine records of the section_tipo dd15
 		// dd15 is used to represent the time machine records
-		if($values->section_tipo === 'dd15') {
+		if($values->section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
 			return false;
 		}
 
@@ -420,7 +420,10 @@ class tm_record {
 		$bulk_process_id	= $tm_data->bulk_process_id;
 		$data				= $tm_data->data;
 
-		$section_record = section_record::get_instance('dd15', (int)$id);
+		$section_record = section_record::get_instance(
+			DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15
+			(int)$id
+		);
 
 		// section_id
 			// the section_id that store the time machine data
@@ -430,7 +433,7 @@ class tm_record {
 				$id_data->value = (int)$section_id;
 
 			$this->set_section_record_factory(
-				'dd1212',
+				DEDALO_TIME_MACHINE_COLUMN_SECTION_ID, // 'dd1212'
 				[$id_data],
 				$section_record
 			);
@@ -444,7 +447,7 @@ class tm_record {
 				$date_value->start 	= $date;
 
 			$this->set_section_record_factory(
-				'dd559',
+				DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP, // 'dd559'
 				[$date_value],
 				$section_record
 			);
@@ -470,11 +473,36 @@ class tm_record {
 				$where_value->value = $component_value;
 
 			$this->set_section_record_factory(
-				'dd577',
+				DEDALO_TIME_MACHINE_COLUMN_TIPO, // 'dd577'
 				[$where_value],
 				$section_record
 			);
 
+		// Section tipo. (section_tipo)
+			// The tipo of the component/section where the change was done.
+			// Resolve the term of the tipo and use it as data of the component
+			// dd577 - component_input_text
+			$component_value = ontology_node::get_term_by_tipo(
+				$section_tipo, // string tipo
+				DEDALO_DATA_LANG, // string lang
+				true, // bool from_cache
+				true // bool fallback
+			);
+
+			if(SHOW_DEBUG) {
+				$component_value = "$component_value [$section_tipo] ";
+			}
+
+			$where_value = new stdClass();
+				$where_value->id = 1;
+				$where_value->lang = DEDALO_DATA_NOLAN;
+				$where_value->value = $component_value;
+
+			$this->set_section_record_factory(
+				DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO, // 'dd1772'
+				[$where_value],
+				$section_record
+			);
 
 		// Who. (user_id)
 			// User. The user who made the change.
@@ -484,15 +512,15 @@ class tm_record {
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 				$user_locator->set_section_id($user_id);
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$user_locator->set_from_component_tipo('dd578');
+				$user_locator->set_from_component_tipo(DEDALO_TIME_MACHINE_COLUMN_USER_ID); // 'dd578'
 
 			$this->set_section_record_factory(
-				'dd578',
+				DEDALO_TIME_MACHINE_COLUMN_USER_ID, // 'dd578'
 				[$user_locator],
 				$section_record
 			);
-			//include the dd200 node also to be compatble with other section records
-			// it will be used for component_text_area to know the user who created the section record
+			// Include the dd200 node also to be compatible with other section records
+			// It will be used for component_text_area to know the user who created the section record
 			$this->set_section_record_factory(
 				DEDALO_SECTION_INFO_CREATED_BY_USER,
 				[$user_locator],
@@ -527,7 +555,9 @@ class tm_record {
 				$search = search::get_instance($sqo);
 				$db_result = $search->search();
 
-				$note_section_id = $db_result->fetch_one()->section_id ?? null;
+				$note_section_id = $db_result
+					? ($db_result->fetch_one()->section_id ?? null)
+					: null;
 
 			// 2. Create the component and get its data
 			// the data will used as (injected into) the component data of the time_machine annotation component.
@@ -543,7 +573,7 @@ class tm_record {
 				$note_model			= ontology_node::get_model_by_tipo( 'rsc329', true );
 				$current_component	= component_common::get_instance(
 					$note_model,
-					'rsc329',
+					DEDALO_NOTES_TEXT_TIPO, // 'rsc329'
 					$note_section_id,
 					'tm', // use tm mode to preserve service_time_machine coherence
 					$ddo->lang ?? DEDALO_DATA_LANG,
@@ -559,11 +589,10 @@ class tm_record {
 			$note_value[0]->parent_section_id = $note_section_id;
 
 			$this->set_section_record_factory(
-				'rsc329',
+				DEDALO_NOTES_TEXT_TIPO, // 'rsc329'
 				$note_value,
 				$section_record
 			);
-
 
 		// Bulk process id
 			// Process id for the bulk process. This is used to track and manage multiple changes together. It is used to identify the changes in a bulk operation.
@@ -573,7 +602,7 @@ class tm_record {
 				$bulk_process_id_value->value = $bulk_process_id;
 
 			$this->set_section_record_factory(
-				'dd1371',
+				DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID, // 'dd1371'
 				[$bulk_process_id_value],
 				$section_record
 			);
@@ -610,16 +639,43 @@ class tm_record {
 
 			}else{
 
-				$this->set_section_record_factory(
-					$tipo,
-					is_array($data) ? $data : [$data],
-					$section_record
+				$string_value = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+				$value = component_string_common::truncate_text(
+					$string_value, // string html
+					500 // int maxLength
 				);
 
+				$data_parsed = (object)[
+					'value' => $value,
+					'lang' => DEDALO_DATA_NOLAN
+				];
+				$this->set_section_record_factory(
+					DEDALO_TIME_MACHINE_COLUMN_DATA, // 'dd1574'
+					// $tipo,
+					// is_array($data) ? $data : [$data],
+					[$data_parsed],
+					$section_record
+				);
 			}
 
 		return $section_record;
 	}//end get_section_record
+
+
+
+	/**
+	* JSON_SERIALIZE
+	* @return mixed
+	*/
+	public function jsonSerialize() : mixed {
+
+		$vars = get_object_vars($this);
+
+		// filter out null values to keep payload small (as dynamic properties behaved before)
+		return array_filter($vars, function($val) {
+			return $val !== null;
+		});
+	}
 
 
 

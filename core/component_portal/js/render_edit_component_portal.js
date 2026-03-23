@@ -42,7 +42,7 @@ export const render_edit_component_portal = function() {
 
 /**
 * EDIT
-* Chose the view render module to generate DOM nodes
+* Choose the view render module to generate DOM nodes
 * based on self.context.view value
 * @param object options
 * {
@@ -85,6 +85,8 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
 			self.permissions = 1;
+
+			// fallthrough
 
 		case 'default':
 		default: {
@@ -170,13 +172,25 @@ export const render_column_id = function(options) {
 				if (e.which == 3 || e.altKey===true) {
 					return
 				}
-
 			// handler
 				self.edit_record_handler({
 					section_tipo	: section_tipo,
 					section_id		: section_id
 				})
 		})
+
+	// drag and drop
+	// permissions control
+	// with read only permissions, stop
+		if(self.permissions < 2){
+			return fragment
+		}
+
+	// drag_node
+		const drag_node = render_drag_node(options)
+		fragment.appendChild(drag_node)
+
+	// button_edit events
 		button_edit.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
 
@@ -213,18 +227,6 @@ export const render_column_id = function(options) {
 				class_name		: 'button edit icon',
 				parent			: button_edit
 			})
-
-	// drag and drop
-
-	// permissions control
-	// with read only permissions, stop
-		if(self.permissions < 2){
-			return fragment
-		}
-
-	// drag_node
-		const drag_node = render_drag_node(options)
-		fragment.appendChild(drag_node)
 
 	// drop_node
 		const drop_node = ui.create_dom_element({
@@ -277,7 +279,7 @@ const render_drag_node = function(options) {
 				drag_node.classList.add('hide')
 			// }
 		});
-		// drag-able options and events
+		// draggable options and events
 		drag_node.draggable	= true
 		drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
 		drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e, options)})
@@ -547,7 +549,7 @@ export const render_column_remove = function(options) {
 									section_id		: section_id
 								})
 
-								// delete_dataframe_record. if it is not dataframe it will be ignored						)
+								// delete_dataframe_record. if it is not dataframe it will be ignored
 								await delete_dataframe({
 									self				: self,
 									section_id			: self.section_id,
@@ -558,7 +560,9 @@ export const render_column_remove = function(options) {
 								})
 
 								// refresh the component. Don't wait here
-								self.refresh()
+								self.refresh({
+									build_autoload : true
+								})
 
 								// close modal
 								modal.close()
@@ -662,7 +666,7 @@ export const render_column_remove = function(options) {
 							}
 						})
 					}
-					// when the modal will be ready in DOM fire the function to attack the event
+					// when the modal will be ready in DOM fire the function to attach the event
 					when_in_dom(button_unlink_record, focus_the_button)
 
 				// data pagination offset. Check and update self data to allow save API request return the proper paginated data
@@ -741,7 +745,8 @@ export const get_buttons = (self) => {
 				//         }
 				//     ]
 				// }
-			const target_section_ddo	= target_section.find(el => el.tipo===target_section[0].tipo) || {}
+			const first_target			= target_section[0]
+			const target_section_ddo	= first_target ? target_section.find(el => el.tipo===first_target.tipo) : {}
 			const section_buttons		= target_section_ddo.buttons || []
 			const button_new			= section_buttons.find(el => el.model==='button_new')
 
@@ -821,7 +826,7 @@ export const get_buttons = (self) => {
 /**
 * ACTIVATE_AUTOCOMPLETE
 * Shared across views
-* Activate service autocomplete. Enable the service_autocomplete when the user do click
+* Activate service autocomplete. Enable the service_autocomplete when the user clicks
 * @param object self
 * @param HTMLElement wrapper
 * @return bool

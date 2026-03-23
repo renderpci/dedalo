@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, SHOW_DEBUG, SHOW_DEVELOPER */
+/* global get_label, SHOW_DEBUG, SHOW_DEVELOPER, DD_TIPOS, DEDALO_CORE_URL */
 /* eslint no-undef: "error" */
 
 
@@ -47,7 +47,7 @@ export const component_portal = function() {
 	this.caller					= null
 	this.caller_dataframe		= null
 
-	self.standalone				= null
+	this.standalone				= null
 
 	// context - data
 	this.datum					= null
@@ -69,8 +69,8 @@ export const component_portal = function() {
 	this.fixed_columns_map		= null
 
 	// delete_diffusion_records bool (on delete record, check this value)
-	self.delete_diffusion_records = null
-}//end  component_portal
+	this.delete_diffusion_records = null
+}//end component_portal
 
 
 
@@ -161,7 +161,7 @@ component_portal.prototype.init = async function(options) {
 					}
 				// remove locator
 					const current_entries = self.data.entries || []
-					const paginated_key = current_entries.findIndex(item => item.section_tipo === locator.section_tipo && item.section_id == locator.section_id)
+					const paginated_key = current_entries.findIndex(item => item.section_tipo === locator.section_tipo && String(item.section_id) === String(locator.section_id))
 
 					if (paginated_key === -1) {
 						console.warn('Value to unlink not found in current entries');
@@ -483,7 +483,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				}
 
 			// set Data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id) === String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
 				}
@@ -514,12 +514,12 @@ component_portal.prototype.build = async function(autoload=false) {
 				if (request_config_item) {
 					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
 					if (request_config_item.sqo &&
-						(request_config_item.sqo.limit || request_config_item.sqo.limit==0)) {
+						(request_config_item.sqo.limit || request_config_item.sqo.limit===0)) {
 
 						self.rqo.sqo.limit = request_config_item.sqo.limit
 					}
 					else if (request_config_item.show && request_config_item.show.sqo_config &&
-							(request_config_item.show.sqo_config.limit || request_config_item.show.sqo_config.limit==0)) {
+							(request_config_item.show.sqo_config.limit || request_config_item.show.sqo_config.limit===0)) {
 
 						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
 					}
@@ -672,12 +672,12 @@ component_portal.prototype.build = async function(autoload=false) {
 									|| ' | '
 
 	// check if the target section is multiple to remove the add button
-		self.show_interface.button_add = (self.target_section?.length > 1)
+		self.show_interface.button_add = (Array.isArray(self.target_section) && self.target_section.length > 1)
 			? false
 			: self.show_interface.button_add ?? true
 
 	// check if the target section is multiple to remove the open_section_list
-		self.show_interface.button_list = (self.target_section?.length > 1)
+		self.show_interface.button_list = (Array.isArray(self.target_section) && self.target_section.length > 1)
 			? false
 			: self.show_interface.button_list ?? true
 
@@ -742,7 +742,7 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
-		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
+		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
 		if (typeof exists!=='undefined') {
 			console.log('[link_record] Value already exists (1) !');
 			if(SHOW_DEBUG===true) {
@@ -1069,13 +1069,13 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		const full_data	= self.datum.data.find(el =>
 				el.tipo===self.tipo &&
 				el.section_tipo===self.section_tipo &&
-				el.section_id==self.section_id
+				String(el.section_id) === String(self.section_id)
 		) || {}
 		self.data = clone(full_data)
 
 	// the portal will use the filtered data value to render it with the tag_id locators.
 		self.data.entries = self.data.entries
-			? self.data.entries.filter(el => el.tag_id==tag_id)
+			? self.data.entries.filter(el => el.tag_id === tag_id)
 			: []
 
 	// reset status to enable re-render
@@ -1102,7 +1102,7 @@ component_portal.prototype.reset_filter_data = function() {
 		self.active_tag = null
 
 	// refresh the data with the full data from datum and render portal.
-		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id) || {}
+		self.data = self.datum.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id) === String(self.section_id)) || {}
 
 	// reset status to able re-render
 		self.status = 'built'
@@ -1167,8 +1167,13 @@ component_portal.prototype.navigate = async function(options) {
 		}
 
 	// container
-		const container = self.node.list_body // view table
-					   || self.node.content_data // view line
+		const container = self.node?.list_body // view table
+					   || self.node?.content_data // view line
+
+		if (!container) {
+			console.error('Error on navigate: container not found. self.node:', self.node);
+			return false
+		}
 
 	// loading
 		container.classList.add('loading')
@@ -1493,7 +1498,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 				menu			: false
 			})
 
-			const fn_widow_blur = function() {
+			const fn_window_blur = function() {
 				// refresh. Get the proper element to refresh based on some criteria.
 				// Note that portals in text view are not self refresh able
 				function get_edit_caller(instance) {
@@ -1520,15 +1525,15 @@ component_portal.prototype.edit_record_handler = async function(options) {
 						build_autoload	: true
 					})
 					.then(function(){
-						// fire window_bur event
-						event_manager.publish('window_bur_'+self.id, self)
+						// fire window_blur event
+						event_manager.publish('window_blur_'+self.id, self)
 					})
 				}
-			}//end fn_widow_blur
+			}//end fn_window_blur
 			new_window = open_window({
 				url		: url,
 				name	: 'record_view_' + section_tipo +'_'+ section_id,
-				on_blur : fn_widow_blur
+				on_blur : fn_window_blur
 			})
 		}
 
@@ -1606,7 +1611,7 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 			&& self.context.properties.source.request_config
 			&& self.context.properties.source.request_config[0]
 			&& self.context.properties.source.request_config[0].sqo
-			&& self.context.properties.source.request_config[0].sqo.fixed_filter
+			&& Array.isArray(self.context.properties.source.request_config[0].sqo.fixed_filter)
 				? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
 				: null
 			if (hierarchy_terms) {

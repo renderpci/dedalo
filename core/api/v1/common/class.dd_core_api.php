@@ -292,8 +292,8 @@ final class dd_core_api {
 
 							// overwrite (!)
 								$model	= 'section';
-								$tipo	= $properties->get_config()->target_section_tipo ?? $tipo;
-								$config	= $properties->get_config() ?? null;
+								$tipo	= $properties->config->target_section_tipo ?? $tipo;
+								$config	= $properties->config ?? null;
 
 							// tool_context
 								$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
@@ -728,7 +728,7 @@ final class dd_core_api {
 			$options		= $rqo->options ?? null;
 			$section_tipo	= $rqo->options->section_tipo;
 			$tipo			= $options->tipo;
-			$model			= $options->model;
+			$model			= $options->model ?? ontology_node::get_model_by_tipo($tipo);
 			$type 			= $options->type;
 
 		$raw_data = [];

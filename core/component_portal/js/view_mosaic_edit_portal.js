@@ -29,7 +29,7 @@
 
 /**
 * VIEW_MOSAIC_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_mosaic_edit_portal = function() {
 
@@ -175,7 +175,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 			list_body		: list_body
 			// top			: top
 		})
-		wrapper.classList.add('portal', 'view_'+self.context.view)
+		wrapper.classList.add('portal', 'view_' + (self.view || self.context.view || 'default'))
 		// set pointers
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
@@ -236,55 +236,47 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 
 		// add all section_record rendered nodes
 			const ar_section_record_length = ar_section_record.length
-			if (ar_section_record_length>0) {
+			if (ar_section_record_length > 0) {
+				const rendered_pairs = await Promise.all(ar_section_record.map(async (section_record, i) => {
+					const [section_record_node, hover_view] = await Promise.all([
+						section_record.render(),
+						render_hover_view(self, hover_ar_section_record[i])
+					])
+					section_record_node.prepend(hover_view)
+					return { section_record_node, section_record, hover_view, i }
+				}))
 
 				for (let i = 0; i < ar_section_record_length; i++) {
-
-					// section record
-						const section_record		= ar_section_record[i]
-						const section_record_node	= await section_record.render()
-
-
-					// hover
-						const hover_section_record	= hover_ar_section_record[i]
-						const hover_view			= await render_hover_view(self, hover_section_record)
-						section_record_node.prepend(hover_view)
+					const { section_record_node, section_record, hover_view } = rendered_pairs[i]
 
 					// drag and drop
-					// permissions control
-					// with read only permissions, remove drag and drop
-						if(self.permissions >= 2){
-							drag_and_drop({
-								section_record_node	: section_record_node,
-								paginated_key		: i,
-								total_records		: self.total,
-								locator 			: section_record.locator,
-								caller 				: self
-							})
-						}
+					if (self.permissions >= 2) {
+						drag_and_drop({
+							section_record_node : section_record_node,
+							paginated_key       : i,
+							total_records       : self.total,
+							locator             : section_record.locator,
+							caller              : self
+						})
+					}
 
 					// mouseenter event
-						section_record_node.addEventListener('mouseenter',function(e){
-							e.stopPropagation()
-							// const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							// event_manager.publish(event_id, this)
-							hover_view.classList.remove('display_none')
-							section_record_node.classList.add('mosaic_over')
-						})
+					section_record_node.addEventListener('mouseenter', function(e) {
+						e.stopPropagation()
+						hover_view.classList.remove('display_none')
+						section_record_node.classList.add('mosaic_over')
+					})
 
 					// mouseleave event
-						section_record_node.addEventListener('mouseleave',function(e){
-							e.stopPropagation()
-							// const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-							// event_manager.publish(event_id, this)
-							hover_view.classList.add('display_none')
-							section_record_node.classList.remove('mosaic_over')
-						})
+					section_record_node.addEventListener('mouseleave', function(e) {
+						e.stopPropagation()
+						hover_view.classList.add('display_none')
+						section_record_node.classList.remove('mosaic_over')
+					})
 
-					// section record append
-						fragment.appendChild(section_record_node)
+					fragment.appendChild(section_record_node)
 				}
-			}//end if (ar_section_record_length===0)
+			}//end if (ar_section_record_length>0)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -312,7 +304,7 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 /**
 * DRAG_AND_DROP
 * Set section_record_node ready to drag and drop
-* Mosaic use his own node to be dragable and dropable
+* Mosaic use his own node to be draggable and droppable
 * also it uses the drag node of default behavior (dependent of section_id node)
 * but doesn't use the drop node (dependent of section_id node)
 * @param object options
@@ -426,7 +418,7 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 				// section record append
 					fragment.appendChild(section_record_node)
 			}
-		}//end if (ar_section_record_length===0)
+		}//end if (ar_section_record_length>0)
 
 	// build references
 		if(self.data.references && self.data.references.length>0){
@@ -467,7 +459,7 @@ const render_hover_view = async function(self, hover_section_record) {
 			parent			: button_alt_container
 		})
 		// event publish
-		// When user clicks 'alt' button, send a event 'mosaic_show_' + section_record_node.id
+		// When user clicks 'alt' button, send an event 'mosaic_show_' + section_record_node.id
 		button_alt_container.addEventListener('mouseup', function(e){
 			e.stopPropagation()
 			const event_id = `mosaic_show_${hover_section_record.id_base}_${hover_section_record.caller.section_tipo}_${hover_section_record.caller.section_id}`
@@ -517,7 +509,7 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 				}
 
 			// button_remove
-				if(self.context.properties.source?.mode !=='external' && self.permissions>1) {
+				if(self.context?.properties?.source?.mode !=='external' && self.permissions>1) {
 					full_columns_map.push({
 						id			: 'remove',
 						label		: '', // get_label.delete || 'Delete',

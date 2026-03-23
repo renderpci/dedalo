@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, Promise */
+/*global get_label, Promise, page_globals, DEDALO_CORE_URL, SHOW_DEBUG, confirm */
 /*eslint no-undef: "error"*/
 
 
@@ -8,7 +8,7 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {clone, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {clone, object_to_url_vars, group_objects_by} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -33,7 +33,7 @@ export const view_graph_list_section = function() {
 * RENDER
 * Render node for use current view
 * @param object self
-* @para object options
+* @param object options
 * sample:
 * {
 *    "render_level": "full",
@@ -56,20 +56,20 @@ view_graph_list_section.render = async function(self, options) {
 	// content_data
 		const content_data = await get_content_data(self)
 
-		if (render_level==='content') {
+		if (render_level === 'content') {
 			return content_data
 		}
 
 	// buttons add
-		if (self.buttons && self.mode!=='tm') {
+		if (self.buttons && self.mode !== 'tm') {
 			const buttons_node = get_buttons(self);
-			if(buttons_node){
+			if (buttons_node) {
 				fragment.appendChild(buttons_node)
 			}
 		}
 
 	// search filter node
-		if (self.filter && self.mode!=='tm') {
+		if (self.filter && self.mode !== 'tm') {
 			const search_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'search_container',
@@ -100,26 +100,20 @@ view_graph_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @para object self
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode, self.type)
+		content_data.classList.add('content_data', self.mode, self.type)
 
 	// get values by typologies
 		const order_key = self.context?.properties?.view_config?.group_by || 'nexus46'
 		const data_to_be_grouped = self.datum.data.filter(el => el.tipo === order_key)
 
-		const group_by = function(array, key) {
-			return array.reduce(function(rv, x) {
-			(rv[x[key]] = rv[x[key]] || []).push(x);
-				return rv;
-			}, {});
-		};
-		const order_value = group_by(data_to_be_grouped, 'value')
+		const order_value = group_objects_by(data_to_be_grouped, 'value')
 
 		for (const group_label in order_value) {
 
@@ -210,12 +204,12 @@ const render_grouper_block = async function(self, group_label, ar_section_record
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return {array} columns_map
 */
 const rebuild_columns_map = async function(self) {
 
 	// columns_map already rebuilt case
-		if (self.fixed_columns_map===true) {
+		if (self.fixed_columns_map === true) {
 			return self.columns_map
 		}
 
@@ -251,14 +245,14 @@ const rebuild_columns_map = async function(self) {
 	// columns base
 		const base_columns_map = await self.columns_map
 
-		const remove_columns = self.context.properties?.view_config?.remove_columns || []
+		const remove_columns = self.context?.properties?.view_config?.remove_columns || []
 		const base_columns_map_length = base_columns_map.length
 
 		for (let i = 0; i < base_columns_map_length; i++) {
 			const column = base_columns_map[i]
 
 			const found = remove_columns.includes(column.tipo)
-			if(found){
+			if (found) {
 				continue
 			}
 			columns_map.push(column)
@@ -282,7 +276,7 @@ const get_buttons = function(self) {
 
 	// ar_buttons list from context
 		const ar_buttons = self.context.buttons
-		if(!ar_buttons) {
+		if (!ar_buttons) {
 			return null;
 		}
 
@@ -333,7 +327,7 @@ const get_buttons = function(self) {
 
 			// button_delete multiple
 			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
-				if(current_button.model==='button_delete' && page_globals.is_global_admin===false){
+				if (current_button.model==='button_delete' && page_globals.is_global_admin===false){
 					continue
 				}
 
@@ -451,6 +445,7 @@ const render_column_graph = function(options) {
 	// mouseup event
 	let is_processing = false
 	const mouseup_handler = async (e) => {
+		e.stopPropagation()
 
 		// Prevent multiple simultaneous executions
 		if (is_processing) {
@@ -506,7 +501,7 @@ const render_column_graph = function(options) {
 			const section_node = await section.render()
 
 			// Add to DOM
-            if (self.node && self.node.after) {
+            if (self.node?.after) {
                 self.node.after(section_node);
             } else {
                 console.error('render_column_graph: self.node.after is not available');
@@ -518,7 +513,7 @@ const render_column_graph = function(options) {
 
 			// navigation (update browser URL and history)
 			const source	= create_source(section, null)
-			const sqo		= section.request_config_object.sqo
+			const sqo		= section.request_config_object?.sqo
 			const title		= section.id
 
 			// url search. Append section_id if exists

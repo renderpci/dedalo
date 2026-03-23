@@ -111,7 +111,7 @@ class NtriplesUtil {
         return strtr($str, self::$iriEscapeMap);
     }
 
-    public static function serializeIri(NamedNode | BlankNode $res): string {
+    public static function serializeIri(NamedNode | BlankNode | DefaultGraph $res): string {
         if ($res instanceof DefaultGraph) {
             return '';
         }

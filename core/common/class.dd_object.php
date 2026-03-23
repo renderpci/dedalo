@@ -23,8 +23,8 @@
 * - @property string|null       $model          Element model name (e.g. 'component_input_text', 'section')
 * - @property string|null       $id             Optional local identifier. Used to identify the DDO inside a DDO_MAP chain.
 * - @property string|null       $info           Optional short information about the DDO. e.g. 'Find(spot) - component_portal'
-* - @property object|array|null $properties     Custom, ontology‑driven configuration. Used to sent or overwrite the Ontology properties.
 * - @property int|null          $permissions    Permission level. 0 = read only, 1 = read and write, 2 = read and write and delete, 3 = read and write and delete and create
+* - @property object|array|null $properties     Custom, ontology‑driven configuration. Used to sent or overwrite the Ontology properties.
 *
 * Labels & translation
 * - @property string|null $label               Main label. e.g. 'Title'
@@ -1756,7 +1756,7 @@ class dd_object extends stdClass implements JsonSerializable {
 		if (method_exists($this, $method)) {
 			return $this->{$method}($value);
 		}
-		$this->$name = $value; 
+		$this->$name = $value;
 	}
 
 
@@ -1796,7 +1796,7 @@ class dd_object extends stdClass implements JsonSerializable {
 	public function jsonSerialize() : mixed {
 
 		$vars = get_object_vars($this);
-		
+
 		// filter out null values to keep payload small (as dynamic properties behaved before)
 		return array_filter($vars, function($val) {
 			return $val !== null;

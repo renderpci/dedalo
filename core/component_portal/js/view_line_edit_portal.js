@@ -29,7 +29,7 @@
 
 /**
 * VIEW_LINE_EDIT_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_line_edit_portal = function() {
 
@@ -176,7 +176,7 @@ const get_content_data = async function(self, ar_section_record) {
 				const section_record = ar_section_record[i]
 
 				// render section_record and await to preserve the order
-				const section_record_node = await ar_section_record[i].render()
+				const section_record_node = await section_record.render()
 
 				// drag and drop
 					// permissions control
@@ -238,7 +238,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_record
+* Adding control columns to the columns_map that will be processed by section_records
 * @param object self
 * @return array columns_map
 */
@@ -260,14 +260,14 @@ const rebuild_columns_map = async function(self) {
 		})
 
 	// base_columns_map
-		const base_columns_map = await self.columns_map
+		const base_columns_map = self.columns_map || []
 
 	// if the component has compnent_info its parents
 	// add its own render column, the `ddinfo`,
 	// columns exists because is added into common.js get_columns_map()
 	// here only added the rendered callback
 		if (self.add_component_info===true) {
-			base_columns_map.map(el => {
+			base_columns_map.forEach(el => {
 				if(el.id==='ddinfo'){
 					el.callback	= render_column_component_info
 				}
@@ -276,7 +276,7 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push(...base_columns_map)
 
 	// column remove
-		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
+		if ( self.context?.properties?.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
@@ -312,7 +312,7 @@ view_line_edit_portal.render_column_id = function(options) {
 	// button_edit
 		const button_edit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'button_edit button_view_' + self.context.view,
+			class_name		: 'button_edit button_view_' + (self.view || self.context.view || 'default'),
 			parent			: fragment
 		})
 		// click event

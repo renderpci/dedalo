@@ -292,6 +292,11 @@ abstract class common {
 				return 0;
 			}
 
+		// fixed read only cases
+			if($parent_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				return logged_user_is_global_admin() ? 1 : 0;
+			}
+
 		// check params
 			if( empty($parent_tipo) ) {
 				if(SHOW_DEBUG===true) {
@@ -403,7 +408,7 @@ abstract class common {
 	* @return object $info
 	*/
 	public function get_info() : object {
-		return (object)[	
+		return (object)[
 			'section_tipo' 	=> $this->section_tipo ?? $this->tipo,
 			'tipo' 			=> $this->tipo,
 			'label' 		=> $this->label,
@@ -1912,7 +1917,7 @@ abstract class common {
 						// 	debug_log(__METHOD__." Error Processing Request. Already calculated! ".$cid .to_string(), logger::ERROR);
 						// 	// throw new Exception("Error Processing Request. Already calculated! ".$cid, 1);
 						// 	// continue;
-						// 	// $related_element = $ar_subcontext_calculated[$cid];
+						// 	// $current_element = $ar_subcontext_calculated[$cid];
 						// }
 
 					// common temporal excluded/mapped models *******
@@ -1935,7 +1940,7 @@ abstract class common {
 							continue;
 						}
 
-					// related_element switch
+					// current_element switch
 						switch (true) {
 
 							// section case (will be used in areas calculations with multiple sections)
@@ -1952,7 +1957,7 @@ abstract class common {
 									$section->add_section_record( $section_record );
 
 								// set element
-									$related_element = $section;
+									$current_element = $section;
 								break;
 
 							// component case
@@ -1973,7 +1978,7 @@ abstract class common {
 
 								// create the component child and inject his configuration (or use the default if the parent don't has specific request_config for it)
 								$current_lang	= $dd_object->lang ?? common::get_element_lang($current_tipo, DEDALO_DATA_LANG);
-								$related_element= component_common::get_instance(
+								$current_element= component_common::get_instance(
 									$model,
 									$current_tipo,
 									$section_id,
@@ -1989,34 +1994,40 @@ abstract class common {
 								// it will get the correct data from the time_machine
 								// used to load the component in edit mode in time_machine tool.
 								if($model==='component_dataframe' && isset($this->matrix_id) ){
-									$related_element->data_source = 'tm';
-									$related_element->matrix_id = $this->matrix_id;
+									$current_element->data_source = 'tm';
+									$current_element->matrix_id = $this->matrix_id;
 								}
 
 								// Permissions inheritance.
 								// Get the permissions to inject to children.
 								// Situation :
 								// The user can access to the source portal (permissions 1 or 2), but he/she can not access to target section (permissions 0).
-								// in this situation the user need to read the data of the target section because he/she can access to the source portal
+								// In this situation, the user needs to read the data of the target section because he/she can access to the source portal
 								// and he/she will be able to search with autocomplete, to assign data to the portal (or link data).
 								// Behavior:
-								// When a component has data to show but the user don't has permissions to access to target section
-								// or target components, the target component need to be set as read (permissions 1)
-								// the user will need read the portal and his data, event if they can not change the target section.
+								// When a component has data to show but the user doesn't have permissions to access to target section
+								// or target components, the target component needs to be set as read (permissions 1).
+								// The user will need to read the portal and his data, even if they cannot change the target section.
 								// The same case happens with the searched section with autocomplete.
 								// The user will need to read the target section and his components to choose data.
 								// Exception:
-								// if the user can read or read/write permissions, do not change it.
-									$child_permissions = $related_element->get_component_permissions();
-									if( strpos(get_called_class(), 'component_')===0 && $child_permissions <1 ){
-										$related_element->set_permissions(1);
+								// If the user can read or read/write permissions, do not change it.
+									$current_element_permissions = $current_element->get_component_permissions();
+									$is_component_caller = str_starts_with(get_called_class(), 'component_');
+									// Grant minimum read permission when user lacks access to target section
+									if($is_component_caller && $current_element_permissions < 1) {
+										$current_element->set_permissions(1);
+									}
+									// Cap permissions at caller level when caller is read-only
+									if($is_component_caller && $this->permissions === 1 && $current_element_permissions > 1) {
+										$current_element->set_permissions($this->permissions);
 									}
 
 								// component_text_area lang case. Change lang before get data (!)
 									if ($model==='component_text_area') {
-										$original_lang = $related_element->get_original_lang();
+										$original_lang = $current_element->get_original_lang();
 										if (!empty($original_lang) && $original_lang!==$current_lang) {
-											$related_element->set_lang($original_lang);
+											$current_element->set_lang($original_lang);
 										}
 									}
 
@@ -2024,13 +2035,13 @@ abstract class common {
 								// get the data from database instead the calculation
 								// do not use the default get_data() because it's calculated by observer and save in DB
 									if ($model==='component_info') {
-										$related_element->use_db_data = true;
+										$current_element->use_db_data = true;
 									}
 
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
 								// Sample of use is request config: numisdata11 (ordered coins)
 									if(isset($dd_object->limit)){
-										$related_element->pagination->limit = $dd_object->limit;
+										$current_element->pagination->limit = $dd_object->limit;
 									}
 
 								// virtual request_config, create new request config to be injected to the current_ddo.
@@ -2038,7 +2049,7 @@ abstract class common {
 								// and it's necessary calculate the new request_config that will be use in the next loop
 								// the main component has all config, his children has specific config (only his own part)
 									// get the component rqo to be updated with the current config
-									$component_request_config = $related_element->build_request_config();
+									$component_request_config = $current_element->build_request_config();
 									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
@@ -2102,26 +2113,26 @@ abstract class common {
 									}//end foreach ($request_config as $request_config_object)
 
 								// Inject the request_config inside the component
-									$related_element->request_config = $component_request_config;
+									$current_element->request_config = $component_request_config;
 
 								// Inject this tipo as related component from_component_tipo
 									if (strpos($source_model, 'component_')===0){
-										$related_element->from_component_tipo	= $this->tipo;
-										$related_element->from_section_tipo		= $this->get_section_tipo();
+										$current_element->from_component_tipo	= $this->tipo;
+										$current_element->from_section_tipo		= $this->get_section_tipo();
 									}
 
 								// inject view
 									if(!empty($view)){
-										$related_element->view = $view;
+										$current_element->view = $view;
 									}
 								break;
 
 							// grouper case
 							case (in_array($model, common::$groupers)):
-								$related_element = new $model($current_tipo, $current_section_tipo, $mode);
+								$current_element = new $model($current_tipo, $current_section_tipo, $mode);
 								break;
 
-							case ($model==='dd_grid' && $section_tipo==='dd15'):
+							case ($model==='dd_grid' && $section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO):
 
 								// tm case
 								$tm_record = tm_record::get_instance($section_id);
@@ -2166,25 +2177,25 @@ abstract class common {
 						}//end switch (true)
 
 					// add
-						if (isset($related_element)) {
+						if (isset($current_element)) {
 
 							// Inject var from_parent as from_parent
 								if (isset($from_parent)) {
-									$related_element->from_parent = $from_parent;
+									$current_element->from_parent = $from_parent;
 								}
 
 							// parent_grouper
 								if (isset($dd_object->parent_grouper)) {
-									$related_element->parent_grouper = $dd_object->parent_grouper;
+									$current_element->parent_grouper = $dd_object->parent_grouper;
 								}
 
 							// properties injection
 								if (isset($dd_object->properties)) {
-									$properties = $related_element->get_properties() ?? new stdClass();
+									$properties = $current_element->get_properties() ?? new stdClass();
 									foreach ($dd_object->properties as $key => $value) {
 										$properties->$key = $value;
 									}
-									$related_element->set_properties($properties);
+									$current_element->set_properties($properties);
 								}
 
 							// skip_subdatum subdatum_options
@@ -2202,7 +2213,7 @@ abstract class common {
 								$item_options = new stdClass();
 									$item_options->get_context	= true;
 									$item_options->get_data		= $bool_get_data;
-								$element_json = $related_element->get_json($item_options);
+								$element_json = $current_element->get_json($item_options);
 
 							// ar_subcontext
 								$ar_subcontext = [...$ar_subcontext, ...$element_json->context];
@@ -2229,12 +2240,12 @@ abstract class common {
 
 							// data add
 								$ar_subdata = [...$ar_subdata, ...$ar_final_subdata];
-						}//end if (isset($related_element))
+						}//end if (isset($current_element))
 
 					// debug
 						if(SHOW_DEBUG===true) {
-							$related_model = isset($related_element)
-								? $related_element->get_model()
+							$related_model = isset($current_element)
+								? $current_element->get_model()
 								: ($dd_object->tipo ?? null);
 							$len = !empty($dd_object->tipo)
 								? strlen($dd_object->tipo)
@@ -2989,7 +3000,7 @@ abstract class common {
 	public static function get_section_elements_context(object $options) : array {
 
 		// options
-			$ar_section_tipo			= $options->ar_section_tipo ?? null;
+			$ar_section_tipo			= $options->ar_section_tipo ?? [];
 			$use_real_sections			= $options->use_real_sections ?? false;
 			$skip_permissions			= $options->skip_permissions ?? false;
 			$caller_tipo				= $options->caller_tipo ?? null;
@@ -3025,7 +3036,13 @@ abstract class common {
 				'children',
 				false // bool search_exact
 			);
-			$section_info_elements = [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
+			$first_section_tipo = $ar_section_tipo[0] ?? null;
+			if (empty($first_section_tipo)) {
+				return [];
+			}
+			$section_info_elements = $first_section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO
+				? []
+				: [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)

@@ -1,15 +1,15 @@
 #!/usr/bin/env php
 <?php
 /**
-* This file calculates component_security_acces datalist tree in background.
+* This file calculates component_security_access datalist tree in background.
 * Receives a command argument JSON encoded array as $argv[1]
 * with server environment needed for config start file:
 * {
-* 	"server" => [
-* 		 "HTTP_HOST"	: "127.0.0.1:8443",
-* 		 "REQUEST_URI"	: "DEDALO_API_URL",
-* 		 "SERVER_NAME"	: "127.0.0.1"
-* 	],
+* 	"server": {
+* 		"HTTP_HOST"	: "127.0.0.1:8443",
+* 		"REQUEST_URI"	: "DEDALO_API_URL",
+* 		"SERVER_NAME"	: "127.0.0.1"
+* 	},
 * 	"session_id"	: "3j4mkd21cq71fh9qp7gj1ka033",
 * 	"user_id"		: "-1",
 * 	"lang" 			: "lg-spa"
@@ -31,10 +31,12 @@
 	$_REQUEST['dedalo_application_lang']	= $lang;
 	$_REQUEST['dedalo_data_lang']			= $lang;
 
-// session_id. Is used mainly to verify that user is logged or not.
-	// get current session id and force new session name as equal
-	$session_id = $data['session_id'];
-	session_id($session_id);
+// session_id. Resumes the caller's session so user auth data is available in the CLI process.
+	// Must be set BEFORE config.php calls session_start().
+	$session_id = $data['session_id'] ?? '';
+	if (!empty($session_id)) {
+		session_id($session_id);
+	}
 
 	error_log(")))))))))))))))))))))))))))))))))))))))))))))))) session_id 1: $session_id");
 
@@ -43,9 +45,6 @@
 
 // config. Starts a new session with forced id from command arguments
 	include dirname(__FILE__, 3) . '/config/config.php';
-
-// unlock session
-	// session_write_close();
 
 // actions to run
 	$datalist = component_security_access::calculate_tree($user_id, $lang);
@@ -60,16 +59,15 @@
 	$current_session = session_id();
 	if (empty($current_session)) {
 		trigger_error("))))) Warning! current session is empty");
+	} elseif (empty($session_id)) {
+		trigger_error("))))) Warning! No session_id provided: session flow not preserved across CLI process");
+	} elseif ($session_id !== $current_session) {
+		trigger_error("))))) Warning! session id received and current session id do not match " . $session_id . ' -> ' . $current_session);
 	}
-	if ($session_id!=session_id()) {
-		trigger_error("))))) Warning! session id received and current session id do not match " . $session_id . ' -> ' .$current_session);
-	}
-	if (!isset($session_lang)) {
+	if ($session_lang === null) {
 		trigger_error('))))) Warning! session dedalo_application_lang is not defined (' . '$_SESSION[\'dedalo\'][\'config\'][\'dedalo_application_lang\']' .')');
-	}else{
-		if ($lang!=$session_lang) {
-			trigger_error('))))) Warning! session dedalo_application_lang ('. $session_lang. ') is not the desired language ('.$lang.')');
-		}
+	} elseif ($lang !== $session_lang) {
+		trigger_error('))))) Warning! session dedalo_application_lang ('. $session_lang. ') is not the desired language ('.$lang.')');
 	}
 
 // write result to file as text

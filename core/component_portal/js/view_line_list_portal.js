@@ -13,7 +13,7 @@
 
 /**
 * VIEW_LINE_LIST_PORTAL
-* Manage the components logic and appearance in client side
+* Manage the component's logic and appearance in client side
 */
 export const view_line_list_portal = function() {
 
@@ -27,7 +27,7 @@ export const view_line_list_portal = function() {
 * Render component nodes in current view
 * @param component_portal instance self
 * @param object options
-* @return promise
+* @return HTMLElement wrapper
 * 	DOM node wrapper
 */
 view_line_list_portal.render = async function(self, options) {
@@ -57,32 +57,33 @@ view_line_list_portal.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : true // bool set autoload when change mode is called (close button)
 		})
-		wrapper.classList.add('portal')
+		wrapper.classList.add('portal', 'view_line')
 		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
 
-
 	// change_mode
-		wrapper.addEventListener('dblclick', function(e) {
-			e.stopPropagation()
+		if (self.show_interface.read_only !== true && self.permissions > 1) {
+			wrapper.addEventListener('dblclick', function(e) {
+				e.stopPropagation()
 
-			// self.show_interface.read_only = true
-			const change_mode = self.context.properties.with_value
-				&& self.context.properties.with_value.mode !== self.mode
-					? self.context.properties.with_value.mode
-					: 'edit'
+				// self.show_interface.read_only = true
+				const change_mode = self.context?.properties?.with_value
+					&& self.context.properties.with_value.mode !== self.mode
+						? self.context.properties.with_value.mode
+						: 'edit'
 
-			const change_view = self.context.properties.with_value
-				&& self.context.properties.with_value.view !== self.context.view
-					? self.context.properties.with_value.view
-					: 'line'
+				const change_view = self.context?.properties?.with_value
+					&& self.context.properties.with_value.view !== self.context.view
+						? self.context.properties.with_value.view
+						: 'line'
 
-			self.change_mode({
-				mode	: change_mode,
-				view	: change_view
+				self.change_mode({
+					mode	: change_mode,
+					view	: change_view
+				})
 			})
-		})
+		}
 
 
 	return wrapper

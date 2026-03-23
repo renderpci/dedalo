@@ -38,7 +38,7 @@ final class ontology_test extends BaseTestCase {
 				"id": "16028305",
 				"tipo": "test102",
 				"parent": "test45",
-				"modelo": "dd1747",
+				"model_tipo": "dd1747",
 				"is_model": false,
 				"order_number": "28",
 				"tld": "test",
@@ -105,7 +105,8 @@ final class ontology_test extends BaseTestCase {
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+			'expected running without errors. DEDALO_LAST_ERROR: ' . PHP_EOL
+			. json_encode($_ENV['DEDALO_LAST_ERROR'], JSON_PRETTY_PRINT)
 		);
 
 		$expected = true;

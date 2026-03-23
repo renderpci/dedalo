@@ -1905,11 +1905,12 @@ abstract class component_common extends common {
 					}
 
 				// sqo. Build the search_query_object to use in the search.
-					$sqo = new stdClass();
-						$sqo->section_tipo	= $observer->section_tipo;
-						$sqo->full_count	= false;
-						$sqo->limit			= 0;
-						$sqo->filter		= $current_observer->server->filter;
+					$sqo_data = new stdClass();
+						$sqo_data->section_tipo	= [$observer->section_tipo];
+						$sqo_data->full_count	= false;
+						$sqo_data->limit		= 0;
+						$sqo_data->filter		= $current_observer->server->filter;
+					$sqo = new search_query_object($sqo_data);
 
 				// search the sections that has reference to the observable component, the component that had changed
 					$search		= search::get_instance($sqo);
@@ -3027,7 +3028,7 @@ abstract class component_common extends common {
 
 				$this->permissions = 2; // Allow all users to search with section info components
 
-			}elseif ( strpos((string)$this->section_id, 'search') === 0){
+			}elseif ( strpos((string)$this->section_id, 'search') === 0 ){
 
 				$this->permissions = 2;
 
@@ -3836,34 +3837,35 @@ abstract class component_common extends common {
 	public static function get_component_tm_data( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
 
 		// search query object
-			$sqo = json_decode('{
-			  "mode": "tm",
-			  "section_tipo": [
-				"'.$section_tipo.'"
-			  ],
-			  "filter_by_locators": [
-				{
-				  "matrix_id": "'.$matrix_id.'",
-				  "section_tipo": "'.$section_tipo.'",
-				  "tipo": "'.$tipo.'"
-				}
-			  ],
-			  "order": [
-				{
-				  "direction": "DESC",
-				  "path": [
-					{
-					 "component_tipo": "id"
-					}
-				  ]
-				}
+		$sqo_data = (object)[
+			'mode' => 'tm',
+			'section_tipo' => [$section_tipo],
+			'filter_by_locators' => [
+			  (object)[
+				'matrix_id' => (string)$matrix_id,
+				'section_tipo' => $section_tipo,
+				'tipo' => $tipo
 			  ]
-			}');
+			],
+			'order' => [
+			(object)[
+				'direction' => 'DESC',
+				'path' => [
+				  (object)[
+					'component_tipo' => 'id'
+				  ]
+				]
+			]
+			]
+		];
+		$sqo = new search_query_object($sqo_data);
 
 		$search = search::get_instance($sqo);
 		$db_result = $search->search();
 
-		$record = $db_result->fetch_one();
+		$record = $db_result
+			? ($db_result->fetch_one() ?? null)
+			: null;
 
 		$tm_data = !empty($record)
 			? $record->data
@@ -3904,6 +3906,11 @@ abstract class component_common extends common {
 	* 	Default is true. Override when component is not sortable
 	*/
 	public function get_sortable() : bool {
+
+		// time machine cases. Do not resolve ddo_map. Tipo 'rsc329' is column `timestamp`
+		if($this->tipo===DEDALO_NOTES_TEXT_TIPO) {
+			return false;
+		}
 
 		return true;
 	}//end get_sortable
@@ -3966,12 +3973,18 @@ abstract class component_common extends common {
 
 
 	/**
-	* CONFORM_IMPORT_DATA
-	* @param string $import_value
-	* @param string $column_name
-	* 	like 'test145_dmy'
-	* @return object $response
-	*/
+	 * CONFORM_IMPORT_DATA
+	 * Validates and transforms import data from CSV or other sources.
+	 * Handles JSON strings, empty values, and type conversion.
+	 *
+	 * @param string $import_value The raw value from the import file
+	 * @param string $column_name  The column name from the import file (for reference/logging)
+	 *
+	 * @return object Response with:
+	 *   - result: mixed The conformed value (array, string, or null)
+	 *   - errors: array List of errors if validation failed
+	 *   - msg: string Status message ('OK' or error description)
+	 */
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
 		// Response
@@ -3980,55 +3993,49 @@ abstract class component_common extends common {
 			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
-		// Check if is a JSON string. Is yes, decode
+		// Check if is a JSON string. If yes, decode
 		if(json_handler::is_json($import_value)){
 
-			// try to JSON decode (null on not decode)
-			$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+			// try to JSON decode
+			$data_from_json = json_handler::decode($import_value);
 
-			// array convert all except null
-			// if (!is_array($data_from_json) && !is_null($data_from_json)) {
-			// 	$data_from_json = [$data_from_json];
-			// }
+			// Handle decode failure
+			if ($data_from_json === null && $import_value !== 'null') {
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes($import_value);
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: JSON decode failed';
+				$response->errors[] = $failed;
 
-			$import_value	= $data_from_json;
+				return $response;
+			}
+
+			$import_value = $data_from_json;
 
 		}else{
-
-			// string case
+			// Non-JSON string case
 
 			if(empty($import_value)) {
-
 				$import_value = null;
-
 			}else{
-
-				// log JSON conversion error
+				// Log unexpected non-JSON error (should not reach here normally)
 				debug_log(__METHOD__
-					." JSON json_last_error: ".json_last_error() . PHP_EOL
+					." Unexpected state: non-empty non-JSON value reached error branch". PHP_EOL
 					.' tipo: ' . $this->tipo . PHP_EOL
 					.' section_tipo: ' . $this->section_tipo . PHP_EOL
 					.' section_id: ' . $this->section_id . PHP_EOL
 					.' model: ' . get_called_class() . PHP_EOL
 					.' import_value: ' . to_string($import_value) . PHP_EOL
 					.' column_name: ' . $column_name
-					, logger::ERROR
+					, logger::WARNING
 				);
-
-				$failed = new stdClass();
-					$failed->section_id		= $this->section_id;
-					$failed->data			= stripslashes( $import_value );
-					$failed->component_tipo	= $this->get_tipo();
-					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-				$response->errors[] = $failed;
-
-				return $response;
 			}
 		}
 
-		$response->result	= $import_value;
-		$response->msg		= 'OK';
-
+		// Convert objects to arrays to ensure compatibility with set_data_lang()
+		$response->result = is_object($import_value) ? (array)$import_value : $import_value;
+		$response->msg = 'OK';
 
 		return $response;
 	}//end conform_import_data

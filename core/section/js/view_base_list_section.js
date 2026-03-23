@@ -15,7 +15,7 @@
 
 /**
 * VIEW_BASE_LIST_SECTION
-* Manages the component's logic and appearance in client side
+* Manages the section's logic and appearance in client side
 */
 export const view_base_list_section = function() {
 
@@ -26,9 +26,9 @@ export const view_base_list_section = function() {
 
 /**
 * RENDER
-* Render node for use current view
+* Render node for the current view
 * @param object self
-* @para object options
+* @param object options
 * sample:
 * {
 *    "render_level": "full",
@@ -43,7 +43,7 @@ view_base_list_section.render = async function(self, options) {
 
 	// columns_map
 	// the method could be injected by caller in this case use it
-	// or it can build his own columns and inject the final columns_map
+	// or it can build its own columns and inject the final columns_map
 	const columns_map = (self.rebuild_columns_map)
 		? await self.rebuild_columns_map(self)
 		: self.columns_map
@@ -191,19 +191,13 @@ const get_content_data = async function(self, ar_section_record) {
 		}else{
 			// rows
 			// parallel mode
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render({
-						add_hilite_row : true
-					})
-					ar_promises.push(render_promise_node)
-				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
+				const ar_promises = ar_section_record.map(el => el.render({
+					add_hilite_row : true
+				}))
+				const ar_nodes = await Promise.all(ar_promises)
+				for (const section_record_node of ar_nodes) {
 					fragment.appendChild(section_record_node)
-				  }
-				});
+				}
 		}
 
 	// content_data

@@ -238,12 +238,22 @@ class search_related extends search {
 		// count and pagination are optional
 			if(empty($this->sqo->full_count)) {
 
-				// order
-				if(!empty($this->sql_obj->order)){
-					$str_query .= PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order );
-				}else{
-					$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
-				}
+				// $str_query .= !empty($this->sql_obj->order)
+				// 	? PHP_EOL . 'ORDER BY ' . implode( PHP_EOL, $this->sql_obj->order )
+				// 	: PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
+
+				// order (use custom order if available, otherwise use default)
+				// Remove table aliases from ORDER BY since UNION queries don't have table aliases
+				$order_clauses = !empty($this->sql_obj->order)
+					? $this->sql_obj->order
+					: $this->sql_obj->order_default;
+
+				$order_clauses_clean = array_map(function($order_clause) {
+					// Remove table alias prefix (e.g., 'all.section_id' -> 'section_id')
+					return preg_replace('/^[a-z0-9_]+\./', '', $order_clause);
+				}, $order_clauses);
+
+				$str_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $order_clauses_clean );
 
 				// limit
 				if(!empty($limit)){

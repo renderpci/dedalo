@@ -1476,18 +1476,17 @@ final class component_common_test extends BaseTestCase {
 				  "model": "component_input_text"
 				}
 			  ],
-			  "component_path": [
-				"dato"
-			  ]
+			  "table": "matrix_dd",
+			  "table_alias": "a0"
 			}
 		');
 
 		$result = component_input_text::get_search_query($query_object);
-			// dump($result, ' result ++ '.to_string());
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
+			'expected running without errors' . PHP_EOL
+			. 'errors: ' . json_encode($_ENV['DEDALO_LAST_ERROR'], JSON_PRETTY_PRINT)
 		);
 
 		$this->assertTrue(

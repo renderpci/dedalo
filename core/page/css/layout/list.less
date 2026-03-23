@@ -584,6 +584,20 @@
 			}
 		}//end >button
 
+		// Time machine bg color
+		&:has(> .section_id_container.time_machine) {
+			// Styles for parent when it has direct child with class section_id_container.time_machine
+			background-color: @color_php;
+			color: @color_white;
+		}
+
+		// Activity bg color
+		&:has(> .section_id_container.activity) {
+			// Styles for parent when it has direct child with class section_id_container.activity
+			background-color: @color_green_success;
+			color: @color_white;
+		}
+
 		// section_id_container (activity dd542)
  		>.section_id_container {
 			padding: 0.12rem;
@@ -592,6 +606,7 @@
 			width: 100%;
 
 			>.section_id {
+				position: relative;
 				font-size: 1.02rem;
 			}
 		}

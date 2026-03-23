@@ -42,24 +42,35 @@ class search_tm extends search {
 	/**
 	* BUILD_SQL_QUERY_ORDER
 	* Creates the SQL to order based on search_query_object order property
+	* Overrides parent method to handle time machine specific ordering
 	* @return void
 	*/
 	public function build_sql_query_order() : void {
 
-		$string_query = 'id DESC';
-
-		if (!in_array($string_query, $this->sql_obj->order)) {
-			$this->sql_obj->order[] = $string_query;
-		}
-		if (!in_array($string_query, $this->sql_obj->order_default)) {
-			$this->sql_obj->order_default[] = $string_query;
-		}
+		// Call parent method to handle custom order from sqo->order
+		parent::build_sql_query_order();
 	}//end build_sql_query_order
 
 
 
 	/**
+	* BUILD_SQL_QUERY_ORDER_DEFAULT
+	* @return void
+	*/
+	public function build_sql_query_order_default() : void {
+
+		// default order
+		$string_query = 'id DESC';
+		if (!in_array($string_query, $this->sql_obj->order_default)) {
+			$this->sql_obj->order_default[] = $string_query;
+		}
+	}//end build_sql_query_order_default
+
+
+
+	/**
 	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
+	* Custom default order for time machine
 	* @return void
 	*/
 	public function build_sql_filter_by_locators_order() : void {

@@ -1524,68 +1524,52 @@ export const ui = {
 	*/
 	create_dom_element : function(options) {
 
-		// options
-			const element_type		= options.element_type || 'div'
-			const type				= options.type
-			const id				= options.id
-			const parent			= options.parent
-			const class_name		= options.class_name
-			const style				= options.style
-			const data_set			= (typeof options.dataset!=='undefined') ? options.dataset : options.data_set
-			const title_label		= options.title_label || options.title
-			const text_node			= options.text_node
-			const text_content		= options.text_content
-			const inner_html		= options.inner_html
-			const draggable			= options.draggable
-			const value				= options.value
-			const src				= options.src
-			const contenteditable	= options.contenteditable
-			const name				= options.name
-			const placeholder		= options.placeholder
-			const pattern			= options.pattern
-			const href				= options.href
-
 		// DOM node element
-			const element = document.createElement(element_type)
+			const element_type	= options.element_type || 'div'
+			const element		= document.createElement(element_type)
 
 		// id. Add id property to element
-			if(id) {
-				element.id = id
+			if(options.id) {
+				element.id = options.id
 			}
 
 		// type
-			if (type && element_type!=='textarea') {
-				element.type = type
+			if (options.type && element_type!=='textarea') {
+				element.type = options.type
 			}
 
 		// element_type. A element. Add default href property to element
 			if(element_type==='a') {
-				element.href = href || 'javascript:;'
+				element.href = options.href || 'javascript:;'
 			}
 
 		// src. Source for images etc.
-			if(src) {
-				element.src = src
+			if(options.src) {
+				element.src = options.src
 			}
 
 		// class_name. Add CSS classes property to element
-			if(class_name) {
-				element.className = class_name
+			if(options.class_name) {
+				element.className = options.class_name
 			}
 
 		// style. Add CSS style property to element
-			if (style) {
-				for(let key in style) {
-					element.style.setProperty(key, style[key])
+			if (options.style) {
+				for(let key in options.style) {
+					element.style.setProperty(key, options.style[key])
 				}
 			}
 
 		// title . Add title attribute to element
+			const title_label = options.title_label || options.title
 			if (title_label) {
-				element.title = strip_tags(title_label)
+				element.title = title_label.indexOf('<') !== -1
+					? strip_tags(title_label)
+					: title_label
 			}
 
 		// dataset Add dataset values to element
+			const data_set = options.dataset ?? options.data_set
 			if (data_set) {
 				for (let key in data_set) {
 					element.dataset[key] = data_set[key]
@@ -1593,55 +1577,55 @@ export const ui = {
 			}
 
 		// value
-			if (value!==undefined) {
-				element.value = value
+			if (options.value!==undefined) {
+				element.value = options.value
 			}
 
 		// Text content: + span,
-			if(inner_html) {
-				element.insertAdjacentHTML('afterbegin', inner_html)
-			}else if (text_node) {
+			if(options.inner_html) {
+				element.insertAdjacentHTML('afterbegin', options.inner_html)
+			}else if (options.text_node) {
 				// Parse HTML text as object
 				if (element_type==='span') {
-					element.textContent = text_node
+					element.textContent = options.text_node
 				}else{
 					const el = document.createElement('span')
 						  // Note that prepend a space to span to prevent Chrome bug on selection
-						  el.insertAdjacentHTML('afterbegin', " "+text_node)
+						  el.insertAdjacentHTML('afterbegin', " "+options.text_node)
 					element.appendChild(el)
 				}
-			}else if(text_content) {
-				element.textContent = text_content
+			}else if(options.text_content) {
+				element.textContent = options.text_content
 			}
 
 		// draggable
-			if(draggable) {
-				element.draggable = draggable
+			if(options.draggable) {
+				element.draggable = options.draggable
 			}
 
 		// contenteditable
-			if (contenteditable) {
-				element.contentEditable = contenteditable
+			if (options.contenteditable) {
+				element.contentEditable = options.contenteditable
 			}
 
 		// name
-			if(name) {
-				element.name = name
+			if(options.name) {
+				element.name = options.name
 			}
 
 		// placeholder
-			if(placeholder) {
-				element.placeholder = placeholder
+			if(options.placeholder) {
+				element.placeholder = options.placeholder
 			}
 
 		// pattern
-			if(pattern) {
-				element.pattern = pattern
+			if(options.pattern) {
+				element.pattern = options.pattern
 			}
 
 		// parent. Append created element to parent
-			if (parent) {
-				parent.appendChild(element)
+			if (options.parent) {
+				options.parent.appendChild(element)
 			}
 
 
@@ -2569,7 +2553,7 @@ export const ui = {
 
 				// order sqo build
 					const order = [{
-						direction: direction, // ASC|DESC
+						direction : direction, // ASC|DESC
 						path : path
 					}]
 
@@ -3218,7 +3202,9 @@ export const ui = {
 			})
 			await instance.build(true)
 			const node = await instance.render()
-			body.appendChild(node)
+			if(node) {
+				body.appendChild(node)
+			}
 			ui.component.activate(instance)
 
 		// footer

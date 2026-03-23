@@ -127,10 +127,11 @@ final class search_tm_test extends BaseTestCase {
 			'expected sql_obj->order to be set'
 		);
 
-		// Verify order contains expected string
+		// Verify order contains expected string (may be part of combined order clause)
+		$order_string = implode(' ', $sql_obj->order);
 		$this->assertTrue(
-			in_array('id DESC', $sql_obj->order),
-			'expected sql_obj->order to contain "id DESC"'
+			strpos($order_string, 'id DESC') !== false,
+			'expected sql_obj->order to contain "id DESC", got: ' . to_string($order_string)
 		);
 
 		// Execute search and verify SQL query contains ORDER BY
@@ -172,10 +173,11 @@ final class search_tm_test extends BaseTestCase {
 			'expected sql_obj->order to be set'
 		);
 
-		// Verify order contains expected string
+		// Verify order contains expected string (may be part of combined order clause)
+		$order_string = implode(' ', $sql_obj->order);
 		$this->assertTrue(
-			in_array('id DESC', $sql_obj->order),
-			'expected sql_obj->order to contain "id DESC"'
+			strpos($order_string, 'id DESC') !== false,
+			'expected sql_obj->order to contain "id DESC", got: ' . to_string($order_string)
 		);
 
 		// Verify order_default is set

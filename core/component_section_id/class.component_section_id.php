@@ -130,5 +130,31 @@ class component_section_id extends component_common {
 
 
 
+	/**
+	* GET_ORDER_PATH
+	* Calculate full path of current element to use in columns order path (context)
+	* @see https://habr.com/en/company/postgrespro/blog/500440/
+	* @see https://www.postgresql.org/docs/current/functions-json.html
+	* @see https://www.postgresql.org/docs/current/datatype-json.html#TYPE-JSONPATH-ACCESSORS
+	*
+	* @param string $component_tipo
+	* @param string $section_tipo
+	* @return array $path
+	*/
+	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+
+		// self path
+		$path = parent::get_order_path($component_tipo, $section_tipo);
+
+		// When `column` property is set, it will be used literally instead of parsing the path.
+		// time machine case: tipo 'dd1573' is column `id`
+		$path[0]->column = $this->tipo===DEDALO_TIME_MACHINE_COLUMN_ID ? 'id' : 'section_id';
+
+
+		return $path;
+	}//end get_order_path
+
+
+
 
 }//end class component_section_id

@@ -65,35 +65,36 @@ class tool_ontology extends tool_common {
 						$locator->set_section_tipo($section_tipo);
 						$locator->set_section_id($section_id);
 
-					$sqo = (object)[
-						'section_tipo'			=> [$section_tipo],
-						'limit'					=> 1,
-						'offset'				=> 0,
-						'filter_by_locators'	=> [$locator]
-					];
+					$sqo = new search_query_object();
+						$sqo->set_section_tipo([$section_tipo]);
+						$sqo->set_limit(1);
+						$sqo->set_offset(0);
+						$sqo->set_filter_by_locators([$locator]);
+
 				} else {
 
 					// List case: Multiple records from session
 					$sqo_id			= section::build_sqo_id($section_tipo);
 					$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
-					
+
 					if (empty($sqo_session)) {
 						// error case: no session configuration found
 						$error_msg = 'Not sqo_session found from id: ' . $sqo_id;
 						$response->msg		= 'Error. ' . $error_msg;
 						$response->errors[]	= $error_msg;
-						
+
 						debug_log(__METHOD__
 							. " Error: " . $error_msg
 							, logger::ERROR
 						);
 						return $response;
 					}
-					
-					$sqo = clone($sqo_session);
-					$sqo->order		= false;
-					$sqo->limit		= 0;
-					$sqo->offset	= 0;
+
+					$sqo_data = clone($sqo_session);
+					$sqo = new search_query_object($sqo_data);
+						$sqo->set_order([]);
+						$sqo->set_limit(0);
+						$sqo->set_offset(0);
 				}
 
 			// Process ontology node/s and change dd_ontology rows
@@ -113,7 +114,7 @@ class tool_ontology extends tool_common {
 			$response->result	= false;
 			$response->msg		= 'Error. ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage()
 				, logger::ERROR

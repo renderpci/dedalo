@@ -2,7 +2,59 @@
 /**
 * CLASS SEARCH
 * TRAIT ORDER
-* Order methods
+* Order methods for search queries
+*
+* ORDER FLOW ARCHITECTURE:
+* ========================
+* The order system uses a dual-array approach to handle both custom and default ordering:
+* 
+* 1. `sql_obj->order` - Custom user-defined order from SQO
+*    - Populated by `build_sql_query_order()` when `sqo->order` is set
+*    - Contains component-based sorting with proper JOIN handling
+*    - Used in outer window query for final result ordering
+* 
+* 2. `sql_obj->order_default` - Fallback default order
+*    - Populated by `build_sql_query_order_default()` (always called)
+*    - Defaults to `section_id ASC` (or DESC for activity sections)
+*    - Used in inner query and as fallback when no custom order exists
+*    - Ensures deterministic, consistent results for pagination
+*
+* EXECUTION SEQUENCE:
+* ===================
+* In `parse_sql_default()`:
+*   1. build_main_from_sql()      - Establishes table aliases and base FROM
+*   2. build_sql_query_select()   - Builds SELECT columns
+*   3. build_sql_query_order()    - Builds custom order (calls order_default internally)
+*   4. build_main_where()          - Builds WHERE clauses
+*
+* WINDOW FUNCTION APPROACH:
+* =========================
+* The system uses a window/subquery pattern:
+*   - Inner query: Uses `order_default` for DISTINCT ON consistency
+*   - Outer query: Uses `order` (custom) or `order_default` (fallback) for final sorting
+* 
+* This dual-level ordering ensures:
+*   - DISTINCT ON works correctly (requires matching ORDER BY)
+*   - Custom sorting is applied to final results
+*   - Pagination is deterministic and stable
+*
+* COMPONENT-BASED ORDERING:
+* =========================
+* For non-direct columns (e.g., component data), the system:
+*   1. Calls `build_sql_join()` to create necessary table joins
+*   2. Uses component model's `build_order_select()` to extract sortable values
+*   3. Adds extracted values to SELECT with aliases (e.g., `dd62_order`)
+*   4. References aliases in ORDER BY clause
+*
+* SEARCH MODE VARIATIONS:
+* =======================
+* - `search` (default): Full order support with component-based sorting
+* - `search_tm`: Uses `id DESC` as default instead of `section_id`
+* - `search_related`: Inherits parent behavior, uses standard order flow
+*
+* @see search::parse_sql_default()
+* @see search::build_sql_query_order()
+* @see search::build_sql_query_order_default()
 */
 trait order {
 
@@ -85,6 +137,7 @@ trait order {
 						// 	'{"lang": "lg-spa"}'
 						// ) #>> '{}' AS sort_val  -- expose sort column
 						$select_sentence = $model::build_order_select((object)[
+							'matrix_table'		=> $this->matrix_table,
 							'table_name'		=> $table_name,
 							'column'			=> $column,
 							'lang'			 	=> $lang,
@@ -120,6 +173,18 @@ trait order {
 		}
 
 		// default order
+		$this->build_sql_query_order_default();
+	}//end build_sql_query_order
+
+
+
+	/**
+	* BUILD_SQL_QUERY_ORDER_DEFAULT
+	* @return void
+	*/
+	public function build_sql_query_order_default() : void {
+
+		// default order
 		$section_tipo				= $this->main_section_tipo;
 		$default_order				= ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) ? 'DESC' : 'ASC';
 		$sql_query_order_default	= $this->main_section_tipo_alias.'.section_id '.$default_order;
@@ -131,7 +196,7 @@ trait order {
 		if (!in_array($sentence, $this->sql_obj->order_default)) {
 			$this->sql_obj->order_default[] = $sentence;
 		}
-	}//end build_sql_query_order
+	}//end build_sql_query_order_default
 
 
 

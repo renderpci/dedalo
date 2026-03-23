@@ -211,329 +211,340 @@ class update {
 			$msg				= array();
 
 		// Disable log and time machine save for all update process (from v4.9.1 24-05-2018)
-			logger_backend_activity::$enable_log = false;
-			#tm_record::$save_tm  = false;
+		$original_log_state = logger_backend_activity::$enable_log;
+		logger_backend_activity::$enable_log = false;
+		#tm_record::$save_tm  = false;
 
-		// update. Select the correct update object from the file 'updates.php'
-			$update = null;
-			foreach ($updates as $version_to_update) {
-				if($current_version[0] == $version_to_update->update_from_major){
-					if($current_version[1] == $version_to_update->update_from_medium){
-						if($current_version[2] == $version_to_update->update_from_minor){
+		try {
+			// update. Select the correct update object from the file 'updates.php'
+				$update = null;
+				foreach ($updates as $version_to_update) {
+					if($current_version[0] == $version_to_update->update_from_major){
+						if($current_version[1] == $version_to_update->update_from_medium){
+							if($current_version[2] == $version_to_update->update_from_minor){
 
-							$update_version[0] = $version_to_update->version_major;
-							$update_version[1] = $version_to_update->version_medium;
-							$update_version[2] = $version_to_update->version_minor;
+								$update_version[0] = $version_to_update->version_major;
+								$update_version[1] = $version_to_update->version_medium;
+								$update_version[2] = $version_to_update->version_minor;
 
-							$update = $version_to_update;
+								$update = $version_to_update;
+							}
 						}
 					}
 				}
-			}
-			if (empty($update)) {
-				$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
-				$response->errors[]	= 'Update item not found for version '.to_string($current_version);
-				return $response;
-			}
-
-		// CLI process data
-			if ( running_in_cli()===true ) {
-				if (!isset(common::$pdata)) {
-					common::$pdata = new stdClass();
-				}
-				common::$pdata->memory = '';
-				common::$pdata->counter = 0;
-			}
-
-		// update log file
-			$update_log_file = defined('UPDATE_LOG_FILE')
-				? UPDATE_LOG_FILE
-				: DEDALO_CONFIG_PATH . '/update.log';
-			if(!file_exists($update_log_file)) {
-				if(!file_put_contents($update_log_file, ' '.PHP_EOL)) {
-					$response->msg = 'Error (1). It\'s not possible set update_log file, review the PHP permissions to write in this directory';
-					$response->errors[] = 'update_log file is not available';
-					debug_log(__METHOD__
-						." ".$response->msg . PHP_EOL
-						. ' update_log_file: ' . $update_log_file
-						, logger::ERROR
-					);
+				if (empty($update)) {
+					$response->msg		= 'Unable to get proper update. Check current version: '.to_string($current_version);
+					$response->errors[]	= 'Update item not found for version '.to_string($current_version);
 					return $response;
 				}
-			}
 
-		// Execution order
-			$execution_order = $update->execution_order ?? ['SQL_update', 'components_update', 'run_scripts'];
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					if (!isset(common::$pdata)) {
+						common::$pdata = new stdClass();
+					}
+					common::$pdata->memory = '';
+					common::$pdata->counter = 0;
+				}
 
-		foreach ($execution_order as $exec_name) {
+			// update log file
+				$update_log_file = defined('UPDATE_LOG_FILE')
+					? UPDATE_LOG_FILE
+					: DEDALO_CONFIG_PATH . '/update.log';
+				if(!file_exists($update_log_file)) {
+					if(!file_put_contents($update_log_file, ' '.PHP_EOL)) {
+						$response->msg = 'Error (1). It\'s not possible set update_log file, review the PHP permissions to write in this directory';
+						$response->errors[] = 'update_log file is not available';
+						debug_log(__METHOD__
+							." ".$response->msg . PHP_EOL
+							. ' update_log_file: ' . $update_log_file
+							, logger::ERROR
+						);
+						return $response;
+					}
+				}
 
-			switch ($exec_name) {
-				case 'SQL_update':
-					// 1 SQL_update
-					if(isset($update->SQL_update)){
-						$counter = count($update->SQL_update);
-						foreach ((array)$update->SQL_update as $key => $current_query) {
+			// Execution order
+				$execution_order = $update->execution_order ?? ['SQL_update', 'components_update', 'run_scripts'];
 
-							// updates_checked. checked test
-								$updates_checked_key = 'SQL_update_' . $key;
-								if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
-									// skip checked false item
-									debug_log(__METHOD__
-										. " Skipped updates item " . PHP_EOL
-										. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
-										. ' current_query : ' . to_string($current_query)
-										, logger::WARNING
-									);
-									continue;
-								}
+			foreach ($execution_order as $exec_name) {
 
-							// CLI process data
-								if ( running_in_cli()===true ) {
-									common::$pdata->msg	= 'Updating SQL_update ' . $key+1 . ' of ' . $counter;
-									common::$pdata->data = $current_query;
-									common::$pdata->memory = dd_memory_usage();
-									// send to output
-									print_cli(common::$pdata);
-								}
+				switch ($exec_name) {
+					case 'SQL_update':
+						// 1 SQL_update
+						if(isset($update->SQL_update)){
+							$counter = count($update->SQL_update);
+							foreach ((array)$update->SQL_update as $key => $current_query) {
 
-							debug_log(__METHOD__ . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								. " EXECUTING SQL_UPDATE ... " . PHP_EOL
-								. " current_query: " . to_string($current_query) . PHP_EOL
-								. " memory usage: " . dd_memory_usage() . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								, logger::WARNING
-							);
+								// updates_checked. checked test
+									$updates_checked_key = 'SQL_update_' . $key;
+									if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+										// skip checked false item
+										debug_log(__METHOD__
+											. " Skipped updates item " . PHP_EOL
+											. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+											. ' current_query : ' . to_string($current_query)
+											, logger::WARNING
+										);
+										continue;
+									}
 
-							// log line
-								$log_line  = PHP_EOL . date('c') . ' Updating [SQL_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
-								$log_line .= PHP_EOL . 'query: ' . to_string($current_query);
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+								// CLI process data
+									if ( running_in_cli()===true ) {
+										common::$pdata->msg	= 'Updating SQL_update ' . $key+1 . ' of ' . $counter;
+										common::$pdata->data = $current_query;
+										common::$pdata->memory = dd_memory_usage();
+										// send to output
+										print_cli(common::$pdata);
+									}
 
-							$SQL_update	= update::SQL_update($current_query);
-							$cmsg		= $SQL_update->msg;
-							$msg[]		= "Updated sql: ".to_string($cmsg);
-
-							if ($SQL_update->result===false) {
-
-								array_push($msg, "Error on SQL_update: ".to_string($current_query));
-
-								$response->result	= false ;
-								$response->msg		= $msg;
-
-								debug_log(__METHOD__." Error on update SQL_update ".PHP_EOL
-									. 'The result is false. Check your query sentence: ' .PHP_EOL
-									. to_string($current_query) .PHP_EOL
-									. 'The update process is aborted to prevent data corruption.'
-									, logger::ERROR
+								debug_log(__METHOD__ . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									. " EXECUTING SQL_UPDATE ... " . PHP_EOL
+									. " current_query: " . to_string($current_query) . PHP_EOL
+									. " memory usage: " . dd_memory_usage() . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									, logger::WARNING
 								);
 
 								// log line
-									$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . ($key+1);
-									$log_line .= PHP_EOL . 'The result is false. Check your query sentence. The update process aborted.';
+									$log_line  = PHP_EOL . date('c') . ' Updating [SQL_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
+									$log_line .= PHP_EOL . 'query: ' . to_string($current_query);
 									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
-								return $response;
-							}
+								$SQL_update	= update::SQL_update($current_query);
+								$cmsg		= $SQL_update->msg;
+								$msg[]		= "Updated sql: ".to_string($cmsg);
 
-							// log line
-								$log_line  = PHP_EOL . 'result: ' . to_string($SQL_update->result);
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+								if ($SQL_update->result===false) {
 
-							// let GC do the memory job
-							sleep(1);
-							// Forces collection of any existing garbage cycles
-							gc_collect_cycles();
-						}//end foreach ((array)$update->SQL_update as $current_query)
-					}
-					break;
+									array_push($msg, "Error on SQL_update: ".to_string($current_query));
 
-				case 'components_update':
-					// 2 components_update
-					if(isset($update->components_update)){
-						$counter = count($update->components_update);
-						foreach ((array)$update->components_update as $key => $current_model) {
+									$response->result	= false ;
+									$response->msg		= $msg;
 
-							// updates_checked. checked test
-								$updates_checked_key = 'components_update_' . $key;
-								if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
-									// skip checked false item
-									debug_log(__METHOD__
-										. " Skipped updates item " . PHP_EOL
-										. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
-										. ' current_model : ' . to_string($current_model)
-										, logger::WARNING
+									debug_log(__METHOD__." Error on update SQL_update ".PHP_EOL
+										. 'The result is false. Check your query sentence: ' .PHP_EOL
+										. to_string($current_query) .PHP_EOL
+										. 'The update process is aborted to prevent data corruption.'
+										, logger::ERROR
 									);
-									continue;
+
+									// log line
+										$log_line  = PHP_EOL . 'ERROR [SQL_update] ' . ($key+1);
+										$log_line .= PHP_EOL . 'The result is false. Check your query sentence. The update process aborted.';
+										file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+									return $response;
 								}
 
-							// CLI process data
-								if ( running_in_cli()===true ) {
-									common::$pdata->msg	= 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model;
-									common::$pdata->data = $current_model;
-									common::$pdata->memory = dd_memory_usage();
-									// send to output
-									print_cli(common::$pdata);
-								}
+								// log line
+									$log_line  = PHP_EOL . 'result: ' . to_string($SQL_update->result);
+									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
-							debug_log(__METHOD__ . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								. " EXECUTING COMPONENTS_UPDATE ... " . PHP_EOL
-								. " current_model: $current_model " . PHP_EOL
-								. " memory usage: " . dd_memory_usage() . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								, logger::WARNING
-							);
+								// let GC do the memory job
+								sleep(1);
+								// Forces collection of any existing garbage cycles
+								gc_collect_cycles();
+							}//end foreach ((array)$update->SQL_update as $current_query)
+						}
+						break;
 
-							// log line
-								$log_line  = PHP_EOL . date('c') . ' Updating [components_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
-								$log_line .= PHP_EOL . 'model: ' . $current_model;
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+					case 'components_update':
+						// 2 components_update
+						if(isset($update->components_update)){
+							$counter = count($update->components_update);
+							foreach ((array)$update->components_update as $key => $current_model) {
 
-							$components_update[] = update::components_update(
-								$current_model,
-								$update_version
-							);
-							$msg[] = "Updated component: ".to_string($current_model);
+								// updates_checked. checked test
+									$updates_checked_key = 'components_update_' . $key;
+									if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+										// skip checked false item
+										debug_log(__METHOD__
+											. " Skipped updates item " . PHP_EOL
+											. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+											. ' current_model : ' . to_string($current_model)
+											, logger::WARNING
+										);
+										continue;
+									}
 
-							debug_log(__METHOD__
-								." Updated component " . $current_model
-								, logger::DEBUG
-							);
+								// CLI process data
+									if ( running_in_cli()===true ) {
+										common::$pdata->msg	= 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model;
+										common::$pdata->data = $current_model;
+										common::$pdata->memory = dd_memory_usage();
+										// send to output
+										print_cli(common::$pdata);
+									}
 
-							// log line
-								$log_line  = PHP_EOL . 'result: Updated component: ' . $current_model;
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
-
-							// let GC do the memory job
-							sleep(1);
-							// Forces collection of any existing garbage cycles
-							gc_collect_cycles();
-						}//end foreach ((array)$update->components_update as $current_model)
-					}
-					break;
-
-				case 'run_scripts':
-					// 3 run_scripts
-					if(isset($update->run_scripts)){
-						$counter = count($update->run_scripts);
-						foreach ((array)$update->run_scripts as $key => $current_script) {
-
-							// updates_checked. checked test
-								$updates_checked_key = 'run_scripts_' . $key;
-								if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
-									// skip checked false item
-									debug_log(__METHOD__
-										. " Skipped updates item " . PHP_EOL
-										. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
-										. ' current_script : ' . to_string($current_script)
-										, logger::WARNING
-									);
-									continue;
-								}
-
-							// CLI process data
-								if ( running_in_cli()===true ) {
-									common::$pdata->msg	= 'Updating run_scripts ' . $key+1 . ' of ' . $counter;
-									common::$pdata->data = $current_script;
-									common::$pdata->memory = dd_memory_usage();
-									// send to output
-									print_cli(common::$pdata);
-								}
-
-							debug_log(__METHOD__ . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								. " EXECUTING RUN_SCRIPTS ... " . PHP_EOL
-								. " current_script: " . to_string($current_script) . PHP_EOL
-								. " memory usage: " . dd_memory_usage() . PHP_EOL
-								. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
-								, logger::WARNING
-							);
-
-							// log line
-								$log_line  = PHP_EOL . date('c') . ' Updating [run_scripts] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
-								$log_line .= PHP_EOL . 'current_script: ' . to_string($current_script);
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
-
-							$run_scripts_response	= update::run_scripts($current_script);
-							$cmsg			= $run_scripts_response->msg;
-							$msg[]			= "Updated run scripts: ".to_string($cmsg);
-
-							if ($run_scripts_response->result===false) {
-
-								array_push($msg, 'Error on run_scripts: '.to_string($current_script));
-
-								debug_log(__METHOD__." Error on run_scripts ".PHP_EOL
-									. 'The result is false. Check your script: ' .PHP_EOL
-									. 'current_script: ' .to_string($current_script) .PHP_EOL
-									. 'run_scripts_response: ' .json_encode($run_scripts_response, JSON_PRETTY_PRINT) .PHP_EOL
-									. 'Note that the run_scripts loop will continue with the next script.'
-									, logger::ERROR
+								debug_log(__METHOD__ . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									. " EXECUTING COMPONENTS_UPDATE ... " . PHP_EOL
+									. " current_model: $current_model " . PHP_EOL
+									. " memory usage: " . dd_memory_usage() . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									, logger::WARNING
 								);
 
 								// log line
-									$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . ($key+1);
-									$log_line .= PHP_EOL . 'The result is false. Check your script';
+									$log_line  = PHP_EOL . date('c') . ' Updating [components_update] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
+									$log_line .= PHP_EOL . 'model: ' . $current_model;
 									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
-								// msg update
-									$msg[] = 'Error updating Dédalo data';
-									if (isset($run_scripts_response->msg)) {
-										$msg[] = $run_scripts_response->msg;
+								$components_update[] = update::components_update(
+									$current_model,
+									$update_version
+								);
+								$msg[] = "Updated component: ".to_string($current_model);
+
+								debug_log(__METHOD__
+									." Updated component " . $current_model
+									, logger::DEBUG
+								);
+
+								// log line
+									$log_line  = PHP_EOL . 'result: Updated component: ' . $current_model;
+									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+								// let GC do the memory job
+								sleep(1);
+								// Forces collection of any existing garbage cycles
+								gc_collect_cycles();
+							}//end foreach ((array)$update->components_update as $current_model)
+						}
+						break;
+
+					case 'run_scripts':
+						// 3 run_scripts
+						if(isset($update->run_scripts)){
+							$counter = count($update->run_scripts);
+							foreach ((array)$update->run_scripts as $key => $current_script) {
+
+								// updates_checked. checked test
+									$updates_checked_key = 'run_scripts_' . $key;
+									if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+										// skip checked false item
+										debug_log(__METHOD__
+											. " Skipped updates item " . PHP_EOL
+											. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+											. ' current_script : ' . to_string($current_script)
+											, logger::WARNING
+										);
+										continue;
 									}
 
-								// errors
-									if (isset($run_scripts_response->errors)) {
-										$response->errors = [...$response->errors, ...$run_scripts_response->errors];
+								// CLI process data
+									if ( running_in_cli()===true ) {
+										common::$pdata->msg	= 'Updating run_scripts ' . $key+1 . ' of ' . $counter;
+										common::$pdata->data = $current_script;
+										common::$pdata->memory = dd_memory_usage();
+										// send to output
+										print_cli(common::$pdata);
 									}
 
-								// stop_on_error
-									if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
+								debug_log(__METHOD__ . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									. " EXECUTING RUN_SCRIPTS ... " . PHP_EOL
+									. " current_script: " . to_string($current_script) . PHP_EOL
+									. " memory usage: " . dd_memory_usage() . PHP_EOL
+									. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+									, logger::WARNING
+								);
 
-										// CLI process data
-											if ( running_in_cli()===true ) {
-												common::$pdata->msg	= '****Updating run_scripts ' . $key+1 . ' of ' . $counter;
-												common::$pdata->data = $current_script;
-												common::$pdata->memory = dd_memory_usage();
-												common::$pdata->response = $run_scripts_response;
-												// send to output
-												print_cli(common::$pdata);
-											}
+								// log line
+									$log_line  = PHP_EOL . date('c') . ' Updating [run_scripts] '. ($key+1) .' )))))))))))))))))))))))))))))))))))))))';
+									$log_line .= PHP_EOL . 'current_script: ' . to_string($current_script);
+									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 
-										$response->result	= false ;
-										$response->msg		= $msg;
-										$response->errors[] = 'unable to run update script';
-										return $response;
-									}
-							}
+								$run_scripts_response	= update::run_scripts($current_script);
+								$cmsg			= $run_scripts_response->msg;
+								$msg[]			= "Updated run scripts: ".to_string($cmsg);
 
-							// log line
-								$log_line = PHP_EOL . 'result: script executed: ' . to_string($run_scripts_response->result);
-								file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+								if ($run_scripts_response->result===false) {
 
-							// let GC do the memory job
-							sleep(1);
-							// Forces collection of any existing garbage cycles
-							gc_collect_cycles();
-						}//end foreach ((array)$update->run_scripts as $current_script)
-					}
-					break;
+									array_push($msg, 'Error on run_scripts: '.to_string($current_script));
+
+									debug_log(__METHOD__." Error on run_scripts ".PHP_EOL
+										. 'The result is false. Check your script: ' .PHP_EOL
+										. 'current_script: ' .to_string($current_script) .PHP_EOL
+										. 'run_scripts_response: ' .json_encode($run_scripts_response, JSON_PRETTY_PRINT) .PHP_EOL
+										. 'Note that the run_scripts loop will continue with the next script.'
+										, logger::ERROR
+									);
+
+									// log line
+										$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . ($key+1);
+										$log_line .= PHP_EOL . 'The result is false. Check your script';
+										file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+									// msg update
+										$msg[] = 'Error updating Dédalo data';
+										if (isset($run_scripts_response->msg)) {
+											$msg[] = $run_scripts_response->msg;
+										}
+
+									// errors
+										if (isset($run_scripts_response->errors)) {
+											$response->errors = [...$response->errors, ...$run_scripts_response->errors];
+										}
+
+									// stop_on_error
+										if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
+
+											// CLI process data
+												if ( running_in_cli()===true ) {
+													common::$pdata->msg	= '****Updating run_scripts ' . $key+1 . ' of ' . $counter;
+													common::$pdata->data = $current_script;
+													common::$pdata->memory = dd_memory_usage();
+													common::$pdata->response = $run_scripts_response;
+													// send to output
+													print_cli(common::$pdata);
+												}
+
+											$response->result	= false ;
+											$response->msg		= $msg;
+											$response->errors[] = 'unable to run update script';
+											return $response;
+										}
+								}
+
+								// log line
+									$log_line = PHP_EOL . 'result: script executed: ' . to_string($run_scripts_response->result);
+									file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+								// let GC do the memory job
+								sleep(1);
+								// Forces collection of any existing garbage cycles
+								gc_collect_cycles();
+							}//end foreach ((array)$update->run_scripts as $current_script)
+						}
+						break;
+				}
 			}
-		}
 
-		// Table matrix_updates data
-			$version_to_update			= update::get_update_version();
-			$version_to_update_string	= implode('.', $version_to_update);
-			$new_version				= update::update_dedalo_data_version($version_to_update_string);
-			$msg[]						= 'Updated Dédalo data version: '.to_string($version_to_update_string);
+			// Table matrix_updates data
+				$version_to_update			= update::get_update_version();
+				$version_to_update_string	= implode('.', $version_to_update);
+				$new_version				= update::update_dedalo_data_version($version_to_update_string);
+				$msg[]						= 'Updated Dédalo data version: '.to_string($version_to_update_string);
 
-		// response
+			// response
 			array_push($msg, 'Updated version successfully');
 			$response->result	= true ;
 			$response->msg		= $msg;
 
+		} catch (Exception $e) {
+			$response->result = false;
+			$response->msg[] = 'Update failed: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Update failed with exception: " . $e->getMessage(), logger::ERROR);
+		} finally {
+			// Always restore the original log state
+			logger_backend_activity::$enable_log = $original_log_state;
+		}
 
-		return (object)$response;
+		return $response;
 	}//end update_version
 
 

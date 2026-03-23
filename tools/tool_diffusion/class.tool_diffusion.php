@@ -206,12 +206,13 @@ class tool_diffusion extends tool_common {
 							$locator->set_section_tipo($section_tipo);
 							$locator->set_section_id($section_id);
 
-						$sqo = (object)[
+						$sqo_data = (object)[
 							'section_tipo'			=> [$section_tipo],
 							'limit'					=> 1,
 							'offset'				=> 0,
 							'filter_by_locators'	=> [$locator]
 						];
+						$sqo = new search_query_object($sqo_data);
 					}else{
 
 						// list case

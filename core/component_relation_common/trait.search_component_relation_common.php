@@ -122,7 +122,7 @@ trait search_component_relation_common {
             // Use time machine specific dispatcher from trait search_component_relation_common_tm
             return self::dispatch_relation_operator_sql_tm($query_object, $q, $ctx);
         }
-        
+
         switch (true) {
             case ($ctx->q_operator === '!*'):
                 return self::resolve_relation_empty_value_sql($query_object, $ctx);

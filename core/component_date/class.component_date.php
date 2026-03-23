@@ -508,98 +508,66 @@ class component_date extends component_common {
 
 
 	/**
+	* BUILD_DD_DATE_WITH_TIME
+	* Creates a dd_date from $source, computes absolute time (seconds) via convert_date_to_seconds,
+	* logs a WARNING if the incoming time value diverges from the computed one, then injects it.
+	* @param object $source
+	* @return dd_date
+	*/
+	private static function build_dd_date_with_time( object $source ) : dd_date {
+
+		$dd_date = new dd_date($source);
+		$time    = dd_date::convert_date_to_seconds($dd_date);
+
+		if (isset($source->time) && $source->time !== $time) {
+			debug_log(__METHOD__
+				.' Unequal time seconds value: current: '.to_string($source->time).', calculated: '.$time.'. Used calculated time.'
+				, logger::WARNING
+			);
+		}
+
+		$dd_date->set_time($time);
+
+		return $dd_date;
+	}//end build_dd_date_with_time
+
+
+
+	/**
 	* ADD_TIME
-	* Gets the current data received (of type stdClass) and uses it to create a dd_date object to which it injects
-	* the calculated time (seconds).
-	* Returns the created dd_date object
+	* Detects the date mode from key presence in $current_data, builds typed dd_date node(s),
+	* injects the computed absolute time (seconds), and returns the modified data.
+	* Supported modes (mutually exclusive by key):
+	*   - period : { "period": { year, month, day, ... } }
+	*   - date   : { "start":  { year, month, day } }
+	*   - range  : { "start":  { ... }, "end": { ... } }
+	*   - time   : { "hour": int, "minute": int, ... }  or bare dd_date with hour set
 	* @param object $current_data
-	* 	dd_date object as
-	* {
-	*    "start": {
-	*        "errors": null,
-	*        "year": 2023,
-	*        "month": 7,
-	*        "day": 11
-	*    }
-	* }
-	* @return object dd_date $current_data
-	*  Modified object with injected time in seconds
-	* {
-	*    "start": {
-	*        "errors": null,
-	*        "year": 2023,
-	*        "month": 7,
-	*        "day": 11,
-	* 		 "time": 64638561691
-	*    }
-	* }
+	* @return object
 	*/
 	public static function add_time( object $current_data ) : object {
 
-		// empty case
-			if(empty($current_data)) {
+		// Period mode
+			if( isset($current_data->period) ) {
+				$current_data->period = self::build_dd_date_with_time($current_data->period);
 				return $current_data;
 			}
 
-		// Period date mode
-			if( isset($current_data->period) ) {
-				$dd_date = new dd_date($current_data->period);
-				$time 	 = dd_date::convert_date_to_seconds($dd_date);
-				if (isset($current_data->period->time) && $current_data->period->time!=$time) {
-					debug_log(__METHOD__
-						.' Unequal time seconds value: current: '.to_string($current_data->period->time).', calculated: '.$time.'. Used calculated time. []'
-						, logger::WARNING
-					);
-				}
-				$dd_date->set_time( $time );
-				$current_data->period = $dd_date;
-			}
-
-		// Range date mode
+		// Date / Range mode
 			if( isset($current_data->start) ) {
-				$dd_date = new dd_date($current_data->start);
-				$time 	 = dd_date::convert_date_to_seconds($dd_date);
-				if (isset($current_data->start->time) && $current_data->start->time!=$time) {
-					debug_log(__METHOD__
-						.' Unequal time seconds value: current: '.to_string($current_data->start->time).', calculated: '.$time.'. Used calculated time. []'
-						, logger::WARNING
-					);
+				$current_data->start = self::build_dd_date_with_time($current_data->start);
+				if( isset($current_data->end) ) {
+					$current_data->end = self::build_dd_date_with_time($current_data->end);
 				}
-				$dd_date->set_time( $time );
-				$current_data->start = $dd_date;
-			}
-			if( isset($current_data->end) ) {
-				$dd_date = new dd_date($current_data->end);
-				$time 	 = dd_date::convert_date_to_seconds($dd_date);
-				if (isset($current_data->end->time) && $current_data->end->time!=$time) {
-					debug_log(__METHOD__
-						.' Unequal time seconds value: current: '.to_string($current_data->end->time).', calculated: '.$time.'. Used calculated time. []'
-						, logger::WARNING
-					);
-				}
-				$dd_date->set_time( $time );
-				$current_data->end = $dd_date;
+				return $current_data;
 			}
 
-		// Time date mode
+		// Time mode (hour at root level, or bare dd_date with hour set)
 			if( isset($current_data->hour) ) {
-				$dd_date = new dd_date($current_data);
-				$time 	 = dd_date::convert_date_to_seconds($dd_date);
-
-				if (isset($current_data->time) && $current_data->time!=$time) {
-					debug_log(__METHOD__
-						.' Unequal time seconds value: current: '.to_string($current_data->time).', calculated: '.$time.'. Used calculated time. []' . PHP_EOL
-						.' $current_data->time: ' . to_string($current_data->time) . PHP_EOL
-						.' calculated: ' . $time
-						, logger::WARNING
-					);
-				}
-				$dd_date->set_time( $time );
-				$current_data = $dd_date;
+				return self::build_dd_date_with_time($current_data);
 			}
 
-
-		return (object)$current_data;
+		return $current_data;
 	}//end add_time
 
 
@@ -759,31 +727,13 @@ class component_date extends component_common {
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
 		// self path
-			$path = [
-				// self component path
-				(object)[
-					'component_tipo'	=> $component_tipo,
-					'model'				=> ontology_node::get_model_by_tipo($component_tipo,true),
-					'name'				=> ontology_node::get_term_by_tipo($component_tipo),
-					'section_tipo'		=> $section_tipo
-				]
-			];
+		$path = parent::get_order_path($component_tipo, $section_tipo);
 
-		// from_section_tipo. When is defined, this component is inside a portal and
-		// we need the parent portal path too to add at beginning
-			if (isset($this->from_section_tipo) && $this->from_section_tipo!==$section_tipo) {
-				// recursion
-				// $pre_path = $this->get_order_path($this->from_component_tipo, $this->from_section_tipo);
-				// $pre_path = search::get_query_path($this->from_component_tipo, $this->from_section_tipo);
-				// array_unshift($path, ...$pre_path);
-				array_unshift($path, (object)[
-					'component_tipo'	=> $this->from_component_tipo,
-					'model'				=> ontology_node::get_model_by_tipo($this->from_component_tipo,true),
-					'name'				=> ontology_node::get_term_by_tipo($this->from_component_tipo),
-					'section_tipo'		=> $this->from_section_tipo
-				]);
-			}
-
+		// time machine cases. Do not resolve ddo_map. Tipo 'dd559' is column `timestamp`
+		if($this->tipo===DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP) {
+			// When `column` property is set, it will be used literally instead of parsing the path.
+			$path[0]->column = 'timestamp';
+		}
 
 		return $path;
 	}//end get_order_path
