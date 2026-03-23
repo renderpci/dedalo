@@ -454,217 +454,213 @@ class tool_import_dedalo_csv extends tool_common {
 		$bulk_process_label	= $options->bulk_process_label;
 
 		// Disable logging activity (!) IMPORTANT
-			logger_backend_activity::$enable_log = false;
+		$original_log_state = logger_backend_activity::$enable_log;
+		logger_backend_activity::$enable_log = false;
 
-		// response
+		try {
+			// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed';
 				$response->errors	= [];
 
-		// csv_map
-			$csv_map = $ar_columns_map;
-			// Verify csv_map
-			$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
-			if ($verify_csv_map->result!==true) {
+			// csv_map
+				$csv_map = $ar_columns_map;
+				// Verify csv_map
+				$verify_csv_map = self::verify_csv_map($csv_map, $section_tipo);
+				if ($verify_csv_map->result!==true) {
 
-				// Restore logging activity # !IMPORTANT
-					logger_backend_activity::$enable_log = true;
+					$response->result	= false;
+					$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map->msg;
 
-				$response->result	= false;
-				$response->msg		= 'Error. Current CSV file first row (headers) is invalid (1): '.$verify_csv_map->msg;
+					return $response;
+				}
 
-				return $response;
-			}
+			// section_id key column
+				$columns		= array_column($csv_map, 'model');
+				$section_id_key	= array_search('component_section_id', $columns);
 
-		// section_id key column
-			$columns		= array_column($csv_map, 'model');
-			$section_id_key	= array_search('component_section_id', $columns);
+			// Fixed private section tipos
+				$metadata_definition = section::get_metadata_definition();
+					$created_by_user	= $metadata_definition->created_by_user; 	// object ('tipo'=>'dd200', 'model'=>'component_select');
+					$created_date		= $metadata_definition->created_date; 		// object ('tipo'=>'dd199', 'model'=>'component_date');
+					$modified_by_user	= $metadata_definition->modified_by_user; 	// object ('tipo'=>'dd197', 'model'=>'component_select');
+					$modified_date		= $metadata_definition->modified_date; 		// object ('tipo'=>'dd201', 'model'=>'component_date');
 
-		// Fixed private section tipos
-			$metadata_definition = section::get_metadata_definition();
-				$created_by_user	= $metadata_definition->created_by_user; 	// object ('tipo'=>'dd200', 'model'=>'component_select');
-				$created_date		= $metadata_definition->created_date; 		// object ('tipo'=>'dd199', 'model'=>'component_date');
-				$modified_by_user	= $metadata_definition->modified_by_user; 	// object ('tipo'=>'dd197', 'model'=>'component_select');
-				$modified_date		= $metadata_definition->modified_date; 		// object ('tipo'=>'dd201', 'model'=>'component_date');
+			// process information
+				$process_info = new stdClass();
+					$process_info->msg				= null;
+					$process_info->section_tipo		= $section_tipo;
+					$process_info->section_id		= null;
+					$process_info->component_tipo	= null;
+					$process_info->compomnent_label	= null;
+					$process_info->current_file		= $current_file;
 
-		// process information
-			$process_info = new stdClass();
-				$process_info->msg				= null;
-				$process_info->section_tipo		= $section_tipo;
-				$process_info->section_id		= null;
-				$process_info->component_tipo	= null;
-				$process_info->compomnent_label	= null;
-				$process_info->current_file		= $current_file;
+			// rows info statistics
+				$created_rows	= [];
+				$updated_rows	= [];
+				$failed_rows	= [];
 
+			$counter		= 0;
+			$csv_head_row	= $ar_csv_data[0];
 
-		// rows info statistics
-			$created_rows	= [];
-			$updated_rows	= [];
-			$failed_rows	= [];
-
-		$counter		= 0;
-		$csv_head_row	= $ar_csv_data[0];
-
-		// PROCESS
-			// create new process section
-				$bulk_process_section = section::get_instance(
-					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-				);
-				$bulk_process_id = $bulk_process_section->create_record();
-
-			// get the bulk_process_id as the section_id of the section process
-				// $bulk_process_id = $bulk_process_section->get_section_id();
-
-			// Save the file name into the process section
-				$bulk_file_component = component_common::get_instance(
-					'component_input_text', // string model
-					DEDALO_BULK_PROCESS_FILE_TIPO, // string tipo
-					$bulk_process_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-				);
-				$bulk_file_component_data = new stdClass();
-					$bulk_file_component_data->value = $current_file;
-				$bulk_file_component->set_data([$bulk_file_component_data]);
-				$bulk_file_component->save();
-
-			// Save the process name into the process section
-				$bulk_process_label_component = component_common::get_instance(
-					'component_input_text', // string model
-					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
-					$bulk_process_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-				);
-				$bulk_process_label_data = new stdClass();
-					$bulk_process_label_data->value = $bulk_process_label;
-				$bulk_process_label_component->set_data([$bulk_process_label_data]);
-				$bulk_process_label_component->save();
-
-			// SAVE_TIME_MACHINE
-				// Set section to save data for time machine
-				// No component time machine data will be saved when section saves later
-				// (based on checkbox value 'Save time machine history on import')
-				tm_record::$save_tm = ($time_machine_save===true)
-					? true
-					: false;
-
-		foreach ($ar_csv_data as $rkey => $columns) {
-
-			// header row
-				if($rkey===0) continue; // Skip first row, the header row
-
-			// section_id (cast to int the section_id of the row)
-				$section_id = !empty($columns[$section_id_key]) ? (int)$columns[$section_id_key] : null;
-				if (empty($section_id)) {
-					$error = "ERROR on get MANDATORY section_id. SKIPPED record (section_tipo: $section_tipo - rkey: $rkey - section_id: $section_id)";
-					debug_log(__METHOD__
-						." $error". PHP_EOL
-						.' section_id: '. to_string($section_id),
-						logger::ERROR
+			// PROCESS
+				// create new process section
+					$bulk_process_section = section::get_instance(
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 					);
-					$response->errors[] = $error;
-					continue;
-				}
+					$bulk_process_id = $bulk_process_section->create_record();
 
-				$section_record = section_record::get_instance( $section_tipo, $section_id );
-				$exists = $section_record->exists_in_the_database();
-				// if section does not exist in matrix, create it
-				if( $exists===false ){
-					$section = section::get_instance( $section_tipo );
-					$section->create_record( (object)[
-						'section_id' => $section_id ? (int)$section_id : null
-					]);
-				}
+				// get the bulk_process_id as the section_id of the section process
+					// $bulk_process_id = $bulk_process_section->get_section_id();
 
-			// set the information about the process
-				$process_info->section_id = $section_id;
-				$process_info->msg = ($exists===true)
-					? label::get_label('creating') ?? 'Creating'
-					: label::get_label('updating') ?? 'Updating';
+				// Save the file name into the process section
+					$bulk_file_component = component_common::get_instance(
+						'component_input_text', // string model
+						DEDALO_BULK_PROCESS_FILE_TIPO, // string tipo
+						$bulk_process_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+					);
+					$bulk_file_component_data = new stdClass();
+						$bulk_file_component_data->value = $current_file;
+					$bulk_file_component->set_data([$bulk_file_component_data]);
+					$bulk_file_component->save();
 
+				// Save the process name into the process section
+					$bulk_process_label_component = component_common::get_instance(
+						'component_input_text', // string model
+						DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+						$bulk_process_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+					);
+					$bulk_process_label_data = new stdClass();
+						$bulk_process_label_data->value = $bulk_process_label;
+					$bulk_process_label_component->set_data([$bulk_process_label_data]);
+					$bulk_process_label_component->save();
 
-			// Iterate fields/columns
-				foreach ($columns as $key => $value) {
+				// SAVE_TIME_MACHINE
+					// Set section to save data for time machine
+					// No component time machine data will be saved when section saves later
+					// (based on checkbox value 'Save time machine history on import')
+					tm_record::$save_tm = ($time_machine_save===true)
+						? true
+						: false;
 
-					$column_map = $csv_map[$key];
-					// column_map sample:
-						// {
-						// 	"tipo": "dd197",
-						// 	"label": "Modified by user",
-						// 	"model": "component_select",
-						// 	"column_name": "dd197",
-						// 	"checked": true,
-						// 	"map_to": "dd197"
-						// 	"decimal": "."
-						// }
+			foreach ($ar_csv_data as $rkey => $columns) {
 
-					// excluded columns
-						// by name
-						if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') {
-							continue; # Skip section_id value column
-						}
-						// by checked property
-						if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) {
-							continue;
-						}
-						// by head comparison. Check if the column_map is correct with the current column in the csv file (match needed)
-						$current_csv_head_column = $csv_head_row[$key];
-						if($current_csv_head_column !== $column_map->tipo) {
-							continue;
-						}
+				// header row
+					if($rkey===0) continue; // Skip first row, the header row
 
-					// value general fixes
-						// Prevent wrong final return problems
-						$value = trim($value);
-						// Remove delimiter escape (U+003B for ;)
-						$value = str_replace('U+003B', ';', $value);
-
-					// component_tipo
-						$component_tipo	= $column_map->map_to;
-						// check if the component_tipo is empty, forgotten case.
-						if (empty($component_tipo)) {
-							debug_log(__METHOD__
-								. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
-								. " csv_map: ".to_string($csv_map)
-								, logger::ERROR
-							);
-							continue;
-						}
-
-					// component base
-						$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
-						$translate		= ontology_node::get_translatable($component_tipo); //==='si' ? true : false;
-						$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-						$component		= component_common::get_instance(
-							$model_name,
-							$component_tipo,
-							$section_id,
-							'list',
-							$lang,
-							$section_tipo,
-							false, // cache
+				// section_id (cast to int the section_id of the row)
+					$section_id = !empty($columns[$section_id_key]) ? (int)$columns[$section_id_key] : null;
+					if (empty($section_id)) {
+						$error = "ERROR on get MANDATORY section_id. SKIPPED record (section_tipo: $section_tipo - rkey: $rkey - section_id: $section_id)";
+						debug_log(__METHOD__
+							." $error". PHP_EOL
+							.' section_id: '. to_string($section_id),
+							logger::ERROR
 						);
-						// set the bulk_process_id to save it into time_machine
-						// this allow to revert the bulk import
-						$component->set_bulk_process_id($bulk_process_id);
+						$response->errors[] = $error;
+						continue;
+					}
 
-						if($model_name==='component_number' && isset($column_map->decimal)){
-							$component->decimal = $column_map->decimal;
-						}
+					$section_record = section_record::get_instance( $section_tipo, $section_id );
+					$exists = $section_record->exists_in_the_database();
+					// if section does not exist in matrix, create it
+					if( $exists===false ){
+						$section = section::get_instance( $section_tipo );
+						$section->create_record( (object)[
+							'section_id' => $section_id ? (int)$section_id : null
+						]);
+					}
 
-						// with_lang_versions
-							$with_lang_versions	= $component->with_lang_versions;
+				// set the information about the process
+					$process_info->section_id = $section_id;
+					$process_info->msg = ($exists===true)
+						? label::get_label('creating') ?? 'Creating'
+						: label::get_label('updating') ?? 'Updating';
 
-						// configure component
-							// DIFFUSION_INFO
-							// Note that this process can be very long if there are many inverse locators in this section
-							// To optimize save process in scripts of importation, you can disable this option if is not really necessary
-							$component->update_diffusion_info_propagate_changes = false;
+				// Iterate fields/columns
+					foreach ($columns as $key => $value) {
 
+						$column_map = $csv_map[$key];
+						// column_map sample:
+							// {
+							// 	"tipo": "dd197",
+							// 	"label": "Modified by user",
+							// 	"model": "component_select",
+							// 	"column_name": "dd197",
+							// 	"checked": true,
+							// 	"map_to": "dd197"
+							// 	"decimal": "."
+							// }
+
+						// excluded columns
+							// by name
+							if($column_map->model === 'section_id' || $column_map->model === 'component_section_id') {
+								continue; # Skip section_id value column
+							}
+							// by checked property
+							if(!isset($column_map->checked) || $column_map->checked=== false || !isset($column_map->map_to)) {
+								continue;
+							}
+							// by head comparison. Check if the column_map is correct with the current column in the csv file (match needed)
+							$current_csv_head_column = $csv_head_row[$key];
+							if($current_csv_head_column !== $column_map->tipo) {
+								continue;
+							}
+
+						// value general fixes
+							// Prevent wrong final return problems
+							$value = trim($value);
+							// Remove delimiter escape (U+003B for ;)
+							$value = str_replace('U+003B', ';', $value);
+
+						// component_tipo
+							$component_tipo	= $column_map->map_to;
+							// check if the component_tipo is empty, forgotten case.
+							if (empty($component_tipo)) {
+								debug_log(__METHOD__
+									. " Error: !!!!!!!! ignored empty component_tipo on csv_map key: $key ". PHP_EOL
+									. " csv_map: ".to_string($csv_map)
+									, logger::ERROR
+								);
+								continue;
+							}
+
+						// component base
+							$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
+							$translate		= ontology_node::get_translatable($component_tipo); //==='si' ? true : false;
+							$lang			= $translate===false ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+							$component		= component_common::get_instance(
+								$model_name,
+								$component_tipo,
+								$section_id,
+								'list',
+								$lang,
+								$section_tipo,
+								false, // cache
+							);
+							// set the bulk_process_id to save it into time_machine
+							// this allow to revert the bulk import
+							$component->set_bulk_process_id($bulk_process_id);
+
+							if($model_name==='component_number' && isset($column_map->decimal)){
+								$component->decimal = $column_map->decimal;
+							}
+
+							// with_lang_versions
+								$with_lang_versions	= $component->with_lang_versions;
+
+							// configure component
+								// DIFFUSION_INFO
+								// Note that this process can be very long if there are many inverse locators in this section
+								// To optimize save process in scripts of importation, you can disable this option if is not really necessary
+								$component->update_diffusion_info_propagate_changes = false;
 
 						// conform imported value with every component rules.
 							$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
@@ -679,31 +675,29 @@ class tool_import_dedalo_csv extends tool_common {
 
 						// conformed_value. value conformed replacement
 							$conformed_value = $conform_import_data_response->result;
-								// dump($value, ' value ++ '.to_string($component_tipo).' - '.$model_name);
-								// dump($conformed_value, ' conformed_value ++ '.to_string($component_tipo).' - '.$model_name);
 
-					switch (true) {
+						switch (true) {
 
-						// created_date
-						case ($component_tipo===$created_date->tipo): // dd199
-						// modified_date. Place it at end columns to prevent overwrite
-						case ($component_tipo===$modified_date->tipo): // dd201
+							// created_date
+							case ($component_tipo===$created_date->tipo): // dd199
+							// modified_date. Place it at end columns to prevent overwrite
+							case ($component_tipo===$modified_date->tipo): // dd201
 
-							// section set_created_date add
-								if (isset($conformed_value[0]) && isset($conformed_value[0]->start)) {
-									$dd_date	= new dd_date($conformed_value[0]->start);
-									$timestamp	= $dd_date->get_dd_timestamp();
-									// set value to section
-									if ($component_tipo===$created_date->tipo) {
-										$component->get_my_section()->set_created_date($timestamp);
-									}elseif ($component_tipo===$modified_date->tipo) {
-										$component->get_my_section()->set_modified_date($timestamp);
+								// section set_created_date add
+									if (isset($conformed_value[0]) && isset($conformed_value[0]->start)) {
+										$dd_date	= new dd_date($conformed_value[0]->start);
+										$timestamp	= $dd_date->get_dd_timestamp();
+										// set value to section
+										if ($component_tipo===$created_date->tipo) {
+											$component->get_my_section()->set_created_date($timestamp);
+										}elseif ($component_tipo===$modified_date->tipo) {
+											$component->get_my_section()->set_modified_date($timestamp);
+										}
 									}
-								}
 
-							// save_modified. Only for modified_date, set section save_modified to false
-								if ($component_tipo===$modified_date->tipo) {
-									$component->get_my_section()->save_modified = false; // (!) important set to false
+								// save_modified. Only for modified_date, set section save_modified to false
+									if ($component_tipo===$modified_date->tipo) {
+										$component->get_my_section()->save_modified = false; // (!) important set to false
 								}
 
 							// component save
@@ -847,12 +841,6 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 		}//end foreach ($ar_csv_data as $key => $value)
 
-		// Restore logging activity # !IMPORTANT
-			logger_backend_activity::$enable_log = true;
-
-		// back to set time machine to true for the next savings.
-			tm_record::$save_tm = true;
-
 		// response
 			if (!empty($updated_rows) || !empty($created_rows)) {
 				$response->result		= true;
@@ -863,8 +851,19 @@ class tool_import_dedalo_csv extends tool_common {
 			}
 			$response->time = exec_time_unit($start_time,'ms');
 
+		} catch (Exception $e) {
+			$response->result = false;
+			$response->msg = 'CSV import failed: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " CSV import failed with exception: " . $e->getMessage(), logger::ERROR);
+		} finally {
+			// Always restore the original log state
+			logger_backend_activity::$enable_log = $original_log_state;
+			// back to set time machine to true for the next savings.
+			tm_record::$save_tm = true;
+		}
 
-		return (object)$response;
+		return $response;
 	}//end import_dedalo_csv_file
 
 
