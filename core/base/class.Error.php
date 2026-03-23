@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * CLASS DD_ERROR
  *
@@ -12,7 +12,6 @@ class dd_error {
 
 	// ANSI color codes for terminal output
 	private const ANSI_YELLOW_BG = "\033[43m%s\033[0m";
-	private const ANSI_RESET = "\033[0m";
 
 	// Error type constants
 	private const ERROR_TYPE_ERROR = 'error';
@@ -72,7 +71,7 @@ class dd_error {
 		);
 
 		// Store in environment for later retrieval
-		$_ENV['DEDALO_LAST_ERROR'] = print_r($error_data, true);
+		$_ENV['DEDALO_LAST_ERROR'] = json_encode($error_data);
 	}//end captureError
 
 
