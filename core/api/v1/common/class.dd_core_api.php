@@ -2775,15 +2775,15 @@ final class dd_core_api {
 	private static function log_activity(object $options) : void {
 
 		// options
-			$rqo		= $options->rqo;
+			$rqo		= $options->rqo ?? null;
 			$section_id	= $options->section_id ?? null;
 
-		// short vars
-			$tipo	= $rqo->source->tipo ?? '';
-			$mode	= $rqo->source->mode ?? '';
+		// short vars (using nullsafe operator to prevent errors if source is missing)
+			$tipo	= $rqo?->source?->tipo ?? '';
+			$mode	= $rqo?->source?->mode ?? '';
 
-		// Prevent search mode write activity
-			if ($mode==='search') {
+		// return early if no valid tipo or excluded modes
+			if ($tipo === '' || $mode === 'search' || $mode === 'tm') {
 				return;
 			}
 
@@ -2793,64 +2793,31 @@ final class dd_core_api {
 			}
 
 		// exclude other tipos
-			$ar_exclude_tipo = [
-				DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655
-				DEDALO_SEARCH_PRESET_SECTION_TIPO, // dd623
-			];
-			if (in_array($tipo, $ar_exclude_tipo, true)) {
-				return;
-			}
-
-		// exclude modes
-			if ($mode==='tm') {
+			if ($tipo === DEDALO_TEMP_PRESET_SECTION_TIPO || $tipo === DEDALO_SEARCH_PRESET_SECTION_TIPO) {
 				return;
 			}
 
 		// exclude components
 		// only sections and areas generate activity (prevent autocomplete activity footprint)
 			$model = ontology_node::get_model_by_tipo($tipo, true);
-			if (strpos($model, 'section')===false && strpos($model, 'area')===false) {
+			if ($model !== 'section' && str_starts_with((string)$model, 'area') === false) {
 				return;
 			}
 
 		// mode. set mode_to_activity
 		// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
 		// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
-			$mode_to_activity = in_array($mode, ['edit','list'])
-				? $mode
-				: 'edit';
+			$mode_to_activity = ($mode === 'list') ? 'list' : 'edit';
 
 		// data_activity. Create data_activity array
 			$data_activity = [
-				'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
+				'msg'  => 'HTML Page is loaded in mode: ' . $mode_to_activity . ' [' . $mode . ']',
+				'tipo' => $tipo
 			];
 
 		// create custom log based on caller and context
-			switch (true) {
-
-				// area
-				case (strpos($model, 'area')!==false):
-					$data_activity['tipo'] = $tipo;
-					break;
-
-				// section
-				case ($model==='section'):
-
-					switch ($mode) {
-						case 'edit' :
-							$data_activity['id']	= $section_id;
-							$data_activity['tipo']	= $tipo;
-							break;
-						case 'list' :
-						default:
-							$data_activity['tipo'] = $tipo;
-							break;
-					}
-					break;
-
-				default:
-
-					break;
+			if ($model === 'section' && $mode === 'edit' && $section_id !== null) {
+				$data_activity['id'] = $section_id;
 			}
 
 		// logger activity. Write message
