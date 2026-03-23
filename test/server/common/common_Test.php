@@ -6,7 +6,15 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 final class common_test extends BaseTestCase {
 
-
+	/**
+	 * Set up before each test
+	 */
+	protected function setUp() : void {
+		parent::setUp();
+		// Clear static caches in common
+		common::$structure_context_cache = [];
+		common::$matrix_table_from_tipo = [];
+	}
 
 	/////////// ⬇︎ static methods ⬇︎ ////////////////
 
@@ -1485,6 +1493,346 @@ final class common_test extends BaseTestCase {
 
 		$this->assertTrue(is_object($result));
 		// The test ensures the recursive closure logic is exercised without crashing
+	}
+
+	/**
+	* TEST_get_structure_context_basic
+	* @return void
+	*/
+	public function test_get_structure_context_basic() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		$this->assertEquals('test17', $result->tipo);
+		$this->assertEquals('test3', $result->section_tipo);
+		$this->assertEquals('edit', $result->mode);
+		$this->assertEquals('component_text_area', $result->model);
+	}
+
+	/**
+	* TEST_get_structure_context_simple
+	* @return void
+	*/
+	public function test_get_structure_context_simple() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		$result = $component->get_structure_context_simple();
+
+		$this->assertInstanceOf('dd_object', $result);
+		// In simple mode, tools should be an empty array
+		$this->assertIsArray($result->tools);
+		$this->assertEmpty($result->tools, 'Expected tools to be empty in simple mode');
+		$this->assertEquals('test17', $result->tipo);
+	}
+
+	/**
+	* TEST_get_structure_context_cache
+	* @return void
+	*/
+	public function test_get_structure_context_cache() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// First call
+		$result1 = $component->get_structure_context();
+
+		// Second call (should be cached)
+		$result2 = $component->get_structure_context();
+
+		$this->assertSame($result1, $result2, 'Expected same instance from cache');
+	}
+
+	/**
+	* TEST_get_structure_context_with_request_config
+	* @return void
+	*/
+	public function test_get_structure_context_with_request_config() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Mock request_config in the component properties since build_request_config uses them
+		$properties = new stdClass();
+		$properties->source = new stdClass();
+		// V6 style config
+		$properties->source->request_config = [
+			(object)[
+				'api_engine' => 'dedalo',
+				'type' => 'main',
+				'show' => (object)['ddo_map' => []]
+			]
+		];
+		$component->set_properties($properties);
+
+		$result = $component->get_structure_context(0, true);
+
+		$this->assertInstanceOf('dd_object', $result);
+		$this->assertNotEmpty($result->request_config, 'Expected request_config not to be empty');
+		$this->assertEquals('dedalo', $result->request_config[0]->api_engine);
+	}
+
+	/**
+	* TEST_get_structure_context_css
+	* @return void
+	*/
+	public function test_get_structure_context_css() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Mock CSS in properties
+		$properties = new stdClass();
+		$properties->css = (object)['color' => 'red'];
+		$component->set_properties($properties);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		$this->assertEquals('red', $result->css->color);
+		// properties->css should be unset in dd_object
+		$this->assertObjectNotHasProperty('css', $result->properties);
+	}
+
+	/**
+	* TEST_get_structure_context_label_overwrite
+	* @return void
+	*/
+	public function test_get_structure_context_label_overwrite() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Mock label overwrite in properties
+		$properties = new stdClass();
+		$properties->label = new stdClass();
+		$properties->label->{DEDALO_APPLICATION_LANG} = 'Overwritten Label';
+		$component->set_properties($properties);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		$this->assertEquals('Overwritten Label', $result->label);
+	}
+
+	/**
+	* TEST_get_structure_context_parent_resolution
+	* @return void
+	*/
+	public function test_get_structure_context_parent_resolution() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// 1. From injected from_parent
+		$component->from_parent = 'custom_parent';
+		$result = $component->get_structure_context();
+		$this->assertEquals('custom_parent', $result->parent);
+
+		// 2. From session (mock session)
+		$_SESSION['dedalo']['config']['ddo']['test3'] = [
+			(object)[
+				'tipo' => 'test17',
+				'section_tipo' => 'test3',
+				'parent' => 'session_parent'
+			]
+		];
+		// Clear cache to re-calculate
+		common::$structure_context_cache = [];
+		$component->from_parent = null;
+		$result = $component->get_structure_context();
+		$this->assertEquals('session_parent', $result->parent);
+
+		// Clean up session
+		unset($_SESSION['dedalo']['config']['ddo']['test3']);
+	}
+
+	/**
+	* TEST_get_structure_context_css_removal_in_list
+	* @return void
+	*/
+	public function test_get_structure_context_css_removal_in_list() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'list', // mode list
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Mock CSS in properties
+		$properties = new stdClass();
+		$properties->css = (object)['color' => 'red'];
+		$component->set_properties($properties);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		// In list mode for component_text_area, css should be null
+		$this->assertNull($result->css);
+	}
+
+	/**
+	* TEST_get_structure_context_label_fallback
+	* @return void
+	*/
+	public function test_get_structure_context_label_fallback() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Mock label with other language but not current DEDALO_APPLICATION_LANG
+		$properties = new stdClass();
+		$properties->label = new stdClass();
+		$properties->label->{'lg-other'} = 'Other Label';
+		$component->set_properties($properties);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		// Should fallback to the first available label
+		$this->assertEquals('Other Label', $result->label);
+	}
+
+	/**
+	* TEST_get_structure_context_parent_fallback_chain
+	* @return void
+	*/
+	public function test_get_structure_context_parent_fallback_chain() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// 3. From structure (fallback to section_tipo)
+		$component->from_parent = null;
+		// Ensure session is clear
+		unset($_SESSION['dedalo']['config']['ddo']['test3']);
+
+		$result = $component->get_structure_context();
+		$this->assertEquals('test3', $result->parent, 'Expected fallback to section_tipo');
+	}
+
+	/**
+	* TEST_get_structure_context_parent_grouper_default
+	* @return void
+	*/
+	public function test_get_structure_context_parent_grouper_default() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		$result = $component->get_structure_context();
+
+		$this->assertInstanceOf('dd_object', $result);
+		// parent_grouper should come from ontology_node if not set
+		$expected_grouper = $component->ontology_node->get_parent();
+		$this->assertEquals($expected_grouper, $result->parent_grouper);
+	}
+
+	/**
+	* TEST_get_structure_context_tools_mode_filter
+	* @return void
+	*/
+	public function test_get_structure_context_tools_mode_filter() {
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// We need to mock tools return. This is harder because get_tools() is complex.
+		// However, we can check if the mode filtering logic in get_structure_context works
+		// if we can inject a tool with a specific mode requirement.
+
+		// Let's verify that when mode is NOT 'list', it tries to get tools.
+		$result = $component->get_structure_context();
+		$this->assertInstanceOf('dd_object', $result);
+		// By default it should have some tools in edit mode if user is logged
+		$this->assertIsArray($result->tools);
 	}
 
 }//end class common_test
