@@ -166,7 +166,7 @@ class class_loader {
 	public function __construct() {
 
 		spl_autoload_extensions('.php');
-		spl_autoload_register(array($this, 'loader'));
+		spl_autoload_register([self::class, 'loader']);
 	}//end __construct
 
 
