@@ -7,7 +7,7 @@
  * Supports modes: date, range, time_range, period.
  */
 
-import type { parser_options } from '../types';
+import type { parser_options, data_item } from '../types';
 import { langs_config } from '../diffusion_processor';
 
 
@@ -15,14 +15,6 @@ import { langs_config } from '../diffusion_processor';
 // =====================================================
 // Data item type
 // =====================================================
-
-interface data_item {
-	id?:    string | null;
-	value:  any;
-	tipo?:  string;
-	lang?:  string | null;
-}
-
 interface dd_date_part {
 	year?:   number;
 	month?:  number;
@@ -263,8 +255,10 @@ export default function (data: data_item[] | null, options: parser_options): dat
 
 	const date_mode = (options.date_mode as string) ?? 'date';
 
-	const ar_diffusion_values: string[]  = [];
-	const ar_period_items:     data_item[] = []; // per-lang items for period mode
+	// Collect one [formatted_string] per date object — parallel to text_format output shape.
+	// merge/auto-completion downstream handles joining across records.
+	const ar_diffusion_items: data_item[] = [];
+	const ar_period_items:    data_item[] = []; // per-lang items for period mode
 
 	for (const item of data) {
 		const val    = item.value;
@@ -285,7 +279,7 @@ export default function (data: data_item[] | null, options: parser_options): dat
 						ar_date.push(format_dd_date(date_obj.end as dd_date_part, 'Y-m-d H:i:s'));
 					}
 					if (ar_date.length > 0) {
-						ar_diffusion_values.push(ar_date.join(','));
+						ar_diffusion_items.push({ ...item, value: [ar_date.join(',')] });
 					}
 					break;
 				}
@@ -306,14 +300,14 @@ export default function (data: data_item[] | null, options: parser_options): dat
 						const target_langs = langs_config.langs;
 
 						if (target_langs.length > 0) {
-							// Emit one result item per known lang
+							// Emit one item per lang — value:[string] matches text_format shape
 							for (const target_lang of target_langs) {
 								const period_str = build_period_string(target_lang);
 								if (period_str) {
-									ar_period_items.push({ ...item, lang: target_lang, value: period_str });
+									ar_period_items.push({ ...item, lang: target_lang, value: [period_str] });
 								}
 							}
-						} 
+						}
 					}
 					break;
 				}
@@ -321,7 +315,7 @@ export default function (data: data_item[] | null, options: parser_options): dat
 				case 'date':
 				default: {
 					if (date_obj.start && date_obj.start.year !== undefined) {
-						ar_diffusion_values.push(format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s'));
+						ar_diffusion_items.push({ ...item, value: [format_dd_date(date_obj.start as dd_date_part, 'Y-m-d H:i:s')] });
 					}
 					break;
 				}
@@ -329,22 +323,15 @@ export default function (data: data_item[] | null, options: parser_options): dat
 		}
 	}// end for
 
-	// Period mode: return per-lang items directly
+	// Period mode: return per-lang items (each value is string[])
 	if (ar_period_items.length > 0) {
 		return ar_period_items;
 	}
 
-	if (ar_diffusion_values.length === 0) return null;
+	if (ar_diffusion_items.length === 0) return null;
 
-	// Mirror PHP: only the first value is used ("Temporal !!")
-	const diffusion_value = ar_diffusion_values[0] || null;
-
-	if (!diffusion_value) return null;
-
-	return [{
-		...data[0],
-		value: diffusion_value
-	}];
+	// Return one item per date record — merge/auto-completion joins them downstream.
+	return ar_diffusion_items;
 }
 
 

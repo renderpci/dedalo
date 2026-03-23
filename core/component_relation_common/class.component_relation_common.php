@@ -1548,7 +1548,6 @@ class component_relation_common extends component_common {
 			if ($resolve_parent_chain===true) {
 				// Fetch recursive list of parent locators going up the tree
 				$parents_locators = component_relation_parent::get_parents_recursive( $section_id, $section_tipo );
-
 				if (!empty($parents_locators)) {
 					foreach($parents_locators as $parent_locator) {
 
@@ -1602,7 +1601,10 @@ class component_relation_common extends component_common {
 	protected function resolve_map_node_data( object $map_node, int $section_id, string $section_tipo ) : ?array {
 
 		// Ensure the map node has required thesaurus mappings for term and model
-		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)) return null;
+		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)){
+			debug_log(__METHOD__." thesaurus->term or thesaurus->model not found for section_tipo: $section_tipo", logger::ERROR);
+			return null;
+		}
 
 		// Normalize types to strings (assumes first if array is provided)
 		$term_tipo 	= is_array($map_node->thesaurus->term) ? reset($map_node->thesaurus->term) : $map_node->thesaurus->term;

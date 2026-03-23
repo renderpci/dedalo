@@ -80,6 +80,13 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			];
 
 			$process = $parser_process;
+
+			if(isset($output) && $output==='merged'){
+				$process->output_format = "json";
+			}else{
+				$process->output_format = "string";
+			}
+			
 			if(!empty($ddo_map)){
 				$process->ddo_map = $ddo_map;
 			}
@@ -381,7 +388,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 		case 'component_autocomplete_ts':
 			$fields_separator =' - ';
 			$records_separator =', ';
-
+			
 			if($option_obj || $custom_arguments) {
 				$option_obj = $option_obj ?? new stdClass();
 
@@ -560,6 +567,73 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 					break;
 				}
+			}
+
+			//empty options
+			if(empty($option_obj)) {
+
+				$fields_separator =', ';
+				$records_separator =' - ';
+
+				$ontology_node = ontology_node::get_instance($tipo);
+				$properties = $ontology_node->get_properties();
+				
+				$show = $properties->source->request_config[0]->show ?? null;
+				if(!empty($show)) {
+					$deep_ddo = [];
+					foreach ($show->ddo_map as $ddo) {
+						if($ddo->parent === 'self') {
+							$ddo->parent = $tipo;
+						}
+						$deep_ddo[] = $ddo;
+					}
+
+					$letter_ids = [];
+					foreach ($deep_ddo as $i => $ddo) {					
+
+						$children = array_find($deep_ddo, fn($ddo) => $ddo->parent === $ddo->tipo);
+
+						if(empty($children)) {
+
+							$letter_id = chr(ord('a') + $i);
+							$letter_ids[] = $letter_id;
+
+							$ddo_map[] = (object)[
+								'id' => $letter_id,
+								'tipo' => $ddo->tipo,
+								'parent' => $ddo->parent
+							];
+						}else{
+							$ddo_map[] = (object)[
+								'tipo' => $ddo->tipo,
+								'parent' => $ddo->parent
+							];
+
+						}
+					}
+				}
+				
+				$parser_process = (object)[					
+					'parser' => [
+						(object)[
+							'fn' => 'parser_text::text_format',
+							'options' => (object)[
+								'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? [])),
+								'records_separator' => $records_separator,
+								'fields_separator' => $fields_separator
+							]
+						]
+					],
+					"output_format" => "string"
+				];
+				$process = $parser_process;
+				if(!empty($ddo_map)){
+					$process->ddo_map = $ddo_map;
+				}
+				$process->output_sample = "Pere | Manuel";
+				
+				break;
+
 			}
 			break;
 		case 'component_publication':  
@@ -894,6 +968,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				"output_format" => "string"
 			];
 			$process = $parser_process;
+			break;
 		case 'component_select_lang':
 
 			$fields_separator = $custom_arguments[0]->divisor ?? ', ';

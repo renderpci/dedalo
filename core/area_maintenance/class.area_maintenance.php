@@ -688,7 +688,7 @@ class area_maintenance extends area_common {
 				]);
 
 				// sleep process
-				$ms = $update_rate; usleep( $ms * 1000 );
+				$ms = $update_rate; usleep( (int)$ms * 1000 );
 			}
 
 		}else{
@@ -755,7 +755,7 @@ class area_maintenance extends area_common {
 				// break the loop if the client aborted the connection (closed the page)
 				if ( connection_aborted() ) break;
 
-				$ms = $update_rate;
+				$ms = (int)$update_rate;
 				usleep( $ms * 1000 );
 			}
 

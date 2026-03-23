@@ -14,7 +14,7 @@
  *   5. null                        → no data exists at all
  */
 
-import { apply_parser, default_join, join_items_to_string } from './parsers/index';
+import { apply_parser, default_join, join_items_to_string, merge } from './parsers/index';
 import type {
 	php_api_response,
 	datum_group,
@@ -202,6 +202,12 @@ function process_record(
 	// Structure: column_name → Map<lang | "nolan", parsed_value>
 	const column_parsed_values = new Map<string, Map<string, string | null>>();
 
+	// Also track tipo → lang_values for the merge_columns post-pass
+	const tipo_to_lang_values  = new Map<string, Map<string, string | null>>();
+
+	// Contexts that use merge_columns are deferred to run AFTER all other columns
+	const deferred_merge_ctx: context_field[] = [];
+
 	for (const ctx of context) {
 
 		const tipo    = ctx.tipo;
@@ -211,14 +217,31 @@ function process_record(
 		// Initialize the lang→value map for this column
 		const lang_values = new Map<string, string | null>();
 		column_parsed_values.set(column_name, lang_values);
+		tipo_to_lang_values.set(tipo, lang_values);
+
+		// Check parsers
+		const parser = ctx.parser as parser_definition;
+
+		// Defer merge_columns until all other columns are resolved
+		if (parser_uses_merge_columns(parser)) {
+			deferred_merge_ctx.push(ctx);
+			continue;
+		}
+
+		// Data-independent parsers (e.g. publication_unix_timestamp) generate their own
+		// value without needing server data — run them even when entries is empty.
+		if (parser_is_data_independent(parser)) {
+			const result = apply_parser_chain(parser, [], ctx.output_format);
+			if (result !== null && result !== undefined) {
+				lang_values.set('nolan', String(result));
+			}
+			continue;
+		}
 
 		if (!entries || entries.length === 0) {
 			// No data for this field at all
 			continue;
 		}
-
-		// Check parsers
-		const parser     = ctx.parser as parser_definition;
 
 		// Group entries by lang
 		const entries_by_lang = group_entries_by_lang(entries);
@@ -245,7 +268,7 @@ function process_record(
 			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
 
 			if (has_parser) {
-				const parser_result = apply_parser_chain(parser, data_items);
+				const parser_result = apply_parser_chain(parser, data_items, ctx.output_format);
 
 				if (parser_result !== null) {
 					// Final result should be data_item[], but apply_parser_chain returns any
@@ -325,6 +348,40 @@ function process_record(
 					lang_values.set(lang_key, column_value);
 				}
 			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// PHASE 1b: Process deferred merge_columns using parsed strings
+	// ---------------------------------------------------------------
+	for (const ctx of deferred_merge_ctx) {
+		const column_name = sanitize_column_name(ctx.term);
+		const lang_values = column_parsed_values.get(column_name)!;
+		const parser      = ctx.parser as parser_definition;
+
+		// Build data_items from already-parsed column values (SQL-ready strings).
+		// item.id = column_tipo so parser_global::merge_columns can filter by columns option.
+		const merged_items: data_item[] = [];
+		for (const [col_tipo, col_lang_values] of tipo_to_lang_values) {
+			// Pick best available value (nolan → main_lang → first)
+			const val = col_lang_values.get('nolan')
+				?? (langs_config.main_lang ? col_lang_values.get(langs_config.main_lang) : undefined)
+				?? get_first_value(col_lang_values)
+				?? null;
+			merged_items.push({
+				id:    col_tipo,
+				value: val,
+				tipo:  col_tipo,
+				lang:  null,
+			});
+		}
+
+		const parser_result = apply_parser_chain(parser, merged_items, ctx.output_format);
+		const merged_str = typeof parser_result === 'string' ? parser_result
+			: (Array.isArray(parser_result) && parser_result.length > 0 ? String(parser_result[0]?.value ?? '') : null);
+
+		if (merged_str !== null && merged_str !== '') {
+			lang_values.set('nolan', merged_str);
 		}
 	}
 
@@ -433,6 +490,31 @@ function group_entries_by_lang(entries: entry_value[]): Map<string | null, entry
 
 
 /**
+ * PARSER_USES_MERGE_COLUMNS
+ * Returns true if any parser in the chain is parser_global::merge_columns.
+ */
+function parser_uses_merge_columns(parser: any): boolean {
+	if (!parser) return false;
+	const chain = Array.isArray(parser) ? parser : [parser];
+	return chain.some((p: any) => p?.fn === 'parser_global::merge_columns');
+}
+
+
+
+/**
+ * PARSER_IS_DATA_INDEPENDENT
+ * Returns true for parsers that generate their own value without server data.
+ * These are called even when the column has no entries (e.g. publication_unix_timestamp).
+ */
+function parser_is_data_independent(parser: any): boolean {
+	if (!parser) return false;
+	const chain = Array.isArray(parser) ? parser : [parser];
+	return chain.some((p: any) => p?.fn === 'parser_global::publication_unix_timestamp');
+}
+
+
+
+/**
  * SANITIZE_COLUMN_NAME
  * Converts a human-readable term to a safe SQL column name.
  * Lowercases, replaces spaces/special chars with underscores.
@@ -457,8 +539,9 @@ function sanitize_column_name(term: string): string {
  * @returns Final result (array or primitive) or null
  */
 function apply_parser_chain(
-	parsers: parser_definition | parser_definition[] | Record<string, never>,
-	data: any[]
+	parsers:       parser_definition | parser_definition[] | Record<string, never>,
+	data:          any[],
+	output_format: string = 'string'
 ): any {
 
 	if (!parsers || (typeof parsers === 'object' && Object.keys(parsers).length === 0)) {
@@ -551,6 +634,39 @@ function apply_parser_chain(
 			}
 		}
 		return combined;
+	}
+
+	// ── DEFAULT COMPLETION CHAIN ─────────────────────────────────────────────
+	// If the last result still contains data_item[] with value:string[] (emitted
+	// by text_format or any other parser), auto-apply merge to collapse them.
+	//
+	// Strategy driven by output_format:
+	//   "json"         → merge(undefined/default) — keep as flat array, no string join
+	//   "string" / *  → merge("string")          — global collapse to one scalar string
+	//
+	// No-op when:
+	//   • An explicit parser_helper::merge step already ran (values are scalar/string)
+	//   • last_unmapped_result is null or has no array-valued items
+	if (Array.isArray(last_unmapped_result) && last_unmapped_result.length > 0) {
+		const has_array_values = last_unmapped_result.some(
+			(item: any) =>
+				item !== null &&
+				typeof item === 'object' &&
+				Array.isArray(item.value) &&
+				item.value.length > 0 &&
+				typeof item.value[0] === 'string'
+		);
+		if (has_array_values) {
+			if (output_format === 'json') {
+				// Keep structure: flatten nested arrays into a single flat array per lang
+				const merged = merge(last_unmapped_result, {});
+				if (merged) last_unmapped_result = merged;
+			} else {
+				// Default ("string"): global collapse — all rows joined into one scalar
+				const merged = merge(last_unmapped_result, { merge: 'string' });
+				if (merged) last_unmapped_result = merged;
+			}
+		}
 	}
 
 	return last_unmapped_result;

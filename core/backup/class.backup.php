@@ -100,7 +100,7 @@ abstract class backup {
 					$current_time_secs		= time();
 					$difference_in_hours	= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 					if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
-						$msg = " Skipped backup. A recent backup (about $difference_in_hours hours early) already exists. It is not necessary to build another one";
+						$msg = ' Skipped backup. A recent backup (about '.$difference_in_hours.' hours early) already exists. It is not necessary to build another one';
 						debug_log(__METHOD__
 							." $msg "
 							, logger::DEBUG
@@ -186,16 +186,16 @@ abstract class backup {
 
 		$strQuery = "
 		SELECT *
-		FROM information_schema.tables
-		WHERE table_type = 'BASE TABLE'
-		 AND table_schema = 'public'
-		ORDER BY table_type, table_name
+			FROM information_schema.tables
+			WHERE table_type = 'BASE TABLE'
+			AND table_schema = 'public'
+			ORDER BY table_type, table_name
 		";
 		$result = matrix_db_manager::exec_search($strQuery, []);
 
 		if(!$result) {
-			$response->msg = 'Error. Failed to retrieve tables from the database.';
-			debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
+			$msg = 'Error. Failed to retrieve tables from the database.';
+			debug_log(__METHOD__ . $msg . ' Query failed: ' . $strQuery, logger::ERROR);
 			return [];
 		}
 		$tableList = array();
@@ -337,7 +337,7 @@ abstract class backup {
 				$response->msg		= $msg;
 			}else{
 				$response->result	= false;
-				$response->msg		= "Error on consolidate sequence: $sequence_name - table: $table";
+				$response->msg		= 'Error on consolidate sequence: '.$sequence_name.' - table: '.$table;
 				debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
 			}
 

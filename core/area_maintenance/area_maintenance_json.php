@@ -1,4 +1,5 @@
 <?php
+/** @var area_maintenance $this */
 // JSON data controller
 
 

@@ -1,4 +1,5 @@
 <?php
+/** @var button_delete $this */
 	
 	# CONTROLLER
 
