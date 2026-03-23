@@ -228,6 +228,16 @@ function process_record(
 			continue;
 		}
 
+		// Data-independent parsers (e.g. publication_unix_timestamp) generate their own
+		// value without needing server data — run them even when entries is empty.
+		if (parser_is_data_independent(parser)) {
+			const result = apply_parser_chain(parser, [], ctx.output_format);
+			if (result !== null && result !== undefined) {
+				lang_values.set('nolan', String(result));
+			}
+			continue;
+		}
+
 		if (!entries || entries.length === 0) {
 			// No data for this field at all
 			continue;
@@ -487,6 +497,19 @@ function parser_uses_merge_columns(parser: any): boolean {
 	if (!parser) return false;
 	const chain = Array.isArray(parser) ? parser : [parser];
 	return chain.some((p: any) => p?.fn === 'parser_global::merge_columns');
+}
+
+
+
+/**
+ * PARSER_IS_DATA_INDEPENDENT
+ * Returns true for parsers that generate their own value without server data.
+ * These are called even when the column has no entries (e.g. publication_unix_timestamp).
+ */
+function parser_is_data_independent(parser: any): boolean {
+	if (!parser) return false;
+	const chain = Array.isArray(parser) ? parser : [parser];
+	return chain.some((p: any) => p?.fn === 'parser_global::publication_unix_timestamp');
 }
 
 

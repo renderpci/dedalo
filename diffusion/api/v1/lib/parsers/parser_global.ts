@@ -54,3 +54,21 @@ export function merge_columns(data: data_item[] | null, options: parser_options)
 	return merged.length > 0 ? merged.join(fields_separator) : null;
 }
 
+let _cached_publication_timestamp: number | null = null;
+
+/**
+ * PUBLICATION_UNIX_TIMESTAMP
+ * Generates a unique UNIX timestamp (seconds since epoch) for the entire diffusion process.
+ * The value is memoized upon first call so that all rows receive the exact same timestamp.
+ *
+ * @param data    - Ignored
+ * @param options - Ignored
+ * @returns UNIX timestamp as an integer
+ */
+export function publication_unix_timestamp(data: data_item[] | null, options: parser_options): number {
+	if (_cached_publication_timestamp === null) {
+		_cached_publication_timestamp = Math.floor(Date.now() / 1000);
+	}
+	return _cached_publication_timestamp;
+}
+
