@@ -14,6 +14,7 @@ import { widget } from './parser_info';
 import info_default from './parser_info';
 import { flat } from './parser_iri';
 import { geojson } from './parser_geo';
+import { merge_columns } from './parser_global';
 import type { parser_options } from '../types';
 
 
@@ -57,6 +58,7 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_info::default':							info_default,
 	'parser_iri::flat':								flat,
 	'parser_geo::geojson':							geojson,
+	'parser_global::merge_columns':					merge_columns,
 };
 
 

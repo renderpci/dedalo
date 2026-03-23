@@ -202,6 +202,12 @@ function process_record(
 	// Structure: column_name → Map<lang | "nolan", parsed_value>
 	const column_parsed_values = new Map<string, Map<string, string | null>>();
 
+	// Also track tipo → lang_values for the merge_columns post-pass
+	const tipo_to_lang_values  = new Map<string, Map<string, string | null>>();
+
+	// Contexts that use merge_columns are deferred to run AFTER all other columns
+	const deferred_merge_ctx: context_field[] = [];
+
 	for (const ctx of context) {
 
 		const tipo    = ctx.tipo;
@@ -211,14 +217,21 @@ function process_record(
 		// Initialize the lang→value map for this column
 		const lang_values = new Map<string, string | null>();
 		column_parsed_values.set(column_name, lang_values);
+		tipo_to_lang_values.set(tipo, lang_values);
+
+		// Check parsers
+		const parser = ctx.parser as parser_definition;
+
+		// Defer merge_columns until all other columns are resolved
+		if (parser_uses_merge_columns(parser)) {
+			deferred_merge_ctx.push(ctx);
+			continue;
+		}
 
 		if (!entries || entries.length === 0) {
 			// No data for this field at all
 			continue;
 		}
-
-		// Check parsers
-		const parser     = ctx.parser as parser_definition;
 
 		// Group entries by lang
 		const entries_by_lang = group_entries_by_lang(entries);
@@ -329,6 +342,40 @@ function process_record(
 	}
 
 	// ---------------------------------------------------------------
+	// PHASE 1b: Process deferred merge_columns using parsed strings
+	// ---------------------------------------------------------------
+	for (const ctx of deferred_merge_ctx) {
+		const column_name = sanitize_column_name(ctx.term);
+		const lang_values = column_parsed_values.get(column_name)!;
+		const parser      = ctx.parser as parser_definition;
+
+		// Build data_items from already-parsed column values (SQL-ready strings).
+		// item.id = column_tipo so parser_global::merge_columns can filter by columns option.
+		const merged_items: data_item[] = [];
+		for (const [col_tipo, col_lang_values] of tipo_to_lang_values) {
+			// Pick best available value (nolan → main_lang → first)
+			const val = col_lang_values.get('nolan')
+				?? (langs_config.main_lang ? col_lang_values.get(langs_config.main_lang) : undefined)
+				?? get_first_value(col_lang_values)
+				?? null;
+			merged_items.push({
+				id:    col_tipo,
+				value: val,
+				tipo:  col_tipo,
+				lang:  null,
+			});
+		}
+
+		const parser_result = apply_parser_chain(parser, merged_items, ctx.output_format);
+		const merged_str = typeof parser_result === 'string' ? parser_result
+			: (Array.isArray(parser_result) && parser_result.length > 0 ? String(parser_result[0]?.value ?? '') : null);
+
+		if (merged_str !== null && merged_str !== '') {
+			lang_values.set('nolan', merged_str);
+		}
+	}
+
+	// ---------------------------------------------------------------
 	// PHASE 2: Expand to one record per lang
 	// ---------------------------------------------------------------
 	// If no langs provided, emit a single record with null lang
@@ -428,6 +475,18 @@ function group_entries_by_lang(entries: entry_value[]): Map<string | null, entry
 	}
 
 	return grouped;
+}
+
+
+
+/**
+ * PARSER_USES_MERGE_COLUMNS
+ * Returns true if any parser in the chain is parser_global::merge_columns.
+ */
+function parser_uses_merge_columns(parser: any): boolean {
+	if (!parser) return false;
+	const chain = Array.isArray(parser) ? parser : [parser];
+	return chain.some((p: any) => p?.fn === 'parser_global::merge_columns');
 }
 
 
