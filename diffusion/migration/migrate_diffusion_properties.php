@@ -690,15 +690,15 @@ function process_node($node, $level) {
 									$first_custom_arg = is_array($custom_arguments) ? ($custom_arguments[0] ?? null) : $custom_arguments;
 									$process_dato_arguments_2 = $first_custom_arg->process_dato_arguments ?? null;
 									if ($process_dato_arguments_2) {
-										$component_method_2 = $process_dato_arguments_2->component_method;
-										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
-										$output_2 = $process_dato_arguments_2->output;
-										$output_options_2 = $process_dato_arguments_2->output_options;
+										$component_method_2 = $process_dato_arguments_2->component_method ?? null;
+										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo ?? null;
+										$output_2 = $process_dato_arguments_2->output ?? null;
+										$output_options_2 = $process_dato_arguments_2->output_options ?? null;
 											// $date_format_2 = $output_options_2->date_format;
 											// $selected_key_2 = $output_options_2->selected_key;
 											// $selected_date_2 = $output_options_2->selected_date;
-										$empty_value_2 = $process_dato_arguments_2->empty_value;
-										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
+										$empty_value_2 = $process_dato_arguments_2->empty_value ?? null;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable ?? null;
 										$process_dato_2 = $process_dato_arguments_2->process_dato ?? null;
 										$fallback_2 = $process_dato_arguments_2->fallback ?? null;
 											// $tipo_2 = $fallback_2->tipo;
@@ -709,13 +709,13 @@ function process_node($node, $level) {
 											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
 										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
 										
-										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments ?? null;
 											// $dato_3 = $process_dato_arguments_3->dato;
 											// $options_3 = $process_dato_arguments_3->options;
 										
-										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents ?? null;
 
-										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments ?? null;
 
 
 										$ddo_map2 = [
@@ -819,10 +819,10 @@ function process_node($node, $level) {
 										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
 										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
 										if ($process_dato_arguments_3) {
-											$component_method_3 = $process_dato_arguments_3->component_method;
-											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
-											$output_3 = $process_dato_arguments_3->output;
-											$output_options_3 = $process_dato_arguments_3->output_options;
+											$component_method_3 = $process_dato_arguments_3->component_method ?? null;
+											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo ?? null;
+											$output_3 = $process_dato_arguments_3->output ?? null;
+											$output_options_3 = $process_dato_arguments_3->output_options ?? null;
 
 											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
 											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
@@ -832,11 +832,11 @@ function process_node($node, $level) {
 											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
 											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
 											
-											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
+											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments ?? null;
 											
-											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
+											$custom_parents_3 = $process_dato_arguments_3->custom_parents ?? null;
 
-											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
+											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments ?? null;
 
 
 											$ddo_map3 = [
@@ -1392,15 +1392,15 @@ function process_node($node, $level) {
 									$process_dato_arguments_2 = $custom_arguments->process_dato_arguments;
 										$component_method_2 = $process_dato_arguments_2->component_method;
 										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
-										$output_2 = $process_dato_arguments_2->output;
-										$output_options_2 = $process_dato_arguments_2->output_options;
+										$output_2 = $process_dato_arguments_2->output ?? null;
+										$output_options_2 = $process_dato_arguments_2->output_options ?? null;
 											// $date_format_2 = $output_options_2->date_format;
 											// $selected_key_2 = $output_options_2->selected_key;
 											// $selected_date_2 = $output_options_2->selected_date;
-										$empty_value_2 = $process_dato_arguments_2->empty_value;
-										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
-										$process_dato_2 = $process_dato_arguments_2->process_dato;
-										$fallback_2 = $process_dato_arguments_2->fallback;
+										$empty_value_2 = $process_dato_arguments_2->empty_value ?? null;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable ?? null;
+										$process_dato_2 = $process_dato_arguments_2->process_dato ?? null;
+										$fallback_2 = $process_dato_arguments_2->fallback ?? null;
 											// $tipo_2 = $fallback_2->tipo;
 											// $method_2 = $fallback_2->method;
 										$target_component_properties_2 = $process_dato_arguments_2->target_component_properties ?? null;
@@ -1409,13 +1409,13 @@ function process_node($node, $level) {
 											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
 										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
 										
-										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments ?? null;
 											// $dato_3 = $process_dato_arguments_3->dato;
 											// $options_3 = $process_dato_arguments_3->options;
 										
-										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents ?? null;
 
-										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments ?? null;
 
 
 										$ddo_map2 = [
@@ -1472,10 +1472,10 @@ function process_node($node, $level) {
 										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
 										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
 										if ($process_dato_arguments_3) {
-											$component_method_3 = $process_dato_arguments_3->component_method;
-											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
-											$output_3 = $process_dato_arguments_3->output;
-											$output_options_3 = $process_dato_arguments_3->output_options;
+											$component_method_3 = $process_dato_arguments_3->component_method ?? null;
+											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo ?? null;
+											$output_3 = $process_dato_arguments_3->output ?? null;
+											$output_options_3 = $process_dato_arguments_3->output_options ?? null;
 
 											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
 											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
@@ -1485,11 +1485,11 @@ function process_node($node, $level) {
 											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
 											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
 											
-											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
+											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments ?? null;
 											
-											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
+											$custom_parents_3 = $process_dato_arguments_3->custom_parents ?? null;
 
-											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
+											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments ?? null;
 
 
 											$ddo_map3 = [
@@ -3385,7 +3385,10 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
-							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							// 2 "process_dato" present
+							$process_dato = $props->process_dato ?? null;
+
+							// 1 "process_dato" = "diffusion::map_section_id_to_subtitles_url"
 							if( $process_dato 
 								&& $process_dato=== "diffusion::map_section_id_to_subtitles_url"){							
 
