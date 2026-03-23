@@ -433,7 +433,7 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
-						case (strpos($model, 'tool_')===0):
+						case str_starts_with($model, 'tool_'):
 
 							// resolve tool from name and user
 								$user_id			= logged_user_id();
@@ -465,7 +465,7 @@ final class dd_core_api {
 								}
 							break;
 
-						case (strpos($model, 'area')===0):
+						case str_starts_with($model, 'area'):
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
@@ -487,7 +487,7 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
-						case (strpos($model, 'component_')===0):
+						case str_starts_with($model, 'component_'):
 
 							$component_lang	= (ontology_node::get_translatable($tipo)===true)
 								? $lang
@@ -1070,7 +1070,7 @@ final class dd_core_api {
 			$is_temporal		= $source->is_temporal ?? false;
 
 		// activity section check
-			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
+			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && !str_starts_with($section_id, 'search_')) {
 				$response->msg = 'Error. Illegal save to activity';
 				$response->errors[] = 'illegal section tipo';
 				debug_log(__METHOD__
@@ -1411,11 +1411,11 @@ final class dd_core_api {
 					// 	$element->set_rqo([$source]); // inject whole source
 					// 	break;
 
-				case strpos($model, 'area')===0:
+				case str_starts_with($model, 'area'):
 					$element = area::get_instance($model, $tipo, $mode);
 					break;
 
-				case strpos($model, 'component_')===0:
+				case str_starts_with($model, 'component_'):
 
 					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
@@ -1431,7 +1431,7 @@ final class dd_core_api {
 					);
 					break;
 
-				case strpos($model, 'tool_')===0:
+				case str_starts_with($model, 'tool_'):
 
 					// tool section_tipo and section_id can be resolved from model if is necessary
 						// if (empty($section_id)) {
@@ -1846,7 +1846,7 @@ final class dd_core_api {
 
 				case 'get_data': // Used by components and areas
 
-					if (strpos($model, 'component_')===0) {
+					if (str_starts_with($model, 'component_')) {
 
 						if ($section_id<1) {
 							// invalid call
@@ -1921,7 +1921,7 @@ final class dd_core_api {
 
 						}//end if ($section_id>=1)
 
-					}else if (strpos($model, 'area')===0) {
+					}else if (str_starts_with($model, 'area')) {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
@@ -1971,7 +1971,7 @@ final class dd_core_api {
 
 				case 'resolve_data': // Used by components in search mode like portals to resolve locators data
 
-					if (strpos($model, 'component')===0) {
+					if (str_starts_with($model, 'component')) {
 
 						// component
 							$component_lang	= (ontology_node::get_translatable($tipo)===true)
@@ -2207,7 +2207,7 @@ final class dd_core_api {
 		// build element
 			switch (true) {
 
-				case strpos($model, 'component_')===0:
+				case str_starts_with($model, 'component_'):
 
 					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
@@ -2601,7 +2601,7 @@ final class dd_core_api {
 				$obj->php_version	= PHP_VERSION;
 				// $obj->php_version .= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory	= ini_get('memory_limit') ?? 'Unknown';
-				if ( strpos(DEDALO_HOST, 'localhost')===0 ) {
+				if (str_starts_with(DEDALO_HOST, 'localhost')) {
 					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
 				}
 			}
