@@ -107,14 +107,12 @@ class section_record_data {
 
 	/**
 	* GET_INSTANCE
-	* Singleton instance constructor for the class section_record_data
-	* Stores cache instances based on the contraction of section_tipo and $section_id
-	* as 'oh1_1'.
+	* Instance constructor for the class section_record_data.
 	* @param string $section_tipo
 	* 	Ontology identifier of the section. E.g. 'oh1'
 	* @param int $section_id
 	* 	Unique id of the section. E.g. 1
-	* @return class section_record_data instance
+	* @return section_record_data instance
 	*/
 	public static function get_instance( string $section_tipo, int $section_id ) : self {
 

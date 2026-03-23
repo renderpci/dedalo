@@ -479,6 +479,9 @@ class tool_import_dedalo_csv extends tool_common {
 			// section_id key column
 				$columns		= array_column($csv_map, 'model');
 				$section_id_key	= array_search('component_section_id', $columns);
+				if ($section_id_key === false) {
+					throw new Exception("component_section_id column not found in CSV mapping");
+				}
 
 			// Fixed private section tipos
 				$metadata_definition = section::get_metadata_definition();
@@ -493,7 +496,7 @@ class tool_import_dedalo_csv extends tool_common {
 					$process_info->section_tipo		= $section_tipo;
 					$process_info->section_id		= null;
 					$process_info->component_tipo	= null;
-					$process_info->compomnent_label	= null;
+					$process_info->component_label	= null;
 					$process_info->current_file		= $current_file;
 
 			// rows info statistics
@@ -502,6 +505,9 @@ class tool_import_dedalo_csv extends tool_common {
 				$failed_rows	= [];
 
 			$counter		= 0;
+			if (empty($ar_csv_data)) {
+				throw new Exception("CSV data is empty");
+			}
 			$csv_head_row	= $ar_csv_data[0];
 
 			// PROCESS
@@ -581,8 +587,8 @@ class tool_import_dedalo_csv extends tool_common {
 				// set the information about the process
 					$process_info->section_id = $section_id;
 					$process_info->msg = ($exists===true)
-						? label::get_label('creating') ?? 'Creating'
-						: label::get_label('updating') ?? 'Updating';
+						? label::get_label('updating') ?? 'Updating'
+						: label::get_label('creating') ?? 'Creating';
 
 				// Iterate fields/columns
 					foreach ($columns as $key => $value) {
@@ -818,7 +824,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 					// set the information about the process
 					$process_info->component_tipo = $component_tipo;
-					$process_info->compomnent_label = ontology_node::get_term_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
+					$process_info->component_label = ontology_node::get_term_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
 
 					// print the process_info
 					if ( running_in_cli()===true ) {
