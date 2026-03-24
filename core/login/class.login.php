@@ -25,14 +25,12 @@ class login extends common {
 	* @var int|null $id Unique identifier for the login instance
 	* @var string $tipo_active_account Ontology tipo for active account status component
 	* @var string $tipo_button_login Ontology tipo for login button component
-	* @var string $login_matrix_table Matrix table name for login operations
 	* @var string $SU_DEFAULT_PASSWORD Default password for super user (root)
 	*/
 		protected $id;
-		protected $tipo_active_account			= 'dd131';
-		protected $tipo_button_login			= 'dd259';
-		protected static $login_matrix_table	= 'matrix';
-		const SU_DEFAULT_PASSWORD				= '';
+		protected $tipo_active_account	= 'dd131';
+		protected $tipo_button_login	= 'dd259';
+		const SU_DEFAULT_PASSWORD		= '';
 
 
 

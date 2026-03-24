@@ -59,25 +59,6 @@ final class area_maintenance_test extends BaseTestCase {
 
 
 	/**
-	* TEST_ar_tables_with_relations
-	* @return void
-	*/
-	public function test_ar_tables_with_relations() {
-
-		// $area = $this->build_instance();
-
-		$result = area_maintenance::$ar_tables_with_relations;
-
-		$this->assertTrue(
-			gettype($result)==='array' ,
-			'expected array' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_ar_tables_with_relations
-
-
-
-	/**
 	* TEST_item_make_backup
 	* @return void
 	*/

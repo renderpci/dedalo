@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * UPDATE
 * Manage Dédalo data updates defined in file updates.php

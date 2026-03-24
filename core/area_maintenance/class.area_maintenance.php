@@ -9,30 +9,6 @@ class area_maintenance extends area_common {
 
 
 
-	// tables_with_relations
-	public static $ar_tables_with_relations = [
-		'matrix_users',
-		'matrix_projects',
-		'matrix',
-		'matrix_list',
-		'matrix_activities',
-		'matrix_hierarchy',
-		'matrix_hierarchy_main',
-		'matrix_langs',
-		'matrix_layout',
-		'matrix_notes',
-		'matrix_profiles',
-		'matrix_test',
-		'matrix_indexations',
-		'matrix_structurations',
-		'matrix_dd',
-		'matrix_layout_dd',
-		'matrix_activity',
-		'matrix_tools'
-	];//end ar_tables_with_relations
-
-
-
 	/**
 	* ITEM_MAKE_BACKUP
 	* Make a copy of the item in database.
