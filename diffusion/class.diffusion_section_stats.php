@@ -743,7 +743,7 @@ class diffusion_section_stats extends diffusion {
 
 		// get all user activity records from user_activity_section in the range
 			$sqo_data = (object)[
-				'section_tipo' => USER_ACTIVITY_SECTION_TIPO,
+				'section_tipo' => [USER_ACTIVITY_SECTION_TIPO],
 				'limit' => 0,
 				'offset' => 0,
 				'select' => [],
