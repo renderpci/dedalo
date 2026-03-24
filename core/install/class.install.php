@@ -588,22 +588,6 @@ class install extends common {
 			// 	}
 			// }
 
-		// regenerate relations ()
-			// $ar_tables = tool_administration::$ar_tables_with_relations;
-			// $tables = [];
-			// foreach ($ar_tables as $current_table) {
-			// 	if ($current_table==='matrix_langs') {
-			// 		continue;
-			// 	}
-			// 	$tables[] = $current_table;
-			// }
-			// if ($exec) {
-			// 	$generate_relations_response = self::generate_relations_table_data($tables, true, $db_install_conn);
-			// 	if ($generate_relations_response->result!==true) {
-			// 		trigger_error('Error on propagate relations data. '.$generate_relations_response->msg);
-			// 	}
-			// }
-
 		// vacuum analyze
 			// CLI msg
 			if ( running_in_cli()===true ) {
@@ -1931,7 +1915,7 @@ class install extends common {
 		// short vars
 			$config	= self::get_config();
 
-		// hierarchy search 	
+		// hierarchy search
 			$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
 			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 			$section_id		= $hierarchy_row->section_id;
