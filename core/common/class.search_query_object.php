@@ -134,12 +134,12 @@ class search_query_object extends stdClass {
 	/**
 	* SET_SECTION_TIPO
 	* Array of one or more values
-	* @param array $value like ['oh1']
+	* @param array|string $value like ['oh1'] or 'oh1'
 	* @return bool true
 	*/
-	public function set_section_tipo(array $value) : true {
+	public function set_section_tipo(array|string $value) : true {
 
-		$this->section_tipo = $value;
+		$this->section_tipo = is_array($value) ? $value : [$value];
 
 		return true;
 	}//end set_section_tipo
