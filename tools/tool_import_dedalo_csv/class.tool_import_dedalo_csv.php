@@ -477,11 +477,15 @@ class tool_import_dedalo_csv extends tool_common {
 				}
 
 			// section_id key column
-				$columns		= array_column($csv_map, 'model');
-				$section_id_key	= array_search('component_section_id', $columns);
-				if ($section_id_key === false) {
-					throw new Exception("component_section_id column not found in CSV mapping");
-				}
+			$columns		= array_column($csv_map, 'model');
+			$section_id_key	= array_search('section_id', $columns);
+			if ($section_id_key === false) {
+				// Fallback to try 'component_section_id'
+				$section_id_key = array_search('component_section_id', $columns);
+			}
+			if ($section_id_key === false) {
+				throw new Exception("component_section_id column not found in CSV mapping");
+			}
 
 			// Fixed private section tipos
 				$metadata_definition = section::get_metadata_definition();
