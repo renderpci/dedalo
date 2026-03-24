@@ -2586,17 +2586,24 @@ final class dd_core_api {
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
 				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-					$obj->pg_version = (function() {
-						try {
-							$conn = DBi::_getConnection() ?? false;
-							if ($conn) {
-								return pg_version(DBi::_getConnection())['server'];
+					if(isset($cache_data['pg_version'])) {
+						$obj->pg_version					= $cache_data['pg_version'];
+					}else{
+						$obj->pg_version = (function() {
+							try {
+								$conn = DBi::_getConnection() ?? false;
+								if ($conn) {
+									return pg_version($conn)['server'];
+								}
+								return 'Failed!';
+							}catch(Exception $e){
+								return 'Failed with Exception!';
 							}
-							return 'Failed!';
-						}catch(Exception $e){
-							return 'Failed with Exception!';
-						}
-					})();
+						})();
+						$cache_data['pg_version']			= $obj->pg_version;
+						$cache_modified = true;
+					}
+
 				}
 				$obj->php_version	= PHP_VERSION;
 				// $obj->php_version .= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
