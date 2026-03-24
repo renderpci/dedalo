@@ -2394,6 +2394,8 @@ abstract class component_common extends common {
 
 		// cache
 			self::$ar_list_of_values_data_cache[$cache_key] = $response;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$ar_list_of_values_data_cache);
 
 
 		return $response;
@@ -2647,6 +2649,8 @@ abstract class component_common extends common {
 
 		// cache adds the response to cache to be reused
 			self::$list_of_values_data_cache[$uid] = $response;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$list_of_values_data_cache);
 
 
 		return $response;

@@ -20,6 +20,23 @@ abstract class common {
 
 	use request_config_utils, request_config_ddo, request_config_v6, request_config_v5;
 
+	// Cache management constants
+	const MAX_CACHE_SIZE = 1000;
+
+	/**
+	* MANAGE_CACHE_SIZE
+	* Controls cache size to prevent memory leaks by limiting cache entries.
+	* Keeps only the most recent entries when limit is exceeded.
+	* @param array &$cache Reference to the cache array
+	* @return void
+	*/
+	protected static function manage_cache_size(array &$cache) : void {
+		if (count($cache) > self::MAX_CACHE_SIZE) {
+			// Keep only the most recent entries
+			$cache = array_slice($cache, -self::MAX_CACHE_SIZE, null, true);
+		}
+	}
+
 
 
 	/**
@@ -83,7 +100,7 @@ abstract class common {
 		// cache of calculated context, used to get the context that was calculated and reuse it.
 		public static $structure_context_cache = [];
 		public static $matrix_table_from_tipo = [];
-		public static $ar_tables_with_relations_cache;
+		public static $cache_ar_tables_with_relations;
 		public static $current_main_lang = [];
 		public static $ar_related_by_model_data = [];
 		public static $resolved_request_properties_parsed = [];
@@ -195,7 +212,7 @@ abstract class common {
 		public static function clear() : void {
 			self::$structure_context_cache = [];
 			self::$matrix_table_from_tipo = [];
-			self::$ar_tables_with_relations_cache = null;
+			self::$cache_ar_tables_with_relations = null;
 			self::$current_main_lang = [];
 			self::$ar_related_by_model_data = [];
 			self::$resolved_request_properties_parsed = [];
@@ -479,9 +496,7 @@ abstract class common {
 
 		// cache
 			// Safe control: prevent big array memory and performance problems
-			if (count(self::$matrix_table_from_tipo) > 1000) {
-				self::$matrix_table_from_tipo = [];
-			}
+			self::manage_cache_size(self::$matrix_table_from_tipo);
 
 			// check cache
 			if(isset(self::$matrix_table_from_tipo[$tipo])) {
@@ -598,8 +613,8 @@ abstract class common {
 	public static function get_matrix_tables_with_relations() : array {
 
 		// cache
-			if (isset(self::$ar_tables_with_relations_cache)) {
-				return self::$ar_tables_with_relations_cache;
+			if (isset(self::$cache_ar_tables_with_relations)) {
+				return self::$cache_ar_tables_with_relations;
 			}
 
 		// tables
@@ -659,7 +674,7 @@ abstract class common {
 			}
 
 		// cache
-			self::$ar_tables_with_relations_cache = $ar_tables_with_relations;
+			self::$cache_ar_tables_with_relations = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -790,6 +805,8 @@ abstract class common {
 		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);
 
 		self::$current_main_lang[$uid] = $main_lang;
+		// Manage cache size to prevent memory leaks
+		self::manage_cache_size(self::$current_main_lang);
 
 
 		return (string)$main_lang;
@@ -1083,6 +1100,8 @@ abstract class common {
 
 		// cache
 		self::$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		// Manage cache size to prevent memory leaks
+		self::manage_cache_size(self::$ar_related_by_model_data);
 
 
 		return $ar_related_by_model;
@@ -1663,6 +1682,8 @@ abstract class common {
 		// cache. fix context dd_object
 			if ($use_cache===true) {
 				self::$structure_context_cache[$ddo_key] = $dd_object;
+				// Manage cache size to prevent memory leaks
+				self::manage_cache_size(self::$structure_context_cache);
 			}
 
 		// Debug
@@ -2413,13 +2434,7 @@ abstract class common {
 			}
 
 		// 2. Attempt to retrieve from static cache
-		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
-			static $resolved_request_config_parsed = [];
-			$resolved_key = $this->tipo .'_'. $this->get_section_tipo() .'_'. $this->mode .'_'. $this->section_id;
-			$use_cache = false;
-			if ($use_cache===true && isset($resolved_request_config_parsed[$resolved_key])) {
-				return $resolved_request_config_parsed[$resolved_key];
-			}
+		// No use cache here. Atomic cache is used instead
 
 		// 3. Attempt to build from the client's API request (RQO)
 			// requested_source is fixed from RQO calls to API when they exists like
@@ -2639,11 +2654,6 @@ abstract class common {
 				}
 			}//end if ($model==='section')
 
-		// cache
-			if ($use_cache===true) {
-				$resolved_request_config_parsed[$resolved_key] = $this->request_config;
-			}
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$len = !empty($this->tipo)
@@ -2654,7 +2664,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'--- build_request_config --------- '. $tipo_line .' '. number_format(exec_time_unit($start_time,'ms'),3).' ms' . ' - ' . get_called_class() . ' - ' . $resolved_key,
+					"--- build_request_config --------- {$tipo_line} ". number_format(exec_time_unit($start_time,'ms'),3). " ms - " . get_called_class() . " - {$this->tipo} - {$this->section_tipo} - {$this->section_id}",
 					logger::DEBUG
 				);
 			}
@@ -3416,6 +3426,8 @@ abstract class common {
 			if ($use_cache===true) {
 				// static
 				self::$get_tools_cache[$cache_key] = $tools;
+				// Manage cache size to prevent memory leaks
+				self::manage_cache_size(self::$get_tools_cache);
 			}
 
 		// debug
