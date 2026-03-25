@@ -55,7 +55,7 @@ class db_tasks {
 
 				$table_exists = DBi::check_table_exists($table_name);
 				if( $table_exists===false ) {
-					$response->errors[] = "Table $table_name not exists. Ignored check_sequences";
+					$response->errors[] = "Table $table_name does not exist. Ignored check_sequences";
 					continue;
 				}
 
@@ -65,7 +65,12 @@ class db_tasks {
 				}
 
 				# Find last id in table
-				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
+				$conn = DBi::_getConnection();
+				if (!$conn) {
+					$response->errors[] = "Database connection failed for table: $table_name";
+					continue;
+				}
+				$sql		= " SELECT id FROM \"" . pg_escape_identifier($conn ?: null, $table_name) . "\" ORDER BY id DESC LIMIT 1 ";
 				$result2	= matrix_db_manager::exec_search($sql, []);
 
 				if (!$result2) {
@@ -100,7 +105,6 @@ class db_tasks {
 					'table_name'	=> $table_name,
 					'start_value'	=> $start_value,
 					'last_value'	=> $last_value,
-					'last_id'		=> $last_id,
 					'last_id'		=> $last_id
 				];
 
@@ -213,7 +217,7 @@ class db_tasks {
 		foreach ($valid_tables as $table) {
 
 			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
-			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE $escaped_table;");
+			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE CONCURRENTLY $escaped_table;");
 
 			$res = shell_exec($command . ' 2>&1');
 			$response->reindex[$table] = $res;
@@ -274,7 +278,7 @@ class db_tasks {
 		}
 
 		$response->result	= true;
-		$response->msg		= empty($reponse->errors)
+		$response->msg = empty($response->errors)
 			? 'Successfully optimized ' . count($valid_tables) . ' table(s)'
 			: 'Optimization completed with errors for some tables';
 
@@ -627,7 +631,7 @@ class db_tasks {
 				// 0 Prevent errors if table not exists
 					$table_exists = DBi::check_table_exists($table);
 					if( $table_exists===false ) {
-						$response->errors[] = "Table $table not exists. Ignored index $index->name";
+						$response->errors[] = "Table $table does not exist. Ignored index $index->name";
 						continue;
 					}
 
@@ -720,7 +724,7 @@ class db_tasks {
 				// 0 Prevent errors if table not exists
 					$table_exists = DBi::check_table_exists($table);
 					if( $table_exists===false ) {
-						$response->errors[] = "Table $table not exists. Ignored constraint $constraint->name";
+						$response->errors[] = "Table $table does not exist. Ignored constraint $constraint->name";
 						continue;
 					}
 
@@ -777,16 +781,23 @@ class db_tasks {
 	* @return array $tables
 	*/
 	public static function get_tables() : array {
+
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			throw new Exception('Database connection failed');
+		}
+
 		$sql = "
 			SELECT tablename
 			FROM pg_tables
 			WHERE schemaname = 'public';
 		";
-		$result = pg_query(DBi::_getConnection(), $sql);
+		$result = pg_query($conn, $sql);
 
 		// Error handling for the query
 		if (!$result) {
-			throw new Exception('Database query failed: ' . pg_last_error());
+			throw new Exception('Database query failed: ' . pg_last_error($conn));
 		}
 
 		$tables = [];
@@ -835,30 +846,43 @@ class db_tasks {
 	private static function exec_sql_query( string $sql_query ) : object {
 
 		$response = new stdClass();
-			$response->result	= false;
+			$response->result = false;
+			$response->errors = [];
 
 		// debug info
-			debug_log(__METHOD__
-				. " Executing ql_query SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
-				, logger::WARNING
-			);
+		debug_log(__METHOD__
+			. " Executing sql_query SQL sentence " . PHP_EOL
+			. ' sql_query: ' . trim($sql_query)
+			, logger::DEBUG
+		);
 
-		//exec the SQL query
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			$response->errors[] = " Error: Invalid database connection";
+			return $response;
+		}
+
+		// exec the SQL query
+		$result = pg_query($conn, $sql_query);
 		if($result===false) {
 			// error case
 			debug_log(__METHOD__
 				." Error Processing sql query Request ". PHP_EOL
-				. pg_last_error(DBi::_getConnection()) .PHP_EOL
+				. pg_last_error($conn) .PHP_EOL
 				. 'sql query: '.to_string($sql_query)
 				, logger::ERROR
 			);
-			// the the PostgreSQL error to show into the response
-			$response->errors[] = " Error Processing sql query Request: ". pg_last_error(DBi::_getConnection());
+			// the PostgreSQL error to show into the response
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error($conn);
 		}
 		// set the result
 		$response->result = $result;
+
+		// Free the result resource if successful
+		if ($result && $result !== false) {
+			pg_free_result($result);
+		}
 
 
 		return $response;
@@ -938,4 +962,7 @@ class db_tasks {
 
 		return $response;
 	}//end analyze_db
+
+
+
 }//end db_tasks
