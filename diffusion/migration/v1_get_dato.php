@@ -101,6 +101,15 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 			}
 			$process->output_format = 'json'; 
 			break;
+		case 'relation_list':
+
+			$parser_process = (object)[					
+				"output_format" => "json"
+			];
+			$process = $parser_process;
+			$process->output_sample = [(object)[ "section_id" => "1", "section_tipo" => "55"]];
+
+			break;
 	}
 
 
