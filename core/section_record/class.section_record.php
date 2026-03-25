@@ -1496,6 +1496,7 @@ class section_record {
 		}
 
 		// assign data_columns from database results
+		// Raw JSON strings are passed to set_column_data for lazy decoding on first access.
 		$columns_name = $this->data_instance->get_columns_name();
 		foreach ($columns_name as $column) {
 
@@ -1505,9 +1506,8 @@ class section_record {
 			}
 
 			if ( $row->$column!==null ) {
-				// JSON case
-				$column_decoded = json_decode($row->$column);
-				$this->data_instance->set_column_data($column, $column_decoded);
+				// Pass raw JSON string; decoded lazily on first access
+				$this->data_instance->set_column_data($column, $row->$column);
 			}
 		}
 
