@@ -1,6 +1,5 @@
 <?php
-
-// DB_PG_DEFINTIONS
+// DB_PG_DEFINITIONS
 //
 // PostgreSQL db definitions for extensions, functions, constraints, indexes and maintenance.
 // This file defines in a common way the SQL sentences to perform into a maintenance process.
@@ -14,7 +13,6 @@
 //		"name" : string, mandatory, the name of the functionality to identify it.
 //		"info" : string, mandatory, additional information about the functionality describing its use.
 //	}
-
 
 // Extensions
 	$ar_extensions = [];
@@ -59,7 +57,7 @@
 		'info' => 'Used to process the relation column and get the string value of section_tipo and section_id as oh1_3'
 	];
 
-	//  Create function with base flat locators st=section_tipo si=section_id (dd64_1)
+	// Create function with base flat locators st=section_tipo si=section_id (dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
@@ -203,7 +201,6 @@
 	// uses unaccent 		- remove any accent in the string
 	// uses lower 			- all letters in lowercase, to be used as case-insensitive
 	// uses regexp_replace 	- remove all HTML tags as <p>
-
 	$ar_function[] = (object)[
 		'add' => '
 			CREATE OR REPLACE FUNCTION get_searchable_string(data jsonb)
@@ -227,12 +224,12 @@
 			SELECT *
 			FROM matrix
 			WHERE
-				get_searchable_string(sting) LIKE f_unaccent(lower(\'%ripoll%\'))
+				get_searchable_string(string) LIKE f_unaccent(lower(\'%ripoll%\'))
 			ORDER BY section_id ASC
 			LIMIT 10;
 		',
 		'name' => 'get_searchable_string',
-		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_seach` column'
+		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_search` column'
 	];
 
 	// check_array_component
@@ -288,79 +285,78 @@
 	$ar_constraint = [];
 
 	// section_id & section_tipo
-			$ar_constraint[] = (object)[
-				'tables' => [
-					'matrix',
-					'matrix_activities',
-					'matrix_activity',
-					'matrix_activity_diffusion',
-					'matrix_dataframe',
-					'matrix_dd',
-					'matrix_hierarchy',
-					'matrix_hierarchy_main',
-					'matrix_indexations',
-					'matrix_langs',
-					'matrix_layout',
-					'matrix_layout_dd',
-					'matrix_list',
-					'matrix_nexus',
-					'matrix_nexus_main',
-					'matrix_notes',
-					'matrix_ontology',
-					'matrix_ontology_main',
-					'matrix_profiles',
-					'matrix_projects',
-					'matrix_stats',
-					'matrix_test',
-					'matrix_tools',
-					'matrix_users'
-				],
-				'add' => '
-					ALTER TABLE IF EXISTS {$table}
-					ADD CONSTRAINT {$table}_section_id_section_tipo_key
-					UNIQUE ( section_id, section_tipo );
-				',
-				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_section_id_section_tipo_key;
-				',
-				'sample' => '
-					INSERT INTO "matrix_projects"
-						(section_id, section_tipo)
-					VALUES
-						(1, \'dd153\');
-				',
-				'name' => 'all_matrix_constraint_section_id_section_tipo_key',
-				'info' => 'Used to avoid duplicated records, is not possible to storage the same section_id with the same section_tipo'
-			];
+		$ar_constraint[] = (object)[
+			'tables' => [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_activity_diffusion',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_langs',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_ontology',
+				'matrix_ontology_main',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_test',
+				'matrix_tools',
+				'matrix_users'
+			],
+			'add' => '
+				ALTER TABLE IF EXISTS {$table}
+				ADD CONSTRAINT {$table}_section_id_section_tipo_key
+				UNIQUE ( section_id, section_tipo );
+			',
+			'drop' => '
+				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_section_id_section_tipo_key;
+			',
+			'sample' => '
+				INSERT INTO "matrix_projects"
+					(section_id, section_tipo)
+				VALUES
+					(1, \'dd153\');
+			',
+			'name' => 'all_matrix_constraint_section_id_section_tipo_key',
+			'info' => 'Used to avoid duplicated records, it is not possible to store the same section_id with the same section_tipo'
+		];
 
 	// tipo_key
-			$ar_constraint[] = (object)[
-				'tables' => [
-					'dd_ontology'
-				],
-				'add' => '
-					ALTER TABLE IF EXISTS {$table}
-					ADD CONSTRAINT {$table}_tipo_key
-					UNIQUE ( tipo );
-				',
-				'drop' => '
-					ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key;
-					DROP INDEX IF EXISTS {$table}_tipo_key;
-				',
-				'sample' => '
-					INSERT INTO "dd_ontology"
-						(tipo)
-					VALUES
-						(\'dd1\');
-				',
-				'name' => 'dd_ontology_constraint_tipo_key',
-				'info' => 'Used to avoid duplicated records, is not possible to storage the same tipo'
-			];
+		$ar_constraint[] = (object)[
+			'tables' => [
+				'dd_ontology'
+			],
+			'add' => '
+				ALTER TABLE IF EXISTS {$table}
+				ADD CONSTRAINT {$table}_tipo_key
+				UNIQUE ( tipo );
+			',
+			'drop' => '
+				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key;
+				DROP INDEX IF EXISTS {$table}_tipo_key;
+			',
+			'sample' => '
+				INSERT INTO "dd_ontology"
+					(tipo)
+				VALUES
+					(\'dd1\');
+			',
+			'name' => 'dd_ontology_constraint_tipo_key',
+			'info' => 'Used to avoid duplicated records, it is not possible to store the same tipo'
+		];
 
 
 // Indexes
 	$ar_index = [];
-
 
 	// dd_ontology and ontology
 
@@ -370,7 +366,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_is_model_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_is_model_idx
 					ON {$table}
 					USING btree ( is_model ASC NULLS LAST );
 				',
@@ -393,7 +389,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_model_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_model_idx
 					ON {$table}
 					USING btree ( model COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -416,7 +412,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_model_tipo_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_model_tipo_idx
 					ON {$table}
 					USING btree ( model_tipo COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -430,7 +426,7 @@
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_model_tipo_idx',
-				'info' => 'Used to search if the descriptor model_tipo'
+				'info' => 'Used to search for the descriptor model_tipo'
 			];
 
 		// order
@@ -439,7 +435,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_order_number_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_order_number_idx
 					ON {$table}
 					USING btree ( order_number ASC NULLS LAST );
 				',
@@ -449,11 +445,11 @@
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
-					WHERE order = 2
+					WHERE order_number = 2
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_order_number_idx',
-				'info' => 'Used to search if the descriptor model_tipo'
+				'info' => 'Used to search for the descriptor order_number'
 			];
 
 		// parent
@@ -462,7 +458,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_parent_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_parent_idx
 					ON {$table}
 					USING btree ( parent ASC NULLS LAST );
 				',
@@ -476,7 +472,7 @@
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_parent_idx',
-				'info' => 'Used to search if the descriptor model_tipo'
+				'info' => 'Used to search for the descriptor parent'
 			];
 
 		// tld
@@ -486,7 +482,7 @@
 					'main_dd'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_tld_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tld_idx
 					ON {$table}
 					USING btree ( tld COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -500,7 +496,7 @@
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_tld_idx',
-				'info' => 'Used to search if the descriptor model_tipo'
+				'info' => 'Used to search for the descriptor tld'
 			];
 
 		// relations
@@ -509,7 +505,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_relations_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relations_idx
 					ON {$table}
 					USING gin ( relations );
 				',
@@ -519,11 +515,11 @@
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
-					WHERE relations = \'tch\'
+					WHERE relations @> ARRAY[\'tch\']
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_relations_idx',
-				'info' => 'Used to search if the descriptor model_tipo'
+				'info' => 'Used to search for descriptor relations'
 			];
 
 		// translatable
@@ -532,7 +528,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_is_translatable_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_is_translatable_idx
 					ON {$table}
 					USING btree ( is_translatable ASC NULLS LAST );
 				',
@@ -555,7 +551,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_parent_order_number_idx
 					ON {$table}
 					USING btree (
 						parent COLLATE pg_catalog.default ASC NULLS LAST,
@@ -572,7 +568,7 @@
 					LIMIT 1;
 				',
 				'name' => 'dd_ontology_parent_order_number_idx',
-				'info' => 'Used to search descriptors by parent, is_descriptor and order'
+				'info' => 'Used to search descriptors by parent and order_number'
 			];
 
 
@@ -608,7 +604,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_id_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST);
 				',
@@ -655,7 +651,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_id_desc_idx
 					ON {$table}
 					USING btree (section_id DESC NULLS LAST);
 				',
@@ -701,7 +697,7 @@
 					'matrix_users'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 				',
@@ -747,7 +743,7 @@
 			// 		'matrix_time_machine'
 			// 	],
 			// 	'add' => '
-			// 		CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
+			// 		CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_section_id_idx
 			// 		ON {$table}
 			// 		USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 			// 	',
@@ -793,7 +789,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
@@ -893,7 +889,7 @@
 				) STORED;
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx;
+				DROP INDEX IF EXISTS {$table}_search_string_gin_idx;
 				ALTER TABLE {$table} DROP COLUMN IF EXISTS search_string;
 			',
 			'sample' => '
@@ -904,7 +900,7 @@
 				ORDER BY section_id ASC
 				LIMIT 10;
 			',
-			'name' => 'all_matrix_strings_value_gin_idx',
+			'name' => 'all_matrix_search_string_column',
 			'info' => 'Used to search literal string values as strings across all sections, it could be used as global search, but is not possible use with specific language'
 		];
 
@@ -986,7 +982,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_gin_idx
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_gin_idx
 				ON {$table}
 				USING gin (
 					relation
@@ -1086,7 +1082,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
@@ -1096,7 +1092,7 @@
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
+				WHERE data_relations_flat_st_si(relation) @> \'["dd64_1"]\'::jsonb;
 				LIMIT 10;
 			',
 			'name' => 'all_matrix_relation_flat_st_si_gin_idx',
@@ -1135,7 +1131,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
@@ -1184,7 +1180,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
@@ -1234,7 +1230,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_si_gin_idx
+				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_ty_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
@@ -1604,7 +1600,7 @@
 					'matrix_activity_diffusion'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_id_desc_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_id_desc_idx
 					ON {$table}
 					USING btree (id DESC NULLS LAST);
 				',
@@ -1675,7 +1671,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
 					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST);
 				',
@@ -1698,7 +1694,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_bulk_process_id_idx
 					ON {$table}
 					USING btree ( bulk_process_id ASC NULLS LAST);
 				',
@@ -1722,7 +1718,7 @@
 			// 		'matrix_time_machine'
 			// 	],
 			// 	'add' => '
-			// 		CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
+			// 		CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_timestamp_idx
 			// 		ON {$table}
 			// 		USING btree ("timestamp" DESC NULLS LAST );
 			// 	',
@@ -1767,7 +1763,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
 					USING btree ("user_id" ASC NULLS LAST );
 					',
@@ -1790,7 +1786,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx
+					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx
 					ON {$table}
 					USING btree (
 						section_id ASC NULLS LAST,
@@ -1815,7 +1811,6 @@
 
 
 // Maintenance
-
 	$ar_maintenance = [];
 
 	// matrix_dd REINDEX
