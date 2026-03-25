@@ -866,4 +866,76 @@ class db_tasks {
 
 
 
+	/**
+	* ANALYZE_DB
+	*
+	* Executes PostgreSQL's ANALYZE command to update statistics for all tables in the database.
+	* This command is essential for maintaining optimal query performance as it helps the
+	* query planner make informed decisions about the most efficient execution plans.
+	*
+	* The ANALYZE command collects statistics about:
+	* - Distribution of values in each column
+	* - Number of distinct values
+	* - Most common values
+	* - Histogram bounds for numeric columns
+	*
+	* Process:
+	* 1. Initializes response object with default values
+	* 2. Executes ANALYZE command on the database
+	* 3. Handles errors by adding them to response without throwing exceptions
+	* 4. Frees the PostgreSQL result resource
+	* 5. Returns response object containing results or errors
+	*
+	* Note: ANALYZE is a read-only operation and does not lock tables for writes.
+	* It's safe to run during normal database operations.
+	*
+	* @return object $response Response object with the following structure:
+	*   - result (mixed): The PostgreSQL result resource or false on failure
+	*   - errors (array): Array of error messages if the query failed
+	*
+	* @example
+	* $response = db_tasks::analyze_db();
+	* if (isset($response->errors)) {
+	*     foreach ($response->errors as $error) {
+	*         echo "Error: " . $error . "\n";
+	*     }
+	* } else {
+	*     echo "Database analyzed successfully\n";
+	* }
+	*/
+	public static function analyze_db() : object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->errors = [];
+
+		// Get and validate database connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			$response->errors[] = " Error: Invalid database connection";
+			return $response;
+		}
+
+		$sql = "ANALYZE;";
+		$result = pg_query($conn, $sql);
+
+		// Error handling for the query
+		if (!$result) {
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error($conn);
+		} else {
+			// Set successful result
+			$response->result = $result;
+		}
+
+		// Free the result resource only if it's valid
+		if ($result) {
+			pg_free_result($result);
+		}
+
+		$response->msg = count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+
+		return $response;
+	}//end analyze_db
 }//end db_tasks

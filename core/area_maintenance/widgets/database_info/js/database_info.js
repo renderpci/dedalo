@@ -83,6 +83,41 @@ database_info.prototype.build = async function(autoload=false) {
 
 
 /**
+* ANALYZE_DB
+* Exec "ANALYZE" command on database for optimal performance.
+* @return promise - api_response
+*/
+database_info.prototype.analyze_db = async function() {
+
+	// API worker call
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'analyze_db'
+			},
+			options	: {}
+		},
+		retries : 1, // one try only
+		timeout : 3600 * 1000 // 1 hour waiting response
+	})
+
+	// remove annoying rqo_string from object
+	if (api_response && api_response.debug && api_response.debug.rqo_string) {
+		delete api_response.debug.rqo_string
+	}
+
+	return api_response
+}//end analyze_db
+
+
+
+/**
 * RECREATE_DB_ASSETS
 * Forces recreate all PostgreSQL main indexes, constraints, extensions and functions.
 * @return promise - api_response
@@ -94,10 +129,12 @@ database_info.prototype.recreate_db_assets = async function() {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
-			source	: {
-				action : 'recreate_db_assets'
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'recreate_db_assets'
 			},
 			options	: {}
 		},
@@ -127,10 +164,12 @@ database_info.prototype.rebuild_db_indexes = async function() {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
-			source	: {
-				action : 'rebuild_db_indexes'
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'rebuild_db_indexes'
 			},
 			options	: {}
 		},
@@ -160,10 +199,12 @@ database_info.prototype.rebuild_db_functions = async function() {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
-			source	: {
-				action : 'rebuild_db_functions'
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'rebuild_db_functions'
 			},
 			options	: {}
 		},
@@ -193,10 +234,12 @@ database_info.prototype.rebuild_db_constraints = async function() {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
-			source	: {
-				action : 'rebuild_db_constraints'
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'rebuild_db_constraints'
 			},
 			options	: {}
 		},
@@ -266,18 +309,21 @@ database_info.prototype.consolidate_tables = async function(tables) {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
 			source			: {
-				action : 'consolidate_tables'
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'consolidate_tables'
 			},
-			options			: {
+			options	: {
 				tables : tables
 			}
 		},
 		retries : 1, // one try only
 		timeout : 3600 * 1000 // 1 hour waiting response
 	})
+
 
 	// remove annoying rqo_string from object
 	if (api_response && api_response.debug && api_response.debug.rqo_string) {
@@ -302,10 +348,12 @@ database_info.prototype.rebuild_user_stats = async function(users) {
 		use_worker	: true,
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
-			source	: {
-				action : 'rebuild_user_stats'
+			source			: {
+				type	: 'widget',
+				model	: 'database_info',
+				action	: 'rebuild_user_stats'
 			},
 			options	: {
 				users : users // array
