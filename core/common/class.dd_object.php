@@ -46,13 +46,14 @@
 * - @property object|null $section_map         Section map. (used by tools) e.g. {"thesaurus": {"term": "hierarchy25", "model": "hierarchy27", "order": "hierarchy48", "parent": "hierarchy36", "is_indexable": "hierarchy24", "is_descriptor": "hierarchy23"}}
 * - @property string|null $color               Color. e.g. "#f1f1f1" (used by sections)
 * - @property string|null $matrix_table        Matrix table. e.g. "matrix_list"
-* - @property string|null $data_fn             Data function. e.g. "get_calculation_data" (It is used in "mdcat2431" for the function that retrieves DDO data.)
+* - @property string|null $data_fn             DEPRECATED. Remove in favor of fn. Data function. e.g. "get_calculation_data" (It is used in "mdcat2431" for the function that retrieves DDO data.)
 *
 * Execution and parsing
 * - @property string|null $fn                  Generic function name to be invoked in the execution context (e.g. custom callbacks)
 * - @property string|null $diffusion_node_tipo Diffusion node tipo used to bind the DDO to a specific diffusion configuration/node
 * - @property object|null $options			   Generic object options container tu pass custom vars across DDOs
 * - @property object|null $parser_args		   Diffusion parser arguments (used by diffusion)
+* - @property object|null $data_slice         Data slice definition. e.g. {"offset":0, "length":1}
 *
 * Runtime
 * - @property array|null  $errors              Collected error messages
@@ -121,6 +122,7 @@ class dd_object extends stdClass implements JsonSerializable {
 	protected ?string $diffusion_tipo = null;
 	protected ?object $options = null;
 	protected ?object $parser_args = null;
+	protected ?object $data_slice = null;
 
 	// Errors
 	protected ?array $errors = null;
@@ -1538,6 +1540,37 @@ class dd_object extends stdClass implements JsonSerializable {
 
 		return $this->parser_args ?? null;
 	}//end get_parser_args
+
+
+
+	/**
+	* SET_DATA_SLICE
+	* Defines a data slice for pagination or partial data retrieval.
+	* Example: {"offset": 0, "length": 1}
+	*
+	* @param object|null $value Object with properties 'offset' (int) and 'length' (int)
+	* @return bool
+	*/
+	public function set_data_slice(?object $value) : bool {
+
+		$this->data_slice = $value;
+
+		return true;
+	}//end set_data_slice
+
+
+
+	/**
+	* GET_DATA_SLICE
+	* Returns the data slice definition if set.
+	* Example: {"offset": 0, "length": 1}
+	*
+	* @return object|null $this->data_slice Object with properties 'offset' (int) and 'length' (int)
+	*/
+	public function get_data_slice() : ?object {
+
+		return $this->data_slice ?? null;
+	}//end get_data_slice
 
 
 
