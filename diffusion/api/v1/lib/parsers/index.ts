@@ -9,7 +9,7 @@ import { default_join, text_format, map_value, v5_html } from './parser_text';
 import { select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
 import date_default from './parser_date';
 import { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, parents } from './parser_locator';
-import { get_first, count, merge } from './parser_helper';
+import { get_first, count, merge, replace } from './parser_helper';
 import { widget } from './parser_info';
 import info_default from './parser_info';
 import { flat } from './parser_iri';
@@ -107,4 +107,4 @@ export { default as date_default, select_properties, select_keys, format_string_
 export { default as info_default, widget } from './parser_info';
 export { flat } from './parser_iri';
 export { geojson } from './parser_geo';
-export { replace as replace_pattern } from './pattern_replacer';
+export { replace as replace_pattern } from './parser_helper';

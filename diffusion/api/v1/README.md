@@ -7,7 +7,7 @@ Bun-based middleware that receives client RQO (Request Query Object) requests, f
 ```
 Client (tool_diffusion) → Apache ProxyPass → Bun (unix socket)
   → PHP diffusion_api (agnostic data + parser config)
-  → Bun applies parsers (text_format, string_date, pattern_replacer)
+  → Bun applies parsers (text_format, string_date, parser_helper)
   → MariaDB (INSERT/UPSERT with section_id + lang key)
 ```
 
@@ -71,7 +71,7 @@ api/v1/
 │       ├── index.ts           # Parser registry & dispatcher
 │       ├── parser_text.ts     # text_format, default_join
 │       ├── parser_date.ts     # string_date
-│       └── pattern_replacer.ts # ${a} pattern replacement
+│       └── parser_helper.ts    # merge, replace (${a}), count, get_first
 └── test/
     └── parsers.test.ts       # Parser unit tests
 ```
