@@ -9,7 +9,7 @@ abstract class backup {
 
 	// Columns to save (used by copy command, etc.)
 	// Do not use id column NEVER here
-	public static $dd_ontology_columns		= 'tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_tanslatable, propiedades';
+	public static $dd_ontology_columns		= 'tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades';
 	public static $checked_download_str_dir	= false;
 
 
@@ -114,9 +114,9 @@ abstract class backup {
 				}
 
 			// Backup file exists (less than an hour apart)
-				$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
-				if (file_exists($mysqlExportPath)) {
-					$msg = " Skipped backup. A recent backup already exists ('$mysqlExportPath'). It is not necessary to build another one";
+				$file_path = DEDALO_BACKUP_PATH_DB . DIRECTORY_SEPARATOR . $db_name . '.custom.backup';
+				if (file_exists($file_path)) {
+					$msg = " Skipped backup. A recent backup already exists ('$file_path'). It is not necessary to build another one";
 					debug_log(__METHOD__
 						. $msg  . PHP_EOL
 						. ' db_name: ' . to_string($db_name)
@@ -129,17 +129,17 @@ abstract class backup {
 					return $response; // stop here
 				}
 
-			// command base. Export the database and output the status to the page
-			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
+			// postgresExportPath . Export the database and output the status to the page
+			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$file_path .'"';
 
 			// process
 				$pfile		= process::get_unique_process_file(); // like 'process_1_2024-03-31_23-47-36_3137757' usually stored in the sessions directory
-				$file_path	= process::get_process_path() .'/' . $pfile; // output file with errors and stream data
+				$file_path	= process::get_process_path() . DIRECTORY_SEPARATOR . $pfile; // output file with errors and stream data
 				$command	= "nohup sh -c 'nice -n 19 $cmd' >$file_path 2>&1 & echo $!";
 
-				// debug
+					// debug
 					debug_log(__METHOD__
-						." Building backup file in background ($mysqlExportPath)". PHP_EOL
+						." Building backup file in background ($file_path)". PHP_EOL
 						." Command: ". PHP_EOL. to_string($command)
 						, logger::DEBUG
 					);
@@ -261,12 +261,14 @@ abstract class backup {
 				$command_history[] = $command;
 
 				# DELETE . Remove previous records
-				$command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE tld = '{$tld}' \" ";
+				$tld_escaped = escapeshellarg($tld);
+				$command = $command_base . " -c \"DELETE FROM \"dd_ontology\" WHERE tld = {$tld_escaped} \" ";
 				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 
 				# COPY . Load data from file
-				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(backup::$dd_ontology_columns).") from {$path_file}\" ";
+				$path_file_escaped = escapeshellarg($path_file);
+				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(backup::$dd_ontology_columns).") from {$path_file_escaped}\" ";
 				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 				break;
@@ -283,7 +285,8 @@ abstract class backup {
 				$command_history[] = $command;
 
 				# COPY . Load data from file
-				$command = $command_base . " -c \"\copy matrix_dd from {$path_file}\" ";
+				$path_file_escaped = escapeshellarg($path_file);
+				$command = $command_base . " -c \"\copy matrix_dd from {$path_file_escaped}\" ";
 				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 				break;
@@ -321,7 +324,19 @@ abstract class backup {
 		# SEQUENCE UPDATE (to the last table id)
 		$strQuery	= 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
 		$result		= pg_query(DBi::_getConnection(), $strQuery);
-		$row		= pg_fetch_row($result);
+		if ($result===false) {
+			$response->result	= false;
+			$response->msg		= 'Error on consolidate sequence: failed to query last id from table: '.$table;
+			debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
+			return $response;
+		}
+		$row = pg_fetch_row($result);
+		if ($row===false) {
+			$response->result	= false;
+			$response->msg		= 'Error on consolidate sequence: no rows found in table: '.$table;
+			debug_log(__METHOD__ . ' No rows found in table: ' . $table, logger::ERROR);
+			return $response;
+		}
 		$last_id	= (int)$row[0];
 		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id
 		$sequence_name	= $table.'_id_seq';
@@ -353,11 +368,26 @@ abstract class backup {
 	*/
 	public static function check_remote_server() : object {
 
+		// Validate required constants
+		if (!defined('STRUCTURE_SERVER_CODE') || empty(STRUCTURE_SERVER_CODE)) {
+			return (object)[
+				'result' => false,
+				'msg' => 'Error: STRUCTURE_SERVER_CODE is not defined or empty'
+			];
+		}
+
+		if (!defined('STRUCTURE_SERVER_URL') || empty(STRUCTURE_SERVER_URL)) {
+			return (object)[
+				'result' => false,
+				'msg' => 'Error: STRUCTURE_SERVER_URL is not defined or empty'
+			];
+		}
+
 		// data
 			$data = array(
 				'code'				=> STRUCTURE_SERVER_CODE,
 				'check_connection'	=> true,
-				'dedalo_version'	=> DEDALO_VERSION
+				'dedalo_version'	=> DEDALO_VERSION ?? 'unknown'
 			);
 			$data_string = 'data=' . json_encode($data);
 
@@ -405,7 +435,7 @@ abstract class backup {
 		}
 
 		// file path
-		$file_path = DEDALO_CORE_PATH . '/common/js/lang/' . $lang . '.js';
+		$file_path = DEDALO_CORE_PATH . DIRECTORY_SEPARATOR . 'common' . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR . 'lang' . DIRECTORY_SEPARATOR . $lang . '.js';
 
 		// content
 		$content = json_encode($ar_label, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -426,9 +456,11 @@ abstract class backup {
 
 		// remove lang cache
 		$cache_file_name = label::build_cache_file_name($lang);
-		dd_cache::delete_cache_files([
-			$cache_file_name
-		]);
+		if (!empty($cache_file_name)) {
+			dd_cache::delete_cache_files([
+				$cache_file_name
+			]);
+		}
 
 		debug_log(__METHOD__
 			. " Generated js labels file for lang: $lang - $file_path " .PHP_EOL
@@ -444,6 +476,7 @@ abstract class backup {
 	/**
 	* MAKE_MYSQL_BACKUP
 	* Make a backup of the MySQL database(s)
+	* @deprecated This method uses deprecated diffusion_mysql class. Consider migrating to dd_diffusion_api.
 	* @return object $response
 	* {
 	* 	result: array|bool [result: true, msg: Backup done web_my_ddbb,..]
@@ -451,6 +484,9 @@ abstract class backup {
 	* }
 	*/
 	public static function make_mysql_backup() : object {
+
+		// Log deprecation warning
+		debug_log(__METHOD__ . " WARNING: This method uses deprecated diffusion_mysql class. Consider migrating to dd_diffusion_api.", logger::WARNING);
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -489,7 +525,7 @@ abstract class backup {
 	*/
 	public static function get_mysql_backup_files() : array {
 
-		$folder_path = DEDALO_BACKUP_PATH . '/mysql';
+		$folder_path = DEDALO_BACKUP_PATH . DIRECTORY_SEPARATOR . 'mysql';
 
 		// bk_files read backup directory
 		$ar_bk_files = (array)glob($folder_path . '/*');
@@ -533,7 +569,7 @@ abstract class backup {
 	*/
 	public static function get_backup_files() : array {
 
-		$folder_path = DEDALO_BACKUP_PATH . '/db';
+		$folder_path = DEDALO_BACKUP_PATH . DIRECTORY_SEPARATOR . 'db';
 
 		// bk_files read backup directory
 		$ar_bk_files = (array)glob($folder_path . '/*');
