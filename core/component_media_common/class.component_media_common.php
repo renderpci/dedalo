@@ -393,6 +393,10 @@ class component_media_common extends component_common {
 				if (empty($data) || empty($data[0])) {
 					return $diffusion_data;
 				}
+				// if the ddo provides a data_slice property, use it to slice the data
+				if(isset($ddo->data_slice)){
+					$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+				}
 				// get the files_info, it has the file_exist parameter that determinate if file exists in the media tree
 				$files_info = $data[0]->files_info ?? [];
 				$found = array_find($files_info, function($el) use ($quality, $extension){

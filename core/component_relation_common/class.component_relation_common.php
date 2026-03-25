@@ -1065,6 +1065,11 @@ class component_relation_common extends component_common {
 		// If the ddo doesn't provide any specific function the component will use a get_url as default.
 		$data = $this->get_data();
 
+		// if the ddo provides a data_slice property, use it to slice the data
+		if(isset($ddo->data_slice)){
+			$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+		}
+
 		// Try hierarchy1 resolution (v5 thesaurus compatibility)
 		if (empty($data) && $this->model==='component_relation_parent') {
 			$hierarchy_parent = $this->get_possible_root_hierarchy();

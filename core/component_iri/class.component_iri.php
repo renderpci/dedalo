@@ -581,6 +581,12 @@ class component_iri extends component_common {
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 			$data = $this->get_data();
+
+			// if the ddo provides a data_slice property, use it to slice the data
+			if(isset($ddo->data_slice)){
+				$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+			}
+
 			if(!empty($data)) {
 				foreach ($data as $current_data) {
 					if(!empty($current_data)) {
