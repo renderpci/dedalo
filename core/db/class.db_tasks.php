@@ -965,4 +965,64 @@ class db_tasks {
 
 
 
+	/**
+	* GET_ANALYZE_CACHE_FILE_NAME
+	* Returns the cache file name for DB ANALYZE timestamp tracking
+	* @return string
+	*/
+	public static function get_analyze_cache_file_name() : string {
+		return 'cache_db_analyze_last_run.php';
+	}//end get_analyze_cache_file_name
+
+
+
+	/**
+	* SHOULD_RUN_ANALYZE
+	* Check if DB ANALYZE should run based on last execution timestamp
+	* Returns true if more than 24 hours have passed since last execution
+	* or if no previous execution record exists
+	* @return bool
+	*/
+	public static function should_run_analyze() : bool {
+
+		$cache_file_name = self::get_analyze_cache_file_name();
+
+		// check if cache file exists
+		$file_exists = dd_cache::cache_file_exists((object)[
+			'file_name'	=> $cache_file_name,
+			'prefix'	=> ''
+		]);
+
+		// no previous execution, should run
+		if ($file_exists===false) {
+			return true;
+		}
+
+		// read cache data
+		$cache_data = dd_cache::cache_from_file((object)[
+			'file_name'	=> $cache_file_name,
+			'prefix'	=> ''
+		]);
+
+		// invalid cache data, should run
+		if (empty($cache_data) || !isset($cache_data->timestamp)) {
+			return true;
+		}
+
+		// check time difference (24 hours = 86400 seconds)
+		$current_time = time();
+		$last_run_time = $cache_data->timestamp;
+		$time_difference = $current_time - $last_run_time;
+
+		// run if more than 24 hours have passed
+		if ($time_difference >= 86400) {
+			return true;
+		}
+
+		// recently executed, skip
+		return false;
+	}//end should_run_analyze
+
+
+
 }//end db_tasks
