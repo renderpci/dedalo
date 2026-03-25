@@ -6,7 +6,7 @@
  * Architecture:
  *   Client → Bun (unix socket via Apache ProxyPass)
  *     → PHP diffusion_api (agnostic data + parser config)
- *     → Bun parses data (parser_text, parser_date, pattern_replacer)
+ *     → Bun parses data (parser_text, parser_date, parser_helper)
  *     → MariaDB (INSERT/UPDATE)
  *     → Client response (NDJSON stream with per-record progress)
  */

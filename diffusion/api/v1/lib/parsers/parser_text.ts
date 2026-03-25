@@ -6,8 +6,7 @@
  * Provides text joining and pattern-based formatting for diffusion data.
  */
 
-import { replace }             from './pattern_replacer';
-import { merge }               from './parser_helper';
+import { merge, replace }      from './parser_helper';
 import type { parser_options, data_item } from '../types';
 
 
