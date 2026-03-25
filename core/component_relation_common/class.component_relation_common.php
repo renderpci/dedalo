@@ -2467,7 +2467,7 @@ class component_relation_common extends component_common {
 
 		$last			= $dd_object->last ?? null;
 		$tipo			= $dd_object->tipo;
-		$data_fn		= $dd_object->data_fn ?? null;
+		$fn				= $dd_object->fn ?? $dd_object->data_fn ?? null; // data_fn is the old name for fn
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
 		$model			= ontology_node::get_model_by_tipo($tipo,true);
@@ -2481,7 +2481,7 @@ class component_relation_common extends component_common {
 			$section_tipo
 		);
 
-		switch ($data_fn) {
+		switch ($fn) {
 			case 'get_calculation_data':
 				$options = $dd_object->options ?? null;
 				$component_data = $component->get_calculation_data($options);
