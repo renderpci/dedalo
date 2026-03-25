@@ -3776,7 +3776,6 @@ function process_node($node, $level) {
 									null,
 									null,
 									null,
-									null,
 									null
 								);
 
