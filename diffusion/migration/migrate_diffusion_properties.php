@@ -3335,8 +3335,28 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] text_area empty props -> get_diffusion_value\n";
 								break;
 							}
-							break;
 
+							// 1 proces datao with geojson
+							$process_dato = $props->process_dato ?? null;
+							if($process_dato && $process_dato === "diffusion_sql::build_geolocation_data_geojson") {
+
+								// Specific for geojson
+								$parser_process = (object)[
+									"fn" => "get_geojson_data"
+								];							
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_format = "json";
+								$new_props->process->output_sample = "Yes";
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] componet_text_area -> diffusion_sql::build_geolocation_data_geojson\n";							
+								break;					
+							}
+
+							break;
 						case 'component_html_text':
 							$is_empty_cd = function($props) {
 								if (empty($props)) return true;
