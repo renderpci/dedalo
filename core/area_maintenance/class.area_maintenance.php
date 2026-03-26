@@ -529,22 +529,42 @@ class area_maintenance extends area_common {
 			$test_data = file_get_contents( dirname(__FILE__) . '/test_data.json' );
 
 		// exec SQL
-			$sql = '
-				TRUNCATE "'.$table.'";
-				ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
-				INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$test_data.'\');
-			';
-			debug_log(__METHOD__
-				." Executing DB query "
-				.to_string($sql)
-				, logger::WARNING
-			);
-			$result = pg_query($db_conn, $sql);
+			// Statement 1: TRUNCATE table
+			$sql1 = 'TRUNCATE TABLE '.$table;
+			$result = pg_query($db_conn, $sql1);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on TRUNCATE: ".pg_last_error($db_conn);
 				debug_log(__METHOD__
 					. $msg . PHP_EOL
-					. ' SQL: ' . $sql
+					. ' SQL: ' . $sql1
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				return $response;
+			}
+
+			// Statement 2: Reset sequence
+			$sql2 = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1';
+			$result = pg_query($db_conn, $sql2);
+			if (!$result) {
+				$msg = " Error on ALTER SEQUENCE: ".pg_last_error($db_conn);
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. ' SQL: ' . $sql2
+					, logger::ERROR
+				);
+				$response->msg = $msg;
+				return $response;
+			}
+
+			// Statement 3: INSERT data (using prepared statement for security)
+			$sql3 = 'INSERT INTO '.$table.' ("section_id", "section_tipo", "datos") VALUES ($1, $2, $3)';
+			$result = pg_query_params($db_conn, $sql3, ['1', $section_tipo, $test_data]);
+			if (!$result) {
+				$msg = " Error on INSERT: ".pg_last_error($db_conn);
+				debug_log(__METHOD__
+					. $msg . PHP_EOL
+					. ' SQL: ' . $sql3
 					, logger::ERROR
 				);
 				$response->msg = $msg;
@@ -923,10 +943,15 @@ class area_maintenance extends area_common {
 			}
 
 		// set config_core constant value
-		area_maintenance::set_config_core((object)[
+		$response = area_maintenance::set_config_core((object)[
 			'name'	=> 'DEDALO_RECOVERY_MODE',
 			'value'	=> $value
 		]);
+
+		// Check for errors before proceeding
+		if (!$response->result) {
+			return $response;
+		}
 
 		// set environmental var accessible in all Dédalo just now
 		$_ENV['DEDALO_RECOVERY_MODE'] = $value;
