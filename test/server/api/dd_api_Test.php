@@ -1092,6 +1092,281 @@ final class dd_api_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_SAVE_INVALID_CHANGED_DATA
+	* Test that save returns error when changed_data is not an array
+	* @return void
+	*/
+	public function test_save_invalid_changed_data() : void {
+
+		$this->user_login();
+
+		// changed_data as string instead of array
+		$rqo = json_decode('
+			{
+				"action": "save",
+				"source": {
+					"typo"			: "source",
+					"type"			: "component",
+					"model"			: "component_input_text",
+					"tipo"			: "test52",
+					"section_tipo"	: "test3",
+					"section_id"	: "1",
+					"lang"			: "'.DEDALO_DATA_LANG.'",
+					"mode"			: "edit"
+				},
+				"data" : {
+					"tipo"				: "test52",
+					"section_tipo"		: "test3",
+					"section_id"		: "1",
+					"lang"				: "'.DEDALO_DATA_LANG.'",
+					"changed_data"		: "invalid_string"
+				}
+			}
+		');
+
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = dd_core_api::save($rqo);
+
+		$this->assertTrue(
+			$response->result === false,
+			'expected result is false for invalid changed_data'
+		);
+
+		$this->assertTrue(
+			in_array('changed_data must be array', $response->errors),
+			'expected "changed_data must be array" error'
+		);
+	}//end test_save_invalid_changed_data
+
+
+
+	/**
+	* TEST_SAVE_MISSING_SOURCE_PROPERTIES
+	* Test that save handles missing source properties gracefully
+	* @return void
+	*/
+	public function test_save_missing_source_properties() : void {
+
+		$this->user_login();
+
+		// Missing tipo, section_tipo, section_id
+		$rqo = json_decode('
+			{
+				"action": "save",
+				"source": {
+					"typo"	: "source",
+					"type"	: "component",
+					"mode"	: "edit"
+				},
+				"data" : {
+					"changed_data": [{
+						"action"	: "update",
+						"key"		: 0,
+						"value"		: "test"
+					}]
+				}
+			}
+		');
+
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+
+		$exception_thrown = false;
+		try {
+			$response = dd_core_api::save($rqo);
+		} catch (Throwable $e) {
+			$exception_thrown = true;
+		}
+
+		// Should either throw exception or return error response
+		$this->assertTrue(
+			$exception_thrown || !empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected exception or error for missing required properties'
+		);
+	}//end test_save_missing_source_properties
+
+
+
+	/**
+	* TEST_SAVE_SEARCH_MODE
+	* Test save in search mode
+	* @return void
+	*/
+	public function test_save_search_mode() : void {
+
+		$this->user_login();
+
+		$rqo = json_decode('
+			{
+				"action": "save",
+				"source": {
+					"typo"			: "source",
+					"type"			: "component",
+					"model"			: "component_input_text",
+					"tipo"			: "test52",
+					"section_tipo"	: "test3",
+					"section_id"	: "search_1",
+					"lang"			: "'.DEDALO_DATA_LANG.'",
+					"mode"			: "search"
+				},
+				"data" : {
+					"tipo"				: "test52",
+					"section_tipo"		: "test3",
+					"section_id"		: "search_1",
+					"lang"				: "'.DEDALO_DATA_LANG.'",
+					"changed_data": [{
+						"action"	: "update",
+						"key"		: 0,
+						"value"		: {
+							"value": "search_test_value"
+						}
+					}]
+				}
+			}
+		');
+
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = dd_core_api::save($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors in search mode: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertTrue(
+			$response->result !== false,
+			'expected result is not false in search mode'
+		);
+	}//end test_save_search_mode
+
+
+
+	/**
+	* TEST_SAVE_INSERT_ACTION
+	* Test save with insert action (pagination calculation)
+	* @return void
+	*/
+	public function test_save_insert_action() : void {
+
+		$this->user_login();
+
+		$rqo = json_decode('
+			{
+				"action": "save",
+				"source": {
+					"typo"			: "source",
+					"type"			: "component",
+					"model"			: "component_portal",
+					"tipo"			: "test80",
+					"section_tipo"	: "test3",
+					"section_id"	: "1",
+					"lang"			: "'.DEDALO_DATA_NOLAN.'",
+					"mode"			: "edit"
+				},
+				"data" : {
+					"tipo"				: "test80",
+					"section_tipo"		: "test3",
+					"section_id"		: "1",
+					"lang"				: "'.DEDALO_DATA_NOLAN.'",
+					"pagination" : {
+						"limit" : 5
+					},
+					"changed_data": [{
+						"action"	: "insert",
+						"key"		: 0,
+						"value"		: {
+							"section_tipo"	: "test3",
+							"section_id"	: "2"
+						}
+					}]
+				}
+			}
+		');
+
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = dd_core_api::save($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors on insert action: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertTrue(
+			$response->result !== false,
+			'expected result is not false on insert action'
+		);
+
+		// Check that pagination was updated
+		if ($response->result !== false) {
+			$context = $response->result->context ?? [];
+			$portal_context = null;
+			foreach ($context as $item) {
+				if (isset($item->tipo) && $item->tipo === 'test80') {
+					$portal_context = $item;
+					break;
+				}
+			}
+			if ($portal_context && isset($portal_context->pagination)) {
+				$this->assertTrue(
+					isset($portal_context->pagination->total),
+					'expected pagination total to be set after insert'
+				);
+			}
+		}
+	}//end test_save_insert_action
+
+
+
+	/**
+	* TEST_SAVE_NULL_CHANGED_DATA_ITEM
+	* Test save with null item in changed_data array
+	* @return void
+	*/
+	public function test_save_null_changed_data_item() : void {
+
+		$this->user_login();
+
+		// changed_data with null as first item
+		$rqo = json_decode('
+			{
+				"action": "save",
+				"source": {
+					"typo"			: "source",
+					"type"			: "component",
+					"model"			: "component_input_text",
+					"tipo"			: "test52",
+					"section_tipo"	: "test3",
+					"section_id"	: "1",
+					"lang"			: "'.DEDALO_DATA_LANG.'",
+					"mode"			: "edit"
+				},
+				"data" : {
+					"tipo"				: "test52",
+					"section_tipo"		: "test3",
+					"section_id"		: "1",
+					"lang"				: "'.DEDALO_DATA_LANG.'",
+					"changed_data": [null]
+				}
+			}
+		');
+
+		$_ENV['DEDALO_LAST_ERROR'] = null;
+		$response = dd_core_api::save($rqo);
+
+		// Should handle gracefully - either error or successful no-op
+		$this->assertTrue(
+			is_object($response),
+			'expected response to be an object'
+		);
+
+		$this->assertTrue(
+			isset($response->result),
+			'expected response to have result property'
+		);
+	}//end test_save_null_changed_data_item
+
+
+
+	/**
 	* TEST_COUNT
 	* @return void
 	*/
