@@ -2912,6 +2912,22 @@ abstract class component_common extends common {
 				// execute the function directly since it's already validated
 				try {
 					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
+
+					switch (true) {
+						// if the function is a method of the current component
+						// it will return any kind of values.
+						case method_exists($this, $fn):
+							$diffusion_data_object->set_value( $fn_data );
+
+							return $diffusion_data;
+						// default, diffusion_fn method loaded by common __call
+						// it will return an array of diffusion_data_object
+						// and the default diffusion_data_object will be replaced
+						default:
+							// overwrite default diffusion data
+							$diffusion_data = $fn_data;
+							break;
+					}
 				} catch (Throwable $e) {
 					debug_log(__METHOD__
 						. " error executing diffusion function " . PHP_EOL

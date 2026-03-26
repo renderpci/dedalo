@@ -1102,17 +1102,22 @@ class component_relation_common extends component_common {
 				try {
 					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
 
-					switch ($fn) {
+					switch (true) {
 						// add parents
-						case 'add_parents':
+						case $fn==='add_parents':
 							$diffusion_data_object->set_value( $data );
 							$diffusion_data_object->parents = $fn_data;
 
 							return $diffusion_data;
-						case 'get_data_with_references':
+						// if the function is a method of the current component
+						// it will return any kind of values.
+						case method_exists($this, $fn):
 							$diffusion_data_object->set_value( $fn_data );
 
 							return $diffusion_data;
+						// default, diffusion_fn method loaded by common __call
+						// it will return an array of diffusion_data_object
+						// and the default diffusion_data_object will be replaced
 						default:
 							// overwrite default diffusion data
 							$diffusion_data = $fn_data;
