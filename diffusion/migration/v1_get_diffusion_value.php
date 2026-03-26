@@ -1045,6 +1045,197 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 		case 'relation_list':
 
 			switch($data_to_be_used){
+				case 'custom':
+					$custom_map = $process_dato_arguments->custom_map ?? [];
+					
+					// Ensure base DDO node for relation_list
+					$ddo_map[0]->info = 'a relation list node, used to obtain the locators that are calling to this section. As lots of sections can be linked here, but the next ddo in the chain will need to use a filter of the locators with specific section, so section_tipo is apply to reduce the data';
+					
+					$v7_map = [];
+					$letter_index = 0;
+					$parser_prechain = [];
+					
+					// Helper to allocate a new letter id
+					$get_letter = function() use (&$letter_index) {
+						return chr(ord('a') + $letter_index++);
+					};
+					
+					// Recursive helper function to parse diffusion objects and build ddo_map
+					$parse_diffusion = function($node, $parent_tipo, $section_tipo) use (&$parse_diffusion, &$ddo_map, &$get_letter, &$parser_prechain) {
+						if (isset($node->process_dato) && $node->process_dato === 'diffusion_sql::return_fixed_value') {
+							$val = $node->process_dato_arguments->value ?? '';
+							if (is_array($val)) {
+								$val = implode(', ', $val);
+							}
+							return $val;
+						}
+
+						$method = $node->component_method ?? null;
+						$args = $node->custom_arguments ?? null;
+						
+						if (is_array($args)) {
+							$args = $args[0] ?? null;
+						}
+						
+						$pda = $args->process_dato_arguments ?? null;
+						if (!$pda) return '';
+						
+						if (isset($pda->process_dato) && $pda->process_dato === 'diffusion_sql::map_locator_to_int' && isset($pda->component_method) && $pda->component_method === 'get_dato') {
+							$target_component_tipo = trim($pda->target_component_tipo ?? "");
+							if (empty($target_component_tipo)) return '';
+							
+							$letter_id = $get_letter();
+							
+							$ddo_map[] = (object)[
+								'id' => $letter_id,
+								'tipo' => $target_component_tipo,
+								'parent' => $parent_tipo,
+								'section_tipo' => $section_tipo
+							];
+							
+							$parser_prechain[] = (object)[
+								'fn' => 'parser_locator::get_section_id',
+								'id' => $letter_id
+							];
+							
+							return '${' . $letter_id . '}';
+						}
+						
+						$dato_splice = $pda->dato_splice ?? null;
+						$target_component_tipo = trim($pda->target_component_tipo ?? "");
+						
+						if (empty($target_component_tipo)) return '';
+						
+						$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
+						$is_relation = in_array($model, component_relation_common::get_components_with_relations());
+						
+						// Create base DDO entry for target
+						$ddo_entry = (object)[
+							'tipo' => $target_component_tipo,
+							'parent' => $parent_tipo,
+							'section_tipo' => $section_tipo
+						];
+						
+						if (isset($dato_splice) && is_array($dato_splice) && isset($dato_splice[0])) {
+							$ddo_entry->data_slice = (object)[
+								'offset' => 0,
+								'length' => (int)$dato_splice[0]
+							];
+						}
+						
+						// If the method resolves another value deeply
+						if ($method === 'get_diffusion_resolve_value' && isset($pda->custom_arguments)) {
+							$ddo_map[] = $ddo_entry;
+							// Find relation's section type to pass down to children if needed
+							$related_section = ontology_node::get_ar_tipo_by_model_and_relation($target_component_tipo, 'section', 'related', true);
+							$child_section_tipo = !empty($related_section) ? $related_section[0] : null;
+							
+							return $parse_diffusion($pda, $target_component_tipo, $child_section_tipo);
+						} 
+						
+						// End of recursion, format string according to relation or normal component
+						if ($is_relation) {
+							$ddo_map[] = $ddo_entry;
+							$pattern_parts = [];
+							
+							$ontology_node_rel = ontology_node::get_instance($target_component_tipo);
+							$properties_rel = $ontology_node_rel->get_properties();
+							$show = $properties_rel->source->request_config[0]->show ?? null;
+							
+							if (!empty($show)) {
+								$deep_ddo = [];
+								foreach ($show->ddo_map as $ddo) {
+									$cloned_ddo = clone $ddo;
+									if ($cloned_ddo->parent === 'self') {
+										$cloned_ddo->parent = $target_component_tipo;
+									}
+									$deep_ddo[] = $cloned_ddo;
+								}
+								
+								foreach ($deep_ddo as $ddo) {
+									$children = array_find($deep_ddo, fn($child) => $child->parent === $ddo->tipo);
+									
+									if (empty($children)) {
+										$letter_id = $get_letter();
+										$ddo_map[] = (object)[
+											'id' => $letter_id,
+											'tipo' => $ddo->tipo,
+											'parent' => $ddo->parent
+										];
+										$pattern_parts[] = '${' . $letter_id . '}';
+									} else {
+										$ddo_map[] = (object)[
+											'tipo' => $ddo->tipo,
+											'parent' => $ddo->parent
+										];
+									}
+								}
+							} else {
+								$related_components = ontology_node::get_ar_tipo_by_model_and_relation($target_component_tipo, 'component_', 'related', false);
+								$related_section = ontology_node::get_ar_tipo_by_model_and_relation($target_component_tipo, 'section', 'related', true);
+								
+								foreach ($related_components as $current_component_tipo) {
+									$letter_id = $get_letter();
+									$ddo_map[] = (object)[
+										'id' => $letter_id,
+										'tipo' => $current_component_tipo,
+										'parent' => $target_component_tipo,
+										'section_tipo' => $related_section[0] ?? ''
+									];
+									$pattern_parts[] = '${' . $letter_id . '}';
+								}
+							}
+							return implode(', ', $pattern_parts);
+						} else {
+							$letter_id = $get_letter();
+							$ddo_entry->id = $letter_id;
+							$ddo_map[] = $ddo_entry;
+							return '${' . $letter_id . '}';
+						}
+					};
+
+					foreach ($custom_map as $v6_map_item) {
+						$map_item = new stdClass();
+						$current_section_tipo = $v6_map_item->section_tipo ?? null;
+						
+						foreach ($v6_map_item as $key => $value) {
+							// Ignore disabled keys
+							if (strpos($key, '***') === 0) continue;
+
+							if (is_string($value)) {
+								$map_item->{$key} = $value;
+							} else if (is_object($value)) {
+								$pattern = $parse_diffusion($value, $tipo, $current_section_tipo);
+								if ($pattern) {
+									$map_item->{$key} = $pattern;
+								}
+							}
+						}
+						// Always include section_id reference Native to V7
+						$map_item->section_id = '${section_id}';
+						$v7_map[] = $map_item;
+					}
+
+					$process_parsers = $parser_prechain;
+					$process_parsers[] = (object)[
+						'fn' => 'parser_map::custom',
+						'info' => 'Create a json data with the result to be insert into the column',
+						'options' => (object)[
+							'map' => $v7_map
+						]
+					];
+
+					$parser_process = (object)[
+						'parser' => $process_parsers,
+						'output_format' => 'json'
+					];
+					
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					
+					break;
 				case 'filtered_values':
 
 					$fields_separator =' | ';
