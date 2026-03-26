@@ -202,12 +202,10 @@ function process_node($node, $level) {
 							// Specific complex object for Enum + Relation
 							$parser_process = [
 								(object)[
-									'fn' => 'parser_locator::get_section_id',
-									'id' => 'a'
+									'fn' => 'parser_locator::get_section_id'
 								],
 								(object)[
-									'fn' => 'parser_helper::get_first',
-									'id' => 'a'
+									'fn' => 'parser_helper::get_first'
 								],
 								(object)[
 									'fn' => 'parser_text::map_value',
