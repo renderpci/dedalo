@@ -10,34 +10,6 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* ITEM_MAKE_BACKUP
-	* Make a copy of the item in database.
-	* @return object $item
-	*/
-	public function item_make_backup() : object {
-
-		// short vars
-			$mysql_db = defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null;
-
-		// item
-			$item = new stdClass();
-				$item->id		= 'make_backup';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('make_backup') ?? 'Make backup';
-				$item->value	= (object)[
-					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
-					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
-					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. logged_user_id() .'_forced_dbv' . implode('-', get_current_data_version()).'.custom.backup',
-					'mysql_db'				=> $mysql_db, // first 10 items
-				];
-
-
-		return $item;
-	}//end item_make_backup
-
-
-
-	/**
 	 * GET_AR_WIDGETS
 	 * Definition of all visible widgets in the area
 	 * Every widget has the client side code in JavaScript
@@ -346,56 +318,13 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GET_DEDALO_BACKUP_FILES
-	* Called from widget 'make_backup'
-	* @param object $options
-	* {
-	* 	max_files: int 10
-	* 	psql_backup_files: bool true
-	* 	mysql_backup_files: bool true
-	* }
-	* @return object $response
-	*/
-	public static function get_dedalo_backup_files(object $options) : object {
-
-		// options
-			$max_files			= $options->max_files ?? 10;
-			$psql_backup_files	= $options->psql_backup_files ?? true;
-			$mysql_backup_files	= $options->mysql_backup_files ?? true;
-
-		// result
-			$result = new stdClass();
-
-			// psql_backup_files
-				if ($psql_backup_files===true) {
-					$files = backup::get_backup_files(); // postgresql files
-					$result->psql_backup_files = array_slice($files, 0, $max_files); // first N items
-				}
-
-			// mysql_backup_files
-				if ($mysql_backup_files===true) {
-					$files = backup::get_mysql_backup_files(); // MariaDB/MySQL files
-					$result->mysql_backup_files = array_slice($files, 0, $max_files); // first N items
-				}
-
-		// response
-			$response = new stdClass();
-				$response->result	= $result;
-				$response->msg		= 'OK. Request done';
-
-
-		return $response;
-	}//end get_dedalo_backup_files
-
-
-	/**
 	* GET_FILE_CONSTANTS
 	* Get all config file constants using a regex
 	* @param string $file
 	* 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
 	* @return array $constants_list
 	*/
-	public static function get_file_constants($file) : array {
+	public static function get_file_constants(string $file) : array {
 
 		if (!file_exists($file)) {
 			return [];
@@ -576,47 +505,6 @@ class area_maintenance extends area_common {
 			return $response;
 		}
 	}//end long_process_stream
-
-
-
-	/**
-	* MAKE_BACKUP
-	* Alias of backup::init_backup_sequence
-	* Exec a full pg_dump of current Dédalo database
-	* Is fired by widget 'make_backup'
-	* @return object $response
-	*/
-	public static function make_backup() : object {
-
-		$user_id				= logged_user_id();
-		$username				= logged_user_username();
-		$skip_backup_time_range	= true;
-
-		$response = backup::init_backup_sequence((object)[
-			'user_id'					=> $user_id,
-			'username'					=> $username,
-			'skip_backup_time_range'	=> $skip_backup_time_range
-		]);
-
-
-		return $response;
-	}//end make_backup
-
-
-
-	/**
-	* MAKE_MYSQL_BACKUP
-	* Alias of backup::make_mysql_backup
-	* Exec a full MySQL dump of current Publication database
-	* @return object $response
-	*/
-	public static function make_mysql_backup() : object {
-
-		$response = backup::make_mysql_backup();
-
-
-		return $response;
-	}//end make_mysql_backup
 
 
 
