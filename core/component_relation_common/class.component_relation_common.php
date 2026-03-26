@@ -1165,7 +1165,7 @@ class component_relation_common extends component_common {
 		// options
 			$save				= $options->save ?? false;
 			$changed			= $options->changed ?? false;
-			$current_data		= $options->current_data ?? false;
+			$current_data		= $options->current_data ?? $options->current_dato ?? false;
 			$references_limit	= $options->references_limit ?? 10;
 
 		// data set
@@ -1235,7 +1235,7 @@ class component_relation_common extends component_common {
 						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
 						, logger::DEBUG
 					);
-					$this->Save();
+					$this->save();
 				// task done. return
 					return true;
 
@@ -1371,7 +1371,7 @@ class component_relation_common extends component_common {
 				}
 
 			$total_ar_result	= sizeof($ar_result);
-			$total_ar_data		= sizeof($data);
+			$total_ar_data		= sizeof((array)$data);
 			$final_data			= [];
 
 			if ($total_ar_result===0 && $total_ar_data===0) {
