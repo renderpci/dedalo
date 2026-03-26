@@ -51,7 +51,8 @@ abstract class logger_backend {
 		int $log_level=logger::INFO,
 		?string $tipo_where=null,
 		?string $operations=null,
-		?array $log_data=null
+		?array $log_data=null,
+		?int $user_id=null
 	) : void;
 
 
