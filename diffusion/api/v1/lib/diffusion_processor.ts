@@ -259,6 +259,12 @@ function process_record(
 				if(e.parents){
 					item.parents = e.parents;
 				}
+				if (e.section_id !== undefined && e.section_id !== null) {
+					item.section_id = e.section_id;
+				}
+				if (e.section_tipo !== undefined && e.section_tipo !== null) {
+					item.section_tipo = e.section_tipo;
+				}
 				return item;
 			});
 			let column_value: string | null = null;
@@ -562,7 +568,8 @@ function apply_parser_chain(
 			if (state.has(parser_def.id)) {
 				input_data = state.get(parser_def.id)!;
 			} else {
-				input_data = data; // New local variable chain starts from original data
+				// Filter original data to only the items matching this id
+				input_data = Array.isArray(data) ? data.filter(d => d && d.id === parser_def.id) : data;
 			}
 		} else {
 			if (state.size > 0) {
@@ -581,6 +588,18 @@ function apply_parser_chain(
 						combined.push({ id: key, value: val });
 					}
 				}
+				
+				// Re-integrate any original data items that were NOT mapped into state
+				if (Array.isArray(data)) {
+					for (const d_orig of data) {
+						if (d_orig && d_orig.id !== null && !state.has(d_orig.id)) {
+							combined.push(d_orig);
+						} else if (d_orig && d_orig.id === null) {
+							combined.push(d_orig);
+						}
+					}
+				}
+				
 				input_data = combined;
 				state.clear();
 			} else {
@@ -633,6 +652,18 @@ function apply_parser_chain(
 				combined.push({ id: key, value: val });
 			}
 		}
+		
+		// Re-integrate any original data items that were NOT mapped into state
+		if (Array.isArray(data)) {
+			for (const d_orig of data) {
+				if (d_orig && d_orig.id !== null && !state.has(d_orig.id)) {
+					combined.push(d_orig);
+				} else if (d_orig && d_orig.id === null) {
+					combined.push(d_orig);
+				}
+			}
+		}
+		
 		return combined;
 	}
 
