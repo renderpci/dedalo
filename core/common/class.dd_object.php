@@ -274,10 +274,15 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TIPO
-	* @param string $value
+	* @param string|null $value
 	* @return bool
 	*/
-	public function set_tipo(string $value) : bool  {
+	public function set_tipo( ?string $value ) : bool  {
+
+		if(empty($value)) {
+			$this->tipo = null;
+			return true;
+		}
 
 		if(!get_tld_from_tipo($value)) {
 
