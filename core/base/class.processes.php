@@ -34,6 +34,29 @@ class processes {
 	 */
 	public static function add( int $user_id, int $pid, string $pfile ) : object {
 
+		// Input validation
+			if ($user_id < -1) { // -1 is DEDALO_SUPERUSER
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Invalid user_id';
+				$response->errors = ['invalid user_id'];
+				return $response;
+			}
+			if ($pid <= 0) {
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Invalid PID';
+				$response->errors = ['invalid pid'];
+				return $response;
+			}
+			if (empty($pfile)) {
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Empty pfile';
+				$response->errors = ['empty pfile'];
+				return $response;
+			}
+
 		// Initialize response object
 			$response = new stdClass();
 				$response->result	= false;
@@ -68,24 +91,40 @@ class processes {
 					$response->errors[]	= 'Create new record fails';
 					return $response;
 				}
+				// Re-fetch data after INSERT to handle race condition
+				$sql_query = 'SELECT data FROM "'.$table.'" WHERE id = $1';
+				$res = matrix_db_manager::exec_search($sql_query, [$id]);
+				if(!$res || pg_num_rows($res) < 1) {
+					$response->msg = 'Error. Request failed to re-fetch after insert: ' . $sql_query;
+					$response->errors[] = 'database error after insert';
+					return $response;
+				}
+				$data = pg_fetch_result($res, 0, 0);
 			}else{
 				$data = pg_fetch_result($res, 0, 0);
 			}
 
 			// Decode JSON data and ensure it's a valid array
-			$data = json_decode($data);
-			if (!is_array($data)) {
-				$data = [];
+			$json_data = json_decode($data);
+			if (json_last_error() !== JSON_ERROR_NONE) {
+				$response->msg = 'Error decoding JSON data: ' . json_last_error_msg();
+				$response->errors[] = 'json decode error';
+				return $response;
 			}
+			$data = is_array($json_data) ? $json_data : [];
 
 		// Check if this process is already registered
 			$found_row = array_find($data, function($el) use($user_id, $pid){
 				return isset($el->pid) && $el->pid === $pid && isset($el->user_id) && $el->user_id === $user_id;
 			});
 			if (!is_null($found_row)) {
+				$response->result	= false;
 				$response->msg		= 'Process '.$pid.' already exists';
 				return $response;
 			}
+
+		// Sanitize pfile parameter to prevent path injection
+			$pfile = basename($pfile);
 
 		// Create and append the new process item
 			$data_item = (object)[
@@ -132,6 +171,22 @@ class processes {
 	 */
 	public static function stop( int $pid, int $user_id ) : object {
 
+		// Input validation
+			if ($pid <= 0) {
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Invalid PID';
+				$response->errors = ['invalid pid'];
+				return $response;
+			}
+			if ($user_id < -1) { // -1 is DEDALO_SUPERUSER
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Invalid user_id';
+				$response->errors = ['invalid user_id'];
+				return $response;
+			}
+
 		// Initialize response
 			$response = new stdClass();
 				$response->result	= false;
@@ -143,12 +198,14 @@ class processes {
 			$table	= self::PROCESSES_TABLE;
 
 		// Authorization check: Only the process owner or the superuser can stop a process
+			// Note: Superuser can stop any process, regular users can only stop their own
 			if ($user_id!==DEDALO_SUPERUSER) {
-				if ($user_id !== logged_user_id()) {
+				$logged_user_id = logged_user_id();
+				if ($logged_user_id === null || $user_id !== $logged_user_id) {
 					debug_log(__METHOD__
 						. " user id is not the current user logged" . PHP_EOL
 						. ' user_id: ' . $user_id . PHP_EOL
-						. ' logged_user_id: ' . logged_user_id()
+						. ' logged_user_id: ' . $logged_user_id
 						, logger::ERROR
 					);
 					$response->result	= false;
@@ -175,7 +232,17 @@ class processes {
 
 		// Parse the stored data
 			$row	= pg_fetch_result($res, 0, 0);
-			$data	= json_decode($row) ?? [];
+			$json_data = json_decode($row);
+			if (json_last_error() !== JSON_ERROR_NONE) {
+				debug_log(__METHOD__
+					. " Unable to decode JSON data: " . json_last_error_msg()
+					, logger::ERROR
+				);
+				$response->result	= false;
+				$response->errors[] = 'json decode error';
+				return $response;
+			}
+			$data = is_array($json_data) ? $json_data : [];
 
 		// Double check parsed data
 			if (empty($data)) {
@@ -256,13 +323,23 @@ class processes {
 	 */
 	public static function delete_process_item( int $pid, int $user_id ) : bool {
 
+		// Input validation
+			if ($pid <= 0) {
+				return false;
+			}
+			if ($user_id < -1) { // -1 is DEDALO_SUPERUSER
+				return false;
+			}
+
 		// Ensure the operating user is authorized (owner or superuser)
+			// Note: Superuser can delete any process, regular users can only delete their own
 			if ($user_id!==DEDALO_SUPERUSER) {
-				if ($user_id !== logged_user_id()) {
+				$logged_user_id = logged_user_id();
+				if ($logged_user_id === null || $user_id !== $logged_user_id) {
 					debug_log(__METHOD__
 						. " user id is not the current user logged" . PHP_EOL
 						. ' user_id: ' . $user_id . PHP_EOL
-						. ' logged_user_id: ' . logged_user_id()
+						. ' logged_user_id: ' . $logged_user_id
 						, logger::ERROR
 					);
 					return false;
@@ -282,10 +359,11 @@ class processes {
 			}
 
 			$row	= pg_fetch_result($res, 0, 0);
-			$data	= json_decode($row);
-			if (!is_array($data)) {
+			$json_data = json_decode($row);
+			if (json_last_error() !== JSON_ERROR_NONE || !is_array($json_data)) {
 				return false;
 			}
+			$data = $json_data;
 
 		// Filter out the target process
 		$new_data = [];
