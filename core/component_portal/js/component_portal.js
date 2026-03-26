@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone,object_to_url_vars,open_window,get_section_id_from_tipo} from '../../common/js/utils/index.js'
+	import {clone,object_to_url_vars, open_window, get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
@@ -27,6 +27,7 @@
 
 /**
 * COMPONENT_PORTAL
+* Portal component for managing relationships between sections
 */
 export const component_portal = function() {
 
@@ -76,7 +77,7 @@ export const component_portal = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component functions from component common
 */
 // prototypes assign
 	// life-cycle
@@ -106,9 +107,18 @@ export const component_portal = function() {
 
 /**
 * INIT
-* Fix instance main properties
-* @param object options
-* @return bool
+* Fix instance main properties and set up event listeners
+* @param {object} options - Initialization options
+* @param {string} [options.id] - Component ID
+* @param {string} [options.tipo] - Component tipo
+* @param {string} [options.section_tipo] - Section tipo
+* @param {string} [options.section_id] - Section ID
+* @param {string} [options.mode] - Component mode (edit, list, etc.)
+* @param {string} [options.lang] - Language code
+* @param {object} [options.columns_map] - Columns configuration
+* @param {object} [options.caller_dataframe] - Caller dataframe reference
+* @param {Array} [options.request_config] - Request configuration array
+* @returns {Promise<boolean>} Returns true if initialization successful
 */
 component_portal.prototype.init = async function(options) {
 
@@ -190,7 +200,7 @@ component_portal.prototype.init = async function(options) {
 			)
 
 		// link_term. Observes thesaurus tree link index button click
-			const link_term_handler = (locator) => {
+			const link_term_handler = async (locator) => {
 
 				switch (self.view) {
 					case 'indexation': {
@@ -244,13 +254,11 @@ component_portal.prototype.init = async function(options) {
 					}
 
 				// add locator selected
-					self.link_record(locator)
-					.then(function(result){
-						if (result===false) {
-							alert("Value already exists! "+ JSON.stringify(locator));
-							return
-						}
-					})
+					const result = await self.link_record(locator)
+					if (result===false) {
+						alert("Value already exists! "+ JSON.stringify(locator));
+						return
+					}
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('link_term_' + self.id, link_term_handler)
@@ -359,8 +367,8 @@ component_portal.prototype.init = async function(options) {
 /**
 * BUILD
 * Load and parse necessary data to create a full ready instance
-* @param bool autoload = false
-* @return bool
+* @param {boolean} [autoload=false] - Whether to autoload data
+* @returns {Promise<boolean>} Returns true if build successful
 */
 component_portal.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
@@ -720,13 +728,17 @@ component_portal.prototype.build = async function(autoload=false) {
 
 
 /**
-* ADD_VALUE
+* LINK_RECORD
+* Adds a record to the portal data
 * Called from service autocomplete when the user selects a datalist option
 * Uses component_common function change_value to call API
 * @verified 07-09-2023 Paco
-* @param object value
-* 	(locator)
-* @return bool
+* @param {object} value - The locator object to add
+* @param {string} value.section_tipo - Section tipo
+* @param {string|number} value.section_id - Section ID
+* @param {string} [value.tag_id] - Tag ID for indexation
+* @param {string} [value.type] - Relation type
+* @returns {Promise<boolean>} Returns false if value already exists, true otherwise
 */
 component_portal.prototype.link_record = async function(value) {
 
@@ -854,13 +866,13 @@ component_portal.prototype.link_record = async function(value) {
 
 /**
 * ADD_NEW_ELEMENT
+* Creates a new element in the target section and adds it to the portal
 * Called from button add
 * Create an new record in the target section and add the result locator as value to current component
 * (Set default project too based on current user privileges and assigned projects)
 * @verified 07-09-2023 Paco
-* @param string target_section_tipo
-* 	Like: rsc197
-* @return bool
+* @param {string} target_section_tipo - The section tipo where to create the new element
+* @returns {Promise<boolean>} Returns true if successful
 */
 component_portal.prototype.add_new_element = async function(target_section_tipo) {
 
@@ -921,10 +933,9 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 
 /**
 * DATA_LIMIT_REACHED
-* @param object self
-* 	component instance
-* @return bool
-* 	true on reached
+* Checks if the portal has reached its maximum allowed records
+* @param {object} self - Component instance
+* @returns {boolean} Returns true if limit is reached, false otherwise
 */
 const data_limit_reached = function (self) {
 
@@ -955,8 +966,9 @@ const data_limit_reached = function (self) {
 
 /**
 * UPDATE_PAGINATION_VALUES
-* @param string action
-* @return bool true
+* Updates pagination values based on action
+* @param {string} action - Pagination action ('next', 'previous', 'first', 'last', 'page')
+* @returns {boolean} Returns true if successful
 */
 component_portal.prototype.update_pagination_values = function(action) {
 
@@ -1036,7 +1048,7 @@ component_portal.prototype.update_pagination_values = function(action) {
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
 * This function is fired directly to add or unlink a locator or by event defined in properties look: rsc860
-* @param object options
+* @param object options - Filter options
 * sample
 * {
 *	"tag": {
@@ -1047,8 +1059,9 @@ component_portal.prototype.update_pagination_values = function(action) {
 *		"label": "",
 *		"data": ""
 *	}
-* }
-* @return promise self.render
+* @param {object} options.tag - Tag object with tag_id and other properties
+* @param {string} options.tag.tag_id - Tag ID to filter by
+* @returns {Promise<object>} Returns self.render promise
 */
 component_portal.prototype.filter_data_by_tag_id = function(options) {
 
@@ -1091,8 +1104,8 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 
 /**
 * RESET_FILTER_DATA
-* reset filtered data to the original and full server data
-* @return promise self.render
+* Reset filtered data to the original and full server data
+* @returns {Promise<object>} Returns self.render promise
 */
 component_portal.prototype.reset_filter_data = function() {
 
@@ -1123,7 +1136,8 @@ component_portal.prototype.reset_filter_data = function() {
 
 /**
 * GET_SEARCH_VALUE
-* @return array new_value
+* Gets the current search value from the portal
+* @returns {Array} Array of locators representing the search value
 */
 component_portal.prototype.get_search_value = function() {
 
@@ -1151,8 +1165,10 @@ component_portal.prototype.get_search_value = function() {
 * NAVIGATE
 * Refresh the portal instance with new sqo params.
 * Used to paginate and sort records
-* @param object options
-* @return bool
+* @param {object} options - Navigation options
+* @param {string} options.action - Navigation action
+* @param {number} [options.offset] - Page offset for 'page' action
+* @returns {Promise<boolean>} Returns true if navigation successful
 */
 component_portal.prototype.navigate = async function(options) {
 
@@ -1194,16 +1210,12 @@ component_portal.prototype.navigate = async function(options) {
 
 /**
 * DELETE_LOCATOR
-* @param object locator
-* 	Locator complete or partial to match as
-* {
-*	tag_id	: tag_id,
-*	type	: DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96
-* }
-* @param array ar_properties
-* 	To compare locators as ['tag_id','type']
-* @return promise
-* 	resolve object response
+* Deletes a locator from the portal data
+* @param {object} locator - Locator complete or partial to match
+* @param {string} [locator.tag_id] - Tag ID to match
+* @param {string} [locator.type] - Relation type (e.g., DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96)
+* @param {Array<string>} ar_properties - Properties to compare locators (e.g., ['tag_id','type'])
+* @returns {Promise<object>} API request response
 */
 component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
@@ -1237,9 +1249,11 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 * Used by on_drop method
 * @see on_drop
 * @verified 07-09-2023 Paco
-* @param object options
-* @return object
-*  API request response
+* @param {object} options - Sort options
+* @param {object} options.value - Value to sort
+* @param {string} options.source_key - Source key
+* @param {string} options.target_key - Target key
+* @returns {Promise<object>} API request response
 */
 component_portal.prototype.sort_data = async function(options) {
 
@@ -1279,9 +1293,9 @@ component_portal.prototype.sort_data = async function(options) {
 
 /**
 * GET_TOTAL
-* this function is for compatibility with section and paginator
-* total is resolved in server and comes in data, so it's not necessary call to server to get it
-* @return int self.total
+* Gets the total number of records in the portal
+* Total is resolved in server and comes in data, so it's not necessary call to server to get it
+* @returns {Promise<number>} Returns self.total
 */
 component_portal.prototype.get_total = async function() {
 
@@ -1294,14 +1308,12 @@ component_portal.prototype.get_total = async function() {
 
 /**
 * UNLINK_RECORD
-* Remove locator from component
-* @verified 07-09-2023 Paco
-* @param object options
-* {
-* 	paginated_key: paginated_key
-*	section_id : section_id
-* }
-* @return bool
+* Removes a record from the portal
+* @param {object} options - Unlink options
+* @param {number} options.paginated_key - Index in the paginated data
+* @param {string} [options.row_key] - Row key identifier
+* @param {string|number} options.section_id - Section ID
+* @returns {Promise<boolean>} Returns true if successful
 */
 component_portal.prototype.unlink_record = async function(options) {
 
@@ -1364,15 +1376,12 @@ component_portal.prototype.unlink_record = async function(options) {
 
 /**
 * DELETE_LINKED_RECORD
-* Generic section remove in mode 'delete_record'
-* @see section.delete_section
-* @param object options
-* {
-*	section_tipo : section_tipo,
-*	section_id : section_id,
-*	caller_dataframe : caller_dataframe
-* }
-* @return bool delete_section_result
+* Deletes a record that is linked in the portal
+* @param {object} options - Delete options
+* @param {object} options.locator - The locator of the record to delete
+* @param {string} options.locator.section_tipo - Section tipo
+* @param {string|number} options.locator.section_id - Section ID
+* @returns {Promise<boolean>} Returns delete_section_result
 */
 component_portal.prototype.delete_linked_record = async function(options) {
 
@@ -1432,16 +1441,12 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 /**
 * EDIT_RECORD_HANDLER
-* Unified way to open new window for view/edit
-* Event 'button_edit_click' fire this
-* On window blur, a event is published
-* for dedalo engine sections
-* @param object options
-* {
-* 	section_tipo: oh1
-*	section_id : 16
-* }
-* @return object new_window
+* Opens a record in edit mode in a new window
+* @param {object} options - Edit options
+* @param {object} options.locator - The locator of the record to edit
+* @param {string} options.locator.section_tipo - Section tipo
+* @param {string|number} options.locator.section_id - Section ID
+* @returns {Promise<object>} Returns new_window object
 */
 component_portal.prototype.edit_record_handler = async function(options) {
 
@@ -1548,9 +1553,9 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 /**
 * FOCUS_FIRST_INPUT
-* Captures ui.component.activate calls
-* to prevent default behavior
-* @return bool
+* Sets focus to the first input element in the portal
+* Used to prevent default behavior
+* @returns {boolean} Returns true if focus was set
 */
 component_portal.prototype.focus_first_input = function() {
 
@@ -1561,14 +1566,11 @@ component_portal.prototype.focus_first_input = function() {
 
 /**
 * OPEN_ONTOLOGY_WINDOW
-* Unified open ontology window method used to relate terms or search a target tern in tree view (area_ontology)
-* @param string thesaurus_mode
-* 	default|relation
-* @param string search_tipos
-* 	Separated by commas list of tipos to search in ontology tree
-* 	e.g. 'rsc32,rsc88'
-* @return object tree_window
-* 	instance of the created/recycled window
+* Opens the ontology/thesaurus window for term selection
+* Unified open ontology window method used to relate terms or search a target term in tree view (area_ontology)
+* @param {string} thesaurus_mode - Thesaurus mode ('relation', 'search', etc.)
+* @param {Array<string>} [search_tipos] - Array of tipos to search for
+* @returns {object} tree_window - Instance of the created/recycled window
 */
 component_portal.prototype.open_ontology_window = function (thesaurus_mode, search_tipos) {
 
@@ -1644,9 +1646,9 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 
 /**
 * IS_EMPTY
-* Check if the instance data is empty.
-* Used in search mode for hilite the component wrapper when has value.
-* @return bool
+* Checks if the portal has any data
+* Used in search mode for highlight the component wrapper when has value
+* @returns {boolean} Returns true if portal is empty
 */
 component_portal.prototype.is_empty = function() {
 

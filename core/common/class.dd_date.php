@@ -1053,9 +1053,6 @@ class dd_date implements JsonSerializable {
 
 
 
-
-
-
 	/**
 	* SET_TIMESTAMP
 	* @param string|null $value
@@ -1066,6 +1063,8 @@ class dd_date implements JsonSerializable {
 		return true;
 	}//end set_timestamp
 
+
+
 	/**
 	* GET_TIMESTAMP
 	* @return string|null $this->timestamp
@@ -1073,6 +1072,8 @@ class dd_date implements JsonSerializable {
 	public function get_timestamp() : ?string {
 		return $this->timestamp ?? null;
 	}//end get_timestamp
+
+
 
 	/**
 	* JSON_SERIALIZE
@@ -1085,6 +1086,8 @@ class dd_date implements JsonSerializable {
 			return $val !== null;
 		});
 	}//end jsonSerialize
+
+
 
 }//end class dd_date
 

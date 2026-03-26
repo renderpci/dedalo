@@ -5,6 +5,32 @@
 */
 class ontology {
 
+	// Cache management constants
+	const MAX_CACHE_SIZE = 1000;
+
+	/**
+	* MANAGE_CACHE_SIZE
+	* Controls cache size to prevent memory leaks by limiting cache entries.
+	* Keeps only the most recent entries when limit is exceeded.
+	* @param array &$cache Reference to the cache array
+	* @return void
+	*/
+	protected static function manage_cache_size(array &$cache) : void {
+		if (count($cache) > self::MAX_CACHE_SIZE) {
+			// Keep only the most recent entries
+			$cache = array_slice($cache, -self::MAX_CACHE_SIZE, null, true);
+		}
+	}
+
+	/**
+	* CLEAR
+	* Purges persistent caches to prevent memory leaks across worker requests.
+	*/
+	public static function clear() : void {
+		self::$cache_ontology_sections = [];
+		self::$cache_active_ontology_elements = [];
+	}
+
 
 
 	// Table where ontology data is stored
@@ -16,7 +42,7 @@ class ontology {
 
 	// cache
 	public static $cache_ontology_sections;
-	public static $active_ontology_elements_cache;
+	public static $cache_active_ontology_elements;
 
 
 	/**
@@ -1305,6 +1331,8 @@ class ontology {
 		// cache
 		if ( !empty($ontology_sections) ) {
 			self::$cache_ontology_sections = $ontology_sections;
+			// Manage cache size to prevent memory leaks
+			self::manage_cache_size(self::$cache_ontology_sections);
 		}
 
 		return $ontology_sections;
@@ -1357,8 +1385,8 @@ class ontology {
 	public static function get_active_elements() : array {
 
 		// cache
-		if ( isset(self::$active_ontology_elements_cache) ) {
-			return self::$active_ontology_elements_cache;
+		if ( isset(self::$cache_active_ontology_elements) ) {
+			return self::$cache_active_ontology_elements;
 		}
 
 		// main filter: only 'Active' records (hierarchy4 = 1)
@@ -1409,7 +1437,9 @@ class ontology {
 		}
 
 		// cache
-		self::$active_ontology_elements_cache = $active_elements;
+		self::$cache_active_ontology_elements = $active_elements;
+		// Manage cache size to prevent memory leaks
+		self::manage_cache_size(self::$cache_active_ontology_elements);
 
 		return $active_elements;
 	}//end get_active_elements

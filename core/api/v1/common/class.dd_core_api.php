@@ -433,7 +433,7 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
-						case (strpos($model, 'tool_')===0):
+						case str_starts_with($model, 'tool_'):
 
 							// resolve tool from name and user
 								$user_id			= logged_user_id();
@@ -465,7 +465,7 @@ final class dd_core_api {
 								}
 							break;
 
-						case (strpos($model, 'area')===0):
+						case str_starts_with($model, 'area'):
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
@@ -487,7 +487,7 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
-						case (strpos($model, 'component_')===0):
+						case str_starts_with($model, 'component_'):
 
 							$component_lang	= (ontology_node::get_translatable($tipo)===true)
 								? $lang
@@ -640,7 +640,7 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// Init the DB connection (consumes 4 - 6 ms)
+		// Init the DB connection (consumes 4 - 8 ms)
 			$conn = DBi::_getConnection();
 
 		// redirect to the method
@@ -1002,7 +1002,7 @@ final class dd_core_api {
 	* 	remove		// removes a item value from the component data array
 	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
-	* @param object $json_data
+	* @param object $rqo
 	* sample:
 		* {
 		*    "action": "save",
@@ -1057,20 +1057,20 @@ final class dd_core_api {
 			$data	= $rqo->data ?? new stdClass();
 
 		// short vars
-			$tipo				= $source->tipo;
+			$tipo				= $source->tipo ?? null;
 			$model				= $source->model ?? ontology_node::get_model_by_tipo($tipo,true);
-			$section_tipo		= $source->section_tipo;
-			$section_id			= $source->section_id;
+			$section_tipo		= $source->section_tipo ?? null;
+			$section_id			= $source->section_id ?? null;
 			$mode				= $source->mode ?? 'list';
 			$view				= $source->view ?? null;
-			$lang				= $source->lang;
-			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
+			$lang				= $source->lang ?? DEDALO_DATA_LANG;
+			$type				= $source->type ?? null; // the type of the dd_object that is calling to update like 'component'
 			$changed_data		= $data->changed_data ?? null;
 			$caller_dataframe	= $source->caller_dataframe ?? null;
 			$is_temporal		= $source->is_temporal ?? false;
 
 		// activity section check
-			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
+			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && !str_starts_with($section_id, 'search_')) {
 				$response->msg = 'Error. Illegal save to activity';
 				$response->errors[] = 'illegal section tipo';
 				debug_log(__METHOD__
@@ -1122,14 +1122,15 @@ final class dd_core_api {
 
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
-						$changed_data = [$changed_data];
 						$response->errors[]	= 'changed_data must be array';
+						$response->msg		= 'Error. changed_data must be array';
 						debug_log(__METHOD__
 							." ERROR. var 'changed_data' expected to be array. Received type: " . PHP_EOL
-							.' type: ' 			. gettype($changed_data) . PHP_EOL
-							.' changed:data: ' 	. to_string($changed_data)
+							.' type: '			. gettype($changed_data) . PHP_EOL
+							.' changed:data: '	. to_string($changed_data)
 							, logger::ERROR
 						);
+						return $response;
 					}
 
 				if ($mode==='search') {
@@ -1166,8 +1167,8 @@ final class dd_core_api {
 							.' exec time: '.exec_time_unit($start_time).' ms'
 							, logger::DEBUG
 						);
-						$save_result = $component->Save();
-						if (is_null($save_result)) {
+						$save_result = $component->save();
+						if ($save_result === null) {
 							$response->errors[]	 = 'error on save';
 							$response->msg		.= ' Error on component Save. data it\'s not saved! ';
 							debug_log(__METHOD__
@@ -1180,12 +1181,10 @@ final class dd_core_api {
 						}
 
 					// force recalculate data
-						$data = $component->get_data();
+						$component_data = $component->get_data();
 
 					// changed_data action: sort_data, add_new_element, insert, remove ..
-						$changed_data_action = isset($changed_data[0])
-							? $changed_data[0]->action
-							: null;
+						$changed_data_action = $changed_data[0]?->action ?? null;
 
 					// pagination. Update offset based on save request (portals)
 						// data->pagination->limit
@@ -1199,41 +1198,30 @@ final class dd_core_api {
 							case 'insert': // from service_autocomplete choose selection
 
 								// pagination
-									$total	= empty($data) ? 0 : count($data);
-									$limit	= isset($component->pagination->limit)
-										? (int)$component->pagination->limit
-										: 10;
-									$pages	= $limit>0
-										? (int)ceil($total / $limit)
-										: 1;
-									$offset	= $limit>=$total
-										? 0
-										: $limit * ($pages - 1);
+								$total	= empty($component_data) ? 0 : count($component_data);
+								$limit	= isset($component->pagination->limit)
+									? (int)$component->pagination->limit
+									: 10;
+								$pages	= $limit > 0
+									? (int)ceil($total / $limit)
+									: 1;
+								$offset	= $limit >= $total
+									? 0
+									: $limit * ($pages - 1);
 
-									// overwrite values
-									$component->pagination->limit	= $limit;
-									$component->pagination->total	= $total;
-									$component->pagination->offset	= $offset;
-									if(SHOW_DEBUG===true) {
-										// dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
-									}
+								// overwrite values
+								$component->pagination->limit	= $limit;
+								$component->pagination->total	= $total;
+								$component->pagination->offset	= $offset;
 								break;
 
 							default:
 								// Nothing to do
 								break;
 						}
-
-					// pagination. Update offset based on save request (portals)
-						// if (isset($data->pagination) && isset($data->pagination->offset)) {
-						// 	$component->pagination->offset = $data->pagination->offset;
-						// }
-						// if (isset($data->pagination) && isset($data->pagination->limit)) {
-						// 	$component->pagination->limit = $data->pagination->limit;
-						// }
 				}
 
-				// datalist. if is received, inject to the component for recycle
+				// datalist. If is received, inject to the component for recycle
 					if (isset($data->datalist)) {
 						$component->set_datalist($data->datalist);
 					}
@@ -1411,11 +1399,11 @@ final class dd_core_api {
 					// 	$element->set_rqo([$source]); // inject whole source
 					// 	break;
 
-				case strpos($model, 'area')===0:
+				case str_starts_with($model, 'area'):
 					$element = area::get_instance($model, $tipo, $mode);
 					break;
 
-				case strpos($model, 'component_')===0:
+				case str_starts_with($model, 'component_'):
 
 					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
@@ -1431,7 +1419,7 @@ final class dd_core_api {
 					);
 					break;
 
-				case strpos($model, 'tool_')===0:
+				case str_starts_with($model, 'tool_'):
 
 					// tool section_tipo and section_id can be resolved from model if is necessary
 						// if (empty($section_id)) {
@@ -1846,7 +1834,7 @@ final class dd_core_api {
 
 				case 'get_data': // Used by components and areas
 
-					if (strpos($model, 'component_')===0) {
+					if (str_starts_with($model, 'component_')) {
 
 						if ($section_id<1) {
 							// invalid call
@@ -1872,7 +1860,6 @@ final class dd_core_api {
 								);
 
 							// time machine matrix_id.
-								// if ($mode==='tm') {
 								if (isset($ddo_source->matrix_id)) {
 									// set matrix_id value to component to allow it search data in
 									// matrix_time_machine component function 'get_data' will be
@@ -1896,7 +1883,7 @@ final class dd_core_api {
 								}
 
 							// properties optional
-								if (!empty($properties)){
+								if (!empty($properties)) {
 									$element->set_properties($properties);
 								}
 
@@ -1922,7 +1909,7 @@ final class dd_core_api {
 
 						}//end if ($section_id>=1)
 
-					}else if (strpos($model, 'area')===0) {
+					}else if (str_starts_with($model, 'area')) {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
@@ -1972,7 +1959,7 @@ final class dd_core_api {
 
 				case 'resolve_data': // Used by components in search mode like portals to resolve locators data
 
-					if (strpos($model, 'component')===0) {
+					if (str_starts_with($model, 'component')) {
 
 						// component
 							$component_lang	= (ontology_node::get_translatable($tipo)===true)
@@ -2042,9 +2029,6 @@ final class dd_core_api {
 							$get_json_options->get_context	= true;
 							$get_json_options->get_data		= true;
 						$element_json = $element->get_json($get_json_options);
-
-					// data add
-						// $data = array_merge($data, $element_json->data);
 
 					// context and data add
 						$context	= $element_json->context;
@@ -2211,7 +2195,7 @@ final class dd_core_api {
 		// build element
 			switch (true) {
 
-				case strpos($model, 'component_')===0:
+				case str_starts_with($model, 'component_'):
 
 					$component_lang	= (ontology_node::get_translatable($tipo)===true)
 						? $lang
@@ -2590,22 +2574,29 @@ final class dd_core_api {
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
 				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-					$obj->pg_version = (function() {
-						try {
-							$conn = DBi::_getConnection() ?? false;
-							if ($conn) {
-								return pg_version(DBi::_getConnection())['server'];
+					if(isset($cache_data['pg_version'])) {
+						$obj->pg_version					= $cache_data['pg_version'];
+					}else{
+						$obj->pg_version = (function() {
+							try {
+								$conn = DBi::_getConnection() ?? false;
+								if ($conn) {
+									return pg_version($conn)['server'];
+								}
+								return 'Failed!';
+							}catch(Exception $e){
+								return 'Failed with Exception!';
 							}
-							return 'Failed!';
-						}catch(Exception $e){
-							return 'Failed with Exception!';
-						}
-					})();
+						})();
+						$cache_data['pg_version']			= $obj->pg_version;
+						$cache_modified = true;
+					}
+
 				}
 				$obj->php_version	= PHP_VERSION;
 				// $obj->php_version .= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory	= ini_get('memory_limit') ?? 'Unknown';
-				if ( strpos(DEDALO_HOST, 'localhost')===0 ) {
+				if (str_starts_with(DEDALO_HOST, 'localhost')) {
 					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
 				}
 			}
@@ -2775,15 +2766,15 @@ final class dd_core_api {
 	private static function log_activity(object $options) : void {
 
 		// options
-			$rqo		= $options->rqo;
+			$rqo		= $options->rqo ?? null;
 			$section_id	= $options->section_id ?? null;
 
-		// short vars
-			$tipo	= $rqo->source->tipo ?? '';
-			$mode	= $rqo->source->mode ?? '';
+		// short vars (using nullsafe operator to prevent errors if source is missing)
+			$tipo	= $rqo?->source?->tipo ?? '';
+			$mode	= $rqo?->source?->mode ?? '';
 
-		// Prevent search mode write activity
-			if ($mode==='search') {
+		// return early if no valid tipo or excluded modes
+			if ($tipo === '' || $mode === 'search' || $mode === 'tm') {
 				return;
 			}
 
@@ -2793,64 +2784,31 @@ final class dd_core_api {
 			}
 
 		// exclude other tipos
-			$ar_exclude_tipo = [
-				DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655
-				DEDALO_SEARCH_PRESET_SECTION_TIPO, // dd623
-			];
-			if (in_array($tipo, $ar_exclude_tipo, true)) {
-				return;
-			}
-
-		// exclude modes
-			if ($mode==='tm') {
+			if ($tipo === DEDALO_TEMP_PRESET_SECTION_TIPO || $tipo === DEDALO_SEARCH_PRESET_SECTION_TIPO) {
 				return;
 			}
 
 		// exclude components
 		// only sections and areas generate activity (prevent autocomplete activity footprint)
 			$model = ontology_node::get_model_by_tipo($tipo, true);
-			if (strpos($model, 'section')===false && strpos($model, 'area')===false) {
+			if ($model !== 'section' && str_starts_with((string)$model, 'area') === false) {
 				return;
 			}
 
 		// mode. set mode_to_activity
 		// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
 		// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
-			$mode_to_activity = in_array($mode, ['edit','list'])
-				? $mode
-				: 'edit';
+			$mode_to_activity = ($mode === 'list') ? 'list' : 'edit';
 
 		// data_activity. Create data_activity array
 			$data_activity = [
-				'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
+				'msg'  => 'HTML Page is loaded in mode: ' . $mode_to_activity . ' [' . $mode . ']',
+				'tipo' => $tipo
 			];
 
 		// create custom log based on caller and context
-			switch (true) {
-
-				// area
-				case (strpos($model, 'area')!==false):
-					$data_activity['tipo'] = $tipo;
-					break;
-
-				// section
-				case ($model==='section'):
-
-					switch ($mode) {
-						case 'edit' :
-							$data_activity['id']	= $section_id;
-							$data_activity['tipo']	= $tipo;
-							break;
-						case 'list' :
-						default:
-							$data_activity['tipo'] = $tipo;
-							break;
-					}
-					break;
-
-				default:
-
-					break;
+			if ($model === 'section' && $mode === 'edit' && $section_id !== null) {
+				$data_activity['id'] = $section_id;
 			}
 
 		// logger activity. Write message

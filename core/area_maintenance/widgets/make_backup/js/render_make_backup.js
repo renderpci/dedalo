@@ -61,6 +61,70 @@ render_make_backup.prototype.list = async function(options) {
 
 
 /**
+* HANDLE_SUBMIT
+* @param HTMLElement body_response - Target div for the API response messages
+* @param HTMLElement target_lock - DIV to lock until execution
+* @param callable api_call - API call function
+* @return void
+*/
+const handle_submit = async (body_response, target_lock, api_call) => {
+
+	if (!body_response) {
+		console.error('Body response div is mandatory.');
+		return
+	}
+
+	if (!target_lock) {
+		console.error('Target lock div is mandatory.');
+		return
+	}
+
+	if (typeof api_call !== 'function') {
+		console.error('Invalid api_call. Expected valid function.');
+		return
+	}
+
+	// clean body_response nodes
+	while (body_response.firstChild) {
+		body_response.removeChild(body_response.firstChild);
+	}
+
+	// loading add
+	target_lock.classList.add('lock')
+	const spinner = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'spinner'
+	})
+	body_response.prepend(spinner)
+
+	// API worker call
+	const api_response = await api_call();
+
+	// response_node pre JSON response
+	if (api_response) {
+		ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'response_node',
+			inner_html		: JSON.stringify(api_response, null, 2),
+			parent			: body_response
+		})
+	}else{
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'response_node error',
+			inner_html		: 'Unknown error calling API',
+			parent			: body_response
+		})
+	}
+
+	// loading remove
+	spinner.remove()
+	target_lock.classList.remove('lock')
+}//end handle_submit
+
+
+
+/**
 * GET_CONTENT_DATA
 * @param object self
 * @return HTMLElement content_data
@@ -115,6 +179,7 @@ const get_content_data = async function(self) {
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					update_process_status(
+						'process_make_backup',
 						local_data.value.pid,
 						local_data.value.pfile,
 						body_response
@@ -125,36 +190,19 @@ const get_content_data = async function(self) {
 		check_process_data()
 
 	// update_last_file_info. CAll API to get updated info about the last updated file
-		const update_last_file_info = () => {
-			data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source			: {
-						action : 'get_dedalo_backup_files'
-					},
-					options	: {
-						max_files			: 1,
-						psql_backup_files	: true,
-						mysql_backup_files	: false
-					}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
+		const update_last_file_info = async () => {
+
+			const response = get_last_file_info()
+
+			// backup_files_info node created once
+			const backup_files_info = document.getElementById('backup_files_info') || ui.create_dom_element({
+				element_type	: 'pre',
+				id				: 'backup_files_info',
+				class_name		: 'backup_files_info',
+				parent			: body_response
 			})
-			.then(function(response){
-				// backup_files_info node created once
-				const backup_files_info = document.getElementById('backup_files_info') || ui.create_dom_element({
-					element_type	: 'pre',
-					id				: 'backup_files_info',
-					class_name		: 'backup_files_info',
-					parent			: body_response
-				})
-				const msg = response?.result?.psql_backup_files[0]
-				ui.update_node_content(backup_files_info, JSON.stringify(msg, null, 2))
-			})
+			const msg = response?.result?.psql_backup_files[0]
+			ui.update_node_content(backup_files_info, JSON.stringify(msg, null, 2))
 		}
 
 	// fn_submit
@@ -178,26 +226,8 @@ const get_content_data = async function(self) {
 			// blur button
 			document.activeElement.blur()
 
-			// clean up container
-			while (body_response.firstChild) {
-				body_response.removeChild(body_response.firstChild);
-			}
-
 			// call API to fire process and get PID
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: {
-					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
-					prevent_lock	: true,
-					source			: {
-						action : 'make_backup'
-					},
-					options	: {}
-				},
-				retries : 1, // one try only
-				timeout : 3600 * 1000 // 1 hour waiting response
-			})
+			const api_response = await self.make_backup()
 
 			if (!api_response || !api_response.result) {
 				ui.create_dom_element({
@@ -211,6 +241,7 @@ const get_content_data = async function(self) {
 
 			// fire update_process_status
 			update_process_status(
+				'process_make_backup',
 				api_response.pid,
 				api_response.pfile,
 				body_response
@@ -231,7 +262,7 @@ const get_content_data = async function(self) {
 		content_data.appendChild(body_response)
 
 	// backup_files
-		const backup_files_container = render_psql_backup_files()
+		const backup_files_container = render_psql_backup_files(self)
 		content_data.appendChild(backup_files_container)
 
 	// form backup MySQL DDBB
@@ -249,13 +280,12 @@ const get_content_data = async function(self) {
 				confirm_text	: get_label.sure || 'Sure?',
 				body_info		: content_data,
 				body_response	: mysql_body_response,
-				trigger		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
-						action : 'make_mysql_backup'
-					},
-					options	: {}
+				on_submit		: async (e) => {
+					await handle_submit(
+						mysql_body_response,
+						e.target,
+						self.make_mysql_backup
+					)
 				}
 			})
 
@@ -263,7 +293,7 @@ const get_content_data = async function(self) {
 			content_data.appendChild(mysql_body_response)
 
 			// mysql_backup_files
-			const backup_files_container = render_mysql_backup_files()
+			const backup_files_container = render_mysql_backup_files(self)
 			content_data.appendChild(backup_files_container)
 		}
 
@@ -276,36 +306,25 @@ const get_content_data = async function(self) {
 /**
 * REFRESH_FILES_LIST
 * Get and print the files list of selected type
+* @param object self
 * @param string type
 * 	psql|mysql
 * @param HTMLElement container
 * 	DOM node where print the result JSON list
 * @return void
 */
-const refresh_files_list = async (type, container) => {
+const refresh_files_list = async (self, type, container) => {
 
 	const psql_backup_files		= (type==='psql')
 	const mysql_backup_files	= (type==='mysql')
 
 	// get files list updated
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
-			prevent_lock	: true,
-			source			: {
-				action : 'get_dedalo_backup_files'
-			},
-			options	: {
-				max_files			: 20,
-				psql_backup_files	: psql_backup_files,
-				mysql_backup_files	: mysql_backup_files
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+	const api_response = await self.get_backup_files({
+		max_files			: 20,
+		psql_backup_files	: psql_backup_files,
+		mysql_backup_files	: mysql_backup_files
 	})
+
 	// message from API response
 	const msg = api_response?.result || ['Unknown error']
 	// print list
@@ -318,9 +337,10 @@ const refresh_files_list = async (type, container) => {
 * RENDER_PSQL_BACKUP_FILES
 * Render Dédalo backup files list
 * Refresh the list every 1 sec
+* @param object self widget instance
 * @return HTMLElement backup_files_container
 */
-const render_psql_backup_files = function() {
+const render_psql_backup_files = function(self) {
 
 	// container
 	const backup_files_container = ui.create_dom_element({
@@ -350,10 +370,17 @@ const render_psql_backup_files = function() {
 			return
 		}
 		// call API and refresh the list
-		refresh_files_list('psql', backup_files_list)
+		refresh_files_list(self, 'psql', backup_files_list)
 		// activate interval to refresh after 1 sec
 		interval = setInterval(()=>{
-			refresh_files_list('psql', backup_files_list)
+			// check if widget body is hidden, if true, clear interval
+			const widget_body = self.node.parentNode
+			if (widget_body && widget_body.classList.contains('hide')) {
+				// fire click_handler event to hide the list and stop interval
+				backup_toggle.click()
+				return
+			}
+			refresh_files_list(self, 'psql', backup_files_list)
 		}, 1000);
 	}
 	backup_toggle.addEventListener('click', click_handler)
@@ -376,9 +403,10 @@ const render_psql_backup_files = function() {
 * RENDER_MYSQL_BACKUP_FILES
 * Render MySQL backup files list
 * Refresh the list every 1 sec
+* @param object self widget instance
 * @return HTMLElement backup_files_container
 */
-const render_mysql_backup_files = function() {
+const render_mysql_backup_files = function(self) {
 
 	// container
 	const backup_files_container = ui.create_dom_element({
@@ -408,10 +436,17 @@ const render_mysql_backup_files = function() {
 			return
 		}
 		// call API and refresh the list
-		refresh_files_list('mysql', mysql_backup_files_list)
+		refresh_files_list(self, 'mysql', mysql_backup_files_list)
 		// activate interval to refresh after 1 sec
 		interval = setInterval(()=> {
-			refresh_files_list('mysql', mysql_backup_files_list)
+			// check if widget body is hidden, if not, clear interval
+			const widget_body = self.node.parentNode
+			if (widget_body && widget_body.classList.contains('hide')) {
+				// fire click_handler event to hide the list and stop interval
+				mysql_backup_toggle.click()
+				return
+			}
+			refresh_files_list(self, 'mysql', mysql_backup_files_list)
 		}, 1000);
 	}
 	mysql_backup_toggle.addEventListener('click', click_handler)

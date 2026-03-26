@@ -147,6 +147,16 @@ class v6_to_v7 {
 	 */
 	public static function fill_new_columns_in_jer_dd() : bool {
 
+		// Check if source column exists (terminoID is representative of all old columns)
+		$terminoID_exists = DBi::check_column_exists(static::$table_jer_dd, 'terminoID');
+		if(!$terminoID_exists) {
+			debug_log(__METHOD__
+				." WARNING: Ignore fill_new_columns_in_jer_dd because terminoID column does not exist"
+				, logger::WARNING
+			);
+			return true;
+		}
+
 		$sql_query = sanitize_query ('
 			UPDATE "' . static::$table_jer_dd . '"
 				SET tipo 			= "terminoID",
@@ -159,7 +169,7 @@ class v6_to_v7 {
 		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
-			$msg = "Failed to fill new columns in jer_dd ";
+			$msg = "Failed to fill new columns in jer_dd";
 			debug_log(__METHOD__
 				." ERROR: $msg "
 				, logger::ERROR
@@ -274,7 +284,7 @@ class v6_to_v7 {
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.term IS \'Ontology node names in multiple languages\';
-			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.model IS \'Ontology model name as section, componnet_portal, etc.\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.model IS \'Ontology model name as section, component_portal, etc.\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.order_number IS \'Ontology node position order\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.relations IS \'Direct connections between nodes, unidirectional\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.tld IS \'Ontology name space\';
@@ -772,7 +782,7 @@ class v6_to_v7 {
 	 * @param bool $save If true, saves changes to DB. If false, only performs a data review.
 	 * @return object Standard response object.
 	 */
-	public static function reformat_matrix_time_machine_data( array $ar_tables, bool $save ) {
+	public static function reformat_matrix_time_machine_data( array $ar_tables, bool $save ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -817,7 +827,7 @@ class v6_to_v7 {
 				// garbage old data
 				if( empty($tipo) || $tipo === 'termino' ) {
 					// Delete it because it is old data garbage
-					$deleted = tm_db_manager::delete($id);
+					$deleted = tm_db_manager::delete( (int)$id );
 					debug_log(__METHOD__ . " Ignored old data garbage for matrix_time_machine ID $id. Deleted: " . json_handler::encode($deleted), logger::DEBUG);
 					return;
 				}
@@ -1465,7 +1475,7 @@ class v6_to_v7 {
 	 * RECREATE_TM_TABLE
 	 *
 	 * Extends the `matrix_time_machine` table with new columns required by the v7 schema:
-	 * `user_id`, `bulk_process`, and `data`. Also adds relevant documentation via SQL comments.
+	 * `user_id`, `bulk_process_temp`, and `data`. Also adds relevant documentation via SQL comments.
 	 *
 	 * @return bool True if the table was successfully updated, false otherwise.
 	 */
@@ -1483,7 +1493,7 @@ class v6_to_v7 {
 		$sql_query = sanitize_query ('
 			ALTER TABLE "' . static::$table_matrix_time_machine . '"
 				ADD COLUMN IF NOT EXISTS "user_id" character varying(8) NULL,
-				ADD COLUMN IF NOT EXISTS "bulk_process" integer NULL,
+				ADD COLUMN IF NOT EXISTS "bulk_process_temp" integer NULL,
 				ADD COLUMN IF NOT EXISTS "data" jsonb NULL;
 
 			COMMENT ON TABLE "' . static::$table_matrix_time_machine . '" IS \'Time Machine\';
@@ -1494,7 +1504,7 @@ class v6_to_v7 {
 			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.lang IS \'component data lang of the change\';
 			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.timestamp IS \'timestamp of the change\';
 			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.user_id IS \'User section_id that made the change\';
-			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.bulk_process IS \'Bulk process id that identify a bulk change\';
+			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.bulk_process_temp IS \'Bulk process id that identify a bulk change - copy\';
 			COMMENT ON COLUMN ' . static::$table_matrix_time_machine . '.data IS \'JSONB data representing the change\';
 		');
 
@@ -1517,15 +1527,36 @@ class v6_to_v7 {
 
 	/**
 	* FILL_NEW_COLUMNS_IN_TM
-	* Set the new columns `user_id`, `bulk_process` and `data` with its previous column data
+	* Set the new columns `user_id`, `bulk_process_temp` and `data` with its previous column data
 	* New columns data is compatible with previous column data.
+	* @return bool
 	*/
-	public static function fill_new_columns_in_tm() :bool {
+	public static function fill_new_columns_in_tm() : bool {
 
 		$column_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'userID');
 		if(!$column_exists) {
 			debug_log(__METHOD__
-				." WARNING: Ignore fill_new_columns_in_tm because userID column does not exist "
+				." WARNING: Ignore fill_new_columns_in_tm because userID column does not exist"
+				, logger::WARNING
+			);
+			return true;
+		}
+
+		// Check if bulk_process_id column exists (source for migration)
+		$bulk_process_id_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'bulk_process_id');
+		if(!$bulk_process_id_exists) {
+			debug_log(__METHOD__
+				." WARNING: Ignore fill_new_columns_in_tm because bulk_process_id column does not exist"
+				, logger::WARNING
+			);
+			return true;
+		}
+
+		// Check if dato column exists (source for migration)
+		$dato_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'dato');
+		if(!$dato_exists) {
+			debug_log(__METHOD__
+				." WARNING: Ignore fill_new_columns_in_tm because dato column does not exist"
 				, logger::WARNING
 			);
 			return true;
@@ -1533,9 +1564,9 @@ class v6_to_v7 {
 
 		$sql_query = sanitize_query ('
 			UPDATE "' . static::$table_matrix_time_machine . '"
-				SET user_id 		= "userID",
-					bulk_process 	= bulk_process_id,
-					data 			= dato;
+				SET user_id 		  = "userID",
+					bulk_process_temp = bulk_process_id,
+					data 			  = dato;
 		');
 
 		$result = matrix_db_manager::exec_sql($sql_query);
@@ -1558,7 +1589,6 @@ class v6_to_v7 {
 	/**
 	 * DELETE_TM_COLUMNS
 	 * Delete obsolete columns to matrix_time_machine table
-	 * Rename column `bulk_process` to `bulk_process_id`
 	 * @return bool
 	 */
 	public static function delete_tm_columns() : bool {
@@ -1568,16 +1598,13 @@ class v6_to_v7 {
 				DROP COLUMN IF EXISTS "section_id_key",
 				DROP COLUMN IF EXISTS "state",
 				DROP COLUMN IF EXISTS "userID",
-				DROP COLUMN IF EXISTS "bulk_process_id",
 				DROP COLUMN IF EXISTS "dato";
-
-			ALTER TABLE "' . static::$table_matrix_time_machine . '" RENAME COLUMN bulk_process TO bulk_process_id;
 		');
 
 		$result = matrix_db_manager::exec_sql($sql_query);
 
 		if($result===false) {
-			$msg = "Failed to delete tm section_id_key and state columns ";
+			$msg = "Failed to delete tm section_id_key and state columns";
 			debug_log(__METHOD__
 				." ERROR: $msg "
 				, logger::ERROR
@@ -1588,6 +1615,54 @@ class v6_to_v7 {
 
 		return true;
 	}//end delete_tm_columns
+
+
+
+	/**
+	 * RENAME_TM_COLUMN_BULK_PROCESS
+	 * Rename column "bulk_process_temp" to "bulk_process_id" in tm table (matrix_time_machine) in PostgreSQL.
+	 * @return bool
+	 */
+	public static function rename_tm_column_bulk_process() : bool {
+
+		// column 'bulk_process_temp' already exists check
+		$bulk_process_temp_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'bulk_process_temp');
+		if($bulk_process_temp_exists===false) {
+			debug_log(__METHOD__
+				." WARNING: Ignore rename_tm_column_bulk_process because bulk_process_temp column does not exist"
+				, logger::WARNING
+			);
+			return true;
+		}
+
+		// column 'bulk_process_id' already exists check
+		$bulk_process_id_exists = DBi::check_column_exists(static::$table_matrix_time_machine, 'bulk_process_id');
+		if($bulk_process_id_exists===true) {
+			debug_log(__METHOD__
+				." WARNING: Ignore rename_tm_column_bulk_process because bulk_process_id column already exists"
+				, logger::WARNING
+			);
+			return true;
+		}
+
+		$sql_query = sanitize_query ('
+			ALTER TABLE "' . static::$table_matrix_time_machine . '" RENAME COLUMN bulk_process_temp TO bulk_process_id;
+		');
+
+		$result = matrix_db_manager::exec_sql($sql_query);
+
+		if($result===false) {
+			$msg = "Failed to rename tm bulk_process_temp column to bulk_process_id";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::ERROR
+			);
+			return false;
+		}
+
+
+		return true;
+	}//end rename_tm_column_bulk_process
 
 
 
