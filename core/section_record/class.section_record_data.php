@@ -10,6 +10,12 @@ class section_record_data {
 	// An object structure with the data columns defined in database
 	private stdClass $data;
 
+	// Raw JSON strings keyed by column name, pending decode
+	private array $raw_data = [];
+
+	// Decode state per column: true = decoded (object in $data), false = raw string in $raw_data
+	private array $decoded = [];
+
 	// array columns_name
 	private array $columns_name = [
 		// object|null data. Section data value from DB column 'data'
@@ -107,14 +113,12 @@ class section_record_data {
 
 	/**
 	* GET_INSTANCE
-	* Singleton instance constructor for the class section_record_data
-	* Stores cache instances based on the contraction of section_tipo and $section_id
-	* as 'oh1_1'.
+	* Instance constructor for the class section_record_data.
 	* @param string $section_tipo
 	* 	Ontology identifier of the section. E.g. 'oh1'
 	* @param int $section_id
 	* 	Unique id of the section. E.g. 1
-	* @return class section_record_data instance
+	* @return section_record_data instance
 	*/
 	public static function get_instance( string $section_tipo, int $section_id ) : self {
 
@@ -143,6 +147,7 @@ class section_record_data {
 		// Assign the valid columns. Every column has its own homonym column in database.
 		foreach ($this->columns_name as $column_name) {
 			$this->data->{$column_name} = null;
+			$this->decoded[$column_name] = true; // null values are already "decoded"
 		}
 	}//end __construct
 
@@ -189,6 +194,41 @@ class section_record_data {
 
 
 	/**
+	* ENSURE_DECODED
+	* Lazily decodes a raw JSON string stored for the given column.
+	* If the column is already decoded (or null), this is a no-op.
+	* @param string $column
+	* @return void
+	* @throws Exception on JSON decode error
+	*/
+	private function ensure_decoded( string $column ) : void {
+
+		if ( ($this->decoded[$column] ?? true) === true ) {
+			return;
+		}
+
+		$raw = $this->raw_data[$column];
+		$value = json_decode( $raw );
+		if ( json_last_error() !== JSON_ERROR_NONE ) {
+			debug_log(__METHOD__
+				. " Abort. JSON decode error for column " . PHP_EOL
+				. "column: " . $column . PHP_EOL
+				. "error: " . json_last_error_msg()
+				, logger::ERROR
+			);
+			throw new Exception(
+				"JSON decode error for column " . $column . ": " . json_last_error_msg()
+			);
+		}
+
+		$this->data->$column	= $value;
+		$this->decoded[$column]	= true;
+		unset( $this->raw_data[$column] );
+	}//end ensure_decoded
+
+
+
+	/**
 	* SET_DATA
 	* Replace data as full data of the section_record
 	* @param object $data
@@ -202,22 +242,8 @@ class section_record_data {
 				continue;
 			}
 
-			if ( is_string($value) ) {
-				$value = json_decode( $value );
-				if (json_last_error() !== JSON_ERROR_NONE) {
-					debug_log(__METHOD__
-						. " Abort. JSON decode error for column " . PHP_EOL
-						. "column: " . $column . PHP_EOL
-						. "value: " . $value . PHP_EOL
-						. "error: " . json_last_error_msg()
-						, logger::ERROR
-					);
-					throw new Exception(
-						"JSON decode error for column " . $column . ": " . json_last_error_msg()
-					);
-				}
-			}
-
+			// Delegate to set_column_data which handles raw strings (lazy)
+			// and already-decoded objects transparently.
 			$this->set_column_data( $column, $value );
 		}
 
@@ -229,11 +255,13 @@ class section_record_data {
 	/**
 	* SET_COLUMN_DATA
 	* Assign the given data to the indicated column.
+	* When a raw JSON string is received, it is stored for lazy decoding on first access.
+	* When an object or null is received, it is stored directly as decoded.
 	* @param string $column
-	* @param object|null $data
+	* @param string|object|null $value
 	* @return bool
 	*/
-	public function set_column_data( string $column, ?object $value ) : bool {
+	public function set_column_data( string $column, string|object|null $value ) : bool {
 
 		if ( !property_exists($this->data, $column) ) {
 			debug_log(__METHOD__
@@ -243,7 +271,18 @@ class section_record_data {
 			);
 			return false;
 		}
-		$this->data->$column = $value;
+
+		if ( is_string($value) ) {
+			// Store raw JSON string for lazy decode
+			$this->raw_data[$column]	= $value;
+			$this->decoded[$column]		= false;
+			$this->data->$column		= null; // placeholder until decoded
+		}else{
+			// Object or null: store directly as decoded
+			$this->data->$column		= $value;
+			$this->decoded[$column]		= true;
+			unset( $this->raw_data[$column] );
+		}
 
 		return true;
 	}//end set_column_data
@@ -268,6 +307,9 @@ class section_record_data {
 			);
 			return false;
 		}
+
+		// Force decode before mutation
+		$this->ensure_decoded( $column );
 
 		// remove the data of the key when data is set as null
 		if( $data===null ){
@@ -298,6 +340,11 @@ class section_record_data {
 	*/
 	public function get_data() : object {
 
+		// Materialize all pending lazy columns
+		foreach ($this->columns_name as $column) {
+			$this->ensure_decoded( $column );
+		}
+
 		return $this->data;
 	}//end get_data
 
@@ -310,6 +357,8 @@ class section_record_data {
 	* @return object|null $this->data
 	*/
 	public function get_column_data( string $column ) : ?object {
+
+		$this->ensure_decoded( $column );
 
 		return $this->data->$column ?? null;
 	}//end get_column_data
@@ -324,6 +373,8 @@ class section_record_data {
 	* @return array|null
 	*/
 	public function get_key_data( string $column, string $key ) : ?array {
+
+		$this->ensure_decoded( $column );
 
 		return $this->data->$column->$key ?? null;
 	}//end get_key_data

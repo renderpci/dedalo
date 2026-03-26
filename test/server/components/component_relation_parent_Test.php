@@ -17,7 +17,7 @@ final class component_relation_parent_test extends BaseTestCase {
 	* @return object $component
 	*/
 	private function build_component_instance() {
-		  
+
 		$this->user_login();
 
 		$model			= self::$model;
@@ -467,7 +467,7 @@ final class component_relation_parent_test extends BaseTestCase {
 					. gettype($result)
 			);
 
-			
+
 			if ($result===true) {
 
 				$this->assertTrue(

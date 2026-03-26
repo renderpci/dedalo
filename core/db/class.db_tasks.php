@@ -55,7 +55,7 @@ class db_tasks {
 
 				$table_exists = DBi::check_table_exists($table_name);
 				if( $table_exists===false ) {
-					$response->errors[] = "Table $table_name not exists. Ignored check_sequences";
+					$response->errors[] = "Table $table_name does not exist. Ignored check_sequences";
 					continue;
 				}
 
@@ -65,7 +65,12 @@ class db_tasks {
 				}
 
 				# Find last id in table
-				$sql		= " SELECT id FROM $table_name ORDER BY id DESC LIMIT 1 ";
+				$conn = DBi::_getConnection();
+				if (!$conn) {
+					$response->errors[] = "Database connection failed for table: $table_name";
+					continue;
+				}
+				$sql		= " SELECT id FROM \"" . pg_escape_identifier($conn ?: null, $table_name) . "\" ORDER BY id DESC LIMIT 1 ";
 				$result2	= matrix_db_manager::exec_search($sql, []);
 
 				if (!$result2) {
@@ -100,7 +105,6 @@ class db_tasks {
 					'table_name'	=> $table_name,
 					'start_value'	=> $start_value,
 					'last_value'	=> $last_value,
-					'last_id'		=> $last_id,
 					'last_id'		=> $last_id
 				];
 
@@ -213,7 +217,7 @@ class db_tasks {
 		foreach ($valid_tables as $table) {
 
 			$escaped_table = pg_escape_identifier(DBi::_getConnection(), $table);
-			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE $escaped_table;");
+			$command = $command_base . ' -c ' . escapeshellarg("REINDEX TABLE CONCURRENTLY $escaped_table;");
 
 			$res = shell_exec($command . ' 2>&1');
 			$response->reindex[$table] = $res;
@@ -274,7 +278,7 @@ class db_tasks {
 		}
 
 		$response->result	= true;
-		$response->msg		= empty($reponse->errors)
+		$response->msg = empty($response->errors)
 			? 'Successfully optimized ' . count($valid_tables) . ' table(s)'
 			: 'Optimization completed with errors for some tables';
 
@@ -627,7 +631,7 @@ class db_tasks {
 				// 0 Prevent errors if table not exists
 					$table_exists = DBi::check_table_exists($table);
 					if( $table_exists===false ) {
-						$response->errors[] = "Table $table not exists. Ignored index $index->name";
+						$response->errors[] = "Table $table does not exist. Ignored index $index->name";
 						continue;
 					}
 
@@ -720,7 +724,7 @@ class db_tasks {
 				// 0 Prevent errors if table not exists
 					$table_exists = DBi::check_table_exists($table);
 					if( $table_exists===false ) {
-						$response->errors[] = "Table $table not exists. Ignored constraint $constraint->name";
+						$response->errors[] = "Table $table does not exist. Ignored constraint $constraint->name";
 						continue;
 					}
 
@@ -777,16 +781,23 @@ class db_tasks {
 	* @return array $tables
 	*/
 	public static function get_tables() : array {
+
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			throw new Exception('Database connection failed');
+		}
+
 		$sql = "
 			SELECT tablename
 			FROM pg_tables
 			WHERE schemaname = 'public';
 		";
-		$result = pg_query(DBi::_getConnection(), $sql);
+		$result = pg_query($conn, $sql);
 
 		// Error handling for the query
 		if (!$result) {
-			throw new Exception('Database query failed: ' . pg_last_error());
+			throw new Exception('Database query failed: ' . pg_last_error($conn));
 		}
 
 		$tables = [];
@@ -835,34 +846,182 @@ class db_tasks {
 	private static function exec_sql_query( string $sql_query ) : object {
 
 		$response = new stdClass();
-			$response->result	= false;
+			$response->result = false;
+			$response->errors = [];
 
 		// debug info
-			debug_log(__METHOD__
-				. " Executing ql_query SQL sentence " . PHP_EOL
-				. ' sql_query: ' . trim($sql_query)
-				, logger::WARNING
-			);
+		debug_log(__METHOD__
+			. " Executing sql_query SQL sentence " . PHP_EOL
+			. ' sql_query: ' . trim($sql_query)
+			, logger::DEBUG
+		);
 
-		//exec the SQL query
-		$result = pg_query(DBi::_getConnection(), $sql_query);
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			$response->errors[] = " Error: Invalid database connection";
+			return $response;
+		}
+
+		// exec the SQL query
+		$result = pg_query($conn, $sql_query);
 		if($result===false) {
 			// error case
 			debug_log(__METHOD__
 				." Error Processing sql query Request ". PHP_EOL
-				. pg_last_error(DBi::_getConnection()) .PHP_EOL
+				. pg_last_error($conn) .PHP_EOL
 				. 'sql query: '.to_string($sql_query)
 				, logger::ERROR
 			);
-			// the the PostgreSQL error to show into the response
-			$response->errors[] = " Error Processing sql query Request: ". pg_last_error(DBi::_getConnection());
+			// the PostgreSQL error to show into the response
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error($conn);
 		}
 		// set the result
 		$response->result = $result;
 
+		// Free the result resource if successful
+		if ($result && $result !== false) {
+			pg_free_result($result);
+		}
+
 
 		return $response;
 	}//end exec_sql_query
+
+
+
+	/**
+	* ANALYZE_DB
+	*
+	* Executes PostgreSQL's ANALYZE command to update statistics for all tables in the database.
+	* This command is essential for maintaining optimal query performance as it helps the
+	* query planner make informed decisions about the most efficient execution plans.
+	*
+	* The ANALYZE command collects statistics about:
+	* - Distribution of values in each column
+	* - Number of distinct values
+	* - Most common values
+	* - Histogram bounds for numeric columns
+	*
+	* Process:
+	* 1. Initializes response object with default values
+	* 2. Executes ANALYZE command on the database
+	* 3. Handles errors by adding them to response without throwing exceptions
+	* 4. Frees the PostgreSQL result resource
+	* 5. Returns response object containing results or errors
+	*
+	* Note: ANALYZE is a read-only operation and does not lock tables for writes.
+	* It's safe to run during normal database operations.
+	*
+	* @return object $response Response object with the following structure:
+	*   - result (mixed): The PostgreSQL result resource or false on failure
+	*   - errors (array): Array of error messages if the query failed
+	*
+	* @example
+	* $response = db_tasks::analyze_db();
+	* if (isset($response->errors)) {
+	*     foreach ($response->errors as $error) {
+	*         echo "Error: " . $error . "\n";
+	*     }
+	* } else {
+	*     echo "Database analyzed successfully\n";
+	* }
+	*/
+	public static function analyze_db() : object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->errors = [];
+
+		// Get and validate database connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			$response->errors[] = " Error: Invalid database connection";
+			return $response;
+		}
+
+		$sql = "ANALYZE;";
+		$result = pg_query($conn, $sql);
+
+		// Error handling for the query
+		if (!$result) {
+			$response->errors[] = " Error Processing sql query Request: ". pg_last_error($conn);
+		} else {
+			// Set successful result
+			$response->result = $result;
+		}
+
+		// Free the result resource only if it's valid
+		if ($result) {
+			pg_free_result($result);
+		}
+
+		$response->msg = count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
+
+		return $response;
+	}//end analyze_db
+
+
+
+	/**
+	* GET_ANALYZE_CACHE_FILE_NAME
+	* Returns the cache file name for DB ANALYZE timestamp tracking
+	* @return string
+	*/
+	public static function get_analyze_cache_file_name() : string {
+		return 'cache_db_analyze_last_run.php';
+	}//end get_analyze_cache_file_name
+
+
+
+	/**
+	* SHOULD_RUN_ANALYZE
+	* Check if DB ANALYZE should run based on last execution timestamp
+	* Returns true if more than 24 hours have passed since last execution
+	* or if no previous execution record exists
+	* @return bool
+	*/
+	public static function should_run_analyze() : bool {
+
+		$cache_file_name = self::get_analyze_cache_file_name();
+
+		// check if cache file exists
+		$file_exists = dd_cache::cache_file_exists((object)[
+			'file_name'	=> $cache_file_name,
+			'prefix'	=> ''
+		]);
+
+		// no previous execution, should run
+		if ($file_exists===false) {
+			return true;
+		}
+
+		// read cache data
+		$cache_data = dd_cache::cache_from_file((object)[
+			'file_name'	=> $cache_file_name,
+			'prefix'	=> ''
+		]);
+
+		// invalid cache data, should run
+		if (empty($cache_data) || !isset($cache_data->timestamp)) {
+			return true;
+		}
+
+		// check time difference (24 hours = 86400 seconds)
+		$current_time = time();
+		$last_run_time = $cache_data->timestamp;
+		$time_difference = $current_time - $last_run_time;
+
+		// run if more than 24 hours have passed
+		if ($time_difference >= 86400) {
+			return true;
+		}
+
+		// recently executed, skip
+		return false;
+	}//end should_run_analyze
 
 
 

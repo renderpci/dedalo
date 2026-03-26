@@ -1,8 +1,25 @@
 <?php declare(strict_types=1);
 /**
 * DD_MANAGER
-* Manage API web
+* Central API manager for handling Dédalo web requests.
 *
+* Key features:
+* - Entry point for all API requests to the system
+* - Request validation and authentication enforcement
+* - Dynamic routing to appropriate API handlers
+* - Performance metrics and debug information collection
+* - Special handling for maintenance area access control
+*
+* Architecture:
+* - Receives request objects (rqo) from client via JSON API
+* - Validates structure and authenticates user sessions
+* - Routes to specific API classes (dd_core_api, dd_area_maintenance_api, etc.)
+* - Returns standardized response objects with debug info when enabled
+*
+* @package Dédalo
+* @subpackage API
+* @version 1.0.0
+* @date 05-06-2019
 */
 final class dd_manager {
 
@@ -23,8 +40,39 @@ final class dd_manager {
 
 	/**
 	* MANAGE_REQUEST
-	* @param object $rqo
-	* @return object $response
+	* Central API request handler that validates, authenticates, and routes
+	* incoming requests to the appropriate API class methods.
+	*
+	* Key features:
+	* - Validates request object (rqo) structure
+	* - Authentication check with whitelist for public actions
+	* - Dynamic routing to API classes based on `dd_api` property
+	* - Special permission handling for maintenance area
+	* - Debug and performance metrics collection
+	*
+	* Flow:
+	* 1. Logs request details when SHOW_DEBUG is enabled
+	* 2. Validates that rqo has required `action` property
+	* 3. Checks user authentication (skips for whitelisted actions)
+	* 4. Routes to appropriate API class (`dd_core_api` by default)
+	* 5. Validates target method exists and executes
+	* 6. Enforces maintenance area permissions if applicable
+	* 7. Attaches debug info and performance metrics to response
+	*
+	* @param object $rqo Request object containing:
+	*                    - action (string) Required. API method to invoke
+	*                    - dd_api (string) Optional. API class name, defaults to 'dd_core_api'
+	*                    - id (string) Optional. Request identifier
+	*                    - source (object) Optional. May contain tipo property
+	* @return object $response Standard response object with:
+	*                    - result (bool) Success/failure status
+	*                    - msg (string) Response message
+	*                    - errors (array) Error codes if any
+	*                    - action (string) The action that was processed
+	*                    - debug (object) Optional. Debug info when enabled
+	*
+	* @throws Exception If authentication or permission checks fail
+	*                   (returned as error response, not thrown)
 	*/
 	final public function manage_request( object $rqo ) : object {
 		$api_manager_start_time = start_time();
@@ -40,6 +88,19 @@ final class dd_manager {
 
 				// enable cache analytics
 				section_record_instances_cache::setAnalytics(false);
+			}
+
+		// rqo check
+			if (!property_exists($rqo,'action')) {
+
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= "Invalid action var (not found in rqo)";
+					$response->errors[]	= 'Undefined method';
+
+				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+
+				return $response;
 			}
 
 		// logged check
@@ -71,19 +132,6 @@ final class dd_manager {
 				}
 			}
 
-		// rqo check
-			if (!is_object($rqo) || !property_exists($rqo,'action')) {
-
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= "Invalid action var (not found in rqo)";
-					$response->errors[]	= 'Undefined method';
-
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
-
-				return $response;
-			}
-
 		// actions
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
@@ -93,7 +141,8 @@ final class dd_manager {
 					$response->result	= false;
 					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
 					$response->errors[]	= 'Undefined method';
-					$response->action	= $rqo->action;
+					$response->action	= $action;
+				return $response;
 			}else{
 				// success
 				if($dd_api==='dd_area_maintenance_api'){
@@ -104,11 +153,12 @@ final class dd_manager {
 							$response->result	= false;
 							$response->msg		= 'Error. user has not permissions ! [action:'.$rqo->action.']';
 							$response->errors[]	= 'permissions error';
+							$response->action	= $action;
 						return $response;
 					}
 				}
 				$response			= $dd_api::{$rqo->action}( $rqo );
-				$response->action	= $rqo->action;
+				$response->action	= $action;
 			}
 
 		// debug
@@ -133,87 +183,124 @@ final class dd_manager {
 				}
 
 				// metrics
-					$metrics = [
-						// permissions stats
-						'Permissions',
-						'--> calculated permissions for user ' . logged_user_id(),
-						'--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms',
-						'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count,
-						'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms',
-						'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls,
-						// get_tools stats
-						'Tools',
-						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
-						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
-						'--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached,
-						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
-						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
-						// presets
-						'Presets (request config)',
-						'--> presets_total_time: '  . metrics::$presets_total_time.' ms',
-						'--> presets_total_calls: ' . metrics::$presets_total_calls,
-						// search stats
-						'Search',
-						'--> search_total_time: ' . metrics::$search_total_time.' ms',
-						'--> search_total_calls: '. metrics::$search_total_calls,
-						// ontology stats
-						'Ontology load',
-						'--> ontology_total_time: ' . metrics::$ontology_total_time.' ms',
-						'--> ontology_total_calls: '. metrics::$ontology_total_calls,
-						'--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached,
-						'--> ontology_total_calls_different: '. (metrics::$ontology_total_calls - metrics::$ontology_total_calls_cached),
-						// matrix stats
-						'matrix load',
-						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
-						'--> matrix_total_calls: '. metrics::$matrix_total_calls,
-						// exec_search stats
-						'Search exec_search (matrix_db_manager)',
-						'--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms',
-						'--> exec_search_total_calls: '. metrics::$exec_search_total_calls,
-						// exec_search stats
-						'Search exec_search (dd_ontology_db_manager)',
-						'--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms',
-						'--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls,
-						// search_free stats
-						'Search free (JSON_RecordDataBounceObject)',
-						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
-						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
-						// section_save stats
-						'section_save',
-						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
-						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
-						// Context
-						'Context (all)',
-						'--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms',
-						'--> structure_context_total_calls: ' . metrics::$structure_context_total_calls,
-						// data
-						'Data (components)',
-						'--> data_total_time: '  . metrics::$data_total_time.' ms',
-						'--> data_total_calls: ' . metrics::$data_total_calls,
-						// cache
-						'Cache',
-						'--> section_record_total: ' . section_record::$section_record_total,
-						'--> section_record_total_calls: ' . section_record::$section_record_total_calls,
-						'--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls,
-						// '--> section_record_cache_hit_stats ' . json_encode(section_record_instances_cache::getStats()),
-						// '--> component_instances_cache_hit_stats ' . json_encode(component_instances_cache::getStats()),
-						// Subdatum
-						// 'Subdatum',
-						// '--> subdatum_total_time: ' . metrics::$subdatum_total_time.' ms',
-						// '--> subdatum_total_calls: ' . metrics::$subdatum_total_calls,
-						// summary
-						'Summary',
-						'time: ' . (
+					$metrics = [];
+
+					// permissions stats
+						if(metrics::$security_permissions_total_calls > 0) {
+							$metrics[] = 'Permissions';
+							$metrics[] = '--> calculated permissions for user ' . logged_user_id();
+							$metrics[] = '--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms';
+							$metrics[] = '--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count;
+							$metrics[] = '--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms';
+							$metrics[] = '--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls;
+						}
+
+					// get_tools stats
+						if(metrics::$get_tools_total_calls > 0) {
+							$metrics[] = 'Tools';
+							$metrics[] = '--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms';
+							$metrics[] = '--> get_tools_total_calls: '. metrics::$get_tools_total_calls;
+							$metrics[] = '--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached;
+							$metrics[] = '--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms';
+							$metrics[] = '--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls;
+						}
+
+					// presets
+						if(metrics::$presets_total_calls > 0) {
+							$metrics[] = 'Presets (request config)';
+							$metrics[] = '--> presets_total_time: '  . metrics::$presets_total_time.' ms';
+							$metrics[] = '--> presets_total_calls: ' . metrics::$presets_total_calls;
+						}
+
+					// search stats
+						if(metrics::$search_total_calls > 0) {
+							$metrics[] = 'Search';
+							$metrics[] = '--> search_total_time: ' . metrics::$search_total_time.' ms';
+							$metrics[] = '--> search_total_calls: '. metrics::$search_total_calls;
+						}
+
+					// ontology stats
+						if(metrics::$ontology_total_calls > 0) {
+							$metrics[] = 'Ontology load';
+							$metrics[] = '--> ontology_total_time: ' . metrics::$ontology_total_time.' ms';
+							$metrics[] = '--> ontology_total_calls: '. metrics::$ontology_total_calls;
+							$metrics[] = '--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached;
+							$metrics[] = '--> ontology_total_calls_different: '. (metrics::$ontology_total_calls - metrics::$ontology_total_calls_cached);
+						}
+
+					// matrix stats
+						if(metrics::$matrix_total_calls > 0) {
+							$metrics[] = 'matrix load';
+							$metrics[] = '--> matrix_total_time: ' . metrics::$matrix_total_time.' ms';
+							$metrics[] = '--> matrix_total_calls: '. metrics::$matrix_total_calls;
+						}
+
+					// exec_search stats (matrix_db_manager)
+						if(metrics::$exec_search_total_calls > 0) {
+							$metrics[] = 'Search exec_search (matrix_db_manager)';
+							$metrics[] = '--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms';
+							$metrics[] = '--> exec_search_total_calls: '. metrics::$exec_search_total_calls;
+						}
+
+					// exec_search stats (dd_ontology_db_manager)
+						if(metrics::$exec_dd_ontology_search_total_calls > 0) {
+							$metrics[] = 'Search exec_search (dd_ontology_db_manager)';
+							$metrics[] = '--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms';
+							$metrics[] = '--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls;
+						}
+
+					// Context
+						if(metrics::$structure_context_total_calls > 0) {
+							$metrics[] = 'Context (all)';
+							$metrics[] = '--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms';
+							$metrics[] = '--> structure_context_total_calls: ' . metrics::$structure_context_total_calls;
+						}
+
+					// data
+						if(metrics::$data_total_calls > 0) {
+							$metrics[] = 'Data (components)';
+							$metrics[] = '--> data_total_time: '  . metrics::$data_total_time.' ms';
+							$metrics[] = '--> data_total_calls: ' . metrics::$data_total_calls;
+						}
+
+					// Section record cache
+						if(section_record::$section_record_total_calls > 0) {
+							$metrics[] = 'Section record cache';
+							$metrics[] = '--> section_record_total: ' . section_record::$section_record_total;
+							$metrics[] = '--> section_record_total_calls: ' . section_record::$section_record_total_calls;
+							$metrics[] = '--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls;
+						}
+
+					// section_save stats
+						if(metrics::$section_save_total_calls > 0) {
+							$metrics[] = 'section_save';
+							$metrics[] = '--> section_save_total_time: ' . metrics::$section_save_total_time.' ms';
+							$metrics[] = '--> section_save_total_calls: '. metrics::$section_save_total_calls;
+						}
+
+					// db connection
+						if(metrics::$db_connection_total_calls > 0) {
+							$metrics[] = 'DB connection (' . DEDALO_HOSTNAME_CONN . ')';
+							$metrics[] = '--> db_connection_total_time: ' . metrics::$db_connection_total_time.' ms';
+							$metrics[] = '--> db_connection_total_calls: '. metrics::$db_connection_total_calls;
+							$metrics[] = '--> db_connection_total_calls_cached: '. metrics::$db_connection_total_calls_cached;
+						}
+
+					// summary add always
+						$metrics[] = 'Summary';
+						$metrics[] = 'time: ' . (
 							metrics::$security_permissions_total_time +
 							metrics::$exec_search_total_time +
 							metrics::$exec_dd_ontology_search_total_time +
-							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
 							metrics::$matrix_total_time +
 							metrics::$get_tools_total_time +
-							metrics::$section_save_total_time
-						)
-					];
+							metrics::$section_save_total_time +
+							metrics::$db_connection_total_time +
+							metrics::$structure_context_total_time +
+							metrics::$presets_total_time
+						);
+
 					debug_log(__METHOD__ . PHP_EOL
 						. implode(PHP_EOL, $metrics)
 						, logger::WARNING
@@ -225,11 +312,8 @@ final class dd_manager {
 					}
 
 				// end line info
-					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
+					$id			= $rqo->id ?? $rqo->source?->tipo ?? '';
 					$text			= 'API REQUEST (dd_manager) ' . $rqo->action . ' (' . $id . ') END IN ' . $total_time_api_exec .' - ' .exec_time_unit($api_manager_start_time,'ms') . ' - ' . dd_memory_usage();
-					$text_length	= strlen($text) +1;
-					// $nchars		= 200;
-					// $repeat 		= ($nchars - $text_length) ?? 0;
 					$line			= $text .' '. PHP_EOL;
 					debug_log(__METHOD__ . PHP_EOL . $line, logger::DEBUG);
 			}

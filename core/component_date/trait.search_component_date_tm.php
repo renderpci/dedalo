@@ -54,7 +54,7 @@ trait search_component_date_tm {
 			case '<':
 			case '>=':
 			case '>':
-			case '<=':			
+			case '<=':
 			case '=':
 			default:
 
@@ -65,18 +65,18 @@ trait search_component_date_tm {
 					// Year only search
 					$year = $dd_date->get_year();
 					$query_object->params   = ['_Q1_' => $year];
-					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator $1";
+					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_";
 				} elseif ($shape->year && $shape->month && !$shape->day) {
 					// Year and month search
 					$year  = $dd_date->get_year();
 					$month = $dd_date->get_month();
 					$query_object->params   = ['_Q1_' => $year, '_Q2_' => $month];
-					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator $1 AND EXTRACT(MONTH FROM DATE(\"timestamp\")) $ctx->operator $2";
+					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_' AND EXTRACT(MONTH FROM DATE(\"timestamp\")) $ctx->operator _Q2_";
 				} else {
 					// Full date search (default)
 					$Q1 = $dd_date->get_dd_timestamp("Y-m-d");
 					$query_object->params   = ['_Q1_' => $Q1];
-					$query_object->sentence = "DATE(\"timestamp\") $ctx->operator $1";
+					$query_object->sentence = "DATE(\"timestamp\") $ctx->operator _Q1_";
 				}
 				break;
 		}
@@ -112,6 +112,6 @@ trait search_component_date_tm {
 		return null;
 	}
 
-	
+
 
 }//end search_component_date_tm

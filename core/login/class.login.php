@@ -25,14 +25,12 @@ class login extends common {
 	* @var int|null $id Unique identifier for the login instance
 	* @var string $tipo_active_account Ontology tipo for active account status component
 	* @var string $tipo_button_login Ontology tipo for login button component
-	* @var string $login_matrix_table Matrix table name for login operations
 	* @var string $SU_DEFAULT_PASSWORD Default password for super user (root)
 	*/
 		protected $id;
-		protected $tipo_active_account			= 'dd131';
-		protected $tipo_button_login			= 'dd259';
-		protected static $login_matrix_table	= 'matrix';
-		const SU_DEFAULT_PASSWORD				= '';
+		protected $tipo_active_account	= 'dd131';
+		protected $tipo_button_login	= 'dd259';
+		const SU_DEFAULT_PASSWORD		= '';
 
 
 
@@ -905,7 +903,45 @@ class login extends common {
 				}
 
 			}else{
-				$backup_info = 'Deactivated "on login backup" for this domain';
+			$backup_info = 'Deactivated "on login backup" for this domain';
+		}
+
+		// db analyze daily
+			if (!defined('DEDALO_DB_ANALYZE_ON_LOGIN')) {
+				define('DEDALO_DB_ANALYZE_ON_LOGIN', true);
+			}
+			if (DEDALO_DB_ANALYZE_ON_LOGIN===true && defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+
+				try {
+
+					if (db_tasks::should_run_analyze()===true) {
+
+						$cache_file_name = db_tasks::get_analyze_cache_file_name();
+						debug_log(__METHOD__
+							." Executing DB ANALYZE in background... [cache_file_name: $cache_file_name]"
+							, logger::DEBUG
+						);
+						dd_cache::process_and_cache_to_file((object)[
+							'process_file'	=> DEDALO_CORE_PATH . '/db/db_analyze_process.php',
+							'data'			=> (object)[
+								'session_id'	=> session_id(),
+								'user_id'		=> $user_id
+							],
+							'file_name'		=> $cache_file_name,
+							'prefix'		=> '',
+							'wait'			=> false
+						]);
+
+					}else{
+						debug_log(__METHOD__
+							." Skipped DB ANALYZE. Recently executed (less than 24 hours ago)"
+							, logger::DEBUG
+						);
+					}
+
+				} catch (Exception $e) {
+					debug_log(__METHOD__." Error on DB ANALYZE process: $e ", logger::ERROR);
+				}
 			}
 
 		// remove lock_components elements

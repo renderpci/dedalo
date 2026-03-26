@@ -85,88 +85,116 @@ class tool_update_cache extends tool_common {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// Disable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log	= false;
-			tm_record::$save_tm						= false;
-
-		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= section::build_sqo_id($section_tipo);
-			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-				$response->msg .= ' Section session sqo not found!';
-				debug_log(__METHOD__
-					. " $response->msg ". PHP_EOL
-					. ' sqo_id: ' .$sqo_id
-					, logger::ERROR
-				);
-				if(SHOW_DEBUG===true) {
-					dump($_SESSION['dedalo']['config']['sqo'], '$_SESSION[dedalo][config][sqo] ++ ');
-				}
+		// Validate required inputs
+			if (empty($section_tipo)) {
+				$response->msg .= ' section_tipo is required!';
+				return $response;
+			}
+			if (empty($components_selection) || !is_array($components_selection)) {
+				$response->msg .= ' components_selection must be a non-empty array!';
 				return $response;
 			}
 
-		// PROCESS
-			// create new process section
-			// get the bulk_process_id as the section_id of the section process
-			$section = section::get_instance(DEDALO_BULK_PROCESS_SECTION_TIPO);
-			$bulk_process_id = $section->create_record();
+		// Validate required constants
+			if (!defined('DEDALO_BULK_PROCESS_SECTION_TIPO') || !defined('DEDALO_BULK_PROCESS_LABEL_TIPO')) {
+				$response->msg .= ' Required bulk process constants are not defined!';
+				return $response;
+			}
 
-			// Save the process name into the process section
-				$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
-				$bulk_process_label_component = component_common::get_instance(
-					$bulk_process_label_model, // string model
-					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
-					$bulk_process_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
-				);
-				$section_name = ontology_node::get_term_by_tipo( $section_tipo );
-				$ar_component_names = [];
-				foreach ($components_selection as $current_item) {
-					$ar_component_names[] = ontology_node::get_term_by_tipo($current_item->tipo) . '['.$current_item->tipo .']';
+		// Disable logging activity and time machine # !IMPORTANT
+		$original_log_state = logger_backend_activity::$enable_log;
+		$original_tm_state = tm_record::$save_tm;
+		logger_backend_activity::$enable_log = false;
+		tm_record::$save_tm = false;
+
+		try {
+			// RECORDS. Use actual list search options as base to build current search
+				$sqo_id	= section::build_sqo_id($section_tipo);
+				if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+					$response->msg .= ' Section session sqo not found!';
+					debug_log(__METHOD__
+						. " $response->msg ". PHP_EOL
+						. ' sqo_id: ' .$sqo_id
+						, logger::ERROR
+					);
+					if(SHOW_DEBUG===true) {
+						dump($_SESSION['dedalo']['config']['sqo'], '$_SESSION[dedalo][config][sqo] ++ ');
+					}
+					return $response;
 				}
-				$component_names = implode(', ', $ar_component_names);
-				$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
-				$bulk_process_data = [
-					(object)[
-						'value'	=> $bulk_process_label,
-						'lang'	=> $bulk_process_label_component->get_lang()
-					]
-				];
-				$bulk_process_label_component->set_data($bulk_process_data);
-				$bulk_process_label_component->save();
 
-		// process_chunk
-			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-			$sqo->limit		= self::CHUNK_SIZE;
-			$sqo->offset	= 0;
+			// PROCESS
+				// create new process section
+				// get the bulk_process_id as the section_id of the section process
+				$section = section::get_instance(DEDALO_BULK_PROCESS_SECTION_TIPO);
+				$bulk_process_id = $section->create_record();
 
-		// count records
-			$search			= search::get_instance($sqo);
-			$rows_data		= $search->count();
-			self::$total	= $rows_data->total;
+				// Save the process name into the process section
+					$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
+					$bulk_process_label_component = component_common::get_instance(
+						$bulk_process_label_model, // string model
+						DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+						$bulk_process_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+					);
+					$section_name = ontology_node::get_term_by_tipo( $section_tipo );
+					$ar_component_names = [];
+					foreach ($components_selection as $current_item) {
+						if (!isset($current_item->tipo)) {
+							debug_log(__METHOD__ . " Component item missing tipo property", logger::WARNING);
+							continue;
+						}
+						$ar_component_names[] = ontology_node::get_term_by_tipo($current_item->tipo) . '['.$current_item->tipo .']';
+					}
+					$component_names = implode(', ', $ar_component_names);
+					$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
+					$bulk_process_data = [
+						(object)[
+							'value'	=> $bulk_process_label,
+							'lang'	=> $bulk_process_label_component->get_lang()
+						]
+					];
+					$bulk_process_label_component->set_data($bulk_process_data);
+					$bulk_process_label_component->save();
 
-		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
-			tool_update_cache::process_chunk(
-				$sqo,
-				$section_tipo,
-				$components_selection,
-				$bulk_process_id
-			);
+			// process_chunk
+				$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+				$sqo->limit		= self::CHUNK_SIZE;
+				$sqo->offset	= 0;
 
-		// Enable logging activity and time machine # !IMPORTANT
-			logger_backend_activity::$enable_log	= true;
-			tm_record::$save_tm						= true;
+			// count records
+				$search			= search::get_instance($sqo);
+				$rows_data		= $search->count();
+				self::$total	= $rows_data->total;
 
-		$section_label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+			// recursive process_chunk. Chunked by sqo limit to prevent memory issues
+				tool_update_cache::process_chunk(
+					$sqo,
+					$section_tipo,
+					$components_selection,
+					$bulk_process_id
+				);
 
-		// response
+			$section_label = ontology_node::get_term_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+
+			// response
 			$response->result		= true;
 			$response->msg			= "Updated cache of section $section_label ($section_tipo) successfully";
 			$response->counter		= self::$n_records;
 			$response->total		= self::$total;
 			$response->n_components	= count($components_selection);
 
+		} catch (Exception $e) {
+			$response->result = false;
+			$response->msg = 'Cache update failed: ' . $e->getMessage();
+			debug_log(__METHOD__ . " Cache update failed with exception: " . $e->getMessage(), logger::ERROR);
+		} finally {
+			// Always restore the original states
+			logger_backend_activity::$enable_log = $original_log_state;
+			tm_record::$save_tm = $original_tm_state;
+		}
 
 		return $response;
 	}//end update_cache

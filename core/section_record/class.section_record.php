@@ -39,14 +39,18 @@ class section_record {
 
 
 	/**
-	* GET_INSTANCE
-	* Get an instance of a section_record object.
-	* It returns a cached instance if it exists.
-	* @param string $section_tipo
-	* @param int $section_id
-	* @param bool $is_temporal
-	* @return section_record $section_record
-	*/
+	 * GET_INSTANCE
+	 * Get an instance of a section_record object.
+	 *
+	 * It returns a cached instance from section_record_instances_cache if it exists for the given
+	 * combination of section_tipo, section_id and temporal state.
+	 * If not cached, it creates a new instance (section_record or section_record_temp).
+	 *
+	 * @param string $section_tipo The ontology tipo of the section
+	 * @param int|string $section_id The record ID. String is deprecated and will be cast to int.
+	 * @param bool $is_temporal Whether to use a temporal record instance (section_record_temp)
+	 * @return section_record The section record instance
+	 */
 	public static function get_instance( string $section_tipo, int|string $section_id, bool $is_temporal = false ) : section_record {
 
 		// debug
@@ -80,13 +84,17 @@ class section_record {
 
 
 	/**
-	* __CONSTRUCT
-	* Cache section instances (singleton pattern)
-	* On construction, it loads the section_record_data instance.
-	* @param string $section_tipo
-	* @param int $section_id
-	* @return void
-	*/
+	 * __CONSTRUCT
+	 * Initialize a new section_record instance.
+	 *
+	 * Sets the core identification properties, initializes the shared section_record_data instance,
+	 * determines the target database table based on the ontology tipo, and selects the
+	 * appropriate data handler (matrix_db_manager or matrix_activity_db_manager).
+	 *
+	 * @param string $section_tipo The ontology tipo of the section
+	 * @param int $section_id The record ID
+	 * @return void
+	 */
 	protected function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
@@ -1452,6 +1460,11 @@ class section_record {
 	public function read( bool $cache=true ) : ?object {
 
 		if ($cache && $this->is_loaded_data) {
+			// Fast path for caching: If we already know the record does not exist
+			// in the database from a previous read attempt, return null without querying again.
+			if (isset($this->record_in_the_database) && $this->record_in_the_database === false) {
+				return null;
+			}
 			return $this->data_instance->get_data();
 		}
 
@@ -1475,10 +1488,15 @@ class section_record {
 
 		// No results found
 		if (!$row) {
+			// Cache the database miss to prevent identical redundant queries
+			// from executing if this record is accessed multiple times during the request.
+			$this->is_loaded_data = true;
+			$this->record_in_the_database = false;
 			return null;
 		}
 
 		// assign data_columns from database results
+		// Raw JSON strings are passed to set_column_data for lazy decoding on first access.
 		$columns_name = $this->data_instance->get_columns_name();
 		foreach ($columns_name as $column) {
 
@@ -1488,14 +1506,15 @@ class section_record {
 			}
 
 			if ( $row->$column!==null ) {
-				// JSON case
-				$column_decoded = json_decode($row->$column);
-				$this->data_instance->set_column_data($column, $column_decoded);
+				// Pass raw JSON string; decoded lazily on first access
+				$this->data_instance->set_column_data($column, $row->$column);
 			}
 		}
 
 		// Updates is_loaded_data
 		$this->is_loaded_data = true;
+		// Mark the record as successfully found in the database.
+		$this->record_in_the_database = true;
 
 
 		return $this->data_instance->get_data();

@@ -602,4 +602,396 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_import_dedalo_csv_file_empty_csv_data
+	* Test that empty CSV data returns error
+	* @return void
+	*/
+	public function test_import_dedalo_csv_file_empty_csv_data() {
+
+		$this->user_login();
+
+		$options = new stdClass();
+			$options->section_tipo		= 'test3';
+			$options->ar_csv_data		= [];
+			$options->time_machine_save	= false;
+			$options->ar_columns_map	= [];
+			$options->current_file		= 'test_empty.csv';
+			$options->bulk_process_label	= 'test empty csv';
+
+		$response = tool_import_dedalo_csv::import_dedalo_csv_file($options);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			$response->result===false,
+			'expected result is false'
+				.' and is : '.json_encode($response->result)
+		);
+		$this->assertTrue(
+			gettype($response->msg)==='string',
+			'expected gettype msg is string'
+				.' and is : '.gettype($response->msg)
+		);
+		$this->assertTrue(
+			gettype($response->errors)==='array',
+			'expected gettype errors is array'
+				.' and is : '.gettype($response->errors)
+		);
+	}//end test_import_dedalo_csv_file_empty_csv_data
+
+
+
+	/**
+	* TEST_import_dedalo_csv_file_missing_section_id
+	* Test that CSV without section_id column fails
+	* @return void
+	*/
+	public function test_import_dedalo_csv_file_missing_section_id() {
+
+		$this->user_login();
+
+		// CSV data without section_id column
+		$ar_csv_data = [
+			['test52', 'test17'],
+			['test value', 'text area value']
+		];
+
+		$ar_columns_map = [
+			(object)[
+				'tipo' => 'test52',
+				'label' => 'input_text',
+				'model' => 'component_input_text',
+				'column_name' => 'test52',
+				'checked' => true,
+				'map_to' => 'test52'
+			],
+			(object)[
+				'tipo' => 'test17',
+				'label' => 'text_area',
+				'model' => 'component_text_area',
+				'column_name' => 'test17',
+				'checked' => true,
+				'map_to' => 'test17'
+			]
+		];
+
+		$options = new stdClass();
+			$options->section_tipo		= 'test3';
+			$options->ar_csv_data		= $ar_csv_data;
+			$options->time_machine_save	= false;
+			$options->ar_columns_map	= $ar_columns_map;
+			$options->current_file		= 'test_no_section_id.csv';
+			$options->bulk_process_label	= 'test missing section_id';
+
+		$response = tool_import_dedalo_csv::import_dedalo_csv_file($options);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			$response->result===false,
+			'expected result is false'
+				.' and is : '.json_encode($response->result)
+		);
+		$this->assertTrue(
+			strpos($response->msg, 'component_section_id')!==false,
+			'expected msg to mention component_section_id error'
+				.' and msg is : '.$response->msg
+		);
+	}//end test_import_dedalo_csv_file_missing_section_id
+
+
+
+	/**
+	* TEST_import_files_nonexistent_file
+	* Test importing a non-existent file
+	* @return void
+	*/
+	public function test_import_files_nonexistent_file() {
+
+		$this->user_login();
+
+		$options = new stdClass();
+			$options->files = [
+				(object)[
+					'file' => 'nonexistent_file_xyz.csv',
+					'section_tipo' => 'test3',
+					'bulk_process_label' => 'test nonexistent',
+					'ar_columns_map' => []
+				]
+			];
+			$options->time_machine_save = false;
+
+		$response = tool_import_dedalo_csv::import_files($options);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			gettype($response->result)==='array',
+			'expected gettype result is array'
+				.' and is : '.gettype($response->result)
+		);
+		// Check that the file was not found
+		foreach ($response->result as $value) {
+			$this->assertTrue(
+				$value->result===false,
+				'expected value->result is false for nonexistent file'
+					.' and is: '.json_encode($value->result)
+			);
+			$this->assertTrue(
+				strpos($value->msg, 'not found')!==false,
+				'expected msg to mention file not found'
+					.' and msg is: '.$value->msg
+			);
+		}
+	}//end test_import_files_nonexistent_file
+
+
+
+	/**
+	* TEST_import_files_empty_files_list
+	* Test importing with empty files list
+	* @return void
+	*/
+	public function test_import_files_empty_files_list() {
+
+		$this->user_login();
+
+		$options = new stdClass();
+			$options->files = [];
+			$options->time_machine_save = false;
+
+		$response = tool_import_dedalo_csv::import_files($options);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			gettype($response->result)==='array',
+			'expected gettype result is array'
+				.' and is : '.gettype($response->result)
+		);
+		$this->assertTrue(
+			empty($response->result),
+			'expected empty result array'
+				.' and is : '.json_encode($response->result)
+		);
+		$this->assertTrue(
+			$response->msg==='Request done',
+			'expected msg is Request done'
+				.' and is : '.$response->msg
+		);
+	}//end test_import_files_empty_files_list
+
+
+
+	/**
+	* TEST_verify_csv_map_invalid_component_tipo
+	* Test verify_csv_map with invalid component tipo
+	* @return void
+	*/
+	public function test_verify_csv_map_invalid_component_tipo() {
+
+		$this->user_login();
+
+		// CSV map with non-existent component tipo
+		$csv_map = [
+			(object)[
+				'tipo' => 'section_id',
+				'label' => 'Section ID',
+				'model' => 'section_id',
+				'column_name' => 'section_id',
+				'checked' => true,
+				'map_to' => 'section_id'
+			],
+			(object)[
+				'tipo' => 'xyz999',
+				'label' => 'Invalid Component',
+				'model' => 'component_input_text',
+				'column_name' => 'xyz999',
+				'checked' => true,
+				'map_to' => 'xyz999' // Non-existent tipo
+			]
+		];
+
+		$response = tool_import_dedalo_csv::verify_csv_map($csv_map, 'test3');
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			$response->result===false,
+			'expected result is false for invalid component'
+				.' and is : '.json_encode($response->result)
+		);
+		$this->assertTrue(
+			strpos($response->msg, 'not found')!==false || strpos($response->msg, 'xyz999')!==false,
+			'expected msg to mention invalid component'
+				.' and msg is : '.$response->msg
+		);
+	}//end test_verify_csv_map_invalid_component_tipo
+
+
+
+	/**
+	* TEST_verify_csv_map_valid_mapping
+	* Test verify_csv_map with valid component tipos
+	* @return void
+	*/
+	public function test_verify_csv_map_valid_mapping() {
+
+		$this->user_login();
+
+		// CSV map with valid component tipos from test3 section
+		$csv_map = [
+			(object)[
+				'tipo' => 'section_id',
+				'label' => 'Section ID',
+				'model' => 'section_id',
+				'column_name' => 'section_id',
+				'checked' => true,
+				'map_to' => 'section_id'
+			],
+			(object)[
+				'tipo' => 'test52',
+				'label' => 'input_text',
+				'model' => 'component_input_text',
+				'column_name' => 'test52',
+				'checked' => true,
+				'map_to' => 'test52'
+			]
+		];
+
+		$response = tool_import_dedalo_csv::verify_csv_map($csv_map, 'test3');
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			$response->result===true,
+			'expected result is true for valid components'
+				.' and is : '.json_encode($response->result)
+		);
+		$this->assertTrue(
+			$response->msg==='OK. Request done successfully',
+			'expected success msg'
+				.' and is : '.$response->msg
+		);
+	}//end test_verify_csv_map_valid_mapping
+
+
+
+	/**
+	* TEST_import_dedalo_csv_file_unchecked_columns
+	* Test that unchecked columns are not processed
+	* @return void
+	*/
+	public function test_import_dedalo_csv_file_unchecked_columns() {
+
+		$this->user_login();
+
+		// CSV data with section_id
+		$ar_csv_data = [
+			['section_id', 'test52', 'test17'],
+			['1', 'input value', 'text area value']
+		];
+
+		// Columns map with test52 unchecked
+		$ar_columns_map = [
+			(object)[
+				'tipo' => 'section_id',
+				'label' => 'Section ID',
+				'model' => 'section_id',
+				'column_name' => 'section_id',
+				'checked' => true,
+				'map_to' => 'section_id'
+			],
+			(object)[
+				'tipo' => 'test52',
+				'label' => 'input_text',
+				'model' => 'component_input_text',
+				'column_name' => 'test52',
+				'checked' => false, // unchecked
+				'map_to' => 'test52'
+			],
+			(object)[
+				'tipo' => 'test17',
+				'label' => 'text_area',
+				'model' => 'component_text_area',
+				'column_name' => 'test17',
+				'checked' => true,
+				'map_to' => 'test17'
+			]
+		];
+
+		$options = new stdClass();
+			$options->section_tipo		= 'test3';
+			$options->ar_csv_data		= $ar_csv_data;
+			$options->time_machine_save	= false;
+			$options->ar_columns_map	= $ar_columns_map;
+			$options->current_file		= 'test_unchecked.csv';
+			$options->bulk_process_label	= 'test unchecked columns';
+
+		$response = tool_import_dedalo_csv::import_dedalo_csv_file($options);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			$response->result===true,
+			'expected result is true'
+				.' and is : '.json_encode($response->result)
+		);
+	}//end test_import_dedalo_csv_file_unchecked_columns
+
+
+
+	/**
+	* TEST_get_csv_files_with_custom_path
+	* Test get_csv_files with custom files_path option
+	* @return void
+	*/
+	public function test_get_csv_files_with_custom_path() {
+
+		$response = tool_import_dedalo_csv::get_csv_files((object)[
+			'files_path' => $this->get_test_files_path()
+		]);
+
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected gettype result is object'
+				.' and is : '.gettype($response)
+		);
+		$this->assertTrue(
+			gettype($response->result)==='array',
+			'expected gettype result is array'
+				.' and is : '.gettype($response->result)
+		);
+		// Should find the test CSV files
+		$this->assertTrue(
+			count($response->result) >= 2,
+			'expected at least 2 CSV files'
+				.' and found : '.count($response->result)
+		);
+	}//end test_get_csv_files_with_custom_path
+
+
+
 }//end class tool_import_dedalo_csv_Test

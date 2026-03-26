@@ -281,6 +281,8 @@ class section extends common {
 					if(isset($caller_dataframe)) {
 						self::$ar_section_instances[$cache_key]->set_caller_dataframe($caller_dataframe);
 					}
+					// Manage cache size to prevent memory leaks (using inherited method)
+					self::manage_cache_size(self::$ar_section_instances);
 				}
 
 
@@ -2413,8 +2415,10 @@ class section extends common {
 			$search_exact
 		);
 
-		// Cache session store
-		self::$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
+		// cache. Store in cache for speed
+			self::$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$cache_ar_children_tipo);
 
 
 		return $section_ar_children_tipo;
@@ -3684,8 +3688,7 @@ class section extends common {
 	public static function get_section_map( string $section_tipo ) : ?object {
 
 		// cache
-
-			if (array_key_exists($section_tipo, self::$section_map_cache)) {
+			if( isset(self::$section_map_cache[$section_tipo]) ) {
 				return self::$section_map_cache[$section_tipo];
 			}
 
@@ -3724,6 +3727,8 @@ class section extends common {
 
 		// cache. Store in cache for speed
 			self::$section_map_cache[$section_tipo] = $section_map;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$section_map_cache);
 
 
 		return $section_map;

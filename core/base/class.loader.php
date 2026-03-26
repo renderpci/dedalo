@@ -1,6 +1,19 @@
 <?php declare(strict_types=1);
-/*
-	FIXED CLASSES TO LOAD
+/**
+* CLASS LOADER
+*
+* Manages the autoloading of Dédalo PHP classes.
+* This class is included from the config file and registers an autoloader
+* that follows Dédalo's directory structure conventions.
+*
+* Key features:
+* - Autoloads tools, diffusion classes, components, and areas
+* - Follows Dédalo's naming convention: class.{Class_name}.php
+* - Uses modern PHP 8.3+ functions for better performance
+*
+* @package Dedalo
+* @subpackage Core
+* @since 7.0
 */
 // Base
 include DEDALO_CORE_PATH . '/base/class.Error.php';
@@ -22,13 +35,9 @@ include DEDALO_CORE_PATH . '/db/class.tm_db_manager.php';
 include DEDALO_CORE_PATH . '/db/class.db_result.php';
 include DEDALO_CORE_PATH . '/db/class.locators_result.php';
 include DEDALO_CORE_PATH . '/db/class.object_cache.php';
-// include DEDALO_CORE_PATH . '/db/class.RecordDataBoundObject.php';
-// include DEDALO_CORE_PATH . '/db/class.JSON_RecordDataBoundObject.php';
-// include DEDALO_CORE_PATH . '/db/class.JSON_RecordObj_matrix.php';
-// include DEDALO_CORE_PATH . '/db/class.RecordObj_time_machine.php';
 include DEDALO_CORE_PATH . '/db/class.json_handler.php';
 include DEDALO_CORE_PATH . '/db/class.db_tasks.php';
-
+// Backup
 include DEDALO_CORE_PATH . '/backup/class.backup.php';
 // Common
 include DEDALO_CORE_PATH . '/common/class.common.php';
@@ -153,8 +162,14 @@ include DEDALO_SHARED_PATH . '/class.subtitles.php';
 
 /**
 * CLASS_LOADER
-* manage the load of Dédalo PHP classes files
-* Included from config file
+*
+* Manages the autoloading of Dédalo PHP classes.
+* This class is included from the config file and registers an autoloader
+* that follows Dédalo's directory structure conventions.
+*
+* @package Dedalo
+* @subpackage Core
+* @since 7.0
 */
 class class_loader {
 
@@ -162,46 +177,56 @@ class class_loader {
 
 	/**
 	* __CONSTRUCT
+	*
+	* Registers the autoloader function with SPL.
+	* Sets the file extension for autoloaded files to .php
 	*/
 	public function __construct() {
 
 		spl_autoload_extensions('.php');
-		spl_autoload_register(array($this, 'loader'));
+		spl_autoload_register([self::class, 'loader']);
 	}//end __construct
 
 
 
 	/**
 	* LOADER
-	* Include the file of given class resolving more common paths
-	* @param string $className
-	* @return bool
+	*
+	* Autoloads PHP classes following Dédalo's directory structure conventions.
+	* Resolves class names to file paths and includes the appropriate file.
+	*
+	* Supported patterns:
+	* - tool* -> Loads from DEDALO_TOOLS_PATH (with special handling for tools_register)
+	* - *diffusion_* -> Loads from DEDALO_DIFFUSION_PATH
+	* - * -> Loads from DEDALO_CORE_PATH/class_name/class.class_name.php
+	*
+	* @param string $class_name The name of the class to autoload
+	* @return bool True if the file was successfully included
+	* @throws Exception If the class file cannot be found or included
 	*/
-	private static function loader(string $className) : bool {
+	private static function loader(string $class_name) : bool {
 
 		switch (true) {
 
 			// tools
-			case (strpos($className, 'tool')===0):
-				$directory	= ($className==='tools_register') ? 'tool_common' : $className;
-				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $className . '.php';
+			case (str_starts_with($class_name, 'tool')):
+				$directory	= ($class_name==='tools_register') ? 'tool_common' : $class_name;
+				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $class_name . '.php';
 				break;
 
 			// diffusion
-				// case (strpos($className, 'diffusion_')!==false):
-				// 	$file_path	= DEDALO_CORE_PATH . '/diffusion/class.' . $className . '.php';
-				// 	break;
+			case (str_starts_with($class_name, 'diffusion_')):
+				$file_path	= DEDALO_DIFFUSION_PATH . '/class.' . $class_name . '.php';
+				break;
 
 			// components, areas, etc. (first level directory inside DEDALO_CORE_PATH)
 			default:
-				$file_path	= DEDALO_CORE_PATH . '/' . $className . '/class.' . $className . '.php';
+				$file_path	= DEDALO_CORE_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
 				break;
 		}
 
 		if ( !include($file_path) ) {
-			// $bt = debug_backtrace();
-			// dump($bt, ' ERROR ON LOADER INCLUDE FILE !! bt ++ '.to_string($file_path));
-			$msg = "<hr> A loader call was made to class <b>$className</b><br> File do not exits at: <b>$file_path</b><br>
+			$msg = "<hr> A loader call was made to class <b>$class_name</b><br> File do not exits at: <b>$file_path</b><br>
 				Please, remember require this file in main class (like component_common) or create standard dedalo lib path folder
 				like '/component_input_text/class.component_input_text.php' for loader calls. ";
 			// throw new Exception(__METHOD__ . $msg);

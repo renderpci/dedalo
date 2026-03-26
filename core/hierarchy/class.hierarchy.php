@@ -31,10 +31,25 @@ class hierarchy extends ontology {
 		DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // hierarchy59 hierarchy main: General term model
 	];
 
-	public static $cache_main_lang_cache;
-	public static $section_map_elemets_cache;
-	public static $hierarchy_section_cache;
-	public static $active_hierarchy_elements_cache;
+	public static $cache_main_lang;
+	public static $cache_section_map_elemets;
+	public static $cache_hierarchy_section;
+	public static $cache_hierarchy_elements;
+
+
+
+	/**
+	* CLEAR
+	* Purges persistent caches to prevent memory leaks across worker requests.
+	* Overrides parent clear to include hierarchy-specific caches.
+	*/
+	public static function clear() : void {
+		parent::clear();
+		self::$cache_main_lang = [];
+		self::$cache_section_map_elemets = [];
+		self::$cache_hierarchy_section = [];
+		self::$cache_hierarchy_elements = [];
+	}
 
 
 
@@ -550,8 +565,8 @@ class hierarchy extends ontology {
 			}
 
 		// cache
-			if(isset(self::$cache_main_lang_cache[$section_tipo])) {
-				return self::$cache_main_lang_cache[$section_tipo];
+			if(isset(self::$cache_main_lang[$section_tipo])) {
+				return self::$cache_main_lang[$section_tipo];
 			}
 
 		// default value
@@ -628,7 +643,9 @@ class hierarchy extends ontology {
 			}
 
 		// store cache
-			self::$cache_main_lang_cache[$section_tipo] = $main_lang;
+			self::$cache_main_lang[$section_tipo] = $main_lang;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$cache_main_lang);
 
 
 		return $main_lang;
@@ -715,8 +732,8 @@ class hierarchy extends ontology {
 		}
 
 		// cache
-		if (isset(self::$section_map_elemets_cache[$section_tipo])) {
-			return self::$section_map_elemets_cache[$section_tipo];
+		if (isset(self::$cache_section_map_elemets[$section_tipo])) {
+			return self::$cache_section_map_elemets[$section_tipo];
 		}
 
 		// Elements are stored in current section > section_map
@@ -760,7 +777,9 @@ class hierarchy extends ontology {
 		}
 
 		// Set static var for re-use
-		self::$section_map_elemets_cache[$section_tipo] = $ar_elements;
+			self::$cache_section_map_elemets[$section_tipo] = $ar_elements;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$cache_section_map_elemets);
 
 
 		return (array)$ar_elements;
@@ -782,8 +801,8 @@ class hierarchy extends ontology {
 
 		// cache
 
-		if (isset(self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo])) {
-			return self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo];
+		if (isset(self::$cache_hierarchy_section[$section_tipo][$hierarchy_component_tipo])) {
+			return self::$cache_hierarchy_section[$section_tipo][$hierarchy_component_tipo];
 		}
 
 		$model = ontology_node::get_model_by_tipo($hierarchy_component_tipo,true);
@@ -823,7 +842,9 @@ class hierarchy extends ontology {
 			$section_id = isset($record->section_id) ? (int)$record->section_id : null;
 
 		// cache
-			self::$hierarchy_section_cache[$section_tipo][$hierarchy_component_tipo] = $section_id;
+			self::$cache_hierarchy_section[$section_tipo][$hierarchy_component_tipo] = $section_id;
+			// Manage cache size to prevent memory leaks (using inherited method)
+			self::manage_cache_size(self::$cache_hierarchy_section);
 
 		return $section_id;
 	}//end get_hierarchy_section
@@ -1329,8 +1350,8 @@ class hierarchy extends ontology {
 	public static function get_active_elements() : array {
 
 		// cache
-		if (isset(self::$active_hierarchy_elements_cache)) {
-			return self::$active_hierarchy_elements_cache;
+		if (isset(self::$cache_hierarchy_elements)) {
+			return self::$cache_hierarchy_elements;
 		}
 
 		// main filter
@@ -1380,7 +1401,9 @@ class hierarchy extends ontology {
 		}
 
 		// cache
-		self::$active_hierarchy_elements_cache = $active_elements;
+		self::$cache_hierarchy_elements = $active_elements;
+		// Manage cache size to prevent memory leaks (using inherited method)
+		self::manage_cache_size(self::$cache_hierarchy_elements);
 
 
 		return $active_elements;

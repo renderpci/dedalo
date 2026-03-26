@@ -277,31 +277,32 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 		$colorFormats = [
 			// styles
 			// italic and blink may not work depending of your terminal
-			'bold'			=> "\033[1m%s\033[0m",
-			'dark'			=> "\033[2m%s\033[0m",
-			'italic'		=> "\033[3m%s\033[0m",
-			'underline'		=> "\033[4m%s\033[0m",
-			'blink'			=> "\033[5m%s\033[0m",
-			'reverse'		=> "\033[7m%s\033[0m",
-			'concealed'		=> "\033[8m%s\033[0m",
+			'bold'			=> ANSI_BOLD . "%s" . ANSI_RESET,
+			'dark'			=> ANSI_DARK . "%s" . ANSI_RESET,
+			'italic'		=> ANSI_ITALIC . "%s" . ANSI_RESET,
+			'underline'		=> ANSI_UNDERLINE . "%s" . ANSI_RESET,
+			'blink'			=> ANSI_BLINK . "%s" . ANSI_RESET,
+			'reverse'		=> ANSI_REVERSE . "%s" . ANSI_RESET,
+			'concealed'		=> ANSI_CONCEALED . "%s" . ANSI_RESET,
 			// foreground colors
-			'black'			=> "\033[30m%s\033[0m",
-			'red'			=> "\033[31m%s\033[0m",
-			'green'			=> "\033[32m%s\033[0m",
-			'yellow'		=> "\033[33m%s\033[0m",
-			'blue'			=> "\033[34m%s\033[0m",
-			'magenta'		=> "\033[35m%s\033[0m",
-			'cyan'			=> "\033[36m%s\033[0m",
-			'white'			=> "\033[37m%s\033[0m",
+			'black'			=> ANSI_BLACK . "%s" . ANSI_RESET,
+			'red'			=> ANSI_RED . "%s" . ANSI_RESET,
+			'green'			=> ANSI_GREEN . "%s" . ANSI_RESET,
+			'yellow'		=> ANSI_YELLOW . "%s" . ANSI_RESET,
+
+			'blue'			=> ANSI_BLUE . "%s" . ANSI_RESET,
+			'magenta'		=> ANSI_MAGENTA . "%s" . ANSI_RESET,
+			'cyan'			=> ANSI_CYAN . "%s" . ANSI_RESET,
+			'white'			=> ANSI_WHITE . "%s" . ANSI_RESET,
 			// background colors
-			'bg_black'		=> "\033[40m%s\033[0m",
-			'bg_red'		=> "\033[41m%s\033[0m",
-			'bg_green'		=> "\033[42m%s\033[0m",
-			'bg_yellow'		=> "\033[43m%s\033[0m",
-			'bg_blue'		=> "\033[44m%s\033[0m",
-			'bg_magenta'	=> "\033[45m%s\033[0m",
-			'bg_cyan'		=> "\033[46m%s\033[0m",
-			'bg_white'		=> "\033[47m%s\033[0m"
+			'bg_black'		=> ANSI_BG_BLACK . "%s" . ANSI_RESET,
+			'bg_red'		=> ANSI_BG_RED . "%s" . ANSI_RESET,
+			'bg_green'		=> ANSI_BG_GREEN . "%s" . ANSI_RESET,
+			'bg_yellow'		=> ANSI_BG_YELLOW . "%s" . ANSI_RESET,
+			'bg_blue'		=> ANSI_BG_BLUE . "%s" . ANSI_RESET,
+			'bg_magenta'	=> ANSI_BG_MAGENTA . "%s" . ANSI_RESET,
+			'bg_cyan'		=> ANSI_BG_CYAN . "%s" . ANSI_RESET,
+			'bg_white'		=> ANSI_BG_WHITE . "%s" . ANSI_RESET
 		];
 
 	// level string

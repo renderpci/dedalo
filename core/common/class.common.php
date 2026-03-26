@@ -20,6 +20,23 @@ abstract class common {
 
 	use request_config_utils, request_config_ddo, request_config_v6, request_config_v5;
 
+	// Cache management constants
+	const MAX_CACHE_SIZE = 1000;
+
+	/**
+	* MANAGE_CACHE_SIZE
+	* Controls cache size to prevent memory leaks by limiting cache entries.
+	* Keeps only the most recent entries when limit is exceeded.
+	* @param array &$cache Reference to the cache array
+	* @return void
+	*/
+	protected static function manage_cache_size(array &$cache) : void {
+		if (count($cache) > self::MAX_CACHE_SIZE) {
+			// Keep only the most recent entries
+			$cache = array_slice($cache, -self::MAX_CACHE_SIZE, null, true);
+		}
+	}
+
 
 
 	/**
@@ -83,7 +100,7 @@ abstract class common {
 		// cache of calculated context, used to get the context that was calculated and reuse it.
 		public static $structure_context_cache = [];
 		public static $matrix_table_from_tipo = [];
-		public static $ar_tables_with_relations_cache;
+		public static $cache_ar_tables_with_relations;
 		public static $current_main_lang = [];
 		public static $ar_related_by_model_data = [];
 		public static $resolved_request_properties_parsed = [];
@@ -195,7 +212,7 @@ abstract class common {
 		public static function clear() : void {
 			self::$structure_context_cache = [];
 			self::$matrix_table_from_tipo = [];
-			self::$ar_tables_with_relations_cache = null;
+			self::$cache_ar_tables_with_relations = null;
 			self::$current_main_lang = [];
 			self::$ar_related_by_model_data = [];
 			self::$resolved_request_properties_parsed = [];
@@ -479,9 +496,7 @@ abstract class common {
 
 		// cache
 			// Safe control: prevent big array memory and performance problems
-			if (count(self::$matrix_table_from_tipo) > 1000) {
-				self::$matrix_table_from_tipo = [];
-			}
+			self::manage_cache_size(self::$matrix_table_from_tipo);
 
 			// check cache
 			if(isset(self::$matrix_table_from_tipo[$tipo])) {
@@ -520,7 +535,7 @@ abstract class common {
 				return null;
 			}
 			// area model case
-			if (strpos($model_name, 'area')===0 || $model_name==='menu' || $model_name==='section_tool') {
+			if (str_starts_with($model_name, 'area') || $model_name==='menu' || $model_name==='section_tool') {
 				return null;
 			}
 			// non section model case
@@ -598,8 +613,8 @@ abstract class common {
 	public static function get_matrix_tables_with_relations() : array {
 
 		// cache
-			if (isset(self::$ar_tables_with_relations_cache)) {
-				return self::$ar_tables_with_relations_cache;
+			if (isset(self::$cache_ar_tables_with_relations)) {
+				return self::$cache_ar_tables_with_relations;
 			}
 
 		// tables
@@ -659,7 +674,7 @@ abstract class common {
 			}
 
 		// cache
-			self::$ar_tables_with_relations_cache = $ar_tables_with_relations;
+			self::$cache_ar_tables_with_relations = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -703,15 +718,6 @@ abstract class common {
 					unset($this->data_resolved);
 				}
 			}
-
-		// unset previous calculated data_resolved
-		// (!) Do not apply in time machine mode because the data is injected
-			if ($this->mode !== 'tm') {
-				if (isset($this->data_resolved)) {
-					unset($this->data_resolved);
-				}
-			}
-
 	}//end set_to_force_reload_data
 
 
@@ -790,6 +796,8 @@ abstract class common {
 		#debug_log(__METHOD__." main_lang ".to_string($main_lang), logger::DEBUG);
 
 		self::$current_main_lang[$uid] = $main_lang;
+		// Manage cache size to prevent memory leaks
+		self::manage_cache_size(self::$current_main_lang);
 
 
 		return (string)$main_lang;
@@ -1075,7 +1083,7 @@ abstract class common {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}else{
-				if (strpos($current_model_name, $model_name)!==false) {
+				if (str_contains($current_model_name, $model_name)) {
 					$ar_related_by_model[] = $current_tipo;
 				}
 			}
@@ -1083,6 +1091,8 @@ abstract class common {
 
 		// cache
 		self::$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		// Manage cache size to prevent memory leaks
+		self::manage_cache_size(self::$ar_related_by_model_data);
 
 
 		return $ar_related_by_model;
@@ -1298,7 +1308,7 @@ abstract class common {
 			}
 			// (!) new. Section overwrite css (virtual sections case)
 			// see sample at section 'rsc170'
-			if (strpos($model, 'component_')===0) {
+			if (str_starts_with($model, 'component_')) {
 				$ontology_node		= ontology_node::get_instance($section_tipo);
 				$section_properties	= $ontology_node->get_properties();
 				if (isset($section_properties->css) && isset($section_properties->css->{$tipo})) {
@@ -1404,7 +1414,7 @@ abstract class common {
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
 			// but they can load tools using only the name if needed
-			if(( ($model==='section' || strpos($model, 'area')===0) && $this->mode==='list') || ($this->mode!=='list')){
+			if(( ($model==='section' || str_starts_with($model, 'area')) && $this->mode==='list') || ($this->mode!=='list')){
 				$tools_list	= $this->get_tools();
 				foreach ($tools_list as $tool_object) {
 
@@ -1414,9 +1424,7 @@ abstract class common {
 						}
 
 					// tool_config
-						$tool_config = isset($properties->tool_config->{$tool_object->name})
-							? $properties->tool_config->{$tool_object->name}
-							: null;
+						$tool_config = $properties->tool_config->{$tool_object->name} ?? null;
 
 					// specific tool config in registered tools or tool configuration
 						// when the tool has a specific properties in the register or in his configuration records
@@ -1430,10 +1438,11 @@ abstract class common {
 
 						// get the config, get_config check is the specific configuration isset
 						// else get the configuration in register record
-							$tool_config_options = new stdClass();
-								$tool_config_options->tool_name		= $tool_object->name;
-								$tool_config_options->tipo			= $tipo;
-								$tool_config_options->section_tipo	= $section_tipo;
+							$tool_config_options = (object)[
+								'tool_name'		=> $tool_object->name,
+								'tipo'			=> $tipo,
+								'section_tipo'	=> $section_tipo
+							];
 
 							$specific_tool_config = tool_common::get_tool_configuration(
 								$tool_config_options,
@@ -1442,9 +1451,7 @@ abstract class common {
 
 						// if the configuration was defined, replace the ddo_map of the ontology with it.
 							if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
-								if (!isset($tool_config)) {
-									$tool_config = new stdClass();
-								}
+								$tool_config ??= new stdClass();
 								$tool_config->ddo_map = $specific_tool_config->ddo_map;
 							}
 
@@ -1458,7 +1465,7 @@ abstract class common {
 						);
 					// add
 					$tools[] = $tool_context;
-				}//end foreach ($tools_list as $item)
+				}//end foreach ($tools_list as $tool_object)
 			}
 
 		// buttons
@@ -1530,7 +1537,7 @@ abstract class common {
 				}
 
 			// specific by model
-				if (strpos($model, 'component_')===0) {
+				if (str_starts_with($model, 'component_')) {
 
 					// component specific
 
@@ -1666,6 +1673,8 @@ abstract class common {
 		// cache. fix context dd_object
 			if ($use_cache===true) {
 				self::$structure_context_cache[$ddo_key] = $dd_object;
+				// Manage cache size to prevent memory leaks
+				self::manage_cache_size(self::$structure_context_cache);
 			}
 
 		// Debug
@@ -1676,7 +1685,7 @@ abstract class common {
 				metrics::$structure_context_total_time += $time;
 
 				$debug = new stdClass();
-					$debug->exec_time	= $time.' ms';
+					$debug->exec_time = $time.' ms';
 
 				$dd_object->debug = $debug;
 
@@ -1691,7 +1700,8 @@ abstract class common {
 						? (14 - $len)
 						: 0;
 					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-					error_log('--- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model - parent:" . $parent . ' ' . json_encode($add_request_config);
+					debug_log($msg, logger::WARNING);
 				}
 			}
 
@@ -1779,23 +1789,22 @@ abstract class common {
 				];
 			}
 
-		// children_recursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
-			if (!function_exists('get_children_recursive')) {
-				function get_children_recursive(array $ar_ddo, object $dd_object) : array {
-					$ar_children = [];
-					foreach ($ar_ddo as $ddo) {
-						if($ddo->parent===$dd_object->tipo) {
-							$ar_children[] = $ddo;
-							$result = get_children_recursive($ar_ddo, $ddo);
-							if (!empty($result)) {
-								$ar_children = [...$ar_children, ...$result];
-							}
+		// children_recursive closure (avoids global namespace pollution)
+		// Used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
+			$get_children_recursive = static function(array $ar_ddo, object $dd_object) use (&$get_children_recursive) : array {
+				$ar_children = [];
+				foreach ($ar_ddo as $ddo) {
+					if($ddo->parent===$dd_object->tipo) {
+						$ar_children[] = $ddo;
+						$result = $get_children_recursive($ar_ddo, $ddo);
+						if (!empty($result)) {
+							array_push($ar_children, ...$result);
 						}
 					}
-
-					return $ar_children;
 				}
-			}
+
+				return $ar_children;
+			};
 
 		// full_ddo_map. Get the full ddo in every request_config
 			$full_ddo_map = [];
@@ -1813,14 +1822,41 @@ abstract class common {
 					continue;
 				}
 				// merge all ddo of all request_config
-				$full_ddo_map = [...$full_ddo_map, ...$request_config_object->show->ddo_map];
+				array_push($full_ddo_map, ...$request_config_object->show->ddo_map);
 				// hide ddo_map add. If request config has 'hide' property defined, add his ddo_map to be resolved
 				if( isset($request_config_object->hide) && isset($request_config_object->hide->ddo_map) ){
-					$full_ddo_map = [...$full_ddo_map, ...$request_config_object->hide->ddo_map];
+					array_push($full_ddo_map, ...$request_config_object->hide->ddo_map);
 				}
 			}//end foreach ($request_config as $request_config_object)
-			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
-			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
+			// remove duplicates by composite key
+			// Sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
+			$seen_ddo = [];
+			$full_ddo_map = array_filter($full_ddo_map, function($ddo) use (&$seen_ddo) {
+				$key = $ddo->tipo . '_' . ($ddo->parent ?? '') . '_' . json_encode($ddo->section_tipo);
+				if (isset($seen_ddo[$key])) return false;
+				return $seen_ddo[$key] = true;
+			});
+
+		// pre-group DDOs by section_tipo to avoid repeated array_filter per locator
+			$ddo_by_section_tipo = [];
+			$ddo_dataframes = [];
+			foreach ($full_ddo_map as $ddo) {
+				if (isset($ddo->model) && $ddo->model === 'component_dataframe') {
+					$ddo_dataframes[] = $ddo;
+					continue;
+				}
+				$tipos = is_array($ddo->section_tipo) ? $ddo->section_tipo : [$ddo->section_tipo];
+				foreach ($tipos as $st) {
+					$ddo_by_section_tipo[$st][] = $ddo;
+				}
+			}
+
+		// hoist invariant values outside loops
+			$source_model		= get_called_class();
+			$is_component_caller	= str_starts_with($source_model, 'component_');
+
+		// children_recursive cache (keyed by ddo tipo + api_engine, avoids recomputing across locators)
+			$children_cache = [];
 
 		// get the context and data for every locator
 			foreach($ar_locators as $current_locator) {
@@ -1840,17 +1876,28 @@ abstract class common {
 				$section_id_key			= $current_locator->section_id;
 				$section_tipo_key		= $current_locator->section_tipo;
 
-				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
-				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
-				$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
-					return 	$ddo->section_tipo===$section_tipo ||
-							(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
-							(isset($ddo->model) && $ddo->model === 'component_dataframe');
-				});
+				// // get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
+				// // but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
+				// $ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
+				// 	return 	$ddo->section_tipo===$section_tipo ||
+				// 			(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
+				// 			(isset($ddo->model) && $ddo->model === 'component_dataframe');
+				// });
+				// get only the direct ddos compatible with the current locator (pre-grouped lookup + dataframes)
+				$ar_ddo = array_merge(
+					$ddo_by_section_tipo[$section_tipo] ?? [],
+					$ddo_dataframes
+				);
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
-					$ddo_start_time = start_time();
+					// reset to avoid stale reference from previous iteration (correctness fix)
+					unset($current_element);
+
+					// debug timing
+					if(SHOW_DEBUG===true) {
+						$ddo_start_time = start_time();
+					}
 
 					// use the locator section_tipo.
 					// when the ddo is a component_dataframe (used as sub section as data frame or semantic_node of the locator)
@@ -1961,13 +2008,12 @@ abstract class common {
 								break;
 
 							// component case
-							case (strpos($model, 'component_')===0):
+							case (str_starts_with($model, 'component_')):
 
-								// who calls sub-datum. Could be a component_portal or a section
-								$source_model = get_called_class();
+								// source_model and is_component_caller are hoisted before the loops
 
 								// caller_dataframe cases
-								$caller_dataframe = (strpos($source_model, 'component_')===0)
+								$caller_dataframe = (str_starts_with($source_model, 'component_'))
 									? (object)[
 										'section_id_key'		=> $section_id_key,
 										'section_tipo_key'		=> $section_tipo_key,
@@ -2013,7 +2059,6 @@ abstract class common {
 								// Exception:
 								// If the user can read or read/write permissions, do not change it.
 									$current_element_permissions = $current_element->get_component_permissions();
-									$is_component_caller = str_starts_with(get_called_class(), 'component_');
 									// Grant minimum read permission when user lacks access to target section
 									if($is_component_caller && $current_element_permissions < 1) {
 										$current_element->set_permissions(1);
@@ -2053,19 +2098,30 @@ abstract class common {
 									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
-											$api_engine			= $request_config_object->api_engine;
-											$children_show		= isset($request_config_object->show)
-												? get_children_recursive($request_config_object->show->ddo_map, $dd_object)
-												: null;
-											$children_search	= isset($request_config_object->search)
-												? get_children_recursive($request_config_object->search->ddo_map, $dd_object)
-												: null;
-											$children_choose	= isset($request_config_object->choose)
-												? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
-												: null;
-											$children_hide		= isset($request_config_object->hide)
-												? get_children_recursive($request_config_object->hide->ddo_map, $dd_object)
-												: null;
+											$api_engine = $request_config_object->api_engine;
+
+										// cache children_recursive results (same dd_object + api_engine across locators)
+											$cache_key = $dd_object->tipo . '_' . $api_engine;
+											if (!isset($children_cache[$cache_key])) {
+												$children_cache[$cache_key] = [
+													'show'		=> isset($request_config_object->show)
+														? $get_children_recursive($request_config_object->show->ddo_map, $dd_object)
+														: null,
+													'search'	=> isset($request_config_object->search)
+														? $get_children_recursive($request_config_object->search->ddo_map, $dd_object)
+														: null,
+													'choose'	=> isset($request_config_object->choose)
+														? $get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
+														: null,
+													'hide'		=> isset($request_config_object->hide)
+														? $get_children_recursive($request_config_object->hide->ddo_map, $dd_object)
+														: null,
+												];
+											}
+											$children_show		= $children_cache[$cache_key]['show'];
+											$children_search	= $children_cache[$cache_key]['search'];
+											$children_choose	= $children_cache[$cache_key]['choose'];
+											$children_hide		= $children_cache[$cache_key]['hide'];
 
 										// select the current api_engine
 											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
@@ -2116,7 +2172,7 @@ abstract class common {
 									$current_element->request_config = $component_request_config;
 
 								// Inject this tipo as related component from_component_tipo
-									if (strpos($source_model, 'component_')===0){
+									if (str_starts_with($source_model, 'component_')){
 										$current_element->from_component_tipo	= $this->tipo;
 										$current_element->from_section_tipo		= $this->get_section_tipo();
 									}
@@ -2132,6 +2188,7 @@ abstract class common {
 								$current_element = new $model($current_tipo, $current_section_tipo, $mode);
 								break;
 
+							// dd_grid in time machine case
 							case ($model==='dd_grid' && $section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO):
 
 								// tm case
@@ -2198,25 +2255,14 @@ abstract class common {
 									$current_element->set_properties($properties);
 								}
 
-							// skip_subdatum subdatum_options
-								$bool_get_data = true;
-								// (!) Commented because currently all portals are direct (included set data external cases). To be considered for future use
-								// if (isset($subdatum_options->skip_subdatum) && $mode === 'edit') {
-								// 	$legacy_model = ontology_node::get_legacy_model_by_tipo($current_tipo);
-								// 	if(in_array($legacy_model, $subdatum_options->skip_subdatum)) {
-								// 		$bool_get_data = false;
-								// 		dump($bool_get_data, ' bool_get_data ++ '.$current_tipo.' -  '.to_string($model));
-								// 	}
-								// }
-
 							// get the JSON context of the related component
 								$item_options = new stdClass();
 									$item_options->get_context	= true;
-									$item_options->get_data		= $bool_get_data;
+									$item_options->get_data		= true;
 								$element_json = $current_element->get_json($item_options);
 
 							// ar_subcontext
-								$ar_subcontext = [...$ar_subcontext, ...$element_json->context];
+								array_push($ar_subcontext, ...$element_json->context);
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
@@ -2239,7 +2285,7 @@ abstract class common {
 								}
 
 							// data add
-								$ar_subdata = [...$ar_subdata, ...$ar_final_subdata];
+								array_push($ar_subdata, ...$ar_final_subdata);
 						}//end if (isset($current_element))
 
 					// debug
@@ -2380,13 +2426,7 @@ abstract class common {
 			}
 
 		// 2. Attempt to retrieve from static cache
-		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
-			static $resolved_request_config_parsed = [];
-			$resolved_key = $this->tipo .'_'. $this->get_section_tipo() .'_'. $this->mode .'_'. $this->section_id;
-			$use_cache = false;
-			if ($use_cache===true && isset($resolved_request_config_parsed[$resolved_key])) {
-				return $resolved_request_config_parsed[$resolved_key];
-			}
+		// No use cache here. Atomic cache is used instead
 
 		// 3. Attempt to build from the client's API request (RQO)
 			// requested_source is fixed from RQO calls to API when they exists like
@@ -2606,11 +2646,6 @@ abstract class common {
 				}
 			}//end if ($model==='section')
 
-		// cache
-			if ($use_cache===true) {
-				$resolved_request_config_parsed[$resolved_key] = $this->request_config;
-			}
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$len = !empty($this->tipo)
@@ -2621,7 +2656,7 @@ abstract class common {
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'--- build_request_config --------- '. $tipo_line .' '. number_format(exec_time_unit($start_time,'ms'),3).' ms' . ' - ' . get_called_class() . ' - ' . $resolved_key,
+					"--- build_request_config --------- {$tipo_line} ". number_format(exec_time_unit($start_time,'ms'),3). " ms - " . get_called_class() . " - {$this->tipo} - {$this->section_tipo} - {$this->section_id}",
 					logger::DEBUG
 				);
 			}
@@ -3176,7 +3211,7 @@ abstract class common {
 				switch (true) {
 
 					// component case
-					case (strpos($model, 'component_')===0):
+					case (str_starts_with($model, 'component_')):
 						$translatable	= ontology_node::get_translatable($element_tipo);
 						$current_lang	= $translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 						$element		= component_common::get_instance(
@@ -3323,7 +3358,7 @@ abstract class common {
 		// short vars
 			$model				= get_class($this);
 			$tipo				= $this->tipo;
-			$is_component		= strpos($model, 'component_')===0;
+			$is_component		= str_starts_with($model, 'component_');
 			$properties			= $this->get_properties();
 			$with_lang_versions	= $this->with_lang_versions;
 
@@ -3383,6 +3418,8 @@ abstract class common {
 			if ($use_cache===true) {
 				// static
 				self::$get_tools_cache[$cache_key] = $tools;
+				// Manage cache size to prevent memory leaks
+				self::manage_cache_size(self::$get_tools_cache);
 			}
 
 		// debug
@@ -3415,7 +3452,7 @@ abstract class common {
 
 		// model validation (only areas and section are allowed)
 			$model = get_called_class();
-			if ($model!=='section' && strpos($model, 'area')===false) {
+			if ($model!=='section' && !str_starts_with($model, 'area')) {
 				return []; // null;
 			}
 
@@ -3669,7 +3706,7 @@ abstract class common {
 
 		// list mode
 			if ($this->mode==='list' &&
-				(strpos(get_called_class(), 'component_')===0 || get_called_class()==='section')){
+				(str_starts_with(get_called_class(), 'component_') || get_called_class()==='section')){
 				// section list
 				$ar_terms = (array)ontology_node::get_ar_tipo_by_model_and_relation(
 					$this->tipo,
@@ -3707,7 +3744,7 @@ abstract class common {
 
 
 	/**
-	* RESOlVE_VIEW
+	* RESOLVE_VIEW
 	* @param object $options
 	* @return string|null $view
 	*/

@@ -107,7 +107,7 @@ trait request_config_utils {
 	* Retrieves cached request config if available
 	*
 	* Includes safety check to prevent memory bloat:
-	* - If cache exceeds 1000 entries, clear it
+	* - Uses common::manage_cache_size() to limit cache entries
 	* - This prevents unbounded memory growth in long-running processes
 	*
 	* @param string $resolved_key
@@ -115,12 +115,7 @@ trait request_config_utils {
 	*/
 	protected function get_cached_request_config(string $resolved_key) : ?array {
 
-		// Safety: prevent memory bloat in long-running processes
-		if (count(self::$resolved_request_properties_parsed) > 1000) {
-			self::$resolved_request_properties_parsed = [];
-		}
-
-		return self::$resolved_request_properties_parsed[$resolved_key] ?? null;
+		return common::$resolved_request_properties_parsed[$resolved_key] ?? null;
 	}//end get_cached_request_config
 
 
@@ -135,7 +130,10 @@ trait request_config_utils {
 	*/
 	protected function cache_request_config(string $resolved_key, array $ar_request_query_objects) : void {
 
-		self::$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+		// Safety: prevent memory bloat in long-running processes
+		common::manage_cache_size(common::$resolved_request_properties_parsed);
+
+		common::$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
 	}//end cache_request_config
 
 

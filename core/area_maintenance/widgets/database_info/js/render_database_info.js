@@ -97,6 +97,10 @@ const get_content_data_edit = async function(self) {
 	// form init
 	if (self.caller?.init_form) {
 
+		// analyze
+		const analyze_container = render_analyze(self)
+		content_data.appendChild(analyze_container)
+
 		// recreate db assets
 		const recreate_db_assets_container = render_recreate_db_assets(self)
 		content_data.appendChild(recreate_db_assets_container)
@@ -181,6 +185,71 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 	spinner.remove()
 	target_lock.classList.remove('lock')
 }//end handle_submit
+
+
+
+/**
+* RENDER_ANALYZE
+* @param object self widget instance
+* @return HTMLElement rebuild_indexes_container
+*/
+const render_analyze = (self) => {
+
+	const analyze_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_container analyze_container'
+	})
+
+	// label
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'group_label',
+		inner_html		: get_label.analyze_database || 'Analyze database',
+		parent			: analyze_container
+	})
+
+	// info_text
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'info_text',
+		inner_html		: 'Exec "ANALYZE" command on database for optimal performance.',
+		parent			: analyze_container
+	})
+
+	const body_response = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'body_response'
+	})
+	// dblclick event
+	const dblclick_handler = (e) => {
+		// clean body_response nodes
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild);
+		}
+	}
+	body_response.addEventListener('dblclick', dblclick_handler)
+
+	self.caller?.init_form({
+		submit_label	: 'Analyze DB',
+		confirm_text	: get_label.sure || 'Sure?',
+		body_info		: analyze_container,
+		body_response	: body_response,
+		on_submit		: async (e) => {
+
+			await handle_submit(
+				body_response,
+				e.target,
+				self.analyze_db
+			)
+		}
+	})
+
+	// add body_response at end
+	analyze_container.appendChild(body_response)
+
+
+	return analyze_container
+}//end render_analyze
 
 
 

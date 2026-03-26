@@ -7,60 +7,59 @@ final class metrics {
 
 
 	// permissions. Time to calculate user permissions
-		static $security_permissions_table_time = 0;
-		static $security_permissions_table_count = 0;
-		static $security_permissions_total_time = 0;
-		static $security_permissions_total_calls = 0;
+	public static $security_permissions_table_time = 0;
+	public static $security_permissions_table_count = 0;
+	public static $security_permissions_total_time = 0;
+	public static $security_permissions_total_calls = 0;
 
 	// search
-		static $search_total_time = 0;
-		static $search_total_calls = 0;
+	public static $search_total_time = 0;
+	public static $search_total_calls = 0;
 
 	// ontology
-		static $ontology_total_time = 0;
-		static $ontology_total_calls = 0;
-		static $ontology_total_calls_cached = 0;
+	public static $ontology_total_time = 0;
+	public static $ontology_total_calls = 0;
+	public static $ontology_total_calls_cached = 0;
 
 	// matrix
-		static $matrix_total_time = 0;
-		static $matrix_total_calls = 0;
+	public static $matrix_total_time = 0;
+	public static $matrix_total_calls = 0;
 
 	// exec_search matrix_db_manager
-		static $exec_search_total_time = 0;
-		static $exec_search_total_calls = 0;
+	public static $exec_search_total_time = 0;
+	public static $exec_search_total_calls = 0;
 
 	// exec_search dd_ontology_db_manager
-		static $exec_dd_ontology_search_total_time = 0;
-		static $exec_dd_ontology_search_total_calls = 0;
-
-	// search_free (JSON_RecordDataBounceObject)
-		static $search_free_total_time = 0;
-		static $search_free_total_calls = 0;
+	public static $exec_dd_ontology_search_total_time = 0;
+	public static $exec_dd_ontology_search_total_calls = 0;
 
 	// get_tools (current element context tools calculations)
-		static $get_tools_total_time = 0;
-		static $get_tools_total_calls = 0;
-		static $get_tools_total_calls_cached = 0;
-		static $get_tool_config_total_time = 0;
-		static $get_tool_config_total_calls = 0;
+	public static $get_tools_total_time = 0;
+	public static $get_tools_total_calls = 0;
+	public static $get_tools_total_calls_cached = 0;
+	public static $get_tool_config_total_time = 0;
+	public static $get_tool_config_total_calls = 0;
 
 	// section_save
-		static $section_save_total_time = 0;
-		static $section_save_total_calls = 0;
+	public static $section_save_total_time = 0;
+	public static $section_save_total_calls = 0;
 
 	// context
-		static $structure_context_total_time = 0;
-		static $structure_context_total_calls = 0;
+	public static $structure_context_total_time = 0;
+	public static $structure_context_total_calls = 0;
 
 	// data
-		static $data_total_time = 0;
-		static $data_total_calls = 0;
+	public static $data_total_time = 0;
+	public static $data_total_calls = 0;
 
 	// presets
-		static $presets_total_time = 0;
-		static $presets_total_calls = 0;
+	public static $presets_total_time = 0;
+	public static $presets_total_calls = 0;
 
-
+	// db_connection
+	public static $db_connection_total_time = 0;
+	public static $db_connection_total_calls = 0;
+	public static $db_connection_total_calls_cached = 0;
 
 	/**
 	* ADD_METRIC
@@ -119,8 +118,6 @@ final class metrics {
 		self::$exec_search_total_calls = 0;
 		self::$exec_dd_ontology_search_total_time = 0;
 		self::$exec_dd_ontology_search_total_calls = 0;
-		self::$search_free_total_time = 0;
-		self::$search_free_total_calls = 0;
 		self::$get_tools_total_time = 0;
 		self::$get_tools_total_calls = 0;
 		self::$get_tools_total_calls_cached = 0;
@@ -134,6 +131,9 @@ final class metrics {
 		self::$data_total_calls = 0;
 		self::$presets_total_time = 0;
 		self::$presets_total_calls = 0;
+		self::$db_connection_total_time = 0;
+		self::$db_connection_total_calls = 0;
+		self::$db_connection_total_calls_cached = 0;
 	}//end reset
 
 
