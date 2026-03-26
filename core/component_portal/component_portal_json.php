@@ -36,7 +36,7 @@
 
 		// custom properties external data
 		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
-			if(	(!empty($this->build_options) && $this->build_options->get_data_external===true) &&
+			if(	(($this->build_options->get_data_external ?? false) === true) &&
 				(isset($properties->source->mode) && $properties->source->mode==='external')) {
 		 		// set_data_external: $save=false, $changed=false, $current_data=false, $references_limit=0
 				$options = new stdClass();
