@@ -89,8 +89,11 @@
 			}
 		}
 
+		@widget_container_heigth: 3.15rem;
+
 		>.widget_container {
 			contain: content;
+			height: @widget_container_heigth;
 			margin: 0.35em;
 			flex: 1 1 49%;
 			display: flex;
@@ -98,8 +101,13 @@
 			overflow: auto;
 			background-color: @color_hilite;
 
+			&.loaded {
+				height: unset;
+			}
+
 			// label
 			>.widget_label {
+				height: @widget_container_heigth;
 				contain: content;
 				background-color: @color_hilite;
 				transition: background-color 1000ms ease-in-out;

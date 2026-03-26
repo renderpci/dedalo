@@ -2039,7 +2039,7 @@ abstract class component_common extends common {
 
 
 		return $ar_data;
-	}//end update_observers_data
+	}//end update_observer_data
 
 
 

@@ -718,15 +718,6 @@ abstract class common {
 					unset($this->data_resolved);
 				}
 			}
-
-		// unset previous calculated data_resolved
-		// (!) Do not apply in time machine mode because the data is injected
-			if ($this->mode !== 'tm') {
-				if (isset($this->data_resolved)) {
-					unset($this->data_resolved);
-				}
-			}
-
 	}//end set_to_force_reload_data
 
 
@@ -1709,7 +1700,8 @@ abstract class common {
 						? (14 - $len)
 						: 0;
 					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-					error_log('--- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model - parent:" . $parent . ' ' . json_encode($add_request_config);
+					debug_log($msg, logger::WARNING);
 				}
 			}
 
@@ -3752,7 +3744,7 @@ abstract class common {
 
 
 	/**
-	* RESOlVE_VIEW
+	* RESOLVE_VIEW
 	* @param object $options
 	* @return string|null $view
 	*/

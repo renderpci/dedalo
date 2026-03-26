@@ -49,18 +49,18 @@ class area_maintenance extends area_common {
 		$ar_widgets = [];
 
 		// make_backup *
-			$item	= $this->item_make_backup();
-			$widget	= $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$item = new stdClass();
+				$item->id		= 'make_backup';
+				$item->type		= 'widget';
+				$item->label	= label::get_label('make_backup') ?? 'Make backup';
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// update_ontology *
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
-				$item->value	= null;
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// register_tools *
 			$item = new stdClass();
@@ -68,77 +68,71 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('registrar_herramientas');
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// move_tld
 			$item = new stdClass();
 				$item->id		= 'move_tld';
 				$item->type		= 'widget';
-				$item->label	= 'Move TLD';
+				$item->label	= label::get_label('move_tld') ?? 'Move TLD';
 				$item->value	= (object)[
 					'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
 							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_tld' )
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// move_locator
 			$item = new stdClass();
 				$item->id		= 'move_locator';
 				$item->type		= 'widget';
-				$item->label	= 'Move locator';
+				$item->label	= label::get_label('move_locator') ?? 'Move locator';
 				$item->value	= (object)[
 					'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
 							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_locator' )
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// move_to_portal
 			$item = new stdClass();
 				$item->id		= 'move_to_portal';
 				$item->type		= 'widget';
-				$item->label	= 'Move to portal';
+				$item->label	= label::get_label('move_to_portal') ?? 'Move to portal';
 				$item->value	= (object)[
 					'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
 							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// move_to_table
 			$item = new stdClass();
 				$item->id		= 'move_to_table';
 				$item->type		= 'widget';
-				$item->label	= 'Move to table';
+				$item->label	= label::get_label('move_to_table') ?? 'Move to table';
 				$item->value	= (object)[
 					'body' => 'Move data from a table to another (e.g. move utoponymy1 to matrix_hierarchy).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
 					'files' => area_maintenance::get_definitions_files( 'move_to_table' )
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// move_lang
 			$item = new stdClass();
 				$item->id		= 'move_lang';
 				$item->type		= 'widget';
-				$item->label	= 'Move LANG';
+				$item->label	= label::get_label('move_lang') ??  'Move LANG';
 				$item->value	= (object)[
 					'body' => 'Convert map items (e.g., hierarchy89) between translatable and non-translatable components (or vice-versa).<br>
 							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_lang.<br>
 							   Note: This process can be very time-consuming, as it iterates through all relevant records in the database.',
 					'files' => area_maintenance::get_definitions_files( 'move_lang' )
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// build_database_version *
 			$item = new stdClass();
@@ -146,9 +140,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('build_database_version') ?? 'Build database version';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// update_data_version *
 			$item = new stdClass();
@@ -157,28 +149,22 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('update').' '.label::get_label('data');
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// update_code *
 			$item = new stdClass();
 				$item->id		= 'update_code';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// check_config *
 			$item = new stdClass();
 				$item->id		= 'check_config';
-				$item->class	= empty($missing) ? 'success' : 'danger';
+				$item->class	= 'success';
 				$item->type		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// export_hierarchy *
 			$item = new stdClass();
@@ -186,9 +172,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
-				$item->value	= null;
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// publication_api *
 			$item = new stdClass();
@@ -205,8 +189,7 @@ class area_maintenance extends area_common {
 						true // bool connection_status
 					)
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// add_hierarchy *
 			$item = new stdClass();
@@ -214,9 +197,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->class	= 'success width_100';
 				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// dedalo_api_test_environment *
 			$item = new stdClass();
@@ -225,9 +206,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// sqo_test_environment *
 			$item = new stdClass();
@@ -236,9 +215,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// lock_components *
 			$item = new stdClass();
@@ -253,8 +230,7 @@ class area_maintenance extends area_common {
 						'ar_user_actions'	=> []
 					]
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// php_user *
 			$php_user_info		= system::get_php_user_info();
@@ -269,8 +245,7 @@ class area_maintenance extends area_common {
 					'php_error_log_path' => $php_error_log_path,
 					'php_session_path' => session_save_path()
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// database_info *
 			$item = new stdClass();
@@ -278,27 +253,21 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DATABASE INFO';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// environment *
 			$item = new stdClass();
 				$item->id		= 'environment';
 				$item->type		= 'widget';
 				$item->label	= 'Environment';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// unit_test *
 			$item = new stdClass();
 				$item->id		= 'unit_test';
 				$item->type		= 'widget';
 				$item->label	= 'Unit test area';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// sequences_status *
 			$response = db_tasks::check_sequences();
@@ -308,8 +277,7 @@ class area_maintenance extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DB SEQUENCES STATUS';
 				$item->value	= $response;
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// counters_status *
 			$item = new stdClass();
@@ -318,9 +286,7 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
-				$item->value	= null; // loaded from self widget
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// php_info *
 			$item = new stdClass();
@@ -332,8 +298,7 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'src' => DEDALO_CORE_URL.'/area_maintenance/widgets/php_info/php_info.php'
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 		// system_info *
 			$item = new stdClass();
@@ -345,8 +310,7 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'src' => DEDALO_CORE_URL.'/area_maintenance/system_info.php'
 				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
+			$ar_widgets[] = $this->widget_factory($item);
 
 
 		return $ar_widgets;
@@ -722,7 +686,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
 		// import_tools
 			$response->result = tools_register::import_tools();
@@ -772,15 +736,15 @@ class area_maintenance extends area_common {
 	* Sample: Current data version: 5.8.2 -----> 6.0.0
 	* @param object $options
 	* {
-		"updates_checked": {
-			"SQL_update_1": true,
-			"components_update_1": true,
-			"components_update_2": true,
-			"components_update_3": true,
-			"components_update_4": true,
-			"run_scripts_1": true,
-			"run_scripts_2": true
-		}
+	*	"updates_checked": {
+	*		"SQL_update_1": true,
+	*		"components_update_1": true,
+	*		"components_update_2": true,
+	*		"components_update_3": true,
+	*		"components_update_4": true,
+	*		"run_scripts_1": true,
+	*		"run_scripts_2": true
+	*	}
 	* }
 	* @return object $response
 	*/
@@ -797,7 +761,7 @@ class area_maintenance extends area_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->errors	= [];
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 
 		// DEDALO_SUPERUSER only
 			if (logged_user_id()!=DEDALO_SUPERUSER) {
@@ -856,12 +820,12 @@ class area_maintenance extends area_common {
 	* @param object $options
 	* @return object $response
 	*/
-	private static function set_config_core(object $options) {
+	protected static function set_config_core(object $options) {
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 				$response->errors	= [];
 
 		// options
@@ -1181,7 +1145,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 			$response->errors	= [];
 
 		// options
@@ -1262,7 +1226,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 			$response->errors	= [];
 
 		// options
@@ -1343,7 +1307,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 			$response->errors	= [];
 
 		// options
@@ -1403,7 +1367,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 			$response->errors	= [];
 
 		// options
@@ -1463,7 +1427,7 @@ class area_maintenance extends area_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 			$response->errors	= [];
 
 		// options
@@ -1536,12 +1500,11 @@ class area_maintenance extends area_common {
 	* }
 	*/
 	public static function update_ontology(object $options) : object {
-		$start_time=start_time();
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 				$response->errors	= [];
 
 		// options
@@ -1735,7 +1698,7 @@ class area_maintenance extends area_common {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
 				$response->errors	= [];
 
 		// write_lang_file
@@ -1766,7 +1729,7 @@ class area_maintenance extends area_common {
 	* Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
 	* @return object $response
 	*/
-	public static function build_recovery_version_file() {
+	public static function build_recovery_version_file() : object {
 
 		return install::build_recovery_version_file();
 	}//end build_recovery_version_file
@@ -1779,7 +1742,7 @@ class area_maintenance extends area_common {
 	* Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
 	* @return object $response
 	*/
-	public static function restore_dd_ontology_recovery_from_file() {
+	public static function restore_dd_ontology_recovery_from_file() : object {
 
 		return install::restore_dd_ontology_recovery_from_file();
 	}//end restore_dd_ontology_recovery_from_file
