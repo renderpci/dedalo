@@ -1002,7 +1002,7 @@ final class dd_core_api {
 	* 	remove		// removes a item value from the component data array
 	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
-	* @param object $json_data
+	* @param object $rqo
 	* sample:
 		* {
 		*    "action": "save",
@@ -1057,14 +1057,14 @@ final class dd_core_api {
 			$data	= $rqo->data ?? new stdClass();
 
 		// short vars
-			$tipo				= $source->tipo;
+			$tipo				= $source->tipo ?? null;
 			$model				= $source->model ?? ontology_node::get_model_by_tipo($tipo,true);
-			$section_tipo		= $source->section_tipo;
-			$section_id			= $source->section_id;
+			$section_tipo		= $source->section_tipo ?? null;
+			$section_id			= $source->section_id ?? null;
 			$mode				= $source->mode ?? 'list';
 			$view				= $source->view ?? null;
-			$lang				= $source->lang;
-			$type				= $source->type; // the type of the dd_object that is calling to update like 'component'
+			$lang				= $source->lang ?? DEDALO_DATA_LANG;
+			$type				= $source->type ?? null; // the type of the dd_object that is calling to update like 'component'
 			$changed_data		= $data->changed_data ?? null;
 			$caller_dataframe	= $source->caller_dataframe ?? null;
 			$is_temporal		= $source->is_temporal ?? false;
@@ -1122,14 +1122,15 @@ final class dd_core_api {
 
 				// changed_data is array always. Check to safe value
 					if (!is_array($changed_data)) {
-						$changed_data = [$changed_data];
 						$response->errors[]	= 'changed_data must be array';
+						$response->msg		= 'Error. changed_data must be array';
 						debug_log(__METHOD__
 							." ERROR. var 'changed_data' expected to be array. Received type: " . PHP_EOL
-							.' type: ' 			. gettype($changed_data) . PHP_EOL
-							.' changed:data: ' 	. to_string($changed_data)
+							.' type: '			. gettype($changed_data) . PHP_EOL
+							.' changed:data: '	. to_string($changed_data)
 							, logger::ERROR
 						);
+						return $response;
 					}
 
 				if ($mode==='search') {
@@ -1166,8 +1167,8 @@ final class dd_core_api {
 							.' exec time: '.exec_time_unit($start_time).' ms'
 							, logger::DEBUG
 						);
-						$save_result = $component->Save();
-						if (is_null($save_result)) {
+						$save_result = $component->save();
+						if ($save_result === null) {
 							$response->errors[]	 = 'error on save';
 							$response->msg		.= ' Error on component Save. data it\'s not saved! ';
 							debug_log(__METHOD__
@@ -1180,12 +1181,10 @@ final class dd_core_api {
 						}
 
 					// force recalculate data
-						$data = $component->get_data();
+						$component_data = $component->get_data();
 
 					// changed_data action: sort_data, add_new_element, insert, remove ..
-						$changed_data_action = isset($changed_data[0])
-							? $changed_data[0]->action
-							: null;
+						$changed_data_action = $changed_data[0]?->action ?? null;
 
 					// pagination. Update offset based on save request (portals)
 						// data->pagination->limit
@@ -1199,41 +1198,30 @@ final class dd_core_api {
 							case 'insert': // from service_autocomplete choose selection
 
 								// pagination
-									$total	= empty($data) ? 0 : count($data);
-									$limit	= isset($component->pagination->limit)
-										? (int)$component->pagination->limit
-										: 10;
-									$pages	= $limit>0
-										? (int)ceil($total / $limit)
-										: 1;
-									$offset	= $limit>=$total
-										? 0
-										: $limit * ($pages - 1);
+								$total	= empty($component_data) ? 0 : count($component_data);
+								$limit	= isset($component->pagination->limit)
+									? (int)$component->pagination->limit
+									: 10;
+								$pages	= $limit > 0
+									? (int)ceil($total / $limit)
+									: 1;
+								$offset	= $limit >= $total
+									? 0
+									: $limit * ($pages - 1);
 
-									// overwrite values
-									$component->pagination->limit	= $limit;
-									$component->pagination->total	= $total;
-									$component->pagination->offset	= $offset;
-									if(SHOW_DEBUG===true) {
-										// dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
-									}
+								// overwrite values
+								$component->pagination->limit	= $limit;
+								$component->pagination->total	= $total;
+								$component->pagination->offset	= $offset;
 								break;
 
 							default:
 								// Nothing to do
 								break;
 						}
-
-					// pagination. Update offset based on save request (portals)
-						// if (isset($data->pagination) && isset($data->pagination->offset)) {
-						// 	$component->pagination->offset = $data->pagination->offset;
-						// }
-						// if (isset($data->pagination) && isset($data->pagination->limit)) {
-						// 	$component->pagination->limit = $data->pagination->limit;
-						// }
 				}
 
-				// datalist. if is received, inject to the component for recycle
+				// datalist. If is received, inject to the component for recycle
 					if (isset($data->datalist)) {
 						$component->set_datalist($data->datalist);
 					}
