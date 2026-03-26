@@ -1151,6 +1151,17 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* SET_DATO_EXTERNAL (Compatibility alias for set_data_external)
+	* @param object $options
+	* @return bool
+	*/
+	public function set_dato_external( object $options ) : bool {
+		return $this->set_data_external( $options );
+	}
+
+
+
+	/**
 	* SET_DATA_EXTERNAL
 	* Get the data from other component that reference at the current section of the component (portal, autocomplete, select, etc)
 	* the result will be the result of the search to the external section and component
