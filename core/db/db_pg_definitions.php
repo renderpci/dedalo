@@ -366,7 +366,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_is_model_idx
+					CREATE INDEX IF NOT EXISTS {$table}_is_model_idx
 					ON {$table}
 					USING btree ( is_model ASC NULLS LAST );
 				',
@@ -389,7 +389,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_model_idx
+					CREATE INDEX IF NOT EXISTS {$table}_model_idx
 					ON {$table}
 					USING btree ( model COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -412,7 +412,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_model_tipo_idx
+					CREATE INDEX IF NOT EXISTS {$table}_model_tipo_idx
 					ON {$table}
 					USING btree ( model_tipo COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -435,7 +435,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_order_number_idx
+					CREATE INDEX IF NOT EXISTS {$table}_order_number_idx
 					ON {$table}
 					USING btree ( order_number ASC NULLS LAST );
 				',
@@ -458,7 +458,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_parent_idx
+					CREATE INDEX IF NOT EXISTS {$table}_parent_idx
 					ON {$table}
 					USING btree ( parent ASC NULLS LAST );
 				',
@@ -482,7 +482,7 @@
 					'main_dd'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tld_idx
+					CREATE INDEX IF NOT EXISTS {$table}_tld_idx
 					ON {$table}
 					USING btree ( tld COLLATE pg_catalog.default ASC NULLS LAST );
 				',
@@ -505,7 +505,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relations_idx
+					CREATE INDEX IF NOT EXISTS {$table}_relations_idx
 					ON {$table}
 					USING gin ( relations );
 				',
@@ -528,7 +528,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_is_translatable_idx
+					CREATE INDEX IF NOT EXISTS {$table}_is_translatable_idx
 					ON {$table}
 					USING btree ( is_translatable ASC NULLS LAST );
 				',
@@ -551,7 +551,7 @@
 					'dd_ontology'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_parent_order_number_idx
+					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
 					ON {$table}
 					USING btree (
 						parent COLLATE pg_catalog.default ASC NULLS LAST,
@@ -604,7 +604,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_id_idx
+					CREATE INDEX IF NOT EXISTS {$table}_section_id_idx
 					ON {$table}
 					USING btree (section_id ASC NULLS LAST);
 				',
@@ -651,7 +651,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_id_desc_idx
+					CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx
 					ON {$table}
 					USING btree (section_id DESC NULLS LAST);
 				',
@@ -697,7 +697,7 @@
 					'matrix_users'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_idx
+					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 				',
@@ -743,7 +743,7 @@
 			// 		'matrix_time_machine'
 			// 	],
 			// 	'add' => '
-			// 		CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_section_id_idx
+			// 		CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_idx
 			// 		ON {$table}
 			// 		USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 			// 	',
@@ -789,7 +789,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
+					CREATE INDEX IF NOT EXISTS {$table}_section_tipo_section_id_desc_idx
 					ON {$table}
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
@@ -837,7 +837,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_string_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_string_gin_idx
 				ON {$table}
 				USING gin (
 					string
@@ -930,7 +930,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_strings_value_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_strings_value_gin_idx
 				ON {$table}
 				USING gin (
 					search_string gin_trgm_ops
@@ -982,7 +982,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_gin_idx
 				ON {$table}
 				USING gin (
 					relation
@@ -1031,7 +1031,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_locators_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_locators_gin_idx
 				ON {$table}
 				USING gin (
 					jsonb_path_query_array(relation, \'$.*[*]\')
@@ -1082,7 +1082,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
@@ -1131,7 +1131,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
@@ -1180,7 +1180,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
@@ -1230,7 +1230,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_flat_ty_st_si_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_flat_ty_st_si_gin_idx
 				ON {$table}
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
@@ -1277,7 +1277,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_date_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_date_gin_idx
 				ON {$table}
 				USING gin (
 					date jsonb_path_ops
@@ -1326,7 +1326,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_iri_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_iri_gin_idx
 				ON {$table}
 				USING gin (
 					iri jsonb_path_ops
@@ -1375,7 +1375,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_geo_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_geo_gin_idx
 				ON {$table}
 				USING gin (
 					geo jsonb_path_ops
@@ -1424,7 +1424,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_number_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_number_gin_idx
 				ON {$table}
 				USING gin (
 					number jsonb_path_ops
@@ -1473,7 +1473,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_media_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_media_gin_idx
 				ON {$table}
 				USING gin (
 					media jsonb_path_ops
@@ -1522,7 +1522,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_misc_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_misc_gin_idx
 				ON {$table}
 				USING gin (
 					misc jsonb_path_ops
@@ -1571,7 +1571,7 @@
 				'matrix_users'
 			],
 			'add' => '
-				CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_relation_search_gin_idx
+				CREATE INDEX IF NOT EXISTS {$table}_relation_search_gin_idx
 				ON {$table}
 				USING gin (
 					relation_search jsonb_path_ops
@@ -1600,7 +1600,7 @@
 					'matrix_activity_diffusion'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_id_desc_idx
+					CREATE INDEX IF NOT EXISTS {$table}_id_desc_idx
 					ON {$table}
 					USING btree (id DESC NULLS LAST);
 				',
@@ -1624,7 +1624,7 @@
 					'matrix_counter_dd'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tipo_idx
+					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
 					ON {$table}
 					USING btree (tipo ASC NULLS LAST);
 				',
@@ -1647,7 +1647,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_tipo_idx
+					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
 					ON {$table}
 					USING btree (tipo, id DESC);
 				',
@@ -1671,7 +1671,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_lang_idx
+					CREATE INDEX IF NOT EXISTS {$table}_lang_idx
 					ON {$table}
 					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST);
 				',
@@ -1694,7 +1694,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_bulk_process_id_idx
+					CREATE INDEX IF NOT EXISTS {$table}_bulk_process_id_idx
 					ON {$table}
 					USING btree ( bulk_process_id ASC NULLS LAST);
 				',
@@ -1718,7 +1718,7 @@
 			// 		'matrix_time_machine'
 			// 	],
 			// 	'add' => '
-			// 		CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_timestamp_idx
+			// 		CREATE INDEX IF NOT EXISTS {$table}_timestamp_idx
 			// 		ON {$table}
 			// 		USING btree ("timestamp" DESC NULLS LAST );
 			// 	',
@@ -1739,7 +1739,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_timestamp_date_idx
+					CREATE INDEX IF NOT EXISTS {$table}_timestamp_date_idx
 					ON {$table}
 					(DATE("timestamp"));
 				',
@@ -1763,7 +1763,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_user_id_idx
+					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
 					USING btree ("user_id" ASC NULLS LAST );
 					',
@@ -1786,7 +1786,7 @@
 					'matrix_time_machine'
 				],
 				'add' => '
-					CREATE INDEX CONCURRENTLY IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx
+					CREATE INDEX IF NOT EXISTS {$table}_si_bulk_st_tipo_lang_idx
 					ON {$table}
 					USING btree (
 						section_id ASC NULLS LAST,
