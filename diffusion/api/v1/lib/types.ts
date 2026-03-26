@@ -103,11 +103,13 @@ export interface datum_record {
 }
 
 export interface entry_value {
-	tipo:   string;
-	lang:   string | null;
-	value:  unknown;
-	id:     string | null;
-	parents?: any[];
+	tipo:        string;
+	lang:        string | null;
+	value:       unknown;
+	id:          string | null;
+	parents?:    any[];
+	section_id?:   string | number | null;
+	section_tipo?: string | null;
 }
 
 // Re-used for parser inputs, matches entry_value closely
@@ -117,6 +119,8 @@ export interface data_item {
 	tipo?: string;
 	lang?: string | null;
 	parents?: any;
+	section_id?:   string | number | null;
+	section_tipo?: string | null;
 }
 
 

@@ -15,6 +15,7 @@ import info_default from './parser_info';
 import { flat } from './parser_iri';
 import { geojson } from './parser_geo';
 import { merge_columns, publication_unix_timestamp } from './parser_global';
+import { custom as map_custom } from './parser_map';
 import type { parser_options } from '../types';
 
 
@@ -60,6 +61,7 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_geo::geojson':							geojson,
 	'parser_global::merge_columns':					merge_columns,
 	'parser_global::publication_unix_timestamp':	publication_unix_timestamp,
+	'parser_map::custom':							map_custom,
 };
 
 
@@ -108,3 +110,4 @@ export { default as info_default, widget } from './parser_info';
 export { flat } from './parser_iri';
 export { geojson } from './parser_geo';
 export { replace as replace_pattern } from './parser_helper';
+export { custom as map_custom } from './parser_map';
