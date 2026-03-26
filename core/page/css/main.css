@@ -780,7 +780,7 @@ pre {
   top: calc(50% - 1rem);
   height: 2rem;
   width: 2rem;
-  padding: 3px;
+  padding: 3px !important;
   aspect-ratio: 1;
   border-radius: 50%;
   background: #f78a1c;
@@ -1468,6 +1468,9 @@ button {
   border-radius: 0.25rem;
   transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
   color: #212529;
+}
+button:active {
+  opacity: 0.4 !important;
 }
 @media screen and (max-width: 960px) {
   button.folding {
@@ -9680,6 +9683,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .area_maintenance > .content_data > .widget_container {
   contain: content;
+  height: 3.15rem;
   margin: 0.35em;
   flex: 1 1 49%;
   display: flex;
@@ -9687,7 +9691,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   overflow: auto;
   background-color: #fce8d2;
 }
+.area_maintenance > .content_data > .widget_container.loaded {
+  height: unset;
+}
 .area_maintenance > .content_data > .widget_container > .widget_label {
+  height: 3.15rem;
   contain: content;
   background-color: #fce8d2;
   transition: background-color 1000ms ease-in-out;
@@ -10608,7 +10616,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .wrapper_widget.register_tools .tool_item {
   display: grid;
-  grid-template-columns: 1.2fr 1.1fr 3rem 4rem 1.5fr;
+  grid-template-columns: 1.4fr 1.3fr 3rem 4rem 1.5fr;
   gap: 0.5rem;
   line-height: 1.1rem;
   border-bottom: 1px solid #bbbbbb;
