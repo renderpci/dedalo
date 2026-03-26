@@ -41,7 +41,7 @@ class component_relation_related extends component_relation_common {
 		$data		= $this->get_data();
 		$references	= $this->get_calculated_references(true);
 
-		$data_with_references = [...$data, ...$references];
+		$data_with_references = [...($data ?? []), ...$references];
 
 		return $data_with_references;
 	}//end get_data_with_references
