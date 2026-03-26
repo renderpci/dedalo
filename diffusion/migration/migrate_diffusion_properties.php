@@ -3425,7 +3425,7 @@ function process_node($node, $level) {
 												'fn' => 'parser_locator::get_term_id'
 											],
 											(object)[
-												'fn' => 'parser_locator::get_first'
+												'fn' => 'parser_helper::get_first'
 											]
 										],
 										"output_format" => "string"
@@ -3461,7 +3461,7 @@ function process_node($node, $level) {
 												'fn' => 'parser_locator::get_section_tipo'
 											],
 											(object)[
-												'fn' => 'parser_locator::get_first'
+												'fn' => 'parser_helper::get_first'
 											]
 										],
 										"output_format" => "string"
