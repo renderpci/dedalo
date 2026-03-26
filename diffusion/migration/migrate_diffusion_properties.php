@@ -3843,6 +3843,36 @@ function process_node($node, $level) {
 								break;
 							}
 							
+							// 1 data_to_be_used: "custom"
+							$data_to_be_used_rl = $props->data_to_be_used ?? null;
+							if($data_to_be_used_rl && $data_to_be_used_rl === 'custom') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									$props->custom_arguments ?? null,
+									$props->process_dato_arguments ?? null,
+									$props->output ?? null,
+									$props->data_to_be_used ?? null,
+									null,
+									$ddo_map_relation_list
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list data_to_be_used=custom -> get_diffusion_value()\n";
+								break;
+							}
+
 							break;
 						}
 				}
