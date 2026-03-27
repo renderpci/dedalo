@@ -936,8 +936,24 @@ abstract class component_common extends common {
 					}));
 				}else{
 					// any other relation component
-					$data_tm = array_values( array_filter( $data_tm, function($el) use($component_tipo) {
-						return is_object($el) && isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						if(is_object($el)) {
+							// Note that TM data locators could or could not have the property "from_component_tipo."
+							// This point is only to allow verify if the object is valid or not
+							if(isset($el->section_tipo) && isset($el->section_id)) {
+								return true;
+							}else{
+								debug_log(__METHOD__
+								   .' IGNORED: Invalid locator object found in TM data' . PHP_EOL
+								   .' el: ' . to_string($el) . PHP_EOL
+								   .' component_tipo: ' . $this->tipo . PHP_EOL
+								   .' section_tipo: ' . $this->section_tipo . PHP_EOL
+								   .' matrix_id: ' . $this->matrix_id
+								   , logger::ERROR
+								);
+							}
+						}
+						return false;
 					}));
 				}
 
