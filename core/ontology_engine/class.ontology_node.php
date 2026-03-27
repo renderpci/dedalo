@@ -289,7 +289,7 @@ class ontology_node {
 		}
 
 		// forced models in v6/v7 (while we are using structure v5)
-		$forced_models = [
+		static $forced_models = [
 			DEDALO_SECURITY_ADMINISTRATOR_TIPO => 'component_radio_button',
 			DEDALO_USER_PROFILE_TIPO            => 'component_select',
 			'dd546'                             => 'component_input_text',  // activity where
@@ -305,8 +305,25 @@ class ontology_node {
 			return $forced_models[$this->tipo];
 		}
 
+		// Temporal model resolution for migration
+		static $temporal_models = [
+			// temporal TM (Until the new ontology is updated)
+			DEDALO_TIME_MACHINE_COLUMN_ID               => 'component_number',      // dd1573
+			DEDALO_TIME_MACHINE_COLUMN_SECTION_ID       => 'component_number',      // dd1212
+			DEDALO_TIME_MACHINE_COLUMN_SECTION_TIPO     => 'component_input_text',  // dd1772
+			DEDALO_TIME_MACHINE_COLUMN_TIPO             => 'component_input_text',  // dd577
+			DEDALO_TIME_MACHINE_COLUMN_TIMESTAMP        => 'component_date',        // dd559
+			DEDALO_TIME_MACHINE_COLUMN_USER_ID          => 'component_portal',      // dd578
+			DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID  => 'component_number',      // dd1371
+			DEDALO_TIME_MACHINE_COLUMN_DATA             => 'component_json',        // dd1574
+		];
+		if (isset($temporal_models[$this->tipo])) {
+			return $temporal_models[$this->tipo];
+		}
+
 		// model resolution with fallback
 		$model = $this->data->model ?? null;
+
 		if (empty($model)) {
 
 			// fallback to old resolution
