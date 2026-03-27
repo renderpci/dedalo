@@ -416,11 +416,21 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// TM : Delete old "section_id_key" and "state" tm columns in PostgreSQL.
+		// TM : Delete old 'section_id_key', 'state', 'userID', 'dato' tm columns in PostgreSQL.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Delete tm table (matrix_time_machine) old columns "section_id_key" and "state" in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'delete_tm_columns',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// TM : Rename column "bulk_process_temp" to "bulk_process_id" in PostgreSQL.
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Rename column "bulk_process_temp" to "bulk_process_id" in tm table (matrix_time_machine) in PostgreSQL.',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'rename_tm_column_bulk_process',
 				'stop_on_error'	=> false,
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
