@@ -837,8 +837,8 @@ class ontology_node {
 			return self::$model_by_tipo_cache[$cache_uid];
 		}
 
-		$ontology_node	= ontology_node::get_instance($tipo);
-		$model	= $ontology_node->get_model();
+		$ontology_node = ontology_node::get_instance($tipo);
+		$model = $ontology_node->get_model();
 
 		// cache
 		self::$model_by_tipo_cache[$cache_uid] = $model;

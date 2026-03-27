@@ -390,6 +390,17 @@ class tm_record {
 	private function set_section_record_factory( string $tipo, ?array $data, section_record $section_record ) : bool {
 
 		$model 	= ontology_node::get_model_by_tipo( $tipo, true );
+
+		if ($model === null) {
+			debug_log(__METHOD__
+				. " Error: Unable to resolve model for tipo" . PHP_EOL
+				. ' tipo: ' . to_string($tipo) . PHP_EOL
+				. ' Ensure you have an updated Ontology version with Time machine (dd15) valid definition'
+				, logger::ERROR
+			);
+			return false;
+		}
+
 		$column = section_record_data::get_column_name( $model );
 		$result = $section_record->set_component_data( $tipo, $column, $data );
 
