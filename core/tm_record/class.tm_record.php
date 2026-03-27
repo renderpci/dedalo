@@ -639,21 +639,20 @@ class tm_record {
 
 			}else{
 
-				$string_value = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-				$value = component_string_common::truncate_text(
-					$string_value, // string html
-					500 // int maxLength
-				);
+				$data_parsed = is_array($data) ? $data : [$data];
 
-				$data_parsed = (object)[
-					'value' => $value,
-					'lang' => DEDALO_DATA_NOLAN
-				];
+				// inject data into dd1574 (debug/generic data column)
 				$this->set_section_record_factory(
 					DEDALO_TIME_MACHINE_COLUMN_DATA, // 'dd1574'
-					// $tipo,
-					// is_array($data) ? $data : [$data],
-					[$data_parsed],
+					$data_parsed,
+					$section_record
+				);
+
+				// inject data under the component's own tipo (e.g. 'oh21')
+				// so the normal component get_data() path finds it in the section_record
+				$this->set_section_record_factory(
+					$tipo,
+					$data_parsed,
 					$section_record
 				);
 			}
