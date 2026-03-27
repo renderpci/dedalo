@@ -464,6 +464,24 @@ service_time_machine.prototype.build_request_config = function() {
 						view			: 'mini'
 					}
 				)
+				// Debug value column only in debug mode
+				if (SHOW_DEBUG) {
+					// component value dd1574 (time machine data column)
+					default_ddo_map.push(
+						{
+							id				: 'tm_value_debug',
+							tipo			: 'dd1574',
+							type			: 'component',
+							typo			: 'ddo',
+							model			: 'component_json',
+							section_tipo	: section_tipo,
+							parent			: section_tipo,
+							debug_label		: 'Component value (debug)',
+							mode			: 'tm',
+							view			: 'mini'
+						}
+					)
+				}
 			}
 
 		// ignore_columns
