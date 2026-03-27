@@ -11282,7 +11282,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding: 1rem;
 }
 .section > .search_container {
-  contain: content;
+  contain: style;
   width: 100%;
   position: relative;
 }

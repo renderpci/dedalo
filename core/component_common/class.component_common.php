@@ -914,13 +914,13 @@ abstract class component_common extends common {
 				: $component_tipo;
 
 			// tm data. Note that no lang or section_id is needed, only matrix_id
-			// data_tm is a full data stored into tm row
-			// it will need to be filter to remove possible dataframe data
-			$data_tm = component_common::get_component_tm_data(
-				$search_component_tipo,
-				$this->section_tipo,
-				$this->matrix_id
-			);
+		// data_tm is a full data stored into tm row
+		// it will need to be filter to remove possible dataframe data
+		$data_tm = component_common::get_component_tm_data(
+			$search_component_tipo,
+			$this->section_tipo,
+			$this->matrix_id
+		);
 
 			// Main components with dataframe and other relation components.
 			$relation_components = component_relation_common::get_components_with_relations();
