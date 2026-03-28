@@ -3499,8 +3499,6 @@ abstract class component_common extends common {
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
-
-
 		// Type check moved to actions where it is strictly required (e.g. set_data)
 
 		switch ($changed_data->action) {
