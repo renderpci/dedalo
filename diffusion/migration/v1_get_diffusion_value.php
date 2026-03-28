@@ -1330,9 +1330,44 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					
 				break;
 				case 'dato':
-					$filter_section 		= $process_dato_arguments->filter_section ?? "";
-					$filter_component 		= $process_dato_arguments->filter_component ?? "";
-					$format 				= $process_dato_arguments->format ?? "";	
+					$filter_section = $process_dato_arguments->filter_section ?? null;
+					$filter_component = $process_dato_arguments->filter_component ?? null;
+					$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? "");
+					
+					if(!empty($ddo_map) && isset($ddo_map[0])) {
+						if($filter_section) {
+							$ddo_map[0]->filter_section = $filter_section;
+						}
+						if($filter_component) {
+							$ddo_map[0]->filter_component = $filter_component;
+						}
+					}
+					
+					if($target_component_tipo) {
+						$target_ddo = (object)[
+							'tipo' => $target_component_tipo,
+							'parent' => $tipo
+						];
+						if($filter_section && !empty($filter_section[0])) {
+							$target_ddo->section_tipo = $filter_section[0];
+						}
+						$ddo_map[] = $target_ddo;
+					}
+
+					$parser_process = (object)[
+						"parser" => [
+							(object)[
+								'fn' => 'parser_locator::get_section_id'
+							]
+						],
+						"output_format" => "json"
+					];
+
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = ["1", "2"];	
 					
 					break;
 			}
