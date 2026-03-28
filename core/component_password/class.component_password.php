@@ -225,12 +225,17 @@ class component_password extends component_common {
 
 
 	/**
-	* GET_V6_ROOT_PASSWORD_DATA
-	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
-	* REMOVE IT IN VERSIONS > 7.0.0
-	* @return string|false|null $data
-	*/
-	public function get_v6_root_password_data() : string|false|null {
+	 * GET_V6_ROOT_PASSWORD_DATA
+	 * PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
+	 * REMOVE IT IN VERSIONS > 7.0.0
+	 * @return string|null $data
+	 */
+	public function get_v6_root_password_data() : ?string {
+
+		// If the 'datos' column does not exist, it means the migration is complete and we can no longer use this method
+		if (!DBi::check_column_exists('matrix_users', 'datos')) {
+			return null;
+		}
 
 		$sql_query = "
 			SELECT datos->'components'->'dd133'->'dato'->'lg-nolan'->>0
@@ -239,10 +244,14 @@ class component_password extends component_common {
 			LIMIT 1;
 		";
 
-		$result = pg_query(DBi::_getConnection(), $sql_query);
-		$data = pg_fetch_result($result, 0, 0);
+		$result = matrix_db_manager::exec_sql($sql_query);
 
-		return $data;
+		if ($result && pg_num_rows($result) > 0) {
+			$data = pg_fetch_result($result, 0, 0);
+			return is_string($data) ? $data : null;
+		}
+
+		return null;
 	}//end get_v6_root_password_data
 
 
