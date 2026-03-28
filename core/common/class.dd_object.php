@@ -1844,7 +1844,7 @@ class dd_object extends stdClass implements JsonSerializable {
 	* @param mixed $value Property value
 	* @return mixed
 	*/
-	final public function __set(string $name, mixed $value) {
+	final public function __set(string $name, $value) {
 
 		$method = 'set_' . $name;
 		if (method_exists($this, $method)) {
