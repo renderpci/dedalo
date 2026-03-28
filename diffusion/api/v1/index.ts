@@ -6,7 +6,7 @@
  * Architecture:
  *   Client → Bun (unix socket via Apache ProxyPass)
  *     → PHP diffusion_api (agnostic data + parser config)
- *     → Bun parses data (parser_text, parser_date, pattern_replacer)
+ *     → Bun parses data (parser_text, parser_date, parser_helper)
  *     → MariaDB (INSERT/UPDATE)
  *     → Client response (NDJSON stream with per-record progress)
  */
@@ -57,9 +57,9 @@ function encode_sse_chunk(data: progress_data): Uint8Array {
 
 	// Fix Apache reverse-proxy buffering dropping early short chunks
 	// by filling out the payload with harmless JSON trailing spaces 
-	// up to the common 4096 HTTP/1.1 flush boundary.
-	if (payload.length < 4096) {
-		payload += ' '.repeat(4096 - payload.length);
+	// up to the common 16384 HTTP/1.1 flush boundary (Nginx/Apache).
+	if (payload.length < 16384) {
+		payload += ' '.repeat(16384 - payload.length);
 	}
 
 	payload += '\n\n';
@@ -281,7 +281,7 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 				if (current_state) {
 					try { controller.enqueue(encode_sse_chunk(current_state)); } catch { /* ignore */ }
 				}
-			}, 15000); // 15s ping
+			}, 2000); // 2s ping (reduced from 5s/15s to beat 10s default idleTimeout and keep proxies warm)
 
 			const on_update = (snapshot: progress_data) => {
 				try {
@@ -451,9 +451,8 @@ async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string |
 // =====================================================
 
 const server = Bun.serve({
-	unix: SOCKET_PATH,
-
-
+	unix:        SOCKET_PATH,
+	idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
 	async fetch(request: Request): Promise<Response> {
 
 		const url    = new URL(request.url);
@@ -528,7 +527,7 @@ const server = Bun.serve({
 			);
 		}
 	},
-});
+} as any);
 
 console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
 

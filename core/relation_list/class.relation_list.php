@@ -996,6 +996,7 @@ class relation_list extends common {
 				// check if the function exist
 				// if not, return a null value in diffusion data
 				// and stop the resolution
+				// 'is_callable' allows magic methods
 				if( !is_callable([$this, $fn]) ){
 					debug_log(__METHOD__
 						. " function doesn't exist " . PHP_EOL
@@ -1010,40 +1011,44 @@ class relation_list extends common {
 				try {
 					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
 
-					switch ($fn) {
-						// add parents
-						case 'add_parents':
-							$data = $this->get_data();
-							$diffusion_data_object->set_value( $data );
-							$diffusion_data_object->parents = $diffusion_value;
+					switch (true) {
+						// if the function is a method of the current component
+						// it will return any kind of values.
+						case method_exists($this, $fn):
+							$diffusion_data_object->set_value( $fn_data );
 
 							return $diffusion_data;
-						case 'get_data_with_references':
-							$diffusion_data_object->set_value( $diffusion_value );
-
-							return $diffusion_data;
+						// default, diffusion_fn method loaded by common __call
+						// it will return an array of diffusion_data_object
+						// and the default diffusion_data_object will be replaced
 						default:
+							// overwrite default diffusion data
+							$diffusion_data = $fn_data;
 							break;
 					}
 				} catch (Throwable $e) {
-					// fallback when method does not expect $diffusion_data_object
 					debug_log(__METHOD__
 						. " error executing diffusion function " . PHP_EOL
 						. " function name: ". $fn . PHP_EOL
 						. " error: " . $e->getMessage()
 						, logger::ERROR
-						);
-						$diffusion_value = null;
+					);
+					$fn_data = null;
 				}
+				// overwrite default diffusion data
+				$diffusion_data = $fn_data;
 
-				// set the diffusion value and return the diffusion data
-				$diffusion_data_object->set_value( $diffusion_value );
 				return $diffusion_data;
 			}
 
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 			$data = $this->get_data();
+
+			// if the ddo provides a data_slice property, use it to slice the data
+			if(isset($ddo->data_slice)){
+				$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+			}
 
 			$diffusion_value = !empty($data)
 				? $data
