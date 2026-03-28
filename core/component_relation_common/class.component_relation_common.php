@@ -1065,6 +1065,11 @@ class component_relation_common extends component_common {
 		// If the ddo doesn't provide any specific function the component will use a get_url as default.
 		$data = $this->get_data();
 
+		// if the ddo provides a data_slice property, use it to slice the data
+		if(isset($ddo->data_slice)){
+			$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
+		}
+
 		// Try hierarchy1 resolution (v5 thesaurus compatibility)
 		if (empty($data) && $this->model==='component_relation_parent') {
 			$hierarchy_parent = $this->get_possible_root_hierarchy();
@@ -1097,17 +1102,22 @@ class component_relation_common extends component_common {
 				try {
 					$fn_data = $this->$fn( $ddo, $diffusion_element_tipo );
 
-					switch ($fn) {
+					switch (true) {
 						// add parents
-						case 'add_parents':
+						case $fn==='add_parents':
 							$diffusion_data_object->set_value( $data );
 							$diffusion_data_object->parents = $fn_data;
 
 							return $diffusion_data;
-						case 'get_data_with_references':
+						// if the function is a method of the current component
+						// it will return any kind of values.
+						case method_exists($this, $fn):
 							$diffusion_data_object->set_value( $fn_data );
 
 							return $diffusion_data;
+						// default, diffusion_fn method loaded by common __call
+						// it will return an array of diffusion_data_object
+						// and the default diffusion_data_object will be replaced
 						default:
 							// overwrite default diffusion data
 							$diffusion_data = $fn_data;
@@ -1141,6 +1151,17 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* SET_DATO_EXTERNAL (Compatibility alias for set_data_external)
+	* @param object $options
+	* @return bool
+	*/
+	public function set_dato_external( object $options ) : bool {
+		return $this->set_data_external( $options );
+	}
+
+
+
+	/**
 	* SET_DATA_EXTERNAL
 	* Get the data from other component that reference at the current section of the component (portal, autocomplete, select, etc)
 	* the result will be the result of the search to the external section and component
@@ -1155,7 +1176,7 @@ class component_relation_common extends component_common {
 		// options
 			$save				= $options->save ?? false;
 			$changed			= $options->changed ?? false;
-			$current_data		= $options->current_data ?? false;
+			$current_data		= $options->current_data ?? $options->current_dato ?? false;
 			$references_limit	= $options->references_limit ?? 10;
 
 		// data set
@@ -1225,7 +1246,7 @@ class component_relation_common extends component_common {
 						."Set observed data ($model_name - $current_component_tipo - $section_tipo - $section_id)"
 						, logger::DEBUG
 					);
-					$this->Save();
+					$this->save();
 				// task done. return
 					return true;
 
@@ -1361,7 +1382,7 @@ class component_relation_common extends component_common {
 				}
 
 			$total_ar_result	= sizeof($ar_result);
-			$total_ar_data		= sizeof($data);
+			$total_ar_data		= sizeof((array)$data);
 			$final_data			= [];
 
 			if ($total_ar_result===0 && $total_ar_data===0) {
@@ -2462,7 +2483,7 @@ class component_relation_common extends component_common {
 
 		$last			= $dd_object->last ?? null;
 		$tipo			= $dd_object->tipo;
-		$data_fn		= $dd_object->data_fn ?? null;
+		$fn				= $dd_object->fn ?? $dd_object->data_fn ?? null; // data_fn is the old name for fn
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
 		$model			= ontology_node::get_model_by_tipo($tipo,true);
@@ -2476,7 +2497,7 @@ class component_relation_common extends component_common {
 			$section_tipo
 		);
 
-		switch ($data_fn) {
+		switch ($fn) {
 			case 'get_calculation_data':
 				$options = $dd_object->options ?? null;
 				$component_data = $component->get_calculation_data($options);

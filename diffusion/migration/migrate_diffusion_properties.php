@@ -202,19 +202,17 @@ function process_node($node, $level) {
 							// Specific complex object for Enum + Relation
 							$parser_process = [
 								(object)[
-									'fn' => 'parser_locator::get_section_id',
-									'id' => 'a'
+									'fn' => 'parser_locator::get_section_id'
 								],
 								(object)[
-									'fn' => 'parser_helper::get_first',
-									'id' => 'a'
+									'fn' => 'parser_helper::get_first'
 								],
 								(object)[
 									'fn' => 'parser_text::map_value',
 									'options' => (object)[
 										'map' => [
 											(object)[
-												'a' => $props->enum
+												'a' => $props->enum ?? (object)["1"=>"Yes", "0"=>"No"]
 											]
 										]
 									]
@@ -690,15 +688,15 @@ function process_node($node, $level) {
 									$first_custom_arg = is_array($custom_arguments) ? ($custom_arguments[0] ?? null) : $custom_arguments;
 									$process_dato_arguments_2 = $first_custom_arg->process_dato_arguments ?? null;
 									if ($process_dato_arguments_2) {
-										$component_method_2 = $process_dato_arguments_2->component_method;
-										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
-										$output_2 = $process_dato_arguments_2->output;
-										$output_options_2 = $process_dato_arguments_2->output_options;
+										$component_method_2 = $process_dato_arguments_2->component_method ?? null;
+										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo ?? null;
+										$output_2 = $process_dato_arguments_2->output ?? null;
+										$output_options_2 = $process_dato_arguments_2->output_options ?? null;
 											// $date_format_2 = $output_options_2->date_format;
 											// $selected_key_2 = $output_options_2->selected_key;
 											// $selected_date_2 = $output_options_2->selected_date;
-										$empty_value_2 = $process_dato_arguments_2->empty_value;
-										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
+										$empty_value_2 = $process_dato_arguments_2->empty_value ?? null;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable ?? null;
 										$process_dato_2 = $process_dato_arguments_2->process_dato ?? null;
 										$fallback_2 = $process_dato_arguments_2->fallback ?? null;
 											// $tipo_2 = $fallback_2->tipo;
@@ -709,13 +707,13 @@ function process_node($node, $level) {
 											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
 										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
 										
-										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments ?? null;
 											// $dato_3 = $process_dato_arguments_3->dato;
 											// $options_3 = $process_dato_arguments_3->options;
 										
-										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents ?? null;
 
-										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments ?? null;
 
 
 										$ddo_map2 = [
@@ -733,111 +731,10 @@ function process_node($node, $level) {
 											]
 										];
 
-									// 2.4.5
-									// geojson
-									if(isset($fallback_2)&& $fallback_2->method === 'get_diffusion_value_as_geojson'){
-										$component_tipo = $fallback_2->tipo;
-
-										$ddo_map3 = [
-											(object)[
-												'tipo'         => $rel_info['tipo'],
-												'section_tipo' => 'self'
-											],
-											(object)[
-												'tipo'         => $component_tipo,							
-												'parent'       => $rel_info['tipo']
-											]
-										];
-
-										$parser_process = (object)[
-											'parser' => [
-												(object)[
-													'fn' => 'parser_geo::geojson'
-												]
-											],
-											'output_format' => 'json'							
-										];
-									
-										$new_props = new stdClass();
-											$new_props->process = $parser_process;
-											$new_props->process->ddo_map = $ddo_map3;
-											$new_props->process->output_sample = '[{"layer_id":1,"layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-2.923972570429317,43.257925269216365]}}]}}]';
-
-										// "is_publicable" = true
-										if(isset($props->is_publicable) && $props->is_publicable === true){
-											$new_props->is_publishable = $props->is_publicable;
-										}
-
-										// "varchar" = 256
-										if(isset($props->varchar)){
-											$new_props->varchar = $props->varchar;
-										}
-
-										echo "{$indent}- [$tipo] $model_name\n";
-										echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
-										break;
-									}
-
-
-
-									// 2.4.6.1 "component_method" = "get_diffusion_value"
-									if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
-
-										$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
-
-										$new_props = new stdClass();
-										$new_props->process = get_diffusion_value(
-											$target_component_tipo_2,
-											$model,
-											$custom_arguments_2,
-											$process_dato_arguments_2,
-											$output_2,
-											$data_to_be_used_2,
-											$option_obj,
-											$ddo_map2
-										);
-
-										// "is_publicable" = true
-										if(isset($props->is_publicable) && $props->is_publicable === true){
-											$new_props->is_publishable = $props->is_publicable;
-										}
-
-										// "varchar" = 256
-										if(isset($props->varchar)){
-											$new_props->varchar = $props->varchar;
-										}
-
-										echo "{$indent}- [$tipo] $model_name\n";
-										echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
-										break;
-										
-									}
-									// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
-									// second deep component
-									if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
-
-										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
-										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
-										if ($process_dato_arguments_3) {
-											$component_method_3 = $process_dato_arguments_3->component_method;
-											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
-											$output_3 = $process_dato_arguments_3->output;
-											$output_options_3 = $process_dato_arguments_3->output_options;
-
-											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
-											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
-											$process_dato_3 = $process_dato_arguments_3->process_dato ?? null;
-											$fallback_3 = $process_dato_arguments_3->fallback ?? null;
-											$target_component_properties_3 = $process_dato_arguments_3->target_component_properties ?? null;
-											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
-											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
-											
-											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
-											
-											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
-
-											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
-
+										// 2.4.5
+										// geojson
+										if(isset($fallback_2)&& $fallback_2->method === 'get_diffusion_value_as_geojson'){
+											$component_tipo = $fallback_2->tipo;
 
 											$ddo_map3 = [
 												(object)[
@@ -845,35 +742,57 @@ function process_node($node, $level) {
 													'section_tipo' => 'self'
 												],
 												(object)[
-													'tipo'         => $target_component_tipo,							
+													'tipo'         => $component_tipo,							
 													'parent'       => $rel_info['tipo']
-												],
-												(object)[
-													'tipo'         => $target_component_tipo_2,
-													'parent'       => $target_component_tipo
-												],
-												(object)[
-													'tipo'         => $target_component_tipo_3,
-													'parent'       => $target_component_tipo_2
 												]
 											];
 
+											$parser_process = (object)[
+												'parser' => [
+													(object)[
+														'fn' => 'parser_geo::geojson'
+													]
+												],
+												'output_format' => 'json'							
+											];
+										
+											$new_props = new stdClass();
+												$new_props->process = $parser_process;
+												$new_props->process->ddo_map = $ddo_map3;
+												$new_props->process->output_sample = '[{"layer_id":1,"layer_data":{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-2.923972570429317,43.257925269216365]}}]}}]';
 
-										// 2.5.1 "component_method" = "get_diffusion_value"
-										if($component_method_3 === "get_diffusion_value" && !isset($custom_arguments_3)){
+											// "is_publicable" = true
+											if(isset($props->is_publicable) && $props->is_publicable === true){
+												$new_props->is_publishable = $props->is_publicable;
+											}
 
-											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_3);
+											// "varchar" = 256
+											if(isset($props->varchar)){
+												$new_props->varchar = $props->varchar;
+											}
+
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+											break;
+										}
+
+
+
+										// 2.4.6.1 "component_method" = "get_diffusion_value"
+										if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
+
+											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
 
 											$new_props = new stdClass();
 											$new_props->process = get_diffusion_value(
-												$target_component_tipo_3,
+												$target_component_tipo_2,
 												$model,
-												$custom_arguments_3,
-												$process_dato_arguments_3,
-												$output_3,
-												$data_to_be_used_3,
+												$custom_arguments_2,
+												$process_dato_arguments_2,
+												$output_2,
+												$data_to_be_used_2,
 												$option_obj,
-												$ddo_map3
+												$ddo_map2
 											);
 
 											// "is_publicable" = true
@@ -891,13 +810,94 @@ function process_node($node, $level) {
 											break;
 											
 										}
+										// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
+										// second deep component
+										if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
+
+											$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
+											$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
+											if ($process_dato_arguments_3) {
+												$component_method_3 = $process_dato_arguments_3->component_method ?? null;
+												$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo ?? null;
+												$output_3 = $process_dato_arguments_3->output ?? null;
+												$output_options_3 = $process_dato_arguments_3->output_options ?? null;
+
+												$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
+												$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
+												$process_dato_3 = $process_dato_arguments_3->process_dato ?? null;
+												$fallback_3 = $process_dato_arguments_3->fallback ?? null;
+												$target_component_properties_3 = $process_dato_arguments_3->target_component_properties ?? null;
+												$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
+												$divisor_3 = $process_dato_arguments_3->divisor ?? null;
+												
+												$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments ?? null;
+												
+												$custom_parents_3 = $process_dato_arguments_3->custom_parents ?? null;
+
+												$custom_arguments_3 = $process_dato_arguments_3->custom_arguments ?? null;
+
+
+												$ddo_map3 = [
+													(object)[
+														'tipo'         => $rel_info['tipo'],
+														'section_tipo' => 'self'
+													],
+													(object)[
+														'tipo'         => $target_component_tipo,							
+														'parent'       => $rel_info['tipo']
+													],
+													(object)[
+														'tipo'         => $target_component_tipo_2,
+														'parent'       => $target_component_tipo
+													],
+													(object)[
+														'tipo'         => $target_component_tipo_3,
+														'parent'       => $target_component_tipo_2
+													]
+												];
+
+
+												// 2.5.1 "component_method" = "get_diffusion_value"
+												if($component_method_3 === "get_diffusion_value" && !isset($custom_arguments_3)){
+
+													$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_3);
+
+													$new_props = new stdClass();
+													$new_props->process = get_diffusion_value(
+														$target_component_tipo_3,
+														$model,
+														$custom_arguments_3,
+														$process_dato_arguments_3,
+														$output_3,
+														$data_to_be_used_3,
+														$option_obj,
+														$ddo_map3
+													);
+
+													// "is_publicable" = true
+													if(isset($props->is_publicable) && $props->is_publicable === true){
+														$new_props->is_publishable = $props->is_publicable;
+													}
+
+													// "varchar" = 256
+													if(isset($props->varchar)){
+														$new_props->varchar = $props->varchar;
+													}
+
+													echo "{$indent}- [$tipo] $model_name\n";
+													echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+													break;
+													
+												}
+											}
+										}
 									}
+
 								}
 							}
 
-							}
-							}
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
+							$data_to_be_used        = $props->data_to_be_used ?? null;
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
 								$parser_process = [
@@ -924,11 +924,8 @@ function process_node($node, $level) {
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";							
 								break;
-
 								
 							}
-
-
 
 							break;
 						case 'component_autocomplete':
@@ -1392,15 +1389,15 @@ function process_node($node, $level) {
 									$process_dato_arguments_2 = $custom_arguments->process_dato_arguments;
 										$component_method_2 = $process_dato_arguments_2->component_method;
 										$target_component_tipo_2 = $process_dato_arguments_2->target_component_tipo;
-										$output_2 = $process_dato_arguments_2->output;
-										$output_options_2 = $process_dato_arguments_2->output_options;
+										$output_2 = $process_dato_arguments_2->output ?? null;
+										$output_options_2 = $process_dato_arguments_2->output_options ?? null;
 											// $date_format_2 = $output_options_2->date_format;
 											// $selected_key_2 = $output_options_2->selected_key;
 											// $selected_date_2 = $output_options_2->selected_date;
-										$empty_value_2 = $process_dato_arguments_2->empty_value;
-										$is_publicable_2 = $process_dato_arguments_2->is_publicable;
-										$process_dato_2 = $process_dato_arguments_2->process_dato;
-										$fallback_2 = $process_dato_arguments_2->fallback;
+										$empty_value_2 = $process_dato_arguments_2->empty_value ?? null;
+										$is_publicable_2 = $process_dato_arguments_2->is_publicable ?? null;
+										$process_dato_2 = $process_dato_arguments_2->process_dato ?? null;
+										$fallback_2 = $process_dato_arguments_2->fallback ?? null;
 											// $tipo_2 = $fallback_2->tipo;
 											// $method_2 = $fallback_2->method;
 										$target_component_properties_2 = $process_dato_arguments_2->target_component_properties ?? null;
@@ -1409,13 +1406,13 @@ function process_node($node, $level) {
 											// $separator_fields_2 = $target_component_properties_2->separator_fields ?? null;
 										$divisor_2 = $process_dato_arguments_2->divisor ?? null;
 										
-										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments;
+										$process_dato_arguments_3 = $process_dato_arguments_2->process_dato_arguments ?? null;
 											// $dato_3 = $process_dato_arguments_3->dato;
 											// $options_3 = $process_dato_arguments_3->options;
 										
-										$custom_parents_2 = $process_dato_arguments_2->custom_parents;
+										$custom_parents_2 = $process_dato_arguments_2->custom_parents ?? null;
 
-										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments;
+										$custom_arguments_2 = $process_dato_arguments_2->custom_arguments ?? null;
 
 
 										$ddo_map2 = [
@@ -1472,10 +1469,10 @@ function process_node($node, $level) {
 										$first_custom_arg_2 = is_array($custom_arguments_2) ? ($custom_arguments_2[0] ?? null) : $custom_arguments_2;
 										$process_dato_arguments_3 = $first_custom_arg_2->process_dato_arguments ?? null;
 										if ($process_dato_arguments_3) {
-											$component_method_3 = $process_dato_arguments_3->component_method;
-											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo;
-											$output_3 = $process_dato_arguments_3->output;
-											$output_options_3 = $process_dato_arguments_3->output_options;
+											$component_method_3 = $process_dato_arguments_3->component_method ?? null;
+											$target_component_tipo_3 = $process_dato_arguments_3->target_component_tipo ?? null;
+											$output_3 = $process_dato_arguments_3->output ?? null;
+											$output_options_3 = $process_dato_arguments_3->output_options ?? null;
 
 											$empty_value_3 = $process_dato_arguments_3->empty_value ?? null;
 											$is_publicable_3 = $process_dato_arguments_3->is_publicable ?? null;
@@ -1485,11 +1482,11 @@ function process_node($node, $level) {
 											$data_to_be_used_3 = $target_component_properties_3->data_to_be_used ?? null;
 											$divisor_3 = $process_dato_arguments_3->divisor ?? null;
 											
-											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments;
+											$process_dato_arguments_4 = $process_dato_arguments_3->process_dato_arguments ?? null;
 											
-											$custom_parents_3 = $process_dato_arguments_3->custom_parents;
+											$custom_parents_3 = $process_dato_arguments_3->custom_parents ?? null;
 
-											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments;
+											$custom_arguments_3 = $process_dato_arguments_3->custom_arguments ?? null;
 
 
 											$ddo_map3 = [
@@ -3338,8 +3335,28 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] text_area empty props -> get_diffusion_value\n";
 								break;
 							}
-							break;
 
+							// 1 proces datao with geojson
+							$process_dato = $props->process_dato ?? null;
+							if($process_dato && $process_dato === "diffusion_sql::build_geolocation_data_geojson") {
+
+								// Specific for geojson
+								$parser_process = (object)[
+									"fn" => "get_geojson_data"
+								];							
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_format = "json";
+								$new_props->process->output_sample = "Yes";
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] componet_text_area -> diffusion_sql::build_geolocation_data_geojson\n";							
+								break;					
+							}
+
+							break;
 						case 'component_html_text':
 							$is_empty_cd = function($props) {
 								if (empty($props)) return true;
@@ -3385,7 +3402,10 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
-							// 1 "process_dato" = "diffusion_sql::map_target_section_tipo"
+							// 2 "process_dato" present
+							$process_dato = $props->process_dato ?? null;
+
+							// 1 "process_dato" = "diffusion::map_section_id_to_subtitles_url"
 							if( $process_dato 
 								&& $process_dato=== "diffusion::map_section_id_to_subtitles_url"){							
 
@@ -3422,7 +3442,7 @@ function process_node($node, $level) {
 												'fn' => 'parser_locator::get_term_id'
 											],
 											(object)[
-												'fn' => 'parser_locator::get_first'
+												'fn' => 'parser_helper::get_first'
 											]
 										],
 										"output_format" => "string"
@@ -3458,7 +3478,7 @@ function process_node($node, $level) {
 												'fn' => 'parser_locator::get_section_tipo'
 											],
 											(object)[
-												'fn' => 'parser_locator::get_first'
+												'fn' => 'parser_helper::get_first'
 											]
 										],
 										"output_format" => "string"
@@ -3773,7 +3793,6 @@ function process_node($node, $level) {
 									null,
 									null,
 									null,
-									null,
 									null
 								);
 
@@ -3794,7 +3813,85 @@ function process_node($node, $level) {
 							
 
 							break;
-					}
+						case 'relation_list':
+
+							$is_empty_relation_list = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							$ddo_map_relation_list = [
+								(object)[
+									'tipo'         => $rel_info['tipo'],
+									'section_tipo' => 'self'
+								]
+							];
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_relation_list($props)) {
+
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'relation_list',
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list empty props -> get_dato (letter-id ddo_map)\n";
+								break;
+							}
+							
+							// 1 data_to_be_used: "custom"
+							$data_to_be_used_rl = $props->data_to_be_used ?? null;
+							if($data_to_be_used_rl && $data_to_be_used_rl === 'custom') {
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									$props->custom_arguments ?? null,
+									$props->process_dato_arguments ?? null,
+									$props->output ?? null,
+									$props->data_to_be_used ?? null,
+									null,
+									$ddo_map_relation_list
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list data_to_be_used=custom -> get_diffusion_value()\n";
+								break;
+							}
+
+							break;
+						}
 				}
 			}
 		}

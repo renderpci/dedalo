@@ -137,7 +137,7 @@ class diffusion_chain_processor {
 		});
 
 		// 1. RELATION COMPONENT BRANCH: Handles both queuing and recursion
-		$is_relation_component = in_array($model_name, component_relation_common::get_components_with_relations());
+		$is_relation_component = in_array($model_name, component_relation_common::get_components_with_relations()) || $model_name === 'relation_list';
 		if ($is_relation_component) {
 			return $this->process_relation_component($ddo, $element, $ddo_map, $children, $level, $is_publishable);
 		}
@@ -248,6 +248,13 @@ class diffusion_chain_processor {
 				// Merge values from child DDOs
 				foreach ($child_results as $res) {
 					$val = $res->get_value();
+					if($element_model === 'relation_list'){
+						$val = array_map(function($item) use($locator) {
+							$item->section_id = $locator->section_id;
+							$item->section_tipo = $locator->section_tipo;
+							return $item;
+						}, $val);
+					}
 					if (is_array($val)) {
 						$relation_values = array_merge($relation_values, $val);
 					} else {
