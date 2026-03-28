@@ -1146,6 +1146,12 @@ final class dd_core_api {
 
 					// changed_data is array always. Update items
 						foreach ($changed_data as $changed_data_item) {
+
+							if (!is_object($changed_data_item)) {
+								debug_log(__METHOD__ . " Error: changed_data_item is not an object", logger::ERROR);
+								continue;
+							}
+
 							// update the data with the changed data sent by the client
 							$update_result = (bool)$component->update_data_value($changed_data_item);
 							if ($update_result===false) {
