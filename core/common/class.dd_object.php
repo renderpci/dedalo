@@ -54,6 +54,8 @@
 * - @property object|null $options			   Generic object options container tu pass custom vars across DDOs
 * - @property object|null $parser_args		   Diffusion parser arguments (used by diffusion)
 * - @property object|null $data_slice         Data slice definition. e.g. {"offset":0, "length":1}
+* - @property array|null  $section_filter      Section filtering list used by relation_list to restrict inverse references by section tipo.
+* - @property array|null  $component_filter    Component filtering list used by relation_list to restrict inverse references by component tipo.
 *
 * Runtime
 * - @property array|null  $errors              Collected error messages
@@ -123,6 +125,8 @@ class dd_object extends stdClass implements JsonSerializable {
 	protected ?object $options = null;
 	protected ?object $parser_args = null;
 	protected ?object $data_slice = null;
+	protected ?array $section_filter = null;
+	protected ?array $component_filter = null;
 
 	// Errors
 	protected ?array $errors = null;
@@ -1576,6 +1580,58 @@ class dd_object extends stdClass implements JsonSerializable {
 
 		return $this->data_slice ?? null;
 	}//end get_data_slice
+
+
+
+	/**
+	* SET_SECTION_FILTER
+	* @param array|null $value
+	* @return bool
+	*/
+	public function set_section_filter(?array $value) : bool {
+
+		$this->section_filter = $value;
+
+		return true;
+	}//end set_section_filter
+
+
+
+	/**
+	* GET_SECTION_FILTER
+	* Return property value
+	* @return array|null $this->section_filter
+	*/
+	public function get_section_filter() : ?array {
+
+		return $this->section_filter ?? null;
+	}//end get_section_filter
+
+
+
+	/**
+	* SET_COMPONENT_FILTER
+	* @param array|null $value
+	* @return bool
+	*/
+	public function set_component_filter(?array $value) : bool {
+
+		$this->component_filter = $value;
+
+		return true;
+	}//end set_component_filter
+
+
+
+	/**
+	* GET_COMPONENT_FILTER
+	* Return property value
+	* @return array|null $this->component_filter
+	*/
+	public function get_component_filter() : ?array {
+
+		return $this->component_filter ?? null;
+	}//end get_component_filter
 
 
 
