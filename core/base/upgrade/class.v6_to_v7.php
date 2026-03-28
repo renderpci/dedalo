@@ -1693,6 +1693,58 @@ class v6_to_v7 {
 
 
 	/**
+	 * DROP_LEGACY_DATOS_COLUMN
+	 *
+	 * Removes the legacy 'datos' column from the specified tables after successful data migration.
+	 *
+	 * @param array $ar_tables List of database tables to process.
+	 * @return bool True if all columns were successfully dropped or didn't exist, false on error.
+	 */
+	public static function drop_legacy_datos_column(array $ar_tables) : bool {
+
+		$conn = DBi::_getConnection();
+
+		foreach ($ar_tables as $table) {
+			// CLI feedback
+			if (running_in_cli()) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->msg = " Dropping legacy 'datos' column from table: $table";
+				print_cli(common::$pdata);
+			}
+
+			$escaped_table = pg_escape_identifier($conn, $table);
+
+			$sql_query = sanitize_query("
+				DO $$
+				BEGIN
+					IF EXISTS (
+						SELECT 1
+						FROM information_schema.columns
+						WHERE table_name = '$table'
+						AND column_name = 'datos'
+					) THEN
+						ALTER TABLE $escaped_table DROP COLUMN \"datos\";
+					END IF;
+				END $$;
+			");
+
+			$result = matrix_db_manager::exec_sql($sql_query);
+
+			if ($result === false) {
+				$msg = "Failed to drop legacy 'datos' column from table '$table'";
+				debug_log(__METHOD__ . " ERROR: $msg", logger::ERROR);
+				return false;
+			}
+		}
+
+		return true;
+	}//end drop_legacy_datos_column
+
+
+
+	/**
 	 * CHANGE_NOTIFICATIONS_TABLE_COLUMN_NAME
 	 *
 	 * Change notifications table column name from 'datos' to 'data'
