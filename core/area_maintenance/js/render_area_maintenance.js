@@ -97,7 +97,11 @@ const get_content_data = function(self) {
 				replace_container	: false,
 				label				: widget.label ,
 				callback			: async () => {
-					return await render_widget(widget, self)
+					const node = await render_widget(widget, self)
+					setTimeout(()=>{
+						container.classList.add('loaded')
+					}, 3)
+					return node
 				}
 			})
 		}

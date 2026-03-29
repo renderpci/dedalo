@@ -326,22 +326,22 @@ service_time_machine.prototype.build_request_config = function() {
 					// section case. Usually from Tool Time machine listing deleted sections
 
 					// sqo. filter
-						sqo.parsed = false,
-						sqo.filter = {
-							$and : [
-								{
-									q			: section_tipo_caller,
-									operator	: "=",
-									format		: "column",
-									column_name	: "tipo",
-									path		: [{ section_tipo : section_tipo_caller }]
-								}
-							]
-						}
-						sqo.order = [{
-							direction	: 'ASC',
-							path		: [{ component_tipo : 'section_id' }]
-						}]
+					sqo.parsed = false,
+					sqo.filter = {
+						$and : [
+							{
+								q			: section_tipo_caller,
+								operator	: "=",
+								format		: "column",
+								column_name	: "tipo",
+								path		: [{ section_tipo : section_tipo_caller }]
+							}
+						]
+					}
+					sqo.order = [{
+						direction	: 'ASC',
+						path		: [{ component_tipo : 'section_id' }]
+					}]
 					break;
 
 				case 'dd_grid':
@@ -349,26 +349,26 @@ service_time_machine.prototype.build_request_config = function() {
 					// time machine list case. Usually from inspector listing section changes history
 
 					// sqo. filter_by_locators
-						sqo.filter_by_locators = [{
-							section_tipo	: section_tipo_caller,
-							section_id		: section_id_caller
-							// removed because limit components by lang
-							// lang			: lang // (!) used only in time machine to filter by column lang
-						}]
+					sqo.filter_by_locators = [{
+						section_tipo	: section_tipo_caller,
+						section_id		: section_id_caller
+						// removed because limit components by lang
+						// lang			: lang // (!) used only in time machine to filter by column lang
+					}]
 					break;
 
 				default:
 
 					// component case. Usually from tool or inspector component history
 					const current_locator =	{
-							section_tipo	: section_tipo_caller,
-							section_id		: section_id_caller,
-							tipo			: tipo, // (!) used only in time machine to filter by column tipo
-							lang			: lang, // (!) used only in time machine to filter by column lang
-						}
+						section_tipo	: section_tipo_caller,
+						section_id		: section_id_caller,
+						tipo			: tipo, // (!) used only in time machine to filter by column tipo
+						lang			: lang, // (!) used only in time machine to filter by column lang
+					}
 
 					// sqo. filter_by_locators
-						sqo.filter_by_locators = [current_locator]
+					sqo.filter_by_locators = [current_locator]
 					break;
 			}
 		}//end if (!config_sqo)
@@ -464,6 +464,24 @@ service_time_machine.prototype.build_request_config = function() {
 						view			: 'mini'
 					}
 				)
+				// Debug value column only in debug mode
+				if (SHOW_DEBUG) {
+					// component value dd1574 (time machine data column)
+					default_ddo_map.push(
+						{
+							id				: 'tm_value_debug',
+							tipo			: 'dd1574',
+							type			: 'component',
+							typo			: 'ddo',
+							model			: 'component_json',
+							section_tipo	: section_tipo,
+							parent			: section_tipo,
+							debug_label		: 'Component value (debug)',
+							mode			: 'tm',
+							view			: 'mini'
+						}
+					)
+				}
 			}
 
 		// ignore_columns

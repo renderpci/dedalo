@@ -46,7 +46,7 @@ $updates->$v = new stdClass();
 	// MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
 	$updates->$v->update_from_medium	= 8;
-	$updates->$v->update_from_minor		= 7;
+	$updates->$v->update_from_minor		= 8;
 
 	// require a clean installation
 	// it only could be 'clean' | null. Incremental option has not sense to be forced.
@@ -67,8 +67,8 @@ $updates->$v = new stdClass();
 
 	// SQL UPDATE ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	// change the date column in matrix_activity as timestamp.
-	// date column will use to storage component_date data.
+		// Rename matrix_activity column date to timestamp.
+		// The date column will be used to store the component_date data.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DO $$
 			BEGIN
@@ -80,13 +80,13 @@ $updates->$v = new stdClass();
 					AND data_type != \'jsonb\'
 				) THEN
 					EXECUTE \'ALTER TABLE matrix_activity RENAME COLUMN date TO "timestamp"\';
+					EXECUTE \'COMMENT ON COLUMN matrix_activity."timestamp" IS \'\'Activity timestamp (previously date)\'\'\';
 				END IF;
-			END;
-			$$;
+			END $$;
 		');
 
-	// Rename matrix_notifications column datos to data
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+		// Rename matrix_notifications column datos to data
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('
 			DO $$
 			BEGIN
 				IF EXISTS (
@@ -95,13 +95,13 @@ $updates->$v = new stdClass();
 					WHERE table_name = \'matrix_notifications\'
 					AND column_name = \'datos\'
 				) THEN
-					EXECUTE \'ALTER TABLE "matrix_notifications" RENAME COLUMN "datos" TO "data"\';
+					EXECUTE \'ALTER TABLE matrix_notifications RENAME COLUMN datos TO data\';
 				END IF;
 			END $$;
 		');
 
-	// DATA INSIDE DATABASE UPDATES
-	// clean_section_and_component_dato. Update 'datos' to section_data
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
 		$ar_tables = [
 			'matrix',
 			'matrix_activities',
@@ -128,7 +128,7 @@ $updates->$v = new stdClass();
 			'matrix_users'
 		];
 
-	// create the new table structure, with a new columns for data type.
+		// Create the new table structure, with new columns for data type.
 		$columns_sentences = [];
 		$comments_sentences = [];
 		foreach ($ar_tables as $current_table) {
@@ -147,26 +147,27 @@ $updates->$v = new stdClass();
 					ADD COLUMN IF NOT EXISTS "meta" jsonb NULL;
 			';
 			$comments_sentences[] = "
-				COMMENT ON COLUMN ".$current_table.".id IS 'Unique table identifier';
-				COMMENT ON COLUMN ".$current_table.".section_id IS 'Section unique identifier';
-				COMMENT ON COLUMN ".$current_table.".section_tipo IS 'Ontology section identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)';
-				COMMENT ON COLUMN ".$current_table.".data IS 'Section data';
-				COMMENT ON COLUMN ".$current_table.".relation IS 'Component data with relation values: ".DEDALO_RELATION_TYPE_LINK." | ".DEDALO_RELATION_TYPE_CHILDREN_TIPO." | ".DEDALO_RELATION_TYPE_PARENT_TIPO." | ".DEDALO_RELATION_TYPE_INDEX_TIPO." | ".DEDALO_RELATION_TYPE_MODEL_TIPO." | ".DEDALO_RELATION_TYPE_FILTER."';
-				COMMENT ON COLUMN ".$current_table.".string IS 'Component data with string values: ". DEDALO_VALUE_TYPE_STRING. "';
-				COMMENT ON COLUMN ".$current_table.".date IS 'Component data with date values: ". DEDALO_VALUE_TYPE_DATE. "';
-				COMMENT ON COLUMN ".$current_table.".iri IS 'Component data with IRI values: ". DEDALO_VALUE_TYPE_IRI. "';
-				COMMENT ON COLUMN ".$current_table.".geo IS 'Component data with geolocation values: ". DEDALO_VALUE_TYPE_GEO. "';
-				COMMENT ON COLUMN ".$current_table.".number IS 'Component data with number values: ". DEDALO_VALUE_TYPE_NUMBER. "';
-				COMMENT ON COLUMN ".$current_table.".media IS 'Component data with media values: ". DEDALO_VALUE_TYPE_MEDIA. "';
-				COMMENT ON COLUMN ".$current_table.".misc IS 'Other component data with miscellaneous values: ". DEDALO_VALUE_TYPE_MISC. "';
-				COMMENT ON COLUMN ".$current_table.".relation_search IS 'Complementary relationships as parents, used to search for all children of the parent being searched for.';
-				COMMENT ON COLUMN ".$current_table.".meta IS 'Component metadata, used as counters for components and other value identifiers.';
+				COMMENT ON COLUMN " . $current_table . ".id IS 'Unique table identifier';
+				COMMENT ON COLUMN " . $current_table . ".section_id IS 'Section unique identifier';
+				COMMENT ON COLUMN " . $current_table . ".section_tipo IS 'Ontology section identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)';
+				COMMENT ON COLUMN " . $current_table . ".data IS 'Section data';
+				COMMENT ON COLUMN " . $current_table . ".relation IS 'Component data with relation values: " . DEDALO_RELATION_TYPE_LINK . " | " . DEDALO_RELATION_TYPE_CHILDREN_TIPO . " | " . DEDALO_RELATION_TYPE_PARENT_TIPO . " | " . DEDALO_RELATION_TYPE_INDEX_TIPO . " | " . DEDALO_RELATION_TYPE_MODEL_TIPO . " | " . DEDALO_RELATION_TYPE_FILTER . "';
+				COMMENT ON COLUMN " . $current_table . ".string IS 'Component data with string values: " . DEDALO_VALUE_TYPE_STRING . "';
+				COMMENT ON COLUMN " . $current_table . ".date IS 'Component data with date values: " . DEDALO_VALUE_TYPE_DATE . "';
+				COMMENT ON COLUMN " . $current_table . ".iri IS 'Component data with IRI values: " . DEDALO_VALUE_TYPE_IRI . "';
+				COMMENT ON COLUMN " . $current_table . ".geo IS 'Component data with geolocation values: " . DEDALO_VALUE_TYPE_GEO . "';
+				COMMENT ON COLUMN " . $current_table . ".number IS 'Component data with number values: " . DEDALO_VALUE_TYPE_NUMBER . "';
+				COMMENT ON COLUMN " . $current_table . ".media IS 'Component data with media values: " . DEDALO_VALUE_TYPE_MEDIA . "';
+				COMMENT ON COLUMN " . $current_table . ".misc IS 'Other component data with miscellaneous values: " . DEDALO_VALUE_TYPE_MISC . "';
+				COMMENT ON COLUMN " . $current_table . ".relation_search IS 'Complementary relationships as parents, used to search for all children of the parent being searched for.';
+				COMMENT ON COLUMN " . $current_table . ".meta IS 'Component metadata, used as counters for components and other value identifiers.';
 			";
-		};
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns_sentences));
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments_sentences));
+		}
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query(implode(PHP_EOL, $columns_sentences));
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query(implode(PHP_EOL, $comments_sentences));
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('ANALYZE ' . implode(', ', array_map(fn($t) => '"' . $t . '"', $ar_tables)) . ';');
 
-	// Rename the "datos" column to "data" in other tables
+		// Rename the "datos" column "data" in the other tables.
 		$columns_sentences = [];
 		$comments_sentences = [];
 		// other kind of tables
@@ -174,10 +175,6 @@ $updates->$v = new stdClass();
 			'matrix_updates'
 		];
 		foreach ($other_tables as $current_table) {
-			// $columns_sentences [] = '
-			// 	ALTER TABLE "'.$current_table.'"
-			// 		RENAME COLUMN datos TO data;
-			// ';
 			$columns_sentences [] = "
 			DO $$
 			BEGIN
@@ -192,15 +189,16 @@ $updates->$v = new stdClass();
 			END $$;
 			";
 			$comments_sentences[] = "
-				COMMENT ON COLUMN ".$current_table.".data IS 'Table data as a general JSON data';
+				COMMENT ON COLUMN " . $current_table . ".data IS 'Table data as a general JSON data';
 			";
-		};
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $columns_sentences));
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query(implode(PHP_EOL, $comments_sentences));
+		}
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query(implode(PHP_EOL, $columns_sentences));
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query(implode(PHP_EOL, $comments_sentences));
+		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('ANALYZE ' . implode(', ', array_map(fn($t) => '"' . $t . '"', $other_tables)) . ';');
 
-	// Create new temprary table with key -> value
-	// Use to storage temporay sections (sections without section_id or section_id=0)
-	// key string as section_tipo_user_id or any other string combination as section_tipo_section_id_user_id
+		// Create new temprary table with key -> value
+		// Use to storage temporay sections (sections without section_id or section_id=0)
+		// key string as section_tipo_user_id or any other string combination as section_tipo_section_id_user_id
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			CREATE UNLOGGED TABLE IF NOT EXISTS temp (
 				key text PRIMARY KEY,
@@ -208,13 +206,11 @@ $updates->$v = new stdClass();
 			);
 		');
 
-	// Set the matrix_notifications as UNLOGGED
-	// Optimize write operations
+		// Set the matrix_notifications as "UNLOGGED" to optimize write operations
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-			ALTER TABLE "matrix_notifications" SET UNLOGGED;
+			ALTER TABLE matrix_notifications SET UNLOGGED;
 		');
 
-	// @TODO : ADD TO DB_PG_DEFINITIONS ! ///////////////////////////////////////////////////////////////////////////////////////////////
 		// create index for matrix_langs hierarchy41 value (lang code as 'eng')
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DROP INDEX IF EXISTS "idx_matrix_langs_hierarchy41_value";
@@ -296,6 +292,7 @@ $updates->$v = new stdClass();
 					FROM temp_matrix_counter;
 					-- Drop the Temporary Table
 					DROP TABLE temp_matrix_counter;
+					ANALYZE matrix_counter;
 				END IF;
 			END $$;
 		');
@@ -324,6 +321,7 @@ $updates->$v = new stdClass();
 					FROM temp_matrix_counter_dd;
 					-- Drop the Temporary Table
 					DROP TABLE temp_matrix_counter_dd;
+					ANALYZE matrix_counter_dd;
 				END IF;
 			END $$;
 		');
@@ -416,11 +414,21 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// TM : Delete old "section_id_key" and "state" tm columns in PostgreSQL.
+		// TM : Delete old 'section_id_key', 'state', 'userID', 'dato' tm columns in PostgreSQL.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Delete tm table (matrix_time_machine) old columns "section_id_key" and "state" in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'delete_tm_columns',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// TM : Rename column "bulk_process_temp" to "bulk_process_id" in PostgreSQL.
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'Rename column "bulk_process_temp" to "bulk_process_id" in tm table (matrix_time_machine) in PostgreSQL.',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'rename_tm_column_bulk_process',
 				'stop_on_error'	=> false,
 				'script_vars'	=> [
 				] // Note that only ONE argument encoded is sent
@@ -445,5 +453,16 @@ $updates->$v = new stdClass();
 				'script_method'	=> 'create_matrix_activity_diffusion_table',
 				'stop_on_error'	=> true,
 				'script_vars'	=> [
+				] // Note that only ONE argument encoded is sent
+			];
+
+		// Cleanup: Remove legacy 'datos' column from matrix tables
+			$updates->$v->run_scripts[] = (object)[
+				'info'			=> 'DROP legacy "datos" column in matrix tables (Final cleanup)',
+				'script_class'	=> 'v6_to_v7',
+				'script_method'	=> 'drop_legacy_datos_column',
+				'stop_on_error'	=> false,
+				'script_vars'	=> [
+					$ar_tables
 				] // Note that only ONE argument encoded is sent
 			];

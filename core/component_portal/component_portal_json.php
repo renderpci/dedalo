@@ -29,9 +29,8 @@
 		$start_time=start_time();
 
 		// short vars
-
 			$section_id	= $this->get_section_id();
-			$limit		= $this->pagination->limit;
+			$limit		= $this->pagination->limit ?? null;
 			$offset		= $this->pagination->offset ?? 0;
 
 		// custom properties external data
@@ -76,7 +75,7 @@
 
 				case 'edit':
 				default:
-					$value	= $this->get_data_paginated();
+					$value	= $this->get_data_paginated( $limit );
 					break;
 			}//end switch ($mode)
 
