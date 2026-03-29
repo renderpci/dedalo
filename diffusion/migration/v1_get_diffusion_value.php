@@ -1365,10 +1365,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					
 					if(!empty($ddo_map) && isset($ddo_map[0])) {
 						if($filter_section) {
-							$ddo_map[0]->filter_section = $filter_section;
+							$ddo_map[0]->section_filter = $filter_section;
 						}
 						if($filter_component) {
-							$ddo_map[0]->filter_component = $filter_component;
+							$ddo_map[0]->component_filter = $filter_component;
 						}
 					}
 					
