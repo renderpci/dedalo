@@ -61,17 +61,36 @@ export function count(data: data_item[] | null, options: parser_options): data_i
 /**
  * MERGE
  * Unifies the parent chains according to the options.merge style mapping.
- * 
+ * Preserves column order and empty slots for missing tipos (no cleanup_formatting).
+ *
  * @param data    - Array of data items
+ * @param options - Parser options (columns is mandatory)
+ * @param options.merge - Strategy for flattening or structuring collections:
+ * 	- undefined (default): ["Madrid", "Spain", "Paris", "France"]
+ * 	                    // flat array of all non-empty slot values across all sections,
+ * 	                    // order-preserved, duplicates allowed
+ * 	- string:           "Madrid - Spain, Paris - France"
+ * 	                    // columns joined by fields_separator within each section,
+ * 	                    // sections joined by records_separator
+ * 	- nested:          	[["Madrid", "Spain"], ["Paris", "France"]]
+ * 	                    // one sub-array of col-values per section_id
+ * 	- flat:           	["Madrid - Spain", "Paris - France"]
+ * 	                    // one string per section_id (columns joined by fields_separator)
+ * 	- pipe:             '["Madrid","Spain"] - ["Paris","France"]'
+ * 	                    // JSON.stringify(col_values) per section, joined by records_separator
+ * 	- unique:           ["Madrid", "Spain", "Paris", "France"]
+ * 	                    // deduplicated flat list of non-empty slot values across all sections
+ *
+ * Fallback priority per column slot (tipo × lang):
+ *   1. Exact lang match
+ *   2. Nolan ("lg-nolan" / null)
+ *   3. main_lang (from options.main_lang, injected by diffusion_processor)
+ *   4. Any other available lang (first found)
+ *   5. "" (empty slot — adjacent separators preserved intentionally)
+ *
+ * @param data    - Array of data items with tipo, lang, value, section_id
  * @param options - Parser options
- * @param options.merge - Strategy for flattening or structuring collections.
- * 	- undefined: 	["Madrid", "Spain", "Paris", "France"]
- * 	- string: 		"Madrid - Spain, Paris - France" // use the fields_separator to separate the values and the records_separator to separate the pipe
- * 	- nested: 		[["Madrid", "Spain"], ["Paris", "France"]]
- * 	- flat: 		["Madrid - Spain", "Paris - France"] // use the fields_separator to separate the values
- * 	- pipe: 		["Madrid", "Spain"] | ["Paris", "France"] // use the records_separator to separate the pipe
- *  - unique:		["Madrid", "Spain", "Paris", "France"] (with duplicates removed)
- * @returns Formatted array
+ * @returns Array of data_item[], one per rendering lang
  */
 export function merge(data: data_item[] | null, options: parser_options): data_item[] | null {
 
