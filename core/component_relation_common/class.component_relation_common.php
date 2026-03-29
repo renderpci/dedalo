@@ -1053,10 +1053,10 @@ class component_relation_common extends component_common {
 
 		// Default diffusion data object
 		$diffusion_data_object = new diffusion_data_object( (object)[
-			'tipo'	=> $this->tipo,
-			'lang'	=> null,
-			'value'	=> null,
-			'id'	=> $ddo->id ?? null
+			'tipo'			=> $this->tipo,
+			'lang'			=> null,
+			'value'			=> null,
+			'id'			=> $ddo->id ?? null
 		]);
 
 		$diffusion_data[] = $diffusion_data_object;
