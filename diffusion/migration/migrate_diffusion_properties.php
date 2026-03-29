@@ -3930,6 +3930,53 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list format=section_id -> parser_locator::get_section_id\n";
 								break;
 							}
+							
+							// 3 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_value
+							$component_method_rl = $process_dato_args->component_method ?? null;
+						
+							if ($process_dato_rl === 'diffusion_sql::resolve_value'
+								&& $component_method_rl === 'get_diffusion_value'
+								&& !isset($process_dato_args->custom_arguments)) {
+							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}							
+							
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									null,
+									$process_dato_args,
+									null,
+									'resolve_value',
+									null,
+									$ddo_map_relation_list
+								);
+
+								$output_rl = $props->process_dato_arguments->output ?? null;
+
+								if($output_rl === 'merged'){
+									$new_props->process->output_format = 'json';
+								}
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+							}
 				}
 			}
 		}
