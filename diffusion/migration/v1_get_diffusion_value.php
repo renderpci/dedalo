@@ -40,7 +40,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -120,7 +120,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$ddo_map[] = (object)[
 				'tipo' => DEDALO_PROJECTS_NAME_TIPO,
 				'parent' => $tipo,
-				'section' => DEDALO_SECTION_PROJECTS_TIPO
+				'section_tipo' => DEDALO_SECTION_PROJECTS_TIPO
 			];			
 
 			$parser_process = (object)[					
@@ -254,7 +254,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'id' => $letter_id,
 								'tipo' => $component_tipo,
 								'parent' => $tipo,
-								'section' => $related_section[0]
+								'section_tipo' => $related_section[0]
 							]; 
 						}
 					}
@@ -292,7 +292,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'id' => $letter_id,
 								'tipo' => $component_tipo,
 								'parent' => $tipo,
-								'section' => $related_section[0]
+								'section_tipo' => $related_section[0]
 							]; 
 						}
 					}
@@ -361,7 +361,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -667,7 +667,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -1252,7 +1252,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$ddo_map[] = (object)[
 							'tipo' => $target_component_tipo,
 							'parent' => $tipo,
-							'section' => $filter_section
+							'section_tipo' => $filter_section
 						];
 
 						$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
@@ -1297,7 +1297,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$ddo_map[] = (object)[
 							'tipo' => $target_component_tipo,
 							'parent' => $tipo,
-							'section' => $filter_section
+							'section_tipo' => $filter_section
 						];
 
 						// component with relations
