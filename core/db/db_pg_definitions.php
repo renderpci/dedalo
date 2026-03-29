@@ -43,7 +43,7 @@
 			$BODY$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS f_unaccent;
+			DROP FUNCTION IF EXISTS f_unaccent
 		',
 		'sample' => '
 			SELECT *
@@ -51,10 +51,10 @@
 			WHERE
 				f_unaccent(jsonb_path_query_array(string, \'$.*[*]\')->>value) = f_unaccent(\'Ripolles\')
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'f_unaccent',
-		'info' => 'Used to process the relation column and get the string value of section_tipo and section_id as oh1_3'
+		'info' => 'Used to remove accents from a text string. Useful for case-insensitive and accent-insensitive searches.'
 	];
 
 	// Create function with base flat locators st=section_tipo si=section_id (dd64_1)
@@ -77,7 +77,7 @@
 			$$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS data_relations_flat_st_si;
+			DROP FUNCTION IF EXISTS data_relations_flat_st_si
 		',
 		'sample' => '
 			SELECT *
@@ -85,10 +85,10 @@
 			WHERE
 				data_relations_flat_st_si(relation) @> \'["oh1_3"]\'
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'data_relations_flat_st_si',
-		'info' => 'Used to process the relation column and get the string value of section_tipo and section_id as oh1_3'
+		'info' => 'Aggregates relation section_tipo and section_id into a flat string format (e.g., oh1_3) for easier indexing and searching.'
 	];
 
 	// Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (tchi7_dd64_1)
@@ -112,7 +112,7 @@
 			$$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS data_relations_flat_fct_st_si;
+			DROP FUNCTION IF EXISTS data_relations_flat_fct_st_si
 		',
 		'sample' => '
 			SELECT *
@@ -120,14 +120,14 @@
 			WHERE
 				data_relations_flat_fct_st_si(relation) @> \'["oh25_oh1_3"]\'
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'data_relations_flat_fct_st_si',
-		'info' => 'Used to process the relation column and get the string value of fct=from_section_tipo st=section_tipo si=section_id e.g. oh25_oh1_3'
+		'info' => 'Aggregates relation from_component_tipo, section_tipo and section_id into a flat string format (e.g., oh25_oh1_3) for easier indexing and searching.'
 	];
 
 	// Create function with base flat locators ty=type st=section_tipo si=section_id (dd151_dd64_1)
-	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st_si(data) @> \'["dd151_dd64_1"]\'::jsonb;
+	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st_si(relation) @> \'["dd151_dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_ty_st_si(data jsonb)
@@ -147,7 +147,7 @@
 			$$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS data_relations_flat_ty_st_si;
+			DROP FUNCTION IF EXISTS data_relations_flat_ty_st_si
 		',
 		'sample' => '
 			SELECT *
@@ -155,14 +155,14 @@
 			WHERE
 				data_relations_flat_ty_st_si(relation) @> \'["dd151_oh1_3"]\'
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'data_relations_flat_ty_st_si',
-		'info' => 'Used to process the relation column and get the string value of ty=type st=section_tipo si=section_id e.g. dd151_dd64_1'
+		'info' => 'Aggregates relation type, section_tipo and section_id into a flat string format (e.g., dd151_oh1_3) for easier indexing and searching.'
 	];
 
 	// Create function with base flat locators ty=type st=section_tipo (dd96_rsc197)
-	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st(data) @> \'["dd96_rsc197"]\'::jsonb;
+	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st(relation) @> \'["dd96_rsc197"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
 			CREATE OR REPLACE FUNCTION data_relations_flat_ty_st(data jsonb)
@@ -181,7 +181,7 @@
 			$$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS data_relations_flat_ty_st;
+			DROP FUNCTION IF EXISTS data_relations_flat_ty_st
 		',
 		'sample' => '
 			SELECT *
@@ -189,10 +189,10 @@
 			WHERE
 				data_relations_flat_ty_st(relation) @> \'["dd151_oh1"]\'
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'data_relations_flat_ty_st',
-		'info' => 'Used to process the relation column and get the string value of ty=type st=section_tipo e.g. dd151_dd64_1'
+		'info' => 'Aggregates relation type and section_tipo into a flat string format (e.g., dd151_oh1) for easier indexing and searching.'
 	];
 
 	// Create function to get valid searchable strings
@@ -218,7 +218,7 @@
 			$$;
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS get_searchable_string;
+			DROP FUNCTION IF EXISTS get_searchable_string
 		',
 		'sample' => '
 			SELECT *
@@ -226,58 +226,27 @@
 			WHERE
 				get_searchable_string(string) LIKE f_unaccent(lower(\'%ripoll%\'))
 			ORDER BY section_id ASC
-			LIMIT 10;
+			LIMIT 10
 		',
 		'name' => 'get_searchable_string',
-		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `string_search` column'
+		'info' => 'Used to process the string column and get the string value without accents in lowercase and without HTML. Is used to create a `search_string` column.'
 	];
 
 	// check_array_component
 	// Used by component date to search inside its data
-		$ar_function[] = (object)[
+	// @todo Review if this function is actually used today! If not, remove it.
+	$ar_function[] = (object)[
 		'add' => '
-			CREATE OR REPLACE FUNCTION check_array_component(condition bool, component_path jsonb)
-			RETURNS SETOF jsonb
-			LANGUAGE plpgsql
-			AS $$
-			BEGIN
-				IF condition THEN
-					RETURN QUERY SELECT jsonb_array_elements(component_path);
-				ELSE
-					RETURN QUERY SELECT component_path;
-				END IF;
-			END
-			$$;
+			-- Not used anymore (v6)
 		',
 		'drop' => '
-			DROP FUNCTION IF EXISTS check_array_component;
+			DROP FUNCTION IF EXISTS check_array_component
 		',
 		'sample' => '
-			SELECT *
-			FROM matrix
-			WHERE id IN (
-				SELECT id
-				FROM check_array_component(
-						( jsonb_typeof(	datos#>\'{components, numisdata35, dato, lg-nolan}\') = \'array\' AND
-										datos#>\'{components, numisdata35, dato, lg-nolan}\' != \'[]\' ),
-						( datos#>\'{components, numisdata35, dato, lg-nolan}\' )
-					) as numisdata35_array_elements
-				WHERE
-					-- TIME
-					numisdata35_array_elements#>\'{time}\' = \'32269363200\'
-					-- RANGE
-					OR (
-					numisdata35_array_elements#>\'{start, time}\' <= \'32269363200\' AND
-					numisdata35_array_elements#>\'{end, time}\' >= \'32269363200\')
-					OR (
-					numisdata35_array_elements#>\'{start, time}\' = \'32269363200\')
-					-- PERIOD
-					OR (
-					numisdata35_array_elements#>\'{period, time}\' = \'32269363200\')
-			);
+			-- Not used anymore (v6)
 		',
 		'name' => 'check_array_component',
-		'info' => 'Used to process the date column.'
+		'info' => 'Not used anymore (v6)'
 	];
 
 
@@ -318,19 +287,19 @@
 				UNIQUE ( section_id, section_tipo );
 			',
 			'drop' => '
-				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_section_id_section_tipo_key;
+				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_section_id_section_tipo_key
 			',
 			'sample' => '
 				INSERT INTO "matrix_projects"
 					(section_id, section_tipo)
 				VALUES
-					(1, \'dd153\');
+					(1, \'dd153\')
 			',
 			'name' => 'all_matrix_constraint_section_id_section_tipo_key',
 			'info' => 'Used to avoid duplicated records, it is not possible to store the same section_id with the same section_tipo'
 		];
 
-	// tipo_key
+		// tipo_key
 		$ar_constraint[] = (object)[
 			'tables' => [
 				'dd_ontology'
@@ -341,16 +310,40 @@
 				UNIQUE ( tipo );
 			',
 			'drop' => '
-				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key;
-				DROP INDEX IF EXISTS {$table}_tipo_key;
+				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key
+				DROP INDEX IF EXISTS {$table}_tipo_key
 			',
 			'sample' => '
 				INSERT INTO "dd_ontology"
 					(tipo)
 				VALUES
-					(\'dd1\');
+					(\'dd1\')
 			',
 			'name' => 'dd_ontology_constraint_tipo_key',
+			'info' => 'Used to avoid duplicated records, it is not possible to store the same tipo'
+		];
+
+		// tipo_key : matrix_counter / matrix_counter_dd
+		$ar_constraint[] = (object)[
+			'tables' => [
+				'matrix_counter',
+				'matrix_counter_dd'
+			],
+			'add' => '
+				ALTER TABLE IF EXISTS {$table}
+				ADD CONSTRAINT {$table}_tipo_key
+				UNIQUE ( tipo );
+			',
+			'drop' => '
+				ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$table}_tipo_key
+			',
+			'sample' => '
+				INSERT INTO "{$table}"
+					(tipo)
+				VALUES
+					(\'test_tipo\')
+			',
+			'name' => 'matrix_counter_constraint_tipo_key',
 			'info' => 'Used to avoid duplicated records, it is not possible to store the same tipo'
 		];
 
@@ -371,13 +364,13 @@
 					USING btree ( is_model ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_model_idx;
+					DROP INDEX IF EXISTS {$table}_is_model_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE is_model = 1
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_is_model_idx',
 				'info' => 'Used to search if the term is a descriptor or not, possible values: 1|2. 1 = yes, 2 = no'
@@ -394,13 +387,13 @@
 					USING btree ( model COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model_idx;
+					DROP INDEX IF EXISTS {$table}_model_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE model = \'section\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_model_idx',
 				'info' => 'Used to search if the descriptor model'
@@ -417,13 +410,13 @@
 					USING btree ( model_tipo COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_model_tipo_idx;
+					DROP INDEX IF EXISTS {$table}_model_tipo_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE model_tipo = \'dd6\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_model_tipo_idx',
 				'info' => 'Used to search for the descriptor model_tipo'
@@ -440,13 +433,13 @@
 					USING btree ( order_number ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_order_number_idx;
+					DROP INDEX IF EXISTS {$table}_order_number_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE order_number = 2
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_order_number_idx',
 				'info' => 'Used to search for the descriptor order_number'
@@ -463,13 +456,13 @@
 					USING btree ( parent ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_idx;
+					DROP INDEX IF EXISTS {$table}_parent_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE parent = \'tch1\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_parent_idx',
 				'info' => 'Used to search for the descriptor parent'
@@ -487,13 +480,13 @@
 					USING btree ( tld COLLATE pg_catalog.default ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tld_idx;
+					DROP INDEX IF EXISTS {$table}_tld_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE tld = \'tch\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_tld_idx',
 				'info' => 'Used to search for the descriptor tld'
@@ -510,13 +503,13 @@
 					USING gin ( relations );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_relations_idx;
+					DROP INDEX IF EXISTS {$table}_relations_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE relations @> ARRAY[\'tch\']
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_relations_idx',
 				'info' => 'Used to search for descriptor relations'
@@ -533,13 +526,13 @@
 					USING btree ( is_translatable ASC NULLS LAST );
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_is_translatable_idx;
+					DROP INDEX IF EXISTS {$table}_is_translatable_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE is_translatable = true
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_is_translatable_idx',
 				'info' => 'Used to search if the term is translatable or not, boolean values: true | false'
@@ -559,13 +552,13 @@
 					);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_order_number_idx;
+					DROP INDEX IF EXISTS {$table}_parent_order_number_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM dd_ontology
 					WHERE parent = \'tch1\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'dd_ontology_parent_order_number_idx',
 				'info' => 'Used to search descriptors by parent and order_number'
@@ -609,18 +602,17 @@
 					USING btree (section_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id_idx;
+					DROP INDEX IF EXISTS {$table}_section_id_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix
 					WHERE section_id = 5
-					LIMIT 10;
+					LIMIT 10
 				',
 				'name' => 'all_matrix_section_id_idx',
-				'info' => 'Used to search by id ordered ascendant.'
+				'info' => 'Used to search by section_id ordered ascendant.'
 			];
-
 
 			$ar_index[] = (object)[
 				'tables' => [
@@ -656,16 +648,16 @@
 					USING btree (section_id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_id_desc_idx;
+					DROP INDEX IF EXISTS {$table}_section_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix
 					WHERE section_id = 5
-					LIMIT 10;
+					LIMIT 10
 				',
 				'name' => 'all_matrix_section_id_desc_idx',
-				'info' => 'Used to search by id ordered ascendant.'
+				'info' => 'Used to search by section_id ordered descendant.'
 			];
 
 		// section_tipo
@@ -702,13 +694,13 @@
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_idx;
+					DROP INDEX IF EXISTS {$table}_section_tipo_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix
 					WHERE section_tipo = \'oh1\'
-					LIMIT 10;
+					LIMIT 10
 				',
 				'name' => 'all_matrix_section_tipo_idx',
 				'info' => 'Used to search by section_tipo ordered ascendant.'
@@ -748,13 +740,13 @@
 			// 		USING btree (section_id ASC NULLS LAST, section_tipo COLLATE pg_catalog.default ASC NULLS LAST);
 			// 	',
 			// 	'drop' => '
-			// 		DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx;
+			// 		DROP INDEX IF EXISTS {$table}_section_tipo_section_id_idx
 			// 	',
 			// 	'sample' => '
 			// 		SELECT *
 			// 		FROM matrix
 			// 		WHERE section_id = 5 AND section_tipo = \'rsc197\'
-			// 		LIMIT 10;
+			// 		LIMIT 10
 			// 	',
 			// 	'name' => 'all_matrix_section_tipo_section_id_idx',
 			// 	'info' => 'Used to search by section_tipo ordered ascendant.'
@@ -794,16 +786,16 @@
 					USING btree (section_tipo COLLATE pg_catalog.default ASC NULLS LAST, section_id DESC NULLS FIRST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx;
+					DROP INDEX IF EXISTS {$table}_section_tipo_section_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix
 					WHERE section_id = 5 AND section_tipo = \'rsc197\'
-					LIMIT 10;
+					LIMIT 10
 				',
 				'name' => 'all_matrix_section_tipo_section_id_desc_idx',
-				'info' => 'Used to search by section_tipo ordered descendant by id.'
+				'info' => 'Used to search by section_tipo ordered descendant by section_id.'
 			];
 
 
@@ -845,12 +837,12 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_string_gin_idx;
+				DROP INDEX IF EXISTS {$table}_string_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE strings @> \'{"rsc85":[{"value":"Pere"}]}\';
+				WHERE string @> \'{"rsc85":[{"value":"Pere"}]}\';
 			',
 			'name' => 'all_matrix_string_gin_idx',
 			'info' => 'Used to search string literals as full components data'
@@ -898,7 +890,7 @@
 				WHERE
 					search_string LIKE unaccent(lower(\'%ripoll%\'))
 				ORDER BY section_id ASC
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_search_string_column',
 			'info' => 'Used to search literal string values as strings across all sections, it could be used as global search, but is not possible use with specific language'
@@ -937,7 +929,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx;
+				DROP INDEX IF EXISTS {$table}_strings_value_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -945,7 +937,7 @@
 				WHERE
 					search_string LIKE unaccent(lower(\'%ripoll%\'))
 				ORDER BY section_id ASC
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_strings_value_gin_idx',
 			'info' => 'Used to search literal string values as strings across all sections, it could be used as global search, but is not possible use with specific language'
@@ -990,13 +982,13 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE relation @> \'{"rsc91":[{"section_tipo":"es1"}]}\'
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_gin_idx',
 			'info' => 'Used to search relations as components data'
@@ -1039,13 +1031,13 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_locators_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_locators_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE jsonb_path_query_array(relation, \'$.*[*]\') @> \'[{"section_tipo":"es1"}]\'
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_locators_gin_idx',
 			'info' => 'Used to search relations across all components data'
@@ -1087,13 +1079,13 @@
 				USING gin (data_relations_flat_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_st_si_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_flat_st_si_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE data_relations_flat_st_si(relation) @> \'["dd64_1"]\'::jsonb;
-				LIMIT 10;
+				WHERE data_relations_flat_st_si(relation) @> \'["dd64_1"]\'::jsonb
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_flat_st_si_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as es1_65'
@@ -1136,13 +1128,13 @@
 				USING gin (data_relations_flat_fct_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_flat_fct_st_si_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE data_relations_flat_fct_st_si(data) @> \'["oh33_dd64_1"]\'::jsonb;
-				LIMIT 10;
+				WHERE data_relations_flat_fct_st_si(relation) @> \'["oh33_dd64_1"]\'::jsonb
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_flat_fct_st_si_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as oh33_dd64_1'
@@ -1152,6 +1144,7 @@
 		// Flat relation type, section_tipo
 		// ty = type
 		// st = section_tipo
+		// si = section_id
 		$ar_index[] = (object)[
 			'tables' => [
 				'matrix',
@@ -1185,13 +1178,13 @@
 				USING gin (data_relations_flat_ty_st(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE data_relations_flat_ty_st(data) @> \'["dd151_dd64"]\'::jsonb;
-				LIMIT 10;
+				WHERE data_relations_flat_ty_st(relation) @> \'["dd151_dd64"]\'::jsonb
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_flat_ty_st_gin_idx',
 			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64'
@@ -1235,16 +1228,16 @@
 				USING gin (data_relations_flat_ty_st_si(relation) jsonb_path_ops);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_si_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_flat_ty_st_si_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
-				WHERE data_relations_flat_ty_st_si(data) @> \'["dd151_dd64"]\'::jsonb;
-				LIMIT 10;
+				WHERE data_relations_flat_ty_st_si(relation) @> \'["dd151_dd64_1"]\'::jsonb
+				LIMIT 10
 			',
 			'name' => 'all_matrix_relation_flat_ty_st_si_gin_idx',
-			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64'
+			'info' => 'Used to search relations across all components data with a flat text of the relation such as dd151_dd64_1'
 		];
 
 
@@ -1284,13 +1277,13 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_date_gin_idx;
+				DROP INDEX IF EXISTS {$table}_date_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE date @> \'[{"time":57958546}]\'
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_date_gin_idx',
 			'info' => 'Used to search dates by any property.'
@@ -1333,13 +1326,13 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_iri_gin_idx;
+				DROP INDEX IF EXISTS {$table}_iri_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE iri @> \'[{"iri":"https://dedalo.dev"}]\'
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_iri_gin_idx',
 			'info' => 'Used to search IRI data by any of its properties, iri or title.'
@@ -1382,7 +1375,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_geo_gin_idx;
+				DROP INDEX IF EXISTS {$table}_geo_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1391,7 +1384,7 @@
 				LIMIT 10;
 			',
 			'name' => 'all_matrix_geo_gin_idx',
-			'info' => 'Used to search IRI data by any of its properties, lat, log or alt.'
+			'info' => 'Used to search geolocation data by any of its properties: lat, lng or alt.'
 		];
 
 
@@ -1431,13 +1424,13 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_number_gin_idx;
+				DROP INDEX IF EXISTS {$table}_number_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE jsonb_path_query_array(number, \'$.*[*].value\') @> \'[5]\'
-				LIMIT 10;
+				LIMIT 10
 			',
 			'name' => 'all_matrix_number_gin_idx',
 			'info' => 'Used to search number data values.'
@@ -1480,7 +1473,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_media_gin_idx;
+				DROP INDEX IF EXISTS {$table}_media_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1529,7 +1522,7 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_misc_gin_idx;
+				DROP INDEX IF EXISTS {$table}_misc_gin_idx
 			',
 			'sample' => '
 				SELECT *
@@ -1578,15 +1571,15 @@
 				);
 			',
 			'drop' => '
-				DROP INDEX IF EXISTS {$table}_relation_search_gin_idx;
+				DROP INDEX IF EXISTS {$table}_relation_search_gin_idx
 			',
 			'sample' => '
 				SELECT *
 				FROM matrix
 				WHERE relation_search @> \'[{"section_tipo":"es1"}]\'
-				LIMIT 10;
+				LIMIT 10
 			',
-			'name' => 'all_matrix_search_gin_idx',
+			'name' => 'all_matrix_relation_search_gin_idx',
 			'info' => 'Used to search relation all children data with specific parent. Give me all data indexed with a child using any of its parents.'
 		];
 
@@ -1605,40 +1598,16 @@
 					USING btree (id DESC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_id_desc_idx;
+					DROP INDEX IF EXISTS {$table}_id_desc_idx
 				',
 				'sample' => '
 					SELECT *
-					FROM matrix
+					FROM matrix_activity
 					WHERE id = 5
-					LIMIT 10;
+					LIMIT 10
 				',
 				'name' => 'matrix_activity_id_desc_idx',
 				'info' => 'Used to search by id ordered descendant.'
-			];
-
-		// tipo : matrix_counter / matrix_counter_dd
-			$ar_index[] = (object)[
-				'tables' => [
-					'matrix_counter',
-					'matrix_counter_dd'
-				],
-				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_tipo_idx
-					ON {$table}
-					USING btree (tipo ASC NULLS LAST);
-				',
-				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tipo_idx;
-				',
-				'sample' => '
-					SELECT *
-					FROM matrix_counter
-					WHERE tipo = \'oh1\'
-					LIMIT 1;
-				',
-				'name' => 'matrix_counter_tipo_idx',
-				'info' => 'Used to search by tipo.'
 			];
 
 		// tipo : time_machine (includes tipo and id for performance)
@@ -1652,14 +1621,14 @@
 					USING btree (tipo, id DESC);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_tipo_idx;
+					DROP INDEX IF EXISTS {$table}_tipo_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE tipo = \'oh1\'
 					ORDER BY id DESC
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'matrix_time_machine_tipo_idx',
 				'info' => 'Used to search by tipo.'
@@ -1676,13 +1645,13 @@
 					USING btree (lang COLLATE pg_catalog.default ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_lang_idx;
+					DROP INDEX IF EXISTS {$table}_lang_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE lang = \'lg-spa\'
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'matrix_time_machine_lang_idx',
 				'info' => 'Used to search by lang.'
@@ -1699,13 +1668,13 @@
 					USING btree ( bulk_process_id ASC NULLS LAST);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx;
+					DROP INDEX IF EXISTS {$table}_bulk_process_id_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE bulk_process_id = 751
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'matrix_time_machine_bulk_process_id_idx',
 				'info' => 'Used to search by bulk_process_id.'
@@ -1729,7 +1698,7 @@
 			// 		SELECT *
 			// 		FROM matrix_time_machine
 			// 		WHERE timestamp = \'2025-08-18 19:09:05\'
-			// 		LIMIT 1;
+			// 		LIMIT 1
 			// 	',
 			// 	'name' => 'matrix_time_machine_timestamp_idx',
 			// 	'info' => 'Used to search by timestamp, in time machine always descendant.'
@@ -1744,16 +1713,16 @@
 					(DATE("timestamp"));
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_timestamp_idx;
+					DROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intencional remove legacy index
 					DROP INDEX IF EXISTS {$table}_timestamp_date_idx;
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
-					WHERE DATE(timestamp) = \'2025-08-18 19:09:05\'
-					LIMIT 1;
+					WHERE DATE("timestamp") = \'2025-08-18\'
+					LIMIT 1
 				',
-				'name' => 'matrix_time_machine_timestamp_idx',
+				'name' => 'matrix_time_machine_timestamp_date_idx',
 				'info' => 'Used to search by date in time machine timestamp column.'
 			];
 
@@ -1765,19 +1734,19 @@
 				'add' => '
 					CREATE INDEX IF NOT EXISTS {$table}_user_id_idx
 					ON {$table}
-					USING btree ("user_id" ASC NULLS LAST );
-					',
+					USING btree ("user_id" ASC NULLS LAST);
+				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_user_id_idx;
+					DROP INDEX IF EXISTS {$table}_user_id_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE user_id = 2
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'matrix_time_machine_user_id_idx',
-				'info' => 'Used to search by user id.'
+				'info' => 'Used to search by user_id.'
 			];
 
 		// section_id_key
@@ -1797,16 +1766,89 @@
 					);
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_si_bulk_st_tipo_lang_idx;
+					DROP INDEX IF EXISTS {$table}_si_bulk_st_tipo_lang_idx
 				',
 				'sample' => '
 					SELECT *
 					FROM matrix_time_machine
 					WHERE bulk_process_id = 751
-					LIMIT 1;
+					LIMIT 1
 				',
 				'name' => 'matrix_time_machine_si_bulk_st_tipo_lang_idx',
 				'info' => 'Used to search by bulk_process_id with all parameters, section_id, bulk_process_id, section_tipo, tipo and lang.'
+			];
+
+		// hierarchy41 value : matrix_langs
+			$ar_index[] = (object)[
+				'tables' => [
+					'matrix_langs'
+				],
+				'add' => '
+					CREATE INDEX IF NOT EXISTS {$table}_hierarchy41_value_idx ON "{$table}" (
+						(string->\'hierarchy41\'->0->>\'value\')
+					);
+					ANALYZE {$table};
+				',
+				'drop' => '
+					DROP INDEX IF EXISTS "{$table}_hierarchy41_value_idx"
+				',
+				'sample' => '
+					SELECT *
+					FROM matrix_langs
+					WHERE (string->\'hierarchy41\'->0->>\'value\') = \'eng\'
+					LIMIT 10
+				',
+				'name' => 'matrix_langs_hierarchy41_value_idx',
+				'info' => 'Used to search by hierarchy41 value (lang code) in matrix_langs'
+			];
+
+		// search default : matrix_time_machine
+			$ar_index[] = (object)[
+				'tables' => [
+					'matrix_time_machine'
+				],
+				'add' => '
+					CREATE INDEX IF NOT EXISTS {$table}_search_default_idx ON "{$table}" (
+						section_id, section_tipo, tipo, lang, "timestamp" DESC
+					);
+					ANALYZE {$table};
+				',
+				'drop' => '
+					DROP INDEX IF EXISTS "{$table}_search_default_idx"
+				',
+				'sample' => '
+					SELECT *
+					FROM matrix_time_machine
+					WHERE section_id = 1 AND section_tipo = \'oh1\'
+					ORDER BY timestamp DESC
+					LIMIT 10
+				',
+				'name' => 'matrix_time_machine_search_default_idx',
+				'info' => 'Used to search by default parameters: section_id, section_tipo, tipo, lang, timestamp DESC'
+			];
+
+		// id asc : matrix_activity
+			$ar_index[] = (object)[
+				'tables' => [
+					'matrix_activity'
+				],
+				'add' => '
+					CREATE INDEX IF NOT EXISTS {$table}_id_asc_idx
+					ON {$table}
+					USING btree (id ASC);
+					ANALYZE {$table};
+				',
+				'drop' => '
+					DROP INDEX IF EXISTS "{$table}_id_asc_idx"
+				',
+				'sample' => '
+					SELECT *
+					FROM matrix_activity
+					ORDER BY id ASC
+					LIMIT 10
+				',
+				'name' => 'matrix_activity_id_asc_idx',
+				'info' => 'Used to search by id ordered ascendant. Used by diffusion_section_stats:update_user_activity_stats'
 			];
 
 

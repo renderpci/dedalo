@@ -537,9 +537,8 @@ abstract class DBi {
 
 
 	/**
-	* GET_functions
+	* GET_FUNCTIONS
 	* Get all Database user functions as:
-	* 	public	check_array_component
 	* 	public	f_unaccent
 	* @return array|false $list
 	*/

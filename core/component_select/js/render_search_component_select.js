@@ -67,8 +67,8 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// values (inputs)
-		const inputs_value		= entries.length>0 ? entries : [null]
-		const entries_length	= inputs_value.length
+		const inputs_value		= entries
+		const entries_length	= inputs_value.length || 1
 		for (let i = 0; i < entries_length; i++) {
 			const content_value = get_content_value(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
@@ -186,8 +186,8 @@ const get_content_value = (i, current_value, self) => {
 			})
 			// selected options set on match
 			if (current_value && datalist_item.value &&
-				current_value.section_id===datalist_item.value.section_id &&
-				current_value.section_tipo===datalist_item.value.section_tipo
+				current_value.section_id === datalist_item.value.section_id &&
+				current_value.section_tipo === datalist_item.value.section_tipo
 				) {
 				option.selected = true
 			}

@@ -183,3 +183,7 @@ cline_mcp_settings.json
 .continue
 .markdownlint.json
 .rr.yaml
+/webgrind
+/docker
+/code
+diff_*.txt

@@ -115,6 +115,49 @@ final class tm_record_test extends BaseTestCase {
     }
 
     /**
+    * TEST_GET_SECTION_RECORD_COMPONENT_DATA_INJECTION
+    * @depends test_create
+    */
+    public function test_get_section_record_component_data_injection() : void {
+        // Create tm_record with component data using valid tipo dd1212 (time machine type component)
+        $component_tipo = 'dd1212';
+        $component_data = [
+            (object)[
+                'section_id' => 123456,
+                'section_tipo' => 'dd12',
+                'value' => 'test_value_123'
+            ]
+        ];
+
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = $component_tipo;
+        $values->lang           = 'lg-eng';
+        $values->data           = $component_data;
+        $values->user_id        = 1;
+
+        $tm_record = tm_record::create($values);
+        $this->assertInstanceOf(tm_record::class, $tm_record);
+
+        $section_record = $tm_record->get_section_record();
+        $this->assertInstanceOf(section_record::class, $section_record);
+
+        // Verify data is injected under component's tipo (the fix)
+        $column = section_record_data::get_column_name('component_number');
+        $data_by_tipo = $section_record->get_component_data($component_tipo, $column);
+        $this->assertNotNull($data_by_tipo, 'Component data should be accessible under its own tipo');
+
+        // Verify data is also injected under dd1574 (legacy/debug column)
+        $column = section_record_data::get_column_name('component_json');
+        $data_by_dd1574 = $section_record->get_component_data(DEDALO_TIME_MACHINE_COLUMN_DATA, $column);
+        $this->assertNotNull($data_by_dd1574, 'Component data should be accessible under dd1574');
+
+        // Cleanup
+        $tm_record->delete();
+    }
+
+    /**
     * TEST_DELETE
     * @depends test_create
     */

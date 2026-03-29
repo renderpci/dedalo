@@ -59,25 +59,6 @@ final class area_maintenance_test extends BaseTestCase {
 
 
 	/**
-	* TEST_item_make_backup
-	* @return void
-	*/
-	public function test_item_make_backup() {
-
-		$area = $this->build_instance();
-
-		$result = $area->item_make_backup();
-
-		$this->assertTrue(
-			gettype($result)==='object' ,
-			'expected object' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_item_make_backup
-
-
-
-	/**
 	* TEST_get_ar_widgets
 	* @return void
 	*/

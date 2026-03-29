@@ -914,13 +914,13 @@ abstract class component_common extends common {
 				: $component_tipo;
 
 			// tm data. Note that no lang or section_id is needed, only matrix_id
-			// data_tm is a full data stored into tm row
-			// it will need to be filter to remove possible dataframe data
-			$data_tm = component_common::get_component_tm_data(
-				$search_component_tipo,
-				$this->section_tipo,
-				$this->matrix_id
-			);
+		// data_tm is a full data stored into tm row
+		// it will need to be filter to remove possible dataframe data
+		$data_tm = component_common::get_component_tm_data(
+			$search_component_tipo,
+			$this->section_tipo,
+			$this->matrix_id
+		);
 
 			// Main components with dataframe and other relation components.
 			$relation_components = component_relation_common::get_components_with_relations();
@@ -936,8 +936,24 @@ abstract class component_common extends common {
 					}));
 				}else{
 					// any other relation component
-					$data_tm = array_values( array_filter( $data_tm, function($el) use($component_tipo) {
-						return is_object($el) && isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						if(is_object($el)) {
+							// Note that TM data locators could or could not have the property "from_component_tipo."
+							// This point is only to allow verify if the object is valid or not
+							if(isset($el->section_tipo) && isset($el->section_id)) {
+								return true;
+							}else{
+								debug_log(__METHOD__
+								   .' IGNORED: Invalid locator object found in TM data' . PHP_EOL
+								   .' el: ' . to_string($el) . PHP_EOL
+								   .' component_tipo: ' . $this->tipo . PHP_EOL
+								   .' section_tipo: ' . $this->section_tipo . PHP_EOL
+								   .' matrix_id: ' . $this->matrix_id
+								   , logger::ERROR
+								);
+							}
+						}
+						return false;
 					}));
 				}
 
@@ -3504,8 +3520,6 @@ abstract class component_common extends common {
 		$data				= $this->get_data_lang() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
-
-
 
 		// Type check moved to actions where it is strictly required (e.g. set_data)
 

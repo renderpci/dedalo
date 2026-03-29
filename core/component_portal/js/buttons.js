@@ -1,22 +1,20 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global get_label, event_manager, DEDALO_CORE_URL, SHOW_DEBUG*/
+/*eslint no-undef: "error"*/
 
 
 
 // imports
-	import { data_manager } from '../../common/js/data_manager.js'
 	import { get_instance } from '../../common/js/instances.js'
-	import { create_source } from '../../common/js/common.js'
 	import { ui } from '../../common/js/ui.js'
-	import { is_filter_empty } from '../../../core/search/js/search.js'
-	import { printf } from '../../common/js/utils/index.js'
 	import { render_open_list_with_direct_relations } from '../../section/js/render_open_list_with_direct_relations.js'
 	import {
 		object_to_url_vars,
 		open_window,
-		open_records_in_window,
-		clone,
 		get_caller_by_model
 	} from '../../common/js/utils/index.js'
+
+
 
 /**
 * BUTTONS
@@ -179,12 +177,18 @@ buttons.render_button_add = (self) => {
 * RENDER_BUTTON_LINK
 * Builds the button nodes and events
 * @param object self (component instance)
-* @return HTMLElement button_link
+* @return HTMLElement|null button_link
 */
 buttons.render_button_link = (self) => {
 
 	const target_section		= self.target_section || []
 	const target_section_length	= target_section.length
+
+	// Validate target_section exists
+	if (target_section_length === 0) {
+		console.error('No target sections available for link button');
+		return null;
+	}
 
 	const button_link = ui.create_dom_element({
 		element_type	: 'span',
@@ -221,8 +225,8 @@ buttons.render_button_link = (self) => {
 
 			// modal_body
 				const iframe_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'iframe_container'
+				element_type	: 'div',
+				class_name		: 'iframe_container'
 				})
 				const iframe = ui.create_dom_element({
 					element_type	: 'iframe',
@@ -272,14 +276,33 @@ buttons.render_button_link = (self) => {
 					}
 
 			// fix modal to allow close later, on set value
-				self.modal = ui.attach_to_modal({
-					header	: header_custom,
-					body	: iframe_container,
-					footer	: null,
-					size	: 'big'
-				})
-
+			// Note: Store modal reference on self to allow external control/cleanup
+				try {
+					self.modal = ui.attach_to_modal({
+						header	: header_custom,
+						body	: iframe_container,
+						footer	: null,
+						size	: 'big'
+					})
+					// Store cleanup function on modal for potential cleanup
+					self.modal.cleanup = function() {
+						// Remove event listeners to prevent memory leaks
+						select_section.removeEventListener('click', function(e){
+							e.stopPropagation()
+						})
+						select_section.removeEventListener('mousedown', function(e){
+							e.stopPropagation()
+						})
+						select_section.removeEventListener('change', function(){
+							iframe.src = get_iframe_url(this.value)
+						})
+					}
+				} catch (error) {
+					console.error('Error creating modal:', error);
+					alert('An error occurred while opening the link dialog');
+				}
 		})()
+
 		return
 	}
 	button_link.addEventListener('mousedown', mousedown_handler)
@@ -394,7 +417,7 @@ buttons.render_list_from_component_data_button = (self) => {
 			return
 		}
 
-		const options ={
+		const options = {
 			sqo	: caller_section.rqo?.sqo || {},
 			caller_tipo		: self.tipo,
 			rqo_options		: {

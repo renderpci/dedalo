@@ -175,7 +175,9 @@
 					// tm case: inject time machine record metadata
 						if ($mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ) {
 							$tm_data = $tm_record->get_data();
-							$current_value->matrix_id			= $tm_data->id ?? null;
+							// Note: id/matrix_id is in tm_record instance, not in get_data() result
+							$matrix_id = $tm_record->id;
+							$current_value->matrix_id			= $matrix_id;
 							$current_value->timestamp			= $tm_data->timestamp ?? null;
 							$current_value->caller_section_tipo = $tm_data->section_tipo ?? null;
 							$current_value->caller_section_id 	= $tm_data->section_id ?? null;
