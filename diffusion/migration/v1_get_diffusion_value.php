@@ -1370,7 +1370,44 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$process->output_sample = ["1", "2"];	
 					
 					break;
-			}
+				case 'resolve_value':
+					// ddo_map[0] already has section_filter/component_filter applied by caller
+					// Add target_component_tipo as second ddo entry, then resolve its model via get_diffusion_value
+					$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? '');
+					$filter_section        = $process_dato_arguments->filter_section ?? null;
+					
+					if (!empty($target_component_tipo)) {
+						$second_entry = (object)[
+							'tipo'   => $target_component_tipo,
+							'parent' => $tipo,
+						];
+						if ($filter_section && !empty($filter_section[0])) {
+							$second_entry->section_tipo = $filter_section[0];
+						}
+						$ddo_map[] = $second_entry;
+					
+						// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
+						$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+						if($model_target === 'component_input_text'){
+
+							$process->ddo_map = $ddo_map;
+							$process->output_sample = 'MIB';
+							break;
+						}
+						$process = get_diffusion_value(
+							$target_component_tipo,
+							$model_target,
+							[(object)[]], // safe empty custom_arguments for component_select divisor access
+							null,
+							null,
+							null,
+							null,
+							$ddo_map
+						);
+						$process->output_sample = ['MIB', 'ACIP'];
+					}
+					break;
+				}
 			break;
 	}
 	
