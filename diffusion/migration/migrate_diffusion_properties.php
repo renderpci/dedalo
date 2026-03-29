@@ -966,7 +966,7 @@ function process_node($node, $level) {
 											'id' => $letter_id,
 											'tipo' => $component_tipo,
 											'parent' => $rel_info['tipo'],
-											'section' => $related_section[0]
+											'section_tipo' => $related_section[0]
 										]; 
 									}
 								}
@@ -3862,7 +3862,7 @@ function process_node($node, $level) {
 							
 							// 1 data_to_be_used: "custom" or "dato"
 							$data_to_be_used_rl = $props->data_to_be_used ?? ($props->process_dato_arguments->data_to_be_used ?? null);
-							if($data_to_be_used_rl && ($data_to_be_used_rl === 'custom' || $data_to_be_used_rl === 'dato')) {
+							if($data_to_be_used_rl && ($data_to_be_used_rl === 'custom' || $data_to_be_used_rl === 'dato' || $data_to_be_used_rl === 'filtered_values')) {
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
