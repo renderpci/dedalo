@@ -3889,9 +3889,47 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list data_to_be_used={$data_to_be_used_rl} -> get_diffusion_value()\n";
 								break;
 							}
-
-							break;
-						}
+							
+							// 2 no process_dato + format=section_id in process_dato_arguments
+							$process_dato_rl   = $props->process_dato ?? null;
+							$process_dato_args = $props->process_dato_arguments ?? null;
+							$format_rl         = $process_dato_args->format ?? null;
+							
+							if (!$process_dato_rl && $format_rl === 'section_id') {
+							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+							
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									null,
+									$process_dato_args,
+									null,
+									'section_id',
+									null,
+									$ddo_map_relation_list
+								);
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list format=section_id -> parser_locator::get_section_id\n";
+								break;
+							}
 				}
 			}
 		}
