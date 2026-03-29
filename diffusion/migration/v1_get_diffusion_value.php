@@ -1324,11 +1324,40 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						
 						
 					}else if($component_method === 'get_diffusion_value'){
-						// Manual
+
+						if (!empty($target_component_tipo)) {
+							$second_entry = (object)[
+								'tipo'   => $target_component_tipo,
+								'parent' => $tipo,
+							];
+							if ($filter_section && !empty($filter_section[0])) {
+								$second_entry->section_tipo = $filter_section[0];
+							}
+							$ddo_map[] = $second_entry;
+						
+							// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
+							$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+							if($model_target === 'component_input_text'){
+								$process->ddo_map = $ddo_map;
+								$process->output_sample = 'MIB';
+								break;
+							}
+							$process = get_diffusion_value(
+								$target_component_tipo,
+								$model_target,
+								[(object)[]], // safe empty custom_arguments for component_select divisor access
+								null,
+								null,
+								null,
+								null,
+								$ddo_map
+							);
+							$process->output_sample = ['MIB', 'ACIP'];
+						}
 					}
 
 					
-				break;
+					break;
 				case 'dato':
 					$filter_section = $process_dato_arguments->filter_section ?? null;
 					$filter_component = $process_dato_arguments->filter_component ?? null;
