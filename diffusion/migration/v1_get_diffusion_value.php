@@ -1370,6 +1370,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$process->output_sample = ["1", "2"];	
 					
 					break;
+				case 'section_id':
+					// ddo_map[0] already has section_filter/component_filter applied by caller
+					$process = new stdClass();
+					$process->parser = [(object)['fn' => 'parser_locator::get_section_id']];
+					$process->output_format = 'json';
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = ['1', '2'];
+					break;
 				case 'resolve_value':
 					// ddo_map[0] already has section_filter/component_filter applied by caller
 					// Add target_component_tipo as second ddo entry, then resolve its model via get_diffusion_value
