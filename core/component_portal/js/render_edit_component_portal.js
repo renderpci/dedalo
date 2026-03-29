@@ -759,7 +759,9 @@ export const get_buttons = (self) => {
 	// button_link
 		if(show_interface.button_link === true){
 			const button_link = buttons.render_button_link(self)
-			buttons_fold.appendChild(button_link)
+			if (button_link) {
+				buttons_fold.appendChild(button_link)
+			}
 		}//end button_link
 
 	// button_list (go to target section in list mode)
