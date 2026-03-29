@@ -470,12 +470,23 @@ class dd_diffusion_api {
 		// Model comes from diffusion ontology node
 		$field_model = ontology_node::get_model_by_tipo($diffusion_tipo);
 
+		// Build parent hash-set (O(1) lookup) then filter+clone+clean in one pass
+		$parent_set = array_flip(array_filter(array_column((array)$ddo_map, 'parent')));
+		$cleaned_lasts_ddo_chain = [];
+		foreach ($ddo_map as $ddo) {
+			if (isset($parent_set[$ddo->tipo])) continue;
+			$clean = clone $ddo;
+			unset($clean->typo, $clean->type, $clean->parent, $clean->section_tipo, $clean->diffusion_tipo);
+			$cleaned_lasts_ddo_chain[] = $clean;
+		}
+
 		$context[] = (object)[
 			'term'   		=> $term,
 			'tipo'   		=> $diffusion_tipo,
 			'model'  		=> $field_model,
 			'parent' 		=> $diffusion_node_instance->get_parent(),
-			'parser' 		=> $properties->process->parser ?? new stdClass()
+			'parser' 		=> $properties->process->parser ?? new stdClass(),
+			'columns' 		=> array_values($cleaned_lasts_ddo_chain)
 		];
 
 		// Resolve output_format
