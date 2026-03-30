@@ -4028,8 +4028,63 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
 								break;
 							}
+
+							// 4
+							if ($process_dato_rl === 'diffusion_sql::resolve_value'
+								&& $component_method_rl === 'get_diffusion_dato'
+								&& !isset($process_dato_args->custom_arguments)) {
 							
-							// 4 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_resolve_value + custom_arguments
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+								// target_component_tipo
+								$target_component_tipo = $process_dato_args->target_component_tipo ?? null;
+								
+								$model_rl = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(								
+									$model_rl,
+									null,
+									$process_dato_args,
+									null								
+								);
+
+								if($model_rl==='component_autocomplete'){
+									// add the merge to pipe
+									$parser_process = (object)[
+										'fn' => 'parser_helper::merge',
+										'options' => [
+											'merge' => 'pipe'
+										]
+									];
+									$new_props->process->parser[] = $parser_process;
+								}
+
+								// add target component to ddo_map
+								$ddo_map_relation_list[] = (object)['tipo' => $target_component_tipo, 'parent' => $rel_info['tipo']];
+	
+								$new_props->process->ddo_map = $ddo_map_relation_list;
+								$new_props->process->output_format = 'json';
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+							}
+							
+							// 5 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_resolve_value + custom_arguments
 							// Same pattern as component_portal: while-loop walks the nested chain, dispatches to the correct V1 trait
 							// $component_method_rl and $process_dato_rl already set above
 							if ($process_dato_rl === 'diffusion_sql::resolve_value'
