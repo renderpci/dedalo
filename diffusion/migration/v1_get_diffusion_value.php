@@ -1325,6 +1325,80 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						
 					}else if($component_method === 'get_diffusion_value'){
 
+						if($target_component_tipo === 'numisdata161'){
+							$process = json_decode('
+								{
+
+										"parser": [
+										{
+											"fn": "parser_helper::merge",
+											"options": {
+											"merge": "string",
+											"fields_separator": " | ",
+											"records_separator": " - "
+											}
+										}
+										],
+										"ddo_map": [
+										{
+											"tipo": "numisdata578",
+											"section_tipo": "self",
+											"section_filter": [
+											"numisdata3"
+											],
+											"component_filter": [
+											"numisdata77"
+											]
+										},
+										{
+											"tipo": "numisdata309",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata303",
+											"parent": "numisdata309"
+										},
+										{
+											"tipo": "numisdata27",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata30",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata16",
+											"parent": "numisdata30"
+										},
+										{
+											"tipo": "numisdata34",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata97",
+											"parent": "numisdata34"
+										},
+										{
+											"tipo": "numisdata81",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata1447",
+											"parent": "numisdata578"
+										}
+										],
+										"output_format": "json",
+										"output_sample": [
+										"MIB",
+										"ACIP"
+										]
+									}						
+							');
+
+							break;
+						}
+
+					
 						if (!empty($target_component_tipo)) {
 							$second_entry = (object)[
 								'tipo'   => $target_component_tipo,
