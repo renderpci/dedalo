@@ -1292,7 +1292,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					break;
 				case 'filtered_values':
 
-					$fields_separator =' | ';
+					$fields_separator = $process_dato_arguments->separator ?? ' | ';
 
 					$output 				= $process_dato_arguments->output ?? "string";
 					$direct_value 			= $process_dato_arguments->direct_value ?? true;
@@ -1458,9 +1458,6 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'tipo'   => $target_component_tipo,
 								'parent' => $tipo,
 							];
-							if ($filter_section && !empty($filter_section[0])) {
-								$second_entry->section_tipo = $filter_section[0];
-							}
 							$ddo_map[] = $second_entry;
 						
 							// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
