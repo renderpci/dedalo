@@ -4205,6 +4205,15 @@ function process_node($node, $level) {
 										];
 										$new_props->process->output_format = 'string';
 									}
+
+									if($model_rl==='component_select'){
+										// add the merge to pipe
+										$new_props->process->parser =  (object)[
+											'fn' => 'parser_helper::merge'
+										];
+										$new_props->process->output_format = 'json';
+									}
+
 									
 								}
 							
