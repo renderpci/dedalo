@@ -3902,11 +3902,19 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list empty props -> get_dato (letter-id ddo_map)\n";
 								break;
 							}
-							
+
 							// 1 data_to_be_used: "custom" or "dato"
 							$data_to_be_used_rl = $props->data_to_be_used ?? ($props->process_dato_arguments->data_to_be_used ?? null);
 							if($data_to_be_used_rl && ($data_to_be_used_rl === 'custom' || $data_to_be_used_rl === 'dato' || $data_to_be_used_rl === 'filtered_values')) {
-
+								$process_dato_args = $props->process_dato_arguments ?? null;
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+								
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
 									'relation_list',
