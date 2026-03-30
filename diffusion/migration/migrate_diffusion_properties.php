@@ -953,21 +953,64 @@ function process_node($node, $level) {
 										'section_tipo' => 'self'
 									]
 								];
-														
-								$related_component = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'component_','related', false);
-								$related_section = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'section','related', true);
+								
+								$ontology_node = ontology_node::get_instance($rel_info['tipo'] );
+								$properties = $ontology_node->get_properties();
 
-								if (!empty($related_section)) {
+								$show = $properties->source->request_config[0]->show ?? null;
+								if(!empty($show)) {
+									$deep_ddo = [];
+									foreach ($show->ddo_map as $ddo) {
+										$model = ontology_node::get_model_by_tipo($ddo->tipo);
+										if($model === 'component_dataframe'){
+											continue;
+										}
+										if($ddo->parent === 'self') {
+											$ddo->parent = $rel_info['tipo'];
+										}
+										$deep_ddo[] = $ddo;
+									}
+
 									$letter_ids = [];
-									foreach ($related_component as $i => $component_tipo) {
-										$letter_id = chr(ord('a') + $i);
-										$letter_ids[] = $letter_id;
-										$ddo_map[] = (object)[
-											'id' => $letter_id,
-											'tipo' => $component_tipo,
-											'parent' => $rel_info['tipo'],
-											'section_tipo' => $related_section[0]
-										]; 
+									foreach ($deep_ddo as $i => $ddo) {					
+
+										$children = array_find($deep_ddo, fn($ddo) => $ddo->parent === $ddo->tipo);
+
+										if(empty($children)) {
+
+											$letter_id = chr(ord('a') + $i);
+											$letter_ids[] = $letter_id;
+
+											$ddo_map[] = (object)[
+												'id' => $letter_id,
+												'tipo' => $ddo->tipo,
+												'parent' => $ddo->parent
+											];
+										}else{
+											$ddo_map[] = (object)[
+												'tipo' => $ddo->tipo,
+												'parent' => $ddo->parent
+											];
+
+										}
+									}
+								}else{		
+
+									$related_component = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'component_','related', false);
+									$related_section = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'section','related', true);
+
+									if (!empty($related_section)) {
+										$letter_ids = [];
+										foreach ($related_component as $i => $component_tipo) {
+											$letter_id = chr(ord('a') + $i);
+											$letter_ids[] = $letter_id;
+											$ddo_map[] = (object)[
+												'id' => $letter_id,
+												'tipo' => $component_tipo,
+												'parent' => $rel_info['tipo'],
+												'section_tipo' => $related_section[0]
+											]; 
+										}
 									}
 								}
 
