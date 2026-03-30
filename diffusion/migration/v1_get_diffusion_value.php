@@ -1503,6 +1503,14 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
 						if($model_target === 'component_input_text'){
 
+							// add the merge to pipe
+							$process->parser = (object)[
+								'fn' => 'parser_helper::merge',
+								'options' => [
+									'merge' => 'string',
+									'records_separator' => ' | '
+								]
+							];
 							$process->ddo_map = $ddo_map;
 							$process->output_sample = 'MIB';
 							break;
