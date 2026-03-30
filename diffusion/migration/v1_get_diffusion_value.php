@@ -624,6 +624,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				if(!empty($show)) {
 					$deep_ddo = [];
 					foreach ($show->ddo_map as $ddo) {
+						$model = ontology_node::get_model_by_tipo($ddo->tipo);
+						if($model === 'component_dataframe'){
+							continue;
+						}						
 						if($ddo->parent === 'self') {
 							$ddo->parent = $tipo;
 						}
@@ -910,6 +914,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				if(!empty($show)) {
 					$deep_ddo = [];
 					foreach ($show->ddo_map as $ddo) {
+						$model = ontology_node::get_model_by_tipo($ddo->tipo);
+						if($model === 'component_dataframe'){
+							continue;
+						}
 						if($ddo->parent === 'self') {
 							$ddo->parent = $tipo;
 						}
@@ -1187,6 +1195,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							if (!empty($show)) {
 								$deep_ddo = [];
 								foreach ($show->ddo_map as $ddo) {
+									$model = ontology_node::get_model_by_tipo($ddo->tipo);
+									if($model === 'component_dataframe'){
+										continue;
+									}
 									$cloned_ddo = clone $ddo;
 									if ($cloned_ddo->parent === 'self') {
 										$cloned_ddo->parent = $target_component_tipo;
