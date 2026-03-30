@@ -4222,7 +4222,62 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list resolve_value_deep (portal pattern) -> chain walk\n";
 								break;
 							}
+
+							// 6 "process_dato": "diffusion_sql::resolve_value" and "component_method": "get_dato"
+							if ($process_dato_rl === 'diffusion_sql::resolve_value' 
+								&& $component_method_rl === 'get_dato'
+								&& !isset($process_dato_args->custom_arguments)) {
 							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+
+								$target = $process_dato_args->target_component_tipo ?? null;
+								
+								$model_rl = ontology_node::get_legacy_model_by_tipo($target);
+								
+								if($model_rl === 'component_date'){
+									$output =  "split_date_range";
+								}
+							
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									$model_rl,
+									null,
+									$output ?? null,
+									$process_dato_args->process_dato_arguments->options ?? null,
+									$ddo_map_relation_list
+								);
+
+								$new_props->process->ddo_map[] = (object)[
+									'tipo' => $target,
+									'parent' => $rel_info['tipo']
+								];
+
+								$output_rl = $props->process_dato_arguments->output ?? null;
+
+								if($output_rl === 'merged'){
+									$new_props->process->output_format = 'json';
+								}
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+								break;
+							}
 
 							break;
 						}
