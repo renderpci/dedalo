@@ -132,11 +132,14 @@ class database_info {
 	*/
 	public static function recreate_db_assets( object $options ) : object {
 
+		set_time_limit(10800); // 3 hours
+
 		$response = new stdClass();
 			$response->result	= new stdClass();
 			$response->msg		= 'Error. Request failed ';
 			$response->errors	= [];
 			$response->success	= 0;
+
 		// extensions
 		$response_extensions	= db_tasks::create_extensions();
 			$response->result->extensions	= $response_extensions->result;
@@ -171,7 +174,12 @@ class database_info {
 	*/
 	public static function rebuild_db_indexes( object $options ) : object {
 
-		$response = db_tasks::rebuild_indexes();
+		set_time_limit(7200); // 2 hours
+
+		// options
+		$tables = $options->tables ?? [];  // tables are optional. On empty, all tables are processed
+
+		$response = db_tasks::rebuild_indexes($tables);
 
 		return $response;
 	}//end rebuild_db_indexes
