@@ -592,9 +592,13 @@ class db_tasks {
 	/**
 	* REBUILD_INDEXES
 	* Forces rebuilding of PostgreSQL main indexes
+	* @param array $selected_tables Optional array of table names to rebuild indexes for. If empty, rebuilds all indexes.
 	* @return object $response
 	*/
-	public static function rebuild_indexes() : object {
+	public static function rebuild_indexes( array $selected_tables=[] ) : object {
+
+		// Increase PHP time out. This action can take a long time (minutes or hours)
+		set_time_limit(7200); // 2 hours
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -614,6 +618,7 @@ class db_tasks {
 		}
 
 		// exec
+		$executed = [];
 		foreach ($ar_index as $index) {
 
 			// debug info
@@ -627,6 +632,11 @@ class db_tasks {
 			$tables = $index->tables;
 
 			foreach ($tables as $table) {
+
+				// Skip if table is not in the selected tables list (if provided)
+				if (!empty($selected_tables) && !in_array($table, $selected_tables)) {
+					continue;
+				}
 
 				// 0 Prevent errors if table not exists
 					$table_exists = DBi::check_table_exists($table);
@@ -656,15 +666,17 @@ class db_tasks {
 						$response->errors[] = $query_response->errors;
 						continue;
 					}
+
+				$executed[] = $sql_query;
 			}
 
-				$response->success++;
+			$response->success++;
 		}
 
 		// debug
 			debug_log(__METHOD__
 				. " Exec rebuild_indexes " . PHP_EOL
-				. ' sql_query: ' .PHP_EOL. json_encode( $ar_index ) . PHP_EOL
+				. ' sql_query: ' .PHP_EOL. json_encode( $executed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) . PHP_EOL
 				, logger::DEBUG
 			);
 
@@ -673,7 +685,7 @@ class db_tasks {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
-		$response->n_queries = count($ar_index);
+		$response->n_queries = count($executed);
 		$response->n_errors = count($response->errors);
 
 
