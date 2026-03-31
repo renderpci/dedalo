@@ -983,7 +983,7 @@ class db_tasks {
 	* @return string
 	*/
 	public static function get_analyze_cache_file_name() : string {
-		return 'cache_db_analyze_last_run.php';
+		return DEDALO_ENTITY . '_cache_db_analyze_last_run.php';
 	}//end get_analyze_cache_file_name
 
 
