@@ -966,7 +966,7 @@ function process_node($node, $level) {
 											'id' => $letter_id,
 											'tipo' => $component_tipo,
 											'parent' => $rel_info['tipo'],
-											'section' => $related_section[0]
+											'section_tipo' => $related_section[0]
 										]; 
 									}
 								}
@@ -3860,9 +3860,9 @@ function process_node($node, $level) {
 								break;
 							}
 							
-							// 1 data_to_be_used: "custom"
-							$data_to_be_used_rl = $props->data_to_be_used ?? null;
-							if($data_to_be_used_rl && $data_to_be_used_rl === 'custom') {
+							// 1 data_to_be_used: "custom" or "dato"
+							$data_to_be_used_rl = $props->data_to_be_used ?? ($props->process_dato_arguments->data_to_be_used ?? null);
+							if($data_to_be_used_rl && ($data_to_be_used_rl === 'custom' || $data_to_be_used_rl === 'dato' || $data_to_be_used_rl === 'filtered_values')) {
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
@@ -3870,7 +3870,7 @@ function process_node($node, $level) {
 									$props->custom_arguments ?? null,
 									$props->process_dato_arguments ?? null,
 									$props->output ?? null,
-									$props->data_to_be_used ?? null,
+									$data_to_be_used_rl,
 									null,
 									$ddo_map_relation_list
 								);
@@ -3886,9 +3886,237 @@ function process_node($node, $level) {
 								}
 
 								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] relation_list data_to_be_used=custom -> get_diffusion_value()\n";
+								echo "{$indent}  [RULE APPLIED] relation_list data_to_be_used={$data_to_be_used_rl} -> get_diffusion_value()\n";
 								break;
 							}
+							
+							// 2 no process_dato + format=section_id in process_dato_arguments
+							$process_dato_rl   = $props->process_dato ?? null;
+							$process_dato_args = $props->process_dato_arguments ?? null;
+							$format_rl         = $process_dato_args->format ?? null;
+							
+							if (!$process_dato_rl && $format_rl === 'section_id') {
+							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+							
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									null,
+									$process_dato_args,
+									null,
+									'section_id',
+									null,
+									$ddo_map_relation_list
+								);
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list format=section_id -> parser_locator::get_section_id\n";
+								break;
+							}
+							
+							// 3 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_value
+							$component_method_rl = $process_dato_args->component_method ?? null;
+						
+							if ($process_dato_rl === 'diffusion_sql::resolve_value'
+								&& $component_method_rl === 'get_diffusion_value'
+								&& !isset($process_dato_args->custom_arguments)) {
+							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}							
+							
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'relation_list',
+									null,
+									$process_dato_args,
+									null,
+									'resolve_value',
+									null,
+									$ddo_map_relation_list
+								);
+
+								$output_rl = $props->process_dato_arguments->output ?? null;
+
+								if($output_rl === 'merged'){
+									$new_props->process->output_format = 'json';
+								}
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+							}
+							
+							// 4 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_resolve_value + custom_arguments
+							// Same pattern as component_portal: while-loop walks the nested chain, dispatches to the correct V1 trait
+							// $component_method_rl and $process_dato_rl already set above
+							if ($process_dato_rl === 'diffusion_sql::resolve_value'
+								&& $component_method_rl === 'get_diffusion_resolve_value'
+								&& isset($process_dato_args->custom_arguments)) {
+							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+							
+								// Walk the chain (same logic as component_portal)
+								$final_method_rl       = null;
+								$parent_tipo_rl        = $rel_info['tipo'];
+								$args_node_rl          = $process_dato_args;
+								$final_target_rl       = null;
+								$final_args_rl         = null;
+								$check_merge_rl        = $process_dato_args->output ?? null;
+								$first_hop_rl          = true;
+							
+								while ($args_node_rl) {
+									$method_rl = $args_node_rl->component_method ?? null;
+									$target = $args_node_rl->target_component_tipo ?? null;
+							
+									if ($target) {
+										$entry_rl = (object)['tipo' => $target, 'parent' => $parent_tipo_rl];
+										$ddo_map_relation_list[] = $entry_rl;
+										$parent_tipo_rl = $target;
+										$first_hop_rl = false;
+										$final_target_rl =$target;
+									}
+							
+									if ($method_rl === 'get_diffusion_value' || $method_rl === 'get_dato' || $method_rl === 'get_diffusion_dato') {
+										$final_method_rl = $method_rl;
+										$final_args_rl   = $args_node_rl;
+									} else if ($method_rl === 'get_diffusion_resolve_value' && isset($args_node_rl->custom_arguments)) {
+										$final_method_rl = $method_rl;
+										$final_args_rl   = $args_node_rl;
+										// Stop when non-relation component found with get_diffusion_value (same as component_portal L1945-1947)
+										// foreach ($args_node_rl->custom_arguments as $curr_ca_rl) {
+										// 	$curr_target_rl = $curr_ca_rl->process_dato_arguments->target_component_tipo ?? null;
+										// 	$curr_method_rl = $curr_ca_rl->process_dato_arguments->component_method ?? null;
+										// 	if (isset($curr_target_rl)) {
+										// 		$curr_model_rl = ontology_node::get_model_by_tipo($curr_target_rl);
+										// 		if ($curr_model_rl === 'component_date') { break; }
+										// 		// if ($curr_method_rl === 'get_diffusion_value'
+										// 		// 	&& !in_array($curr_model_rl, component_relation_common::get_components_with_relations())) {
+										// 		// 		break 2;
+										// 		// 	}
+										// 	}
+										// }
+									}
+									
+									$ca_rl = $args_node_rl->custom_arguments[0] ?? null;
+									if ($ca_rl && isset($ca_rl->process_dato_arguments)) {
+										$args_node_rl = $ca_rl->process_dato_arguments;
+										$args_node_rl = $ca_rl->process_dato_arguments;
+									} else if ($ca_rl && isset($ca_rl->process_dato) && $ca_rl->process_dato === 'diffusion_sql::resolve_value') {
+										$args_node_rl = $ca_rl->process_dato_arguments ?? null;
+									} else {
+										break;
+									}
+								}
+							
+								// Dispatch to the correct V1 trait based on final_method_rl
+								if ($final_method_rl === 'get_dato') {
+									$model_rl = ontology_node::get_legacy_model_by_tipo($final_target_rl);
+									$output_rl = $final_args_rl->output ?? null;
+									$output_options_rl = $final_args_rl->output_options ?? null;
+									$new_props = new stdClass(); $new_props->process = get_dato(
+										$model_rl, null, $output_rl, $output_options_rl, $ddo_map_relation_list
+									);
+								} else if ($final_method_rl === 'get_diffusion_dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+										$final_target_rl, null, $final_args_rl, null
+									);
+									if (!empty($ddo_map_relation_list)) { $new_props->process->ddo_map = $ddo_map_relation_list; }
+								} else { // get_diffusion_value or fallback
+									$model_rl = ontology_node::get_legacy_model_by_tipo($final_target_rl);
+									$output_rl = $final_args_rl->output ?? null;
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$final_target_rl,
+										$model_rl,
+										[(object)[]],
+										$final_args_rl,
+										$output_rl,
+										null, null,
+										$ddo_map_relation_list
+									);
+									// Append parser_helper::merge step based on inner pda output
+									$split_str_rl = $final_args_rl->split_string_value ?? ' | ';
+
+									if($model_rl === 'component_input_text'){
+										$new_props->process->ddo_map = array_merge($ddo_map_relation_list, $new_props->process->ddo_map ?? []);
+									}
+								
+									if ($output_rl === 'merged') {
+										// pipe: group by section_id, each section group as JSON array
+										$new_props->process->parser = (object)[
+											'fn'      => 'parser_helper::merge',
+											'options' => (object)[
+												'merge'             => 'pipe',
+												'records_separator' => $split_str_rl
+											]
+										];
+										$new_props->process->output_format = 'json';
+									} else {
+										// string: flat concatenation
+										$new_props->process->parser = (object)[
+											'fn'      => 'parser_helper::merge',
+											'options' => (object)[
+												'merge'             => 'string',
+												'records_separator' => $split_str_rl
+											]
+										];
+										$new_props->process->output_format = 'string';
+									}
+									
+								}
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value_deep (portal pattern) -> chain walk\n";
+								break;
+							}
+							
 
 							break;
 						}

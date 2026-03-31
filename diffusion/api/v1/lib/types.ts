@@ -78,6 +78,7 @@ export interface context_field {
 	varchar?:    number;
 	length?:     number;
 	output_format?: string;
+	columns?:    Array<{ tipo: string; model: string }>;
 }
 
 export interface parser_definition {
@@ -94,6 +95,8 @@ export interface parser_options {
 	records_separator?:  string;
 	date_mode?:          string;
 	lang?:               string;
+	columns?:            Array<{ tipo: string; model: string }>;
+	main_lang?:          string;
 	[key: string]:       unknown;
 }
 

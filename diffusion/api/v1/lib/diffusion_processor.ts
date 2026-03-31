@@ -231,7 +231,10 @@ function process_record(
 		// Data-independent parsers (e.g. publication_unix_timestamp) generate their own
 		// value without needing server data — run them even when entries is empty.
 		if (parser_is_data_independent(parser)) {
-			const result = apply_parser_chain(parser, [], ctx.output_format);
+			const effective_parser = ctx.columns?.length
+				? inject_columns_into_parser(parser, ctx.columns, langs_config.main_lang)
+				: parser;
+			const result = apply_parser_chain(effective_parser, [], ctx.output_format);
 			if (result !== null && result !== undefined) {
 				lang_values.set('nolan', String(result));
 			}
@@ -241,6 +244,97 @@ function process_record(
 		if (!entries || entries.length === 0) {
 			// No data for this field at all
 			continue;
+		}
+
+		// ---------------------------------------------------------------
+		// COLUMN-ORDER MODE: pass all entries at once so merge_with_columns
+		// can do cross-lang grouping and fallback internally.
+		// The per-lang loop below would give the parser only one lang slice
+		// at a time, making nolan and cross-lang fallback impossible.
+		// ---------------------------------------------------------------
+		if (ctx.columns?.length) {
+			const has_parser = Array.isArray(parser)
+				? parser.length > 0
+				: (parser && Object.keys(parser).length > 0);
+
+			if (has_parser) {
+				const all_data_items: data_item[] = entries.map((e: entry_value) => {
+					const item: data_item = { id: e.id, value: e.value, tipo: e.tipo, lang: e.lang };
+					if (e.parents)     item.parents      = e.parents;
+					if (e.section_id   != null) item.section_id   = e.section_id;
+					if (e.section_tipo != null) item.section_tipo = e.section_tipo;
+					return item;
+				});
+
+				const effective_parser = inject_columns_into_parser(parser, ctx.columns, langs_config.main_lang);
+				const parser_result    = apply_parser_chain(effective_parser, all_data_items, ctx.output_format, ctx.columns, langs_config.main_lang);
+
+				if (Array.isArray(parser_result) && parser_result.length > 0) {
+					for (const item of parser_result) {
+						let val_str: string | null = null;
+						if (item.value !== null && item.value !== undefined) {
+							if (ctx.output_format === 'int') {
+								val_str = String(parseInt(String(item.value), 10));
+								if (val_str === 'NaN') val_str = '0';
+							} else if (ctx.output_format === 'json') {
+								val_str = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+							} else {
+								val_str = typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value);
+							}
+						}
+						const lang_key = (!item.lang || item.lang === 'lg-nolan') ? 'nolan' : item.lang;
+						if (lang_key !== 'nolan' || val_str !== null) {
+							lang_values.set(lang_key, val_str);
+						}
+					}
+				}
+			} else {
+				// No explicit parser — auto-apply merge() with columns directly on raw entries.
+				// Handles the common case of "parser": {} with columns defined.
+				const all_data_items: data_item[] = entries.map((e: entry_value) => {
+					const item: data_item = { id: e.id, value: e.value, tipo: e.tipo, lang: e.lang };
+					if (e.section_id   != null) item.section_id   = e.section_id;
+					if (e.section_tipo != null) item.section_tipo = e.section_tipo;
+					return item;
+				});
+
+				if (ctx.output_format === 'json') {
+					// JSON output: resolve_slot is string-only and would corrupt complex values
+					// (e.g. locator arrays). Fan-out directly, JSON.stringify preserves structure.
+					for (const item of all_data_items) {
+						if (item.value === null || item.value === undefined) continue;
+						const val_str  = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+						const lang_key = (!item.lang || item.lang === 'lg-nolan') ? 'nolan' : item.lang;
+						lang_values.set(lang_key, val_str);
+					}
+				} else {
+					// String/int output: merge() with columns for proper separator and fallback handling
+					const auto_result = merge(all_data_items, {
+						columns:   ctx.columns,
+						merge:     'string',
+						main_lang: langs_config.main_lang ?? undefined,
+					});
+
+					if (Array.isArray(auto_result) && auto_result.length > 0) {
+						for (const item of auto_result) {
+							let val_str: string | null = null;
+							if (item.value !== null && item.value !== undefined) {
+								if (ctx.output_format === 'int') {
+									val_str = String(parseInt(String(item.value), 10));
+									if (val_str === 'NaN') val_str = '0';
+								} else {
+									val_str = typeof item.value === 'object' ? JSON.stringify(item.value) : String(item.value);
+								}
+							}
+							const lang_key = (!item.lang || item.lang === 'lg-nolan') ? 'nolan' : item.lang;
+							if (lang_key !== 'nolan' || val_str !== null) {
+								lang_values.set(lang_key, val_str);
+							}
+						}
+					}
+				}
+			}
+			continue; // Skip the standard per-lang loop below
 		}
 
 		// Group entries by lang
@@ -274,7 +368,10 @@ function process_record(
 			const has_parser = Array.isArray(parser) ? parser.length > 0 : (parser && Object.keys(parser).length > 0);
 
 			if (has_parser) {
-				const parser_result = apply_parser_chain(parser, data_items, ctx.output_format);
+				const effective_parser = ctx.columns?.length
+					? inject_columns_into_parser(parser, ctx.columns, langs_config.main_lang)
+					: parser;
+				const parser_result = apply_parser_chain(effective_parser, data_items, ctx.output_format);
 
 				if (parser_result !== null) {
 					// Final result should be data_item[], but apply_parser_chain returns any
@@ -536,6 +633,36 @@ function sanitize_column_name(term: string): string {
 
 
 /**
+ * INJECT_COLUMNS_INTO_PARSER
+ * Clones the parser chain (or single definition) and merges
+ * { columns, main_lang } into each step's options.
+ * Never mutates the original parser objects.
+ *
+ * @param parser    - Original parser definition(s) from context
+ * @param columns   - Column order array from context_field.columns
+ * @param main_lang - Active main language from langs_config
+ * @returns Cloned parser chain with injected options
+ */
+function inject_columns_into_parser(
+	parser:    parser_definition | parser_definition[] | Record<string, never>,
+	columns:   Array<{ tipo: string; model: string }>,
+	main_lang: string | null
+): parser_definition | parser_definition[] | Record<string, never> {
+
+	const extra: Record<string, unknown> = { columns };
+	if (main_lang) extra.main_lang = main_lang;
+
+	if (Array.isArray(parser)) {
+		return parser.map(p => ({ ...p, options: { ...p.options, ...extra } }));
+	}
+
+	const p = parser as parser_definition;
+	return { ...p, options: { ...p.options, ...extra } };
+}
+
+
+
+/**
  * APPLY_PARSER_CHAIN
  * Applies a sequence of parsers to the data.
  * The output of each parser becomes the input for the next.
@@ -547,7 +674,9 @@ function sanitize_column_name(term: string): string {
 function apply_parser_chain(
 	parsers:       parser_definition | parser_definition[] | Record<string, never>,
 	data:          any[],
-	output_format: string = 'string'
+	output_format: string = 'string',
+	columns?:      Array<{ tipo: string; model: string }> | null,
+	main_lang?:    string | null
 ): any {
 
 	if (!parsers || (typeof parsers === 'object' && Object.keys(parsers).length === 0)) {
@@ -671,13 +800,9 @@ function apply_parser_chain(
 	// If the last result still contains data_item[] with value:string[] (emitted
 	// by text_format or any other parser), auto-apply merge to collapse them.
 	//
-	// Strategy driven by output_format:
-	//   "json"         → merge(undefined/default) — keep as flat array, no string join
-	//   "string" / *  → merge("string")          — global collapse to one scalar string
-	//
-	// No-op when:
-	//   • An explicit parser_helper::merge step already ran (values are scalar/string)
-	//   • last_unmapped_result is null or has no array-valued items
+	// When columns are available (passed from the column-order branch of process_record),
+	// delegate to merge() for proper column-aware collapsing.
+	// When columns are absent, collapse array values inline (simple join/flatten).
 	if (Array.isArray(last_unmapped_result) && last_unmapped_result.length > 0) {
 		const has_array_values = last_unmapped_result.some(
 			(item: any) =>
@@ -688,14 +813,23 @@ function apply_parser_chain(
 				typeof item.value[0] === 'string'
 		);
 		if (has_array_values) {
-			if (output_format === 'json') {
-				// Keep structure: flatten nested arrays into a single flat array per lang
-				const merged = merge(last_unmapped_result, {});
+			if (columns && columns.length > 0 && output_format !== 'json') {
+				// Column-aware merge — preserves position and empty slots (string output only).
+				// For json output, values flow through as-is so the fan-out can JSON.stringify them.
+				const merge_opts: Record<string, any> = { columns, merge: 'string' };
+				if (main_lang) merge_opts.main_lang = main_lang;
+				const merged = merge(last_unmapped_result, merge_opts);
 				if (merged) last_unmapped_result = merged;
 			} else {
-				// Default ("string"): global collapse — all rows joined into one scalar
-				const merged = merge(last_unmapped_result, { merge: 'string' });
-				if (merged) last_unmapped_result = merged;
+				// No columns — simple inline collapse (no merge() call needed)
+				last_unmapped_result = last_unmapped_result.map((item: any) => ({
+					...item,
+					value: Array.isArray(item.value)
+						? (output_format === 'json'
+							? item.value.flat(Infinity)
+							: item.value.filter((v: any) => v !== null && v !== undefined && v !== '').join(' | '))
+						: item.value
+				}));
 			}
 		}
 	}
