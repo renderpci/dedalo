@@ -1015,7 +1015,8 @@ class matrix_db_manager {
 		}
 
 		// debug
-		if(SHOW_DEBUG===true && (!defined('IS_UNIT_TEST') || IS_UNIT_TEST===false)) {
+		$skip_log = (defined('IS_UNIT_TEST') && IS_UNIT_TEST===true) || ($_ENV['DEDALO_UPDATING'] ?? false);
+		if(SHOW_DEBUG===true && $skip_log===false) {
 			// time
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 			if($total_time_ms>SLOW_QUERY_MS) {
