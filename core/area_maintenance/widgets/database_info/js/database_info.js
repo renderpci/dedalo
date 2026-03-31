@@ -155,9 +155,21 @@ database_info.prototype.recreate_db_assets = async function() {
 /**
 * REBUILD_DB_INDEXES
 * Forces rebuild PostgreSQL main indexes.
+* @param {string} table - Table name to rebuild indexes for
 * @return promise - api_response
 */
-database_info.prototype.rebuild_db_indexes = async function() {
+database_info.prototype.rebuild_db_indexes = async function( tables ) {
+
+	// validate tables: if empty, undefined, or empty string, use empty array
+	const safe_tables = (!tables || tables === '') ? [] : (Array.isArray(tables) ? tables : [tables]);
+
+	const options = {
+		tables : safe_tables
+	}
+
+	if(SHOW_DEBUG===true){
+		console.log('----> rebuild_db_indexes options', options);
+	}
 
 	// API worker call
 	const api_response = await data_manager.request({
@@ -171,10 +183,10 @@ database_info.prototype.rebuild_db_indexes = async function() {
 				model	: 'database_info',
 				action	: 'rebuild_db_indexes'
 			},
-			options	: {}
+			options	: options
 		},
 		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+		timeout : 7200 * 1000 // 2 hours waiting response
 	})
 
 	// remove annoying rqo_string from object

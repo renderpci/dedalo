@@ -364,6 +364,8 @@ const render_recreate_db_assets = (self) => {
 */
 const render_rebuild_indexes = (self, body_response) => {
 
+	const tables = self.value?.tables || [];
+
 	const rebuild_indexes_container = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'group_container rebuild_indexes_container'
@@ -390,12 +392,24 @@ const render_rebuild_indexes = (self, body_response) => {
 		confirm_text	: get_label.sure || 'Sure?',
 		body_info		: rebuild_indexes_container,
 		body_response	: body_response,
-		on_submit		: async (e) => {
+		inputs			: [{
+			type		: 'select',
+			name		: 'table',
+			label		: 'Table',
+			options		: tables,
+			mandatory	: false
+		}],
+		on_submit		: async (e, values) => {
+
+			// get table value
+			const table = values.find(el => el.name === 'table')?.value;
 
 			await handle_submit(
 				body_response,
 				e.target,
-				self.rebuild_db_indexes
+				async () => {
+					return await self.rebuild_db_indexes(table)
+				}
 			)
 		}
 	})
