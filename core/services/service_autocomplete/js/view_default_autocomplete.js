@@ -1480,7 +1480,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 
 	// get the ar_locator founded in sections
 		const data_locator	= data.find((item)=> item.tipo===rqo_search.source.tipo && item.typo==='sections');
-		const ar_locator	= (data_locator) ? data_locator.value : []
+		const ar_locator	= (data_locator) ? data_locator.entries : []
 
 	// iterate the sections
 		for (const current_locator of ar_locator) {
