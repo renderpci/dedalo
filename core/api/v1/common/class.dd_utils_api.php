@@ -268,7 +268,7 @@ final class dd_utils_api {
 
 				// search exec
 					$search	= search::get_instance($sqo);
-					$db_data = $search->search();
+					$db_result = $search->search();
 
 				// SQL string query decorator
 					$sql_query = $search->get_sql_query();
@@ -284,9 +284,16 @@ final class dd_utils_api {
 					$sql_query = implode(PHP_EOL, $ar_final);
 					// $sql_query = '<pre>'.$sql_query.'</pre>';
 
-				$response->result	= true;
-				$response->msg		= $sql_query;
-				$response->db_data	= $db_data;
+				// db records as array
+				$db_data_array = $db_result->fetch_all();
+
+				// db records as array of section ids
+				$ar_section_id = array_map(fn($el) => $el->section_id ?? null, $db_data_array);
+
+				$response->result			= true;
+				$response->msg				= $sql_query;
+				$response->ar_section_id	= array_values(array_unique($ar_section_id));
+				$response->db_data			= $db_data_array;
 			}
 
 
