@@ -215,6 +215,9 @@ class update {
 		logger_backend_activity::$enable_log = false;
 		#tm_record::$save_tm  = false;
 
+		// $_ENV['DEDALO_UPDATING'] avoid verbose logs during update
+		$_ENV['DEDALO_UPDATING'] = true;
+
 		try {
 			// update. Select the correct update object from the file 'updates.php'
 				$update = null;

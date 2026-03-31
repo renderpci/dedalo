@@ -797,6 +797,9 @@ class v6_to_v7 {
 			, logger::WARNING
 		);
 
+		// $_ENV['DEDALO_UPDATING'] avoid verbose logs during update
+		$_ENV['DEDALO_UPDATING'] = true;
+
 		// Pre-fetch value type map once
 		$value_type_map = v6_to_v7::get_value_type_map();
 
