@@ -1020,9 +1020,10 @@ class matrix_db_manager {
 			// time
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 			if($total_time_ms>SLOW_QUERY_MS) {
+				$sql_query_debug = debug_prepared_statement($sql_query, $params, $conn);
 				debug_log(__METHOD__
 					. " SEARCH_SLOW_QUERY [$total_time_ms ms]: ". PHP_EOL
-					. $sql_query
+					. $sql_query_debug
 					, logger::WARNING
 				);
 			}
