@@ -198,6 +198,8 @@ class diffusion_chain_processor {
 			}
 		}
 
+		$is_first_ddo = $ddo_map[0]->tipo === $current_tipo;
+
 		foreach ($ar_locators as $locator) {
 
 			// Check publishability of the LINKED section (not the parent section).
@@ -248,7 +250,7 @@ class diffusion_chain_processor {
 				// Merge values from child DDOs
 				foreach ($child_results as $res) {
 					$val = $res->get_value();
-					if($element_model === 'relation_list'){
+					if($is_first_ddo){
 						$val = array_map(function($item) use($locator) {
 							$item->section_id = $locator->section_id;
 							$item->section_tipo = $locator->section_tipo;

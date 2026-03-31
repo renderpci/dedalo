@@ -16,7 +16,6 @@ interface locator {
 
 
 
-
 /**
  * GET_SECTION_ID
  * Extracts the section_id from the data item value.
@@ -127,17 +126,17 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
 
 
 
-
-
-
-
-
-
-
 /**
  * PARENTS
  * Unified parser to process parent information.
  * Supports extracting terms, term_ids, section_ids, and typologies.
+ *
+ * Emits one data_item per chain node using a positional synthetic tipo
+ * (__parent_0__, __parent_1__, …) and a composite section_id
+ * (section_tipo + '_' + section_id) to guarantee uniqueness across different
+ * section types that share the same numeric section_id (e.g. es1_1 vs fr1_1).
+ * merge() then groups by section_id and fills column slots in depth order,
+ * producing "" for any missing depth level.
  *
  * @param data    - Array of data items
  * @param options - Parser options
@@ -146,19 +145,25 @@ export function get_term_id(data: data_item[] | null, options: parser_options): 
  * @param options.include_self - If true, include the item itself (index 0). Default: true.
  * @param options.records_separator - Separator between different parent chains. Default: " - ". Set to false for array output.
  * @param options.fields_separator - Separator between values in the same chain. Default: ", ".
- * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: [].
- * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: [].
- * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: [].
- * @param options.parent_section_tipo - Array section_tipo to keep to Default: undefined.
- * @param options.parent_term_id - Array term_id to keep to Default: undefined.
+ * @param options.parents_splice - Array of two integers [start, deleteCount] to splice the parent chain. Default: []
+ * @param options.parents_slice - Array of two integers [start, deleteCount] to slice the parent chain. Default: []
+ * @param options.parent_end_by_term_id - Array of term_ids to truncate the parent chain at. Default: []
+ * @param options.parent_section_tipo - Array section_tipo to keep. Default: undefined.
+ * @param options.parent_term_id - Array term_id to keep. Default: undefined.
  * @param options.parent_typology_term_id - Array get the parent with the typology term_id. Default: undefined.
- * @param options.parent_end_by_typology_term_id - Array 
- * @param options.merge - Define the way to merger the parents. nested | flat | pipe Default: undefined.
- * 	- undefined: 	["Madrid", "Spain", "Paris", "France"]
- * 	- string: 		"Madrid - Spain, Paris - France" // use the fields_separator to separate the values and the records_separator to separate the pipe
- * 	- nested: 		[["Madrid", "Spain"], ["Paris", "France"]]
- * 	- flat: 		["Madrid - Spain", "Paris - France"] // use the fields_separator to separate the values
- * 	- pipe: 		["Madrid", "Spain"] | ["Paris", "France"] // use the records_separator to separate the pipe
+ * @param options.parent_end_by_typology_term_id - Array.
+ * @param options.merge - Define the way to merge the parents:
+ *  - undefined (default): 	["Madrid", "Spain", "Paris", "France"]
+ *  - string: 			"Madrid, Spain - Paris, France"
+ * 	                    // fields_separator within chain, records_separator between chains
+ *  - nested:           [["Madrid", "Spain"], ["Paris", "France"]]
+ * 	                    // one sub-array per locator, preserving depth position
+ *  - flat:             ["Madrid, Spain", "Paris, France"]
+ * 	                    // one string per locator (fields_separator within)
+ *  - pipe:             '["Madrid","Spain"] - ["Paris","France"]'
+ * 	                    // JSON.stringify per locator, joined by records_separator
+ *  - unique:           ["Madrid", "Spain", "Paris", "France"]
+ * 	                    // deduplicated flat list of non-empty depth-level values
  * @returns Array of data items with formatted value
  */
 export function parents(data: data_item[] | null, options: parser_options): data_item[] | null {
@@ -166,38 +171,44 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	if (!data || data.length === 0) return null;
 
 	// Extract options with defaults
-	const value_to_extract: string   = (options.value as string) ?? 'term';
-	const include_parents: boolean   = (options.include_parents as boolean) ?? true;
-	const include_self: boolean      = (options.include_self as boolean)    ?? true;
-	const fields_separator: string   = (options.fields_separator as string)  ?? ', ';
-	const records_separator: string  = (options.records_separator as string) ?? ' - ';
-	const merge_style: string | undefined = options.merge as string | undefined ?? (value_to_extract === 'term' ? 'string' : undefined);
+	const value_to_extract: string        = (options.value as string) ?? 'term';
+	const include_parents: boolean        = (options.include_parents as boolean) ?? true;
+	const include_self: boolean           = (options.include_self as boolean)    ?? true;
+	const fields_separator: string        = (options.fields_separator as string)  ?? ', ';
+	const records_separator: string       = (options.records_separator as string) ?? ' - ';
+	const merge_style: string | undefined = (options.merge as string | undefined) ?? (value_to_extract === 'term' ? 'string' : undefined);
 
 	// langs
 	const main_lang = langs_config.main_lang;
 	const langs     = langs_config.langs;
 
 	const result: data_item[] = [];
+	let   max_depth = 0;
 
 	for (const item of data) {
-		const parents_map	= (item as any).parents;
-		const val			= item.value;
-		const values		= Array.isArray(val) ? val : [val];
+		const parents_map = (item as any).parents;
+		const val         = item.value;
+		const values      = Array.isArray(val) ? val : [val];
 
-		// Map to collect extracted values by language: { 'lg-spa': [ ['Spain', 'Madrid'], ['France', 'Paris'] ], etc. }
-		const lang_nodes: Record<string, any[][]> = {};
-		
+		// Map to collect extracted values by language.
+		// Each entry carries the ordered chain values AND the composite key of the originating locator.
+		// Composite key = section_tipo + '_' + section_id — guarantees uniqueness even when
+		// two different section types share the same numeric section_id (e.g. es1_1 vs fr1_1).
+		const lang_nodes: Record<string, { chain: string[], section_composite: string }[]> = {};
+
 		for (const current_val of values) {
 			if (!current_val || typeof current_val !== 'object') continue;
 
-			const section_tipo	= (current_val as any).section_tipo;
-			const section_id	= (current_val as any).section_id;
+			const section_tipo = (current_val as any).section_tipo;
+			const section_id   = (current_val as any).section_id;
 			if (!section_tipo || !section_id) continue;
+
+			const section_composite = `${section_tipo}_${section_id}`;
 
 			const key = term_id_from_locator(current_val as locator);
 			if (!key || !parents_map || !parents_map[key]) continue;
 
-			const original_chain = parents_map[key]; // Array of hierarchy objects [self, parent, grandparent...]
+			const original_chain = parents_map[key]; // [self, parent, grandparent, ...]
 			if (!Array.isArray(original_chain) || original_chain.length === 0) continue;
 
 			// 1. Atomize: Apply filters and truncation logic
@@ -214,23 +225,23 @@ export function parents(data: data_item[] | null, options: parser_options): data
 			if (chain_to_process.length === 0) continue;
 
 			if (value_to_extract === 'term') {
-				// Special handling for multilingual terms
+				// Multilingual terms: one chain entry per lang
 				for (const lang of langs) {
 					const chain_values: string[] = [];
 					for (const node of chain_to_process) {
 						let term_str = '';
 						if (Array.isArray(node.term) && node.term.length > 0) {
-							// 2 if the parent has a lang into the term, use it
+							// 1. exact lang
 							const term_obj = node.term.find((t: any) => t.lang === lang);
 							if (term_obj) {
 								term_str = term_obj.value;
 							} else {
-								// 2.1 search by the term items the term with main_lang
+								// 2. main_lang fallback
 								const main_term_obj = main_lang ? node.term.find((t: any) => t.lang === main_lang) : null;
 								if (main_term_obj) {
 									term_str = main_term_obj.value;
 								} else {
-									// 2.1.1 If the term has not the current lang or the main_lang value, use the first lang defined
+									// 3. first available
 									term_str = node.term[0].value;
 								}
 							}
@@ -239,11 +250,11 @@ export function parents(data: data_item[] | null, options: parser_options): data
 					}
 					if (chain_values.length > 0) {
 						if (!lang_nodes[lang]) lang_nodes[lang] = [];
-						lang_nodes[lang].push(chain_values);
+						lang_nodes[lang].push({ chain: chain_values, section_composite });
 					}
 				}
 			} else {
-				// Single-value extraction (term_id, section_id, etc.)
+				// Single-value extraction (term_id, section_id, typology, etc.) — language-independent
 				const nolan_key = '__nolan__';
 				const chain_values: string[] = [];
 
@@ -271,28 +282,41 @@ export function parents(data: data_item[] | null, options: parser_options): data
 
 				if (chain_values.length > 0) {
 					if (!lang_nodes[nolan_key]) lang_nodes[nolan_key] = [];
-					lang_nodes[nolan_key].push(chain_values);
+					lang_nodes[nolan_key].push({ chain: chain_values, section_composite });
 				}
 			}
 		}
 
-		// Emit one data_item per chain per lang.
-		// parser_helper::merge handles the final aggregation via merge_style.
-		for (const [lang, chains] of Object.entries(lang_nodes)) {
-			for (const chain of chains) {
-				result.push({
-					...item,
-					lang:  lang === '__nolan__' ? null : lang,
-					value: chain	// string[] — the parent hierarchy chain
-				});
+		// Emit one data_item per chain node, with:
+		//   tipo       = '__parent_N__' (positional depth-level column)
+		//   section_id = composite key (groups all depth-level nodes of the same locator)
+		//   value      = the extracted string at this depth level
+		// merge() will group by section_id and fill column slots by tipo, producing
+		// "" for any missing depth level and preserving position order.
+		for (const [lang, chain_entries] of Object.entries(lang_nodes)) {
+			for (const { chain, section_composite } of chain_entries) {
+				for (let i = 0; i < chain.length; i++) {
+					result.push({
+						...item,
+						tipo:       `__parent_${i}__`,
+						lang:       lang === '__nolan__' ? null : lang,
+						value:      chain[i],
+						section_id: section_composite,
+					});
+				}
+				max_depth = Math.max(max_depth, chain.length);
 			}
 		}
 	}
 
 	if (result.length === 0) return null;
 
-	// Delegate merge to parser_helper::merge, forwarding the configured style and separators.
-	return apply_merge(result, { merge: merge_style, fields_separator, records_separator });
+	// Synthesize positional columns from the maximum chain depth observed.
+	// '__parent_0__' = self/first node, '__parent_1__' = first parent, etc.
+	const columns = Array.from({ length: max_depth }, (_, i) => ({ tipo: `__parent_${i}__`, model: '' }));
+
+	// Delegate merge to parser_helper::merge with synthesized columns.
+	return apply_merge(result, { merge: merge_style, fields_separator, records_separator, columns });
 }
 
 

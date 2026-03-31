@@ -18,6 +18,20 @@ class relation_list extends common {
 		// diffusion_dato_cache
 		public static $diffusion_dato_cache;
 		public static $diffusion_value_cache;
+ 
+		// optional filters applied to sqo in get_data()
+		protected ?array $section_filter   = null; // limits section_tipo returned
+		protected ?array $component_filter = null; // limits from_component_tipo in filter_by_locators
+
+		public function set_section_filter(?array $section_filter) : static {
+			$this->section_filter = $section_filter;
+			return $this;
+		}
+
+		public function set_component_filter(?array $component_filter) : static {
+			$this->component_filter = $component_filter;
+			return $this;
+		}
 
 
 
@@ -915,20 +929,36 @@ class relation_list extends common {
 	*/
 	public function get_data() : array {
 
+		// Build filter locators
+		$ar_filter_locators = [];
+		if (empty($this->component_filter)) {
+			// default: one locator without component filter
+			$ar_filter_locators[] = (object)[
+				'section_tipo'	=> $this->section_tipo,
+				'section_id'	=> $this->section_id
+			];
+		} else {
+			// multiple locators: one for each component type in the filter
+			foreach ((array)$this->component_filter as $tipo) {
+				$ar_filter_locators[] = (object)[
+					'section_tipo'			=> $this->section_tipo,
+					'section_id'			=> $this->section_id,
+					'from_component_tipo'	=> $tipo
+				];
+			}
+		}
+
 		// sqo . Common used to get inverse locators
 		$sqo_data = (object)[
-			'section_tipo'			=> ['all'],
+			'section_tipo'			=> !empty($this->section_filter) ? $this->section_filter : ['all'],
 			'mode'					=> 'related',
 			'limit'					=> false,
 			'offset'				=> 0,
-			'filter_by_locators'	=> [
-				(object)[
-					'section_tipo'	=> $this->section_tipo,
-					'section_id'	=> $this->section_id
-				]
-			]
+			'filter_by_locators'	=> $ar_filter_locators
 		];
-		$sqo = new search_query_object($sqo_data);
+
+		// sqo
+			$sqo = new search_query_object($sqo_data);
 
 		// inverse_references
 			$ar_inverse_references = $this->get_inverse_references($sqo);
@@ -1042,6 +1072,14 @@ class relation_list extends common {
 			}
 
 		// Resolve the data by default
+			// apply filters from ddo if provided
+			if (!empty($ddo->section_filter)) {
+				$this->set_section_filter((array)$ddo->section_filter);
+			}
+			if (!empty($ddo->component_filter)) {
+				$this->set_component_filter((array)$ddo->component_filter);
+			}
+
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 			$data = $this->get_data();
 

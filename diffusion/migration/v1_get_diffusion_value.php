@@ -40,7 +40,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -120,7 +120,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			$ddo_map[] = (object)[
 				'tipo' => DEDALO_PROJECTS_NAME_TIPO,
 				'parent' => $tipo,
-				'section' => DEDALO_SECTION_PROJECTS_TIPO
+				'section_tipo' => DEDALO_SECTION_PROJECTS_TIPO
 			];			
 
 			$parser_process = (object)[					
@@ -254,7 +254,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'id' => $letter_id,
 								'tipo' => $component_tipo,
 								'parent' => $tipo,
-								'section' => $related_section[0]
+								'section_tipo' => $related_section[0]
 							]; 
 						}
 					}
@@ -292,7 +292,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'id' => $letter_id,
 								'tipo' => $component_tipo,
 								'parent' => $tipo,
-								'section' => $related_section[0]
+								'section_tipo' => $related_section[0]
 							]; 
 						}
 					}
@@ -361,7 +361,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -667,7 +667,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						'id' => $letter_id,
 						'tipo' => $component_tipo,
 						'parent' => $tipo,
-						'section' => $related_section[0]
+						'section_tipo' => $related_section[0]
 					]; 
 				}
 			}
@@ -1252,7 +1252,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$ddo_map[] = (object)[
 							'tipo' => $target_component_tipo,
 							'parent' => $tipo,
-							'section' => $filter_section
+							'section_tipo' => $filter_section
 						];
 
 						$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
@@ -1297,7 +1297,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$ddo_map[] = (object)[
 							'tipo' => $target_component_tipo,
 							'parent' => $tipo,
-							'section' => $filter_section
+							'section_tipo' => $filter_section
 						];
 
 						// component with relations
@@ -1324,18 +1324,129 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						
 						
 					}else if($component_method === 'get_diffusion_value'){
-						// Manual
+
+						if (!empty($target_component_tipo)) {
+							$second_entry = (object)[
+								'tipo'   => $target_component_tipo,
+								'parent' => $tipo,
+							];
+							if ($filter_section && !empty($filter_section[0])) {
+								$second_entry->section_tipo = $filter_section[0];
+							}
+							$ddo_map[] = $second_entry;
+						
+							// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
+							$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+							if($model_target === 'component_input_text'){
+								$process->ddo_map = $ddo_map;
+								$process->output_sample = 'MIB';
+								break;
+							}
+							$process = get_diffusion_value(
+								$target_component_tipo,
+								$model_target,
+								[(object)[]], // safe empty custom_arguments for component_select divisor access
+								null,
+								null,
+								null,
+								null,
+								$ddo_map
+							);
+							$process->output_sample = ['MIB', 'ACIP'];
+						}
 					}
 
 					
-				break;
+					break;
 				case 'dato':
-					$filter_section 		= $process_dato_arguments->filter_section ?? "";
-					$filter_component 		= $process_dato_arguments->filter_component ?? "";
-					$format 				= $process_dato_arguments->format ?? "";	
+					$filter_section = $process_dato_arguments->filter_section ?? null;
+					$filter_component = $process_dato_arguments->filter_component ?? null;
+					$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? "");
+					
+					if(!empty($ddo_map) && isset($ddo_map[0])) {
+						if($filter_section) {
+							$ddo_map[0]->section_filter = $filter_section;
+						}
+						if($filter_component) {
+							$ddo_map[0]->component_filter = $filter_component;
+						}
+					}
+					
+					if($target_component_tipo) {
+						$target_ddo = (object)[
+							'tipo' => $target_component_tipo,
+							'parent' => $tipo
+						];
+						if($filter_section && !empty($filter_section[0])) {
+							$target_ddo->section_tipo = $filter_section[0];
+						}
+						$ddo_map[] = $target_ddo;
+					}
+
+					$parser_process = (object)[
+						"parser" => [
+							(object)[
+								'fn' => 'parser_locator::get_section_id'
+							]
+						],
+						"output_format" => "json"
+					];
+
+					$process = $parser_process;
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = ["1", "2"];	
 					
 					break;
-			}
+				case 'section_id':
+					// ddo_map[0] already has section_filter/component_filter applied by caller
+					$process = new stdClass();
+					$process->parser = [(object)['fn' => 'parser_locator::get_section_id']];
+					$process->output_format = 'json';
+					if(!empty($ddo_map)){
+						$process->ddo_map = $ddo_map;
+					}
+					$process->output_sample = ['1', '2'];
+					break;
+				case 'resolve_value':
+					// ddo_map[0] already has section_filter/component_filter applied by caller
+					// Add target_component_tipo as second ddo entry, then resolve its model via get_diffusion_value
+					$target_component_tipo = trim($process_dato_arguments->target_component_tipo ?? '');
+					$filter_section        = $process_dato_arguments->filter_section ?? null;
+					
+					if (!empty($target_component_tipo)) {
+						$second_entry = (object)[
+							'tipo'   => $target_component_tipo,
+							'parent' => $tipo,
+						];
+						if ($filter_section && !empty($filter_section[0])) {
+							$second_entry->section_tipo = $filter_section[0];
+						}
+						$ddo_map[] = $second_entry;
+					
+						// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
+						$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+						if($model_target === 'component_input_text'){
+
+							$process->ddo_map = $ddo_map;
+							$process->output_sample = 'MIB';
+							break;
+						}
+						$process = get_diffusion_value(
+							$target_component_tipo,
+							$model_target,
+							[(object)[]], // safe empty custom_arguments for component_select divisor access
+							null,
+							null,
+							null,
+							null,
+							$ddo_map
+						);
+						$process->output_sample = ['MIB', 'ACIP'];
+					}
+					break;
+				}
 			break;
 	}
 	
