@@ -1288,7 +1288,7 @@ class update {
 					}
 
 					$i_ref++;
-					if ($i_ref >= 5000) {
+					if ($i_ref >= 10000) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)

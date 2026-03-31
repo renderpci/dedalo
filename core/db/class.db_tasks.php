@@ -70,7 +70,7 @@ class db_tasks {
 					$response->errors[] = "Database connection failed for table: $table_name";
 					continue;
 				}
-				$sql		= " SELECT id FROM \"" . pg_escape_identifier($conn ?: null, $table_name) . "\" ORDER BY id DESC LIMIT 1 ";
+				$sql		= " SELECT id FROM " . pg_escape_identifier($conn ?: null, $table_name) . " ORDER BY id DESC LIMIT 1 ";
 				$result2	= matrix_db_manager::exec_search($sql, []);
 
 				if (!$result2) {

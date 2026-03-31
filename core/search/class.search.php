@@ -855,12 +855,10 @@ class search {
 
 			// order by default like 'section_id DESC' (for maintain result consistency)
 			$order_query = PHP_EOL . 'ORDER BY ' . implode( ', ', $this->sql_obj->order_default );
-
 			// order union case for various tables
 			if (isset($this->ar_matrix_tables) && count($this->ar_matrix_tables)>1) {
 				$order_query = str_replace('mix.', '', $order_query);
 			}
-
 			$query_inside .= $order_query;
 
 			if (!$use_window) {

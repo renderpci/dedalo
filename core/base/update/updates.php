@@ -376,7 +376,7 @@ $updates->$v = new stdClass();
 		// TM : Recreate the tm table in PostgreSQL. Extends the `matrix_time_machine` table with new columns required by the v7 schema.
 		// (!) Run before Recreate all assets in PostgreSQL to prevent index creation of non existent columns
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Recreate the tm table (matrix_time_machine) in PostgreSQL. Add "user_id", "bulk_process" and "data" columns.',
+				'info'			=> 'Recreate the Time machine table (matrix_time_machine) in PostgreSQL. Add "user_id", "bulk_process" and "data" columns.',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'recreate_tm_table',
 				'stop_on_error'	=> true,
@@ -396,7 +396,7 @@ $updates->$v = new stdClass();
 
 		// TM : Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data.
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Remove the unused sections in tm table (matrix_time_machine) in PostgreSQL. Only deleted sections are stored and contains recoverable data',
+				'info'			=> 'Remove the unused sections in Time machine table (matrix_time_machine) in PostgreSQL. Only deleted sections are stored and contains recoverable data',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'remove_tm_created_sections',
 				'stop_on_error'	=> true,
@@ -406,7 +406,7 @@ $updates->$v = new stdClass();
 
 		// TM : Fill the new  columns `user_id`, `bulk_process` and `data` with its previous column data.
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Fill the new tm table (matrix_time_machine) columns "user_id", "bulk_process" and "data" with its previous column data. ',
+				'info'			=> 'Fill the new Time machine table (matrix_time_machine) columns "user_id", "bulk_process" and "data" with its previous column data. ',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'fill_new_columns_in_tm',
 				'stop_on_error'	=> true,
@@ -416,7 +416,7 @@ $updates->$v = new stdClass();
 
 		// TM : Delete old 'section_id_key', 'state', 'userID', 'dato' tm columns in PostgreSQL.
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Delete tm table (matrix_time_machine) old columns "section_id_key" and "state" in PostgreSQL.',
+				'info'			=> 'Delete Time machine table (matrix_time_machine) old columns "section_id_key" and "state" in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'delete_tm_columns',
 				'stop_on_error'	=> false,
@@ -426,7 +426,7 @@ $updates->$v = new stdClass();
 
 		// TM : Rename column "bulk_process_temp" to "bulk_process_id" in PostgreSQL.
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'Rename column "bulk_process_temp" to "bulk_process_id" in tm table (matrix_time_machine) in PostgreSQL.',
+				'info'			=> 'Rename Time machine column "bulk_process_temp" to "bulk_process_id" (matrix_time_machine) in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'rename_tm_column_bulk_process',
 				'stop_on_error'	=> false,
@@ -434,9 +434,9 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-		// TM : Update all data in PostgreSQL with new v7 format
+		// TM : Update all Time machine data in PostgreSQL with new v7 format
 			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'UPDATE all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
+				'info'			=> 'UPDATE all data Time machine in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
 				'script_class'	=> 'v6_to_v7',
 				'script_method'	=> 'reformat_matrix_time_machine_data',
 				'stop_on_error'	=> false,

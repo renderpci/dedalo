@@ -953,13 +953,13 @@ class v6_to_v7 {
 	 *                  'result' contains the migrated data array or false if no changes were needed.
 	 */
 	public static function migrate_component_data(
-		string $tipo,
-		mixed $raw_value, // each lang value
-		string $lang,
-		?string $section_tipo = null,
-		mixed $section_id = null,
-		int $value_key = 0
-	) : stdClass {
+			string $tipo,
+			mixed $raw_value, // each lang value
+			string $lang,
+			?string $section_tipo = null,
+			mixed $section_id = null,
+			int $value_key = 0
+		) : stdClass {
 
 		$response = new stdClass();
 		$response->errors = [];
