@@ -321,7 +321,9 @@ export const render_child = async function(self, child_data, virtual_order) {
 
 	await ts_object_instance.build(false)
 
-	console.log('2 - built child ts_object_instance:', ts_object_instance);
+	if(SHOW_DEBUG) {
+		console.log('2 - render_child built child ts_object_instance:', ts_object_instance);
+	}
 
 	const node_wrapper = await ts_object_instance.render({
 		render_level : 'full'

@@ -9681,6 +9681,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .area_maintenance > .content_data .form_container input.mandatory.empty {
   border-right: 2em solid #dc3545;
 }
+.area_maintenance > .content_data .form_container select {
+  margin-bottom: 0.5rem;
+}
 .area_maintenance > .content_data > .widget_container {
   contain: content;
   height: 3.15rem;
