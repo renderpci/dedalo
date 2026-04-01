@@ -6,10 +6,10 @@ require DEDALO_LIB_PATH . '/vendor/soda-php/public/socrata.php';
 * CLASS DIFFUSION_SOCRATA
 * Manages publication on Socrata Open Data system
 */
-class diffusion_socrata extends diffusion  {
+class diffusion_socrata {
 
 
-
+	protected $domain;
 	public static $database_name;
 	public static $database_tipo;
 	public static $ar_table;
@@ -23,7 +23,7 @@ class diffusion_socrata extends diffusion  {
 	*/
 	function __construct( ?object $options=null ) {
 
-		parent::__construct($options);
+		$this->domain = DEDALO_DIFFUSION_DOMAIN;
 	}//end __construct
 
 
