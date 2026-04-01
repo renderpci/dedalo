@@ -3820,6 +3820,27 @@ function process_node($node, $level) {
 								break;					
 							}
 
+
+							// 2 proces datao with geojson
+							$process_dato_arguments = $props->process_dato_arguments ?? null;
+							$component_method = $process_dato_arguments->component_method ?? null;
+							if($component_method && $component_method === "get_diffusion_value_with_images") {
+
+								// Specific for geojson
+								$parser_process = (object)[
+									"fn" => "parse_tag_to_html"
+								];							
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = '<p><img id="[svg-n-1-]" src="/dedalo/media/svg/web/hierarchy95_sccmk1_2.svg" ..></p>';
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] componet_text_area -> get_diffusion_value_with_images\n";							
+								break;					
+							}
+
 							break;
 						case 'component_html_text':
 							$is_empty_cd = function($props) {
