@@ -241,6 +241,104 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
+							// first propiedades
+							$data_to_be_used        = $props->data_to_be_used ?? null;
+
+							//0 Resolve the target section is multiple and it's not a common thesarurs
+							// as collection calling to People and Entity
+							$ontology_node = ontology_node::get_instance($rel_info['tipo']);
+							$properties = $ontology_node->get_properties();
+							
+							$show = $properties->source->request_config[0]->show ?? null;
+							$target_ddo_map = $show->ddo_map ?? null;
+
+							if($target_ddo_map && !isset($props->process_dato) && !isset($data_to_be_used)){
+								
+								$parent_tipos = array_column($target_ddo_map, 'parent');
+								$last_items = array_filter($target_ddo_map, fn($item) => !in_array($item->tipo, $parent_tipos));
+								$section_tipos = array_unique(array_column($last_items, 'section_tipo'));
+								$count_sections = count($section_tipos);
+
+								$multiple_target_section = $count_sections > 1;
+
+								if($multiple_target_section){
+									if(!empty($show)) {
+										$deep_ddo = [
+											(object)[
+												'tipo'         => $rel_info['tipo'],
+												'section_tipo' => 'self'
+											]
+										];
+										$flip_people = false;
+										foreach ($target_ddo_map as $ddo) {
+											$new_ddo = new stdClass();
+											$model = ontology_node::get_model_by_tipo($ddo->tipo);
+											if($model === 'component_dataframe'){
+												continue;
+											}						
+											if($ddo->parent === 'self') {
+												$new_ddo->parent = $rel_info['tipo'];
+											}else{
+												$new_ddo->parent = $ddo->parent;
+											}									
+											$new_ddo->tipo = $ddo->tipo;
+
+											if($ddo->tipo === 'rsc85'){
+												$flip_people = true;
+											}
+											$deep_ddo[] = $new_ddo;
+										}
+										
+										if($flip_people){
+
+											// Find indices of rsc85 and rsc86
+											$rsc85_index = array_search('rsc85', array_column($deep_ddo, 'tipo'));
+											$rsc86_index = array_search('rsc86', array_column($deep_ddo, 'tipo'));
+
+											// If both exist, swap them
+											if ($rsc85_index !== false && $rsc86_index !== false) {
+												$temp = $deep_ddo[$rsc85_index];
+												$deep_ddo[$rsc85_index] = $deep_ddo[$rsc86_index];
+												$deep_ddo[$rsc86_index] = $temp;
+											}
+										}								
+
+										$parser_process = (object)[										
+											'parser' => [
+												(object)[
+													'fn' => 'parser_helper::merge',
+													'options' => (object)[
+														'merge' => 'string',
+														'empty_columns' => false,
+														'field_separator' => ', '
+													]
+												]
+											],
+											"output_format" => "string"
+										];
+
+										$new_props = new stdClass();
+											$new_props->process = $parser_process;
+											$new_props->process->ddo_map = $deep_ddo;
+											$new_props->process->output_sample = 'My data, other data';
+
+										// "is_publicable" = true
+										if(isset($props->is_publicable) && $props->is_publicable === true){
+											$new_props->is_publishable = $props->is_publicable;
+										}
+
+										// "varchar" = 256
+										if(isset($props->varchar)){
+											$new_props->varchar = $props->varchar;
+										}
+										
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+										break;
+									}
+								}
+							}
+
 							// 0 emtpy propiedades
 							if($is_empty($props)) {
 
