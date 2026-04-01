@@ -171,10 +171,12 @@ tool_diffusion.prototype.export = function(options) {
 	const self = this
 
 	// options
-		const diffusion_element_tipo	= options.diffusion_element_tipo
+		const item 						= options.item || null
 		const resolve_levels			= options.resolve_levels || self.resolve_levels
 
 	// sort vars
+		const diffusion_element_tipo		= options.diffusion_element_tipo ?? item?.element_tipo
+		const diffusion_tipo				= options.diffusion_tipo ?? item?.diffusion_tipo ?? null
 		const section_tipo					= self.caller.section_tipo
 		const section_id					= self.caller.section_id || null
 		const total 						= self.caller.total || null
@@ -185,8 +187,6 @@ tool_diffusion.prototype.export = function(options) {
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'diffuse')
-			source.diffusion_element_tipo 	= diffusion_element_tipo
-			source.diffusion_tipo 			= options.diffusion_tipo
 
 	// rqo
 		const rqo = {
@@ -204,7 +204,10 @@ tool_diffusion.prototype.export = function(options) {
 				skip_publication_state_check	: skip_publication_state_check,
 				additions_options				: additions_options,
 				total							: total,
-				process_id						: options.process_id
+				process_id						: options.process_id,
+				diffusion_element_tipo			: diffusion_element_tipo,
+				diffusion_tipo					: diffusion_tipo,
+				type							: item?.type || options.type
 			}
 		}
 

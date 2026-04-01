@@ -278,7 +278,7 @@ export const render_publication_items = function(self) {
 			const data_item	= ar_data[diffusion_group_key]
 
 			// skip disable cases
-			if (item.class_name==='diffusion_mysql' && !data_item.table) {
+			if (item.type==='sql' && !data_item.table) {
 				continue;
 			}
 
@@ -348,7 +348,7 @@ export const render_publication_items = function(self) {
 				})
 				const type_value = ui.create_dom_element({
 					element_type	: 'div',
-					inner_html		: item.class_name,
+					inner_html		: item.type,
 					class_name		: 'value',
 					parent			: publication_items_grid
 				})
@@ -622,7 +622,7 @@ export const render_publication_items = function(self) {
 				}
 
 			// container_bottom
-				const container_bottom = render_container_bottom(self, item, lock_items, process_id, current_diffusion_element_tipo, data_item)
+				const container_bottom = render_container_bottom(self, item, lock_items, process_id, data_item)
 				publication_items_grid.appendChild(container_bottom)
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 
@@ -643,7 +643,7 @@ export const render_publication_items = function(self) {
 * @param string process_id
 * @return HTMLElement container_bottom
 */
-export const render_container_bottom = function (self, item, lock_items, process_id, current_diffusion_element_tipo, data_item) {
+export const render_container_bottom = function (self, item, lock_items, process_id, data_item) {
 
 	const container_bottom = ui.create_dom_element({
 		element_type	: 'div',
@@ -685,7 +685,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 			publish_content(self, {
 				response_message		: response_message,
 				publication_button		: publication_button,
-				diffusion_element_tipo	: current_diffusion_element_tipo,
+				item					: item,
 				diffusion_tipo			: data_item.table_tipo,
 				process_id				: process_id
 			})
@@ -695,7 +695,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 	// disable cases :
 		if (
 			(item.connection_status && item.connection_status.result===false) ||
-			(item.class_name==='diffusion_mysql' && !data_item.table)
+			(item.type==='sql' && !data_item.table)
 			) {
 				publication_button.classList.add('loading')
 		}else{
@@ -727,8 +727,8 @@ export const render_container_bottom = function (self, item, lock_items, process
 			class_name		: 'bottom_additions',
 			parent			: buttons_container
 		})
-		switch (item.class_name) {
-			case 'diffusion_xml':
+		switch (item.type) {
+			case 'xml':
 				const combine_files_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'unselectable',
@@ -778,8 +778,9 @@ const publish_content = async (self, options) => {
 	// options
 		const response_message			= options.response_message
 		const publication_button		= options.publication_button
-		const diffusion_element_tipo	= options.diffusion_element_tipo
-		const diffusion_tipo			= options.diffusion_tipo
+		const item						= options.item
+		const diffusion_element_tipo	= options.diffusion_element_tipo ?? item?.element_tipo
+		const diffusion_tipo			= options.diffusion_tipo ?? item?.diffusion_tipo
 		const process_id				= options.process_id
 
 	// clean previous messages
@@ -794,6 +795,7 @@ const publish_content = async (self, options) => {
 
 	// export API call — now returns a ReadableStream
 		const stream = await self.export({
+			item					: item,
 			diffusion_element_tipo	: diffusion_element_tipo,
 			diffusion_tipo			: diffusion_tipo,
 			process_id				: process_id
@@ -1115,15 +1117,15 @@ const render_process_report = function(options) {
 		}
 
 	// class_name based actions
-		const class_name = last_update_record_response.class
+		const type = last_update_record_response.class
 		// cases
-		switch (class_name) {
+		switch (type) {
 
-			case 'diffusion_mysql':
+			case 'sql':
 				// Nothing specific to do
 				break;
 
-			case 'diffusion_rdf':
+			case 'rdf':
 				// RDF export case (returns diffusion_data a list of URL from created RDF files)
 				if (diffusion_data.length) {
 
@@ -1147,7 +1149,7 @@ const render_process_report = function(options) {
 				}
 				break;
 
-			case 'diffusion_xml':
+			case 'xml':
 				// XML export case (returns diffusion_data a list of URL from created RDF files)
 				if (diffusion_data.length) {
 
