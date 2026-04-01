@@ -1514,9 +1514,25 @@ function process_node($node, $level) {
 										$ddo_map
 									);
 
+									if($model === 'component_input_text'){
+										$new_props->process->ddo_map = $ddo_map;
+									}
+
 									// "is_publicable" = true
 									if(isset($props->is_publicable) && $props->is_publicable === true){
 										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									if(isset($output) && $output === 'merged'){
+										if($model === 'component_input_text'){
+											// add the merge to pipe
+											$parser_process = (object)[
+												'fn' => 'parser_helper::merge'
+											];
+											$new_props->process->parser[] = $parser_process;
+										}
+
+										$new_props->process->output_format = 'json';
 									}
 
 									// "varchar" = 256
