@@ -1033,7 +1033,6 @@ function process_node($node, $level) {
 							}
 
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
-							$data_to_be_used        = $props->data_to_be_used ?? null;
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
 								$parser_process = [
