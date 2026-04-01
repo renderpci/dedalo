@@ -310,7 +310,7 @@ function process_node($node, $level) {
 													'options' => (object)[
 														'merge' => 'string',
 														'empty_columns' => false,
-														'field_separator' => ', '
+														'fields_separator' => ', '
 													]
 												]
 											],
@@ -1789,7 +1789,7 @@ function process_node($node, $level) {
 								
 								$parser_process = (object)[
 									'fn' => 'parser_helper::merge',
-									'options' => (object)[ 'separator' => $separator ],
+									'options' => (object)[ 'records_separator' => $separator ],
 									'parser' => $multiple_parsers,
 									'output_format' => 'string'
 								];
