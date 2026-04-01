@@ -1813,6 +1813,7 @@ function process_node($node, $level) {
 								break;
 							}
 
+							$data_to_be_used = $props->data_to_be_used ?? null;
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
