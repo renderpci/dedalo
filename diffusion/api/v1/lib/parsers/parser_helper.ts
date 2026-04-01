@@ -105,7 +105,8 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 	const merge_style = options?.merge    as string | undefined;
 	const fields_sep  = (options?.fields_separator  as string) ?? ', ';
 	const records_sep = (options?.records_separator as string) ?? ' | ';
-	const main_lang   = (options?.main_lang as string | undefined) ?? null;
+	const main_lang    = (options?.main_lang as string | undefined) ?? null;
+	const empty_columns = (options?.empty_columns as boolean) ?? true;
 
 	// -----------------------------------------------------------------------
 	// Phase 1: Build index  section_id → tipo → lang_key → value
@@ -177,36 +178,41 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 			return columns.map(col => resolve_slot(tipo_map, col.tipo, lang_key));
 		});
 
+		// When empty_columns is false, strip empty slots from every section before merging
+		const effective_col_values = empty_columns
+			? sections_col_values
+			: sections_col_values.map(cv => cv.filter(v => v !== ''));
+
 		let final_value: any;
 
 		switch (merge_style) {
 
 			case 'nested':
 				// Each section_id → its col_values array; output is array-of-arrays
-				final_value = sections_col_values;
+				final_value = effective_col_values;
 				break;
 
 			case 'flat':
 				// Each section_id → one string (columns joined by fields_sep); output is array of strings
-				final_value = sections_col_values.map(cv => cv.join(fields_sep));
+				final_value = effective_col_values.map(cv => cv.join(fields_sep));
 				break;
 
 			case 'pipe':
 				// Each section_id → JSON.stringify(col_values); sections joined by records_sep
-				final_value = sections_col_values
+				final_value = effective_col_values
 					.map(cv => JSON.stringify(cv))
 					.join(records_sep);
 				break;
 
 			case 'unique':
 				// Flatten all slot values, filter empty slots, deduplicate
-				final_value = [...new Set(sections_col_values.flat().filter(v => v !== ''))];
+				final_value = [...new Set(effective_col_values.flat().filter(v => v !== ''))];
 				break;
 
 			case 'string':
 				// Columns joined by fields_sep within each section; sections joined by records_sep.
 				// Empty slots produce adjacent separators — preserved intentionally.
-				final_value = sections_col_values
+				final_value = effective_col_values
 					.map(cv => cv.join(fields_sep))
 					.join(records_sep);
 				break;
@@ -214,7 +220,7 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 			default:
 				// undefined — flat array of all non-empty slot values, order-preserved, duplicates allowed.
 				// e.g. ["Madrid", "Spain", "Paris", "France"]
-				final_value = sections_col_values.flat().filter(v => v !== '');
+				final_value = effective_col_values.flat().filter(v => v !== '');
 				break;
 		}
 
