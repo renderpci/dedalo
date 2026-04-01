@@ -821,15 +821,35 @@ function apply_parser_chain(
 				const merged = merge(last_unmapped_result, merge_opts);
 				if (merged) last_unmapped_result = merged;
 			} else {
-				// No columns — simple inline collapse (no merge() call needed)
-				last_unmapped_result = last_unmapped_result.map((item: any) => ({
-					...item,
-					value: Array.isArray(item.value)
-						? (output_format === 'json'
-							? item.value.flat(Infinity)
-							: item.value.filter((v: any) => v !== null && v !== undefined && v !== '').join(' | '))
-						: item.value
-				}));
+				// No columns — group by lang, join same-lang items, then collapse arrays.
+				// text_format may emit multiple items per lang; grouping prevents downstream
+				// overwrites in process_record's lang_values.set().
+				const lang_groups = new Map<string, any[]>();
+				for (const item of last_unmapped_result) {
+					const lk = item.lang ?? '__nolan__';
+					if (!lang_groups.has(lk)) lang_groups.set(lk, []);
+					lang_groups.get(lk)!.push(item);
+				}
+
+				const collapsed: any[] = [];
+				for (const [lk, items] of lang_groups) {
+					const all_vals: string[] = [];
+					for (const item of items) {
+						if (Array.isArray(item.value)) {
+							all_vals.push(...item.value.filter((v: any) => v !== null && v !== undefined && v !== ''));
+						} else if (item.value !== null && item.value !== undefined && item.value !== '') {
+							all_vals.push(String(item.value));
+						}
+					}
+					collapsed.push({
+						...items[0],
+						lang:  lk === '__nolan__' ? null : lk,
+						value: output_format === 'json'
+							? all_vals
+							: all_vals.join(' | '),
+					});
+				}
+				last_unmapped_result = collapsed;
 			}
 		}
 	}
