@@ -211,7 +211,7 @@
 			overflow: hidden;
 			white-space: nowrap;
 			cursor: default;
-			font-weight: 300;
+			font-weight: 200;
 		}
 
 		// buttons_container
@@ -366,6 +366,7 @@
 
 			// content data defaults
 			>.content_data {
+				contain: layout;
 				height: inherit;
 				max-height: inherit;
 
@@ -1161,6 +1162,7 @@
 	}
 
 	.media_content_value {
+		contain: content;
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;

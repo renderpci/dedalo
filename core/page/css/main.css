@@ -4262,7 +4262,7 @@ input:-moz-placeholder {
   overflow: hidden;
   white-space: nowrap;
   cursor: default;
-  font-weight: 300;
+  font-weight: 200;
 }
 .wrapper_component > .buttons_container {
   position: absolute;
@@ -4411,6 +4411,7 @@ input:-moz-placeholder {
 .wrapper_component.edit > .content_data,
 .wrapper_component.search > .content_data,
 .wrapper_component.player > .content_data {
+  contain: layout;
   height: inherit;
   max-height: inherit;
 }
@@ -5098,6 +5099,7 @@ dd-modal .footer.distribute {
   display: contents;
 }
 .media_wrapper.edit.wrapper_component .media_content_value {
+  contain: content;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -7734,6 +7736,7 @@ dd-modal .footer.distribute {
 * Included from dd_grid.less file
 */
 .wrapper_dd_grid.view_indexation {
+  contain: content;
   --icon_height: 1.05rem;
   max-height: 80vh;
   overflow: auto;
@@ -12134,6 +12137,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   }
 }
 .section_record.edit .section_group.edit > .content_data {
+  contain: style;
   display: grid;
   align-content: stretch;
 }
@@ -16054,6 +16058,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_text_area.edit > .content_data > .content_value.editor_container .image-inline,
 .component_text_area.edit > .content_data > .content_value > .editor_container .image-inline {
+  contain: content;
   vertical-align: text-bottom;
 }
 .component_text_area.edit > .content_data > .content_value.editor_container p,
