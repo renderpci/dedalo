@@ -874,8 +874,6 @@ function process_node($node, $level) {
 											break;
 										}
 
-
-
 										// 2.4.6.1 "component_method" = "get_diffusion_value"
 										if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
 
@@ -893,6 +891,10 @@ function process_node($node, $level) {
 												$ddo_map2
 											);
 
+											if($model === 'component_input_text'){
+												$new_props->process->ddo_map = $ddo_map2;
+											}
+
 											// "is_publicable" = true
 											if(isset($props->is_publicable) && $props->is_publicable === true){
 												$new_props->is_publishable = $props->is_publicable;
@@ -908,6 +910,42 @@ function process_node($node, $level) {
 											break;
 											
 										}
+
+										// 2.4.7 "component_method": "get_dato",
+										if($component_method_2 === "get_dato"){
+
+											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
+
+											$new_props = new stdClass();
+											$new_props->process = get_dato(												
+												$model,
+												$custom_arguments_2,
+												$output_2,
+												$output_options_2,
+												$ddo_map2
+											);
+
+											if($model === 'component_input_text'){
+												$new_props->process->ddo_map = $ddo_map2;
+											}
+
+											// "is_publicable" = true
+											if(isset($props->is_publicable) && $props->is_publicable === true){
+												$new_props->is_publishable = $props->is_publicable;
+											}
+
+											// "varchar" = 256
+											if(isset($props->varchar)){
+												$new_props->varchar = $props->varchar;
+											}
+
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+											break;
+
+										}
+
+
 										// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
 										// second deep component
 										if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
