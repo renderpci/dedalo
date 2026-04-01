@@ -113,7 +113,7 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 	// Preserve section insertion order via seen_sections.
 	// lang_key: raw lang string or "__nolan__" for null / "lg-nolan".
 	// -----------------------------------------------------------------------
-	type LangMap    = Map<string, any>;
+	type LangMap    = Map<string, any[]>;
 	type TipoMap    = Map<string, LangMap>;
 	type SectionMap = Map<string, TipoMap>;
 
@@ -132,7 +132,9 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 		}
 		const tipo_map = section_data.get(section_key)!;
 		if (!tipo_map.has(tipo_key)) tipo_map.set(tipo_key, new Map());
-		tipo_map.get(tipo_key)!.set(lang_key, item.value);
+		const lang_map = tipo_map.get(tipo_key)!;
+		if (!lang_map.has(lang_key)) lang_map.set(lang_key, []);
+		lang_map.get(lang_key)!.push(item.value);
 
 		// Store first ref_item per specific lang (skip nolan — not emitted standalone)
 		if (lang_key !== '__nolan__' && !lang_ref_items.has(lang_key)) {
@@ -159,13 +161,19 @@ export function merge(data: data_item[] | null, options: parser_options): data_i
 		const lang_map = tipo_map.get(tipo);
 		if (!lang_map || lang_map.size === 0) return '';
 
-		let v: any;
-		if      (lang_map.has(lang_key))                  v = lang_map.get(lang_key);      // 1. exact lang
-		else if (lang_map.has('__nolan__'))               v = lang_map.get('__nolan__');   // 2. nolan
-		else if (main_lang && lang_map.has(main_lang))    v = lang_map.get(main_lang);     // 3. main_lang
-		else                                               v = lang_map.values().next().value; // 4. any-lang
+		let vals: any[] | undefined;
+		if      (lang_map.has(lang_key))                  vals = lang_map.get(lang_key);      // 1. exact lang
+		else if (lang_map.has('__nolan__'))               vals = lang_map.get('__nolan__');   // 2. nolan
+		else if (main_lang && lang_map.has(main_lang))    vals = lang_map.get(main_lang);     // 3. main_lang
+		else                                               vals = lang_map.values().next().value; // 4. any-lang
 
-		return (v !== null && v !== undefined) ? String(v) : '';                             // 5. empty
+		if (!vals || vals.length === 0) return '';                                             // 5. empty
+
+		// Join accumulated values for this slot with records_sep
+		const parts = vals
+			.filter(v => v !== null && v !== undefined)
+			.map(v => String(v));
+		return parts.length > 0 ? parts.join(records_sep) : '';
 	};
 
 	const result: data_item[] = [];

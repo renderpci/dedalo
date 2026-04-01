@@ -104,56 +104,72 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 		}
 	}
 
-	// Build values array in placeholder order, supporting parallel loops (zipping arrays of equal/variadic length)
-	const id_map = new Map<string, any[]>();
-	let max_len = 1;
-
+	// ---------------------------------------------------------------
+	// Group input items by lang so each language gets its own zip pass.
+	// This preserves per-language values (e.g. lg-spa having two values
+	// while lg-eng has one) and tags output rows with the correct lang.
+	// ---------------------------------------------------------------
+	const lang_groups = new Map<string, data_item[]>();
 	for (const item of data) {
-		if (item.id) {
-			const val = item.value;
-			let new_vals: any[] = [];
-			
-			if (Array.isArray(val)) {
-				new_vals = val.map(v => v !== null && v !== undefined ? stringify_value(v) : null);
-			} else {
-				new_vals = [val !== null && val !== undefined ? stringify_value(val) : null];
-			}
+		const lang_key = item.lang ?? '__nolan__';
+		if (!lang_groups.has(lang_key)) lang_groups.set(lang_key, []);
+		lang_groups.get(lang_key)!.push(item);
+	}
 
-			if (id_map.has(item.id)) {
-				id_map.get(item.id)!.push(...new_vals);
-			} else {
-				id_map.set(item.id, new_vals);
+	const all_results: any[] = [];
+
+	for (const [lang_key, lang_items] of lang_groups) {
+
+		// Build values array in placeholder order per language group
+		const id_map = new Map<string, any[]>();
+		let max_len = 1;
+
+		for (const item of lang_items) {
+			if (item.id) {
+				const val = item.value;
+				let new_vals: any[] = [];
+
+				if (Array.isArray(val)) {
+					new_vals = val.map(v => v !== null && v !== undefined ? stringify_value(v) : null);
+				} else {
+					new_vals = [val !== null && val !== undefined ? stringify_value(val) : null];
+				}
+
+				if (id_map.has(item.id)) {
+					id_map.get(item.id)!.push(...new_vals);
+				} else {
+					id_map.set(item.id, new_vals);
+				}
+				max_len = Math.max(max_len, id_map.get(item.id)!.length);
 			}
-			max_len = Math.max(max_len, id_map.get(item.id)!.length);
+		}
+
+		// One result per zip row. Always apply pattern replacement and wrap the
+		// result string in a single-element array so the shape is uniform regardless
+		// of placeholder count. Downstream merge (explicit or auto) handles joining.
+		for (let i = 0; i < max_len; i++) {
+			const values = placeholder_names.map(name => {
+				const mapped = id_map.get(name);
+				if (!mapped) return null;
+				// Repeat single-element values; otherwise zip positionally
+				return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
+			});
+
+			const result_str = replace(pattern, values);
+			if (result_str) {
+				all_results.push({
+					id:    null,
+					value: [result_str],
+					tipo:  lang_items[0].tipo,
+					lang:  lang_key === '__nolan__' ? null : lang_key,
+					section_id:   lang_items[0].section_id,
+					section_tipo: lang_items[0].section_tipo,
+				});
+			}
 		}
 	}
 
-	// One result per zip row. Always apply pattern replacement and wrap the
-	// result string in a single-element array so the shape is uniform regardless
-	// of placeholder count. Downstream merge (explicit or auto) handles joining.
-	const zipped_results: string[][] = [];
-
-	for (let i = 0; i < max_len; i++) {
-		const values = placeholder_names.map(name => {
-			const mapped = id_map.get(name);
-			if (!mapped) return null;
-			// Repeat single-element values; otherwise zip positionally
-			return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
-		});
-
-		const result_str = replace(pattern, values);
-		if (result_str) zipped_results.push([result_str]);
-	}
-
-	if (zipped_results.length === 0) return null;
-
-	// Each item's value is string[] — executor auto-applies merge based on output_format.
-	return zipped_results.map(row => ({
-		id:    null,
-		value: row,
-		tipo:  data[0].tipo,
-		lang:  data[0].lang
-	}));
+	return all_results.length > 0 ? all_results : null;
 }
 
 
