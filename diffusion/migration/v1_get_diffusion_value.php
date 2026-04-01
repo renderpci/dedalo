@@ -1583,6 +1583,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							$ddo_map
 						);
 						$process->output_sample = ['MIB', 'ACIP'];
+
+						if($model_target === 'component_select'){
+
+							// add the merge to pipe
+							$process->parser = (object)[
+								'fn' => 'parser_helper::merge'								
+							];
+							$process->output_sample = ['MIB'];
+							break;
+						}
 					}
 					break;
 				}
