@@ -940,6 +940,7 @@ class db_tasks {
 	* }
 	*/
 	public static function analyze_db() : object {
+		$start_time = microtime(true);
 
 		$response = new stdClass();
 			$response->result = false;
@@ -952,7 +953,7 @@ class db_tasks {
 			return $response;
 		}
 
-		$sql = "ANALYZE;";
+		$sql = "VACUUM ANALYZE;";
 		$result = pg_query($conn, $sql);
 
 		// Error handling for the query
@@ -971,6 +972,9 @@ class db_tasks {
 		$response->msg = count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
+
+		$end_time = microtime(true);
+		$response->execution_time = $end_time - $start_time;
 
 		return $response;
 	}//end analyze_db
