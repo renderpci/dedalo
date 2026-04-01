@@ -460,28 +460,30 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					) {
 					
 					$parser_process = (object)[
-							'fn' => 'add_parents',
-							'parser' => [
-								(object)[
-									'fn' => 'parser_locator::parents',
-									'options' => (object)[
-										'value' => 'term',
-										"include_parents" => $add_parents,
-										'fields_separator' => $divisor ?? ' - ',
-										'records_separator' => $divisor_parents ?? $records_separator ?? ', '
-									]
+						'fn' => 'add_parents',
+						'parser' => [
+							(object)[
+								'fn' => 'parser_locator::parents',
+								'options' => (object)[
+									'value' => 'term',
+									"include_parents" => $add_parents,
+									'fields_separator' => $divisor ?? ' - ',
+									'records_separator' => $divisor_parents ?? $records_separator ?? ', '
 								]
-							],
-							'output_format' => 'string'							
-						]
-					;
+							]
+						],
+						'output_format' => 'string'							
+					];
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
+
 					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
 
-				break;
+					break;
 				}// end if( add_parents alone and true or false)
 
 				// 1.2 "check_publishable" alone and true
@@ -491,7 +493,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $process_dato_arguments === null
 					&& $custom_parents === null									
 					&& $parent_term_id === null							
-				) {
+				    ) {
 					
 					$parser_process = (object)[
 							'is_publishable' => true,
@@ -509,6 +511,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						];
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
 					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
@@ -523,7 +527,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $process_dato_arguments === null
 					&& $check_publishable === null									
 					&& $parent_term_id === null									
-				) {
+				    ) {
 
 					$parents_splice 			= $custom_parents->parents_splice ?? null;
 					$parent_end_by_term_id 		= $custom_parents->parent_end_by_term_id ?? null;
@@ -547,6 +551,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					;
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
 					}
 					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
@@ -560,7 +566,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $custom_parents === null									
 					&& $check_publishable === null									
 					&& $parent_term_id === null									
-				) {
+				    ) {
 
 					$parents_splice = $process_dato_arguments->custom_parents->parents_splice ?? null;
 					$parent_end_by_term_id = $process_dato_arguments->custom_parents->parent_end_by_term_id ?? null;
