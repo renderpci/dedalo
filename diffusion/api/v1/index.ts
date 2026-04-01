@@ -495,7 +495,29 @@ const server = Bun.serve({
 		try {
 			switch (action) {
 				case 'diffuse': {
-					return handle_diffuse_stream(body, cookie_header);
+					const diffusion_type = (body.options as any)?.type ?? 'sql';
+
+					switch (diffusion_type) {
+						case 'rdf':
+						case 'xml': {
+							// Synchronous file generation - return immediate JSON with file URLs
+							const result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
+							return Response.json(result);
+						}
+
+						case 'socrata': {
+							// TODO: Implement Socrata-specific handling
+							// For now, fall through to streaming SQL behavior
+							console.warn(`[diffuse] Socrata type not yet fully implemented, using streaming fallback`);
+							return handle_diffuse_stream(body, cookie_header);
+						}
+
+						case 'sql':
+						default: {
+							// Streaming SSE for progress tracking with database insertion
+							return handle_diffuse_stream(body, cookie_header);
+						}
+					}
 				}
 				case 'get_process_status': {
 					return handle_get_process_status(body as any);

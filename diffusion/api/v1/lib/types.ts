@@ -16,8 +16,15 @@ export interface rqo {
 }
 
 export interface rqo_source {
-	diffusion_element_tipo: string;
-	diffusion_tipo:         string;
+	typo?:                 string;
+	type?:                 string;
+	action?:               string;
+	model?:                string;
+	tipo?:                 string;
+	section_tipo?:         string;
+	section_id?:           string | number | null;
+	mode?:                 string;
+	view?:                 string | null;
 	lang?:                  string;
 }
 
@@ -28,6 +35,8 @@ export interface rqo_options {
 	total?:         number;       // client-provided total records (main section)
 	chunk_size?:    number;       // records per PHP call (default: 100)
 	process_id?:    string;
+	diffusion_element_tipo?: string;
+	diffusion_tipo?:         string;
 }
 
 
