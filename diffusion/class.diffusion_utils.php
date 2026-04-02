@@ -221,10 +221,10 @@ class diffusion_utils {
 				continue;
 			}
 
-			$current_class_name = $obj_value->class_name ?? null;
-			if (empty($current_class_name)) {
+			$current_type = $obj_value->type ?? null;
+			if (empty($current_type)) {
 				debug_log(__METHOD__
-					. " Ignored bad diffusion obj_value: class_name is mandatory!" . PHP_EOL
+					. " Ignored bad diffusion obj_value: type is mandatory!" . PHP_EOL
 					. ' obj_value : ' . to_string($obj_value)
 					, logger::ERROR
 				);
@@ -233,7 +233,7 @@ class diffusion_utils {
 
 			$ar_related = self::get_diffusion_sections_from_diffusion_element(
 				$current_diffusion_element_tipo,
-				$current_class_name
+				$current_type
 			);
 
 			if(in_array($section_tipo, $ar_related)) {
@@ -612,18 +612,18 @@ class diffusion_utils {
 			foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo) {
 
 				$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
-				$properties		= $ontology_node->get_propiedades(true);
+				$properties		= $ontology_node->get_properties();
 
 				// class name. Class handler to current diffusion element (e.g. diffusion_mysql, diffusion_rdf, diffusion_xml, ..)
-				$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
+				$diffusion_type = isset($properties->diffusion->type) ? $properties->diffusion->type : null;
 
 				// name (e.g. 'Web numisdata'). Try to resolve it with DEDALO_STRUCTURE_LANG
 				$name = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, false)
 					?? '<em>'.ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>'; // empty case
 
 				// database name
-				$with_database_classes = ['diffusion_mysql','diffusion_socrata'];
-				if (in_array($diffusion_class_name, $with_database_classes)) {
+				$types_with_database = ['sql','socrata'];
+				if (in_array($diffusion_type, $types_with_database)) {
 
 					// tipo of the real database from current diffusion element (e.g. 'web_numisdata')
 					$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
@@ -674,14 +674,14 @@ class diffusion_utils {
 						// Get db name from real database item
 						$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
-				}//end if (in_array($diffusion_class_name, $with_database_classes))
+				}//end if (in_array($diffusion_type, $types_with_database))
 
 				// Create the diffusion map element
 				$item = new stdClass();
 					$item->element_tipo		= $diffusion_element_tipo;
 					$item->model			= ontology_node::get_model_by_tipo($diffusion_element_tipo,true);
 					$item->name				= $name;
-					$item->class_name		= $diffusion_class_name;
+					$item->type		= $diffusion_type;
 					$item->database_name	= $diffusion_database_name ?? null;
 					$item->database_tipo	= $diffusion_database_tipo ?? null;
 
@@ -708,7 +708,7 @@ class diffusion_utils {
 
 	/**
 	* GET_CONNECTION_STATUS
-	* Check the status of the connection for the given $item->class_name
+	* Check the status of the connection for the given $item->type
 	* E.g. 'diffusion_mysql' => {result: true, msg: 'Database is ready'}
 	* @param object $item
 	* @return object|null $connection_status
@@ -717,9 +717,9 @@ class diffusion_utils {
 
 		$connection_status = null;
 
-		switch ($item->class_name) {
+		switch ($item->type) {
 
-			case 'diffusion_mysql':
+			case 'sql':
 				// check connection
 				try {
 
@@ -792,7 +792,7 @@ class diffusion_utils {
 	*	    "murapa3": {
 	*	        "element_tipo": "murapa3",
 	*	        "name": "Publish to web",
-	*	        "class_name": "diffusion_mysql",
+	*	        "type": "diffusion_mysql",
 	*	        "database_name": "web_murapa",
 	*	        "database_tipo": "murapa4"
 	*	    }
@@ -817,10 +817,10 @@ class diffusion_utils {
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @param string $diffusion_element_tipo
-	* @param string $class_name
+	* @param string $type
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $type) : array {
 
 		// cache
 			// static $diffusion_sections_from_diffusion_element;
@@ -829,8 +829,9 @@ class diffusion_utils {
 			// }
 
 		try {
-
+			$class_name = 'diffusion_'.$type;
 			$file_path = DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php';
+
 			include_once $file_path;
 
 			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {
@@ -838,7 +839,7 @@ class diffusion_utils {
 			}else{
 				debug_log(__METHOD__
 					. " Ignored diffusion class without mandatory method: 'get_diffusion_sections_from_diffusion_element'." . PHP_EOL
-					. ' class_name: ' . to_string($class_name) . PHP_EOL
+					. ' type: ' . to_string($type) . PHP_EOL
 					. ' method: ' . 'get_diffusion_sections_from_diffusion_element' . PHP_EOL
 					. ' file_path: ' . $file_path
 					, logger::WARNING
@@ -850,7 +851,7 @@ class diffusion_utils {
 			debug_log(__METHOD__
 				. " Caught exception: " . $e->getMessage() . PHP_EOL
 				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
-				. ' class_name: ' . to_string($class_name)
+				. ' type: ' . to_string($type)
 				, logger::ERROR
 			);
 		}
@@ -864,19 +865,7 @@ class diffusion_utils {
 
 
 
-	/**
-	* GET_RESOLVE_LEVELS
-	* Get resolve levels value form config file or from session if defined
-	* @return int $resolve_levels
-	*/
-	public static function get_resolve_levels() : int {
 
-		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-		return $resolve_levels;
-	}//end get_resolve_levels
 
 
 
