@@ -53,7 +53,7 @@
 * - @property string|null $diffusion_node_tipo Diffusion node tipo used to bind the DDO to a specific diffusion configuration/node
 * - @property object|null $options			   Generic object options container tu pass custom vars across DDOs
 * - @property object|null $parser_args		   Diffusion parser arguments (used by diffusion)
-* - @property object|null $data_slice         Data slice definition. e.g. {"offset":0, "length":1}
+* - @property object|null $data_slice 		   Data slice definition. e.g. {"offset":0, "length":1}
 * - @property array|null  $section_filter      Section filtering list used by relation_list to restrict inverse references by section tipo.
 * - @property array|null  $component_filter    Component filtering list used by relation_list to restrict inverse references by component tipo.
 *
