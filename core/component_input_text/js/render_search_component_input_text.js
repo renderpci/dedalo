@@ -120,11 +120,16 @@ const get_content_value = (i, data_item, self) => {
 		const change_handler = (e) => {
 
 			const data_item_to_save = clone(data_item)
-			
+
 			// parsed_value
 			data_item_to_save.value = (input.value.length>0)
 				? input.value
 				: null
+
+			// q_operator. Special cases of search_q_operator_default. Set q_operator to the default value
+			if(self.search_q_operator_default.has(self.tipo)) {
+				self.data.q_operator = self.search_q_operator_default.get(self.tipo)
+			}
 
 			// changed_data
 			const changed_data_item = Object.freeze({
