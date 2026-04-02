@@ -213,6 +213,8 @@ const get_content_data = async function(self) {
 			// add error class on result false
 			if (api_response.result==false) {
 				messages_container.classList.add('error')
+			}else{
+				// Handle success case
 			}
 
 		} catch (error) {

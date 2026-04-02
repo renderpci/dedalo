@@ -36,12 +36,13 @@ view_default_list_input_text.render = async function(self, options) {
 		const entries				= data.entries || []
 		const fallback_value		= data.fallback_value || []
 		const fallback				= get_fallback_value(entries, fallback_value)
-		const with_lang_versions	= self.context.properties.with_lang_versions || false
+		const with_lang_versions	= self.context.properties.with_lang_versions ?? false
+		const transliterate_value 	= self.data.transliterate_value || []
 
 	// transliterate components
 	// add the translation of the data
-		const transliterate_value = (with_lang_versions && self.data.transliterate_value?.[0].value && entries.length)
-			? ' (' + self.data.transliterate_value[0].value + ')'
+		const transliterate_value_text = (with_lang_versions && transliterate_value[0]?.value && entries.length > 0)
+			? ' (' + transliterate_value[0].value + ')'
 			: ''
 
 	// wrapper

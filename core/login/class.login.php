@@ -903,8 +903,8 @@ class login extends common {
 				}
 
 			}else{
-			$backup_info = 'Deactivated "on login backup" for this domain';
-		}
+				$backup_info = 'Deactivated "on login backup" for this domain';
+			}
 
 		// db analyze daily
 			if (!defined('DEDALO_DB_ANALYZE_ON_LOGIN')) {

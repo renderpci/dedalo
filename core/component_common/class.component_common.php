@@ -2426,9 +2426,11 @@ abstract class component_common extends common {
 	* Sample of use with fixed_filter: 'mdcat3223'
 	* @param string $lang
 	* 	Used to resolve the literal
+	* @param bool $include_negative = false
+	* 	Include negative section_id values (like root user -1) in results
 	* @return object $response
 	*/
-	public function get_list_of_values( string $lang ) : object {
+	public function get_list_of_values( string $lang, bool $include_negative=false ) : object {
 
 		$start_time = start_time();
 
@@ -2540,6 +2542,10 @@ abstract class component_common extends common {
 					}
 
 			$search 	= search::get_instance($sqo);
+			// include_negative values to include root user in list
+			if ($include_negative===true) {
+				$search->include_negative = true;
+			}
 			$db_result 	= $search->search();
 
 		// 2 with all sections, create the list_of values
