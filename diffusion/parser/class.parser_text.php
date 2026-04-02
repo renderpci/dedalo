@@ -154,7 +154,7 @@ class parser_text {
 					: $pattern;
 			}
 
-			$value = $pattern ?? null;
+			$value = $pattern;
 		}else{
 			$value = self::default_join($data, $options);
 		}
