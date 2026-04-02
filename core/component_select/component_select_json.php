@@ -71,7 +71,7 @@
 				case 'edit':
 				default:
 					$value = $this->get_data_lang();
-					$list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG);
+					$list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG, true);
 					break;
 			}
 

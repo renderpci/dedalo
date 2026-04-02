@@ -65,6 +65,10 @@ class search {
 	// sql_query : string (final query to execute stored for debug purposes)
 	protected string $sql_query = '';
 
+	// include_negative
+	// negative section_id used in profiles for the root user, root record could be avoid or include
+	public bool $include_negative = false;
+
 
 
 	/**

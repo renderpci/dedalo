@@ -4947,7 +4947,10 @@ dd-modal .footer.distribute {
   overflow: auto;
 }
 .jse-main .jse-menu {
-  padding-right: 4rem;
+  padding-right: 3.617rem;
+}
+.jse-main .jse-menu > button.svelte-3erbu0 {
+  width: 2.35rem;
 }
 .json-container {
   background-color: #fcfcfc;

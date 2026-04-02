@@ -65,7 +65,7 @@ const get_content_data = function(self) {
 	// short vars
 		const data		= self.data || {}
 		const entries	= data.entries || []
-	
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
@@ -76,8 +76,8 @@ const get_content_data = function(self) {
 
 			// if the value is not a object, create a object with the value
 			// This happen when the value is from a preset saved as q value
-			const data_item = typeof inputs_value[i] === 'object' 
-				? inputs_value[i] 
+			const data_item = typeof inputs_value[i] === 'object'
+				? inputs_value[i]
 				: {value : inputs_value[i]}
 
 			const input_element_node = get_content_value(i, data_item, self)
@@ -145,7 +145,7 @@ const get_content_value = (i, data_item, self) => {
 			event_manager.publish('change_search_element', self)
 		}
 		input.addEventListener('change', change_handler)
-		
+
 		// paste event
 		const paste_handler = (e) => {
 			// Trigger paste_tipo function to handle TLD 'ontology7' cases
