@@ -1,0 +1,21 @@
+{
+    "_comment": "This is a placeholder baseline. Run 'php tools/ontology_tracker/ontology-check.php --create-baseline' in a working Dédalo environment with database access to generate the actual baseline.",
+    "created_at": "2026-04-02",
+    "version": "v7_developer",
+    "checksum": "placeholder",
+    "snapshot": {
+        "dd_ontology_structure": {},
+        "matrix_dd_structure": {},
+        "tipo_model_mapping": {},
+        "critical_tipos": {},
+        "hierarchy_structure": {},
+        "timestamp": "2026-04-02",
+        "version": "v7_developer"
+    },
+    "_instructions": {
+        "how_to_create": "Run the CLI tool in an environment with Dédalo configured and database accessible:",
+        "command": "cd /path/to/dedalo && php tools/ontology_tracker/ontology-check.php --create-baseline",
+        "requirements": "Working PostgreSQL database with dd_ontology and matrix_dd tables",
+        "ci_usage": "Add to GitHub Actions workflow to detect breaking ontology changes"
+    }
+}
