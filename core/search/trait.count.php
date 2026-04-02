@@ -84,10 +84,13 @@ trait count {
 				$records_data->debug = $records_data->debug ?? new stdClass();
 				$records_data->debug->generated_time['get_records_data'] = $exec_time;
 				# Query to database string
-				$records_data->debug->strQuery				= $count_sql_query;
-				$this->sqo->generated_time	= $exec_time;
+				$records_data->debug->strQuery 	= $count_sql_query;
+				$this->sqo->generated_time		= $exec_time;
 
-				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
+				$conn = DBi::_getConnection();
+				$sql_query_debug = debug_prepared_statement($count_sql_query, array_keys($this->params), $conn);
+
+				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query_debug;
 
 				// metrics
 				metrics::$search_total_time += $exec_time;
