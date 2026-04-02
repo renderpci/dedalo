@@ -236,7 +236,7 @@ class diffusion_utils {
 					}
 				
 					// Build the parent item with basic ontology info
-						$parent_item = (object)[
+					$parent_item = (object)[
 						'tipo' => $parent_tipo,
 						'model' => $parent_model,
 						'label' => ontology_node::get_term_by_tipo($parent_tipo)
