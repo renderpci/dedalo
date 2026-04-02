@@ -1426,7 +1426,6 @@ export const get_columns_map = function(options) {
 					label		: 'Info'
 				})
 			}
-
 		}
 
 	// debug
