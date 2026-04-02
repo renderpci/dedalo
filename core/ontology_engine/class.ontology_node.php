@@ -414,6 +414,27 @@ class ontology_node {
 
 
 
+
+	/**
+	 * GET_RELATION_TIPOS
+	 * Returns an array of relation tipos for this node.
+	 *
+	 * @return array|null Array of relation tipos or null when none present
+	 */
+	public function get_relation_tipos() : ?array {
+		$relations = $this->get_relations();
+		if (empty($relations)) {
+			return null;
+		}
+		$relation_tipos = [];
+		foreach ($relations as $relation) {
+			$relation_tipos[] = $relation->tipo;
+		}
+		return $relation_tipos;
+	}//end get_relation_tipos
+
+
+
 	/**
 	 * GET_TLD
 	 * Returns the TLD (Top Level Domain) / ontology namespace.
@@ -965,7 +986,7 @@ class ontology_node {
 
 	/**
 	 * GET_AR_CHILDREN
-	 * Resolves all terms (tipos) that have the given tipo as parent.
+	 * Resolves all terms (tipos) that have the given tipo as parent (first level only).
 	 *
 	 * Does not distinguish between descriptors and models.
 	 *
@@ -1142,7 +1163,7 @@ class ontology_node {
 	 * Returns relation nodes for a given tipo.
 	 *
 	 * @param string $tipo   Source ontology identifier
-	 * @param bool   $cache  (Unused, kept for BC)
+	 * @param bool   $cache  (Unused, kept for back compatibility)
 	 * @param bool   $simple When true, returns only an array of relation tipos
 	 * @return array         Array of relation objects or tipos (simple mode)
 	 */
