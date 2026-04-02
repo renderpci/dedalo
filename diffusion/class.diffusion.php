@@ -43,6 +43,9 @@ abstract class diffusion  {
 	public function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
+		if ($options) {
+			// Unused but kept for interface compatibility
+		}
 	}//end __construct
 
 
@@ -320,6 +323,7 @@ abstract class diffusion  {
 	public static function get_connection_status( object $item ) : ?object {
 
 		$connection_status = null;
+		$conn = null;
 
 		switch ($item->class_name) {
 
@@ -327,7 +331,7 @@ abstract class diffusion  {
 				// check connection
 				try {
 
-					if (!isset($conn) || $conn==false) {
+					if ($conn===null || $conn===false) {
 						// try again. Note that if there are multiple connections, they must be checked for each database.
 						$conn = DBi::_getConnection_mysql(
 							MYSQL_DEDALO_HOSTNAME_CONN,

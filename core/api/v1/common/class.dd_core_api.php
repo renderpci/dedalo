@@ -171,6 +171,14 @@ final class dd_core_api {
 
 		// page mode and tipo
 			$default_section_tipo = MAIN_FALLBACK_SECTION; // 'test38';
+			$tool_name		= null;
+			$tipo			= $default_section_tipo;
+			$section_tipo	= $default_section_tipo;
+			$section_id		= null;
+			$mode			= 'list';
+			$lang			= DEDALO_DATA_LANG;
+			$view			= null;
+			$session_key	= null;
 			if (isset($search_obj->tool)) {
 
 				// tool case
@@ -2060,7 +2068,7 @@ final class dd_core_api {
 
 		// permissions check. Prevent mistaken data resolutions
 			$permissions = common::get_permissions($section_tipo, $tipo);
-			if (!empty($result->data) && $permissions<1 && $element->get_model()!=='menu') {
+			if (!empty($result->data) && $permissions<1 && isset($element) && $element->get_model()!=='menu') {
 
 				// $result->data = [];
 

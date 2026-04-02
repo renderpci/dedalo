@@ -9,6 +9,15 @@ class diffusion_utils {
 
 
     /**
+     * GET_IS_PUBLICABLE
+     * Compatibility wrapper for legacy callers.
+     */
+    public static function get_is_publicable(object $locator): bool {
+
+        return self::is_publishable($locator);
+    }
+
+    /**
      * IS_PUBLISHABLE
      * Locate component_publication in requested locator section and get its boolean value.
      */
@@ -708,6 +717,7 @@ class diffusion_utils {
 	public static function get_connection_status( object $item ) : ?object {
 
 		$connection_status = null;
+		$conn = null;
 
 		switch ($item->type) {
 
@@ -715,7 +725,7 @@ class diffusion_utils {
 				// check connection
 				try {
 
-					if (!isset($conn) || $conn==false) {
+					if ($conn===null || $conn===false) {
 						// try again. Note that if there are multiple connections, they must be checked for each database.
 						$conn = DBi::_getConnection_mysql(
 							MYSQL_DEDALO_HOSTNAME_CONN,

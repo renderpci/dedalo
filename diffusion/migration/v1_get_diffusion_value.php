@@ -30,6 +30,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+			$letter_ids = [];
 			if (!empty($related_section)) {
 
 				$letter_ids = [];
@@ -50,7 +51,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 						]
 					]
 				],
@@ -244,6 +245,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					$letter_ids = [];
 					if (!empty($related_section)) {
 
 						$letter_ids = [];
@@ -264,7 +266,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							(object)[
 								'fn' => 'parser_text::text_format',
 								'options' => (object)[
-									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 								]
 							]
 						],
@@ -282,6 +284,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					$letter_ids = [];
 					if (!empty($related_section)) {
 
 						$letter_ids = [];
@@ -302,7 +305,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							(object)[
 								'fn' => 'parser_text::text_format',
 								'options' => (object)[
-									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+									'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 								]
 							]
 						],
@@ -351,6 +354,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			$ontology_node = ontology_node::get_instance($tipo);
 			$properties = $ontology_node->get_properties();
+
+			$letter_ids = [];
 
 			$show = $properties->source->request_config[0]->show ?? null;
 			if(!empty($show)) {
@@ -413,7 +418,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 						]
 					]
 				],
@@ -591,7 +596,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					if(isset($records_separator)){
 						$parser_options->records_separator = $records_separator;
 					}
-					if(isset($parent_term_id)){
+					if($parent_term_id !== null){
 						$parser_options->parent_term_id = $parent_term_id;
 					}
 
@@ -709,6 +714,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+			$letter_ids = [];
 			if (!empty($related_section)) {
 
 				$letter_ids = [];
@@ -729,7 +735,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 						]
 					]
 				],
@@ -778,8 +784,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 								'options' => (object)[
 									'value' => 'section_id',
 									"include_parents" => $add_parents,
-									'fields_separator' => $fields_separator ?? ', ',
-									'records_separator' => $records_separator ?? ', '
+									'fields_separator' => $fields_separator,
+									'records_separator' => $records_separator
 								]
 							]
 						],
@@ -805,8 +811,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					$parser_options = (object)[
 						'value' => 'term',
 						"include_parents" => $add_parents,
-						'fields_separator' => $fields_separator ?? ', ',
-						'records_separator' => $records_separator ?? ', ',
+						'fields_separator' => $fields_separator,
+						'records_separator' => $records_separator,
 						'merge' => 'flat'
 					];
 					if($parent_section_tipo !== false) {
@@ -889,8 +895,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 									'options' => (object)[
 										'value' => 'term',
 										"include_parents" => false,
-										'fields_separator' => $fields_separator ?? ', ',
-										'records_separator' => $records_separator ?? ', '
+										'fields_separator' => $fields_separator,
+										'records_separator' => $records_separator
 									]
 								]
 							],
@@ -1001,7 +1007,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					(object)[
 						'fn' => 'parser_text::text_format',
 						'options' => (object)[
-							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+							'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 						]
 					]
 				],
@@ -1337,7 +1343,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 									(object)[
 										'fn' => 'parser_text::text_format',
 										'options' => (object)[
-											'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+											'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 										]
 									]
 								],

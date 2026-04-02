@@ -599,6 +599,7 @@ class diffusion_xml extends diffusion  {
 		foreach ($parser as $current_parser) {
 
 			$current_data = $data;
+			$found = null;
 
 			// pre-parser cases
 			if (isset($current_parser->tipo)) {
