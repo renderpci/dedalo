@@ -192,13 +192,13 @@ class diffusion_rdf {
 					$date
 				];
 
-				$file_name			= implode('_', $name_parts);
+				$file_name			= sanitize_file_name(implode('_', $name_parts));
 				$rdf_file_name		= $file_name .'.rdf';
 				$save_to_file_path	= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name;
 				$url_file			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
 				$data				= $build_response->data;
 
-				if( file_put_contents($save_to_file_path, $data) ){
+				if( file_put_contents($save_to_file_path, $data)!==false ){
 
 					debug_log(__METHOD__
 						. " Save file to " . PHP_EOL
@@ -1028,42 +1028,52 @@ class diffusion_rdf {
 			$service_type	= $this->service_type; // setting in the diffusion_element
 
 		// query object
-			$query = '
-			{
-				"id": "base_uri",
-				"mode": "list",
-				"section_tipo": "'.$section_tipo.'",
-				"limit": 1,
-				"filter": {
-					"$and": [
-						{
-							"q": "{\"section_id\":\"'.$entity_id.'\",\"section_tipo\":\"dd1000\",\"from_component_tipo\":\"dd1016\",\"type\":\"dd151\"}",
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "'.$section_tipo.'",
-									"component_tipo": "dd1016",
-									"model": "component_select",
-									"name": "Entity"
-								}
+			$search_query_object = new stdClass();
+				$search_query_object->id = 'base_uri';
+				$search_query_object->mode = 'list';
+				$search_query_object->section_tipo = [$section_tipo];
+				$search_query_object->limit = 1;
+				$search_query_object->filter = new stdClass();
+				$search_query_object->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$entity_id,
+								'section_tipo' => 'dd1000',
+								'from_component_tipo' => 'dd1016',
+								'type' => 'dd151'
 							]
-						},
-						{
-							"q": "{\"section_id\":\"'.$service_type.'\",\"section_tipo\":\"dd1020\",\"from_component_tipo\":\"dd1037\",\"type\":\"dd151\"}",
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "'.$section_tipo.'",
-									"component_tipo": "dd1037",
-									"model": "component_select",
-									"name": "Name"
-								}
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1016',
+								'model' => 'component_select',
+								'name' => 'Entity'
 							]
-						}
+						]
+					],
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$service_type,
+								'section_tipo' => 'dd1020',
+								'from_component_tipo' => 'dd1037',
+								'type' => 'dd151'
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1037',
+								'model' => 'component_select',
+								'name' => 'Name'
+							]
+						]
 					]
-				}
-			}';
-			$search_query_object = json_decode($query);
+				];
 
 
 		// search
@@ -1437,45 +1447,48 @@ class diffusion_rdf {
 		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 
-		$q = implode(',', (array)$ar_section_id);
+		$ar_section_id = array_map('strval', array_values((array)$ar_section_id));
+		$component_publication_tipo = reset($component_publication_tipo);
+		$component_section_id_tipo = reset($component_section_id_tipo);
 
-        // query
-			$query = '
-			{
-			    "id": "numisdata4_list",
-				"select": [],
-			    "section_tipo": "['.$section_tipo.']",
-			    "limit": false,
-			    "filter": {
-			        "$and": [
-			            {
-			                "q": "'.$q.'",
-			                "q_operator": null,
-			                "path": [
-			                    {
-			                        "section_tipo": "'.$section_tipo.'",
-			                        "component_tipo": "'.reset($component_section_id_tipo).'",
-			                        "model": "component_section_id",
-			                        "name": "ID"
-			                    }
-			                ]
-			            },
-			            {
-			                "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.reset($component_publication_tipo).'\"}",
-			                "q_operator": null,
-			                "path": [
-			                    {
-			                        "section_tipo": "'.$section_tipo.'",
-			                        "component_tipo": "'.reset($component_publication_tipo).'",
-			                        "model": "component_publication",
-			                        "name": "Publish"
-			                    }
-			                ]
-			            }
-			        ]
-			    }
-			}';
-			$sqo = json_decode($query);
+		// query
+			$sqo = new stdClass();
+				$sqo->id = $section_tipo . '_list';
+				$sqo->section_tipo = [$section_tipo];
+				$sqo->limit = false;
+				$sqo->filter = new stdClass();
+				$sqo->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => '1',
+								'section_tipo' => 'dd64',
+								'from_component_tipo' => $component_publication_tipo
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_publication_tipo,
+								'model' => 'component_publication',
+								'name' => 'Publish'
+							]
+						]
+					],
+					(object)[
+						'q' => $ar_section_id,
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_section_id_tipo,
+								'model' => 'component_section_id',
+								'name' => 'ID'
+							]
+						]
+					]
+				];
 
 		// search
 			$search = search::get_instance(
