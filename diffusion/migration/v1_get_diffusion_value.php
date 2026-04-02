@@ -245,6 +245,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					$letter_ids = [];
 					if (!empty($related_section)) {
 
 						$letter_ids = [];
@@ -283,6 +284,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 											
 					$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
 					$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+					$letter_ids = [];
 					if (!empty($related_section)) {
 
 						$letter_ids = [];
@@ -352,6 +354,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 
 			$ontology_node = ontology_node::get_instance($tipo);
 			$properties = $ontology_node->get_properties();
+
+			$letter_ids = [];
 
 			$show = $properties->source->request_config[0]->show ?? null;
 			if(!empty($show)) {
