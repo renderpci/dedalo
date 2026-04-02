@@ -111,6 +111,12 @@ class diffusion_rdf {
 				$ar_section_id = self::get_to_publish_rows($section_tipo, $ar_section_id);
 			}
 
+		// if empty ar_section_id stop
+			if (empty($ar_section_id)) {
+				$response->msg[] = "No records to publish";
+				return $response;
+			}
+
 		// Directory (skipped in pure mode: no file saving, no filesystem side effects)
 		if ($pure === false) {
 			$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma/';
