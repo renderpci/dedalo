@@ -14792,7 +14792,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .component_portal.view_line > .content_data .section_record .column .ddinfo_value,
 .portal.view_line > .content_data .section_record .column .ddinfo_value {
   padding: 0px;
-  display: inline-block;
   display: contents;
 }
 .component_portal.view_line > .content_data .section_record .column .ddinfo_value *,
@@ -14826,8 +14825,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding-bottom: 0px;
   margin: 0px;
 }
-.component_portal.view_line.list > .content_data > .section_record.view_text .list.view_text,
-.portal.view_line.list > .content_data > .section_record.view_text .list.view_text {
+.component_portal.view_line.list > .content_data > .section_record.view_text span,
+.portal.view_line.list > .content_data > .section_record.view_text span {
+  display: inline;
+}
+.component_portal.view_line.list > .content_data > .section_record.view_text .view_text,
+.portal.view_line.list > .content_data > .section_record.view_text .view_text {
   display: inline;
   padding: 0px;
   margin: 0px;
@@ -14841,6 +14844,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .component_portal.view_line.list > .content_data > .section_record.view_text .separator.column_separator,
 .portal.view_line.list > .content_data > .section_record.view_text .separator.column_separator {
   color: inherit;
+}
+.component_portal.view_line.list > .content_data > .section_record.view_text .ddinfo_value,
+.portal.view_line.list > .content_data > .section_record.view_text .ddinfo_value {
+  display: inline;
+  color: #7f7f7f;
 }
 .component_portal.view_line.edit,
 .portal.view_line.edit {

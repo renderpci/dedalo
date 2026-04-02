@@ -7,7 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
-	import {render_references} from './render_edit_component_portal.js'
+	import {render_references, render_column_component_info} from './render_edit_component_portal.js'
 
 
 
@@ -37,6 +37,9 @@ view_line_list_portal.render = async function(self, options) {
 
 	// view
 		const children_view	= self.context.children_view || self.context.view || 'default'
+
+		// columns_map
+		self.columns_map = await rebuild_columns_map(self)
 
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
@@ -140,6 +143,47 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* REBUILD_COLUMNS_MAP
+* Adding control columns to the columns_map that will be processed by section_records
+* @param object self
+* @return array columns_map
+*/
+const rebuild_columns_map = async function(self) {
+
+	// columns_map already rebuilt case
+		if (self.fixed_columns_map===true) {
+			return self.columns_map
+		}
+
+	const columns_map = []
+
+	// base_columns_map
+	const base_columns_map = self.columns_map || []
+
+	// if the component has compnent_info its parents
+	// add its own render column, the `ddinfo`,
+	// columns exists because is added into common.js get_columns_map()
+	// here only added the rendered callback
+		if (self.add_component_info===true) {
+			base_columns_map.forEach(el => {
+				if(el.id==='ddinfo'){
+					el.callback	= render_column_component_info
+				}
+			})
+		}
+		columns_map.push(...base_columns_map)
+
+
+	// fixed as calculated
+		self.fixed_columns_map = true
+
+
+	return columns_map
+}//end rebuild_columns_map
 
 
 
