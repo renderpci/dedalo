@@ -7,6 +7,10 @@ parameters:
     tmpDir: var/phpstan
     scanFiles:
         - stub.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Graph.php
+        - lib/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Format.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Literal.php
     bootstrapFiles:
         - phpstan-bootstrap.php
     excludePaths:
