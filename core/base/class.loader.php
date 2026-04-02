@@ -204,7 +204,7 @@ class class_loader {
 	* @return bool True if the file was successfully included
 	* @throws Exception If the class file cannot be found or included
 	*/
-	private static function loader(string $class_name) : bool {
+	public static function loader(string $class_name) : bool {
 
 		switch (true) {
 
