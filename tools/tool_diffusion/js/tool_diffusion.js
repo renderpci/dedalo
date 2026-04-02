@@ -32,6 +32,7 @@ export const tool_diffusion = function () {
 	this.caller			= null
 
 	this.diffusion_info = null
+	this.bun_status     = null
 	this.skip_publication_state_check
 
 	// optional options. Custom options like XML group files
@@ -91,8 +92,11 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-			self.diffusion_info = await self.get_diffusion_info()
-			self.active_processes = await self.get_active_processes()
+			;[self.diffusion_info, self.bun_status, self.active_processes] = await Promise.all([
+				self.get_diffusion_info(),
+				self.get_diffusion_status({}),
+				self.get_active_processes(),
+			])
 
 		 // fix value
 			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
@@ -280,6 +284,52 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+/**
+* GET_DIFFUSION_STATUS
+* Get Bun engine health/stability (is Bun running, configured, PHP bridge reachable, etc.)
+* Resolved entirely by Bun - not PHP.
+* @param object options
+* @return promise
+*/
+tool_diffusion.prototype.get_diffusion_status = function(options) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'get_diffusion_status')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_diffusion_api',
+			action	: 'get_diffusion_status',
+			source	: source,
+			options : {}
+		}
+
+	// call to Bun API (same URL as get_diffusion_info)
+		return new Promise(function(resolve){
+			data_manager.request({
+				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log('-> get_diffusion_status API response:', response);
+				}
+
+				const result = response.data || response.result || {}
+
+				resolve(result)
+			})
+			.catch(function(err){
+				console.error('get_diffusion_status error:', err)
+				resolve({ result: false, msg: err.message || 'Bun unreachable' })
+			})
+		})
+}//end get_diffusion_status
 
 
 

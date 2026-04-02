@@ -12,6 +12,7 @@
  */
 
 import { call_dd_diffusion_api }      from './lib/php_client';
+import { check_bun_health, enrich_diffusion_info_with_readiness } from './lib/status';
 import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
@@ -415,6 +416,34 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 
 
 /**
+ * HANDLE_GET_DIFFUSION_INFO
+ * Fetches diffusion info from PHP and injects per-node readiness status.
+ * Bun analyzes each diffusion_element type from the PHP result and adds
+ * connection_status to every section_diffusion_node before returning.
+ */
+async function handle_get_diffusion_info(request_rqo: rqo, cookie_header: string | null): Promise<object> {
+
+	const php_response = await call_dd_diffusion_api(
+		{ ...request_rqo, action: 'get_diffusion_info' },
+		cookie_header ?? undefined
+	);
+
+	if (!php_response.result || typeof php_response.result !== 'object') {
+		return php_response;
+	}
+
+	// Enrich each section_diffusion_node with Bun-side readiness checks
+	php_response.result = await enrich_diffusion_info_with_readiness(
+		php_response.result,
+		cookie_header ?? undefined
+	);
+
+	return php_response;
+}
+
+
+
+/**
  * HANDLE_VALIDATE
  * Pass-through validation to PHP API.
  */
@@ -534,8 +563,12 @@ const server = Bun.serve({
 					const logs = get_all_processes();
 					return Response.json({ result: true, processes: logs });
 				}
+				case 'get_diffusion_status': {
+					const health = await check_bun_health(cookie_header ?? undefined);
+					return Response.json({ result: health.result, msg: health.msg, data: health });
+				}
 				case 'get_diffusion_info': {
-					const result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
+					const result = await handle_get_diffusion_info(body, cookie_header);
 					return Response.json(result);
 				}
 				default:
