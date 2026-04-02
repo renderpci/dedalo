@@ -1036,7 +1036,7 @@ const render_process_report = function(options) {
 				// Nothing specific to do
 				break;
 
-			case 'rdf':
+			case 'diffusion_rdf':
 				// RDF export case (returns diffusion_data a list of URL from created RDF files)
 				if (diffusion_data.length) {
 
@@ -1060,8 +1060,8 @@ const render_process_report = function(options) {
 				}
 				break;
 
-			case 'xml':
-				// XML export case (returns diffusion_data a list of URL from created RDF files)
+			case 'diffusion_xml':
+				// XML export case (returns diffusion_data a list of URL from created XML files)
 				if (diffusion_data.length) {
 
 					diffusion_data.forEach((el) => {

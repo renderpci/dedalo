@@ -529,9 +529,64 @@ const server = Bun.serve({
 					switch (diffusion_type) {
 						case 'rdf':
 						case 'xml': {
-							// Synchronous file generation - return immediate JSON with file URLs
-							const result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
-							return Response.json(result);
+							// Synchronous file generation — call PHP synchronously then emit a
+							// terminal SSE event so the client's read_stream / render_process_report
+							// can receive last_update_record_response and diffusion_data correctly.
+							const start_ms   = Date.now();
+							const php_result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
+
+							// Extract file URLs from datum entries (each entry may have a file_url)
+							const diffusion_data: { file_url: string }[] = [];
+							for (const datum_group of (php_result as any).datum ?? []) {
+								const diffusion_tipo = datum_group.diffusion_tipo;
+								for (const record of datum_group.data ?? []) {
+									for (const entry of (record.entries?.[diffusion_tipo] ?? [])) {
+										if (entry.file_url) {
+											diffusion_data.push({ file_url: entry.file_url });
+										}
+									}
+								}
+							}
+
+							// Synthetic last_update_record_response that mirrors what
+							// diffusion_rdf::update_record() returns per-record for SQL flows.
+							const last_update_record_response = {
+								result:         (php_result as any).result ?? false,
+								msg:            [(php_result as any).msg ?? ''],
+								errors:         (php_result as any).errors ?? [],
+								class:          diffusion_type === 'rdf' ? 'diffusion_rdf' : 'diffusion_xml',
+								diffusion_data,
+							};
+
+							const terminal_event: progress_data = {
+								process_id: (body.options as any)?.process_id ?? crypto.randomUUID(),
+								is_running: false,
+								started_at: start_ms,
+								total_time: `${Date.now() - start_ms} ms`,
+								errors:     (php_result as any).errors ?? [],
+								data: {
+									msg:                        (php_result as any).msg ?? 'Done',
+									counter:                    1,
+									total:                      1,
+									last_update_record_response,
+									diffusion_data,
+								} as any,
+							};
+
+							// Build SSE string directly (avoid Uint8Array BodyInit mismatch)
+							const json = JSON.stringify(terminal_event);
+							let sse_payload = `data:\n${json}`;
+							if (sse_payload.length < 16384) {
+								sse_payload += ' '.repeat(16384 - sse_payload.length);
+							}
+							sse_payload += '\n\n';
+
+							return new Response(sse_payload, {
+								headers: {
+									'Content-Type':  'text/event-stream',
+									'Cache-Control': 'no-cache',
+								},
+							});
 						}
 
 						case 'socrata': {
