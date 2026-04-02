@@ -91,7 +91,7 @@ abstract class diffusion  {
 	public static function get_my_diffusion_domain(string $diffusion_domain_name, string $caller_class_name) : ?string {
 
 		// Array of all diffusion domains
-		$diffusion_domains = (array)diffusion::get_diffusion_domains();
+		$diffusion_domains = (array)diffusion_utils::get_diffusion_domains();
 		foreach ($diffusion_domains as $current_tipo) {
 
 			$current_name = ontology_node::get_term_by_tipo($current_tipo, DEDALO_DATA_LANG, true, true);

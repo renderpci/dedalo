@@ -69,6 +69,27 @@ const get_content_data = async function(self) {
 		const diffusion_info = self.diffusion_info
 
 
+	// bun_status
+		const bun_status = self.bun_status || {}
+		const bun_status_class = bun_status.result === true ? 'bun_status ready' : 'bun_status fail'
+		const bun_status_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: bun_status_class,
+			parent			: fragment
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: get_label.bun_engine || 'Bun engine',
+			parent			: bun_status_node
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			inner_html		: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
+			parent			: bun_status_node
+		})
+
 	// section_info
 		const section_info = ui.create_dom_element({
 			element_type	: 'div',
@@ -256,9 +277,8 @@ const get_content_data = async function(self) {
 export const render_publication_items = function(self) {
 
 	// short vars
-		const diffusion_map	= self.diffusion_info.diffusion_map
-		const ar_data		= self.diffusion_info.ar_data
-		const lock_items	= []
+		const section_diffusion_nodes	= self.diffusion_info.section_diffusion_nodes || []
+		const lock_items				= []
 
 	// publication_items container
 		const publication_items = ui.create_dom_element({
@@ -266,368 +286,265 @@ export const render_publication_items = function(self) {
 			class_name		: 'publication_items'
 		})
 
-	let diffusion_group_key = 0;
-	for(const diffusion_group_tipo in diffusion_map) {
+	// group nodes by diffusion_group parent label
+		const groups = new Map()
+		for (const node of section_diffusion_nodes) {
+			// find diffusion_group parent
+			const diffusion_group_parent = node.parents.find(p => p.model === 'diffusion_group')
+			const group_label = diffusion_group_parent ? diffusion_group_parent.label : 'Other'
+			const group_tipo = diffusion_group_parent ? diffusion_group_parent.tipo : 'other'
 
-		const current_diffusion_map = diffusion_map[diffusion_group_tipo] // array
-
-		const current_diffusion_map_length = current_diffusion_map.length
-		for (let i = 0; i < current_diffusion_map_length; i++) {
-
-			const item		= current_diffusion_map[i]
-			const data_item	= ar_data[diffusion_group_key]
-
-			// skip disable cases
-			if (item.class_name==='diffusion_mysql' && !data_item.table) {
-				continue;
+			if (!groups.has(group_label)) {
+				groups.set(group_label, {
+					label: group_label,
+					tipo: group_tipo,
+					nodes: []
+				})
 			}
+			groups.get(group_label).nodes.push(node)
+		}
 
-			// process_id like 'process_diffusion_8_mht2_rsc170'
-			const process_id = 'process_diffusion_' + page_globals.user_id + '_' + item.element_tipo + '_' + self.caller.section_tipo
+	// render each group
+		for (const group of groups.values()) {
 
-			const current_diffusion_element_tipo = item.element_tipo
+			// render each node in this group
+				for (const node of group.nodes) {
 
-			// publication_item_label
-				const publication_item_label = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'publication_item_label label icon_arrow up',
-					inner_html		: item.name,
-					parent			: publication_items
-				})
+					// find diffusion_element parent for type and element_tipo
+						const diffusion_element_parent = node.parents.find(p => p.model === 'diffusion_element')
+						const element_tipo = diffusion_element_parent ? diffusion_element_parent.tipo : null
+						const type = diffusion_element_parent ? diffusion_element_parent.type : null
 
-			// publication_item_body
-				const publication_item_body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'publication_item_body',
-					parent			: publication_items
-				})
+					// process_id like 'process_diffusion_8_mht2_rsc170'
+						const process_id = 'process_diffusion_' + page_globals.user_id + '_' + element_tipo + '_' + self.caller.section_tipo
 
-			// collapse body
-				ui.collapse_toggle_track({
-					toggler				: publication_item_label,
-					container			: publication_item_body,
-					collapsed_id		: 'collapsed_diffusion_item_'+current_diffusion_element_tipo,
-					collapse_callback	: collapse,
-					expose_callback		: expose,
-					default_state		: 'opened'
-				})
-				function collapse() {
-					publication_item_label.classList.remove('up')
-				}
-				function expose() {
-					publication_item_label.classList.add('up')
-				}
-
-			// publication_items_grid
-				const publication_items_grid = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'publication_items_grid',
-					parent			: publication_item_body
-				})
-
-			// name
-				const name_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.name || 'Name',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				const name_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: item.name,
-					class_name		: 'value',
-					parent			: publication_items_grid
-				})
-
-			// type
-				const type_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: get_label.type || 'Type',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				const type_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: item.class_name,
-					class_name		: 'value',
-					parent			: publication_items_grid
-				})
-
-			// diffusion_element
-				const diffusion_element_label = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: 'Diffusion element',
-					class_name		: 'label',
-					parent			: publication_items_grid
-				})
-				const diffusion_element_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: current_diffusion_element_tipo,
-					class_name		: 'value',
-					parent			: publication_items_grid
-				})
-				const diffusion_element_link_node = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button tree',
-					title			: get_label.open || 'Open',
-					parent			: diffusion_element_value
-				})
-				const click_handler = async (e) => {
-					e.stopPropagation()
-					const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${current_diffusion_element_tipo}`
-					window.open(url, 'docu_window')
-				}
-				diffusion_element_link_node.addEventListener('click', click_handler)
-
-			// database
-				if (item.database_name) {
-					const database_label = ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: get_label.database || 'Database',
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					const database_value = ui.create_dom_element({
-						element_type	: 'div',
-						inner_html		: item.database_name,
-						class_name		: 'value',
-						parent			: publication_items_grid
-					})
-					if (data_item.database_tipo) {
-						const database_tipo_node = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'value_info',
-							inner_html		: `[${data_item.database_tipo}]`,
-							parent			: database_value
-						})
-						const database_tipo_link_node = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'button tree',
-							title			: get_label.open || 'Open',
-							parent			: database_value
-						})
-						const click_handler = async (e) => {
-							e.stopPropagation()
-							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${data_item.database_tipo}`
-							window.open(url, 'docu_window')
-						}
-						database_tipo_link_node.addEventListener('click', click_handler)
-					}
-				}
-
-			// table
-				if (data_item.table) {
-					const table_label = ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: get_label.table || 'Table',
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					const table_value = ui.create_dom_element({
-						element_type	: 'div',
-						inner_html		: data_item.table,
-						class_name		: 'value',
-						parent			: publication_items_grid
-					})
-					if (data_item.table_tipo) {
-						const table_tipo_node = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'value_info',
-							inner_html		: `[${data_item.table_tipo}]`,
-							parent			: table_value
-						})
-						const table_tipo_link_node = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'button tree',
-							title			: get_label.open || 'Open',
-							parent			: table_value
-						})
-						const click_handler = async (e) => {
-							e.stopPropagation()
-							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${data_item.table_tipo}`
-							window.open(url, 'docu_window')
-						}
-						table_tipo_link_node.addEventListener('click', click_handler)
-					}
-				}
-
-			// fields
-				if (data_item.table_fields_info?.length>0) {
-					const fields_label = ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: get_label.fields || 'Fields',
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					const fields_value = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value link icon_arrow unselectable',
-						inner_html		: get_label.show || 'Show',
-						parent			: publication_items_grid
-					})
-					fields_value.addEventListener('click', function(e) {
-						ar_fields_nodes.map(el => {
-							el.classList.toggle('hide')
-						})
-						this.classList.toggle('up')
-					})
-
-					// table_fields_info
-					const ar_fields_nodes = []
-					const table_fields_info_length = data_item.table_fields_info.length
-					for (let i = 0; i < table_fields_info_length; i++) {
-
-						const item = data_item.table_fields_info[i]
-
-						// field (MySQL target)
-						const field_node = ui.create_dom_element({
-							element_type	: 'span',
-							inner_html		: item.label,
-							class_name		: 'fields_grid_value label hide',
-							parent			: publication_items_grid
-						})
-						ar_fields_nodes.push(field_node)
-
-						// related (Dédalo source)
-						const related_item = ui.create_dom_element({
+					// publication_item_label
+						const publication_item_label = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: item.related_label,
-							class_name		: 'fields_grid_value label link hide',
-							title			: item.related_tipo + ' - ' + item.related_model,
+							class_name		: 'publication_item_label label icon_arrow up',
+							inner_html		: diffusion_element_parent.label,
+							parent			: publication_items
+						})
+
+					// publication_item_body
+						const publication_item_body = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'publication_item_body',
+							parent			: publication_items
+						})
+
+					// collapse body
+						ui.collapse_toggle_track({
+							toggler				: publication_item_label,
+							container			: publication_item_body,
+							collapsed_id		: 'collapsed_diffusion_item_' + element_tipo,
+							collapse_callback	: collapse,
+							expose_callback		: expose,
+							default_state		: 'opened'
+						})
+						function collapse() {
+							publication_item_label.classList.remove('up')
+						}
+						function expose() {
+							publication_item_label.classList.add('up')
+						}
+
+					// publication_items_grid
+						const publication_items_grid = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'publication_items_grid',
+							parent			: publication_item_body
+						})
+
+					// name
+						const name_label = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: get_label.name || 'Name',
+							class_name		: 'label',
 							parent			: publication_items_grid
 						})
-						ar_fields_nodes.push(related_item)
-						related_item.addEventListener('click', function(e) {
+						const name_value = ui.create_dom_element({
+							element_type	: 'div',
+							inner_html		: node.label,
+							class_name		: 'value',
+							parent			: publication_items_grid
+						})
+
+					// type
+						const type_label = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: get_label.type || 'Type',
+							class_name		: 'label',
+							parent			: publication_items_grid
+						})
+						const type_value = ui.create_dom_element({
+							element_type	: 'div',
+							inner_html		: type || node.model,
+							class_name		: 'value',
+							parent			: publication_items_grid
+						})
+
+					// diffusion_element
+						const diffusion_element_label = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: 'Diffusion element',
+							class_name		: 'label',
+							parent			: publication_items_grid
+						})
+						const diffusion_element_value = ui.create_dom_element({
+							element_type	: 'div',
+							inner_html		: element_tipo,
+							class_name		: 'value',
+							parent			: publication_items_grid
+						})
+						const diffusion_element_link_node = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'button tree',
+							title			: get_label.open || 'Open',
+							parent			: diffusion_element_value
+						})
+						const click_handler = async (e) => {
 							e.stopPropagation()
-							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-								tipo			: 'dd5',
-								search_tipos	: item.tipo,
-								menu			: false
+							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${element_tipo}`
+							window.open(url, 'docu_window')
+						}
+						diffusion_element_link_node.addEventListener('click', click_handler)
+
+					// diffusion_tipo (main node tipo)
+						const diffusion_tipo_label = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: 'Diffusion tipo',
+							class_name		: 'label',
+							parent			: publication_items_grid
+						})
+						const diffusion_tipo_value = ui.create_dom_element({
+							element_type	: 'div',
+							inner_html		: node.tipo,
+							class_name		: 'value',
+							parent			: publication_items_grid
+						})
+						const diffusion_tipo_link_node = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'button tree',
+							title			: get_label.open || 'Open',
+							parent			: diffusion_tipo_value
+						})
+						const diffusion_tipo_click_handler = async (e) => {
+							e.stopPropagation()
+							const url = DEDALO_CORE_URL + `/page/?tipo=dd5&menu=false&search_tipos=${node.tipo}`
+							window.open(url, 'docu_window')
+						}
+						diffusion_tipo_link_node.addEventListener('click', diffusion_tipo_click_handler)
+
+					// DB connection_status
+						if (node.connection_status) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								inner_html		: get_label.connection_status || 'Connection status',
+								class_name		: 'label',
+								parent			: publication_items_grid
 							})
-							const window_width	= 1001
-							const screen_width	= window.screen.width
-							const screen_height	= window.screen.height
-							window.docu_window	= window.open(
-								url,
-								'docu_window',
-								`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
-							)
-						})
-						const model_node = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'fields_grid_value_obs label light hide',
-							inner_html		: item.model + ' | ' + item.tipo,
-							parent			: publication_items_grid
-						})
-						ar_fields_nodes.push(model_node)
-						const related_info_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'fields_grid_value_obs label light hide',
-							inner_html		: item.related_model + ' | ' + item.related_tipo,
-							parent			: publication_items_grid
-						})
-						ar_fields_nodes.push(related_info_node)
-					}
-				}
+							const class_status = node.connection_status.result===true
+								? 'success'
+								: 'fail'
+							ui.create_dom_element({
+								element_type	: 'div',
+								inner_html		: node.connection_status.msg,
+								class_name		: 'value ' + class_status,
+								parent			: publication_items_grid
+							})
+						}
 
-			// DB connection_status
-				if (item.connection_status) {
-					ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: get_label.connection_status || 'Connection status',
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					const class_status = item.connection_status.result===true
-						? 'success'
-						: 'fail'
-					ui.create_dom_element({
-						element_type	: 'div',
-						inner_html		: item.connection_status.msg,
-						class_name		: 'value ' + class_status,
-						parent			: publication_items_grid
-					})
-				}
+					// children (fields) - using node.children as table_fields_info equivalent
+						if (node.children?.length > 0) {
+							const fields_label = ui.create_dom_element({
+								element_type	: 'span',
+								inner_html		: get_label.fields || 'Fields',
+								class_name		: 'label',
+								parent			: publication_items_grid
+							})
+							const fields_value = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'value link icon_arrow unselectable',
+								inner_html		: get_label.show || 'Show',
+								parent			: publication_items_grid
+							})
+							fields_value.addEventListener('click', function(e) {
+								ar_fields_nodes.map(el => {
+									el.classList.toggle('hide')
+								})
+								this.classList.toggle('up')
+							})
 
-			// properties (section_tables_map)
-				const properties = data_item.section_tables_map.properties || null
-				if (properties) {
-					// label
-					ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: (get_label.properties || 'Properties'),
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					// value
-					const fields_value = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value link icon_arrow unselectable',
-						inner_html		: get_label.show || 'Show',
-						parent			: publication_items_grid
-					})
-					fields_value.addEventListener('click', function(e) {
-						properties_label.classList.toggle('hide')
-						properties_node.classList.toggle('hide')
-						this.classList.toggle('up')
-					})
-					const properties_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label hide',
-						inner_html		: `table tipo: ${data_item.section_tables_map.table}`,
-						parent			: publication_items_grid
-					})
-					const properties_node = ui.create_dom_element({
-						element_type	: 'pre',
-						class_name		: 'pre hide',
-						inner_html		: JSON.stringify(properties, null, 2),
-						parent			: publication_items_grid
-					})
-				}
+							// table_fields_info (children array)
+								const ar_fields_nodes = []
+								const children_length = node.children.length
+								for (let i = 0; i < children_length; i++) {
 
-			// config (from config.php definitions)
-				const config = data_item.config || null
-				if (config) {
-					// label
-					ui.create_dom_element({
-						element_type	: 'span',
-						inner_html		: (get_label.config || 'Config'),
-						class_name		: 'label',
-						parent			: publication_items_grid
-					})
-					// value
-					const fields_value = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'value link icon_arrow unselectable',
-						inner_html		: get_label.show || 'Show',
-						parent			: publication_items_grid
-					})
-					fields_value.addEventListener('click', function(e) {
-						properties_label.classList.toggle('hide')
-						properties_node.classList.toggle('hide')
-						this.classList.toggle('up')
-					})
-					const properties_label = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'label hide',
-						inner_html		: '',
-						parent			: publication_items_grid
-					})
-					const properties_node = ui.create_dom_element({
-						element_type	: 'pre',
-						class_name		: 'pre hide',
-						inner_html		: JSON.stringify(config, null, 2),
-						parent			: publication_items_grid
-					})
-				}
+									const child = node.children[i]
 
-			// container_bottom
-				const container_bottom = render_container_bottom(self, item, lock_items, process_id, current_diffusion_element_tipo, data_item)
-				publication_items_grid.appendChild(container_bottom)
-		}//end for (let i = 0; i < current_diffusion_map_length; i++)
+									// field (target)
+										const field_node = ui.create_dom_element({
+											element_type	: 'span',
+											inner_html		: child.label,
+											class_name		: 'fields_grid_value label hide',
+											parent			: publication_items_grid
+										})
+										ar_fields_nodes.push(field_node)
 
-		diffusion_group_key++
-	}
+									// related (Dédalo source)
+										const related_item = ui.create_dom_element({
+											element_type	: 'div',
+											inner_html		: child.related_label || '-',
+											class_name		: 'fields_grid_value label link hide',
+											title			: (child.related_tipo || '') + ' - ' + (child.related_model || ''),
+											parent			: publication_items_grid
+										})
+										ar_fields_nodes.push(related_item)
+										related_item.addEventListener('click', function(e) {
+											e.stopPropagation()
+											const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+												tipo			: 'dd5',
+												search_tipos	: child.tipo,
+												menu			: false
+											})
+											const window_width	= 1001
+											const screen_width	= window.screen.width
+											const screen_height	= window.screen.height
+											window.docu_window	= window.open(
+												url,
+												'docu_window',
+												`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
+											)
+										})
+										const model_node = ui.create_dom_element({
+											element_type	: 'span',
+											class_name		: 'fields_grid_value_obs label light hide',
+											inner_html		: child.model + ' | ' + child.tipo,
+											parent			: publication_items_grid
+										})
+										ar_fields_nodes.push(model_node)
+										const related_info_node = ui.create_dom_element({
+											element_type	: 'div',
+											class_name		: 'fields_grid_value_obs label light hide',
+											inner_html		: (child.related_model || '') + ' | ' + (child.related_tipo || ''),
+											parent			: publication_items_grid
+										})
+										ar_fields_nodes.push(related_info_node)
+								}
+
+							// container_bottom
+							const container_bottom = render_container_bottom(self, {
+								element_tipo	: element_tipo,
+								tipo			: node.tipo,
+								type			: type,
+								label			: node.label,
+								children		: node.children
+							}, lock_items, process_id)
+							publication_items_grid.appendChild(container_bottom)
+						}
+			}//end for group.nodes
+		}//end for groups
 
 
 	return publication_items
@@ -638,12 +555,13 @@ export const render_publication_items = function(self) {
 /**
 * RENDER_CONTAINER_BOTTOM
 * Render container_bottom nodes
-* @param object item
+* @param object self
+* @param object item - contains element_tipo, tipo, type, label, children
 * @param array lock_items
 * @param string process_id
 * @return HTMLElement container_bottom
 */
-export const render_container_bottom = function (self, item, lock_items, process_id, current_diffusion_element_tipo, data_item) {
+export const render_container_bottom = function (self, item, lock_items, process_id) {
 
 	const container_bottom = ui.create_dom_element({
 		element_type	: 'div',
@@ -685,24 +603,17 @@ export const render_container_bottom = function (self, item, lock_items, process
 			publish_content(self, {
 				response_message		: response_message,
 				publication_button		: publication_button,
-				diffusion_element_tipo	: current_diffusion_element_tipo,
-				diffusion_tipo			: data_item.table_tipo,
+				item					: item,
+				diffusion_tipo			: item.tipo,
 				process_id				: process_id
 			})
 		}
 		publication_button.addEventListener('click', click_handler)
 
-	// disable cases :
-		if (
-			(item.connection_status && item.connection_status.result===false) ||
-			(item.class_name==='diffusion_mysql' && !data_item.table)
-			) {
-				publication_button.classList.add('loading')
-		}else{
-			when_in_viewport(publication_button, ()=>{
-				publication_button.focus()
-			})
-		}
+	// disable cases removed - connection_status and table check will be handled by Bun API in future
+		when_in_viewport(publication_button, ()=>{
+			publication_button.focus()
+		})
 
 	// check process status always (reconnection after page reload)
 		const check_process_data = () => {
@@ -727,8 +638,8 @@ export const render_container_bottom = function (self, item, lock_items, process
 			class_name		: 'bottom_additions',
 			parent			: buttons_container
 		})
-		switch (item.class_name) {
-			case 'diffusion_xml':
+		switch (item.type) {
+			case 'xml':
 				const combine_files_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'unselectable',
@@ -778,8 +689,9 @@ const publish_content = async (self, options) => {
 	// options
 		const response_message			= options.response_message
 		const publication_button		= options.publication_button
-		const diffusion_element_tipo	= options.diffusion_element_tipo
-		const diffusion_tipo			= options.diffusion_tipo
+		const item						= options.item
+		const diffusion_element_tipo	= options.diffusion_element_tipo ?? item?.element_tipo
+		const diffusion_tipo			= options.diffusion_tipo ?? item?.diffusion_tipo
 		const process_id				= options.process_id
 
 	// clean previous messages
@@ -794,6 +706,7 @@ const publish_content = async (self, options) => {
 
 	// export API call — now returns a ReadableStream
 		const stream = await self.export({
+			item					: item,
 			diffusion_element_tipo	: diffusion_element_tipo,
 			diffusion_tipo			: diffusion_tipo,
 			process_id				: process_id
@@ -1115,15 +1028,15 @@ const render_process_report = function(options) {
 		}
 
 	// class_name based actions
-		const class_name = last_update_record_response.class
+		const type = last_update_record_response.class
 		// cases
-		switch (class_name) {
+		switch (type) {
 
-			case 'diffusion_mysql':
+			case 'sql':
 				// Nothing specific to do
 				break;
 
-			case 'diffusion_rdf':
+			case 'rdf':
 				// RDF export case (returns diffusion_data a list of URL from created RDF files)
 				if (diffusion_data.length) {
 
@@ -1147,7 +1060,7 @@ const render_process_report = function(options) {
 				}
 				break;
 
-			case 'diffusion_xml':
+			case 'xml':
 				// XML export case (returns diffusion_data a list of URL from created RDF files)
 				if (diffusion_data.length) {
 

@@ -348,21 +348,63 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			// @TODO: the exception is_publicable is not handled here!! check if it is needed
 			$fields_separator = $custom_arguments[0]->divisor ??' ';
 			$records_separator =' | ';
-									
-			$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
-			$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
-			if (!empty($related_section)) {
+
+			$ontology_node = ontology_node::get_instance($tipo);
+			$properties = $ontology_node->get_properties();
+
+			$show = $properties->source->request_config[0]->show ?? null;
+			if(!empty($show)) {
+				$deep_ddo = [];
+				foreach ($show->ddo_map as $ddo) {
+					$model = ontology_node::get_model_by_tipo($ddo->tipo);
+					if($model === 'component_dataframe'){
+						continue;
+					}
+					if($ddo->parent === 'self') {
+						$ddo->parent = $tipo;
+					}
+					$deep_ddo[] = $ddo;
+				}
 
 				$letter_ids = [];
-				foreach ($related_component as $i => $component_tipo) {
-					$letter_id = chr(ord('a') + $i);
-					$letter_ids[] = $letter_id;
-					$ddo_map[] = (object)[
-						'id' => $letter_id,
-						'tipo' => $component_tipo,
-						'parent' => $tipo,
-						'section_tipo' => $related_section[0]
-					]; 
+				foreach ($deep_ddo as $i => $ddo) {					
+
+					$children = array_find($deep_ddo, fn($ddo) => $ddo->parent === $ddo->tipo);
+
+					if(empty($children)) {
+
+						$letter_id = chr(ord('a') + $i);
+						$letter_ids[] = $letter_id;
+
+						$ddo_map[] = (object)[
+							'id' => $letter_id,
+							'tipo' => $ddo->tipo,
+							'parent' => $ddo->parent
+						];
+					}else{
+						$ddo_map[] = (object)[
+							'tipo' => $ddo->tipo,
+							'parent' => $ddo->parent
+						];
+
+					}
+				}
+			}else{		
+				$related_component = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'component_','related', false);
+				$related_section = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section','related', true);
+				if (!empty($related_section)) {
+
+					$letter_ids = [];
+					foreach ($related_component as $i => $component_tipo) {
+						$letter_id = chr(ord('a') + $i);
+						$letter_ids[] = $letter_id;
+						$ddo_map[] = (object)[
+							'id' => $letter_id,
+							'tipo' => $component_tipo,
+							'parent' => $tipo,
+							'section_tipo' => $related_section[0]
+						]; 
+					}
 				}
 			}
 
@@ -418,28 +460,30 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					) {
 					
 					$parser_process = (object)[
-							'fn' => 'add_parents',
-							'parser' => [
-								(object)[
-									'fn' => 'parser_locator::parents',
-									'options' => (object)[
-										'value' => 'term',
-										"include_parents" => $add_parents,
-										'fields_separator' => $divisor ?? ' - ',
-										'records_separator' => $divisor_parents ?? $records_separator ?? ', '
-									]
+						'fn' => 'add_parents',
+						'parser' => [
+							(object)[
+								'fn' => 'parser_locator::parents',
+								'options' => (object)[
+									'value' => 'term',
+									"include_parents" => $add_parents,
+									'fields_separator' => $divisor ?? ' - ',
+									'records_separator' => $divisor_parents ?? $records_separator ?? ', '
 								]
-							],
-							'output_format' => 'string'							
-						]
-					;
+							]
+						],
+						'output_format' => 'string'							
+					];
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
+
 					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
 
-				break;
+					break;
 				}// end if( add_parents alone and true or false)
 
 				// 1.2 "check_publishable" alone and true
@@ -449,7 +493,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $process_dato_arguments === null
 					&& $custom_parents === null									
 					&& $parent_term_id === null							
-				) {
+				    ) {
 					
 					$parser_process = (object)[
 							'is_publishable' => true,
@@ -467,6 +511,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						];
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
 					}
 					$process->output_sample = "Bilbao, Abergement-Clémenciat (L')";
@@ -481,7 +527,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $process_dato_arguments === null
 					&& $check_publishable === null									
 					&& $parent_term_id === null									
-				) {
+				    ) {
 
 					$parents_splice 			= $custom_parents->parents_splice ?? null;
 					$parent_end_by_term_id 		= $custom_parents->parent_end_by_term_id ?? null;
@@ -505,6 +551,8 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					;
 					$process = $parser_process;
 					if(!empty($ddo_map)){
+						unset($parser_process->fn);
+						$ddo_map[count($ddo_map)-1]->fn='add_parents';
 						$process->ddo_map = $ddo_map;
 					}
 					$process->output_sample = "Bilbao - Bizkaia, Abergement-Clémenciat (L') - Bourg-en-Bresse";
@@ -518,7 +566,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					&& $custom_parents === null									
 					&& $check_publishable === null									
 					&& $parent_term_id === null									
-				) {
+				    ) {
 
 					$parents_splice = $process_dato_arguments->custom_parents->parents_splice ?? null;
 					$parent_end_by_term_id = $process_dato_arguments->custom_parents->parent_end_by_term_id ?? null;
@@ -582,6 +630,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				if(!empty($show)) {
 					$deep_ddo = [];
 					foreach ($show->ddo_map as $ddo) {
+						$model = ontology_node::get_model_by_tipo($ddo->tipo);
+						if($model === 'component_dataframe'){
+							continue;
+						}						
 						if($ddo->parent === 'self') {
 							$ddo->parent = $tipo;
 						}
@@ -868,6 +920,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 				if(!empty($show)) {
 					$deep_ddo = [];
 					foreach ($show->ddo_map as $ddo) {
+						$model = ontology_node::get_model_by_tipo($ddo->tipo);
+						if($model === 'component_dataframe'){
+							continue;
+						}
 						if($ddo->parent === 'self') {
 							$ddo->parent = $tipo;
 						}
@@ -1145,6 +1201,10 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							if (!empty($show)) {
 								$deep_ddo = [];
 								foreach ($show->ddo_map as $ddo) {
+									$model = ontology_node::get_model_by_tipo($ddo->tipo);
+									if($model === 'component_dataframe'){
+										continue;
+									}
 									$cloned_ddo = clone $ddo;
 									if ($cloned_ddo->parent === 'self') {
 										$cloned_ddo->parent = $target_component_tipo;
@@ -1238,7 +1298,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 					break;
 				case 'filtered_values':
 
-					$fields_separator =' | ';
+					$fields_separator = $process_dato_arguments->separator ?? ' | ';
 
 					$output 				= $process_dato_arguments->output ?? "string";
 					$direct_value 			= $process_dato_arguments->direct_value ?? true;
@@ -1325,14 +1385,85 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						
 					}else if($component_method === 'get_diffusion_value'){
 
+						if($target_component_tipo === 'numisdata161'){
+							$process = json_decode('
+								{
+
+										"parser": [
+										{
+											"fn": "parser_helper::merge",
+											"options": {
+											"merge": "string",
+											"fields_separator": " | ",
+											"records_separator": " - "
+											}
+										}
+										],
+										"ddo_map": [
+										{
+											"tipo": "numisdata578",
+											"section_tipo": "self",
+											"section_filter": [
+											"numisdata3"
+											],
+											"component_filter": [
+											"numisdata77"
+											]
+										},
+										{
+											"tipo": "numisdata309",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata303",
+											"parent": "numisdata309"
+										},
+										{
+											"tipo": "numisdata27",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata30",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata16",
+											"parent": "numisdata30"
+										},
+										{
+											"tipo": "numisdata34",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata97",
+											"parent": "numisdata34"
+										},
+										{
+											"tipo": "numisdata81",
+											"parent": "numisdata578"
+										},
+										{
+											"tipo": "numisdata1447",
+											"parent": "numisdata578"
+										}
+										],
+										"output_format": "json",
+										"output_sample": [
+										"MIB",
+										"ACIP"
+										]
+									}						
+							');
+
+							break;
+						}
+
+					
 						if (!empty($target_component_tipo)) {
 							$second_entry = (object)[
 								'tipo'   => $target_component_tipo,
 								'parent' => $tipo,
 							];
-							if ($filter_section && !empty($filter_section[0])) {
-								$second_entry->section_tipo = $filter_section[0];
-							}
 							$ddo_map[] = $second_entry;
 						
 							// Resolve target component's related leaf via get_diffusion_value (e.g. component_select)
@@ -1429,6 +1560,14 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						$model_target = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
 						if($model_target === 'component_input_text'){
 
+							// add the merge to pipe
+							$process->parser = (object)[
+								'fn' => 'parser_helper::merge',
+								'options' => [
+									'merge' => 'string',
+									'records_separator' => ' | '
+								]
+							];
 							$process->ddo_map = $ddo_map;
 							$process->output_sample = 'MIB';
 							break;
@@ -1444,6 +1583,16 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							$ddo_map
 						);
 						$process->output_sample = ['MIB', 'ACIP'];
+
+						if($model_target === 'component_select'){
+
+							// add the merge to pipe
+							$process->parser = (object)[
+								'fn' => 'parser_helper::merge'								
+							];
+							$process->output_sample = ['MIB'];
+							break;
+						}
 					}
 					break;
 				}
