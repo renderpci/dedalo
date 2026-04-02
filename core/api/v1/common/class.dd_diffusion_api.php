@@ -100,7 +100,7 @@ class dd_diffusion_api {
 			$db_result = $search->search();
 
 			// Detect diffusion type from diffusion_element ontology for specialized dispatch
-			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_propiedades(true);
+			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_properties(true);
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
 			if ($diffusion_type === 'rdf') {
