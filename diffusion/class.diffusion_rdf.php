@@ -31,6 +31,9 @@ class diffusion_rdf {
 	public function __construct( ?object $options=null ) {
 
 		$this->domain = DEDALO_DIFFUSION_DOMAIN;
+		if ($options) {
+			// Unused but kept for interface compatibility
+		}
 
 		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
@@ -197,6 +200,7 @@ class diffusion_rdf {
 			if ($save_file===true) {
 
 				$rdf_name = ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
+				$sub_path = '';
 
 				$name_parts = [
 					$rdf_name,
