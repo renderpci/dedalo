@@ -1405,7 +1405,7 @@ export const get_columns_map = function(options) {
 		parse_columns(columns_map)
 
 
-	// column component_info
+	// column ddinfo
 		const value_with_parents = full_ddo_map.find(el => el.value_with_parents === true)
 		if (value_with_parents) {
 			// check if the component with parents has specific column
