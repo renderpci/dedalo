@@ -88,7 +88,7 @@
 						$term = ontology_node::get_term_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
 						$value[0]->value = $term . ' ['. $first_value."]";
 					}
-				}				
+				}
 			}
 
 		// dataframe. If it exists, calculate the subdatum

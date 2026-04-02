@@ -1,7 +1,5 @@
 <?php declare(strict_types=1);
-
 require_once(DEDALO_CORE_PATH . '/db/class.matrix_activity_diffusion_db_manager.php');
-
 /**
  * CLASS DIFFUSION_ACTIVITY_LOGGER
  * Handles the logic for logging a processed section in the Diffusion API.
@@ -16,7 +14,7 @@ class diffusion_activity_logger {
 	/**
 	 * LOG
 	 * Logs the activity of a processed section.
-	 * 
+	 *
 	 * @param string $section_tipo
 	 * @param int $section_id
 	 * @return bool True if logged, false if already logged or error
@@ -35,8 +33,6 @@ class diffusion_activity_logger {
 			$data->date		= new stdClass();
 			$data->misc		= new stdClass();
 
-
-
 		// USER (dd1762 - Who)
 		// We use the current logged user or system user
 		$user_id = function_exists('logged_user_id') ? logged_user_id() : ( isset($_SESSION['dedalo']['auth']['user_id']) ? $_SESSION['dedalo']['auth']['user_id'] : 0 );
@@ -54,7 +50,7 @@ class diffusion_activity_logger {
 					$locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
 					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator->set_from_component_tipo($component_tipo);
-				
+
 				$data->$column_name->$component_tipo = [$locator];
 			}
 		}
@@ -63,14 +59,14 @@ class diffusion_activity_logger {
 		$component_tipo = 'dd1761';
 		$model			= ontology_node::get_model_by_tipo($component_tipo);
 		$column_name	= section_record_data::get_column_name($model);
-		
+
 		if ($column_name) {
 			if (!isset($data->$column_name)) {
 				$data->$column_name = new stdClass();
 			}
 			$time_value = new stdClass();
 			$time_value->start = component_date::get_date_now();
-			
+
 			$data->$column_name->$component_tipo = [$time_value];
 		}
 
@@ -91,7 +87,7 @@ class diffusion_activity_logger {
 					$locator->set_section_tipo($section_tipo);
 					$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 					$locator->set_from_component_tipo($component_tipo);
-				
+
 				$data->$column_name->$component_tipo = [$locator];
 			}
 
@@ -134,22 +130,22 @@ class diffusion_activity_logger {
 				if (!isset($data->$column_name)) {
 					$data->$column_name = new stdClass();
 				}
-				
+
 				// Calculate locator from diffusion_element_tipo (e.g. oh63 -> diffusion_element_id:63)
 				// Logic: extract chars for prefix, numbers for id. locator tipo = prefix.'0'
 				$diff_prefix = get_tld_from_tipo($diffusion_element_tipo);
 				$diff_id     = get_section_id_from_tipo($diffusion_element_tipo);
-				
+
 				if ($diff_prefix && $diff_id) {
 					$diff_section_tipo = $diff_prefix . '0';
 					$diff_section_id   = (int)$diff_id;
-					
+
 					$locator = new locator();
 						$locator->set_section_id($diff_section_id);
 						$locator->set_section_tipo($diff_section_tipo);
 						$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 						$locator->set_from_component_tipo($component_tipo);
-					
+
 					$data->$column_name->$component_tipo = [$locator];
 				}
 			}
@@ -161,12 +157,12 @@ class diffusion_activity_logger {
 			'dd1758', // diffusion_log section tipo
 			$data
 		);
-		
+
 		// 4. Update cache
 		self::$logged_sections[$cache_key] = true;
 
 		return true;
-	}
+	}//end log
 
 	/**
 	 * RESET_CACHE
@@ -174,6 +170,6 @@ class diffusion_activity_logger {
 	 */
 	public static function reset_cache(): void {
 		self::$logged_sections = [];
-	}
+	}//end reset_cache
 
-}
+}//end diffusion_activity_logger
