@@ -640,6 +640,9 @@ class dd_diffusion_api {
 
 			$diffusion_data = [];
 			$raw_xml_parts  = [];
+			$datum_data     = [];
+			$parent         = ontology_node::get_instance($diffusion_element_tipo)->get_parent();
+			$rdf_term       = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG);
 
 			foreach ($db_result as $locator) {
 
@@ -663,16 +666,42 @@ class dd_diffusion_api {
 				if (!empty($rdf_response->data)) {
 					$raw_xml_parts[] = $rdf_response->data;
 				}
+
+				$entries = new stdClass();
+				$rdf_value = new stdClass();
+					$rdf_value->tipo = $diffusion_element_tipo;
+					$rdf_value->lang = null;
+					$rdf_value->value = $rdf_response->data ?? null;
+				if (!empty($rdf_response->diffusion_data[0]->file_url)) {
+					$rdf_value->file_url = $rdf_response->diffusion_data[0]->file_url;
+				}
+				$entries->{$diffusion_element_tipo} = [$rdf_value];
+
+				$datum_data[] = (object)[
+					'section_id' => $locator->section_id,
+					'entries' => $entries
+				];
 			}
 
-			// Build minimal datum for API compatibility
+			// Build RDF datum using canonical diffusion datum semantics
 			$datum = new diffusion_datum();
 				$datum->set_diffusion_tipo($diffusion_element_tipo);
 				$datum->set_section_tipo($section_tipo);
-				$datum->set_term(ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG));
+				$datum->set_term($rdf_term);
 				$datum->set_model('diffusion_element');
-				$datum->set_context([]);
-				$datum->set_data([]);
+				$datum->set_parent($parent);
+				$datum->set_context([
+					(object)[
+						'term' => $rdf_term,
+						'tipo' => $diffusion_element_tipo,
+						'model' => 'diffusion_element',
+						'parent' => $parent,
+						'parser' => new stdClass(),
+						'output_format' => 'rdf',
+						'columns' => []
+					]
+				]);
+				$datum->set_data($datum_data);
 
 			$response->result        = true;
 			$response->msg           = 'OK. RDF diffusion done';
@@ -680,8 +709,6 @@ class dd_diffusion_api {
 			$response->main_lang     = DEDALO_DATA_LANG_DEFAULT;
 			$response->main          = $main;
 			$response->datum         = [$datum];
-			$response->diffusion_data = $diffusion_data;
-			$response->data          = implode("\n", $raw_xml_parts);
 
 		} catch (Exception $e) {
 			$response->msg    = 'Error: ' . $e->getMessage();
