@@ -42,6 +42,14 @@ class diffusion_rdf {
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Boolean.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Date.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/DateTime.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Decimal.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HexBinary.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HTML.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Integer.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/XML.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
