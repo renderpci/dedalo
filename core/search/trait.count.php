@@ -55,7 +55,7 @@ trait count {
 			$totals_group = [];
 			if ($count_result!==false) {
 				while($row = pg_fetch_assoc($count_result)) {
-					
+
 					// get the total as the sum of all rows
 					$full_count = $row['full_count'] ?? 0;
 					$total = $total + (int)$full_count;
