@@ -202,7 +202,7 @@ abstract class diffusion_fn {
 			$diffusion_data_object = new diffusion_data_object( (object)[
 				'tipo'	=> $tipo,
 				'lang'	=> $lang,
-				'value'	=> $subtitles_url ?? null,
+				'value'	=> $subtitles_url,
 				'id'	=> $ddo->id ?? null
 			]);
 			$diffusion_data[] = $diffusion_data_object;
@@ -261,7 +261,7 @@ abstract class diffusion_fn {
 					$diffusion_data_object = new diffusion_data_object( (object)[
 						'tipo'	=> $element_instance->tipo,
 						'lang'	=> $current_data->lang ?? null,
-						'value'	=> $html_data?? null,
+						'value'	=> $html_data,
 						'id'	=> $ddo->id ?? null
 					]);
 
