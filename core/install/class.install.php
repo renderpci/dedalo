@@ -1935,10 +1935,10 @@ class install extends common {
 
 				// create a new section
 				$section = section::get_instance(
-					null, // string|null section_id
-					$section_tipo // string section_tipo
+					$section_tipo, // string section_tipo
+					'edit' // string mode
 				);
-				$section_id = $section->Save();
+				$section_id = $section->create_record();
 			}
 
 		// check valid $section_id

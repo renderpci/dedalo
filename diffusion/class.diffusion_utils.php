@@ -131,14 +131,242 @@ class diffusion_utils {
 
 
 
+	
+	/**
+	 * GET_SECTION_DIFFUSION_NODES
+	 * Builds a hierarchical tree of diffusion nodes mapped to a specific section.
+	 *
+	 * This method traverses the ontology tree starting from `DEDALO_DIFFUSION_DOMAIN`
+	 * to find all diffusion configurations that target the given section. For each
+	 * matching diffusion node, it constructs:
+	 *
+	 * - **Parents chain**: Ascending hierarchy from the section up to `diffusion_domain`,
+	 *   including diffusion elements with their type property (e.g., 'sql', 'xml')
+	 *
+	 * - **Children nodes**: Descending tree of all components/elements under the section,
+	 *   with their related ontology references
+	 *
+	 * Logic flow:
+	 * 1. Get all recursive children under `DEDALO_DIFFUSION_DOMAIN`
+	 * 2. For each diffusion node, resolve related sections via ontology relations
+	 * 3. Filter to only nodes that map to the requested `section_tipo`
+	 * 4. Build parent chain:
+	 *    - Traverse upward via `get_parent()` until reaching `diffusion_domain`
+	 *    - For `diffusion_element` nodes, extract `diffusion->type` from properties
+	 *    - Log error and mark if diffusion type is missing
+	 * 5. Build children list:
+	 *    - Get all recursive children of the section
+	 *    - Include relation information for each child
+	 * 6. Return array of source element objects with full hierarchy
+	 *
+	 * @param string $section_tipo The section tipo to get diffusion nodes for
+	 *
+	 * @return array Array of source element objects, each containing:
+	 *         {
+	 *             string $tipo    : The diffusion node tipo
+	 *             string $model   : The ontology model name
+	 *             string $label   : Human-readable label
+	 *             array  $parents : Ascending hierarchy to diffusion_domain
+	 *             array  $children: Descending nodes with relations
+	 *         }
+	 *
+	 * @see ontology_node::get_ar_recursive_children() For tree traversal
+	 * @see ontology_node::get_ar_tipo_by_model_and_relation() For relation resolution
+	 */
+	public static function get_section_diffusion_nodes( string $section_tipo) : array {
+
+		// get diffucion domain tipo
+		$diffusion_domain_tipo = self::get_diffusion_domain_tipo();
+		if ($diffusion_domain_tipo === null) {
+			return [];
+		}
+
+		// Get all recursive children nodes under the diffusion domain tree
+		// This retrieves the entire diffusion ontology structure from root
+		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
+			$diffusion_domain_tipo		
+		);
+		
+		// Initialize result array to collect matching source elements
+		$source_elements = [];
+		
+		// Iterate through each diffusion node to find those targeting our section
+		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
+			
+			// Resolve which section_tipo this diffusion node is related to
+			// Uses ontology relation system to find 'related' sections
+			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
+				$diffusion_tipo,		// The diffusion node to check relations from
+				'section',			// The target model type to find
+				'related',			// The relation type to match
+				true				// Recursive search
+			);
+			
+			// Check each related section for a match with requested section_tipo
+			foreach ($ar_sections as $current_section_tipo) {
+
+				// Skip if this diffusion node targets a different section
+				if($current_section_tipo !== $section_tipo) {
+					continue;
+				}
+
+				// PARENTS RESOLUTION
+				// Build ascending chain from section up to diffusion_domain
+				// This shows the hierarchy of diffusion containers
+				$parents = [];
+				$current_tipo = $diffusion_tipo;
+				
+				// Traverse upward through parent nodes
+				while(true) {
+					// Get the parent node instance and its tipo
+					$parent_node = ontology_node::get_instance($current_tipo);
+					$parent_tipo = $parent_node->get_parent();
+					
+					// Stop if no parent exists (reached ontology root)
+					if($parent_tipo === null) {
+						break;
+					}
+					
+					// Get the model name for this parent
+					$parent_model = ontology_node::get_model_by_tipo($parent_tipo);
+					
+					// Stop if model cannot be determined
+					if(empty($parent_model)) {
+						break;
+					}
+				
+					// Build the parent item with basic ontology info
+					$parent_item = (object)[
+						'tipo' => $parent_tipo,
+						'model' => $parent_model,
+						'label' => ontology_node::get_term_by_tipo($parent_tipo)
+					];
+
+					// Special handling for diffusion_element nodes
+					// Extract the diffusion type (e.g., 'sql', 'xml') from properties
+					if($parent_model === 'diffusion_element') {
+						$diffusion_element_instance = ontology_node::get_instance($parent_tipo);
+						$diffusion_element_properties = $diffusion_element_instance->get_properties();
+						
+						// Extract diffusion type from properties JSON
+						$type = $diffusion_element_properties->diffusion->type ?? null;
+						
+						// Log error and mark if diffusion type is missing
+						if(!$type) {
+							debug_log(__METHOD__
+								. " Missing diffusion type in properties for diffusion element: " . $parent_tipo 
+								, logger::ERROR
+							);
+							$type = 'unknown';
+							$parent_item->error = true;
+						}
+						$parent_item->type = $type;
+					}
+
+					// Add this parent to the chain
+					$parents[] = $parent_item;
+
+					// Stop when we reach diffusion_domain (top of diffusion hierarchy)
+					if($parent_model === 'diffusion_domain') {
+						break;
+					}
+
+					// Move up to the parent for next iteration
+					$current_tipo = $parent_tipo;
+				}
+
+				// CHILDREN RESOLUTION
+				// Build descending tree of all nodes under this section
+				// This shows components and their ontology relations
+				$children = [];
+				
+				// Get all recursive children of the section
+				$children_nodes = ontology_node::get_ar_recursive_children($diffusion_tipo);
+				
+				// Process each child node
+				foreach ($children_nodes as $child_tipo) {
+					// Get child node instance and basic properties
+					$child_node 	= ontology_node::get_instance($child_tipo);
+					$child_model 	= $child_node->get_model();
+					$child_label 	= $child_node->get_term($child_tipo);
+					
+					// Get the first relation tipo (if any exists)
+					$relation_tipo 	= $child_node->get_relation_tipos()[0] ?? null;						
+					
+					// Initialize relation info as null
+					$relation_model = null;
+					$relation_label = null;
+					
+					// Resolve relation model and label if relation exists
+					if ($relation_tipo !== null) {
+						$relation_model = ontology_node::get_model_by_tipo($relation_tipo);
+						$relation_label = ontology_node::get_term_by_tipo($relation_tipo);
+					}						
+
+					// Build child object with ontology info and relation data
+					$children[] = (object)[
+						'tipo' 			=> $child_tipo,
+						'model' 		=> $child_model,
+						'label' 		=> $child_label,
+						'related_tipo' 	=> $relation_tipo,
+						'related_model' => $relation_model,
+						'related_label' => $relation_label
+					];
+				}
+
+				// Build final source element object combining all resolved data
+				$source_elements[] = (object)[
+					'tipo' 		=> $diffusion_tipo,
+					'model' 	=> ontology_node::get_model_by_tipo($diffusion_tipo),
+					'label' 	=> ontology_node::get_term_by_tipo($diffusion_tipo),
+					'parents' 	=> $parents,
+					'children' 	=> $children
+				];
+			}//foreach ($ar_sections as $current_section_tipo)
+		}//foreach ($ar_diffusion_nodes as $diffusion_tipo)
+	
+		return $source_elements;
+	}//end get_section_diffusion_nodes
 
 
 
+	/**
+	* GET_RESOLVE_LEVELS
+	* Get resolve levels value form config file or from session if defined
+	* @return int $resolve_levels
+	*/
+	public static function get_resolve_levels() : int {
+
+		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
+			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
+			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+
+		return $resolve_levels;
+	}//end get_resolve_levels
 
 
 
+	/**
+	 * Get diffusion domain tipo
+	 * @return string|null The diffusion domain tipo or null if not found
+	 */	
+	public static function get_diffusion_domain_tipo() : ?string {
 
+		$diffusion_domain_tipos = ontology_node::get_ar_tipo_by_model_and_relation(
+			DEDALO_DIFFUSION_TIPO,
+			'diffusion_domain', // string model_name=
+			'children' // string relation_type=
+		);
 
+		foreach ($diffusion_domain_tipos as $diffusion_domain_tipo) {
+			$term = ontology_node::get_term_by_tipo($diffusion_domain_tipo);
+			if ($term===DEDALO_DIFFUSION_DOMAIN) {
+				return $diffusion_domain_tipo;
+			}
+		}
+
+		return null;
+	}//end get_diffusion_domain_tipo
 
 
 
@@ -221,10 +449,10 @@ class diffusion_utils {
 				continue;
 			}
 
-			$current_class_name = $obj_value->class_name ?? null;
-			if (empty($current_class_name)) {
+			$current_type = $obj_value->type ?? null;
+			if (empty($current_type)) {
 				debug_log(__METHOD__
-					. " Ignored bad diffusion obj_value: class_name is mandatory!" . PHP_EOL
+					. " Ignored bad diffusion obj_value: type is mandatory!" . PHP_EOL
 					. ' obj_value : ' . to_string($obj_value)
 					, logger::ERROR
 				);
@@ -233,7 +461,7 @@ class diffusion_utils {
 
 			$ar_related = self::get_diffusion_sections_from_diffusion_element(
 				$current_diffusion_element_tipo,
-				$current_class_name
+				$current_type
 			);
 
 			if(in_array($section_tipo, $ar_related)) {
@@ -253,242 +481,6 @@ class diffusion_utils {
 	}//end have_section_diffusion
 
 
-	/**
-	 * GET_DIFFUSION_INFO
-	 * Collects basic tool info needed to create user options
-	 * Called on tool build by client to retrieve available diffusion targets
-	 *
-	 * This method:
-	 * - Retrieves diffusion map from ontology
-	 * - Filters excluded diffusion elements
-	 * - Validates diffusion groups and elements
-	 * - Collects table/field information for each target
-	 * - Returns configuration for UI rendering
-	 *
-	 * @param object $options Configuration object with:
-	 *   - section_tipo: string Section type identifier - REQUIRED
-	 *
-	 * @return object Response object with:
-	 *   - result: object|false Diffusion info object or false on error:
-	 *     - resolve_levels: int Number of reference resolution levels
-	 *     - skip_publication_state_check: int Whether to skip publication state check
-	 *     - diffusion_map: array Filtered diffusion map
-	 *     - ar_data: array Table and field information for each diffusion target
-	 *   - msg: string Status message
-	 *   - errors: array Error messages if any
-	 *
-	 * @throws Exception If diffusion map retrieval fails
-	 */
-	public static function get_diffusion_info(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->errors	= [];
-
-		// options
-			$section_tipo = $options->section_tipo ?? null;
-
-		// levels default from config
-			$resolve_levels = self::get_resolve_levels();
-
-		// diffusion_map
-			$diffusion_map = self::get_diffusion_map(
-				DEDALO_DIFFUSION_DOMAIN,
-				true // bool connection_status
-			);
-
-		// tool_config. Look for 'EXCLUDE_DIFFUSION_ELEMENTS' definition in the tool config (section dd996 filtered by tool name)
-			$tool_config = tool_common::get_config('tool_diffusion');
-			// EXCLUDE_DIFFUSION_ELEMENTS sample:
-			// {
-			// 	"EXCLUDE_DIFFUSION_ELEMENTS" : ["navarra97","navarra67"]
-			// }
-			$EXCLUDE_DIFFUSION_ELEMENTS = isset($tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS) && is_array($tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS)
-				? $tool_config->config->EXCLUDE_DIFFUSION_ELEMENTS
-				: null;
-			// fallback to config EXCLUDE_DIFFUSION_ELEMENTS
-			if (!$EXCLUDE_DIFFUSION_ELEMENTS) {
-				// try with Dédalo config file definition
-				$EXCLUDE_DIFFUSION_ELEMENTS = defined('EXCLUDE_DIFFUSION_ELEMENTS') && is_array(EXCLUDE_DIFFUSION_ELEMENTS)
-					? EXCLUDE_DIFFUSION_ELEMENTS
-					: null;
-			}
-
-		// safe diffusion_map
-			if (!empty($EXCLUDE_DIFFUSION_ELEMENTS)) {
-
-				$safe_diffusion_map = [];
-				$changed = false;
-				foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
-
-					$safe_diffusion_items = [];
-					foreach ($diffusion_items as $current_item) {
-						if (empty($current_item->element_tipo) || in_array($current_item->element_tipo, $EXCLUDE_DIFFUSION_ELEMENTS)) {
-							debug_log(__METHOD__
-								. " Excluded diffusion element '$current_item->element_tipo'. Included in config EXCLUDE_DIFFUSION_ELEMENTS values" . PHP_EOL
-								. ' EXCLUDE_DIFFUSION_ELEMENTS: ' . to_string($EXCLUDE_DIFFUSION_ELEMENTS)
-								, logger::WARNING
-							);
-							$changed = true;
-							continue;
-						}
-						$safe_diffusion_items[] = $current_item;
-					}
-
-					// add if not empty
-					if (!empty($safe_diffusion_items)) {
-						$safe_diffusion_map[$diffusion_group] = $safe_diffusion_items;
-					}
-				}
-				if ($changed) {
-					// replace
-					$diffusion_map = $safe_diffusion_map;
-				}
-			}
-
-		// ar_data. Get data about table and fields of current section diffusion target
-			$ar_data = [];
-			$final_diffusion_map = [];
-			foreach ($diffusion_map as $diffusion_group => $diffusion_items) {
-
-				// check diffusion_group model
-				$current_model = ontology_node::get_model_by_tipo($diffusion_group, true);
-				if ($current_model!=='diffusion_group') {
-					debug_log(__METHOD__
-						. ' Ignored non diffusion group element' . PHP_EOL
-						. ' model: ' . to_string($current_model) . PHP_EOL
-						. ' diffusion_group: ' . to_string($diffusion_group)
-						, logger::WARNING
-					);
-					continue;
-				}
-
-				// diffusion_group without children case
-				if (empty($diffusion_items) || empty($diffusion_items[0])) {
-					debug_log(__METHOD__
-						. ' Ignored empty diffusion group' . PHP_EOL
-						. ' diffusion_group: ' . to_string($diffusion_group) . PHP_EOL
-						. ' diffusion_items: ' . to_string($diffusion_items)
-						, logger::WARNING
-					);
-					continue;
-				}
-
-				// diffusion_element_tipo
-				$diffusion_element_tipo = $diffusion_items[0]->element_tipo ?? null; // like oh63 - Historia oral web
-				if (!$diffusion_element_tipo) {
-					debug_log(__METHOD__
-						. " Invalid empty element_tipo " . PHP_EOL
-						. ' diffusion_items: ' . to_string($diffusion_items)
-						, logger::ERROR
-					);
-					$response->errors[] = 'Invalid empty element_tipo';
-					continue;
-				}
-
-				// config: based on class_name and config.php definitions
-					$class_name = $diffusion_items[0]->class_name ?? null;
-					$config = null;
-					switch ($class_name) {
-						case 'diffusion_socrata':
-							// add config values
-							if (defined('SOCRATA_CONFIG') && is_array(SOCRATA_CONFIG)) {
-								$config = (object)[
-									'server'	=> SOCRATA_CONFIG['server'] ?? null,
-									'mode'		=> SOCRATA_CONFIG['mode'] ?? null
-								];
-							}
-							break;
-						default:
-							$config = null;
-							break;
-					}
-
-				// Check if current diffusion element have the current section in some item
-				// If not, skip non applicable diffusion map element (excluded from $final_diffusion_map array)
-					$ar_related = self::get_diffusion_sections_from_diffusion_element(
-						$diffusion_element_tipo,
-						$class_name
-					);
-					if(!in_array($section_tipo, $ar_related)) {
-						continue;
-					}
-
-				// section_tables_map
-					$diffusion_element_tables_map	= diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-					$section_tables_map				= $diffusion_element_tables_map->{$section_tipo} ?? (object)[
-						'database_name'	=> null,
-						'name'			=> null
-					];
-
-				// table_fields
-					if (empty($diffusion_element_tables_map)) {
-						$table_fields_info	= null;
-						$table_fields		= [];
-					}else{
-						$table_fields_info	= self::get_table_fields($diffusion_element_tipo, $section_tipo);
-						$table_fields		= array_map(function($el){
-							return $el->label;
-						}, (array)$table_fields_info);
-						// add related terms
-						foreach ($table_fields_info as $info_item) {
-							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
-							$ar_related = ontology_node::get_relation_nodes($info_item->tipo, true, true);
-							if (isset($ar_related[0])) {
-								$current_name				= ontology_node::get_term_by_tipo($ar_related[0], null, true, true);
-								$info_item->related_tipo	= $ar_related[0];
-								$info_item->related_label	= $current_name;
-								$info_item->related_model	= ontology_node::get_legacy_model_by_tipo($ar_related[0]);
-							}
-							// add model
-							$info_item->model = ontology_node::get_model_by_tipo($info_item->tipo, true);
-						}
-					}
-
-				$table_tipo = isset($section_tables_map->from_alias) && $section_tables_map->from_alias
-					? $section_tables_map->from_alias
-					: ($section_tables_map->table ?? null);
-
-				$data_item = (object)[
-					'database'				=> $section_tables_map->database_name ?? null,
-					'database_tipo'			=> $section_tables_map->database_tipo ?? null,
-					'table'					=> $section_tables_map->name,
-					'table_tipo'			=> $table_tipo,
-					'fields'				=> $table_fields,
-					'section_tables_map'	=> $section_tables_map,
-					'table_fields_info'		=> $table_fields_info,
-					'config'				=> $config
-				];
-				$ar_data[] = $data_item;
-
-				// safe_diffusion_map add
-				$final_diffusion_map[$diffusion_group] = $diffusion_items;
-			}//end foreach ($diffusion_map as $diffusion_group => $diffusion_items)
-
-		// skip_publication_state_check
-			$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check'])
-				? (int)$_SESSION['dedalo']['config']['skip_publication_state_check']
-				: 1;
-
-		// result info
-			$result = (object)[
-				'resolve_levels'				=> $resolve_levels,
-				'skip_publication_state_check'	=> $skip_publication_state_check,
-				'diffusion_map'					=> $final_diffusion_map,
-				'ar_data'						=> $ar_data
-			];
-
-		// response
-			$response->result	= $result;
-			$response->msg		= empty($response->errors)
-				? 'OK. Request done successfully'
-				: 'Warning. request done with errors';
-
-
-
-		return $response;
-	}//end get_diffusion_info
 
 
 
@@ -524,7 +516,7 @@ class diffusion_utils {
 	*	        {
 	*	            "element_tipo": "murapa3",
 	*	            "name": "Publicar en web",
-	*	            "class_name": "diffusion_mysql",
+	*	            "type": "diffusion_mysql",
 	*	            "database_name": "web_murapa",
 	*	            "database_tipo": "murapa4"
 	*	        }
@@ -612,18 +604,18 @@ class diffusion_utils {
 			foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo) {
 
 				$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
-				$properties		= $ontology_node->get_propiedades(true);
+				$properties		= $ontology_node->get_properties();
 
 				// class name. Class handler to current diffusion element (e.g. diffusion_mysql, diffusion_rdf, diffusion_xml, ..)
-				$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
+				$diffusion_type = isset($properties->diffusion->type) ? $properties->diffusion->type : null;
 
 				// name (e.g. 'Web numisdata'). Try to resolve it with DEDALO_STRUCTURE_LANG
 				$name = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, false)
 					?? '<em>'.ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG, true, true).'</em>'; // empty case
 
 				// database name
-				$with_database_classes = ['diffusion_mysql','diffusion_socrata'];
-				if (in_array($diffusion_class_name, $with_database_classes)) {
+				$types_with_database = ['sql','socrata'];
+				if (in_array($diffusion_type, $types_with_database)) {
 
 					// tipo of the real database from current diffusion element (e.g. 'web_numisdata')
 					$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
@@ -674,14 +666,14 @@ class diffusion_utils {
 						// Get db name from real database item
 						$diffusion_database_name = ontology_node::get_term_by_tipo($diffusion_database_tipo, DEDALO_STRUCTURE_LANG, true, false);
 					}
-				}//end if (in_array($diffusion_class_name, $with_database_classes))
+				}//end if (in_array($diffusion_type, $types_with_database))
 
 				// Create the diffusion map element
 				$item = new stdClass();
 					$item->element_tipo		= $diffusion_element_tipo;
 					$item->model			= ontology_node::get_model_by_tipo($diffusion_element_tipo,true);
 					$item->name				= $name;
-					$item->class_name		= $diffusion_class_name;
+					$item->type		= $diffusion_type;
 					$item->database_name	= $diffusion_database_name ?? null;
 					$item->database_tipo	= $diffusion_database_tipo ?? null;
 
@@ -708,7 +700,7 @@ class diffusion_utils {
 
 	/**
 	* GET_CONNECTION_STATUS
-	* Check the status of the connection for the given $item->class_name
+	* Check the status of the connection for the given $item->type
 	* E.g. 'diffusion_mysql' => {result: true, msg: 'Database is ready'}
 	* @param object $item
 	* @return object|null $connection_status
@@ -717,9 +709,9 @@ class diffusion_utils {
 
 		$connection_status = null;
 
-		switch ($item->class_name) {
+		switch ($item->type) {
 
-			case 'diffusion_mysql':
+			case 'sql':
 				// check connection
 				try {
 
@@ -792,7 +784,7 @@ class diffusion_utils {
 	*	    "murapa3": {
 	*	        "element_tipo": "murapa3",
 	*	        "name": "Publish to web",
-	*	        "class_name": "diffusion_mysql",
+	*	        "type": "diffusion_mysql",
 	*	        "database_name": "web_murapa",
 	*	        "database_tipo": "murapa4"
 	*	    }
@@ -817,10 +809,10 @@ class diffusion_utils {
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @param string $diffusion_element_tipo
-	* @param string $class_name
+	* @param string $type
 	* @return array $ar_diffusion_sections
 	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $type) : array {
 
 		// cache
 			// static $diffusion_sections_from_diffusion_element;
@@ -829,8 +821,9 @@ class diffusion_utils {
 			// }
 
 		try {
-
+			$class_name = 'diffusion_'.$type;
 			$file_path = DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php';
+
 			include_once $file_path;
 
 			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {
@@ -838,7 +831,7 @@ class diffusion_utils {
 			}else{
 				debug_log(__METHOD__
 					. " Ignored diffusion class without mandatory method: 'get_diffusion_sections_from_diffusion_element'." . PHP_EOL
-					. ' class_name: ' . to_string($class_name) . PHP_EOL
+					. ' type: ' . to_string($type) . PHP_EOL
 					. ' method: ' . 'get_diffusion_sections_from_diffusion_element' . PHP_EOL
 					. ' file_path: ' . $file_path
 					, logger::WARNING
@@ -850,7 +843,7 @@ class diffusion_utils {
 			debug_log(__METHOD__
 				. " Caught exception: " . $e->getMessage() . PHP_EOL
 				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
-				. ' class_name: ' . to_string($class_name)
+				. ' type: ' . to_string($type)
 				, logger::ERROR
 			);
 		}
@@ -864,19 +857,7 @@ class diffusion_utils {
 
 
 
-	/**
-	* GET_RESOLVE_LEVELS
-	* Get resolve levels value form config file or from session if defined
-	* @return int $resolve_levels
-	*/
-	public static function get_resolve_levels() : int {
 
-		$resolve_levels = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-			? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-			: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-		return $resolve_levels;
-	}//end get_resolve_levels
 
 
 

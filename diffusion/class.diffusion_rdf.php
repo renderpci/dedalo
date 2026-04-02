@@ -5,9 +5,9 @@
 * Used to publish data to RDF
 * The publication in RDF need to be defined in the ontology inside a diffusion_element
 */
-class diffusion_rdf extends diffusion {
+class diffusion_rdf {
 
-
+	protected $domain;
 	public $section_id;
 	public $rdf_wrapper;	// Array of RDF wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
 
@@ -30,7 +30,7 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function __construct( ?object $options=null ) {
 
-		parent::__construct($options);
+		$this->domain = DEDALO_DIFFUSION_DOMAIN;
 
 		// fix url
 		$this->DEDALO_EXTRAS_BASE_URL = DEDALO_ROOT_WEB . '/'. basename(dirname(DEDALO_CORE_PATH)) .'/'. basename(DEDALO_CORE_PATH) .'/'. basename(DEDALO_EXTRAS_PATH);
@@ -42,6 +42,14 @@ class diffusion_rdf extends diffusion {
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Boolean.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Date.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/DateTime.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Decimal.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HexBinary.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/HTML.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/Integer.php';
+			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal/XML.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
 			include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser/RdfXml.php';
@@ -74,6 +82,8 @@ class diffusion_rdf extends diffusion {
 			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
 			$save_file				= $options->save_file ?? true;
+			$pure					= $options->pure ?? false;
+			$skip_publication_check	= $options->skip_publication_check ?? false;
 
 		// target_section_tipo
 			$ontology_node			= ontology_node::get_instance($diffusion_element_tipo);
@@ -97,9 +107,18 @@ class diffusion_rdf extends diffusion {
 			}
 
 		// filter to publish records
-			$ar_section_id = self::get_to_publish_rows($section_tipo, $ar_section_id);
+			if ($pure === false && $skip_publication_check === false) {
+				$ar_section_id = self::get_to_publish_rows($section_tipo, $ar_section_id);
+			}
 
-		// Directory
+		// if empty ar_section_id stop
+			if (empty($ar_section_id)) {
+				$response->msg[] = "No records to publish";
+				return $response;
+			}
+
+		// Directory (skipped in pure mode: no file saving, no filesystem side effects)
+		if ($pure === false) {
 			$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma/';
 			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
@@ -114,6 +133,7 @@ class diffusion_rdf extends diffusion {
 				}
 				debug_log(__METHOD__." CREATED DIR: $folder_path  ".to_string(), logger::DEBUG);
 			}
+		}
 
 		// diffusion rdf
 			$current_date	= new DateTime();
@@ -169,7 +189,9 @@ class diffusion_rdf extends diffusion {
 			$response->msg		= array_merge($response->msg, $build_response->msg);
 
 		// saves publication data
+		if ($pure === false) {
 			diffusion::update_publication_data($section_tipo, $section_id);
+		}
 
 		// save file
 			if ($save_file===true) {
@@ -184,13 +206,13 @@ class diffusion_rdf extends diffusion {
 					$date
 				];
 
-				$file_name			= implode('_', $name_parts);
+				$file_name			= sanitize_file_name(implode('_', $name_parts));
 				$rdf_file_name		= $file_name .'.rdf';
 				$save_to_file_path	= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name;
 				$url_file			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
 				$data				= $build_response->data;
 
-				if( file_put_contents($save_to_file_path, $data) ){
+				if( file_put_contents($save_to_file_path, $data)!==false ){
 
 					debug_log(__METHOD__
 						. " Save file to " . PHP_EOL
@@ -216,6 +238,31 @@ class diffusion_rdf extends diffusion {
 
 		return $response;
 	}//end update_record
+
+
+
+	/**
+	* BUILD_RDF_XML
+	* Pure RDF/XML string generator. No file save, no publication side effects.
+	* Used by SQL field-level RDF embedding via diffusion_chain_processor.
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $diffusion_element_tipo
+	* @return string|null RDF/XML string or null on failure
+	*/
+	public static function build_rdf_xml( string $section_tipo, int $section_id, string $diffusion_element_tipo ) : ?string {
+
+		$instance = new self(null);
+		$response = $instance->update_record((object)[
+			'section_tipo'			=> $section_tipo,
+			'section_id'			=> $section_id,
+			'diffusion_element_tipo'	=> $diffusion_element_tipo,
+			'save_file'				=> false,
+			'pure'					=> true
+		]);
+
+		return $response->data ?? null;
+	}//end build_rdf_xml
 
 
 
@@ -433,7 +480,7 @@ class diffusion_rdf extends diffusion {
 						$current_locator = $data[$i];
 
 						// Check target is publicable
-							$current_is_publicable = diffusion::get_is_publicable($current_locator);
+							$current_is_publicable = diffusion_utils::get_is_publicable($current_locator);
 							if ($current_is_publicable!==true) {
 								$max_items++;
 								continue;
@@ -469,7 +516,7 @@ class diffusion_rdf extends diffusion {
 								$ddo->tipo			= $current_tipo;
 								$ddo->section_tipo	= $section_tipo;
 								$ddo->parent		= $section_tipo;
-								$ddo->value_fn		= "get_diffusion_value";
+								$ddo->fn			= "get_diffusion_data";
 
 							$ddo_map[] = $ddo;
 						}
@@ -865,16 +912,16 @@ class diffusion_rdf extends diffusion {
 		if(empty($children)) {
 
 			$id			= $ddo->id ?? null;
-			$value_fn	= $ddo->value_fn ?? 'get_diffusion_value';
+			$fn	= $ddo->fn ?? 'get_diffusion_data';
 
 			if($model_name==='relation_list') {
 
-				// diffusion_properties
-				$diffusion_properties = $ddo->diffusion_properties;
-				$element->set_diffusion_properties($diffusion_properties);
+				// // diffusion_properties
+				// $diffusion_properties = $ddo->diffusion_properties;
+				// $element->set_diffusion_properties($diffusion_properties);
 
 				// value (dato)
-				$value = $element->get_diffusion_dato();
+				$value = $element->get_diffusion_data($ddo)[0]->value;
 
 				$config_properties = $ddo->config ?? null;
 				if( $config_properties && !empty($value) ){
@@ -907,10 +954,10 @@ class diffusion_rdf extends diffusion {
 				$ar_values[] = $ddo_value;
 			}elseif($model_name === 'component_image') {
 
-				$quality		= $ddo->fn_params->quality ?? '1.5MB';
-				$test_file		= $ddo->fn_params->test_file ?? false;
-				$absolute		= $ddo->fn_params->absolute ?? false;
-				$default_add	= $ddo->fn_params->default_add ?? false;
+				$quality		= $ddo->options->quality ?? '1.5MB';
+				$test_file		= $ddo->options->test_file ?? false;
+				$absolute		= $ddo->options->absolute ?? false;
+				$default_add	= $ddo->options->default_add ?? false;
 
 				// value
 				$value = $element->get_image_url($quality, $test_file, $absolute, $default_add);
@@ -926,33 +973,33 @@ class diffusion_rdf extends diffusion {
 			}elseif(in_array($model_name, component_relation_common::get_components_with_relations())) {
 
 				// value
-				$value = $element->{$value_fn}();
+				$ddo_value = $element->{$fn}($ddo);
 
-				$ddo_value = new stdClass();
-					$ddo_value->tipo	= $ddo->tipo;
-					$ddo_value->lang	= null;
-					$ddo_value->value	= $value;
-					$ddo_value->id		= $id;
+				// $ddo_value = new stdClass();
+				// 	$ddo_value->tipo	= $ddo->tipo;
+				// 	$ddo_value->lang	= null;
+				// 	$ddo_value->value	= $value;
+				// 	$ddo_value->id		= $id;
 
 				$ar_values[] = $ddo_value;
 			}else{
 
 				$data = $element->get_data();
 				if(!empty($data)) {
-					foreach ($data as $current_lang => $value) {
-						if(!empty($value)) {
+					foreach ($data as $entry) {
+						if(!empty($entry)) {
 
-							$element->set_lang($current_lang);
+							$current_lang = $element->lang;
 							$lang_alpha2 = $current_lang===DEDALO_DATA_NOLAN
 								? lang::get_alpha2_from_code(DEDALO_DATA_LANG_DEFAULT)
 								: lang::get_alpha2_from_code($current_lang);
 
-							$value	= $element->{$value_fn}($current_lang);
+							// $value	= $element->{$fn}($current_lang);
 
 							$ddo_value = new stdClass();
 								$ddo_value->tipo	= $ddo->tipo;
 								$ddo_value->lang	= $lang_alpha2;
-								$ddo_value->value	= $value;
+								$ddo_value->value	= $entry->value;
 								$ddo_value->id		= $id;
 
 							$ar_values[] = $ddo_value;
@@ -964,7 +1011,7 @@ class diffusion_rdf extends diffusion {
 
 			// no empty($children) case
 
-			$ar_locators = $element->get_dato();
+			$ar_locators = $element->get_data() ?? [];
 			foreach ($ar_locators as $current_locator) {
 				$result	= $this->get_ddo_map_value(
 					$ddo_map,
@@ -995,42 +1042,52 @@ class diffusion_rdf extends diffusion {
 			$service_type	= $this->service_type; // setting in the diffusion_element
 
 		// query object
-			$query = '
-			{
-				"id": "base_uri",
-				"mode": "list",
-				"section_tipo": "'.$section_tipo.'",
-				"limit": 1,
-				"filter": {
-					"$and": [
-						{
-							"q": "{\"section_id\":\"'.$entity_id.'\",\"section_tipo\":\"dd1000\",\"from_component_tipo\":\"dd1016\",\"type\":\"dd151\"}",
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "'.$section_tipo.'",
-									"component_tipo": "dd1016",
-									"model": "component_select",
-									"name": "Entity"
-								}
+			$search_query_object = new stdClass();
+				$search_query_object->id = 'base_uri';
+				$search_query_object->mode = 'list';
+				$search_query_object->section_tipo = [$section_tipo];
+				$search_query_object->limit = 1;
+				$search_query_object->filter = new stdClass();
+				$search_query_object->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$entity_id,
+								'section_tipo' => 'dd1000',
+								'from_component_tipo' => 'dd1016',
+								'type' => 'dd151'
 							]
-						},
-						{
-							"q": "{\"section_id\":\"'.$service_type.'\",\"section_tipo\":\"dd1020\",\"from_component_tipo\":\"dd1037\",\"type\":\"dd151\"}",
-							"q_operator": null,
-							"path": [
-								{
-									"section_tipo": "'.$section_tipo.'",
-									"component_tipo": "dd1037",
-									"model": "component_select",
-									"name": "Name"
-								}
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1016',
+								'model' => 'component_select',
+								'name' => 'Entity'
 							]
-						}
+						]
+					],
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => (string)$service_type,
+								'section_tipo' => 'dd1020',
+								'from_component_tipo' => 'dd1037',
+								'type' => 'dd151'
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => 'dd1037',
+								'model' => 'component_select',
+								'name' => 'Name'
+							]
+						]
 					]
-				}
-			}';
-			$search_query_object = json_decode($query);
+				];
 
 
 		// search
@@ -1038,10 +1095,10 @@ class diffusion_rdf extends diffusion {
 				$search_query_object // object sqo
 			);
 			$db_result	= $search->search();
-			$dato_entity= $db_result->fetch_one() ?? null;
+			$data_entity= $db_result->fetch_one() ?? null;
 
 		// base_uri
-			if (empty($dato_entity)) {
+			if (empty($data_entity)) {
 
 				$entity_locator = null;
 				debug_log(__METHOD__
@@ -1052,8 +1109,8 @@ class diffusion_rdf extends diffusion {
 			}else{
 
 				$entity_locator = new locator();
-					$entity_locator->set_section_id($dato_entity->section_id);
-					$entity_locator->set_section_tipo($dato_entity->section_tipo);
+					$entity_locator->set_section_id($data_entity->section_id);
+					$entity_locator->set_section_tipo($data_entity->section_tipo);
 			}
 
 
@@ -1112,7 +1169,7 @@ class diffusion_rdf extends diffusion {
 					$this->entity_locator->section_tipo
 				);
 
-				$iri_object_data	= $component->get_dato();
+				$iri_object_data	= $component->get_data();
 				// $row_data		=  json_decode($row->datos);
 				// $iri_object_data	= $row_data->components->{$component_tipo};
 
@@ -1152,33 +1209,33 @@ class diffusion_rdf extends diffusion {
 						DEDALO_DATA_NOLAN,
 						$base_uri_entity->from_section_tipo
 					);
-					$dato_entity = $component->get_dato();
+					$data_entity = $component->get_data();
 
-					if (!empty($dato_entity)) {
+					if (!empty($data_entity)) {
 						// component load
 						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
 							$component_tipo,
-							$dato_entity[0]->section_id,
+							$data_entity[0]->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
 							$section_tipo
 						);
-						$dato = $component->get_dato();
+						$data = $component->get_data();
 					}
 
 				// base_uri
-					if (empty($dato)) {
+					if (empty($data)) {
 
 						$base_uri = null;
 						debug_log(__METHOD__
-							." Empty dato!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
+							." Empty data!  Nothing is found for section_id: '$section_id' - section_tipo: '$section_tipo' - component_tipo: ".to_string($component_tipo)
 							, logger::ERROR
 						);
 					}else{
 
-						$iri_object_data	= (array)$dato;
+						$iri_object_data	= (array)$data;
 						$ar_result			= array_filter((array)$iri_object_data, function($item) use($title){
 							return isset($item->title) && $item->title===$title;
 						});
@@ -1291,10 +1348,10 @@ class diffusion_rdf extends diffusion {
 					$this->entity_locator->section_tipo
 				);
 
-				$config_dato = $component->get_dato();
+				$config_data = $component->get_data_lang($lang);
 				// $row_data =  json_decode($row->datos);
 				// $iri_object_data = $row_data->components->{$component_tipo};
-				if (empty($config_dato)) {
+				if (empty($config_data)) {
 
 					$config = null;
 					debug_log(__METHOD__
@@ -1303,7 +1360,7 @@ class diffusion_rdf extends diffusion {
 					);
 				}else{
 
-					$config = !empty($config_dato->{$title}) ? $config_dato->{$title} : null;
+					$config = !empty($config_data->{$title}) ? $config_data->{$title} : null;
 
 					$ar_result = array_filter((array)$config, function($item) use($id){
 						return $item->id === $id;
@@ -1325,24 +1382,24 @@ class diffusion_rdf extends diffusion {
 						DEDALO_DATA_NOLAN,
 						$configuration_entity->from_section_tipo
 					);
-					$dato_entity = $component->get_dato();
+					$data_entity = $component->get_data();
 
-					if (!empty($dato_entity)) {
+					if (!empty($data_entity)) {
 						// component load
 						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
 							$component_tipo,
-							$dato_entity[0]->section_id,
+							$data_entity[0]->section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
 							$section_tipo
 						);
-						$config_dato = $component->get_dato();
+						$config_data = $component->get_data_lang();
 					}
 
 				// config
-					if (empty($config_dato)) {
+					if (empty($config_data)) {
 
 						$config = null;
 						debug_log(__METHOD__
@@ -1351,7 +1408,7 @@ class diffusion_rdf extends diffusion {
 						);
 					}else{
 
-						$config		= !empty($config_dato->{$title}) ? $config_dato->{$title} : null;
+						$config		= !empty($config_data->{$title}) ? $config_data->{$title} : null;
 						$ar_result	= array_filter((array)$config, function($item) use($id){
 							return $item->id === $id;
 						});
@@ -1404,45 +1461,48 @@ class diffusion_rdf extends diffusion {
 		$component_publication_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_publication'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 		$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_section_id'], $from_cache=true, $resolve_virtual=true, $recursive=true, $search_exact=true);
 
-		$q = implode(',', (array)$ar_section_id);
+		$ar_section_id = array_map('strval', array_values((array)$ar_section_id));
+		$component_publication_tipo = reset($component_publication_tipo);
+		$component_section_id_tipo = reset($component_section_id_tipo);
 
-        // query
-			$query = '
-			{
-			    "id": "numisdata4_list",
-				"select": [],
-			    "section_tipo": "['.$section_tipo.']",
-			    "limit": false,
-			    "filter": {
-			        "$and": [
-			            {
-			                "q": "'.$q.'",
-			                "q_operator": null,
-			                "path": [
-			                    {
-			                        "section_tipo": "'.$section_tipo.'",
-			                        "component_tipo": "'.reset($component_section_id_tipo).'",
-			                        "model": "component_section_id",
-			                        "name": "ID"
-			                    }
-			                ]
-			            },
-			            {
-			                "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.reset($component_publication_tipo).'\"}",
-			                "q_operator": null,
-			                "path": [
-			                    {
-			                        "section_tipo": "'.$section_tipo.'",
-			                        "component_tipo": "'.reset($component_publication_tipo).'",
-			                        "model": "component_publication",
-			                        "name": "Publish"
-			                    }
-			                ]
-			            }
-			        ]
-			    }
-			}';
-			$sqo = json_decode($query);
+		// query
+			$sqo = new stdClass();
+				$sqo->id = $section_tipo . '_list';
+				$sqo->section_tipo = [$section_tipo];
+				$sqo->limit = false;
+				$sqo->filter = new stdClass();
+				$sqo->filter->{'$and'} = [
+					(object)[
+						'q' => [
+							(object)[
+								'section_id' => '1',
+								'section_tipo' => 'dd64',
+								'from_component_tipo' => $component_publication_tipo
+							]
+						],
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_publication_tipo,
+								'model' => 'component_publication',
+								'name' => 'Publish'
+							]
+						]
+					],
+					(object)[
+						'q' => $ar_section_id,
+						'q_operator' => null,
+						'path' => [
+							(object)[
+								'section_tipo' => $section_tipo,
+								'component_tipo' => $component_section_id_tipo,
+								'model' => 'component_section_id',
+								'name' => 'ID'
+							]
+						]
+					]
+				];
 
 		// search
 			$search = search::get_instance(

@@ -1030,11 +1030,6 @@ class component_relation_common extends component_common {
 	}//end remove_parent_references
 
 
-
-
-
-
-
 	/**
 	* GET_DIFFUSION_DATA
 	* Resolve the default diffusion data

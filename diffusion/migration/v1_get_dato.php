@@ -61,7 +61,9 @@ function get_dato($model, $custom_arguments, $output, $output_options, $ddo_map)
 				];
 
 				$process = $parser_process;
-				$process->ddo_map = $ddo_map;
+				if($ddo_map){
+					$process->ddo_map = $ddo_map;
+				}
 				$process->output_sample = "2026-02-26";
 				break;
 			}

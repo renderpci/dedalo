@@ -213,4 +213,67 @@ abstract class diffusion_fn {
 
 
 
+	/**
+	 * PARSE_TAG_TO_HTML
+	 * Converts component text area data to diffusion format by parsing internal tags to HTML.
+	 *
+	 * This method processes the component's stored data and transforms any internal Dédalo tags
+	 * (such as image references) into proper HTML elements suitable for diffusion/export.
+	 *
+	 * Logic flow:
+	 * 1. Retrieves raw data from the component using `get_data()`
+	 * 2. Creates an initial empty `diffusion_data_object` as fallback (null values)
+	 * 3. If data exists:
+	 *    - Resets the diffusion_data array
+	 *    - Iterates through each data item
+	 *    - For non-empty values, uses `TR::add_tag_img_on_the_fly()` to convert tags to HTML
+	 *    - Creates a `diffusion_data_object` for each processed item with tipo, lang, value, and id
+	 * 4. Returns array of `diffusion_data_object` instances
+	 *
+	 * @param object $element_instance The element instance to process
+	 * @param object|null $ddo The diffusion data object
+	 * @param string|null $diffusion_element_tipo The diffusion element tipo
+	 * @return array Array of `diffusion_data_object` instances containing parsed HTML data
+	 * @see diffusion_data_object
+	 * @see TR::add_tag_img_on_the_fly()
+	 */
+	public static function parse_tag_to_html( object $element_instance, $ddo=null, ?string $diffusion_element_tipo=null) : array {
+
+		$data = $element_instance->get_data();
+
+		// Create initial empty diffusion_data_object as fallback
+		$diffusion_data[] = new diffusion_data_object( (object)[
+			'tipo'	=> $element_instance->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id ?? null
+		]);
+
+		// Process actual data if available
+		if(!empty($data)) {
+			$diffusion_data = [];
+			foreach ($data as $current_data) {
+				if(!empty($current_data->value)) {
+
+					// Convert internal tags (like [img] references) to HTML elements
+					$html_data = TR::add_tag_img_on_the_fly($current_data->value);
+
+					$diffusion_data_object = new diffusion_data_object( (object)[
+						'tipo'	=> $element_instance->tipo,
+						'lang'	=> $current_data->lang ?? null,
+						'value'	=> $html_data?? null,
+						'id'	=> $ddo->id ?? null
+					]);
+
+					$diffusion_data[] = $diffusion_data_object;
+				}
+			}
+		}
+
+		return $diffusion_data;		
+	}// end parse_tag_to_html
+
+
+
+
 }//end class v1_functions

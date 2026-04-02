@@ -241,6 +241,104 @@ function process_node($node, $level) {
 								return empty((array)$v5_props);
 							};
 
+							// first propiedades
+							$data_to_be_used        = $props->data_to_be_used ?? null;
+
+							//0 Resolve the target section is multiple and it's not a common thesarurs
+							// as collection calling to People and Entity
+							$ontology_node = ontology_node::get_instance($rel_info['tipo']);
+							$properties = $ontology_node->get_properties();
+							
+							$show = $properties->source->request_config[0]->show ?? null;
+							$target_ddo_map = $show->ddo_map ?? null;
+
+							if($target_ddo_map && !isset($props->process_dato) && !isset($data_to_be_used)){
+								
+								$parent_tipos = array_column($target_ddo_map, 'parent');
+								$last_items = array_filter($target_ddo_map, fn($item) => !in_array($item->tipo, $parent_tipos));
+								$section_tipos = array_unique(array_column($last_items, 'section_tipo'));
+								$count_sections = count($section_tipos);
+
+								$multiple_target_section = $count_sections > 1;
+
+								if($multiple_target_section){
+									if(!empty($show)) {
+										$deep_ddo = [
+											(object)[
+												'tipo'         => $rel_info['tipo'],
+												'section_tipo' => 'self'
+											]
+										];
+										$flip_people = false;
+										foreach ($target_ddo_map as $ddo) {
+											$new_ddo = new stdClass();
+											$model = ontology_node::get_model_by_tipo($ddo->tipo);
+											if($model === 'component_dataframe'){
+												continue;
+											}						
+											if($ddo->parent === 'self') {
+												$new_ddo->parent = $rel_info['tipo'];
+											}else{
+												$new_ddo->parent = $ddo->parent;
+											}									
+											$new_ddo->tipo = $ddo->tipo;
+
+											if($ddo->tipo === 'rsc85'){
+												$flip_people = true;
+											}
+											$deep_ddo[] = $new_ddo;
+										}
+										
+										if($flip_people){
+
+											// Find indices of rsc85 and rsc86
+											$rsc85_index = array_search('rsc85', array_column($deep_ddo, 'tipo'));
+											$rsc86_index = array_search('rsc86', array_column($deep_ddo, 'tipo'));
+
+											// If both exist, swap them
+											if ($rsc85_index !== false && $rsc86_index !== false) {
+												$temp = $deep_ddo[$rsc85_index];
+												$deep_ddo[$rsc85_index] = $deep_ddo[$rsc86_index];
+												$deep_ddo[$rsc86_index] = $temp;
+											}
+										}								
+
+										$parser_process = (object)[										
+											'parser' => [
+												(object)[
+													'fn' => 'parser_helper::merge',
+													'options' => (object)[
+														'merge' => 'string',
+														'empty_columns' => false,
+														'fields_separator' => ', '
+													]
+												]
+											],
+											"output_format" => "string"
+										];
+
+										$new_props = new stdClass();
+											$new_props->process = $parser_process;
+											$new_props->process->ddo_map = $deep_ddo;
+											$new_props->process->output_sample = 'My data, other data';
+
+										// "is_publicable" = true
+										if(isset($props->is_publicable) && $props->is_publicable === true){
+											$new_props->is_publishable = $props->is_publicable;
+										}
+
+										// "varchar" = 256
+										if(isset($props->varchar)){
+											$new_props->varchar = $props->varchar;
+										}
+										
+										echo "{$indent}- [$tipo] $model_name\n";
+										echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+										break;
+									}
+								}
+							}
+
 							// 0 emtpy propiedades
 							if($is_empty($props)) {
 
@@ -776,8 +874,6 @@ function process_node($node, $level) {
 											break;
 										}
 
-
-
 										// 2.4.6.1 "component_method" = "get_diffusion_value"
 										if($component_method_2 === "get_diffusion_value" && !isset($custom_arguments_2)){
 
@@ -795,6 +891,10 @@ function process_node($node, $level) {
 												$ddo_map2
 											);
 
+											if($model === 'component_input_text'){
+												$new_props->process->ddo_map = $ddo_map2;
+											}
+
 											// "is_publicable" = true
 											if(isset($props->is_publicable) && $props->is_publicable === true){
 												$new_props->is_publishable = $props->is_publicable;
@@ -810,6 +910,42 @@ function process_node($node, $level) {
 											break;
 											
 										}
+
+										// 2.4.7 "component_method": "get_dato",
+										if($component_method_2 === "get_dato"){
+
+											$model = ontology_node::get_legacy_model_by_tipo($target_component_tipo_2);
+
+											$new_props = new stdClass();
+											$new_props->process = get_dato(												
+												$model,
+												$custom_arguments_2,
+												$output_2,
+												$output_options_2,
+												$ddo_map2
+											);
+
+											if($model === 'component_input_text'){
+												$new_props->process->ddo_map = $ddo_map2;
+											}
+
+											// "is_publicable" = true
+											if(isset($props->is_publicable) && $props->is_publicable === true){
+												$new_props->is_publishable = $props->is_publicable;
+											}
+
+											// "varchar" = 256
+											if(isset($props->varchar)){
+												$new_props->varchar = $props->varchar;
+											}
+
+											echo "{$indent}- [$tipo] $model_name\n";
+											echo "{$indent}  [RULE APPLIED] field_enum (relation) -> mapped enum values\n";
+											break;
+
+										}
+
+
 										// 2.5 "component_method" = "get_diffusion_resolve_value" && isset($custom_arguments)
 										// second deep component
 										if($component_method_2 === "get_diffusion_resolve_value" && isset($custom_arguments_2)){
@@ -897,7 +1033,6 @@ function process_node($node, $level) {
 							}
 
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
-							$data_to_be_used        = $props->data_to_be_used ?? null;
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
 								$parser_process = [
@@ -953,21 +1088,64 @@ function process_node($node, $level) {
 										'section_tipo' => 'self'
 									]
 								];
-														
-								$related_component = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'component_','related', false);
-								$related_section = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'section','related', true);
+								
+								$ontology_node = ontology_node::get_instance($rel_info['tipo'] );
+								$properties = $ontology_node->get_properties();
 
-								if (!empty($related_section)) {
+								$show = $properties->source->request_config[0]->show ?? null;
+								if(!empty($show)) {
+									$deep_ddo = [];
+									foreach ($show->ddo_map as $ddo) {
+										$model = ontology_node::get_model_by_tipo($ddo->tipo);
+										if($model === 'component_dataframe'){
+											continue;
+										}
+										if($ddo->parent === 'self') {
+											$ddo->parent = $rel_info['tipo'];
+										}
+										$deep_ddo[] = $ddo;
+									}
+
 									$letter_ids = [];
-									foreach ($related_component as $i => $component_tipo) {
-										$letter_id = chr(ord('a') + $i);
-										$letter_ids[] = $letter_id;
-										$ddo_map[] = (object)[
-											'id' => $letter_id,
-											'tipo' => $component_tipo,
-											'parent' => $rel_info['tipo'],
-											'section_tipo' => $related_section[0]
-										]; 
+									foreach ($deep_ddo as $i => $ddo) {					
+
+										$children = array_find($deep_ddo, fn($ddo) => $ddo->parent === $ddo->tipo);
+
+										if(empty($children)) {
+
+											$letter_id = chr(ord('a') + $i);
+											$letter_ids[] = $letter_id;
+
+											$ddo_map[] = (object)[
+												'id' => $letter_id,
+												'tipo' => $ddo->tipo,
+												'parent' => $ddo->parent
+											];
+										}else{
+											$ddo_map[] = (object)[
+												'tipo' => $ddo->tipo,
+												'parent' => $ddo->parent
+											];
+
+										}
+									}
+								}else{		
+
+									$related_component = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'component_','related', false);
+									$related_section = ontology_node::get_ar_tipo_by_model_and_relation($rel_info['tipo'], 'section','related', true);
+
+									if (!empty($related_section)) {
+										$letter_ids = [];
+										foreach ($related_component as $i => $component_tipo) {
+											$letter_id = chr(ord('a') + $i);
+											$letter_ids[] = $letter_id;
+											$ddo_map[] = (object)[
+												'id' => $letter_id,
+												'tipo' => $component_tipo,
+												'parent' => $rel_info['tipo'],
+												'section_tipo' => $related_section[0]
+											]; 
+										}
 									}
 								}
 
@@ -1336,9 +1514,25 @@ function process_node($node, $level) {
 										$ddo_map
 									);
 
+									if($model === 'component_input_text'){
+										$new_props->process->ddo_map = $ddo_map;
+									}
+
 									// "is_publicable" = true
 									if(isset($props->is_publicable) && $props->is_publicable === true){
 										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									if(isset($output) && $output === 'merged'){
+										if($model === 'component_input_text'){
+											// add the merge to pipe
+											$parser_process = (object)[
+												'fn' => 'parser_helper::merge'
+											];
+											$new_props->process->parser[] = $parser_process;
+										}
+
+										$new_props->process->output_format = 'json';
 									}
 
 									// "varchar" = 256
@@ -1595,7 +1789,7 @@ function process_node($node, $level) {
 								
 								$parser_process = (object)[
 									'fn' => 'parser_helper::merge',
-									'options' => (object)[ 'separator' => $separator ],
+									'options' => (object)[ 'records_separator' => $separator ],
 									'parser' => $multiple_parsers,
 									'output_format' => 'string'
 								];
@@ -1619,6 +1813,7 @@ function process_node($node, $level) {
 								break;
 							}
 
+							$data_to_be_used = $props->data_to_be_used ?? null;
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
@@ -3032,6 +3227,275 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_related map_locator_to_term_id\n";
 								break;
 							}
+							$process_dato_arguments = $props->process_dato_arguments ?? null;
+							$component_method = $process_dato_arguments->component_method ?? null;
+							
+							// 3  "process_dato": "diffusion_sql::resolve_value" "component_method": "get_diffusion_resolve_value"
+							if($process_dato_rr === 'diffusion_sql::resolve_value'
+								&& $component_method === 'get_diffusion_resolve_value')
+							{
+
+								$custom_arguments = $process_dato_arguments->custom_arguments ?? null;
+								$output = $process_dato_arguments->output ?? null;
+								$target_component_tipo = $process_dato_arguments->target_component_tipo ?? null;
+
+								
+								$ddo_map_rr = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+								
+								$output_options_rr = new stdClass();
+								$final_method_rr = null;
+								$parent_tipo = $rel_info['tipo'];
+								$args_node = $props->process_dato_arguments;
+								$custom_parents_config = null;
+								$final_target = null;
+								$final_args = null;
+								$is_publicable_rr = $props->process_dato_arguments->is_publicable ?? null;
+								$check_general_merge = $args_node->output ?? null;
+								
+								while($args_node) {
+									$method = $args_node->component_method ?? null;
+									$target = trim($args_node->target_component_tipo ?? "");
+									
+									if($target) {
+										$ddo_map_rr[] = (object)['tipo' => $target, 'parent' => $parent_tipo];
+										$parent_tipo = $target;
+										$final_target = $target;
+									}
+									
+									if(isset($args_node->split_string_value)) {
+										$output_options_rr->records_separator = $args_node->split_string_value;
+									}
+									
+									$ca = $args_node->custom_arguments[0] ?? null;
+									if($ca && isset($ca->custom_parents)) {
+										$custom_parents_config = $ca->custom_parents;
+									}
+									
+									if($method === 'get_diffusion_dato' || $method === 'get_diffusion_value' || $method === 'get_diffusion_resolve_value') {
+										$final_method_rr = $method;
+										$final_args = $args_node;
+
+										if( $method === 'get_diffusion_resolve_value' && isset($args_node->custom_arguments)){
+											foreach($args_node->custom_arguments as $current_ca){
+												$current_component_tipo = $current_ca->process_dato_arguments->target_component_tipo ?? null;
+												$current_compnent_method = $current_ca->process_dato_arguments->component_method ?? null;
+												if(isset($current_component_tipo)){
+													$target_model = ontology_node::get_model_by_tipo($current_component_tipo);
+													if($target_model==='component_date'){
+														break;// break the for and continue with the while
+													}
+													if($current_compnent_method === 'get_diffusion_value' && !in_array($target_model, component_relation_common::get_components_with_relations())) {
+														break 2;
+													}
+												}
+											}
+										}
+																			
+									}else if($method === 'get_dato' && isset($args_node->process_dato)){
+										$final_method_rr = $args_node->process_dato ?? null;
+									}else if($method === 'get_dato' && isset($args_node->output)){
+										$final_method_rr = $method;
+										$final_args = $args_node;
+									}
+									
+									if($ca && isset($ca->process_dato_arguments)) {
+										$args_node = $ca->process_dato_arguments;
+									} else if ($ca && isset($ca->process_dato) && $ca->process_dato === 'diffusion_sql::resolve_value') {
+										$args_node = $ca->process_dato_arguments ?? null;
+									} else {
+										break;
+									}
+								}
+
+								if(empty($final_method_rr)) {
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+
+									$new_props->process->output_format = 'json';
+									$new_props->process->output_sample = ["es1_1"];
+									$new_props->process->ddo_map = $ddo_map_rr;
+									
+
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] check_box map_locator_to_term_id\n";
+									break;
+									
+								}
+								
+								if($final_method_rr === 'get_diffusion_dato') {
+									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
+										$final_target,
+										null,
+										$final_args,
+										null
+									);
+								} else if($final_method_rr === 'get_diffusion_resolve_value') {
+									$separator = $final_args->separator ?? ' ';
+									$output_v5 = $final_args->output ?? null;
+									$custom_arguments = $final_args->custom_arguments ?? [];
+									
+									$merge_option = null;
+									if ($output_v5 === 'merged') {
+										$merge_option = null;
+										$output_format = 'json';
+									} else if ($output_v5 === 'merged_group') {
+										$merge_option = 'flat';
+									} else if ($output_v5 === 'merged_unique') {
+										$merge_option = 'unique';
+									}
+									
+									$pattern_parts = [];
+									$letters = range('a', 'z');
+									
+									foreach ($custom_arguments as $index => $arg) {
+										$sub_args = $arg->process_dato_arguments ?? null;
+										if ($sub_args && isset($sub_args->target_component_tipo)) {
+											$sub_target = trim($sub_args->target_component_tipo);
+											$letter = $letters[$index] ?? 'z';
+											
+											$ddo_map_rr[] = (object)[
+												'tipo' => $sub_target,
+												'parent' => $final_target,
+												'id' => $letter
+											];
+											
+											$pattern_parts[] = '${' . $letter . '}';
+										}
+									}
+									
+									$parser_pipeline = [];
+									$parser_pipeline[] = (object)[
+										'fn' => 'parser_text::text_format',
+										'options' => (object)[
+											'pattern' => implode($separator, $pattern_parts)
+										]
+									];
+									
+									if ($merge_option !== null) {
+										$parser_pipeline[] = (object)[
+											'fn' => 'parser_helper::merge',
+											'options' => (object)[
+												'merge' => $merge_option
+											]
+										];
+										$output_format = 'json';
+									}
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_pipeline;
+									$new_props->process->ddo_map = $ddo_map_rr;
+									$new_props->process->output_format = $output_format ?? 'string';
+									$new_props->process->output_sample = ["Name Surname"];
+									
+									if(isset($props->is_publicable) && $props->is_publicable === true) {
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									break;
+								} else if($final_method_rr === 'diffusion::map_section_id_to_subtitles_url') {
+									
+									$new_props = new stdClass();
+									$new_props->process = new stdClass();;
+
+									if (!empty($ddo_map_rr)) {
+										$ddo_map_rr[count($ddo_map_rr) - 1]->fn = 'map_section_id_to_subtitles_url';
+									}
+
+									$new_props->process->ddo_map = $ddo_map_rr;
+									$new_props->process->output_sample = "/dedalo/publication/server_api/v1/subtitles/?section_id=1&lang=lg-eng";
+
+									// "is_publicable" = true
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+
+									// "varchar" = 256
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] diffusion_sql::map_section_id_to_subtitles_url\n";
+									break;
+								} else if($final_method_rr === 'get_dato'){
+									$model_rr = ontology_node::get_legacy_model_by_tipo($final_target);
+									$output = $final_args->output ?? null;
+									$output_options = $final_args->output_options ?? null;																
+									
+									$new_props = new stdClass(); $new_props->process = get_dato(										
+										$model_rr,
+										null,
+										null,
+										(empty((array)$output_options_rr) ? null : $output_options_rr),
+										$ddo_map_rr
+									);
+									if( isset($check_general_merge) 
+										&& ($check_general_merge==='merged'
+										|| $check_general_merge==='merged_group'
+										|| $check_general_merge==='merged_unique')){
+											$new_props->process->output_format = 'json';
+									}							
+								} else { // get_diffusion_value or fallback
+									$model_rr = ontology_node::get_legacy_model_by_tipo($final_target);
+									
+									// Reconstruct add_parents if found in hierarchy
+									if($custom_parents_config) {
+										$parser_options = new stdClass();
+										$parser_options->value = "term";
+										if(isset($custom_parents_config->select_model)) {
+											$parser_options->parent_typology_term_id = $custom_parents_config->select_model;
+										}
+										if(isset($custom_parents_config->slice)) {
+											$parser_options->parents_slice = $custom_parents_config->slice;
+										}
+										if(isset($custom_parents_config->parent_end_by_model)) {
+											$parser_options->parent_end_by_typology_term_id = $custom_parents_config->parent_end_by_model;
+										}
+										$output_options_rr->add_parents = $parser_options;
+									}
+
+									$output_2 = $final_args->output ?? null;									
+									
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$final_target,
+										$model_rr,
+										null,
+										$final_args,
+										$output_2,
+										null,
+										(empty((array)$output_options_rr) ? null : $output_options_rr),
+										$ddo_map_rr
+									);
+									if ($output === 'merged') {
+										$new_props->process->output_format = 'json';
+									}								
+								}
+								
+								if(isset($props->is_publicable) && $props->is_publicable === true || $is_publicable_rr === true){
+									$new_props->is_publishable = true;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] portal resolve_value nested loop -> {$final_method_rr}\n";
+								break;
+							}
 
 							break;
 						
@@ -3353,6 +3817,27 @@ function process_node($node, $level) {
 
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] componet_text_area -> diffusion_sql::build_geolocation_data_geojson\n";							
+								break;					
+							}
+
+
+							// 2 proces datao with geojson
+							$process_dato_arguments = $props->process_dato_arguments ?? null;
+							$component_method = $process_dato_arguments->component_method ?? null;
+							if($component_method && $component_method === "get_diffusion_value_with_images") {
+
+								// Specific for geojson
+								$parser_process = (object)[
+									"fn" => "parse_tag_to_html"
+								];							
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = '<p><img id="[svg-n-1-]" src="/dedalo/media/svg/web/hierarchy95_sccmk1_2.svg" ..></p>';
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] componet_text_area -> get_diffusion_value_with_images\n";							
 								break;					
 							}
 
@@ -3859,11 +4344,19 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list empty props -> get_dato (letter-id ddo_map)\n";
 								break;
 							}
-							
+
 							// 1 data_to_be_used: "custom" or "dato"
 							$data_to_be_used_rl = $props->data_to_be_used ?? ($props->process_dato_arguments->data_to_be_used ?? null);
 							if($data_to_be_used_rl && ($data_to_be_used_rl === 'custom' || $data_to_be_used_rl === 'dato' || $data_to_be_used_rl === 'filtered_values')) {
-
+								$process_dato_args = $props->process_dato_arguments ?? null;
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+								
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
 									'relation_list',
@@ -3977,8 +4470,63 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
 								break;
 							}
+
+							// 4
+							if ($process_dato_rl === 'diffusion_sql::resolve_value'
+								&& $component_method_rl === 'get_diffusion_dato'
+								&& !isset($process_dato_args->custom_arguments)) {
 							
-							// 4 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_resolve_value + custom_arguments
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+								// target_component_tipo
+								$target_component_tipo = $process_dato_args->target_component_tipo ?? null;
+								
+								$model_rl = ontology_node::get_legacy_model_by_tipo($target_component_tipo);
+								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(								
+									$model_rl,
+									null,
+									$process_dato_args,
+									null								
+								);
+
+								if($model_rl==='component_autocomplete'){
+									// add the merge to pipe
+									$parser_process = (object)[
+										'fn' => 'parser_helper::merge',
+										'options' => [
+											'merge' => 'pipe'
+										]
+									];
+									$new_props->process->parser[] = $parser_process;
+								}
+
+								// add target component to ddo_map
+								$ddo_map_relation_list[] = (object)['tipo' => $target_component_tipo, 'parent' => $rel_info['tipo']];
+	
+								$new_props->process->ddo_map = $ddo_map_relation_list;
+								$new_props->process->output_format = 'json';
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+							}
+							
+							// 5 process_dato=diffusion_sql::resolve_value + component_method=get_diffusion_resolve_value + custom_arguments
 							// Same pattern as component_portal: while-loop walks the nested chain, dispatches to the correct V1 trait
 							// $component_method_rl and $process_dato_rl already set above
 							if ($process_dato_rl === 'diffusion_sql::resolve_value'
@@ -4099,6 +4647,15 @@ function process_node($node, $level) {
 										];
 										$new_props->process->output_format = 'string';
 									}
+
+									if($model_rl==='component_select'){
+										// add the merge to pipe
+										$new_props->process->parser =  (object)[
+											'fn' => 'parser_helper::merge'
+										];
+										$new_props->process->output_format = 'json';
+									}
+
 									
 								}
 							
@@ -4116,7 +4673,62 @@ function process_node($node, $level) {
 								echo "{$indent}  [RULE APPLIED] relation_list resolve_value_deep (portal pattern) -> chain walk\n";
 								break;
 							}
+
+							// 6 "process_dato": "diffusion_sql::resolve_value" and "component_method": "get_dato"
+							if ($process_dato_rl === 'diffusion_sql::resolve_value' 
+								&& $component_method_rl === 'get_dato'
+								&& !isset($process_dato_args->custom_arguments)) {
 							
+								// apply filters onto ddo_map[0]
+								if ($filter_section_rl = $process_dato_args->filter_section ?? null) {
+									$ddo_map_relation_list[0]->section_filter = $filter_section_rl;
+								}
+								if ($filter_component_rl = $process_dato_args->filter_component ?? null) {
+									$ddo_map_relation_list[0]->component_filter = $filter_component_rl;
+								}
+
+								$target = $process_dato_args->target_component_tipo ?? null;
+								
+								$model_rl = ontology_node::get_legacy_model_by_tipo($target);
+								
+								if($model_rl === 'component_date'){
+									$output =  "split_date_range";
+								}
+							
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									$model_rl,
+									null,
+									$output ?? null,
+									$process_dato_args->process_dato_arguments->options ?? null,
+									$ddo_map_relation_list
+								);
+
+								$new_props->process->ddo_map[] = (object)[
+									'tipo' => $target,
+									'parent' => $rel_info['tipo']
+								];
+
+								$output_rl = $props->process_dato_arguments->output ?? null;
+
+								if($output_rl === 'merged'){
+									$new_props->process->output_format = 'json';
+								}
+							
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+							
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+							
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_list resolve_value+get_diffusion_value -> component_select resolution\n";
+								break;
+								break;
+							}
 
 							break;
 						}

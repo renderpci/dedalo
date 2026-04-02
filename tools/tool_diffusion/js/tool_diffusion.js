@@ -32,6 +32,7 @@ export const tool_diffusion = function () {
 	this.caller			= null
 
 	this.diffusion_info = null
+	this.bun_status     = null
 	this.skip_publication_state_check
 
 	// optional options. Custom options like XML group files
@@ -91,8 +92,11 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 	try {
 
 		// specific actions.. like fix main_element for convenience
-			self.diffusion_info = await self.get_diffusion_info()
-			self.active_processes = await self.get_active_processes()
+			;[self.diffusion_info, self.bun_status, self.active_processes] = await Promise.all([
+				self.get_diffusion_info(),
+				self.get_diffusion_status({}),
+				self.get_active_processes(),
+			])
 
 		 // fix value
 			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
@@ -142,6 +146,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
+				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
 				body : rqo
 			})
 			.then(function(response){
@@ -171,10 +176,12 @@ tool_diffusion.prototype.export = function(options) {
 	const self = this
 
 	// options
-		const diffusion_element_tipo	= options.diffusion_element_tipo
+		const item 						= options.item || null
 		const resolve_levels			= options.resolve_levels || self.resolve_levels
 
 	// sort vars
+		const diffusion_element_tipo		= options.diffusion_element_tipo ?? item?.element_tipo
+		const diffusion_tipo				= options.diffusion_tipo ?? item?.diffusion_tipo ?? null
 		const section_tipo					= self.caller.section_tipo
 		const section_id					= self.caller.section_id || null
 		const total 						= self.caller.total || null
@@ -185,8 +192,6 @@ tool_diffusion.prototype.export = function(options) {
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'diffuse')
-			source.diffusion_element_tipo 	= diffusion_element_tipo
-			source.diffusion_tipo 			= options.diffusion_tipo
 
 	// rqo
 		const rqo = {
@@ -204,7 +209,10 @@ tool_diffusion.prototype.export = function(options) {
 				skip_publication_state_check	: skip_publication_state_check,
 				additions_options				: additions_options,
 				total							: total,
-				process_id						: options.process_id
+				process_id						: options.process_id,
+				diffusion_element_tipo			: diffusion_element_tipo,
+				diffusion_tipo					: diffusion_tipo,
+				type							: item?.type || options.type
 			}
 		}
 
@@ -276,6 +284,52 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 	return true
 }//end on_close_actions
+
+
+
+/**
+* GET_DIFFUSION_STATUS
+* Get Bun engine health/stability (is Bun running, configured, PHP bridge reachable, etc.)
+* Resolved entirely by Bun - not PHP.
+* @param object options
+* @return promise
+*/
+tool_diffusion.prototype.get_diffusion_status = function(options) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'get_diffusion_status')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_diffusion_api',
+			action	: 'get_diffusion_status',
+			source	: source,
+			options : {}
+		}
+
+	// call to Bun API (same URL as get_diffusion_info)
+		return new Promise(function(resolve){
+			data_manager.request({
+				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log('-> get_diffusion_status API response:', response);
+				}
+
+				const result = response.data || response.result || {}
+
+				resolve(result)
+			})
+			.catch(function(err){
+				console.error('get_diffusion_status error:', err)
+				resolve({ result: false, msg: err.message || 'Bun unreachable' })
+			})
+		})
+}//end get_diffusion_status
 
 
 

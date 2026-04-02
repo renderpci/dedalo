@@ -292,6 +292,19 @@ class sections extends common {
 			$section = section::get_instance(
 				$section_tipo // string section_tipo
 			);
+			if ($section===false) {
+				$msg = "[1] Error: Unable to get section instance for tipo: $section_tipo";
+				$response->errors[] = 'unable to get section instance';
+				$response->msg .= $msg;
+				debug_log(__METHOD__
+					." $response->msg " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' section_id: ' . to_string($section_id) . PHP_EOL
+					.' delete options: '.to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
 			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
 			// debug
 			debug_log(__METHOD__
