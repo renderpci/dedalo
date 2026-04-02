@@ -1,0 +1,11 @@
+{
+    "_comment": "This is a placeholder baseline. Run 'php tools/signature_tracker/signature-check.php --create-baseline' in a working Dédalo environment to generate the actual baseline from current code.",
+    "created_at": "2026-04-02",
+    "version": "v7_developer",
+    "classes": {},
+    "_instructions": {
+        "how_to_create": "Run the CLI tool in an environment with Dédalo configured:",
+        "command": "cd /path/to/dedalo && php tools/signature_tracker/signature-check.php --create-baseline",
+        "ci_usage": "Add to GitHub Actions workflow to fail on breaking changes"
+    }
+}
