@@ -797,6 +797,9 @@ class v6_to_v7 {
 			, logger::WARNING
 		);
 
+		// $_ENV['DEDALO_UPDATING'] avoid verbose logs during update
+		$_ENV['DEDALO_UPDATING'] = true;
+
 		// Pre-fetch value type map once
 		$value_type_map = v6_to_v7::get_value_type_map();
 
@@ -864,8 +867,37 @@ class v6_to_v7 {
 					return;
 				}
 
+				// data types: section / component
+				$is_section = $safe_tipo === $section_tipo;
+
+				if($is_section) {
+
+					// temporal fix invalid import
+					$safe_data = $data;
+					if(isset($data->data->{'0'})) {
+						$safe_data = $data->data->{'0'};
+					}
+
+					// section case
+					$migrated_data_response = v6_to_v7::migrate_section_data(
+						$section_tipo,
+						$section_id,
+						$safe_data // Normally an array as [{"id":1."label":"xx","relations":[],..}]
+					);
+
+				}else{
+
+					// component case
+					$migrated_data_response = v6_to_v7::migrate_component_data(
+						$safe_tipo,
+						$data,
+						$lang,
+						$section_tipo,
+						$section_id
+					);
+				}
+
 				// data migrate to v7
-				$migrated_data_response = v6_to_v7::migrate_component_data($safe_tipo, $data, $lang, $section_tipo, $section_id);
 				if( $migrated_data_response->result === false ) {
 					if(!empty($migrated_data_response->errors)) {
 						$response->errors[] = "matrix_time_machine ID $id";
@@ -950,13 +982,13 @@ class v6_to_v7 {
 	 *                  'result' contains the migrated data array or false if no changes were needed.
 	 */
 	public static function migrate_component_data(
-		string $tipo,
-		mixed $raw_value, // each lang value
-		string $lang,
-		?string $section_tipo = null,
-		mixed $section_id = null,
-		int $value_key = 0
-	) : stdClass {
+			string $tipo,
+			mixed $raw_value, // each lang value
+			string $lang,
+			?string $section_tipo = null,
+			mixed $section_id = null,
+			int $value_key = 0
+		) : stdClass {
 
 		$response = new stdClass();
 		$response->errors = [];
@@ -1109,6 +1141,74 @@ class v6_to_v7 {
 
 		return $response;
 	}//end migrate_component_data
+
+
+
+	/**
+	 * MIGRATE_SECTION_DATA
+	 *
+	 * Migrates section data from v6 format to v7 format.
+	 * Handles normalization of non-array values, typology mapping, language-aware strings,
+	 * and specialized formatting for complex types (Date, Media, Geo, IRI).
+	 *
+	 * (!) It is used ONLY in TIME MACHINE transformations (matrix_time_machine table) to avoid change
+	 * the actual process_matrix_row_data method.
+	 *
+	 * @param string|null $section_tipo The section type (e.g., 'oh1').
+	 * @param mixed $section_id The section id (e.g., 123).
+	 * @param object $section_data The raw data to migrate.
+	 * @return stdClass Response object with 'errors' (array) and 'result' (array|false).
+	 *                  'result' contains the migrated data array or false if no changes were needed.
+	 */
+	public static function migrate_section_data(
+		string $section_tipo,
+		mixed $section_id,
+		array|object $section_data
+	) : object {
+
+		$response = new stdClass();
+			$response->errors = [];
+			$response->result = false;
+
+		// safe tipo. Check if the tipo is valid
+		$safe_tipo = safe_tipo($section_tipo);
+		if( empty($safe_tipo) ) {
+			$response->errors[] = "Ignored empty safe_tipo. Tipo: $section_tipo";
+			$response->result = false;
+			return $response;
+		}
+
+		// model check
+		$model = ontology_node::get_model_by_tipo($section_tipo);
+		if( empty($model) ) {
+			$response->errors[] = "Ignored empty model. Tipo: $section_tipo";
+			$response->result = false;
+			return $response;
+		}
+		if($model!=='section'){
+			$response->errors[] = "Ignored non section model ($model). Tipo: $section_tipo";
+			$response->result = false;
+			return $response;
+		}
+
+		$value_type_map = self::get_value_type_map();
+
+		$section_data_object = is_array($section_data) ? $section_data[0] : $section_data;
+
+		$result = self::process_matrix_row_data(
+			$section_data_object,
+			'matrix_time_machine',
+			$section_tipo,
+			$section_id,
+			$value_type_map,
+			$response
+		);
+
+		$response->result = $result;
+
+
+		return $response;
+	}//end migrate_section_data
 
 
 

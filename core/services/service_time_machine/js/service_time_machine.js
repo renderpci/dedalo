@@ -476,7 +476,7 @@ service_time_machine.prototype.build_request_config = function() {
 							model			: 'component_json',
 							section_tipo	: section_tipo,
 							parent			: section_tipo,
-							debug_label		: 'Component value (debug)',
+							debug_label		: 'Component raw value - Column "data" (debug)',
 							mode			: 'tm',
 							view			: 'mini'
 						}

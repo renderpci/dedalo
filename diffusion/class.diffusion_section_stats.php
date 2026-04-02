@@ -76,8 +76,9 @@ class diffusion_section_stats extends diffusion {
 		// 2 - last activity record of current user
 		// We search activity records of current user from the date of the last saved user activity stats
 			// query params
+			$who_tipo = logger_backend_activity::$_COMPONENT_WHO['tipo']; // dd543
 			$params = [
-				'{"dd543":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}' // dd543 is the who component
+				'{"'.$who_tipo.'":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}' // $who_tipo is the who component
 			];
 
 			// placehoders

@@ -567,7 +567,7 @@
 
 	// General
 
-		// section_id
+		// section_id ASC
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix',
@@ -613,7 +613,7 @@
 				'name' => 'all_matrix_section_id_idx',
 				'info' => 'Used to search by section_id ordered ascendant.'
 			];
-
+		// section_id DESC
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix',
@@ -706,7 +706,7 @@
 				'info' => 'Used to search by section_tipo ordered ascendant.'
 			];
 
-		// section_id and section_tipo
+		// section_id and section_tipo ASC
 			// $ar_index[] = (object)[
 			// 	'tables' => [
 			// 		'matrix',
@@ -752,6 +752,7 @@
 			// 	'info' => 'Used to search by section_tipo ordered ascendant.'
 			// ];
 
+		// section_tipo_section_id DESC
 			$ar_index[] = (object)[
 				'tables' => [
 					'matrix',
@@ -797,7 +798,6 @@
 				'name' => 'all_matrix_section_tipo_section_id_desc_idx',
 				'info' => 'Used to search by section_tipo ordered descendant by section_id.'
 			];
-
 
 	// String
 		// global literals
@@ -1713,7 +1713,7 @@
 					(DATE("timestamp"));
 				',
 				'drop' => '
-					DROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intencional remove legacy index
+					DROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intentional remove legacy index
 					DROP INDEX IF EXISTS {$table}_timestamp_date_idx;
 				',
 				'sample' => '

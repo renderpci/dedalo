@@ -411,19 +411,55 @@ export const build_form = function(widget_object) {
 				? 'mandatory'
 				: ''
 
-			const input_node = ui.create_dom_element({
-				element_type	: 'input',
-				type			: input.type,
-				name			: input.name,
-				placeholder		: input.label,
-				title			: input.label,
-				class_name		: class_name,
-				parent			: form_container
-			})
-			if (input.value) {
-				input_node.value = input.value
+			let input_node
+
+			// select type
+			if (input.type === 'select') {
+				input_node = ui.create_dom_element({
+					element_type	: 'select',
+					name			: input.name,
+					title			: input.label,
+					class_name		: class_name,
+					parent			: form_container
+				})
+				// add placeholder option
+				ui.create_dom_element({
+					element_type	: 'option',
+					value			: '',
+					text_content	: input.label || 'Select...',
+					disabled		: true,
+					selected		: !input.value,
+					parent			: input_node
+				})
+				// add options
+				if (input.options && Array.isArray(input.options)) {
+					for (const option_value of input.options) {
+						ui.create_dom_element({
+							element_type	: 'option',
+							value			: option_value,
+							text_content	: option_value,
+							selected		: input.value === option_value,
+							parent			: input_node
+						})
+					}
+				}
+			}else{
+				// default input type
+				input_node = ui.create_dom_element({
+					element_type	: 'input',
+					type			: input.type,
+					name			: input.name,
+					placeholder		: input.label,
+					title			: input.label,
+					class_name		: class_name,
+					parent			: form_container
+				})
+				if (input.value) {
+					input_node.value = input.value
+				}
 			}
-			input_node.addEventListener('keyup', function(){
+
+			input_node.addEventListener('change', function(){
 				if (this.value.length>0) {
 					this.classList.remove('empty')
 				}

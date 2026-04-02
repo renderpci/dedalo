@@ -215,6 +215,9 @@ class update {
 		logger_backend_activity::$enable_log = false;
 		#tm_record::$save_tm  = false;
 
+		// $_ENV['DEDALO_UPDATING'] avoid verbose logs during update
+		$_ENV['DEDALO_UPDATING'] = true;
+
 		try {
 			// update. Select the correct update object from the file 'updates.php'
 				$update = null;
@@ -1285,7 +1288,7 @@ class update {
 					}
 
 					$i_ref++;
-					if ($i_ref >= 5000) {
+					if ($i_ref >= 10000) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)

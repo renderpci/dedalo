@@ -4225,7 +4225,7 @@ input:-moz-placeholder {
   white-space: pre;
 }
 .wrapper_component {
-  contain: layout;
+  contain: style;
   position: relative;
   margin: 0px;
   padding: 0px;
@@ -4262,7 +4262,7 @@ input:-moz-placeholder {
   overflow: hidden;
   white-space: nowrap;
   cursor: default;
-  font-weight: 300;
+  font-weight: 200;
 }
 .wrapper_component > .buttons_container {
   position: absolute;
@@ -4320,6 +4320,7 @@ input:-moz-placeholder {
   background-color: #ffffff;
 }
 .wrapper_component > .content_data {
+  contain: style;
   color: #353535;
   height: inherit;
   display: flex;
@@ -4941,8 +4942,12 @@ dd-modal .footer.distribute {
   display: inline-block;
 }
 .jse-main {
+  contain: content;
   --jse-theme-color: #999999;
   overflow: auto;
+}
+.jse-main .jse-menu {
+  padding-right: 4rem;
 }
 .json-container {
   background-color: #fcfcfc;
@@ -5098,6 +5103,7 @@ dd-modal .footer.distribute {
   display: contents;
 }
 .media_wrapper.edit.wrapper_component .media_content_value {
+  contain: content;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -6305,9 +6311,6 @@ dd-modal .footer.distribute {
     top: -0.1px;
     z-index: 4;
   }
-}
-.inspector > .label.is_pinned {
-  box-shadow: 0px 1px 3px 0px #d1d5db;
 }
 .inspector .nav_buttons {
   padding-bottom: 0.5em;
@@ -7734,6 +7737,7 @@ dd-modal .footer.distribute {
 * Included from dd_grid.less file
 */
 .wrapper_dd_grid.view_indexation {
+  contain: content;
   --icon_height: 1.05rem;
   max-height: 80vh;
   overflow: auto;
@@ -8106,7 +8110,7 @@ dd-modal .footer.distribute {
   width: calc(100% + 1px);
   min-width: 25rem;
   opacity: 0;
-  transition: opacity 0.1s ease-in-out;
+  transition: opacity 0.08s ease-in-out;
   z-index: 1;
 }
 .wrapper_service_autocomplete.search {
@@ -9680,6 +9684,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .area_maintenance > .content_data .form_container input.mandatory.empty {
   border-right: 2em solid #dc3545;
+}
+.area_maintenance > .content_data .form_container select {
+  margin-bottom: 0.5rem;
 }
 .area_maintenance > .content_data > .widget_container {
   contain: content;
@@ -11313,6 +11320,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   display: none;
 }
 .section.edit > .inspector_container {
+  contain: contain;
   overflow: auto;
   height: 100%;
   width: var(--inspector_width);
@@ -11334,7 +11342,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     background-color: #e6e6e6;
   }
 }
+.section.edit > .search_container {
+  contain: contain;
+}
 .section.edit > .content_data {
+  contain: contain;
   display: flex;
   flex-wrap: wrap;
   width: 100%;
@@ -12131,6 +12143,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   }
 }
 .section_record.edit .section_group.edit > .content_data {
+  contain: style;
   display: grid;
   align-content: stretch;
 }
@@ -14042,7 +14055,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   height: var(--media_min_height);
   justify-content: center;
   max-height: var(--media_max_height);
-  min-height: var(--media_min_height);
+  min-height: calc(var(--media_min_height) + 1.5rem);
 }
 @media screen and (max-width: 960px) {
   .component_json.edit > .content_data {
@@ -16051,6 +16064,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_text_area.edit > .content_data > .content_value.editor_container .image-inline,
 .component_text_area.edit > .content_data > .content_value > .editor_container .image-inline {
+  contain: content;
   vertical-align: text-bottom;
 }
 .component_text_area.edit > .content_data > .content_value.editor_container p,

@@ -623,7 +623,7 @@ class tm_record {
 			if($source_model==='section'){
 
 				foreach ($data as $column => $components) {
-					if($column === 'data' || empty($components)){
+					if($column === 'data' || $column === 'id' || empty($components)){
 						continue;
 					}
 					// Ensure components is an array or object before iterating
