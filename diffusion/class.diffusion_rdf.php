@@ -972,8 +972,8 @@ class diffusion_rdf {
 
 				$data = $element->get_data();
 				if(!empty($data)) {
-					foreach ($data as $value) {
-						if(!empty($value)) {
+					foreach ($data as $entry) {
+						if(!empty($entry)) {
 
 							$current_lang = $element->lang;
 							$lang_alpha2 = $current_lang===DEDALO_DATA_NOLAN
@@ -985,7 +985,7 @@ class diffusion_rdf {
 							$ddo_value = new stdClass();
 								$ddo_value->tipo	= $ddo->tipo;
 								$ddo_value->lang	= $lang_alpha2;
-								$ddo_value->value	= $value;
+								$ddo_value->value	= $entry->value;
 								$ddo_value->id		= $id;
 
 							$ar_values[] = $ddo_value;
