@@ -62,21 +62,45 @@ trait search_component_date_tm {
 
 				// Handle partial dates: year-only, year-month, or full date
 				if ($shape->year && !$shape->month) {
-					// Year only search
-					$year = $dd_date->get_year();
-					$query_object->params   = ['_Q1_' => $year];
-					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_";
+					// Year - Extract way
+						// $year = $dd_date->get_year();
+						// $query_object->params   = ['_Q1_' => $year];
+						// $query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_";
+					// Year only search - SARGable: use timestamp range instead of EXTRACT. sample: (timestamp >= '2017-01-01 00:00:00' AND timestamp < '2018-01-01 00:00:00')
+						$year = $dd_date->get_year();
+						$next_year = (int)$year + 1;
+						$query_object->params   = ['_Q1_' => "$year-01-01", '_Q2_' => "$next_year-01-01"];
+						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
 				} elseif ($shape->year && $shape->month && !$shape->day) {
-					// Year and month search
-					$year  = $dd_date->get_year();
-					$month = $dd_date->get_month();
-					$query_object->params   = ['_Q1_' => $year, '_Q2_' => $month];
-					$query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_' AND EXTRACT(MONTH FROM DATE(\"timestamp\")) $ctx->operator _Q2_";
+					// Extract way
+						// $query_object->params   = ['_Q1_' => $year, '_Q2_' => $month];
+						// $query_object->sentence = "EXTRACT(YEAR FROM DATE(\"timestamp\")) $ctx->operator _Q1_' AND EXTRACT(MONTH FROM DATE(\"timestamp\")) $ctx->operator _Q2_";
+					// Year and month search - SARGable: use timestamp range instead of EXTRACT
+						$year  = $dd_date->get_year();
+						$month = $dd_date->get_month();
+						// Calculate next month for exclusive upper bound
+						if ($month == 12) {
+							$next_year = (int)$year + 1;
+							$next_month_str = "$next_year-01-01";
+						} else {
+							$next_month = (int)$month + 1;
+							$next_month_str = "$year-" . str_pad((string)$next_month, 2, '0', STR_PAD_LEFT) . "-01";
+						}
+						$month_str = str_pad((string)$month, 2, '0', STR_PAD_LEFT);
+						$query_object->params   = ['_Q1_' => "$year-$month_str-01", '_Q2_' => $next_month_str];
+						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
 				} else {
 					// Full date search (default)
-					$Q1 = $dd_date->get_dd_timestamp("Y-m-d");
-					$query_object->params   = ['_Q1_' => $Q1];
-					$query_object->sentence = "DATE(\"timestamp\") $ctx->operator _Q1_";
+						// $Q1 = $dd_date->get_dd_timestamp("Y-m-d");
+						// $query_object->params   = ['_Q1_' => $Q1];
+						// $query_object->sentence = "DATE(\"timestamp\") $ctx->operator _Q1_";
+					// Full date search (default) - SARGable: use timestamp range instead of DATE()
+						$Q1_date = $dd_date->get_dd_timestamp("Y-m-d");
+						// Calculate next day for exclusive upper bound
+						$ts = strtotime($Q1_date);
+						$next_day = date("Y-m-d", strtotime("+1 day", $ts));
+						$query_object->params   = ['_Q1_' => $Q1_date, '_Q2_' => $next_day];
+						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
 				}
 				break;
 		}
