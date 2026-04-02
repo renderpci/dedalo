@@ -258,11 +258,13 @@ class search {
 		// debug
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time,'ms');
+			$conn = DBi::_getConnection();
+			$sql_query_debug = debug_prepared_statement($sql_query, array_keys($this->params), $conn);
 			if($exec_time>SLOW_QUERY_MS) {
 				debug_log(__METHOD__
 					. " SLOW_QUERY. LOAD_SLOW_QUERY " . PHP_EOL
 					. ' exec_time: '.$exec_time .PHP_EOL
-					. ' sql_query: ' .$sql_query
+					. ' sql_query: ' .$sql_query_debug
 					, logger::WARNING
 				);
 			}
@@ -271,7 +273,7 @@ class search {
 
 			// dd_core_api::$sql_query_search. Fulfill on API request
 			if (!empty(dd_core_api::$rqo)) {
-				dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
+				dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query_debug;
 			}
 
 			// metrics
