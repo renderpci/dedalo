@@ -1,0 +1,58 @@
+{
+    "result": {
+        "__type": "boolean",
+        "__nullable": false
+    },
+    "msg": {
+        "__type": "string",
+        "__nullable": false
+    },
+    "data": {
+        "ddo_map": [
+            {
+                "id": {
+                    "__type": "string",
+                    "__nullable": false
+                },
+                "tipo": {
+                    "__type": "string",
+                    "__nullable": false
+                },
+                "parent": {
+                    "__type": "string",
+                    "__nullable": false
+                },
+                "section_tipo": {
+                    "__type": "string",
+                    "__nullable": false
+                },
+                "model": {
+                    "__type": "string",
+                    "__nullable": true
+                },
+                "label": {
+                    "__type": "string",
+                    "__nullable": true
+                },
+                "lang": {
+                    "__type": "string",
+                    "__nullable": true
+                }
+            }
+        ],
+        "process": {
+            "parser": {
+                "__type": "array",
+                "__nullable": true
+            },
+            "output_format": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "ddo_map": {
+                "__type": "array",
+                "__nullable": true
+            }
+        }
+    }
+}
