@@ -22,9 +22,9 @@ class dd_diffusion_api {
 	 *
 	 * @param object $rqo Request Query Object {
 	 *   action: "diffuse",
-	 *   source: { diffusion_tipo: "rsc..." },
+	 *   source: { ... },
 	 *   sqo: { ... },
-	 *   options: { levels: int, ... }
+	 *   options: { diffusion_tipo: "rsc...", levels: int, ... }
 	 * }
 	 * @return object Standardized JSON response
 	 */
@@ -40,8 +40,8 @@ class dd_diffusion_api {
 			$response->errors = [];
 
 		// Validate basic input
-		if (empty($rqo->source->diffusion_tipo)) {
-			$response->errors[] = 'Missing source->diffusion_tipo';
+		if (empty($rqo->options->diffusion_tipo)) {
+			$response->errors[] = 'Missing options->diffusion_tipo';
 			return $response;
 		}
 		if (empty($rqo->sqo)) {
@@ -49,11 +49,11 @@ class dd_diffusion_api {
 			return $response;
 		}
 
-		$source_tipo   = $rqo->source->diffusion_tipo;
-		$sqo_data      = $rqo->sqo;
-		$options       = $rqo->options ?? new stdClass();
+		$diffusion_tipo = $rqo->options->diffusion_tipo;
+		$sqo_data      	= $rqo->sqo;
+		$options      	= $rqo->options ?? new stdClass();
 		// deep resolution of linked secitons
-		$levels        = $options->levels ?? DEDALO_DIFFUSION_RESOLVE_LEVELS; // 2
+		$levels       	= $options->levels ?? DEDALO_DIFFUSION_RESOLVE_LEVELS; // 2
 
 		try {
 			// 0. Reset caches for this request
@@ -63,10 +63,11 @@ class dd_diffusion_api {
 			self::$datum_unresolved = [];
 
 			// 1. Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
-			$diffusion_element_tipo = diffusion_utils::get_diffusion_element($source_tipo);
+			$diffusion_element_tipo = $options->diffusion_element_tipo
+				?? diffusion_utils::get_diffusion_element($diffusion_tipo);
 
 			if ($diffusion_element_tipo === false) {
-				throw new Exception("No diffusion element related to $source_tipo");
+				throw new Exception("No diffusion element related to $diffusion_tipo");
 			}
 
 			// Set the diffusion element scope for cross-section resolution
@@ -75,9 +76,9 @@ class dd_diffusion_api {
 			}
 
 			// Resolve section related to this node
-			$main_section_tipo = diffusion_utils::get_related_section_tipo($source_tipo);
+			$main_section_tipo = diffusion_utils::get_related_section_tipo($diffusion_tipo);
 			if (!$main_section_tipo) {
-				throw new Exception("No section related to $source_tipo");
+				throw new Exception("No section related to $diffusion_tipo");
 			}
 
 			// =====================================================
@@ -88,7 +89,7 @@ class dd_diffusion_api {
 			// =====================================================
 			// BUILD MAIN (hierarchy UP to diffusion_domain)
 			// =====================================================
-			$main = self::build_main_hierarchy($source_tipo);
+			$main = self::build_main_hierarchy($diffusion_tipo);
 
 			// =====================================================
 			// BUILD DATUM (one object per section)
@@ -217,14 +218,14 @@ class dd_diffusion_api {
 	public static function get_ontology_map(object $rqo): object {
 		$response = new stdClass();
 
-		$source_tipo = $rqo->source->diffusion_tipo ?? null;
-		if (!$source_tipo) {
+		$diffusion_tipo = $rqo->options->diffusion_tipo ?? null;
+		if (!$diffusion_tipo) {
 			$response->result = false;
 			$response->errors[] = 'Missing diffusion_tipo';
 			return $response;
 		}
 
-		$ontology_node = ontology_node::get_instance($source_tipo);
+		$ontology_node = ontology_node::get_instance($diffusion_tipo);
 		$properties = $ontology_node->get_properties();
 
 		$response->result = true;
@@ -262,13 +263,13 @@ class dd_diffusion_api {
 	 * BUILD_MAIN_HIERARCHY
 	 * Traverses UP from source_tipo to diffusion_domain.
 	 * Returns array of hierarchy nodes.
-	 * @param string $source_tipo
+	 * @param string $diffusion_tipo
 	 * @return array
 	 */
-	private static function build_main_hierarchy(string $source_tipo): array {
+	private static function build_main_hierarchy(string $diffusion_tipo): array {
 
 		$main = [];
-		$current_tipo = $source_tipo;
+		$current_tipo = $diffusion_tipo;
 		$hierarchy = [];
 
 		// Traverse up the hierarchy
@@ -318,20 +319,20 @@ class dd_diffusion_api {
 	 * PROCESS_DATUM
 	 * Resolves data for each record in db_result according to source_tipo config.
 	 *
-	 * @param string $source_tipo
+	 * @param string $diffusion_tipo
 	 * @param iterable $iterable_data
 	 * @param int $levels
 	 * @return diffusion_datum
 	 */
-	private static function process_datum(string $source_tipo, $iterable_data, int $levels, object $options): diffusion_datum {
+	private static function process_datum(string $diffusion_tipo, $iterable_data, int $levels, object $options): diffusion_datum {
 
-		$source_node = ontology_node::get_instance($source_tipo);
+		$source_node = ontology_node::get_instance($diffusion_tipo);
 		if (!$source_node) {
-			throw new Exception("Ontology node not found for tipo: $source_tipo");
+			throw new Exception("Ontology node not found for tipo: $diffusion_tipo");
 		}
 
 		$parent = $source_node->get_parent();
-		$main_section_tipo = diffusion_utils::get_related_section_tipo($source_tipo);
+		$main_section_tipo = diffusion_utils::get_related_section_tipo($diffusion_tipo);
 		
 		$properties = $source_node->get_properties();
 
@@ -339,12 +340,12 @@ class dd_diffusion_api {
 		$diffusion_name = $source_node->get_term(DEDALO_STRUCTURE_LANG);
 
 		// Identify all section-level diffusion nodes (children of source_tipo)
-		$ar_children = ontology_node::get_ar_children($source_tipo);
+		$ar_children = ontology_node::get_ar_children($diffusion_tipo);
 
 		if( str_contains( $diffusion_node_model, '_alias') ){
 
 			$search_model = str_replace('_alias','',$diffusion_node_model);
-			$related_tipo = ontology_node::get_ar_tipo_by_model_and_relation($source_tipo, $search_model, 'related', true)[0] ?? null;
+			$related_tipo = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_tipo, $search_model, 'related', true)[0] ?? null;
 
 			if(!empty($related_tipo)){
 				$target_node = ontology_node::get_instance($related_tipo);
@@ -373,7 +374,7 @@ class dd_diffusion_api {
 		}
 
 		$datum_object = new diffusion_datum();
-			$datum_object->set_diffusion_tipo($source_tipo);
+			$datum_object->set_diffusion_tipo($diffusion_tipo);
 			$datum_object->set_section_tipo($main_section_tipo);
 			$datum_object->set_term($diffusion_name);
 			$datum_object->set_model($diffusion_node_model);
