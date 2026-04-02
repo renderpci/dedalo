@@ -1,0 +1,66 @@
+{
+    "context": [
+        {
+            "tipo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "section_tipo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "model": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "mode": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "lang": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "label": {
+                "__type": "string",
+                "__nullable": true
+            },
+            "properties": {
+                "__type": "object",
+                "__nullable": true
+            },
+            "permissions": {
+                "__type": "object",
+                "__nullable": true
+            },
+            "tools": {
+                "__type": "array",
+                "__nullable": true
+            }
+        }
+    ],
+    "data": [
+        {
+            "tipo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "section_tipo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "section_id": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "value": {
+                "__type": "array",
+                "__nullable": true
+            },
+            "fallback_value": {
+                "__type": "array",
+                "__nullable": true
+            }
+        }
+    ]
+}
