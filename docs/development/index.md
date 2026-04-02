@@ -282,3 +282,15 @@ The commit enhances, adds to, revised, or otherwise changes the suite of automat
 
 For example:
 >test: Add unit tests for user authentication
+
+## Breaking Change Detection
+
+Dédalo includes an automated system to detect breaking changes in API contracts, method signatures, and data models. This helps prevent regressions when developing new features.
+
+See [breaking_change_detection.md](breaking_change_detection.md) for full documentation on:
+
+- API Contract Snapshot Testing
+- Method Signature Tracking
+- Data Model Change Detection
+- CI/CD integration
+- How to update baselines for intentional changes
