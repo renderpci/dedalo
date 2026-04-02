@@ -1,0 +1,22 @@
+parameters:
+    level: 1
+    paths:
+        - diffusion
+        - core/api
+        - shared
+    tmpDir: var/phpstan
+    scanFiles:
+        - stub.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Graph.php
+        - lib/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Format.php
+        - lib/vendor/sweetrdf/easyrdf/lib/Literal.php
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    excludePaths:
+        - */vendor/*
+        - */lib/*
+        - */acc/*
+        - */install/*
+        - */test/*
+        - diffusion/class.diffusion_socrata.php

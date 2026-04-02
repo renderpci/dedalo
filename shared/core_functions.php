@@ -307,12 +307,15 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 
 	// level string
 		$level_string = logger::level_to_string($level);
+		$bt = [];
+		$bt_first = ['file' => '', 'line' => ''];
+		$bts = [];
 
 	// backtrace (WARNING, ERROR, CRITICAL)
 		if ($level < 50) {
 			// backtrace
 			$bt			= debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 1);
-			$bt_first	= $bt[0];
+			$bt_first	= $bt[0] ?? $bt_first;
 			// bactrace_sequence. Array of function names in reverse order
 			$bts = array_reverse( get_backtrace_sequence() );
 			// remove last (current function 'dump') from list
@@ -842,7 +845,7 @@ function get_last_modified_file( string $path, array $allowed_extensions, ?calla
 		$last_modified_file = null;
 
 	// Then we walk through all the files inside all folders in the base folder
-		if (!empty($directory_iterator)) foreach ($directory_iterator as $name => $object) {
+		foreach ($directory_iterator as $name => $object) {
 
 			// extension check
 				$ar_bits	= explode('.', $name);
@@ -2058,7 +2061,13 @@ function check_basic_system() : object {
 		if (!$table_exists) {
 			// Try to create it running the pre_update_version script
 			include DEDALO_CORE_PATH . '/base/update/class.update.php';
-			$pre_update_response = update::pre_update_version();
+			$pre_update_response = method_exists('update', 'pre_update_version')
+				? call_user_func(['update', 'pre_update_version'])
+				: (object)[
+					'result' => false,
+					'msg' => 'Class update or method pre_update_version is not available',
+					'errors' => ['Class update or method pre_update_version is not available'],
+				];
 			if ($pre_update_response->result===false) {
 
 				$response->result	= false;

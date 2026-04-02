@@ -1,0 +1,18 @@
+{
+    "result": {
+        "__type": "boolean",
+        "__nullable": false
+    },
+    "msg": {
+        "__type": "string",
+        "__nullable": false
+    },
+    "validation_errors": {
+        "__type": "array",
+        "__nullable": true
+    },
+    "warnings": {
+        "__type": "array",
+        "__nullable": true
+    }
+}

@@ -19,6 +19,11 @@
             <directory>api</directory>
         </testsuite>
 
+        <testsuite name="contract">
+            <directory>contract</directory>
+            <exclude>contract/snapshots</exclude>
+        </testsuite>
+
         <testsuite name="area">
             <directory>area</directory>
         </testsuite>

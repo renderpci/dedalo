@@ -598,6 +598,7 @@ class diffusion_mysql extends diffusion_sql  {
 	* @return object $response
 	*/
 	public static function save_record( object $request_options ) : object {
+		$start_time = 0;
 		if(SHOW_DEBUG===true) {
 			$start_time=start_time();
 		}
@@ -649,6 +650,9 @@ class diffusion_mysql extends diffusion_sql  {
 					#		$ts_options->table_name = $table_name;
 					#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
 					#}else{
+						if (empty($diffusion_element_tipo)) {
+							throw new Exception('Error Processing Request. diffusion_element_tipo is required', 1);
+						}
 
 						$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 
@@ -987,6 +991,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 		$i=0;
 		while ( $rows = $result->fetch_assoc() ) {
+			$ar_portal = null;
 
 			foreach($sql_options->ar_fields as $current_field) {
 
@@ -1272,11 +1277,13 @@ class diffusion_mysql extends diffusion_sql  {
 	* @param string $db_name
 	* @return object response
 	*/
-	public static function backup_database(string $db_name) : object {
+	public static function backup_database( string $db_name ) : object {
+
+		$start_time = start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+			$response->msg		= [];
 
 		// target_file
 			$folder_path = DEDALO_BACKUP_PATH . '/mysql';

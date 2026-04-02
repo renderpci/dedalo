@@ -13,6 +13,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 // Performance monitoring initialization
 // Load configuration and monitor class before any heavy processing
+$perf_monitor = null;
 if (file_exists(__DIR__ . '/performance/performance_config.php')) {
 	include_once __DIR__ . '/performance/performance_config.php';
 	include_once __DIR__ . '/performance/performance_monitor.php';

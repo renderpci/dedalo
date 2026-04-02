@@ -36,7 +36,11 @@ final class dd_utils_api {
 			// run pre_update_version
 			try {
 				require_once DEDALO_CORE_PATH .'/base/upgrade/class.v6_to_v7.php';
-				$pre_update_response = v6_to_v7::pre_update();
+				$pre_update_response = method_exists('v6_to_v7', 'pre_update')
+					? call_user_func(['v6_to_v7', 'pre_update'])
+					: (object)[
+						'result' => false,
+					];
 				if ($pre_update_response->result === false) {
 					debug_log(__METHOD__
 						. " Error on v6_to_v7 pre_update" . PHP_EOL
@@ -157,45 +161,11 @@ final class dd_utils_api {
 			$response->result 	= false;
 			$response->msg 		= 'Error. Request failed';
 
-		// Returns a file size limit in bytes based on the PHP upload_max_filesize
-		// and post_max_size
-		function file_upload_max_size() {
-		  static $max_size = -1;
-
-		  if ($max_size < 0) {
-			// Start with post_max_size.
-			$post_max_size = parse_size(ini_get('post_max_size') ?: '0');
-			if ($post_max_size > 0) {
-			  $max_size = $post_max_size;
-			}
-
-			// If upload_max_size is less, then reduce. Except if upload_max_size is
-			// zero, which indicates no limit.
-			$upload_max = parse_size(ini_get('upload_max_filesize') ?: '0');
-			if ($upload_max > 0 && $upload_max < $max_size) {
-			  $max_size = $upload_max;
-			}
-		  }
-		  return $max_size;
-		}
-
-		function parse_size($size) {
-		  $unit = preg_replace('/[^bkmgtpezy]/i', '', $size); // Remove the non-unit characters from the size.
-		  $size = preg_replace('/[^0-9\.]/', '', $size); // Remove the non-numeric characters from the size.
-		  if ($unit) {
-			// Find the position of the unit in the ordered string which is the power of magnitude to multiply a kilobyte by.
-			return round( floatval($size) * pow(1024, stripos('bkmgtpezy', $unit[0])));
-		  }
-		  else {
-			return round( floatval($size) );
-		  }
-		}
-
 		$upload_tmp_dir = ini_get('upload_tmp_dir');
 
 		// system_info
 			$system_info = new stdClass();
-				$system_info->max_size_bytes				= file_upload_max_size();
+				$system_info->max_size_bytes				= self::file_upload_max_size();
 				$system_info->sys_get_temp_dir				= sys_get_temp_dir();
 				$system_info->upload_tmp_dir				= $upload_tmp_dir;
 				$system_info->upload_tmp_perms				= fileperms($upload_tmp_dir);
@@ -1842,6 +1812,8 @@ final class dd_utils_api {
 	*/
 	private static function error_number_to_text(int $f_error_number) : string {
 
+		$f_error_text = '';
+
 		if( $f_error_number===0 ) {
 						 // all is OK
 						 $f_error_text = label::get_label('file_uploaded_successfully');
@@ -1860,6 +1832,54 @@ final class dd_utils_api {
 
 		return $f_error_text;
 	}//end error_number_to_text
+
+
+
+	/**
+	* FILE_UPLOAD_MAX_SIZE
+	* Returns a file size limit in bytes based on the PHP upload_max_filesize and post_max_size.
+	* @return int
+	*/
+	private static function file_upload_max_size() : int {
+
+		static $max_size = -1;
+
+		if ($max_size < 0) {
+			// Start with post_max_size.
+			$post_max_size = self::parse_size(ini_get('post_max_size') ?: '0');
+			if ($post_max_size > 0) {
+				$max_size = $post_max_size;
+			}
+
+			// If upload_max_size is less, then reduce. Except if upload_max_size is
+			// zero, which indicates no limit.
+			$upload_max = self::parse_size(ini_get('upload_max_filesize') ?: '0');
+			if ($upload_max > 0 && $upload_max < $max_size) {
+				$max_size = $upload_max;
+			}
+		}
+
+		return $max_size;
+	}//end file_upload_max_size
+
+
+
+	/**
+	* PARSE_SIZE
+	* @param string $size
+	* @return int
+	*/
+	private static function parse_size(string $size) : int {
+
+		$unit = preg_replace('/[^bkmgtpezy]/i', '', $size); // Remove the non-unit characters from the size.
+		$size = preg_replace('/[^0-9\.]/', '', $size); // Remove the non-numeric characters from the size.
+		if ($unit) {
+			// Find the position of the unit in the ordered string which is the power of magnitude to multiply a kilobyte by.
+			return (int)round(floatval($size) * pow(1024, stripos('bkmgtpezy', $unit[0])));
+		}
+
+		return (int)round(floatval($size));
+	}//end parse_size
 
 
 
