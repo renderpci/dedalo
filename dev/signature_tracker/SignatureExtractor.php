@@ -18,8 +18,8 @@ class SignatureExtractor {
         // Core API classes
         'dd_diffusion_api',
         'dd_utils_api',
+        'dd_core_api',
         'dd_area_maintenance_api',
-        'dd_api',
 
         // Core components (base classes)
         'component_common',
@@ -135,18 +135,28 @@ class SignatureExtractor {
             return null;
         }
 
+        echo "Processing class: $class_name\n";
+
+        $interfaces = $reflection->getInterfaces();
+        echo "  Interfaces: " . count($interfaces) . "\n";
+        
+        $traits = $reflection->getTraits();
+        echo "  Traits: " . count($traits) . "\n";
+
+        $parent = $reflection->getParentClass();
+        
         return [
             'name' => $class_name,
             'file' => $reflection->getFileName(),
-            'parent' => $reflection->getParentClass()?->getName(),
-            'interfaces' => array_map(
-                fn($i) => $i->getName(),
+            'parent' => $parent === false ? null : $parent?->getName(),
+            'interfaces' => array_values(array_filter(array_map(
+                fn($i) => $i instanceof ReflectionNamedType ? $i->getName() : null,
                 $reflection->getInterfaces()
-            ),
-            'traits' => array_map(
-                fn($t) => $t->getName(),
+            ))),
+            'traits' => array_values(array_filter(array_map(
+                fn($t) => $t instanceof ReflectionNamedType ? $t->getName() : null,
                 $reflection->getTraits()
-            ),
+            ))),
             'constants' => $this->extractConstants($reflection),
             'properties' => $this->extractProperties($reflection),
             'methods' => $this->extractMethods($reflection),
@@ -191,8 +201,11 @@ class SignatureExtractor {
         $properties = [];
 
         foreach ($reflection->getProperties() as $property) {
+            echo "  Property: " . $property->getName() . "\n";
+            
             // Skip inherited private properties
-            if ($property->getDeclaringClass()->getName() !== $reflection->getName()) {
+            $declaring_class = $property->getDeclaringClass();
+            if ($declaring_class === false || $declaring_class->getName() !== $reflection->getName()) {
                 continue;
             }
 
@@ -207,7 +220,7 @@ class SignatureExtractor {
                 'type' => $type ? $this->formatType($type) : 'mixed',
                 'visibility' => $this->getVisibility($property),
                 'static' => $property->isStatic(),
-                'default_value' => null, // Could be extracted but may contain sensitive data
+                'default_value' => null,
             ];
         }
 
@@ -226,7 +239,8 @@ class SignatureExtractor {
 
         foreach ($reflection->getMethods() as $method) {
             // Skip inherited private methods
-            if ($method->getDeclaringClass()->getName() !== $reflection->getName()) {
+            $declaring_class = $method->getDeclaringClass();
+            if ($declaring_class === false || $declaring_class->getName() !== $reflection->getName()) {
                 continue;
             }
 
@@ -263,7 +277,7 @@ class SignatureExtractor {
     private function extractReturnType(ReflectionMethod $method): array {
         $type = $method->getReturnType();
 
-        if ($type === null) {
+        if ($type === null || $type === false) {
             return [
                 'type' => 'mixed',
                 'nullable' => true,
@@ -311,15 +325,27 @@ class SignatureExtractor {
      * FORMAT_TYPE
      * Format reflection type as string representation
      *
-     * @param ReflectionType $type Type to format
+     * @param ReflectionType|false $type Type to format
      * @return string Formatted type
      */
-    private function formatType(ReflectionType $type): string {
+    private function formatType(ReflectionType|false $type): string {
+        if ($type === false) {
+            return 'mixed';
+        }
+
         if ($type instanceof ReflectionUnionType) {
-            $types = array_map(
-                fn($t) => $t->getName(),
-                $type->getTypes()
-            );
+            $types = [];
+            foreach ($type->getTypes() as $t) {
+                if ($t === false) {
+                    $types[] = 'mixed';
+                } elseif ($t instanceof ReflectionNamedType) {
+                    $types[] = $t->getName();
+                } elseif ($t instanceof ReflectionType) {
+                    $types[] = $this->formatType($t);
+                } else {
+                    $types[] = 'mixed';
+                }
+            }
             return implode('|', $types);
         }
 
@@ -328,10 +354,18 @@ class SignatureExtractor {
         }
 
         if ($type instanceof ReflectionIntersectionType) {
-            $types = array_map(
-                fn($t) => $t->getName(),
-                $type->getTypes()
-            );
+            $types = [];
+            foreach ($type->getTypes() as $t) {
+                if ($t === false) {
+                    $types[] = 'mixed';
+                } elseif ($t instanceof ReflectionNamedType) {
+                    $types[] = $t->getName();
+                } elseif ($t instanceof ReflectionType) {
+                    $types[] = $this->formatType($t);
+                } else {
+                    $types[] = 'mixed';
+                }
+            }
             return implode('&', $types);
         }
 
