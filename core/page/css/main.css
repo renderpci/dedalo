@@ -4225,7 +4225,7 @@ input:-moz-placeholder {
   white-space: pre;
 }
 .wrapper_component {
-  contain: layout;
+  contain: style;
   position: relative;
   margin: 0px;
   padding: 0px;
@@ -4320,6 +4320,7 @@ input:-moz-placeholder {
   background-color: #ffffff;
 }
 .wrapper_component > .content_data {
+  contain: style;
   color: #353535;
   height: inherit;
   display: flex;
@@ -4411,7 +4412,6 @@ input:-moz-placeholder {
 .wrapper_component.edit > .content_data,
 .wrapper_component.search > .content_data,
 .wrapper_component.player > .content_data {
-  contain: layout;
   height: inherit;
   max-height: inherit;
 }
@@ -4942,8 +4942,12 @@ dd-modal .footer.distribute {
   display: inline-block;
 }
 .jse-main {
+  contain: content;
   --jse-theme-color: #999999;
   overflow: auto;
+}
+.jse-main .jse-menu {
+  padding-right: 4rem;
 }
 .json-container {
   background-color: #fcfcfc;
@@ -6307,9 +6311,6 @@ dd-modal .footer.distribute {
     top: -0.1px;
     z-index: 4;
   }
-}
-.inspector > .label.is_pinned {
-  box-shadow: 0px 1px 3px 0px #d1d5db;
 }
 .inspector .nav_buttons {
   padding-bottom: 0.5em;
@@ -8109,7 +8110,7 @@ dd-modal .footer.distribute {
   width: calc(100% + 1px);
   min-width: 25rem;
   opacity: 0;
-  transition: opacity 0.1s ease-in-out;
+  transition: opacity 0.08s ease-in-out;
   z-index: 1;
 }
 .wrapper_service_autocomplete.search {
@@ -11319,6 +11320,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   display: none;
 }
 .section.edit > .inspector_container {
+  contain: contain;
   overflow: auto;
   height: 100%;
   width: var(--inspector_width);
@@ -11340,7 +11342,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     background-color: #e6e6e6;
   }
 }
+.section.edit > .search_container {
+  contain: contain;
+}
 .section.edit > .content_data {
+  contain: contain;
   display: flex;
   flex-wrap: wrap;
   width: 100%;
@@ -14049,7 +14055,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   height: var(--media_min_height);
   justify-content: center;
   max-height: var(--media_max_height);
-  min-height: var(--media_min_height);
+  min-height: calc(var(--media_min_height) + 1.5rem);
 }
 @media screen and (max-width: 960px) {
   .component_json.edit > .content_data {
