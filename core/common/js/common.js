@@ -2169,28 +2169,40 @@ export const validate_tipo = function(tipo) {
 
 
 /**
-* GET_FALLBACK_VALUE
-* Get the fallback values when the current language version of the data is missing
-* @return array fallback_result
-* 	Values data with fallback
-*/
-export const get_fallback_value = function(value, fallback_value) {
+ * GET_FALLBACK_VALUE
+ * Get the fallback values when the current language version of the data is missing.
+ * When a value exists in entries, uses it directly. When missing, uses the fallback
+ * value wrapped in <mark> tags to indicate it's from a fallback language.
+ *
+ * @param {Array<Object|null>} entries - Current language data (array of objects with .value property or null)
+ * @param {Array<Object>} [fallback_value] - Fallback language data to use when entries are missing
+ * @returns {Array<string>} Array of values with fallback values marked when used
+ *
+ * @example
+ * // Returns ['Hello', '<mark>Hola</mark>']
+ * get_fallback_value(
+ *   [{value: 'Hello'}, null],
+ *   [{value: 'Hello'}, {value: 'Hola'}]
+ * )
+ */
+export const get_fallback_value = function(entries, fallback_value) {
 
 	const fallback_result	= []
-	const value_length		= (value.length===0)
-		? 1
-		: value.length
+	const value_length		= entries.length > 0
+		? entries.length
+		: (fallback_value?.length ?? 0)
 
 	for (let i = 0; i < value_length; i++) {
 
-		if(value[i]){
+		if( entries[i] ){
 
-			fallback_result.push(value[i].value)
+			fallback_result.push( entries[i].value )
 
 		}else{
 
-			const marked_value = (fallback_value[i] && fallback_value[i].value)
-				? '<mark>'+fallback_value[i].value+'</mark>'
+			const fv			= fallback_value?.[i]
+			const marked_value	= (fv && fv.value)
+				? '<mark>'+fv.value+'</mark>'
 				: ''
 
 			fallback_result.push(marked_value)
