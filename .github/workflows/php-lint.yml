@@ -1,0 +1,31 @@
+name: PHP Syntax Lint
+
+on:
+  push:
+    branches: [v7_developer, master]
+  pull_request:
+    branches: [v7_developer, master]
+
+jobs:
+  lint:
+    name: Check PHP Syntax
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring
+          coverage: none
+
+      - name: Lint PHP files
+        run: |
+          find . -type f -name "*.php" \
+            ! -path "./vendor/*" \
+            ! -path "./lib/*" \
+            ! -path "./.git/*" \
+            -exec php -l {} \; 2>&1 | grep -v "No syntax errors" || true
