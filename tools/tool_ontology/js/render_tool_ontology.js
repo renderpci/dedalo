@@ -83,17 +83,18 @@ const get_content_data = async function(self) {
 
 	try {
 		// Extract TLD from hierarchy data with error handling
-		const hierarchy_data = self.caller.datum?.data?.find(el =>
+		const data = self.caller.datum?.data || [];
+		const hierarchy_data = data.find(el =>
 			el.tipo === 'hierarchy6' || el.tipo === 'ontology7'
 		);
 
-		if (!hierarchy_data || !hierarchy_data.value || !hierarchy_data.value[0]) {
+		if (!hierarchy_data || !hierarchy_data.entries || !hierarchy_data.entries[0] || !hierarchy_data.entries[0].value) {
 			throw new Error('No valid hierarchy data found');
 		}
 
 		// tld from hierarchy6 - component_input_text - TLD
-		const tld			= hierarchy_data.value[0].value;
-		const section_id	= self.caller.data?.value?.[0]?.section_id;
+		const tld			= hierarchy_data.entries[0].value;
+		const section_id	= self.caller.data?.entries?.[0]?.section_id;
 
 		// Calculate info based on mode
 		const info = self.caller.mode==='edit'
@@ -169,56 +170,68 @@ const get_content_data = async function(self) {
 
 		let spinner = null;
 
-		// Reset UI state
-		// messages clean
-		[messages_container].map(el => el.classList.remove('error'))
-		// loading
-		content_data.classList.add('loading')
-		messages_container.innerHTML = ''
+		try {
+			// Reset UI state
+			// messages clean
+			[messages_container].map(el => el.classList.remove('error'))
+			// loading
+			content_data.classList.add('loading')
+			messages_container.innerHTML = ''
 
-		// Add spinner
-		spinner = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'spinner',
-			parent			: content_data.parentNode
-		})
+			// Add spinner
+			spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner',
+				parent			: content_data.parentNode
+			})
 
-		// call API
-		const api_response = await self.set_records_in_dd_ontology()
+			// call API
+			const api_response = await self.set_records_in_dd_ontology()
 
-		// user messages
-		const msg = api_response.msg
-			? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-			: 'Unknown error'
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			inner_html		: msg,
-			parent			: messages_container
-		})
+			// user messages
+			const msg = api_response.msg
+				? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
+				: 'Unknown error'
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				inner_html		: msg,
+				parent			: messages_container
+			})
 
-		// Handle errors
-		if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
+			// Handle errors
+			if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
 
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error',
+					inner_html		: api_response.errors.join('<br>'),
+					parent			: messages_container
+				});
+			}
+
+			// add error class on result false
+			if (api_response.result==false) {
+				messages_container.classList.add('error')
+			}
+
+		} catch (error) {
+			console.error('Error in click_handler:', error);
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: api_response.errors.join('<br>'),
+				inner_html		: 'Error: ' + (error.message || 'Unknown error'),
 				parent			: messages_container
 			});
-		}
-
-		// add error class on result false
-		if (api_response.result==false) {
 			messages_container.classList.add('error')
+		} finally {
+			// Clean up UI state
+			content_data.classList.remove('loading')
+			if (spinner && spinner.parentNode) {
+				spinner.remove();
+			}
+			button_generate.generating = false;
 		}
-
-		// Clean up UI state
-		content_data.classList.remove('loading')
-		if (spinner && spinner.parentNode) {
-			spinner.remove();
-		}
-		button_generate.generating = false;
 	}
 	button_generate.addEventListener('click', click_handler)
 	// focus buttons
@@ -228,7 +241,7 @@ const get_content_data = async function(self) {
 		  target.focus({ preventScroll: true });
 		  target.addEventListener('blur', () => {
 		    // Re-focus if something else tries to steal it
-		    setTimeout(() => target.focus({ preventScroll: true }), 0);
+		    setTimeout(() => target.focus({ preventScroll: true }), 1);
 		  });
 		}
 		keep_focus(button_generate);
