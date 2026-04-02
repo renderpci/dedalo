@@ -622,7 +622,7 @@ function process_node($node, $level) {
 								}
 
 								$parser_options = new stdClass();
-								if(isset($value_to_extract)){
+								if(isset($props->value_to_extract)){
 									$parser_options->value =($component_method==="get_diffusion_value") ? "term" : "term_id" ;
 								}
 								if(isset($select_model)){
@@ -1154,7 +1154,7 @@ function process_node($node, $level) {
 										(object)[
 											'fn' => 'parser_text::text_format',
 											'options' => (object)[
-												'pattern' => implode($records_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []))
+												'pattern' => implode($records_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids))
 											]
 										]
 									],
@@ -1163,7 +1163,7 @@ function process_node($node, $level) {
 
 								$new_props = new stdClass();
 									$new_props->process = $parser_process;
-									if (!empty($ddo_map)) $new_props->process->ddo_map = $ddo_map;
+									if ($ddo_map !== []) $new_props->process->ddo_map = $ddo_map;
 									$new_props->process->output_sample = "Goméz Pérez, Raspa";
 
 								// "is_publicable" = true
@@ -1404,7 +1404,7 @@ function process_node($node, $level) {
 								$parent_end_by_model = $custom_parents->parent_end_by_model ?? null;
 
 								$parser_options = new stdClass();
-								if(isset($value_to_extract)){
+								if(isset($props->value_to_extract)){
 									$parser_options->value =($component_method==="get_diffusion_value") ? "term" : "term_id" ;
 								}
 								if(isset($select_model)){
@@ -2260,7 +2260,7 @@ function process_node($node, $level) {
 									$new_props = new stdClass();
 									$new_props->process = new stdClass();;
 
-									if (!empty($ddo_map_cp)) {
+									if ($ddo_map_cp !== []) {
 										$ddo_map_cp[count($ddo_map_cp) - 1]->fn = 'map_section_id_to_subtitles_url';
 									}
 
@@ -3413,7 +3413,7 @@ function process_node($node, $level) {
 									$new_props = new stdClass();
 									$new_props->process = new stdClass();;
 
-									if (!empty($ddo_map_rr)) {
+									if ($ddo_map_rr !== []) {
 										$ddo_map_rr[count($ddo_map_rr) - 1]->fn = 'map_section_id_to_subtitles_url';
 									}
 
@@ -3545,7 +3545,6 @@ function process_node($node, $level) {
 
 								$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
 									'component_filter',
-									null,
 									null,
 									null,
 									null
@@ -4024,7 +4023,6 @@ function process_node($node, $level) {
 									null,
 									null,
 									null,
-									null,
 									null
 								);
 
@@ -4167,7 +4165,6 @@ function process_node($node, $level) {
 									null,
 									null,
 									null,
-									null,
 									null
 								);
 
@@ -4245,7 +4242,6 @@ function process_node($node, $level) {
 								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
 									$rel_info['tipo'],
 									'component_iri',
-									null,
 									null,
 									null,
 									null,
@@ -4606,7 +4602,7 @@ function process_node($node, $level) {
 									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
 										$final_target_rl, null, $final_args_rl, null
 									);
-									if (!empty($ddo_map_relation_list)) { $new_props->process->ddo_map = $ddo_map_relation_list; }
+									if ($ddo_map_relation_list !== []) { $new_props->process->ddo_map = $ddo_map_relation_list; }
 								} else { // get_diffusion_value or fallback
 									$model_rl = ontology_node::get_legacy_model_by_tipo($final_target_rl);
 									$output_rl = $final_args_rl->output ?? null;
