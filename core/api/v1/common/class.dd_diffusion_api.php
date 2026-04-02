@@ -99,7 +99,20 @@ class dd_diffusion_api {
 			$search    = search::get_instance(new search_query_object($sqo_data));
 			$db_result = $search->search();
 
-			self::process_datum($source_tipo, $db_result, $levels, $options);
+			// Detect diffusion type from diffusion_element ontology for specialized dispatch
+			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_propiedades(true);
+			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
+
+			if ($diffusion_type === 'rdf') {
+				// Build langs and main hierarchy before early RDF dispatch
+				$langs = self::build_langs();
+				$main  = self::build_main_hierarchy($diffusion_element_tipo);
+				$response = self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
+				dump($response, 'response +//////------>');
+				return $response;
+			}
+
+			self::process_datum($diffusion_tipo, $db_result, $levels, $options);
 
 			while (!empty(self::$datum_unresolved)) {
 
@@ -159,43 +172,76 @@ class dd_diffusion_api {
 
 	/**
 	 * GET_DIFFUSION_INFO
-	 * API wrapper for diffusion_utils::get_diffusion_info
+	 * Retrieves diffusion configuration information for a given section.
 	 *
-	 * @param object $rqo Request Query Object
-	 * @return object Standardized JSON response
+	 * This method serves as the entry point for obtaining diffusion metadata,
+	 * including the hierarchy of diffusion elements, nodes, and their mappings
+	 * to the specified section.
+	 *
+	 * Logic flow:
+	 * 1. Validates that `section_tipo` is provided in options
+	 * 2. Retrieves resolve levels from configuration (via `diffusion_utils`)
+	 * 3. Calls `get_section_diffusion_nodes()` to build the diffusion tree
+	 * 4. Returns a standardized response object with result status
+	 *
+	 * @param object $options {
+	 *    Required parameters:
+	 *    - string $section_tipo : The section tipo to query diffusion info for
+	 * }
+	 *
+	 * @return object {
+	 *    - bool   $result : false when error in the operation or an object with diffusion info:
+	 *    	- array  $section_diffusion_nodes : Hierarchical tree of diffusion nodes
+	 *    	- array  $resolve_levels : Configuration resolve levels
+	 *    - string $msg    : Human-readable status message
+	 *    - array  $errors : Array of error messages (empty on success)
+	 * }
+	 *
+	 * @see self::get_section_diffusion_nodes() For the actual tree construction
+	 * @see diffusion_utils::get_resolve_levels() For configuration resolve levels
 	 */
-	public static function get_diffusion_info(object $rqo): object {
+	public static function get_diffusion_info( object $rqo ) : object {
 
 		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
-		$options = $rqo->options ?? new stdClass();
+		// options
+		$section_tipo = $rqo->options->section_tipo ?? null;
 
-		// Validate required options
-		if (empty($options->section_tipo)) {
-			$response->result = false;
-			$response->msg    = 'Error. Missing section_tipo';
-			$response->errors = ['Missing section_tipo'];
+		// validate vars
+		if (empty($section_tipo)) {
+			$response->errors[] = 'Missing section_tipo.';
+			debug_log(__METHOD__
+				. " Missing required parameters" . PHP_EOL
+				. " section_tipo: " . to_string($section_tipo)
+				, logger::ERROR
+			);
 			return $response;
 		}
 
-		try {
-			// Call utils
-			$info_response = diffusion_utils::get_diffusion_info($options);
+		// levels default from config
+		$resolve_levels = diffusion_utils::get_resolve_levels();
 
-			// Map utils response to API response structure
-			$response = $info_response;
+		// get_diffusion_elements
+		$section_diffusion_nodes = diffusion_utils::get_section_diffusion_nodes($section_tipo);
 
-		} catch (Exception $e) {
-			$response->result = false;
-			$response->msg    = 'Error: ' . $e->getMessage();
-			$response->errors = [$e->getMessage()];
-			if (class_exists('logger')) {
-				debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
-			}
-		}
+		// add section_diffusion_nodes to response
+		$result = (object)[
+			'section_diffusion_nodes' => $section_diffusion_nodes,
+			'resolve_levels' => $resolve_levels
+		];
+
+		// response
+		$response->result	= $result;
+		$response->msg		= empty($response->errors) 
+			? 'Diffusion info retrieved successfully' 
+			: 'Diffusion info retrieved with errors';
+		
 
 		return $response;
-	}
+	}//end get_diffusion_info
 
 
 	/**
@@ -383,6 +429,17 @@ class dd_diffusion_api {
 
 		$publishable = $properties->is_publishable ?? null;
 
+		// Pre-detect field nodes delegating to RDF generation (diffusion.type = "rdf")
+		$rdf_field_nodes = [];
+		foreach ($combined_ddo_map as $node_tipo => $unused_ddo_map) {
+			$node_rdf_props = ontology_node::get_instance($node_tipo)->get_properties();
+			if (($node_rdf_props->diffusion->type ?? null) === 'rdf') {
+				$rdf_field_nodes[$node_tipo] = $node_rdf_props->diffusion->diffusion_element_tipo ?? null;
+			}
+		}
+		if (!empty($rdf_field_nodes)) {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_rdf.php';
+		}
 
 		$data = [];
 		// Process each record and group by section
@@ -402,6 +459,26 @@ class dd_diffusion_api {
 			$entries = new stdClass();
 
 			foreach ($combined_ddo_map as $node_tipo => $ddo_map) {
+
+				// RDF field delegation: generate RDF/XML and store as plain text value
+				if (isset($rdf_field_nodes[$node_tipo])) {
+					$rdf_element_tipo = $rdf_field_nodes[$node_tipo];
+					if ($rdf_element_tipo) {
+						$rdf_xml = diffusion_rdf::build_rdf_xml($locator->section_tipo, (int)$locator->section_id, $rdf_element_tipo);
+						if ($rdf_xml !== null) {
+							$first_ddo = reset($ddo_map);
+							$component_tipo = $first_ddo ? ($first_ddo->tipo ?? null) : null;
+							$ddo_value = new stdClass();
+								$ddo_value->tipo  = $component_tipo;
+								$ddo_value->lang  = null;
+								$ddo_value->value = $rdf_xml;
+								$ddo_value->id    = null;
+							$entries->{$node_tipo} = [$ddo_value];
+						}
+					}
+					continue;
+				}
+
 				$processor = new diffusion_chain_processor();
 
 				// Resolve the chain for this ddo_map
@@ -534,5 +611,84 @@ class dd_diffusion_api {
 		}
 
 		return $context;
+	}
+
+
+	/**
+	 * DIFFUSE_RDF
+	 * Handles direct RDF diffusion requests (diffusion_element.diffusion.type = "rdf").
+	 * Processes each search result through diffusion_rdf::update_record, saves RDF files,
+	 * and returns both saved file URLs and raw RDF/XML string in the response.
+	 *
+	 * @param string $diffusion_element_tipo
+	 * @param string $section_tipo
+	 * @param iterable $db_result
+	 * @param array $langs
+	 * @param array $main
+	 * @param object $options
+	 * @return object
+	 */
+	private static function diffuse_rdf(string $diffusion_element_tipo, string $section_tipo, $db_result, array $langs, array $main, object $options): object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg    = 'Error. RDF diffusion failed';
+			$response->errors = [];
+
+		try {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_rdf.php';
+
+			$diffusion_data = [];
+			$raw_xml_parts  = [];
+
+			foreach ($db_result as $locator) {
+
+				if (diffusion_chain_processor::is_used($locator->section_tipo, intval($locator->section_id))) {
+					continue;
+				}
+				diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
+
+				$rdf_instance = new diffusion_rdf(null);
+				$rdf_response = $rdf_instance->update_record((object)[
+					'section_tipo'			 => $locator->section_tipo,
+					'section_id'			 => $locator->section_id,
+					'diffusion_element_tipo' => $diffusion_element_tipo,
+					'save_file'				 => true,
+					'skip_publication_check'	 => $options->skip_publication_state_check ?? false
+				]);
+
+				if (!empty($rdf_response->diffusion_data)) {
+					$diffusion_data = array_merge($diffusion_data, $rdf_response->diffusion_data);
+				}
+				if (!empty($rdf_response->data)) {
+					$raw_xml_parts[] = $rdf_response->data;
+				}
+			}
+
+			// Build minimal datum for API compatibility
+			$datum = new diffusion_datum();
+				$datum->set_diffusion_tipo($diffusion_element_tipo);
+				$datum->set_section_tipo($section_tipo);
+				$datum->set_term(ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG));
+				$datum->set_model('diffusion_element');
+				$datum->set_context([]);
+				$datum->set_data([]);
+
+			$response->result        = true;
+			$response->msg           = 'OK. RDF diffusion done';
+			$response->langs         = $langs;
+			$response->main_lang     = DEDALO_DATA_LANG_DEFAULT;
+			$response->main          = $main;
+			$response->datum         = [$datum];
+			$response->diffusion_data = $diffusion_data;
+			$response->data          = implode("\n", $raw_xml_parts);
+
+		} catch (Exception $e) {
+			$response->msg    = 'Error: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+		return $response;
 	}
 }
