@@ -534,6 +534,10 @@ const server = Bun.serve({
 					const logs = get_all_processes();
 					return Response.json({ result: true, processes: logs });
 				}
+				case 'get_diffusion_info': {
+					const result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
+					return Response.json(result);
+				}
 				default:
 					return Response.json(
 						{ result: false, msg: `Unknown action: ${action}` },
