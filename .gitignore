@@ -86,6 +86,7 @@ lib/vendor/*
 composer.json
 composer.lock
 composer.phar
+/var
 
 # Ignore paths that contain generated content.
 /media

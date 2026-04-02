@@ -1,0 +1,18 @@
+parameters:
+    level: 1
+    paths:
+        - diffusion
+        - core/api
+        - shared
+    tmpDir: var/phpstan
+    scanFiles:
+        - stub.php
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    excludePaths:
+        - */vendor/*
+        - */lib/*
+        - */acc/*
+        - */install/*
+        - */test/*
+        - diffusion/class.diffusion_socrata.php
