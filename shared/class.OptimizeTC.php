@@ -496,7 +496,7 @@ abstract class OptimizeTC {
 	*/
 	public static function ms_format($time) : string {
 
-		if(isset($time)) {
+		if($time !== null) {
 			$tc = self::seg2tc($time);
 		}
 
