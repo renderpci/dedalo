@@ -33,3 +33,14 @@ jobs:
 
       - name: Run API tests
         run: vendor/bin/phpunit --testsuite "unit API"
+
+      - name: Run API contract tests
+        run: vendor/bin/phpunit --testsuite contract
+
+      - name: Check for breaking signature changes
+        run: php dev/signature_tracker/signature-check.php --check
+        continue-on-error: true
+
+      - name: Check for ontology changes
+        run: php dev/ontology_tracker/ontology-check.php --check
+        continue-on-error: true
