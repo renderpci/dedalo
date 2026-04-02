@@ -1959,10 +1959,9 @@ abstract class component_common extends common {
 					// when the section is not the observer section ($locator) or the section of the observable data ($observable_data)
 					// use the inverse relations to get all sections that call to the observable section
 					case(isset($config->use_inverse_relations) && $config->use_inverse_relations===true):
-						$section_observable = section::get_instance(
+						$section_observable = section_record::get_instance(
 							$locator->section_tipo,
-							'edit',
-							true
+							(int)$locator->section_id
 						);
 						$inverse_locators = $section_observable->get_inverse_references();
 						$ar_section = [];

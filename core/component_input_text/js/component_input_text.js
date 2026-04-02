@@ -37,6 +37,11 @@ export const component_input_text = function(){
 
 	this.duplicates		= false
 
+	// search_q_operator_default. Map of component tipos that will use default search operator
+	this.search_q_operator_default = new Map([
+		['ontology7', '=='] // Ontology TLD field
+	])
+
 	// ui
 	this.minimum_width_px = 90 // integer pixels
 

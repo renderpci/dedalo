@@ -187,3 +187,4 @@ cline_mcp_settings.json
 /docker
 /code
 diff_*.txt
+/lib/acc

@@ -138,11 +138,11 @@ trait search_component_date {
 	*/
 	protected static function dispatch_date_mode_sql(object $query_object, ?object $q_object, object $ctx) : object {
 
-		if($ctx->table === 'matrix_time_machine'){
+		if($ctx->table === 'matrix_time_machine' || $ctx->table === 'matrix_activity'){
             // Use time machine specific dispatcher from trait search_component_relation_common_tm
             return self::dispatch_date_mode_sql_tm($query_object, $q_object, $ctx);
         }
-		
+
 		switch ($ctx->date_mode) {
 			case 'date':
 			case 'range':

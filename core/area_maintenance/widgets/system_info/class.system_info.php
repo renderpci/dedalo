@@ -290,6 +290,33 @@ class system_info {
 				'value'	=> $info->getProcessStats()
 			];
 
+		// opcache info
+			$s = opcache_get_status();
+			$system_list[] = (object)[
+				'name'	=> 'opcache_hit_rate',
+				'value'	=> round($s['opcache_statistics']['opcache_hit_rate'], 2) . "%"
+			];
+			$system_list[] = (object)[
+				'name'	=> 'opcache_used_memory',
+				'value'	=> round($s['memory_usage']['used_memory'] / 1024 / 1024, 1) . " MB"
+			];
+			$system_list[] = (object)[
+				'name'	=> 'opcache_free_memory',
+				'value'	=> round($s['memory_usage']['free_memory'] / 1024 / 1024, 1) . " MB"
+			];
+			$system_list[] = (object)[
+				'name'	=> 'opcache_oom_restarts',
+				'value'	=> $s['opcache_statistics']['oom_restarts']
+			];
+			$system_list[] = (object)[
+				'name'	=> 'opcache_hits',
+				'value'	=> $s['opcache_statistics']['hits']
+			];
+			$system_list[] = (object)[
+				'name'	=> 'opcache_misses',
+				'value'	=> $s['opcache_statistics']['misses']
+			];
+
 		} catch (Exception $e) {
 			$response->errors[] = $e->getMessage();
 		}

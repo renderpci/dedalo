@@ -164,7 +164,7 @@
 
 // component common definitions
 	.wrapper_component {
-		contain: layout;
+		contain: style; // Set as 'style' to prevent service autocomplete issues
 		position: relative;
 		margin: 0px;
 		padding: 0px;
@@ -211,7 +211,7 @@
 			overflow: hidden;
 			white-space: nowrap;
 			cursor: default;
-			font-weight: 300;
+			font-weight: 200;
 		}
 
 		// buttons_container
@@ -289,6 +289,7 @@
 
 		// content_data
 		>.content_data {
+			contain: style; // Set as 'style' to prevent service autocomplete issues
 			color: @color_grey_4;
 			height: inherit;
 			display: flex;
@@ -949,10 +950,14 @@
 
 // json_editor
 	.jse-main {
-
+		contain: content;
 		--jse-theme-color: @color_grey_8;
 		// resize: vertical;
 		overflow: auto;
+
+		.jse-menu {
+			padding-right: 4rem;
+		}
 
 	}//end .jse-main
 
@@ -1161,6 +1166,7 @@
 	}
 
 	.media_content_value {
+		contain: content;
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
