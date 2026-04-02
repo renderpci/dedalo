@@ -5,7 +5,9 @@ define('DEDALO_LIB_BASE_PATH','');
 define('DEDALO_DIFFUSION_TM','');
 
 define('DEDALO_ROOT_PATH','');
+define('DEDALO_DIFFUSION_PATH','');
 define('DEDALO_HOST','');
+define('DEDALO_HOSTNAME_CONN','');
 define('DEDALO_PROTOCOL','');
 define('DEDALO_CONFIG','');
 define('DEDALO_CORE','');
@@ -113,9 +115,65 @@ define('SERVER_PROXY','');
 define('DEDALO_API_URL','');
 define('DEDALO_API_URL_UNIT_TEST','');
 define('DEDALO_IMAGE_QUALITY_DEFAULT','');
+define('DEDALO_AV_QUALITY_DEFAULT','');
 
 define('DEDALO_SECTION_PROJECTS_TIPO','');
+define('DEDALO_SECTION_USERS_TIPO','');
+define('DEDALO_SECTION_SI_NO_TIPO','');
+define('DEDALO_SERVICES_SECTION_TIPO','');
+define('DEDALO_ACTIVITY_SECTION_TIPO','');
+define('DEDALO_AREA_MAINTENANCE_TIPO','');
+define('DEDALO_SEARCH_PRESET_SECTION_TIPO','');
+define('DEDALO_TEMP_PRESET_SECTION_TIPO','');
+define('DEDALO_RELATION_TYPE_PARENT_TIPO','');
+define('DEDALO_RELATION_TYPE_INDEX_TIPO','');
+define('DEDALO_RELATION_TYPE_LINK','');
+define('DEDALO_SECTION_INFO_INVERSE_RELATIONS','');
+define('DEDALO_SECTION_RESOURCES_IMAGE_TIPO','');
+define('DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO','');
+define('DEDALO_PROJECTS_NAME_TIPO','');
+define('DEDALO_DIFFUSION_TIPO','');
+define('DEDALO_DIFFUSION_API_URL','');
 define('DEDALO_ROOT_WEB','');
+define('DEDALO_IMAGE_WEB_FOLDER','');
+define('DEDALO_DATABASE_CONN','');
+
+define('MYSQL_DEDALO_HOSTNAME_CONN','');
+define('MYSQL_DEDALO_USERNAME_CONN','');
+define('MYSQL_DEDALO_PASSWORD_CONN','');
+define('MYSQL_DEDALO_DB_PORT_CONN','');
+define('MYSQL_DEDALO_SOCKET_CONN','');
+define('MYSQL_DEDALO_DATABASE_CONN','');
+
+define('ANSI_BOLD','');
+define('ANSI_RESET','');
+define('ANSI_DARK','');
+define('ANSI_ITALIC','');
+define('ANSI_UNDERLINE','');
+define('ANSI_BLINK','');
+define('ANSI_REVERSE','');
+define('ANSI_CONCEALED','');
+define('ANSI_BLACK','');
+define('ANSI_RED','');
+define('ANSI_GREEN','');
+define('ANSI_YELLOW','');
+define('ANSI_BLUE','');
+define('ANSI_MAGENTA','');
+define('ANSI_CYAN','');
+define('ANSI_WHITE','');
+define('ANSI_BG_BLACK','');
+define('ANSI_BG_RED','');
+define('ANSI_BG_GREEN','');
+define('ANSI_BG_YELLOW','');
+define('ANSI_BG_BLUE','');
+define('ANSI_BG_MAGENTA','');
+define('ANSI_BG_CYAN','');
+define('ANSI_BG_WHITE','');
+define('ANSI_BOLD_GREEN','');
+define('ANSI_BOLD_RED','');
+
+define('DEDALO_INFORMATION','');
+define('DEDALO_INFO_KEY','');
 
 define('POSTPROCESSING_IMAGE_SCRIPT','');
 define('DEDALO_SUPERUSER','');
@@ -147,7 +205,16 @@ define('PERSISTENT_CONNECTION', false);
 
 function session_start_manager(){};
 function fix_cascade_config_var(){};
-class logger{};
+class logger{
+	public const DEBUG = 100;
+	public const INFO = 200;
+	public const NOTICE = 250;
+	public const WARNING = 300;
+	public const ERROR = 400;
+	public const CRITICAL = 500;
+	public static $obj;
+	public static function level_to_string(int $level): string { return ''; }
+};
 function custom_postprocessing_image(){};
 // function logged_user_id() : ?int {};
 function logged_user_is_developer() {};
@@ -159,16 +226,57 @@ function logger_backend_activity(){};
 function get_base_binary_path(){};
 class Linfo{};
 class system{};
-function pg_escape_string($connection = null, string $data = ''): ?string {};
-function get_called_class(){};
-class metrics{};
-function pg_fetch_assoc(){};
-function pg_fetch_object(){};
+if (!function_exists('pg_escape_string')) {
+	function pg_escape_string($connection = null, string $data = ''): ?string { return ''; }
+}
+if (!function_exists('get_called_class')) {
+	function get_called_class(){}
+}
+class metrics{
+	public static $security_permissions_total_calls;
+	public static $security_permissions_table_time;
+	public static $security_permissions_table_count;
+	public static $security_permissions_total_time;
+	public static $get_tools_total_calls;
+	public static $get_tools_total_time;
+	public static $get_tools_total_calls_cached;
+	public static $get_tool_config_total_time;
+	public static $get_tool_config_total_calls;
+	public static $presets_total_calls;
+	public static $presets_total_time;
+	public static $search_total_calls;
+	public static $search_total_time;
+	public static $ontology_total_calls;
+	public static $ontology_total_time;
+	public static $ontology_total_calls_cached;
+	public static $matrix_total_calls;
+	public static $matrix_total_time;
+	public static $exec_search_total_calls;
+	public static $exec_search_total_time;
+	public static $exec_dd_ontology_search_total_calls;
+	public static $exec_dd_ontology_search_total_time;
+	public static $structure_context_total_calls;
+	public static $structure_context_total_time;
+	public static $data_total_calls;
+	public static $data_total_time;
+	public static $section_save_total_calls;
+	public static $section_save_total_time;
+	public static $db_connection_total_calls;
+	public static $db_connection_total_time;
+	public static $db_connection_total_calls_cached;
+};
+if (!function_exists('pg_fetch_assoc')) {
+	function pg_fetch_assoc(){ return []; }
+}
+if (!function_exists('pg_fetch_object')) {
+	function pg_fetch_object(){ return new stdClass(); }
+}
 class ImageMagick {
 	public static function get_date_time_original(string $file_path): ?object {}
 	public static function get_imagemagick_pdfinfo_path(): string {}
 	public static function get_version(): string {}
 	public static function get_imagemagick_installed_path(): string {}
+	public static function convert(...$args): mixed {}
 }
 class Ffmpeg {
 	public static function get_date_time_original(string $file_path): ?object {}
@@ -178,5 +286,7 @@ class Ffmpeg {
 	public static function get_ffprove_installed_path(): string {}
 	public static function check_lib(string $lib): bool {}
 	public static function get_setting_name(string $file_path, string $quality): string {}
+	public static function build_fragment(...$args): mixed {}
 	public static function build_av_alternate_command(object $options): object {}
+	public static function create_posterframe(...$args): mixed {}
 }
