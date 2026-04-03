@@ -27,6 +27,9 @@ import {
 	unsubscribe_from_process,
 	get_all_processes,
 }                                     from './lib/progress_store';
+import { merge_rdf_parts, create_zip } from './lib/rdf_file_utils';
+import { writeFileSync }              from 'fs';
+import path                           from 'path';
 import type {
 	rqo,
 	engine_response,
@@ -35,12 +38,10 @@ import type {
 
 
 
-const SOCKET_PATH = process.env.SOCKET_PATH || '/tmp/diffusion.sock';
+const SOCKET_PATH      = process.env.SOCKET_PATH       || '/tmp/diffusion.sock';
 
 // Text encoder for SSE chunks
 const encoder = new TextEncoder();
-
-
 
 // =====================================================
 // SSE HELPERS
@@ -328,6 +329,280 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 
 
 /**
+ * RUN_BACKGROUND_RDF_DIFFUSION
+ * Executes RDF/XML file diffusion in the background, independently of the
+ * client connection, mirroring run_background_diffusion for SQL.
+ *
+ * Per-chunk behaviour:
+ *   1. Inject limit/offset into SQO (Bun controls pagination, same as SQL).
+ *   2. Call PHP — PHP runs search + diffuse_rdf, saves per-record .rdf files.
+ *   3. Extract raw XML parts and individual file URLs from the PHP response.
+ *   4. Push progress update to the store (counter, timing, errors).
+ *
+ * Post-processing (after all chunks):
+ *   5. Merge all raw XML parts → single consolidated .rdf file.
+ *   6. ZIP all individual .rdf files + merged file → single .zip.
+ *   7. Write both to DEDALO_MEDIA_PATH (served by Apache like any media file).
+ *   8. Call finish_process() with URLs so the final SSE carries download links.
+ */
+async function run_background_rdf_diffusion(
+	process_id:     string,
+	request_rqo:    rqo,
+	cookie_header:  string | null,
+	start_time:     number,
+	estimated_total: number,
+	diffusion_type: 'rdf' | 'xml'
+): Promise<void> {
+
+	try {
+		// 1. CHUNKING STRATEGY (identical to SQL path)
+		const DEFAULT_CHUNK_SIZE = 100;
+		const options    = request_rqo.options ?? {};
+		const total      = (options as any).total      ?? 0;
+		const chunk_size = (options as any).chunk_size ?? DEFAULT_CHUNK_SIZE;
+		const use_chunks = total > 0 && total > chunk_size;
+		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
+
+		const errors:        string[] = [];
+		const raw_xml_parts: string[] = [];
+		const all_file_urls: string[] = [];
+		const all_file_entries: { file_url: string }[] = [];
+		let   global_counter = 0;
+
+		// Media paths are read from PHP diffuse_rdf response (set from first chunk)
+		let DEDALO_MEDIA_PATH = '../../../../media/';
+		let DEDALO_MEDIA_URL  = '/dedalo/media/';
+		let sub_path          = '';
+
+		// 2. MAIN CHUNK LOOP
+		for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
+			const chunk_offset = chunk_idx * chunk_size;
+
+			const chunk_rqo: rqo = use_chunks
+				? {
+					...request_rqo,
+					sqo: {
+						...(request_rqo.sqo ?? {}),
+						limit:  chunk_size,
+						offset: chunk_offset,
+					},
+				}
+				: request_rqo;
+
+			update_progress(process_id, {
+				counter: global_counter,
+				msg:     use_chunks
+					? `Processing chunk ${chunk_idx + 1} of ${chunk_count}...`
+					: 'Generating RDF files...',
+				total_ms: Date.now() - start_time,
+			});
+
+			// 3. CALL PHP
+			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
+
+			if (!php_response.result) {
+				const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
+				errors.push(err_msg);
+				console.error(`[rdf_diffuse] ${err_msg}`);
+				update_progress(process_id, {
+					counter:  global_counter,
+					msg:      err_msg,
+					error:    err_msg,
+					total_ms: Date.now() - start_time,
+				});
+				continue;
+			}
+
+			// Extract media paths from PHP response (first chunk sets the paths)
+			if (chunk_idx === 0) {
+				const resp = php_response as any;
+				if (resp.DEDALO_MEDIA_PATH) {
+					DEDALO_MEDIA_PATH = resp.DEDALO_MEDIA_PATH;
+					console.log(`[rdf_diffuse] Using DEDALO_MEDIA_PATH from PHP: ${DEDALO_MEDIA_PATH}`);
+				}
+				if (resp.DEDALO_MEDIA_URL) {
+					DEDALO_MEDIA_URL = resp.DEDALO_MEDIA_URL;
+					console.log(`[rdf_diffuse] Using DEDALO_MEDIA_URL from PHP: ${DEDALO_MEDIA_URL}`);
+				}
+				if (resp.sub_path) {
+					sub_path = resp.sub_path;
+					console.log(`[rdf_diffuse] Using sub_path from PHP: ${sub_path}`);
+				}
+			}
+
+			// 4. EXTRACT per-record file URLs and raw XML from PHP datum
+			const chunk_start = Date.now();
+			const datum_groups = (php_response as any).datum ?? [];
+
+			for (const datum_group of datum_groups) {
+				const diffusion_tipo = datum_group.diffusion_tipo;
+				const records        = datum_group.data ?? [];
+
+				for (const record of records) {
+					const entries = record.entries?.[diffusion_tipo] ?? [];
+					for (const entry of entries) {
+						if (entry.file_url) {
+							all_file_entries.push({ file_url: entry.file_url });
+							// Derive filesystem path from URL
+							const media_url_with_subpath = DEDALO_MEDIA_URL + sub_path;
+							const rel  = entry.file_url.startsWith(media_url_with_subpath)
+								? entry.file_url.slice(media_url_with_subpath.length)
+								: path.basename(entry.file_url);
+							all_file_urls.push(path.join(DEDALO_MEDIA_PATH + sub_path, rel));
+						}
+						if (entry.value && typeof entry.value === 'string') {
+							raw_xml_parts.push(entry.value);
+						}
+					}
+					global_counter++;
+				}
+			}
+
+			update_progress(process_id, {
+				counter:  global_counter,
+				msg:      'Generating RDF files',
+				time_ms:  Date.now() - chunk_start,
+				total_ms: Date.now() - start_time,
+			});
+		}
+
+		// 5. POST-PROCESSING: merge + zip
+		update_progress(process_id, {
+			counter:  global_counter,
+			msg:      'Building consolidated file and archive...',
+			total_ms: Date.now() - start_time,
+		});
+
+		const date_tag    = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+		const type_label  = diffusion_type === 'xml' ? 'xml' : 'rdf';
+		const merged_name = `diffusion_${type_label}_merged_${date_tag}.rdf`;
+		const zip_name    = `diffusion_${type_label}_${date_tag}.zip`;
+		const merged_path = path.join(DEDALO_MEDIA_PATH + sub_path, merged_name);
+		const zip_path    = path.join(DEDALO_MEDIA_PATH + sub_path, zip_name);
+		const merged_url  = DEDALO_MEDIA_URL + sub_path + merged_name;
+		const zip_url     = DEDALO_MEDIA_URL + sub_path + zip_name;
+
+		let consolidated_files: { merged_url: string; zip_url: string } | undefined;
+
+		try {
+			// Merge all raw XML parts into one RDF document
+			const merged_content = merge_rdf_parts(raw_xml_parts);
+			if (merged_content) {
+				writeFileSync(merged_path, merged_content, 'utf8');
+				// Include the merged file itself in the zip
+				const zip_sources = [...all_file_urls, merged_path];
+				await create_zip(zip_sources, zip_path);
+				consolidated_files = { merged_url, zip_url };
+			}
+		} catch (file_err) {
+			const err_msg = file_err instanceof Error ? file_err.message : String(file_err);
+			console.error('[rdf_diffuse] Post-processing error:', file_err);
+			errors.push(`Post-processing: ${err_msg}`);
+		}
+
+		// 6. FINISH
+		const diffusion_class = diffusion_type === 'xml' ? 'diffusion_xml' : 'diffusion_rdf';
+		const final_result: engine_response = Object.assign(
+			{
+				result:         errors.length === 0,
+				msg:            errors.length === 0
+					? `OK. RDF diffusion done. ${global_counter} record(s) processed`
+						+ (use_chunks ? ` in ${chunk_count} chunk(s)` : '')
+					: `Partial success. ${errors.length} error(s)`,
+				errors:         errors.length > 0 ? errors : undefined,
+				diffusion_data: all_file_entries,
+			},
+			consolidated_files ? { consolidated_files } : {},
+			{ diffusion_class }
+		);
+
+		finish_process(process_id, final_result);
+
+	} catch (error: unknown) {
+		const err_msg = error instanceof Error ? error.message : String(error);
+		console.error('[rdf_diffuse] Unhandled error:', error);
+		finish_process(process_id, {
+			result: false,
+			msg:    `Internal error: ${err_msg}`,
+			errors: [err_msg],
+		});
+	}
+}
+
+
+
+/**
+ * HANDLE_DIFFUSE_RDF_STREAM
+ * SSE streaming entry point for RDF/XML diffusion.
+ * Mirrors handle_diffuse_stream for the SQL path.
+ */
+function handle_diffuse_rdf_stream(
+	request_rqo:    rqo,
+	cookie_header:  string | null,
+	diffusion_type: 'rdf' | 'xml'
+): Response {
+
+	const start_time      = Date.now();
+	const options         = request_rqo.options ?? {};
+	const total           = (options as any).total ?? 0;
+	const estimated_total = total > 0 ? total : 0;
+	const process_id      = (options as any).process_id || crypto.randomUUID();
+
+	create_process(estimated_total, process_id);
+
+	run_background_rdf_diffusion(
+		process_id, request_rqo, cookie_header, start_time, estimated_total, diffusion_type
+	).catch(console.error);
+
+	const stream = new ReadableStream({
+		start(controller) {
+
+			const heartbeat = setInterval(() => {
+				const current_state = get_progress(process_id);
+				if (current_state) {
+					try { controller.enqueue(encode_sse_chunk(current_state)); } catch { /* ignore */ }
+				}
+			}, 2000);
+
+			const on_update = (snapshot: progress_data) => {
+				try {
+					controller.enqueue(encode_sse_chunk(snapshot));
+				} catch {
+					clearInterval(heartbeat);
+					unsubscribe_from_process(process_id, on_update);
+					return;
+				}
+				if (!snapshot.is_running) {
+					clearInterval(heartbeat);
+					unsubscribe_from_process(process_id, on_update);
+					try { controller.close(); } catch { /* already closed */ }
+				}
+			};
+
+			subscribe_to_process(process_id, on_update);
+
+			const initial = get_progress(process_id);
+			if (initial) controller.enqueue(encode_sse_chunk(initial));
+		},
+		cancel() {
+			unsubscribe_from_process(process_id, () => {});
+		}
+	});
+
+	return new Response(stream, {
+		headers: {
+			'Content-Type':           'text/event-stream',
+			'Cache-Control':          'no-cache, must-revalidate',
+			'Connection':             'keep-alive',
+			'X-Accel-Buffering':      'no',
+			'Access-Control-Allow-Origin': '*',
+		},
+	});
+}
+
+
+
+/**
  * HANDLE_GET_PROCESS_STATUS
  * Polling SSE endpoint for reconnection.
  * Reads progress from the store at update_rate interval
@@ -529,64 +804,14 @@ const server = Bun.serve({
 					switch (diffusion_type) {
 						case 'rdf':
 						case 'xml': {
-							// Synchronous file generation — call PHP synchronously then emit a
-							// terminal SSE event so the client's read_stream / render_process_report
-							// can receive last_update_record_response and diffusion_data correctly.
-							const start_ms   = Date.now();
-							const php_result = await call_dd_diffusion_api(body, cookie_header ?? undefined);
-
-							// Extract file URLs from datum entries (each entry may have a file_url)
-							const diffusion_data: { file_url: string }[] = [];
-							for (const datum_group of (php_result as any).datum ?? []) {
-								const diffusion_tipo = datum_group.diffusion_tipo;
-								for (const record of datum_group.data ?? []) {
-									for (const entry of (record.entries?.[diffusion_tipo] ?? [])) {
-										if (entry.file_url) {
-											diffusion_data.push({ file_url: entry.file_url });
-										}
-									}
-								}
-							}
-
-							// Synthetic last_update_record_response that mirrors what
-							// diffusion_rdf::update_record() returns per-record for SQL flows.
-							const last_update_record_response = {
-								result:         (php_result as any).result ?? false,
-								msg:            [(php_result as any).msg ?? ''],
-								errors:         (php_result as any).errors ?? [],
-								class:          diffusion_type === 'rdf' ? 'diffusion_rdf' : 'diffusion_xml',
-								diffusion_data,
-							};
-
-							const terminal_event: progress_data = {
-								process_id: (body.options as any)?.process_id ?? crypto.randomUUID(),
-								is_running: false,
-								started_at: start_ms,
-								total_time: `${Date.now() - start_ms} ms`,
-								errors:     (php_result as any).errors ?? [],
-								data: {
-									msg:                        (php_result as any).msg ?? 'Done',
-									counter:                    1,
-									total:                      1,
-									last_update_record_response,
-									diffusion_data,
-								} as any,
-							};
-
-							// Build SSE string directly (avoid Uint8Array BodyInit mismatch)
-							const json = JSON.stringify(terminal_event);
-							let sse_payload = `data:\n${json}`;
-							if (sse_payload.length < 16384) {
-								sse_payload += ' '.repeat(16384 - sse_payload.length);
-							}
-							sse_payload += '\n\n';
-
-							return new Response(sse_payload, {
-								headers: {
-									'Content-Type':  'text/event-stream',
-									'Cache-Control': 'no-cache',
-								},
-							});
+							// Background SSE — same pattern as SQL diffusion.
+							// run_background_rdf_diffusion paginates PHP calls, streams
+							// per-chunk progress, then merges all files and creates a ZIP.
+							return handle_diffuse_rdf_stream(
+								body,
+								cookie_header,
+								diffusion_type as 'rdf' | 'xml'
+							);
 						}
 
 						case 'socrata': {

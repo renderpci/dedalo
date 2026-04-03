@@ -1021,7 +1021,7 @@ const render_process_report = function(options) {
 		// 		"Record updated section_id: 1. Number of references: 8 in levels: 2"
 		//   ],
 		//   "errors": [],
-		//   "class": "diffusion_mysql"
+		//   "class": "sql"
 		// }
 		if (!last_update_record_response) {
 			return false
@@ -1037,12 +1037,34 @@ const render_process_report = function(options) {
 				break;
 
 			case 'diffusion_rdf':
-				// RDF export case (returns diffusion_data a list of URL from created RDF files)
-				if (diffusion_data.length) {
+			case 'diffusion_xml': {
+				// RDF/XML export case.
+				// Bulk: show merged file + ZIP download buttons (consolidated_files present).
+				// Single record: show individual file download button (legacy behaviour).
+				const consolidated_files = last_sse_response.data?.consolidated_files
 
+				if (consolidated_files) {
+					// Bulk — consolidated output
+					const add_button = (file_url, label_key, fallback_label) => {
+						const name = file_url.split('/').pop()
+						const button = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'download warning',
+							inner_html		: (get_label[label_key] || fallback_label) + ' ' + name,
+							parent			: container
+						})
+						button.addEventListener('click', function(e) {
+							e.stopPropagation()
+							open_window({ url : window.location.origin + file_url })
+						})
+					}
+					add_button(consolidated_files.merged_url, 'download_merged', 'Download merged')
+					add_button(consolidated_files.zip_url,    'download_zip',    'Download ZIP')
+
+				} else if (diffusion_data.length) {
+					// Single record — individual file(s)
 					diffusion_data.forEach((el) => {
-						const name = el.file_url.split('\\').pop().split('/').pop();
-						// download button
+						const name = el.file_url.split('\\').pop().split('/').pop()
 						const button_download = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'download warning',
@@ -1051,38 +1073,12 @@ const render_process_report = function(options) {
 						})
 						button_download.addEventListener('click', function(e) {
 							e.stopPropagation()
-							const url = window.location.origin + el.file_url
-							open_window({
-								url : url
-							})
+							open_window({ url : window.location.origin + el.file_url })
 						})
 					})
 				}
 				break;
-
-			case 'diffusion_xml':
-				// XML export case (returns diffusion_data a list of URL from created XML files)
-				if (diffusion_data.length) {
-
-					diffusion_data.forEach((el) => {
-						const name = el.file_url.split('\\').pop().split('/').pop();
-						// download button
-						const button_download = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'download warning',
-							inner_html		: (get_label.download || 'Download') + ' ' + name,
-							parent			: container
-						})
-						button_download.addEventListener('click', function(e) {
-							e.stopPropagation()
-							const url = window.location.origin + el.file_url
-							open_window({
-								url : url
-							})
-						})
-					})
-				}
-				break;
+			}
 
 			default:
 				// Nothing specific to do

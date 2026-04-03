@@ -200,7 +200,6 @@ class diffusion_rdf {
 			if ($save_file===true) {
 
 				$rdf_name = ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
-				$sub_path = '';
 
 				$name_parts = [
 					$rdf_name,
@@ -258,11 +257,11 @@ class diffusion_rdf {
 
 		$instance = new self(null);
 		$response = $instance->update_record((object)[
-			'section_tipo'			=> $section_tipo,
-			'section_id'			=> $section_id,
+			'section_tipo'				=> $section_tipo,
+			'section_id'				=> $section_id,
 			'diffusion_element_tipo'	=> $diffusion_element_tipo,
-			'save_file'				=> false,
-			'pure'					=> true
+			'save_file'					=> false,
+			'pure'						=> true
 		]);
 
 		return $response->data ?? null;
