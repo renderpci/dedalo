@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
 
@@ -36,27 +37,11 @@ view_default_list_check_box.render = async function(self) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			value_string : value_string
 		})
-		wrapper.addEventListener('click', function(e){
-			e.stopPropagation()
 
-			const wrapper_width	= wrapper.getBoundingClientRect().width
-			if (wrapper_width >= self.minimum_width_px) {
-				// inline way
-				self.change_mode({
-					mode	: 'edit',
-					view	: 'line'
-				})
-			}else{
-				// modal way
-				ui.render_edit_modal({
-					self		: self,
-					e			: e,
-					callback	: (dd_modal) => {
-						dd_modal.modal_content.style.width = '25rem'
-						dd_modal.modal_content.style.top = (e.clientY - 25) + 'px'
-					}
-				})
-			}
+	// click handler for edit mode activation (auto: inline if wide enough, modal otherwise)
+		wrapper.addEventListener('click', (e) => {
+			e.stopPropagation()
+			activate_edit_in_list(self, e, { mode: 'auto' })
 		})
 
 
