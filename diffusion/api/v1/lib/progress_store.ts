@@ -120,6 +120,24 @@ export function finish_process(process_id: string, result: engine_response): voi
 	entry.total_time = format_elapsed(Date.now() - entry.started_at);
 	entry.data.msg   = result.msg;
 
+	// Propagate RDF/XML file data into data so client reads it from last_sse_response.data
+	if (result.diffusion_data) {
+		entry.data.diffusion_data = result.diffusion_data;
+
+		const diffusion_class = (result as any).diffusion_class ?? 'diffusion_rdf';
+		entry.data.last_update_record_response = {
+			result:         result.result,
+			msg:            [result.msg],
+			errors:         result.errors ?? [],
+			class:          diffusion_class,
+			diffusion_data: result.diffusion_data,
+		};
+	}
+
+	if (result.consolidated_files) {
+		entry.data.consolidated_files = result.consolidated_files;
+	}
+
 	notify_listeners(process_id, entry);
 }
 

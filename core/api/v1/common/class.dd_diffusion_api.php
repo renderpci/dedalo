@@ -573,7 +573,7 @@ class dd_diffusion_api {
 
 		// 2. Fallback to the component's default format based on the diffusion type (currently 'sql' is assumed)
 		// To properly do this, we find the component model of the main target of this diffusion node.
-		// For simplicity, we get the target component model from the ddo_map (if it exists)
+		// For simplicity, we get the component model from the ddo_map (if it exists)
 		if (!$output_format) {
 			$diffusion_type = 'sql'; // Future: get from diffusion_element or rqo
 
@@ -643,6 +643,9 @@ class dd_diffusion_api {
 			$datum_data     = [];
 			$parent         = ontology_node::get_instance($diffusion_element_tipo)->get_parent();
 			$rdf_term       = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG);
+			$properties     = ontology_node::get_instance($diffusion_element_tipo)->get_properties();
+			$service_name   = $properties->diffusion->service_name ?? '';
+			$sub_path       = '/rdf/' . $service_name . '/';
 
 			foreach ($db_result as $locator) {
 
@@ -703,16 +706,19 @@ class dd_diffusion_api {
 				]);
 				$datum->set_data($datum_data);
 
-			$response->result        = true;
-			$response->msg           = 'OK. RDF diffusion done';
-			$response->langs         = $langs;
-			$response->main_lang     = DEDALO_DATA_LANG_DEFAULT;
-			$response->main          = $main;
-			$response->datum         = [$datum];
+			$response->result        		= true;
+			$response->msg           		= 'OK. RDF diffusion done';
+			$response->langs         		= $langs;
+			$response->main_lang     		= DEDALO_DATA_LANG_DEFAULT;
+			$response->main          		= $main;
+			$response->DEDALO_MEDIA_PATH 	= DEDALO_MEDIA_PATH;
+			$response->DEDALO_MEDIA_URL  	= DEDALO_MEDIA_URL;
+			$response->sub_path        		= $sub_path;
+			$response->datum         		= [$datum];
 
 		} catch (Exception $e) {
-			$response->msg    = 'Error: ' . $e->getMessage();
-			$response->errors[] = $e->getMessage();
+			$response->msg	= 'Error: ' . $e->getMessage();
+			$response->errors[]	= $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
 

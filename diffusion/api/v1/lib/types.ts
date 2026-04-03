@@ -159,11 +159,22 @@ export interface processed_record {
 // Diffusion engine response to client
 // =====================================================
 
+export interface consolidated_files {
+	merged_url: string;
+	zip_url:    string;
+}
+
+export interface diffusion_file_entry {
+	file_url: string;
+}
+
 export interface engine_response {
-	result:   boolean;
-	msg:      string;
-	errors?:  string[];
-	tables?:  { table_name: string; records_affected: number }[];
+	result:              boolean;
+	msg:                 string;
+	errors?:             string[];
+	tables?:             { table_name: string; records_affected: number }[];
+	diffusion_data?:     diffusion_file_entry[];
+	consolidated_files?: consolidated_files;
 }
 
 
@@ -171,17 +182,28 @@ export interface engine_response {
 // Progress tracking (streaming + polling)
 // =====================================================
 
+export interface last_update_record_response {
+	result:         boolean;
+	msg:            string[];
+	errors:         string[];
+	class:          string;
+	diffusion_data: diffusion_file_entry[];
+}
+
 export interface progress_data {
 	process_id:  string;
 	is_running:  boolean;
 	started_at:  number;
 	data: {
-		msg:            string;
-		counter:        number;
-		total:          number;
-		section_label?: string;
-		current?:       { section_id?: string | number; time?: number };
-		total_ms?:      number;
+		msg:                          string;
+		counter:                      number;
+		total:                        number;
+		section_label?:               string;
+		current?:                     { section_id?: string | number; time?: number };
+		total_ms?:                    number;
+		diffusion_data?:              diffusion_file_entry[];
+		last_update_record_response?: last_update_record_response;
+		consolidated_files?:          consolidated_files;
 	};
 	total_time:  string;
 	errors:      string[];
