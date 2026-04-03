@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
 
@@ -34,33 +35,26 @@ view_default_list_json.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			// value_string : value_string
 		})
-		if (self.show_interface.read_only !== true && self.permissions > 1) {
-			wrapper.addEventListener('click', function(e){
-				e.stopPropagation()
 
-				// modal way
-					// lang. Use lang from data instead from context because the problem with component_text_area context lang
-					const lang = self.data && self.data.lang
-						? self.data.lang
-						: self.lang
-					// modal
-					ui.render_edit_modal({
-						self		: self,
-						e			: e,
-						lang		: lang, // to use in new instance
-						callback	: (dd_modal) => {
-							dd_modal.modal_content.style.width = '90%'
-
-							dd_modal.on_close = () => {
-								// refresh whole component
-								self.refresh({
-									autoload : false
-								})
-							}
-						}
+	// click handler for edit mode activation
+	// lang: Use lang from data instead from context because the problem with component_text_area context lang
+		const lang = self.data && self.data.lang
+			? self.data.lang
+			: self.lang
+		wrapper.addEventListener('click', (e) => {
+			e.stopPropagation()
+			activate_edit_in_list(self, e, {
+				mode			: 'modal',
+				modal_width		: '90%',
+				lang			: lang,
+				on_close		: () => {
+					// refresh whole component
+					self.refresh({
+						autoload : false
 					})
+				}
 			})
-		}
+		})
 
 	// content_data
 		const content_data = document.createElement('div')

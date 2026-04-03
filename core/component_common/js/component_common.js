@@ -1800,4 +1800,97 @@ export const is_empty = function( instance ) {
 
 
 
+/**
+* ACTIVATE_EDIT_IN_LIST
+* Unified edit mechanism for components in list view.
+* Handles permissions, read-only mode, dataframe context, and edit mode selection.
+*
+* @param {Object} self - The component instance
+* @param {Event} e - The mouse event for positioning the modal
+* @param {Object} options - Optional configuration
+* @param {string} options.mode - 'modal' (always modal), 'inline' (always inline), 'auto' (based on width)
+* @param {string} options.inline_view - View to use for inline mode (default: 'line')
+* @param {number} options.modal_width - Modal width in CSS (default: '25rem')
+* @param {string} options.lang - Language to use for edit instance
+* @param {Function} options.on_close - Callback when modal closes
+* @returns {boolean} Returns false if read-only or inside dataframe, otherwise void
+*
+* @example
+* // Simple usage (auto mode)
+* wrapper.addEventListener('click', (e) => {
+*   e.stopPropagation()
+*   activate_edit_in_list(self, e)
+* })
+*
+* @example
+* // Always modal with custom width
+* wrapper.addEventListener('click', (e) => {
+*   e.stopPropagation()
+*   activate_edit_in_list(self, e, { mode: 'modal', modal_width: '90%' })
+* })
+*
+* @example
+* // Auto mode with custom inline view
+* wrapper.addEventListener('click', (e) => {
+*   e.stopPropagation()
+*   activate_edit_in_list(self, e, { mode: 'auto', inline_view: 'line' })
+* })
+*/
+export const activate_edit_in_list = (self, e, options={}) => {
+
+	// options
+		const mode			= options.mode ?? 'modal' // 'modal' | 'inline' | 'auto'
+		const inline_view	= options.inline_view ?? 'line'
+		const modal_width	= options.modal_width ?? '25rem'
+		const lang			= options.lang ?? null
+		const on_close		= options.on_close ?? null
+
+	// read only check
+		if (self.show_interface.read_only === true || self.permissions < 2) {
+			return false
+		}
+
+	// dataframe detection
+		if (ui.inside_dataframe(self)) {
+			return false
+		}
+
+	// resolve edit mode
+		const edit_mode = (() => {
+			if (mode === 'modal') return 'modal'
+			if (mode === 'inline') return 'inline'
+			// auto: decide based on wrapper width
+			if (mode === 'auto') {
+				const wrapper_width = e.target?.getBoundingClientRect?.()?.width
+					|| e.currentTarget?.getBoundingClientRect?.()?.width
+					|| 0
+				const minimum_width = self.minimum_width_px ?? 200
+				return wrapper_width >= minimum_width ? 'inline' : 'modal'
+			}
+			return 'modal' // fallback
+		})()
+
+	// execute edit mode
+		if (edit_mode === 'inline') {
+			// inline way: change mode directly
+			self.change_mode({
+				mode	: 'edit',
+				view	: inline_view
+			})
+		} else {
+			// modal way: open modal to edit
+			ui.render_edit_modal({
+				self		: self,
+				lang		: lang,
+				callback	: (dd_modal) => {
+					dd_modal.modal_content.style.width = modal_width
+					// 'center' class from render_edit_modal handles both horizontal and vertical centering
+				},
+				on_close	: on_close
+			})
+		}
+}//end activate_edit_in_list
+
+
+
 // @license-end
