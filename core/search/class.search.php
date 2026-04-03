@@ -828,7 +828,7 @@ class search {
 		$this->build_sql_projects_filter();
 		$this->build_filter_by_user_records();
 
-		$use_window = true;
+		$use_window = !empty($this->sql_obj->join) || !empty($this->sql_obj->order) ? true : false;
 
 		// sql_query
 		$sql_query = '';
