@@ -4950,7 +4950,7 @@ dd-modal .footer.distribute {
   padding-right: 3.617rem;
 }
 .jse-main .jse-menu > button.svelte-3erbu0 {
-  width: 2.35rem;
+  width: 2.25rem;
 }
 .json-container {
   background-color: #fcfcfc;
@@ -14056,9 +14056,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_json.edit > .content_data {
   height: var(--media_min_height);
-  justify-content: center;
   max-height: var(--media_max_height);
   min-height: calc(var(--media_min_height) + 1.5rem);
+  justify-content: center;
 }
 @media screen and (max-width: 960px) {
   .component_json.edit > .content_data {

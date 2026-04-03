@@ -81,7 +81,7 @@ const get_content_data = function(self) {
 			console.warn('More than one value in component_json is not allowed at now. Ignored next values. N values: ', value_length);
 		}
 		for (let i = 0; i < value_length; i++) {
-			// Gets value from inputs_value (note that inputs_value is an array of objects with the property 'value') 
+			// Gets value from inputs_value (note that inputs_value is an array of objects with the property 'value')
 			const current_value = inputs_value[i]?.value || null
 			const content_value_node = (self.permissions===1)
 				? get_content_value_read(i, current_value, self)
@@ -116,54 +116,123 @@ const get_content_value = (key, current_value, self) => {
 
 	// load_editor and init
 		const load_editor = async () => {
-
-			const module = await import('../../../lib/jsoneditor/dist/standalone.js');
-
-			// value for editor
-			const content = current_value
-				? {json : current_value}
-				: {text : ''}
-
-			// editor
-			const editor = module.createJSONEditor({
-				target	: content_value,
-				props	: {
-					content		: content,
-					mode		: 'text',
-					onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
-						// console.log('onChange-------------->', { updatedContent, previousContent, contentErrors, patchResult })
-						if(typeof contentErrors==='undefined'){
-
-							const json_value = updatedContent.json !== undefined
-								? updatedContent.json
-								: updatedContent.text===''
-									? null
-									: JSON.parse( updatedContent.text )
-
-							const inmutable_value = JSON.parse(JSON.stringify(json_value))
-
-							self.set_value(inmutable_value, key)
-						}
-					}
-				}
-			})
-
-			// set pointer
-			self.editors[key] = editor
-
-			// button_save
-			const button_save = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'warning save button_save',
-				inner_html		: get_label.save || 'Save',
-				parent			: content_value
-			})
-			// click event
-			const click_handler = (e) => {
-				e.stopPropagation()
-				self.save_sequence(editor)
+			// Prevent double initialization
+			if (content_value.dataset.editor_loading === 'true' || content_value.dataset.editor_loaded === 'true') {
+				return;
 			}
-			button_save.addEventListener('click', click_handler)
+			content_value.dataset.editor_loading = 'true';
+
+			try {
+				// Validate target element is ready
+				if (!content_value.isConnected) {
+					await new Promise(resolve => {
+						const wait_frame = () => {
+							if (content_value.isConnected) {
+								resolve();
+							} else {
+								requestAnimationFrame(wait_frame);
+							}
+						};
+						requestAnimationFrame(wait_frame);
+					});
+				}
+
+				// Load JSONEditor module
+				const module = await import('../../../lib/jsoneditor/dist/standalone.js');
+				if (!module || typeof module.createJSONEditor !== 'function') {
+					throw new Error('createJSONEditor not found in module');
+				}
+
+				// 1. Pre-boot dummy instance to synchronously force CodeMirror 6 <style> injections into the DOM.
+				// This prevents text metrics caching bugs caused by CodeMirror measuring its dimensions before the browser fully parses the new CSS.
+				const dummy_node = document.createElement('div');
+				try {
+					const dummy_editor = module.createJSONEditor({ target: dummy_node, props: { mode: 'text', content: { text: '' } } });
+					dummy_editor.destroy();
+				} catch (e) {}
+
+				// // 2. Wait for Web Fonts and CSS OM to flush, while bypassing any active Dédalo modal transition animations.
+				if (document.fonts && typeof document.fonts.ready !== 'undefined') {
+					await document.fonts.ready;
+				}
+				await new Promise(resolve => setTimeout(resolve, 10));
+
+				// Abort if the modal was closed while we were waiting
+				if (!content_value.isConnected) return;
+
+				// value for editor
+				const content = current_value !== null
+					? {json : current_value}
+					: {text : ''};
+
+				// Destroy previous instance to avoid conflicts on jump
+				if (self.editors[key] && typeof self.editors[key].destroy === 'function') {
+					try { self.editors[key].destroy(); } catch (e) {}
+					self.editors[key] = null;
+				}
+
+				// Create editor with error handling
+				let editor;
+				try {
+					editor = module.createJSONEditor({
+						target	: content_value,
+						props	: {
+							content		: content,
+							mode		: 'text',
+							onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
+								if (typeof contentErrors === 'undefined') {
+									try {
+										const json_value = updatedContent.json !== undefined
+											? updatedContent.json
+											: updatedContent.text === ''
+												? null
+												: JSON.parse(updatedContent.text);
+
+										const inmutable_value = JSON.parse(JSON.stringify(json_value));
+										self.set_value(inmutable_value, key);
+									} catch (parse_err) {
+										console.error('JSON parse error in onChange:', parse_err);
+									}
+								}
+							}
+						}
+					});
+				} catch (create_err) {
+					throw new Error(`Failed to create JSONEditor: ${create_err.message}`);
+				}
+
+				// Validate editor was created
+				if (!editor) {
+					throw new Error('JSONEditor returned null/undefined');
+				}
+
+				// Mark as loaded
+				content_value.dataset.editor_loaded = 'true';
+				content_value.dataset.editor_loading = 'false';
+
+				// set pointer
+				self.editors[key] = editor;
+
+				// button_save
+				const button_save = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning save button_save',
+					inner_html		: get_label.save || 'Save',
+					parent			: content_value
+				});
+				// click event
+				const click_handler = (e) => {
+					e.stopPropagation();
+					self.save_sequence(editor);
+				};
+				button_save.addEventListener('click', click_handler);
+
+			} catch (error) {
+				content_value.dataset.editor_loading = 'false';
+				console.error('component_json: load_editor failed:', error);
+				// Show error in UI
+				content_value.innerHTML = `<div class="error" style="padding:1rem;color:red;">Error loading JSON editor: ${error.message}</div>`;
+			}
 		}//end load_editor
 
 	// observe in viewport
