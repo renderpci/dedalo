@@ -1,0 +1,946 @@
+# Dédalo Diffusion API Documentation
+
+## Overview
+
+The Dédalo Diffusion system is a sophisticated data publication pipeline that transforms internal ontology-driven data into public-facing formats. It consists of two main API layers:
+
+1. **`dd_diffusion_api`** - The PHP backend API that extracts and prepares data from the work system
+2. **Bun Diffusion API** - A TypeScript/Bun middleware that processes, parses, and inserts data into MariaDB
+
+## Architecture
+
+### High-Level Data Flow
+
+```mermaid
+flowchart TB
+    subgraph "Work System (PostgreSQL)"
+        WS[Internal Dédalo Data]
+    end
+
+    subgraph "Publication Flow"
+        TD[tool_diffusion.js<br/>User Interface]
+        DDA[dd_diffusion_api.php<br/>Data Extraction]
+        DCP[diffusion_chain_processor.php<br/>Chain Resolution]
+        DDU[diffusion_utils.php<br/>Utility Functions]
+    end
+
+    subgraph "Bun Middleware (TypeScript)"
+        PC[php_client.ts<br/>PHP Bridge]
+        DP[diffusion_processor.ts<br/>Parser Pipeline]
+        PARSERS[parsers/<br/>Text/Date/Helper]
+        SQL[sql_generator.ts<br/>SQL Builder]
+        DB[db.ts<br/>MariaDB Writer]
+    end
+
+    subgraph "Diffusion System (MariaDB)"
+        PUB[Public Database]
+    end
+
+    WS --> DDA
+    TD -->|RQO Request| DDA
+    DDA --> DCP
+    DCP --> DDU
+    DDA -->|JSON Response| PC
+    PC --> DP
+    DP --> PARSERS
+    PARSERS --> SQL
+    SQL --> DB
+    DB --> PUB
+```
+
+## dd_diffusion_api
+
+The `dd_diffusion_api` class (`/core/api/v1/common/class.dd_diffusion_api.php`) is the main PHP entry point for diffusion operations.
+
+### Core Methods
+
+#### `diffuse(object $rqo): object`
+
+The primary method that executes the diffusion process.
+
+**Parameters:**
+```php
+$rqo = {
+    action: "diffuse",
+    source: { tipo, section_tipo, ... },
+    sqo: { section_tipo: [...], filter: ... },  // Search Query Object
+    options: {
+        diffusion_tipo: "rsc...",      // Target diffusion node
+        diffusion_element_tipo: "...", // Element scope
+        levels: 2,                      // Resolution depth
+        total: 100,                   // Expected record count
+        chunk_size: 100               // Records per batch
+    }
+}
+```
+
+**Response Structure:**
+```php
+{
+    result: true,
+    msg: "OK. Request done",
+    langs: { "lg-eng": "English", "lg-spa": "Spanish" },
+    main_lang: "lg-eng",
+    main: [                          // Hierarchy from domain to field
+        { diffusion_tipo: "dd3", term: "diffusion", model: "diffusion" },
+        { diffusion_tipo: "oh66", term: "interview", model: "table", ... }
+    ],
+    datum: [                         // Data organized by section
+        {
+            diffusion_tipo: "oh66",
+            section_tipo: "oh1",
+            term: "interview",
+            model: "table",
+            context: [                   // Field definitions with parsers
+                {
+                    term: "code",
+                    tipo: "oh14",
+                    model: "field_varchar",
+                    parser: { fn: "parser_text::text_format", ... }
+                }
+            ],
+            data: [                      // Actual records
+                {
+                    section_id: 1,
+                    entries: {
+                        "oh14": [      // Values by tipo
+                            { tipo: "oh14", lang: "lg-eng", value: "Code-001", id: "abc123" }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+}
+```
+
+#### `get_diffusion_info(object $rqo): object`
+
+Retrieves diffusion configuration for a given section.
+
+**Use Case:** The tool_diffusion uses this to populate the publication interface with available diffusion targets.
+
+```php
+// Request
+{
+    action: "get_diffusion_info",
+    options: { section_tipo: "oh1" }
+}
+
+// Response
+{
+    result: {
+        section_diffusion_nodes: [
+            {
+                element_tipo: "oh66",
+                name: "Web Publication",
+                class_name: "diffusion_sql",
+                database_name: "web_dedalo",
+                database_tipo: "oh67"
+            }
+        ],
+        resolve_levels: 2
+    }
+}
+```
+
+#### `get_ontology_map(object $rqo): object`
+
+Returns raw parser definitions from ontology.
+
+```php
+// Request
+{
+    action: "get_ontology_map",
+    options: { diffusion_tipo: "oh66" }
+}
+
+// Response - Returns the process properties from ontology
+{
+    result: true,
+    data: {
+        "oh100": { fn: "parser_text::text_format", pattern: "${value}" },
+        "oh68": { fn: "parser_date::string_date", date_mode: "year" }
+    }
+}
+```
+
+### Diffusion Chain Processing
+
+The `diffusion_chain_processor` class handles recursive resolution of related data.
+
+```mermaid
+flowchart TD
+    A[Start: section_id=1, section_tipo=oh1] --> B{Has Children in DDO Map?}
+    B -->|Yes| C[Resolve DDO Value]
+    C --> D{Component Type}
+    D -->|Terminal| E[Get Raw Value]
+    D -->|Relation| F[Process Relation Component]
+    F --> G[Queue Target Section<br/>for Level N-1]
+    F --> H[Recursively Resolve<br/>Child Fields]
+    H --> B
+    E --> I[Return diffusion_data_object]
+```
+
+**Key Chain Resolution Features:**
+- **Level-based Resolution**: Resolves linked sections up to configured depth (default: 2 levels)
+- **Publishability Checking**: Validates if related sections are publishable before including them
+- **Deduplication**: Uses `diffusion_activity_logger` to prevent redundant processing
+- **Cross-Section Mapping**: Maintains `section_diffusion_map` for efficient lookup
+
+## Bun Diffusion API
+
+The Bun-based middleware (`/diffusion/api/v1/`) provides high-performance data processing and MariaDB insertion.
+
+### Architecture Components
+
+```mermaid
+flowchart LR
+    subgraph "Incoming Request"
+        RQO[RQO from Client]
+    end
+
+    subgraph "Bun Server (index.ts)"
+        ROUTER[Route Handler]
+        BG[Background Processor]
+        PS[Progress Store]
+    end
+
+    subgraph "Processing Pipeline"
+        PHP[PHP Client]
+        PROC[Diffusion Processor]
+        PARSER[Parser Registry]
+    end
+
+    subgraph "Database Layer"
+        SQL[SQL Generator]
+        POOL[Connection Pool]
+        MARIA[MariaDB]
+    end
+
+    RQO --> ROUTER
+    ROUTER --> BG
+    BG --> PHP
+    PHP -->|JSON Response| PROC
+    PROC --> PARSER
+    PARSER --> SQL
+    SQL --> POOL
+    POOL --> MARIA
+    BG --> PS
+    PS -->|SSE Stream| ROUTER
+```
+
+### Core Modules
+
+#### `index.ts` - Main Server
+
+**Key Features:**
+- Unix socket server (configurable via `SOCKET_PATH`)
+- Server-Sent Events (SSE) streaming for real-time progress
+- Background processing with chunked execution
+- Heartbeat mechanism (2s intervals) to prevent proxy timeouts
+
+**Endpoints:**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/diffuse` | POST | Main diffusion endpoint (streaming) |
+| `/api/v1/validate` | POST | Pass-through to PHP validation |
+| `/api/v1/get_ontology_map` | POST | Pass-through to PHP |
+| `/api/v1/health` | GET | Bun engine health check |
+| `/api/v1/status` | GET | Full system readiness |
+| `/api/v1/processes` | GET | List active processes |
+
+**SSE Progress Format:**
+```typescript
+{
+    process_id: "uuid",
+    is_running: true,
+    started_at: 1234567890,
+    data: {
+        msg: "Processing records",
+        counter: 50,
+        total: 100,
+        section_label: "interview",
+        time_ms: 150,
+        total_ms: 5000
+    },
+    total_time: "00:00:05",
+    errors: []
+}
+```
+
+#### `php_client.ts` - PHP Bridge
+
+Forwards requests to the PHP `dd_diffusion_api` with:
+- Cookie header forwarding for session authentication
+- 120-second timeout for long-running PHP operations
+- Automatic `dd_api: "dd_diffusion_api"` injection
+
+```typescript
+// Environment Configuration
+DEDALO_API_URL = "https://dedalo.dev/dedalo/core/api/v1/json/"
+REQUEST_TIMEOUT_MS = 120000
+```
+
+#### `diffusion_processor.ts` - Parser Pipeline
+
+Transforms PHP agnostic responses into SQL-ready data.
+
+**Processing Steps:**
+
+1. **Database Name Resolution**: Extracts from `main` hierarchy
+2. **Datum Group Processing**: Each group = one table
+3. **Record Processing**: Applies parsers per context field
+4. **Language Expansion**: Creates one record per language
+5. **Column Value Resolution**: 5-level fallback chain
+
+**Language Resolution Priority:**
+```
+1. Exact lang match (lg-spa)
+2. Nolan (lg-nolan / null) → duplicated to all records
+3. main_lang fallback (lg-eng)
+4. Any available lang (best-effort)
+5. null (no data)
+```
+
+**Column-Order Mode:**
+When `context.columns` is defined, passes all entries at once for cross-lang grouping:
+```typescript
+{
+    columns: [
+        { tipo: "rsc85", model: "component_input_text" },  // name
+        { tipo: "rsc86", model: "component_input_text" }   // surname
+    ],
+    parser: { fn: "parser_text::text_format", pattern: "${rsc85} ${rsc86}" }
+}
+```
+
+### Parser System
+
+The parser registry maps PHP-format function strings to TypeScript implementations.
+
+#### Parser Registry (`parsers/index.ts`)
+
+```typescript
+const parser_registry: Record<string, parser_fn> = {
+    // Text Parsers
+    'parser_text::default_join':       default_join,
+    'parser_text::text_format':        text_format,
+    'parser_text::map_value':          map_value,
+    'parser_text::v5_html':            v5_html,
+    
+    // Locator Parsers
+    'parser_locator::get_section_id':  get_section_id,
+    'parser_locator::get_term_id':     get_term_id,
+    'parser_locator::parents':         parents,
+    'parser_locator::slice_chain':     slice_chain,
+    
+    // Date Parsers
+    'parser_date::string_date':        string_date,
+    'parser_date::unix_timestamp':     unix_timestamp,
+    
+    // Helper Parsers
+    'parser_helper::get_first':        get_first,
+    'parser_helper::merge':            merge,
+    'parser_helper::count':            count,
+    
+    // Global Parsers
+    'parser_global::merge_columns':    merge_columns,
+    'parser_global::publication_unix_timestamp': publication_unix_timestamp,
+};
+```
+
+#### Parser: `parser_text.ts`
+
+**`text_format`** - Pattern-based text generation:
+```typescript
+// Input data
+[
+    { id: "a", value: ["Ana", "Ger"], tipo: "rsc85" },
+    { id: "b", value: ["Hero", "Del"], tipo: "rsc86" }
+]
+
+// Pattern: "${rsc85} ${rsc86}"
+// Output: [
+//     { value: ["Ana Hero"], lang: "lg-eng" },
+//     { value: ["Ger Del"], lang: "lg-eng" }
+// ]
+```
+
+**`default_join`** - Simple concatenation:
+```typescript
+// Options
+{ records_separator: " | ", fields_separator: ", " }
+
+// Joins values with separators
+```
+
+#### Parser: `parser_helper.ts`
+
+**`merge`** - Complex multi-column merging with strategies:
+
+| merge Style | Output | Example |
+|-------------|--------|---------|
+| `undefined` | Flat array | `["Madrid", "Spain", "Paris", "France"]` |
+| `string` | Joined string | `"Madrid - Spain, Paris - France"` |
+| `nested` | Array of arrays | `[["Madrid", "Spain"], ["Paris", "France"]]` |
+| `flat` | Flat per-section | `["Madrid - Spain", "Paris - France"]` |
+| `pipe` | JSON strings | `'["Madrid","Spain"] - ["Paris","France"]'` |
+| `unique` | Deduplicated | `["Madrid", "Spain", "Paris", "France"]` |
+
+**Slot Resolution (5-level fallback):**
+```typescript
+const resolve_slot = (tipo_map, tipo, lang_key) => {
+    if (lang_map.has(lang_key))     return lang_map.get(lang_key);      // 1. exact
+    if (lang_map.has('__nolan__'))  return lang_map.get('__nolan__');   // 2. nolan
+    if (main_lang && lang_map.has(main_lang)) 
+                                     return lang_map.get(main_lang);    // 3. main
+    return lang_map.values().next().value;                               // 4. any
+    // 5. empty string if none found
+};
+```
+
+#### Parser: `parser_locator.ts`
+
+**`get_term_id`** - Extracts term IDs from locators:
+```typescript
+// Input: [{ value: [{ section_id: 1, section_tipo: "rsc197" }] }]
+// Output: [{ value: "rsc197_1" }]
+```
+
+**`parents`** - Gets parent hierarchy:
+```typescript
+// Input with parents data
+// Output: [{ value: ["term1", "term2", "term3"] }]
+```
+
+**`slice_chain`** - Selects portion of parent chain:
+```typescript
+// Options: { slice: [1, 2] } - start at index 1, take 2 items
+// Input: [{ value: ["Spain", "Madrid", "Center"], parents: [...] }]
+// Output: [{ value: ["Madrid", "Center"] }]
+```
+
+#### Parser: `parser_date.ts`
+
+**`string_date`** - Formats date objects:
+```typescript
+// Input: [{ value: { start: { year: 1936, month: 5, day: 15 } } }]
+// Options: { date_mode: "year" }
+// Output: [{ value: "1936" }]
+```
+
+**`unix_timestamp`** - Converts to Unix time:
+```typescript
+// Input: [{ value: { start: { year: 2024, month: 1, day: 1 } } }]
+// Output: [{ value: 1704067200 }]
+```
+
+### Database Layer
+
+#### `db.ts` - Connection Management
+
+**Pool Caching:**
+```typescript
+const pool_cache = new Map<string, mysql.Pool>();
+
+// Creates connection pool per database
+mysql.createPool({
+    socketPath: process.env.DB_SOCKET || '/tmp/mysql.sock',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: database_name,
+    connectionLimit: 10,
+    charset: 'utf8mb4'
+});
+```
+
+**`insert_table_data`** - Atomic transaction handling:
+```typescript
+async function insert_table_data(table: processed_table): Promise<number> {
+    // 1. Begin transaction
+    // 2. Ensure table exists (CREATE TABLE IF NOT EXISTS)
+    // 3. Ensure columns exist (ALTER TABLE ADD COLUMN)
+    // 4. Execute batch upserts (INSERT ... ON DUPLICATE KEY UPDATE)
+    // 5. Execute deletions (DELETE FROM ... WHERE section_id IN ...)
+    // 6. Commit or rollback
+}
+```
+
+#### `sql_generator.ts` - SQL Builder
+
+**Composite Key:** `(section_id, lang)`
+
+**Upsert Generation:**
+```sql
+INSERT INTO interview (section_id, lang, code, title)
+VALUES (?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+    code = VALUES(code),
+    title = VALUES(title);
+```
+
+**Type Mapping from Ontology:**
+
+| Ontology Model | SQL Type |
+|----------------|----------|
+| `field_date` | DATE |
+| `field_datetime` | DATETIME |
+| `field_int` | INT(length) |
+| `field_varchar` | VARCHAR(length) |
+| `field_text` | TEXT |
+| `field_mediumtext` | MEDIUMTEXT |
+| `field_point` | POINT |
+| `field_year` | YEAR |
+| `field_decimal` | DECIMAL |
+| `field_boolean` | BOOLEAN |
+
+## Data Flow from tool_diffusion
+
+### User Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as tool_diffusion UI
+    participant API as dd_diffusion_api
+    participant Bun as Bun Middleware
+    participant DB as MariaDB
+
+    User->>UI: Clicks "Publish" button
+    UI->>API: get_diffusion_info(section_tipo)
+    API-->>UI: Available diffusion nodes
+    UI->>UI: Render options (resolve_levels, etc.)
+    User->>UI: Configures & confirms
+    UI->>Bun: export() with RQO
+    Bun->>Bun: Create process, return stream
+    Bun->>API: call_dd_diffusion_api(rqo)
+    API->>API: Search records (SQO)
+    API->>API: Build datum (resolve chains)
+    API-->>Bun: JSON response (datum + context)
+    Bun->>Bun: process_response()
+    Bun->>Bun: Apply parsers
+    Bun->>Bun: Generate SQL
+    Bun->>DB: INSERT/UPSERT
+    Bun-->>UI: SSE progress updates
+    Bun-->>UI: Final result
+    UI->>User: Show completion
+```
+
+### tool_diffusion.js Key Methods
+
+#### `get_diffusion_info()`
+
+Fetches available diffusion targets for the current section:
+```javascript
+const rqo = {
+    dd_api: 'dd_diffusion_api',
+    action: 'get_diffusion_info',
+    source: source,
+    options: { section_tipo: section_tipo }
+};
+
+// Response used to populate UI dropdown
+```
+
+#### `export(options)`
+
+Executes the diffusion with streaming response:
+```javascript
+const rqo = {
+    dd_api: 'dd_diffusion_api',
+    action: 'diffuse',
+    source: source,
+    sqo: sqo,  // Search Query Object from caller
+    options: {
+        levels: resolve_levels,
+        diffusion_tipo: diffusion_tipo,
+        diffusion_element_tipo: diffusion_element_tipo,
+        total: total,
+        process_id: options.process_id
+    }
+};
+
+// Uses data_manager.request_stream for SSE handling
+data_manager.request_stream({
+    url: DEDALO_DIFFUSION_API_URL,
+    body: rqo
+}).then(stream => {
+    // Handle streaming response
+});
+```
+
+#### `get_diffusion_status()`
+
+Checks Bun engine health:
+```javascript
+// Returns readiness status including:
+// - is_bun_running
+// - is_db_connected
+// - is_php_bridge_reachable
+// - last_error
+```
+
+## Configuration & Environment
+
+### Bun Environment Variables (`.env`)
+
+```bash
+# Server
+SOCKET_PATH=/tmp/diffusion.sock
+
+# PHP Bridge
+DEDALO_API_URL=http://localhost:8080/dedalo/core/api/v1/json/
+DEDALO_MEDIA_PATH=/var/www/html/dedalo/media/
+DEDALO_MEDIA_URL=/dedalo/media/
+
+# Database
+DB_SOCKET=/tmp/mysql.sock
+DB_USER=dedalo_user
+DB_PASSWORD=secret
+
+# Redis (for session validation)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+### Apache Configuration
+
+```apache
+# Proxy to Bun Unix Socket
+ProxyPass /diffusion/api/v1/ unix:/tmp/diffusion.sock|http://localhost/ timeout=120 keepalive=On
+ProxyPassReverse /diffusion/api/v1/ unix:/tmp/diffusion.sock|http://localhost/
+
+# Or for TCP (alternative)
+# ProxyPass /diffusion/api/v1/ http://localhost:3000/ timeout=120
+```
+
+## Use Cases & Examples
+
+### Use Case 1: Basic Publication
+
+Publishing Oral History interviews to a website:
+
+```mermaid
+flowchart LR
+    subgraph "Work System"
+        OH[oh1: Interview Section]
+        INF[rsc197: People Section]
+    end
+
+    subgraph "Ontology Mapping"
+        OH_MAP[oh66: interview table]
+        INF_MAP[rsc267: informant table]
+    end
+
+    subgraph "Public Database"
+        T1[interview table]
+        T2[informant table]
+    end
+
+    OH -->|level 0| OH_MAP
+    OH -->|portal oh24| INF
+    INF -->|level 1| INF_MAP
+    OH_MAP --> T1
+    INF_MAP --> T2
+```
+
+**Ontology Configuration:**
+```json
+// Interview table (oh66) - field nodes
+{
+    "term": "code",
+    "tipo": "oh100",
+    "model": "field_varchar",
+    "parser": { "fn": "parser_text::default_join" }
+}
+{
+    "term": "informant_data",
+    "tipo": "oh109",
+    "model": "field_text",
+    "parser": { 
+        "fn": "parser_locator::get_section_id",
+        "output_format": "json"
+    }
+}
+{
+    "term": "informant",
+    "tipo": "oh110",
+    "model": "field_text",
+    "parser": {
+        "fn": "parser_text::text_format",
+        "pattern": "${rsc85} ${rsc86}",
+        "columns": [
+            { "tipo": "rsc85", "model": "component_input_text" },
+            { "tipo": "rsc86", "model": "component_input_text" }
+        ]
+    }
+}
+```
+
+**Result:**
+```sql
+-- interview table
+INSERT INTO interview (section_id, lang, code, informant_data, informant) 
+VALUES (1, 'lg-eng', 'Code-001', '["1","2"]', 'Manuel González, María Gómez');
+
+-- informant table  
+INSERT INTO informant (section_id, lang, name, surname)
+VALUES (1, 'lg-eng', 'Manuel', 'González');
+```
+
+### Use Case 2: Multi-Language Publication
+
+Publishing content in multiple languages with fallback:
+
+```mermaid
+flowchart TB
+    subgraph "Source Data"
+        ENG[Title: "My Interview" lg-eng]
+        SPA[Título: "Mi Entrevista" lg-spa]
+        NOLAN[Code: "Code-001" lg-nolan]
+    end
+
+    subgraph "Published Records"
+        P1[section_id:1, lang:lg-eng, title:My Interview, code:Code-001]
+        P2[section_id:1, lang:lg-spa, title:Mi Entrevista, code:Code-001]
+        P3[section_id:1, lang:lg-cat, title:My Interview, code:Code-001]
+    end
+
+    ENG --> P1
+    SPA --> P2
+    ENG -->|fallback| P3
+    NOLAN -->|all| P1
+    NOLAN -->|all| P2
+    NOLAN -->|all| P3
+```
+
+**Parser Configuration:**
+```typescript
+// Language resolution priority:
+// 1. Exact match (lg-cat)
+// 2. Nolan (non-translatable)
+// 3. main_lang fallback (lg-eng)
+// 4. Any available
+```
+
+### Use Case 3: Complex Chain Resolution
+
+Three-level resolution (Interview → Image → Person → Toponym):
+
+```mermaid
+flowchart TB
+    subgraph "Level 0"
+        I[Interview: oh1]
+    end
+
+    subgraph "Level 1"
+        IMG[Image: rsc170]
+        AUD[Audiovisual: rsc167]
+    end
+
+    subgraph "Level 2"
+        PER[Person: rsc197]
+        AUT[Author: rsc197]
+    end
+
+    subgraph "Level 3"
+        TOP1[Birthplace: es1]
+        TOP2[Residence: es1]
+    end
+
+    I --> IMG
+    I --> AUD
+    IMG --> PER
+    IMG --> AUT
+    PER --> TOP1
+    AUT --> TOP2
+```
+
+**Configuration:**
+```json
+{
+    "options": {
+        "levels": 3,
+        "diffusion_tipo": "oh66"
+    }
+}
+```
+
+**Note:** Each level exponentially increases processing time. Monitor performance with large datasets.
+
+### Use Case 4: Custom Parser Chain
+
+Combining multiple parsers for complex transformations:
+
+```json
+{
+    "term": "birthplace_hierarchy",
+    "tipo": "oh201",
+    "model": "field_text",
+    "parser": [
+        {
+            "fn": "parser_locator::parents",
+            "options": { "include_self": true }
+        },
+        {
+            "fn": "parser_locator::slice_chain",
+            "options": { "slice": [0, 3] }
+        },
+        {
+            "fn": "parser_text::text_format",
+            "options": { "pattern": "${term} (${model})" }
+        },
+        {
+            "fn": "parser_helper::merge",
+            "options": { 
+                "merge": "string",
+                "fields_separator": " > ",
+                "records_separator": " | "
+            }
+        }
+    ]
+}
+```
+
+**Data Flow:**
+```
+Input: { section_id: 1, section_tipo: "es1" }
+  ↓
+parents() → ["Spain", "Madrid", "Center", "Sol"]
+  ↓
+slice_chain([0,3]) → ["Spain", "Madrid", "Center"]
+  ↓
+text_format() → ["Spain (Country)", "Madrid (City)", "Center (District)"]
+  ↓
+merge(string) → "Spain (Country) > Madrid (City) > Center (District)"
+```
+
+### Use Case 5: RDF Export
+
+For RDF-type diffusion elements:
+
+```php
+// In dd_diffusion_api::diffuse()
+if ($diffusion_type === 'rdf') {
+    $response = self::diffuse_rdf($diffusion_element_tipo, ...);
+    // Returns file URLs for merged RDF and ZIP
+    return $response;
+}
+```
+
+The Bun layer handles RDF file merging and ZIP creation via `rdf_file_utils.ts`.
+
+## Advanced Topics
+
+### Chunking Strategy
+
+For large datasets, Bun paginates requests:
+
+```typescript
+const DEFAULT_CHUNK_SIZE = 100;
+const use_chunks = total > chunk_size;
+
+// Injects limit/offset into SQO
+const chunk_rqo = {
+    ...request_rqo,
+    sqo: {
+        ...request_rqo.sqo,
+        limit: chunk_size,
+        offset: chunk_idx * chunk_size
+    }
+};
+```
+
+**Benefits:**
+- Prevents PHP memory exhaustion
+- Allows progress tracking per chunk
+- Fault-tolerant (one bad chunk doesn't fail entire process)
+
+### Progress Store
+
+In-memory process tracking with pub/sub:
+
+```typescript
+// Create process
+create_process(estimated_total, process_id);
+
+// Update progress
+update_progress(process_id, { counter, msg, ... });
+
+// Subscribe for SSE
+subscribe_to_process(process_id, callback);
+```
+
+### Session Handling
+
+Bun forwards cookies for PHP session validation:
+
+```typescript
+const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+};
+if (cookie_header) {
+    headers['Cookie'] = cookie_header;
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "PHP API returned HTTP 500" | PHP error during processing | Check Dédalo error logs |
+| "Table doesn't exist" | Missing diffusion ontology | Verify diffusion node exists for section |
+| Socket permission denied | Apache can't write to socket | `chmod 666 /tmp/diffusion.sock` |
+| SSE timeout | Proxy closing connection | Add `timeout=120` to ProxyPass |
+| Memory exhausted | Too many levels/records | Reduce `levels` or `chunk_size` |
+
+### Debug Mode
+
+Enable debug logging in Bun:
+```bash
+DEBUG=* bun run dev
+```
+
+Enable Dédalo debug:
+```php
+define('SHOW_DEBUG', true);
+```
+
+## API Reference Summary
+
+### dd_diffusion_api (PHP)
+
+| Method | Action | Purpose |
+|--------|--------|---------|
+| `diffuse()` | `diffuse` | Main publication process |
+| `get_diffusion_info()` | `get_diffusion_info` | Get available diffusion targets |
+| `validate()` | `validate` | Validate ontology mapping |
+| `get_ontology_map()` | `get_ontology_map` | Get raw parser definitions |
+
+### Bun Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/v1/diffuse` | Execute diffusion with streaming |
+| `GET /api/v1/health` | Health check |
+| `GET /api/v1/status` | Full system status |
+| `GET /api/v1/processes` | List active processes |
+
+### Parser Functions
+
+| Function | Module | Purpose |
+|----------|--------|---------|
+| `text_format` | parser_text | Pattern-based text |
+| `default_join` | parser_text | Simple concatenation |
+| `merge` | parser_helper | Multi-column merge |
+| `get_first` | parser_helper | First value only |
+| `count` | parser_helper | Count values |
+| `string_date` | parser_date | Format dates |
+| `unix_timestamp` | parser_date | Convert to Unix time |
+| `get_term_id` | parser_locator | Extract term IDs |
+| `parents` | parser_locator | Get parent hierarchy |
+| `slice_chain` | parser_locator | Slice parent chain |
