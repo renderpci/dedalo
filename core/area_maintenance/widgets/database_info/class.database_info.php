@@ -132,7 +132,7 @@ class database_info {
 	*/
 	public static function recreate_db_assets( object $options ) : object {
 
-		set_time_limit(10800); // 3 hours
+		set_time_limit(18000); // 5 hours
 
 		$response = new stdClass();
 			$response->result	= new stdClass();
