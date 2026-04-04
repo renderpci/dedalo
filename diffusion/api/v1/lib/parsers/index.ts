@@ -8,7 +8,7 @@
 import { default_join, text_format, map_value, v5_html } from './parser_text';
 import { select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
 import date_default from './parser_date';
-import { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, parents } from './parser_locator';
+import { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, parents, map_section_tipo_to_name } from './parser_locator';
 import { get_first, count, merge, replace } from './parser_helper';
 import { widget } from './parser_info';
 import info_default from './parser_info';
@@ -48,7 +48,8 @@ const parser_registry: Record<string, parser_fn> = {
 	'parser_locator::truncate_by_term_id':			truncate_by_term_id,
 	'parser_locator::truncate_by_model':			truncate_by_model,
 	'parser_locator::filter_by_section_tipo':		filter_by_section_tipo,
-	'parser_locator::slice_chain':					slice_chain,
+	'parser_locator::slice_chain':                  slice_chain,
+	'parser_locator::map_section_tipo_to_name':		map_section_tipo_to_name,
 	'parser_date::select_properties':				select_properties,
 	'parser_date::select_keys':						select_keys,
 	'parser_date::format_string_date':				format_string_date,
@@ -103,7 +104,7 @@ export function apply_parser(fn_string: string, data: any[] | null, options: par
 
 // Re-export individual parsers for direct use
 export { default_join, join_items_to_string, text_format, map_value, v5_html } from './parser_text';
-export { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain } from './parser_locator';
+export { get_section_id, get_section_tipo, get_term_id, truncate_by_term_id, truncate_by_model, filter_by_section_tipo, filter_parents_by_term_id, slice_chain, map_section_tipo_to_name } from './parser_locator';
 export { get_first, count, merge } from './parser_helper';
 export { default as date_default, select_properties, select_keys, format_string_date, string_date, unix_timestamp } from './parser_date';
 export { default as info_default, widget } from './parser_info';
