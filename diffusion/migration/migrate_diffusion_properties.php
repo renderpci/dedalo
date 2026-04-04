@@ -1032,6 +1032,79 @@ function process_node($node, $level) {
 								}
 							}
 
+							// 2.5 "process_dato" = "diffusion_sql::map_locator_to_name"
+							if($process_dato && $process_dato=== "diffusion_sql::map_locator_to_name"){
+
+								$process_dato_arguments 	= $props->process_dato_arguments ?? null;
+								$custom_arguments 			= $process_dato_arguments->custom_arguments ?? null;
+								$custom_map 				= $custom_arguments->map ?? null;
+
+								$parser_process = (object)[									
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::map_section_tipo_to_name',
+											'options' => (object)[
+												'map' => $custom_map
+											]
+										]
+									],
+									"output_format" => "string"
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = 'ts_thematics';
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_name\n";
+								break;
+
+							}
+
+							// 2.6 "process_dato" = "diffusion_sql::map_locator_to_section_tipo"
+							if($process_dato && $process_dato=== "diffusion_sql::map_locator_to_section_tipo"){
+
+								$parser_process = (object)[									
+									'parser' => [
+										(object)[
+											'fn' => 'parser_locator::get_section_tipo'
+										]
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process = $parser_process;
+								$new_props->process->output_sample = 'numisdata4';
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_section_tipo\n";
+								break;
+
+							}
+
+
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
 							if($data_to_be_used && $data_to_be_used === "dato"){
 								
