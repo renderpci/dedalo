@@ -127,11 +127,11 @@ export const change_handler = function(e, key, self) {
 * REMOVE_HANDLER
 * Handle button remove actions
 * @param DOM  node input
-* @param int key
+* @param int id
 * @param object self
 * @return promise response
 */
-export const remove_handler = function(input, key, self) {
+export const remove_handler = function(input, id, self) {
 
 	// force possible input change before remove
 		document.activeElement.blur()
@@ -147,7 +147,7 @@ export const remove_handler = function(input, key, self) {
 	// changed_data
 		const changed_data = [Object.freeze({
 			action	: 'remove',
-			key		: key,
+			id		: id,
 			value	: null
 		})]
 
