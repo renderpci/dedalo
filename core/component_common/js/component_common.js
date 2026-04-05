@@ -1351,7 +1351,7 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 		self.data.changed_data = self.data.changed_data || []
 
 	// set changed_data item
-		const key = self.data.changed_data.findIndex(el => el.key===changed_data_item.key)
+		const key = self.data.changed_data.findIndex(el => el.id===changed_data_item.id)
 		if (key!==-1) {
 			// replace
 			self.data.changed_data[key] = changed_data_item
