@@ -178,7 +178,7 @@ const get_content_value = (i, current_value, self) => {
 			})
 			button_remove.addEventListener('click', function(e){
 				e.stopPropagation()
-				remove_handler(input, i, self)
+				remove_handler(input, current_value?.id, self)
 			})
 		}
 
@@ -239,11 +239,9 @@ export const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
-				const key = self.data.entries.length
-
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: key,
+					id		: null,
 					value	: {value: null}
 				})]
 				self.change_value({
@@ -340,11 +338,11 @@ export const change_handler = function(e, key, self) {
 * REMOVE_HANDLER
 * Handle button remove actions
 * @param HTMLElement input
-* @param int key
+* @param int id
 * @param object self
 * @return promise response
 */
-export const remove_handler = function(input, key, self) {
+export const remove_handler = function(input, id, self) {
 
 	// force possible input change before remove
 		document.activeElement.blur()
@@ -360,7 +358,7 @@ export const remove_handler = function(input, key, self) {
 	// changed_data
 		const changed_data = [Object.freeze({
 			action	: 'remove',
-			key		: key,
+			id		: id,
 			value	: null
 		})]
 
