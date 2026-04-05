@@ -614,11 +614,7 @@ export const render_column_remove = function(options) {
 
 						// deletes the locator from component data and refresh the component
 						// (!) Note that this function refresh the component and wait for it
-						await self.unlink_record({
-							paginated_key	: paginated_key,
-							row_key			: row_key,
-							section_id		: section_id
-						})
+						await self.unlink_record(options.locator)
 
 						// delete_dataframe_record. if it is not dataframe it will be ignored
 						await delete_dataframe({
