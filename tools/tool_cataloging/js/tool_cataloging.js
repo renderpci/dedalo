@@ -113,7 +113,7 @@ tool_cataloging.prototype.init = async function(options) {
 			// insert the locator in the data of the component
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: null,
+					id		: null,
 					value	: {
 						section_id		: locator.section_id,
 						section_tipo	: locator.section_tipo
