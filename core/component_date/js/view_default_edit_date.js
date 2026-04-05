@@ -188,11 +188,9 @@ const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
-				const key = self.data.entries.length
-
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: key,
+					id		: null,
 					value	: null
 				})]
 

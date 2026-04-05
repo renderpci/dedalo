@@ -485,7 +485,7 @@ export const render_input_element_date = (i, current_value, self) => {
 	// button_remove
 		if (i>0) {
 			date_node.appendChild(
-				render_button_remove(self, i)
+				render_button_remove(self, current_value.id)
 			)
 		}
 
@@ -529,7 +529,7 @@ export const render_input_element_range = (i, current_value, self) => {
 		// button_remove
 			if (i>0) {
 				node_end.appendChild(
-					render_button_remove(self, i)
+					render_button_remove(self, current_value.id)
 				)
 			}
 
@@ -574,7 +574,7 @@ export const render_input_element_time_range = (i, current_value, self) => {
 		// button_remove
 			if (i>0) {
 				node_end.appendChild(
-					render_button_remove(self, i)
+					render_button_remove(self, current_value.id)
 				)
 			}
 
@@ -740,7 +740,7 @@ export const render_input_element_period = (i, current_value, self) => {
 	// button_remove
 		if (i>0) {
 			input_wrap.appendChild(
-				render_button_remove(self, i)
+				render_button_remove(self, current_value.id)
 			)
 		}
 
@@ -768,7 +768,7 @@ export const render_input_element_time = (i, current_value, self) => {
 	// button_remove
 		if (i>0) {
 			time_node.appendChild(
-				render_button_remove(self, i)
+				render_button_remove(self, current_value.id)
 			)
 		}
 
@@ -893,10 +893,10 @@ export const change_handler = function(options) {
 * RENDER_BUTTON_REMOVE
 * @param object self
 * @param HTMLElement input_node
-* @param int key
+* @param int id
 * @return HTMLELement button_remove_container
 */
-const render_button_remove = function (self, key) {
+const render_button_remove = function (self, id) {
 
 	// fn_mousedown manager
 		const fn_mousedown = (e) => {
@@ -911,7 +911,7 @@ const render_button_remove = function (self, key) {
 
 			const changed_data = [Object.freeze({
 				action	: 'remove',
-				key		: key,
+				id		: id,
 				value	: null
 			})]
 			self.change_value({
