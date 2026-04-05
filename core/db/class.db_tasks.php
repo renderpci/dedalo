@@ -833,6 +833,71 @@ class db_tasks {
 	}//end get_tables
 
 
+
+	/**
+	* GET_TABLE_INDEXES
+	* Retrieves index information for a given table from PostgreSQL system catalogs.
+	* Returns indexes sorted by size (largest first) with schema, name, size, and definition.
+	*
+	* @param string $table - Table name to query indexes for
+	* @return array $indexes - Array of associative arrays with keys: schemaname, tablename, indexname, index_size, indexdef
+	* @throws Exception - If database connection or query fails
+	*/
+	public static function get_table_indexes( string $table ) : array {
+
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			throw new Exception('Database connection failed');
+		}
+
+		// Sanitize table name to prevent SQL injection
+		$table = pg_escape_string($conn, $table);
+
+		$sql = "
+			SELECT
+				schemaname,
+				tablename,
+				indexname,
+				pg_size_pretty(pg_relation_size(indexname::regclass)) as index_size,
+				indexdef
+			FROM pg_indexes
+			WHERE tablename = '{$table}'
+			ORDER BY pg_relation_size(indexname::regclass) DESC;
+		";
+		$result = pg_query($conn, $sql);
+
+		// Error handling for the query
+		if (!$result) {
+			debug_log(__METHOD__
+				. " Database query failed " . PHP_EOL
+				. ' Error: '. pg_last_error($conn)
+				, logger::ERROR
+			);
+			return [];
+		}
+
+		$indexes = [];
+		while ($row = pg_fetch_assoc($result)) {
+			$indexes[] = [
+				'schemaname' => $row['schemaname'],
+				'tablename' => $row['tablename'],
+				'indexname' => $row['indexname'],
+				'index_size' => $row['index_size'],
+				'indexdef' => $row['indexdef']
+			];
+		}
+
+		// Free the result resource
+		pg_free_result($result);
+
+		return $indexes;
+	}//end get_table_indexes
+
+
+
+
+
 	/**
 	* PARSE_SQL_SENTENCE
 	* Replace the SQL sentence template given with the table given
