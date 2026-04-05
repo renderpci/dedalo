@@ -394,7 +394,7 @@ const get_content_value = (i, current_value, self) => {
 						// Save value
 						const changed_data = [Object.freeze({
 							action	: 'remove',
-							key		: i,
+							id		: current_value.id,
 							value	: null
 						})]
 						await self.change_value({
@@ -646,8 +646,8 @@ export const get_buttons = (self) => {
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.entries?.length || 0,
-					value	: null
+					key		: null,
+					value	: {value:null}
 				})]
 				self.change_value({
 					changed_data	: changed_data,
