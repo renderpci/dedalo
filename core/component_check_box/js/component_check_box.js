@@ -66,66 +66,6 @@ export const component_check_box = function(){
 
 
 
-
-/**
- * GET_CHANGED_KEY
- * Find the key of the data with the selected value of the datalist
- * The key of datalist has all possible values of the components
- * Key of the data is the active options in data.
- * @param action
- * @param value
- * @param source
- */
-component_check_box.prototype.get_changed_key = function(action, value, source=this.data.entries) {
-
-	// const self = this
-
-	// source usually is self.data.value
-	// source = source || self.data.value
-
-	const changed_key = (() => {
-
-		if (action==='insert') {
-
-			// insert value
-			if (source) {
-
-				// check if value already exists
-				const ar_found = source.filter(item =>
-					item.section_id==value.section_id &&
-					item.section_tipo===value.section_tipo
-				)
-				if (ar_found.length>0) {
-					console.warn("Ignored to add value because already exists:", value)
-				}
-
-				// component common add value and save (without refresh)
-				return source.length || 0
-			}
-
-		}else{
-
-			// remove value
-			const value_key = source.findIndex(item => {
-				return (item.section_id==value.section_id &&
-						item.section_tipo===value.section_tipo)
-			})
-			if (value_key===-1) {
-				console.warn("Error. item not found in values:", value)
-			}else{
-				return value_key
-			}
-		}
-
-		return 0;
-	})()
-
-
-	return changed_key
-}//end get_changed_key
-
-
-
 /**
 * CHANGE_HANDLER
 * Manages the change event actions
@@ -136,6 +76,7 @@ component_check_box.prototype.change_handler = async function(options) {
 
 	// options
 		const self				= options.self
+		const data_entries 		= self.data.entries || []
 		const e					= options.e // event
 		const i					= options.i // value key
 		const datalist_value	= options.datalist_value
@@ -146,18 +87,24 @@ component_check_box.prototype.change_handler = async function(options) {
 
 	// change data vars
 		const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-		// changed key. Find the data.value key (could be different of datalist key)
-		const changed_key	= self.get_changed_key(
-			action,
-			datalist_value,
-			self.data.entries
-		)
+
+		const locator = data_entries.find(item => {
+			return (item.section_id==datalist_value.section_id &&
+					item.section_tipo===datalist_value.section_tipo)
+		 })
+
+		// // changed key. Find the data.value key (could be different of datalist key)
+		// const changed_key	= self.get_changed_key(
+		// 	action,
+		// 	datalist_value,
+		// 	self.data.entries
+		// )
 		const changed_value	= (action==='insert') ? datalist_value : null
 
 	// change data array
 		const changed_data = [Object.freeze({
 			action	: action,
-			key		: changed_key,
+			id		: locator?.id || null,
 			value	: changed_value
 		})]
 
