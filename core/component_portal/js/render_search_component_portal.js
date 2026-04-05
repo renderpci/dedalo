@@ -272,7 +272,7 @@ export const render_column_remove = function(options) {
 				// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'remove',
-					key		: false,
+					id		: null,
 					value	: null
 				})
 				// update the instance data (previous to save)

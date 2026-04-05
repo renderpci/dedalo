@@ -257,10 +257,7 @@ export const on_drop = function(node, event, options) {
 
 			const source_instance = ar_instances.find(el => el.id === source_id)
 			if(source_instance){
-				source_instance.unlink_record({
-					paginated_key	: data_parse.locator.paginated_key,
-					section_id		: data_parse.locator.section_id,
-				})
+				source_instance.unlink_record(data_parse.locator)
 			}
 
 			return true
