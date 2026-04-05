@@ -70,52 +70,6 @@ export const component_filter = function(){
 
 
 
-/**
-* GET_CHANGED_KEY
-* @param string action
-* 	sample: insert
-* @param object value
-* 	sample: {section_tipo: 'dd153', section_id: '6'}
-*/
-component_filter.prototype.get_changed_key = function(action, value) {
-
-	const self = this
-
-	if (action==='insert') {
-
-		// insert value
-
-		// check if value already exists
-		const ar_found = self.data.entries?.filter(item =>
-			item.section_id===value.section_id && item.section_tipo===value.section_tipo
-		)
-		if (ar_found?.length>0) {
-			console.warn("Ignored to add value because already exists:", value);
-			return false
-		}
-
-		// component common add value and save (without refresh)
-		return self.data.entries?.length || 0
-
-	}else{
-
-		// remove value
-
-		const value_key = self.data.entries?.findIndex( (item) => {
-			return (item.section_id===value.section_id && item.section_tipo===value.section_tipo)
-		})
-		if (value_key===-1) {
-			console.warn("Error. item not found in values:", value);
-			return false
-		}
-
-		return value_key
-	}
-
-	return false
-}//end get_changed_key
-
-
 
 /**
 * CHANGE_HANDLER
@@ -130,22 +84,22 @@ component_filter.prototype.change_handler = async function(options) {
 	const self = this
 
 	// options
+		const data_entries 		= self.data.entries
 		const datalist_value	= options.datalist_value
 		const action			= options.action
 
 	// change data vars
 		// changed key. Find the data.value key (could be different of datalist key)
-		const changed_key = self.get_changed_key(
-			action,
-			datalist_value,
-			self.data.entries
-		)
+		const locator = data_entries.find(item => {
+			return (item.section_id==datalist_value.section_id &&
+					item.section_tipo===datalist_value.section_tipo)
+		 })
 		const changed_value	= (action==='insert') ? datalist_value : null
 
 	// changed_data_item
 		const changed_data_item = Object.freeze({
 			action	: action,
-			key		: changed_key,
+			id		: locator?.id || null,
 			value	: changed_value
 		})
 
