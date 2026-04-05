@@ -292,7 +292,7 @@ const get_content_value = function(i, current_value, self) {
 
 				const changed_data = [Object.freeze({
 					action	: 'update',
-					key		: i,
+					id		: self.data.entries[0].id || null,
 					value	: current_value
 				})]
 				self.change_value({
