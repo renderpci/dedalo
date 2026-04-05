@@ -27,10 +27,20 @@ class database_info {
 		$info = pg_version(DBi::_getConnection()) ?? [];
 		$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 
+		// indexes
+		$indexes = [];
+		foreach ($tables as $table) {
+			$table_indexes = db_tasks::get_table_indexes($table);
+			if (!empty($table_indexes)) {
+				$indexes[$table] = $table_indexes;
+			}
+		}
+
 		// result
 		$result = [
 			'info' => $info,
-			'tables' => $tables
+			'tables' => $tables,
+			'indexes' => $indexes
 		];
 
 		// response
