@@ -3125,6 +3125,15 @@ abstract class common {
 					true // bool cache
 				);
 
+			// skip if section instance could not be created (invalid tipo or missing model)
+				if ($dd_section === false) {
+					debug_log(__METHOD__
+						. " Skipped section '$section_tipo': instance creation failed (missing model or invalid tipo)"
+						, logger::ERROR
+					);
+					continue;
+				}
+
 			// item context add to context
 				$item_context = [
 					$dd_section->get_structure_context_simple(
