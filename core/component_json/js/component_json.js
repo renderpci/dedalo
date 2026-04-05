@@ -110,8 +110,8 @@ component_json.prototype.save_sequence = async function(editor) {
 	const self = this
 
 	// short vars
-		const data	= self.data || {}
-		const value	= data.entries || []
+		const data		= self.data || {}
+		const entries	= data.entries || []
 
 
 	// check if the editor validate the current value
@@ -133,7 +133,7 @@ component_json.prototype.save_sequence = async function(editor) {
 				: JSON.parse( current_value.text )
 
 	// check data has really changed. If not, stop save
-		const db_value 	= typeof value[0]!=="undefined" ? value[0] : null
+		const db_value 	= typeof entries[0]!=="undefined" ? entries[0] : null
 		const changed 	= JSON.stringify(db_value)!==JSON.stringify(json_value)
 		if (!changed) {
 			console.log('No changes are detected. Stop save');
@@ -143,7 +143,7 @@ component_json.prototype.save_sequence = async function(editor) {
 	// changed_data
 		const changed_data = [Object.freeze({
 			action	: 'update',
-			key		: 0,
+			id		: entries[0]?.id || null,
 			value	: { value : json_value }
 		})]
 
