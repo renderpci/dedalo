@@ -35,7 +35,7 @@
 			lang	: lang
 		}
 		return data_element;
-	}		
+	}
 
 	export const random_number = function(length=10000000) {
 		return Math.floor(Math.random() * Math.floor(length));
@@ -97,7 +97,8 @@
 			section_tipo		: section_tipo, // "dd501"
 			section_id			: (section_id).toString(),
 			from_component_tipo	: from_component_tipo, // "test144"
-			type				: type
+			type				: type,
+			id 					: 1
 		}
 
 		return value
@@ -215,7 +216,7 @@
 		   result += characters.charAt(Math.floor(Math.random() * charactersLength));
 		}
 		result += '@mydomain.net'
-		
+
 		const data_element = {
 			id : 1,
 			value : result,
@@ -351,7 +352,8 @@
 			  "minute": 8,
 			  "second": 0
 			},
-			"original_normalized_name": "test26_test3_1.glb"
+			"original_normalized_name": "test26_test3_1.glb",
+			"id" 						: 1
 		}
 
 		return [value]
@@ -429,7 +431,8 @@
 			  "minute": 8,
 			  "second": 25
 			},
-			"original_normalized_name": "test94_test3_1.mp4"
+			"original_normalized_name": "test94_test3_1.mp4",
+			"id" 						: 1
 		}
 
 		return [value]
@@ -561,7 +564,8 @@
 			  "minute": 2,
 			  "second": 0
 			},
-			"original_normalized_name": "test99_test3_1.jpg"
+			"original_normalized_name": "test99_test3_1.jpg",
+			"id" 						: 1
 		}
 
 		return [value]
@@ -673,7 +677,8 @@
 			  "minute": 7,
 			  "second": 38
 			},
-			"original_normalized_name": "test85_test3_1.pdf"
+			"original_normalized_name": "test85_test3_1.pdf",
+			"id" 						: 1
 		}
 
 		return [value]
@@ -749,7 +754,8 @@
 			  "minute": 5,
 			  "second": 42
 			},
-			"original_normalized_name": "test177_test3_1.svg"
+			"original_normalized_name": "test177_test3_1.svg",
+			"id" 						: 1
 		}
 
 		return [value]
