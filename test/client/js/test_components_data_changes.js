@@ -74,7 +74,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 									changed_data = [Object.freeze({
 										action	: 'update',
-										key		: 0,
+										id		: value_item?.id || null,
 										value	: value_item
 									})]
 									break;
