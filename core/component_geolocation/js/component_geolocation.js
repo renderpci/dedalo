@@ -1103,7 +1103,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		// changed_data
 			const changed_data_item = Object.freeze({
 				action		: 'update',
-				key			: key,
+				id			: self.current_value[key]?.id || null,
 				value		: self.current_value[key]
 			})
 		// fix instance changed_data
