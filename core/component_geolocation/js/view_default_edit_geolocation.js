@@ -445,10 +445,9 @@ const get_buttons = (self) => {
 
 				// const changed_data = self.data.changed_data || []
 
-				const key = 0; // fixed key (only one element is allowed)
 				const changed_data_item = Object.freeze({
 					action		: 'update',
-					key			: key,
+					id			: self.current_value[key]?.id || null,
 					value		: self.current_value[key]
 				})
 
