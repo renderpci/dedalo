@@ -100,7 +100,7 @@ const add_events = function(self, wrapper) {
 
 				const changed_data_item = Object.freeze({
 					action	: (value===null) ? 'remove' : 'update',
-					key		: key_found,
+					id		: current_entries[key_found]?.id || null,
 					value	: value
 				})
 
