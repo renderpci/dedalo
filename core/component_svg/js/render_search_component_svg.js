@@ -118,7 +118,7 @@ const get_content_value = (i, data_item, self) => {
 			// changed_data
 			const changed_data_item = Object.freeze({
 				action	: 'update',
-				key		: i,
+				id		: self.data.entries?.[i]?.id || null,
 				value	: data_item_to_save
 			})
 
