@@ -768,10 +768,9 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// changed_data
-		const key			= self.total || 0
 		const changed_data	= [Object.freeze({
 			action	: 'insert',
-			key		: key,
+			id		: null,
 			value	: value
 		})]
 
