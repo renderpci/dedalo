@@ -107,7 +107,7 @@ export const change_handler = function(e, key, self) {
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
-			key		: key,
+			id		: entries[key]?.id || null,
 			value	: item_value
 		})
 
