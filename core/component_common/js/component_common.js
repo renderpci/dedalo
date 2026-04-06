@@ -919,25 +919,33 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 		}
 
 	// resolve data_key from id
-		let data_key = null
+		let data_key = null;
+		let id_not_found = false;
 		if (changed_id !== null) {
-			data_key = self.data.entries?.findIndex(entry => entry?.id === changed_id) ?? null
+			const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id);
+			if (idx !== -1) {
+				data_key = idx;
+			}else{
+				id_not_found = true;
+			}
 		}
 
 	// data entries
-		if (data_key===false && changed_value===null) {
-				self.data.entries = []
+		if (action==='remove' && data_key===null && changed_value===null && !id_not_found) {
+			self.data.entries = [];
+		}else if (data_key===false && changed_value===null) {
+			self.data.entries = [];
 		}else if (data_key === null) {
 			if (changed_value !== null) {
-				self.data.entries = self.data.entries || []
-				self.data.entries.push(changed_value)
+				self.data.entries = self.data.entries || [];
+				self.data.entries.push(changed_value);
 			}
 		}else{
 			if (changed_value===null && self.data.entries) {
-				self.data.entries.splice(data_key, 1)
+				self.data.entries.splice(data_key, 1);
 			}else{
-				self.data.entries = self.data.entries || []
-				self.data.entries[data_key] = changed_value
+				self.data.entries = self.data.entries || [];
+				self.data.entries[data_key] = changed_value;
 			}
 		}
 
