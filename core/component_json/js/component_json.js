@@ -87,7 +87,7 @@ component_json.prototype.set_value = async function(value, key=0) {
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
-			key		: key,
+			id		: self.data.entries?.[key]?.id || null,
 			value	: { value : value }
 		})
 
