@@ -318,7 +318,7 @@ export const change_handler = function(e, key, self) {
 	// change data
 	const changed_data_item = Object.freeze({
 		action	: action,
-		key		: key,
+		id		: item.id || null,
 		value	: item
 	})
 
