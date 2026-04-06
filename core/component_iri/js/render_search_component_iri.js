@@ -127,7 +127,7 @@ const get_content_value = (i, current_value, self) => {
 			// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
-					key		: i,
+					id		: self.data.entries?.[i]?.id || null,
 					value	: parsed_value
 				})
 
