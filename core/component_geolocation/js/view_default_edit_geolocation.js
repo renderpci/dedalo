@@ -443,12 +443,10 @@ const get_buttons = (self) => {
 			function fn_save(e) {
 				e.stopPropagation()
 
-				// const changed_data = self.data.changed_data || []
-
 				const changed_data_item = Object.freeze({
 					action		: 'update',
-					id			: self.current_value[key]?.id || null,
-					value		: self.current_value[key]
+					id			: self.current_value[0]?.id || null,
+					value		: self.current_value[0]
 				})
 
 				self.change_value({
