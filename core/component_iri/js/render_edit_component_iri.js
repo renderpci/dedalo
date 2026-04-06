@@ -330,7 +330,7 @@ const get_content_value = (i, current_value, self) => {
 						// set_changed_data
 							const changed_data_item = Object.freeze({
 								action	: 'update',
-								key		: i,
+								id		: current_value.id || null,
 								value	: current_value
 							})
 							// fix instance changed_data
@@ -646,7 +646,7 @@ export const get_buttons = (self) => {
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: null,
+					id		: null,
 					value	: {value:null}
 				})]
 				self.change_value({
