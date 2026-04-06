@@ -130,7 +130,7 @@ const get_input_element = (i, current_value, self) => {
 			// set the changed_data for update the component data and send it to the server for change when save
 			const changed_data_item = Object.freeze({
 				action	: 'update',
-				key		: i,
+				id		: self.data.entries?.[i]?.id || null,
 				value	: value
 			})
 			// update the data in the instance previous to save
