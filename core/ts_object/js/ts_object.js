@@ -787,7 +787,10 @@ ts_object.prototype.get_children_recursive = function( options ) {
 * @return promise
 */
 ts_object.prototype.update_parent_data = async function(options) {
-console.warn('*** update_parent_data options:', options);
+	if(SHOW_DEBUG) {
+		console.warn('*** update_parent_data options:', options);
+	}
+
 	const {
 		section_id,
 		section_tipo,
