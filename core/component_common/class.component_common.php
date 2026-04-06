@@ -3511,34 +3511,102 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATA_VALUE
-	* Used to maintain component data when dd_core_api saves component
-	* * @see dd_core_api update
-	* @param object $changed_data
-	* sample:
+	* Handles component data modifications based on the action specified in $changed_data.
+	* This method is the central hub for all data manipulation operations in components,
+	* called by dd_core_api during save operations.
+	*
+	* The method uses the unique `id` property to identify data entries for update and remove
+	* operations, replacing the previous `key` (array index) approach. This ensures reliable
+	* data manipulation regardless of array reordering or pagination state.
+	*
+	* @see dd_core_api update
+	*
+	* @param object $changed_data The data change request object with the following structure:
+	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'add_new_element', 'force_save'
+	*   - id: (string|null) The unique identifier of the data entry to modify
+	*     - For 'remove': id of entry to remove, or null to remove all entries
+	*     - For 'update': id of entry to update (required for targeted update)
+	*     - For 'insert': typically null (new id will be generated)
+	*   - value: (mixed) The value to set, insert, or update
+	*
+	* @return bool True on success, false on error
+	*
+	* @example Insert a new entry (id is null, new id generated on save):
 	* {
-	*  	"action": "add_new_element",
-	*	"key": null,
-	*	"value": "rsc167"
+	*   "action": "insert",
+	*   "id": null,
+	*   "value": { "value": "New text content", "lang": "lg-eng" }
 	* }
-	* @return bool
+	*
+	* @example Update an existing entry by id:
+	* {
+	*   "action": "update",
+	*   "id": "1",
+	*   "value": { "value": "Updated text content", "lang": "lg-eng" }
+	* }
+	*
+	* @example Remove a single entry by id:
+	* {
+	*   "action": "remove",
+	*   "id": "2",
+	*   "value": null
+	* }
+	*
+	* @example Remove all entries (id is null):
+	* {
+	*   "action": "remove",
+	*   "id": null,
+	*   "value": null
+	* }
+	*
+	* @example Set entire data array (bulk operation):
+	* {
+	*   "action": "set_data",
+	*   "id": null,
+	*   "value": [{ "id": "dd123_1", "value": "Item 1" }, { "id": "dd123_2", "value": "Item 2" }]
+	* }
+	*
+	* @example Sort data entries (used by portals for drag-and-drop reordering):
+	* {
+	*   "action": "sort_data",
+	*   "source_key": 0,
+	*   "target_key": 2,
+	*   "value": { "section_id": "1", "section_tipo": "dd123" }
+	* }
+	*
+	* @example Add new element (creates new section and links it):
+	* {
+	*   "action": "add_new_element",
+	*   "id": null,
+	*   "value": "dd153"
+	* }
 	*/
 	public function update_data_value(object $changed_data) : bool {
 
-		$data				= $this->get_data_lang() ?? [];
+		// Get the current language for data operations
+		// Components can have data in multiple languages; this ensures we modify the correct language version
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
-		// Type check moved to actions where it is strictly required (e.g. set_data)
+		// Retrieve the current data array for the component
+		// component_dataframe uses unfiltered data (includes virtual entries)
+		// Other components use language-specific data
+		$data = $this->model === 'component_dataframe'
+			? $this->get_data_unfiltrered() ?? []
+			: $this->get_data_lang() ?? [];
+	
 
 		switch ($changed_data->action) {
 
-			// insert given value in data
+			// INSERT ACTION
+			// Appends a new value to the data array. The id is typically null for inserts,
+			// and a new unique id will be generated when the data is saved to the database.
+			// This is used when adding new entries to multi-value components like portals,
+			// or when creating the first entry in single-value components.
 			case 'insert':
 
-				// set the id of the comonent_iri
-				// check all data languages to get the if of the array key
-				// if the other data lang has not id, set new one from counter in the component
-				// if the other data lang has an id, set the new data with it.
+				// Legacy code for component_iri id synchronization across languages (deprecated)
+				// Kept as reference for the id synchronization logic that was previously handled here
 				/*
 				if( get_called_class() === 'component_iri'){
 					// get the id of the key in other languages
@@ -3559,144 +3627,175 @@ abstract class component_common extends common {
 				}
 				*/
 
+				// Append the new value to the data array
 				$data[] = $changed_data->value;
-				// set the data in current lang
+
+				// Persist the updated data in the current language
 				$this->set_data_lang( $data, $lang );
 
-				//set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+				// Set observable data for event notifications to other components
+				// component_relation_related needs expanded references, others use plain data
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $data;
 				break;
 
+			// UPDATE ACTION
+			// Updates an existing data entry identified by its unique id.
+			// The id is used to locate the entry in the data array, regardless of its position.
+			// If the id is not found or is null, the value is appended as a new entry.
 			case 'update':
 
-				// check if the key exist in the $data. if the key exist, change it directly, else create all positions with null value for coherence
-				if( isset($data[$changed_data->key]) || array_key_exists($changed_data->key, $data) ) {
-					$data[$changed_data->key] = $changed_data->value;
-				}else{
-					// // fill gaps in array (Necessary ???????)
-					// for ($i=0; $i <= $changed_data->key; $i++) {
-					// 	if(!isset($data[$i])){
-					// 		$data[$i] = null;
-					// 	}
-					// }
-					$data[$changed_data->key] = $changed_data->value;
+				// Extract the id from the change request
+				$id = $changed_data->id ?? null;
+
+				if ($id !== null) {
+					// Search for the entry with matching id in the data array
+					$found = false;
+					foreach ($data as $data_key => $data_item) {
+						if (is_object($data_item) && isset($data_item->id) && $data_item->id == $id) {
+							// Found: replace the entire value at this array position
+							$data[$data_key] = $changed_data->value;
+							// Ensure the id is preserved in the new value object
+							if (!isset($data[$data_key]->id)) {
+								$data[$data_key]->id = $id;
+							}
+							$found = true;
+							break;
+						}
+					}
+					if (!$found) {
+						// Entry not found - log warning and add as new entry instead of failing
+						debug_log(__METHOD__
+							." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
+							, logger::WARNING
+						);
+						$data[] = $changed_data->value;
+					}
+				} else {
+					// No id provided - cannot target a specific entry, add as new
+					debug_log(__METHOD__
+						." Warning on update: no id provided. Adding as new entry.". PHP_EOL
+						, logger::WARNING
+					);
+					$data[] = $changed_data->value;
 				}
 
-				// set the id
-				// check all data languages to get the if of the array key
-				// if the other data lang has not id, set new one from counter in the component
-				// if the other data lang has an id, set the new data with it.
-
-					// // get the id of the key in other languages
-					// $id = $this->get_id_from_key( $changed_data->key );
-					// // if other lang has an id set it
-					// if( !empty($id) ){
-					// 	// Check if the data is an object because as insert action could be null data
-					// 	if( !is_object($changed_data->value) ){
-					// 		// create new object
-					// 		$changed_data->value = new dd_iri();
-					// 			$changed_data->value->set_iri( null );
-					// 			$changed_data->value->set_id( $id );
-					// 	}else{
-					// 		// set the id to the data
-					// 		$changed_data->value->id = $id;
-					// 	}
-					// }
-
-				// set the data in current lang
+				// Persist the updated data in the current language
 				$this->set_data_lang( $data, $lang );
 
-				//set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+				// Set observable data for event notifications to other components
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $data;
 				break;
 
-			// remove a item value from the component data array
+			// REMOVE ACTION
+			// Removes one or all entries from the component data array.
+			// - id !== null: Removes the single entry with matching id
+			// - id === null: Removes ALL entries (clear the entire data array)
+			// The id-based approach ensures correct removal regardless of array ordering or pagination.
 			case 'remove':
 
-				// get the key to be removed into data
-					$key = $changed_data->key;
+				$id = $changed_data->id ?? null;
 
-				// set the observable data used to send other components that observe you, if remove it will need the old data, with old references
+				// Special case: id === null means "remove all entries"
+				if ($id === null) {
+					// Clear all data by setting an empty array
+					$value = [];
+					$this->set_data($value);
+					break;
+				}
+
+				// Standard case: remove single entry by id
+				// Build a new array excluding the entry with the target id
+				// This approach avoids array_splice and maintains clean array indices
+				$found = false;
+				$new_data = [];
+				foreach ($data as $data_item) {
+					if ($data_item->id !== $id) {
+						// Keep this entry - add to new array
+						$new_data[] = $data_item;
+					}else{
+						// Found the target entry - skip it (effectively removing it)
+						$found = true;
+					}
+				}
+
+				// Error: the requested id was not found in the data
+				if ($found === false) {
+					debug_log(__METHOD__
+						." Error on remove: could not find item with id: $id". PHP_EOL
+						.' lang: ' . $lang
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Set observable data BEFORE modification for event notifications
+				// Other components may need to know about the removal with the old references
 				$this->observable_data = ( get_called_class()==='component_relation_related' )
 					? $this->get_data_with_references()
 					: $data;
 
-				// Fix locator used to delete dataframe
-				// Set the locator with the data of the component.
-				// When the component is a relation, pick the correct locator
-				$locator = $data[$key] ?? null;
-
-				// Delete data
-				switch (true) {
-					case ($changed_data->value===null && $changed_data->key===false):
-						$value = [];
-						$this->set_data_lang($value, $lang);
-						break;
-
-					case ($changed_data->value===null && ($with_lang_versions===true && $lang===DEDALO_DATA_NOLAN)):
-
-						$data = $this->get_data_lang($lang);
-						// remove null key and set data updated
-						array_splice($data, $changed_data->key, 1);
-						$this->set_data_lang($data, $lang);
-						//save
-						$this->save();
-
-						break;
-
-					default:
-						array_splice($data, $key, 1);
-						$this->set_data_lang($data, $lang);
-						break;
-				}
-
-				// Delete dataframe
+				// DATAFRAME DELETION
+				// If the component has an associated dataframe (virtual sections), delete the
+				// dataframe record when removing a main component entry.
+				// This is only done for single-entry removals (id !== null), not for "remove all".
 				$dataframe_ddo = $this->get_dataframe_ddo();
-				if( !empty($dataframe_ddo) && $changed_data->key!==false && isset($locator) ){
+				if( !empty($dataframe_ddo) && $id !== null ){
 
-					// If the caller is a literal as component_iri
-					// build a new locator with the id of the component data and its own section_tipo
-					if( get_called_class()==='component_iri'){
+					// Find the locator for the entry being removed
+					$locator = array_find($data, fn($locator) => $locator->id === $id);
+					if( !empty($locator) ){
+						// Literal components (text_area, date, etc.) store values directly, not locators.
+						// For these, build a virtual locator using the entry id as section_id.
+						$remove_relation_components = component_relation_common::get_components_with_relations();
+						if( !in_array(get_called_class(), $remove_relation_components) && isset($locator->id) ){
 
-						// Builds a virtual locator for IRI
-							$current_section_id = $locator->id;
+							// Build virtual locator from the literal item id
+								$current_section_id = $locator->id;
 
-						// Overwrite locator
-							$locator = new locator();
-								$locator->set_section_tipo($this->section_tipo);
-								$locator->set_section_id($current_section_id);
+							// Create a proper locator object for dataframe deletion
+								$locator = new locator();
+									$locator->set_section_tipo($this->section_tipo);
+									$locator->set_section_id($current_section_id);
 
-						if( $lang!==DEDALO_DATA_NOLAN ){
-							// Prevents to delete the dataframe on any langs different of nolan
-							// Only the nolan should delete the dataframe, other langs will delete main data only.
+							if( $lang!==DEDALO_DATA_NOLAN ){
+								// Non-nolan languages should not delete the dataframe if nolan still uses it.
+								// Check if the id exists in nolan data before proceeding.
+								$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
 
-							// Check if the dataframe is used in nolan.
-							// If the id is already used, don't remove the dataframe.
-							$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
-
-							if( $id_exists_in_nolan !== null ){
-								// Prevents to delete the dataframe
-								$locator = null;
+								if( $id_exists_in_nolan !== null ){
+									// Prevent dataframe deletion - nolan still references this id
+									$locator = null;
+								}
 							}
 						}
-					}
 
-					// Remove the dataframe data
-					if( !empty($locator) ){
-						// Remove the dataframe data before the main component save
-						// to save the correct data into Time Machine
+						// Remove the dataframe record before main component save
+						// This ensures Time Machine has correct state
 						$this->remove_dataframe_data( $locator );
+					
 					}
 				}
+
+				// Apply the new data array (without the removed entry) to the component
+				$data = $new_data;
+
+				// Persist the modified data in the current language
+				$this->set_data_lang($data, $lang);
+				
 				break;
 
-			// set the whole data sent by the client without check the array key, bulk insert or update
+			// SET_DATA ACTION
+			// Replaces the entire data array with the provided value.
+			// This is a bulk operation that bypasses individual entry validation.
+			// Used for importing data, batch updates, or resetting component state.
+			// The value must be an array or null (to clear all data).
 			case 'set_data':
 
+				// Validate that the value is an array or null
 				if(!is_array($changed_data->value) && $changed_data->value!==null) {
 					debug_log(__METHOD__
 					   .' Invalid value type for component (set_data): ' . get_called_class() . PHP_EOL
@@ -3706,36 +3805,32 @@ abstract class component_common extends common {
 					return false;
 				}
 
+				// Replace the entire data array with the new value
 				$this->set_data_lang($changed_data->value, $lang);
-				// set the observable data used to send other components that observe you, if insert it will need the final data, with new references
+
+				// Set observable data for event notifications
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $changed_data->value;
 				break;
 
-			// re-organize the whole component data based on target key given. Used by portals to sort rows
+			// SORT_DATA ACTION
+			// Reorders data entries by moving an item from source_key to target_key.
+			// Used primarily by portal components for drag-and-drop row reordering.
+			// Note: This action still uses array keys (indices) for positioning since
+			// the operation is about position, not identification.
 			case 'sort_data':
 
-				// vars
+				// Extract sort parameters
 					$value		= $changed_data->value;
 					unset($value->paginated_key);
 					$source_key	= $changed_data->source_key;
 					$target_key	= $changed_data->target_key;
 
-				// current DB array of value
+				// Get the current data array for reordering
 					$data = $this->get_data_lang($lang);
 
-				// debug
-					// debug_log(__METHOD__
-					// 	.' +++++++++++++++++++++++++++++++++  sort_data:'
-					// 	.PHP_EOL.'key value:'. to_string($source_key)
-					// 	.PHP_EOL.'given value:'. to_string($value)
-					// 	.PHP_EOL.'DB value (data[source_key]):'. to_string($data[$source_key])
-					// 	.PHP_EOL.'data value:'. to_string($data)
-					// 	, logger::ERROR
-					// );
-
-				// check selected value to detect mistakes
+				// Validate that the source entry exists and matches the provided value
 					if (!isset($data[$source_key])) {
 						debug_log(__METHOD__
 							.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
@@ -3758,18 +3853,22 @@ abstract class component_common extends common {
 						return false;
 					}
 
-				// remove old key value and add value at $target_key position
+				// Rebuild the array with the entry moved to its new position
+				// The entry at source_key is skipped, then inserted at target_key
 					$new_data = [];
 
 					foreach ($data as $key => $current_value) {
 						if ($key===$source_key) {
+							// Skip the source entry - it will be inserted at target position
 							continue;
 						}
 						if($key===$target_key && $target_key < $source_key){
+							// Moving up: insert value before current entry
 							$new_data[] = $value;
 							$new_data[] = $current_value;
 							continue;
 						}else if($key===$target_key && $target_key > $source_key){
+							// Moving down: insert value after current entry
 							$new_data[] = $current_value;
 							$new_data[] = $value;
 							continue;
@@ -3778,15 +3877,20 @@ abstract class component_common extends common {
 						$new_data[] = $current_value;
 					}
 
-				// new data set
+				// Persist the reordered data
 					$this->set_data_lang($new_data, $lang);
 				break;
 
-			// used by component_portal to add created target section to current component with project values inheritance
+			// ADD_NEW_ELEMENT ACTION
+			// Creates a new section record and links it to the portal component.
+			// Used by portals to create new related records on-the-fly.
+			// The value contains the target section tipo to create.
+			// Project values are inherited to the new section.
 			case 'add_new_element':
 
 				$target_section_tipo = $changed_data->value;
 
+				// Verify user has permission to create new records in the target section
 				$permissions_new = security::get_section_new_permissions( $target_section_tipo );
 				if($permissions_new < 2){
 					debug_log(__METHOD__
@@ -3797,7 +3901,7 @@ abstract class component_common extends common {
 					return false;
 				}
 
-				// component add_new_element. Returns object $response
+				// Delegate to add_new_element method which handles section creation and linking
 					$response = $this->add_new_element((object)[
 						'target_section_tipo' => $target_section_tipo
 					]);
@@ -3811,14 +3915,18 @@ abstract class component_common extends common {
 					}
 				break;
 
-			// used to force component to save. Example: component_av updates the data with files_info in each save call
+			// FORCE_SAVE ACTION
+			// Triggers a component save without modifying data.
+			// Used by components that need to update derived data on every save,
+			// such as component_av which updates files_info on each save call.
 			case 'force_save':
 
-				// nothing to do here, only return true to allow save call continue
+				// No data modification needed - just return true to allow save to proceed
 				break;
 
+			// DEFAULT CASE
+			// Unknown or unsupported action - log error and return false
 			default:
-				// error
 				debug_log(__METHOD__
 					." Error on update_data_value. changed_data->action is not valid! ". PHP_EOL
 					.' changed_data->action: ' . to_string($changed_data->action)
