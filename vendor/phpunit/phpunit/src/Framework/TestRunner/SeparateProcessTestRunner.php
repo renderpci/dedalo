@@ -14,14 +14,16 @@ use function defined;
 use function get_include_path;
 use function hrtime;
 use function serialize;
+use function sprintf;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
-use function unserialize;
 use function var_export;
+use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Event\NoPreviousThrowableException;
 use PHPUnit\Runner\CodeCoverage;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
+use PHPUnit\TextUI\Configuration\SourceMapper;
 use PHPUnit\Util\GlobalState;
 use PHPUnit\Util\PHP\Job;
 use PHPUnit\Util\PHP\JobRunnerRegistry;
@@ -36,6 +38,8 @@ use SebastianBergmann\Template\Template;
  */
 final class SeparateProcessTestRunner implements IsolatedTestRunner
 {
+    private static ?string $sourceMapFile = null;
+
     /**
      * @throws \PHPUnit\Runner\Exception
      * @throws \PHPUnit\Util\Exception
@@ -69,10 +73,22 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
         }
 
         if ($preserveGlobalState) {
-            $constants     = GlobalState::getConstantsAsString();
-            $globals       = GlobalState::getGlobalsAsString();
-            $includedFiles = GlobalState::getIncludedFilesAsString();
-            $iniSettings   = GlobalState::getIniSettingsAsString();
+            $constants         = GlobalState::getConstantsAsString();
+            $globalStateResult = GlobalState::exportGlobals();
+            $globals           = $globalStateResult->globalsString();
+            $includedFiles     = GlobalState::getIncludedFilesAsString();
+            $iniSettings       = GlobalState::getIniSettingsAsString();
+
+            foreach ($globalStateResult->skippedGlobals() as $skipped) {
+                EventFacade::emitter()->testTriggeredPhpunitWarning(
+                    $test->valueObjectForEvents(),
+                    sprintf(
+                        'Global variable %s was not preserved because it %s',
+                        $skipped['name'],
+                        $skipped['reason'],
+                    ),
+                );
+            }
         }
 
         $coverage = CodeCoverage::instance()->isActive() ? 'true' : 'false';
@@ -101,7 +117,8 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
         $includePath             = "'." . $includePath . ".'";
         $offset                  = hrtime();
         $serializedConfiguration = $this->saveConfigurationForChildProcess();
-        $processResultFile       = tempnam(sys_get_temp_dir(), 'phpunit_');
+        $processResultFile       = $this->pathForCachedSourceMap();
+        $sourceMapFile           = $this->sourceMapFileForChildProcess();
 
         $file = $class->getFileName();
 
@@ -127,6 +144,7 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
             'offsetNanoseconds'              => (string) $offset[1],
             'serializedConfiguration'        => $serializedConfiguration,
             'processResultFile'              => $processResultFile,
+            'sourceMapFile'                  => $sourceMapFile,
         ];
 
         if (!$runEntireClass) {
@@ -144,21 +162,65 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
         @unlink($serializedConfiguration);
     }
 
+    private function sourceMapFileForChildProcess(): string
+    {
+        if (self::$sourceMapFile !== null) {
+            return self::$sourceMapFile;
+        }
+
+        if (!ConfigurationRegistry::get()->source()->notEmpty()) {
+            self::$sourceMapFile = '';
+
+            return self::$sourceMapFile;
+        }
+
+        $path = $this->pathForCachedSourceMap();
+
+        if ($path === false) {
+            // @codeCoverageIgnoreStart
+            self::$sourceMapFile = '';
+
+            return self::$sourceMapFile;
+            // @codeCoverageIgnoreEnd
+        }
+
+        if (!SourceMapper::saveTo($path, ConfigurationRegistry::get()->source())) {
+            // @codeCoverageIgnoreStart
+            self::$sourceMapFile = '';
+
+            return self::$sourceMapFile;
+            // @codeCoverageIgnoreEnd
+        }
+
+        self::$sourceMapFile = $path;
+
+        return self::$sourceMapFile;
+    }
+
     /**
      * @throws ProcessIsolationException
      */
     private function saveConfigurationForChildProcess(): string
     {
-        $path = tempnam(sys_get_temp_dir(), 'phpunit_');
+        $path = $this->pathForCachedSourceMap();
 
         if ($path === false) {
+            // @codeCoverageIgnoreStart
             throw new ProcessIsolationException;
+            // @codeCoverageIgnoreEnd
         }
 
         if (!ConfigurationRegistry::saveTo($path)) {
+            // @codeCoverageIgnoreStart
             throw new ProcessIsolationException;
+            // @codeCoverageIgnoreEnd
         }
 
         return $path;
+    }
+
+    private function pathForCachedSourceMap(): false|string
+    {
+        return tempnam(sys_get_temp_dir(), 'phpunit_');
     }
 }

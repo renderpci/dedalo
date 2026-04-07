@@ -36,20 +36,38 @@ final class InvocationHandler
      */
     private readonly array $configurableMethods;
     private readonly bool $returnValueGeneration;
+    private readonly bool $isMockObject;
 
     /**
      * @param list<ConfigurableMethod> $configurableMethods
      */
-    public function __construct(array $configurableMethods, bool $returnValueGeneration)
+    public function __construct(array $configurableMethods, bool $returnValueGeneration, bool $isMockObject = false)
     {
         $this->configurableMethods   = $configurableMethods;
         $this->returnValueGeneration = $returnValueGeneration;
+        $this->isMockObject          = $isMockObject;
     }
 
-    public function hasMatchers(): bool
+    public function isMockObject(): bool
+    {
+        return $this->isMockObject;
+    }
+
+    public function hasInvocationCountRule(): bool
     {
         foreach ($this->matchers as $matcher) {
-            if ($matcher->hasMatchers()) {
+            if ($matcher->hasInvocationCountRule()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasParametersRule(): bool
+    {
+        foreach ($this->matchers as $matcher) {
+            if ($matcher->hasParametersRule()) {
                 return true;
             }
         }

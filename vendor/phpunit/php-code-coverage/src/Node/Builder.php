@@ -17,6 +17,7 @@ use function dirname;
 use function explode;
 use function implode;
 use function is_file;
+use function sha1_file;
 use function str_ends_with;
 use function str_replace;
 use function str_starts_with;
@@ -76,6 +77,7 @@ final readonly class Builder
                         new File(
                             $key,
                             $root,
+                            sha1_file($filename),
                             $value['lineCoverage'],
                             $value['functionCoverage'],
                             $tests,
@@ -140,6 +142,9 @@ final readonly class Builder
     {
         $result = [];
 
+        $lineCoverage     = $data->lineCoverage();
+        $functionCoverage = $data->functionCoverage();
+
         foreach ($data->coveredFiles() as $originalPath) {
             $path    = explode(DIRECTORY_SEPARATOR, $originalPath);
             $pointer = &$result;
@@ -156,8 +161,8 @@ final readonly class Builder
             }
 
             $pointer = [
-                'lineCoverage'     => $data->lineCoverage()[$originalPath] ?? [],
-                'functionCoverage' => $data->functionCoverage()[$originalPath] ?? [],
+                'lineCoverage'     => $lineCoverage[$originalPath] ?? [],
+                'functionCoverage' => $functionCoverage[$originalPath] ?? [],
             ];
         }
 
@@ -203,12 +208,14 @@ final readonly class Builder
      */
     private function reducePaths(ProcessedCodeCoverageData $coverage): string
     {
-        if ($coverage->coveredFiles() === []) {
+        $coveredFiles = $coverage->coveredFiles();
+
+        if ($coveredFiles === []) {
             return '.';
         }
 
         $commonPath = '';
-        $paths      = $coverage->coveredFiles();
+        $paths      = $coveredFiles;
 
         if (count($paths) === 1) {
             $commonPath = dirname($paths[0]) . DIRECTORY_SEPARATOR;
@@ -260,7 +267,7 @@ final readonly class Builder
             }
         }
 
-        $original = $coverage->coveredFiles();
+        $original = $coveredFiles;
         $max      = count($original);
 
         for ($i = 0; $i < $max; $i++) {
