@@ -753,76 +753,128 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
-	* HAS_CHILDREN_OF_TYPE
-	* Check if the given child has any child descriptor or non descriptor.
-	* Used in Thesaurus to verify if a term has specific types of children (e.g., descriptors vs non-descriptors).
+	* BUILD_CHILDREN_SQO
+	* Build a standardized search_query_object for children searches.
+	* Centralizes SQO construction used by get_children() and has_children_of_type().
 	*
-	* @param int|string $section_id The section ID of the child.
-	* @param string $section_tipo The section tipo of the child.
-	* @param string $component_tipo The component tipo representing the relationship.
-	* @param string $type The type to check: 'descriptor' or 'non_descriptor'.
-	* @return bool True if children of the specified type exist, false otherwise.
+	* @param int|string $section_id The section ID of the parent.
+	* @param string $section_tipo The section tipo of the parent.
+	* @param string $component_tipo The component_relation_children tipo.
+	* @param string $parent_tipo The related component_relation_parent tipo.
+	* @param array $options {
+	*    @type int    $limit             Limit results (default 0 = no limit)
+	*    @type int    $offset            Offset for pagination (default 0)
+	*    @type bool   $order             Apply section_map order (default true)
+	*    @type string $descriptor_type   Filter by descriptor type: 'descriptor', 'non_descriptor', or null for all (default null)
+	*    @type array  $additional_locators Extra locators to filter by (default [])
+	*    @type string $filter_operator   Operator for multiple locators: 'AND' or 'OR' (default null = single locator)
+	* }
+	* @return search_query_object|null Configured SQO or null on error
 	*/
-	public static function has_children_of_type( int|string $section_id, string $section_tipo, string $component_tipo, string $type ) : bool {
+	private static function build_children_sqo(
+		int|string $section_id,
+		string $section_tipo,
+		string $component_tipo,
+		string $parent_tipo,
+		array $options = []
+	) : ?search_query_object {
 
-		//get the descriptor component
-		// if the section_map has not defined the descriptor component return, this component has any non descriptor
-			$section_map = section::get_section_map( $section_tipo );
-			$is_descriptor_tipo = $section_map->thesaurus->is_descriptor ?? null;
-			if (empty($is_descriptor_tipo)) {
-				return false;
-			}
-
-			switch ( $type ) {
-				case 'descriptor':
-					$target_section_id = NUMERICAL_MATRIX_VALUE_YES;
-					break;
-
-				case 'non_descriptor':
-					$target_section_id = NUMERICAL_MATRIX_VALUE_NO;
-					break;
-
-				default:
-					debug_log(__METHOD__
-						. ' Invalid type ' . PHP_EOL
-						. 'type: ' . to_string( $type )
-						, logger::ERROR
-					);
-					return false;
-			}
-
-			$is_descriptor_locator = new locator();
-				$is_descriptor_locator->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO );
-				$is_descriptor_locator->set_section_id( $target_section_id );
-				$is_descriptor_locator->set_from_component_tipo( $is_descriptor_tipo );
-				$is_descriptor_locator->set_type( DEDALO_RELATION_TYPE_LINK );
-
-		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
-			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
-			if( empty($ar_parent_tipo) ){
-				return false;
-			}
-			$parent_tipo = $ar_parent_tipo[0];
+		// options with defaults
+			$limit				= $options['limit'] ?? 0;
+			$offset				= $options['offset'] ?? 0;
+			$order				= $options['order'] ?? true;
+			$descriptor_type	= $options['descriptor_type'] ?? null;
+			$additional_locators= $options['additional_locators'] ?? [];
+			$filter_operator	= $options['filter_operator'] ?? null;
 
 		// filter locator
 			$filter_locator = new locator();
-				$filter_locator->set_section_tipo( $section_tipo );
-				$filter_locator->set_section_id( $section_id );
-				$filter_locator->set_from_component_tipo( $parent_tipo );
-				$filter_locator->set_type( DEDALO_RELATION_TYPE_PARENT_TIPO );
+				$filter_locator->set_section_tipo($section_tipo);
+				$filter_locator->set_section_id($section_id);
+				$filter_locator->set_from_component_tipo($parent_tipo);
+				$filter_locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+
+		// build filter locators array
+			$filter_locators = [$filter_locator];
+
+		// descriptor filter: add is_descriptor locator if descriptor_type is specified
+			if ($descriptor_type !== null) {
+				$section_map = section::get_section_map($section_tipo);
+				$is_descriptor_tipo = $section_map->thesaurus->is_descriptor ?? null;
+				if (!empty($is_descriptor_tipo)) {
+					switch ($descriptor_type) {
+						case 'descriptor':
+							$target_section_id = NUMERICAL_MATRIX_VALUE_YES;
+							break;
+						case 'non_descriptor':
+							$target_section_id = NUMERICAL_MATRIX_VALUE_NO;
+							break;
+						default:
+							debug_log(__METHOD__
+								. ' Invalid descriptor_type ' . PHP_EOL
+								. 'descriptor_type: ' . to_string($descriptor_type)
+								, logger::ERROR
+							);
+							return null;
+					}
+
+					$is_descriptor_locator = new locator();
+						$is_descriptor_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+						$is_descriptor_locator->set_section_id($target_section_id);
+						$is_descriptor_locator->set_from_component_tipo($is_descriptor_tipo);
+						$is_descriptor_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
+					$filter_locators[] = $is_descriptor_locator;
+					$filter_operator = 'AND'; // Always AND for descriptor filter
+				}
+			}
+
+			if (!empty($additional_locators)) {
+				$filter_locators = array_merge($filter_locators, $additional_locators);
+			}
 
 		// table
 			$table = common::get_matrix_table_from_tipo($section_tipo);
 
-		// new way done in relations field with standard sqo
+		// build SQO
 			$sqo = new search_query_object();
-			$sqo->set_section_tipo( ['all'] ); // open wide for Ontology cross section parents
-				$sqo->set_mode( 'related' );
-				$sqo->set_full_count( false );
-				$sqo->set_filter_by_locators( [$filter_locator, $is_descriptor_locator] );
-				$sqo->set_filter_by_locators_op( 'AND' );
-				$sqo->set_limit( 1 ); // set limit for security. Overwrite when needed.
+				$sqo->set_section_tipo(['all']); // open wide for Ontology cross section parents
+				$sqo->set_mode('related');
+				$sqo->set_full_count(false);
+				$sqo->set_filter_by_locators($filter_locators);
+				if (!empty($filter_operator)) {
+					$sqo->set_filter_by_locators_op($filter_operator);
+				}
+				$sqo->set_limit($limit);
+				$sqo->set_offset($offset);
 				$sqo->set_tables([$table]); // Search references only in current table
+
+		// order. It is defined in section 'section_map' item as {"order":"ontology41"}
+			if ($order === true) {
+				$section_map = section::get_section_map($section_tipo);
+				if (isset($section_map->thesaurus->order)) {
+					$order_component_tipo = $section_map->thesaurus->order;
+
+					$path = [
+						(object)[
+							'component_tipo'	=> $order_component_tipo,
+							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($order_component_tipo,true) : $order_component_tipo,
+							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
+							'section_tipo'		=> $section_tipo,
+							'column'			=> '(jsonb_path_query_first(number, \'$.'.$order_component_tipo.'[*] ? (@.section_tipo_key == "'.$section_tipo.'" && @.section_id_key == '.$section_id.').value\') #>> \'{}\')::integer'
+						]
+					];
+					$order_obj = (object)[
+						'direction'	=> 'ASC',
+						'path'		=> $path
+					];
+					$sqo->set_order([$order_obj]);
+				}
+			}
+
+		return $sqo;
+	}//end build_children_sqo
+
 
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
