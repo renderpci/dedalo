@@ -11,6 +11,21 @@ jobs:
     name: Run PHPUnit Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: dedalo_test
+          POSTGRES_PASSWORD: dedalo_test_pass
+          POSTGRES_DB: dedalo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -22,6 +37,16 @@ jobs:
           extensions: mbstring, pdo, pdo_pgsql
           coverage: none
 
+      - name: Create config files
+        run: |
+          cp config/sample.config.php config/config.php
+          cp config/sample.config_db.php config/config_db.php
+          sed -i "s/define('DEDALO_HOSTNAME_CONN', 'localhost')/define('DEDALO_HOSTNAME_CONN', '127.0.0.1')/" config/config_db.php
+          sed -i "s/define('DEDALO_DATABASE_CONN', 'dedalo_mydatabase')/define('DEDALO_DATABASE_CONN', 'dedalo_test')/" config/config_db.php
+          sed -i "s/define('DEDALO_USERNAME_CONN', 'myusername')/define('DEDALO_USERNAME_CONN', 'dedalo_test')/" config/config_db.php
+          sed -i "s/define('DEDALO_PASSWORD_CONN', 'mypassword')/define('DEDALO_PASSWORD_CONN', 'dedalo_test_pass')/" config/config_db.php
+          sed -i "s/define('DEVELOPMENT_SERVER', false)/define('DEVELOPMENT_SERVER', true)/" config/config.php
+
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
 
@@ -29,13 +54,16 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Run unit tests
-        run: vendor/bin/phpunit --testsuite "unit components"
+        working-directory: test/server
+        run: ../../vendor/bin/phpunit --testsuite "components"
 
       - name: Run API tests
-        run: vendor/bin/phpunit --testsuite "unit API"
+        working-directory: test/server
+        run: ../../vendor/bin/phpunit --testsuite "API"
 
       - name: Run API contract tests
-        run: vendor/bin/phpunit --testsuite contract
+        working-directory: test/server
+        run: ../../vendor/bin/phpunit --testsuite "contract"
 
       - name: Check for breaking signature changes
         run: php dev/signature_tracker/signature-check.php --check
