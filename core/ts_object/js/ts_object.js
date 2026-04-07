@@ -185,9 +185,57 @@ ts_object.get_instance = async function (options) {
 /**
 * KEY_INSTANCES_BUILDER
 * Builds a normalized string key from selected properties of the given `options` object.
-* The key is used to uniquely identify an instance based on a defined order of parameters.
-* @param object options
-* @return string key - A concatenated, underscore-delimited string key composed of non-empty values.
+* The key is used to uniquely identify an instance based on a defined order of parameters
+* defined in `key_order` constant: ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode']
+*
+* @param object options - Object containing the properties to build the key from
+* @param string [options.section_tipo] - Section tipo (e.g., 'hierarchy1', 'flora1')
+* @param string|number [options.section_id] - Section ID (e.g., 1, '45')
+* @param string [options.children_tipo] - Children component tipo (e.g., 'hierarchy49')
+* @param string [options.target_section_tipo] - Target section tipo
+* @param string [options.thesaurus_mode] - Thesaurus mode (e.g., 'default', 'model')
+*
+* @return string - A concatenated, underscore-delimited string key prefixed with 'ts_object_'
+* composed of non-empty values from the properties defined in key_order.
+*
+* @example
+* // Basic usage with section_tipo and section_id
+* const key1 = key_instances_builder({
+*   section_tipo: 'hierarchy1',
+*   section_id: 1
+* });
+* // Returns: 'ts_object_hierarchy1_1'
+*
+* @example
+* // With children_tipo
+* const key2 = key_instances_builder({
+*   section_tipo: 'flora1',
+*   section_id: 4,
+*   children_tipo: 'hierarchy49'
+* });
+* // Returns: 'ts_object_flora1_4_hierarchy49'
+*
+* @example
+* // With all properties
+* const key3 = key_instances_builder({
+*   section_tipo: 'hierarchy1',
+*   section_id: 2,
+*   children_tipo: 'hierarchy49',
+*   target_section_tipo: 'flora1',
+*   thesaurus_mode: 'default'
+* });
+* // Returns: 'ts_object_hierarchy1_2_hierarchy49_flora1_default'
+*
+* @example
+* // With null/undefined/empty values (skipped in key)
+* const key4 = key_instances_builder({
+*   section_tipo: 'hierarchy1',
+*   section_id: null,
+*   children_tipo: '',
+*   target_section_tipo: undefined,
+*   thesaurus_mode: 'model'
+* });
+* // Returns: 'ts_object_hierarchy1_model'
 */
 export const key_instances_builder = function(options) {
 
@@ -574,6 +622,8 @@ ts_object.prototype.add_children_item = function ( children_data ) {
 */
 ts_object.prototype.remove_children_item = function ( children_data ) {
 
+	const self = this
+
 	if (!children_data || !children_data.ts_id) {
 		console.error('Invalid children_data provided - missing ts_id');
 		return false;
@@ -605,6 +655,35 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	if (this.children_data.pagination) {
 		this.children_data.pagination.total = this.children_data.ar_children_data.length
 	}
+
+	// Update order (descriptors only)
+	// After removal, re-calculate sequential order for remaining descriptor children.
+	// This ensures consistent ordering (1-based) for all descriptors and syncs
+	// the new order values to their corresponding instance objects.
+	const children_data_descriptors = (this.children_data.ar_children_data || []).filter(el => el.is_descriptor===true)
+	children_data_descriptors.forEach((child, index) => {
+
+		// Assign new sequential order (1-based index)
+		child.order = index + 1
+
+		// Build instance key to locate the corresponding ts_object instance
+		const key = key_instances_builder({
+			section_tipo 	: child.section_tipo,
+			section_id 		: child.section_id,
+			children_tipo 	: child.children_tipo,
+			thesaurus_mode 	: self.thesaurus_mode // expected: 'default'
+		});
+
+		// Sync the new order to the instance (if found)
+		const instance = get_instance_by_id(key)
+		if (instance) {
+			instance.data.order = child.order
+			instance.order = child.order
+			instance.virtual_order = child.order
+		}else{
+			console.warn('Instance not found for key:', key);
+		}
+	})
 
 
 	return true
@@ -1107,6 +1186,11 @@ ts_object.prototype.delete_term = async function(options) {
 		if (delete_section_result && self.caller) {
 			self.caller?.remove_children_item(self.data)
 		}
+
+		if(SHOW_DEBUG) {
+			console.log('[ts_object.delete_term] deleted self:', self);
+		}
+
 	return delete_section_result
 }//end delete_term
 
