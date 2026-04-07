@@ -467,7 +467,7 @@ export const create_new_search_preset = function(options) {
 							await component_instance_section_tipo.build(true)
 							const changed_data_section = [{
 								action	: 'insert',
-								key		: 0,
+								id		: null,
 								value	: {value: self.section_tipo}
 							}]
 							await component_instance_section_tipo.save(changed_data_section)
@@ -487,7 +487,7 @@ export const create_new_search_preset = function(options) {
 							await component_instance_user.build(true)
 							const changed_data_user = [{
 								action	: 'insert',
-								key		: 0,
+								id		: null,
 								value	: locator_user
 							}]
 							await component_instance_user.save(changed_data_user)
@@ -515,7 +515,7 @@ export const create_new_search_preset = function(options) {
 							if (json_filter) {
 								const changed_data_user = [{
 									action	: 'insert',
-									key		: 0,
+									id		: null,
 									value	: json_filter
 								}]
 								await component_instance_user.save(changed_data_user)
@@ -557,7 +557,7 @@ export const save_preset = async function(options) {
 		}
 	// filter value
 		const filter_obj = await self.parse_dom_to_json_filter({}).filter
-
+		filter_obj.id = 1
 	return new Promise(async function(resolve){
 
 		// rqo. save
@@ -574,7 +574,7 @@ export const save_preset = async function(options) {
 					changed_data : [
 						{
 							action	: 'update',
-							key		: 0,
+							id		: 1,
 							value	: { value : filter_obj }
 						}
 					]
