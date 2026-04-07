@@ -132,6 +132,8 @@
 
 
 // required files
+	// logger. Logger class
+	include(DEDALO_CORE_PATH . '/logger/class.logger.php');
 	// core_functions. Basic common functions (before session start)
 	include(DEDALO_SHARED_PATH . '/core_functions.php');
 	// config_core. core definitions and status.
