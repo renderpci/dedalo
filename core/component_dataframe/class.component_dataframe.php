@@ -59,6 +59,12 @@ class component_dataframe extends component_portal {
 
 
 
+	public function get_data_unfiltrered() {
+		return parent::get_data();
+	}
+
+
+
 	/**
 	* REMOVE_LOCATOR_FROM_DATA
 	* Removes from data one or more locators that accomplish given locator equality
@@ -177,8 +183,12 @@ class component_dataframe extends component_portal {
 		}else{
 
 			// Check valid main_component_tipo
+			// Skip ontology parent validation for non-relation components
+			// (component_iri, component_input_text, component_text_area, component_date, etc.)
+			// since these may use shared dataframe tipos that are not direct ontology children.
 			$model = ontology_node::get_model_by_tipo( $main_component_tipo );
-			if ($model!=='component_iri') {
+			$relation_components = component_relation_common::get_components_with_relations();
+			if (in_array($model, $relation_components)) {
 				$ontology_node				= ontology_node::get_instance( $this->get_tipo() );
 				$test_main_component_tipo	= $ontology_node->get_parent();
 				if ($test_main_component_tipo!==$main_component_tipo) {
