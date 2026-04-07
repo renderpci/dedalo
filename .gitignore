@@ -61,6 +61,7 @@ core/extras/*
 
 # vendor ignore all except used public
 lib/vendor/*
+vendor/*
 # !lib/vendor/composer
 # !lib/vendor/myclabs
 # !lib/vendor/sweetrdf
