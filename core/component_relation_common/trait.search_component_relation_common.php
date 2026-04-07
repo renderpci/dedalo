@@ -57,6 +57,11 @@ trait search_component_relation_common {
             }
         }
 
+        // remove the id property from q_raw if exists
+        if (is_object($q_raw) && isset($q_raw->id)) {
+            unset($q_raw->id);
+        }
+
         // For unification, all non string are JSON encoded
         $q = is_string($q_raw) ? $q_raw : json_encode($q_raw);
 

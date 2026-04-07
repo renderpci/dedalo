@@ -47,6 +47,11 @@ trait search_component_number {
             return false;
         }
 
+        // Remove the id property from q_raw if exists
+        if (is_object($q_raw) && isset($q_raw->id)) {
+            unset($q_raw->id);
+        }
+
         $q = is_string($q_raw) ? $q_raw : to_string($q_raw);
         return $q;
     }
