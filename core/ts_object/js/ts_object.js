@@ -320,6 +320,9 @@ ts_object.prototype.init = async function(options) {
 	// string area_model. Model of current thesaurus/ontology area
 	self.area_model = options.area_model
 
+	// virtual order
+	self.virtual_order = options.virtual_order || null
+
 	// status update
 	self.status = 'initialized'
 
@@ -593,7 +596,6 @@ ts_object.prototype.add_children_item = function ( children_data ) {
 		this.is_open = true // Forces is_open to allow to see the added children in new renders
 	}
 
-
 	return true
 }//end add_children_item
 
@@ -663,8 +665,8 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	const children_data_descriptors = (this.children_data.ar_children_data || []).filter(el => el.is_descriptor===true)
 	children_data_descriptors.forEach((child, index) => {
 
-		// Assign new sequential order (1-based index)
-		child.order = index + 1
+		// Create a new sequential order (1-based index)
+		const virtual_order = index + 1
 
 		// Build instance key to locate the corresponding ts_object instance
 		const key = key_instances_builder({
@@ -677,9 +679,7 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 		// Sync the new order to the instance (if found)
 		const instance = get_instance_by_id(key)
 		if (instance) {
-			instance.data.order = child.order
-			instance.order = child.order
-			instance.virtual_order = child.order
+			instance.virtual_order = virtual_order
 		}else{
 			console.warn('Instance not found for key:', key);
 		}

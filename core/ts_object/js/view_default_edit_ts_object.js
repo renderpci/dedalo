@@ -941,7 +941,7 @@ const render_id_column = function(self) {
 								pagination.offset = 0
 							}
 
-						// children_data - render_children_data from API
+						// children_data - get_children_data from API
 							const children_data = await self.get_children_data({
 								pagination	: pagination,
 								children	: null,
