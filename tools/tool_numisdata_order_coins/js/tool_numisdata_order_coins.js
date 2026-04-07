@@ -207,7 +207,7 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 			// force to save current input if changed
 			const changed_data = [{
 				action	: 'update',
-				key		: 0,
+				id		: discard_instance.data.entries[0]?.id || null,
 				value	: {section_id: '1', section_tipo: 'numisdata341'}
 			}]
 			// change_value (save data)
@@ -262,7 +262,7 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 			// force to save current input if changed
 			const changed_data = [{
 				action	: 'update',
-				key		: 0,
+				id		: discard_instance.data.entries[0]?.id || null,
 				value	: {section_id: '2', section_tipo: 'numisdata341'}
 			}]
 			// change_value (save data)

@@ -163,6 +163,7 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'checkbox'
 		})
+
 		option_label.prepend(input_checkbox)
 		input_checkbox.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
@@ -308,7 +309,7 @@ export const get_buttons = (self) => {
 
 				const changed_data = [Object.freeze({
 					action	: 'remove',
-					key		: false,
+					id		: null,
 					value	: null
 				})]
 				self.change_value({

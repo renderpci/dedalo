@@ -334,7 +334,7 @@ component_image.prototype.update_draw_data = function() {
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
 			action	: 'update',
-			key		: 0,
+			id		: value?.id || null,
 			value	: value
 		}
 

@@ -626,4 +626,75 @@ final class component_relation_parent_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_GET_ORDER_DATAFRAME_RETURNS_NULL_WHEN_NOT_CONFIGURED
+	* @return void
+	*/
+	public function test_get_order_dataframe_returns_null_when_not_configured() {
+		$this->user_login();
+		
+		$component = component_common::get_instance(
+			'component_relation_parent',
+			'test71',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+		
+		// Should return null if no order component configured in section_map
+		$result = $component->get_order_dataframe();
+		
+		$this->assertNull($result, 'Should return null when order not configured');
+	}//end test_get_order_dataframe_returns_null_when_not_configured
+
+
+
+	/**
+	* TEST_GET_NEXT_ORDER_IN_CONTEXT
+	* @return void
+	*/
+	public function test_get_next_order_in_context() {
+		$this->user_login();
+		
+		$component = component_common::get_instance(
+			'component_relation_parent',
+			'test71',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+		
+		// Should return 1 when no order component configured
+		$result = $component->get_next_order_in_context('test3', 100);
+		
+		$this->assertEquals(1, $result);
+	}//end test_get_next_order_in_context
+
+
+
+	/**
+	* TEST_RECALCULATE_SIBLING_ORDERS_RETURNS_FALSE_WHEN_NOT_CONFIGURED
+	* @return void
+	*/
+	public function test_recalculate_sibling_orders_returns_false_when_not_configured() {
+		$this->user_login();
+		
+		$component = component_common::get_instance(
+			'component_relation_parent',
+			'test71',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+		
+		$result = $component->recalculate_sibling_orders('test3', 100);
+		
+		$this->assertFalse($result, 'Should return false when order not configured');
+	}//end test_recalculate_sibling_orders_returns_false_when_not_configured
+
+
+
 }//end class component_relation_parent_test

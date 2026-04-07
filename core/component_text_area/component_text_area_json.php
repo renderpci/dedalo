@@ -9,6 +9,7 @@
 	$mode			= $this->get_mode();
 	$lang			= $this->get_lang();
 	$properties		= $this->get_properties();
+	$has_dataframe	= isset($properties->has_dataframe) ? $properties->has_dataframe : false;
 
 
 
@@ -21,12 +22,20 @@
 
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context_simple($permissions);
+				$this->context	= $this->get_structure_context_simple(
+					$permissions,
+					$has_dataframe
+				);
+				$context[] = $this->context;
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-				$this->context	= $this->get_structure_context($permissions);
+				$this->context	= $this->get_structure_context(
+					$permissions,
+					$has_dataframe
+				);
+				$context[] = $this->context;
 				break;
 		}
 
@@ -165,6 +174,47 @@
 							? $this->get_fallback_edit_value((object)['max_chars'=>700])
 							: null;
 					break;
+			}
+
+			// dataframe. If it exists, calculate the subdatum
+			if ($has_dataframe===true && $mode!=='search') {
+
+				// locators (using item id as section_id)
+					$ar_locator	= [];
+					$safe_value	= !empty($value) ? $value : [];
+					foreach ($safe_value as $current_value) {
+
+						if (!isset($current_value->id)) {
+							continue;
+						}
+
+						$locator = new locator();
+							$locator->set_section_tipo($this->section_tipo);
+							$locator->set_section_id($current_value->id);
+						$ar_locator[] = $locator;
+					}
+
+				// Empty data: create a locator with next counter to get dataframe context
+					if( empty($ar_locator) ){
+						$counter = $this->get_counter();
+						$locator = new locator();
+							$locator->set_section_tipo($this->section_tipo);
+							$locator->set_section_id($counter+1);
+						$ar_locator[] = $locator;
+					}
+
+				// subdatum
+					$subdatum = $this->get_subdatum($this->tipo, $ar_locator);
+
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
 			}
 
 		// data item

@@ -142,7 +142,7 @@ export const ts_object = function() {
 * KEY_ORDER
 * Defines de vars and the order to create the instances key
 */
-const key_order = ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode']
+const key_order = ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode','ts_parent']
 
 
 
@@ -2188,8 +2188,10 @@ ts_object.prototype.save_order = async function( value ) {
 			prevent_lock	: true,
 			action			: 'save_order',
 			source			: {
-				section_tipo	: self.section_tipo,
-				ar_locators		: ar_locators
+				section_tipo		: self.section_tipo,
+				ar_locators			: ar_locators,
+				parent_section_tipo	: self.caller?.section_tipo,
+				parent_section_id	: self.caller?.section_id
 			}
 		}
 		// API request. Don't wait here

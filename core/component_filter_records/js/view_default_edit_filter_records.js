@@ -240,21 +240,22 @@ const get_content_value = (i, datalist_item, self) => {
 
 				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
 					const current_entries	= self.data.entries || []
-					const entries_length		= current_entries.length
-					let key_found			= entries_length // default is last (length of array)
+					const entries_length	= current_entries.length
+					let entry_id			= null
 					for (let j = 0; j < entries_length; j++) {
 						if(current_entries[j].tipo===section_tipo) {
-							key_found = j;
+							entry_id = current_entries[j].id;
 							break;
 						}
 					}
 
-				// change_value
-					const changed_data = [Object.freeze({
-						action	: (value===null) ? 'remove' : 'update',
-						key		: key_found,
-						value	: value
-					})]
+
+			// change_value
+				const changed_data = [Object.freeze({
+					action	: (value===null) ? 'remove' : 'update',
+					id		: entry_id,
+					value	: value
+				})]
 					self.change_value({
 						changed_data	: changed_data,
 						refresh			: false

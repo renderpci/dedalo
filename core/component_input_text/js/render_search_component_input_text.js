@@ -128,14 +128,16 @@ const get_content_value = (i, data_item, self) => {
 
 			// q_operator. Special cases of search_q_operator_default. Set q_operator to the default value
 			if(self.search_q_operator_default.has(self.tipo)) {
-				self.data.q_operator = self.search_q_operator_default.get(self.tipo)
+				self.data.q_operator = data_item_to_save.value
+					? self.search_q_operator_default.get(self.tipo)
+					: null
 			}
 
 			// changed_data
 			const changed_data_item = Object.freeze({
-				action	: 'update',
-				key		: i,
-				value	: data_item_to_save
+				action	: (data_item_to_save.value === null) ? 'remove' : 'update',
+				id		: (self.data?.entries?.[i]?.id) || null,
+				value	: (data_item_to_save.value === null) ? null : data_item_to_save
 			})
 
 			// update the instance data (previous to save)

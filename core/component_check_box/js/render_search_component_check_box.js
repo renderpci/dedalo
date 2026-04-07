@@ -146,12 +146,15 @@ const get_input_element = (i, current_value, self) => {
 		input_checkbox.addEventListener('change', function() {
 
 			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
+			const locator = entries.find(item => {
+			return (item.section_id==datalist_value.section_id &&
+					item.section_tipo===datalist_value.section_tipo)
+		 })
 			const changed_value	= (action==='insert') ? datalist_value : null
 
 			const changed_data_item = Object.freeze({
 				action	: action,
-				key		: changed_key,
+				id		: locator?.id || null,
 				value	: changed_value
 			})
 

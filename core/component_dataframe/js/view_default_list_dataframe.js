@@ -247,11 +247,7 @@ const open_target_section = async function (self) {
 					// }
 
 				// soft delete (default)
-					self.unlink_record({
-						paginated_key	: 0,
-						row_key			: false,
-						section_id		: section_id
-					})
+					self.unlink_record(last_value)
 
 				// close modal
 					modal.close()

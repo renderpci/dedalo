@@ -55,7 +55,7 @@ describe(`COMPONENT PORTAL PAGINATION TEST`, async function() {
 
 				const changed_data = [Object.freeze({
 					action	: 'set_data',
-					key		: null,
+					id		: null,
 					value	: null
 				})]
 				const api_response = await self.change_value({
@@ -119,14 +119,9 @@ return
 				let key = 0
 				while(component.data.entries && component.data.entries[key]) {
 
-					const current_value = component.data.entries[key]
+					const current_locator = component.data.entries[key]
 
-					const options = {
-						paginated_key	: current_value.paginated_key,
-						row_key			: key,
-						section_id		: current_value.section_id
-					}
-					const result = await component.unlink_record(options)
+					const result = await component.unlink_record(current_locator)
 					// console.log('result:', result);
 
 					await pause(100)

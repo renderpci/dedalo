@@ -705,12 +705,30 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 	// get_search_value. Get the search value from the component or apply the default method
 	const get_search_value = (component) => {
-		if (typeof component.get_search_value === 'function') {
-		  return component.get_search_value();
-		}
 
+		const safe_entries = (typeof component.get_search_value === 'function')
+			? component.get_search_value() || []
+			: component.data?.entries || []
+
+		const parsed_entries = safe_entries.map(entry => {
+			if(!entry) {
+				return
+			}
+
+			if(typeof entry !== 'object') {
+				entry = {
+					value : entry
+				}
+			}
+
+			// fixed id for search presets
+			entry.id = 1
+			
+			return entry
+		})
+		
 		// value is into the data.entries array
-		return component.data.entries;
+		return parsed_entries;
 	}
 
 	const len = ar_elements.length

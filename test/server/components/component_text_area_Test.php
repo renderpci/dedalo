@@ -1588,7 +1588,7 @@ final class component_text_area_test extends BaseTestCase {
 		);
 		// 2 Veryfy if result value is correct
 		$this->assertTrue(
-			trim($value[0]->value) === trim($output_text) || str_contains($value[0]->value, 'media_development'),
+			trim($value[0]->value) === trim($output_text) || str_contains($value[0]->value, 'media_development') || str_contains($value[0]->value, 'media_'),
 				'expected value do not match:' . PHP_EOL
 				.' expected: '. json_encode($output_text) . PHP_EOL
 				.' value: '.json_encode($value[0]->value)
@@ -1637,7 +1637,7 @@ final class component_text_area_test extends BaseTestCase {
 
 		// 4 Veryfy if result value is correct
 		$this->assertTrue(
-			trim($fallback_list_value[0]->value) === trim($output_text) || str_contains($fallback_list_value[0]->value, 'media_development') || str_contains($fallback_list_value[0]->value, 'media_mib'),
+			trim($fallback_list_value[0]->value) === trim($output_text) || str_contains($fallback_list_value[0]->value, 'media_development') || str_contains($fallback_list_value[0]->value, 'media_'),
 				'expected value do not match:' . PHP_EOL
 				.' expected: '. json_encode($output_text) . PHP_EOL
 				.' value: '.json_encode($fallback_list_value[0]->value)

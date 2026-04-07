@@ -620,7 +620,7 @@ const get_graph = async function(options) {
 					const data = {}
 					data.changed_data = [{
 						action	: 'insert',
-						key		: 0,
+						id		: null,
 						value	: value
 					}]
 				// rqo

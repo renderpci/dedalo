@@ -141,7 +141,7 @@ const get_content_value = (i, current_value, self) => {
 				// change data
 					const changed_data_item	= Object.freeze({
 						action	: (parsed_value != null) ? 'update' : 'remove',
-						key		: (parsed_value != null) ? i : false,
+						id		: (parsed_value != null) ? parsed_value.id : null,
 						value	: parsed_value
 					})
 

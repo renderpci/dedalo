@@ -97,7 +97,7 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 			const data = clone(self.data)
 			data.changed_data = [{
 				action	: 'remove',
-				key		: false,
+				id		: null,
 				value	: null
 			}]
 			const rqo = {
@@ -126,7 +126,7 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 		const data = clone(self.data)
 		data.changed_data = [{
 			action	: 'add_new_element',
-			key		: null,
+			id		: null,
 			value	: target_section_tipo
 		}]
 

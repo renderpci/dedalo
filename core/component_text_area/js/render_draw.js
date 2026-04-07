@@ -287,11 +287,7 @@ export const render_draw = async function(options) {
 					if(locator.length > 0){
 
 						// if the locator is not empty, remove it of the component.
-						component_tags_draw.unlink_record({
-							paginated_key	: locator[0].paginated_key,
-							row_key			: null,
-							section_id		: locator[0].section_id
-						});
+						component_tags_draw.unlink_record(locator[0]);
 					}
 
 					// remove the modal
@@ -351,7 +347,7 @@ export const render_draw = async function(options) {
 				// change data to set empty value in the component (it saved in Session instead DDBB)
 					const changed_data = [Object.freeze({
 						action	: 'set_data',
-						key		: 0,
+						id		: null,
 						value	: null
 					})]
 

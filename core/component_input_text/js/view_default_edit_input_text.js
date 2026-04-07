@@ -314,11 +314,9 @@ const get_buttons = (self) => {
 						return
 					}
 
-				const key = self.data.entries.length
-
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: key,
+					id		: null,
 					value	: {
 						value: null,
 						lang: self.lang

@@ -247,7 +247,7 @@ const get_content_data_edit = async function(self) {
 					for (let i = 0; i < source_value.length; i++) {
 						self.target_component.save([{
 							action	: 'update',
-							key		: i,
+							id		: source_value[i]?.id || null,
 							value	: source_value[i]
 						}])
 					}

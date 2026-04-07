@@ -63,20 +63,6 @@ export const component_section_id = function(){
 
 
 /**
- * GET_SEARCH_VALUE
- * @return array new_value
- */
-component_section_id.prototype.get_search_value = function() {
-
-	const data = this.data || {}
-	const entries = data.entries || []
-
-	return entries
-}//end get_search_value
-
-
-
-/**
 * IS_EMPTY
 * Check if the instance data is empty.
 * Used in search mode for hilite the component wrapper when has value.

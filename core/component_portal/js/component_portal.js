@@ -169,11 +169,8 @@ component_portal.prototype.init = async function(options) {
 					if (SHOW_DEBUG===true) {
 						console.log('-> event fn_initiator_unlink locator:', locator);
 					}
-				// remove locator
-					const current_entries = self.data.entries || []
-					const paginated_key = current_entries.findIndex(item => item.section_tipo === locator.section_tipo && String(item.section_id) === String(locator.section_id))
-
-					if (paginated_key === -1) {
+				
+					if (!locator.id) {
 						console.warn('Value to unlink not found in current entries');
 						return
 					}
@@ -182,11 +179,7 @@ component_portal.prototype.init = async function(options) {
 					const row_key = current_entries[paginated_key].id || null
 
 				// remove locator selected
-					const result = await self.unlink_record({
-						paginated_key 	: paginated_key,
-						row_key 		: row_key,
-						section_id 		: locator.section_id
-					})
+					const result = await self.unlink_record(locator)
 					if (result===false) {
 						return
 					}
@@ -775,10 +768,9 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// changed_data
-		const key			= self.total || 0
 		const changed_data	= [Object.freeze({
 			action	: 'insert',
-			key		: key,
+			id		: null,
 			value	: value
 		})]
 
@@ -891,7 +883,7 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 		const data = clone(self.data)
 		data.changed_data = [{
 			action	: 'add_new_element',
-			key		: null,
+			id		: null,
 			value	: target_section_tipo
 		}]
 
@@ -1150,6 +1142,7 @@ component_portal.prototype.get_search_value = function() {
 	const value_len = current_value.length
 	for (let i = 0; i < value_len; i++) {
 		new_value.push({
+			id 					: current_value[i].id,
 			section_tipo		: current_value[i].section_tipo,
 			section_id			: current_value[i].section_id,
 			from_component_tipo	: current_value[i].from_component_tipo
@@ -1309,25 +1302,17 @@ component_portal.prototype.get_total = async function() {
 /**
 * UNLINK_RECORD
 * Removes a record from the portal
-* @param {object} options - Unlink options
-* @param {number} options.paginated_key - Index in the paginated data
-* @param {string} [options.row_key] - Row key identifier
-* @param {string|number} options.section_id - Section ID
+* @param {object} locator - Unlink options
 * @returns {Promise<boolean>} Returns true if successful
 */
-component_portal.prototype.unlink_record = async function(options) {
+component_portal.prototype.unlink_record = async function(locator) {
 
 	const self = this
-
-	// options
-		const paginated_key	= options.paginated_key
-		const row_key		= options.row_key
-		const section_id	= options.section_id
 
 	// changed_data
 		const changed_data = [Object.freeze({
 			action	: 'remove',
-			key		: paginated_key,
+			id		: locator.id,
 			value	: null
 		})]
 
@@ -1337,7 +1322,7 @@ component_portal.prototype.unlink_record = async function(options) {
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false,
-			label			: section_id,
+			label			: locator.section_id,
 			remove_dialog	: ()=>{
 				return true
 			}
@@ -1366,7 +1351,7 @@ component_portal.prototype.unlink_record = async function(options) {
 		}
 
 	// event to update the DOM elements of the instance
-		event_manager.publish('remove_element_'+self.id, row_key)
+		event_manager.publish('remove_element_'+self.id, locator.id)
 
 
 	return true

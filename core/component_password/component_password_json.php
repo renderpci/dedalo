@@ -35,8 +35,13 @@
 
 		$start_time=start_time();
 
+		$internal_data = $this->get_data();
+
 		// value - this value will not be sent to the front end in any case
-		$value = [];
+		$value = [(object)[
+			'id' => $internal_data[0]->id ?? null,
+			'value' => $this->fake_value
+		]];
 
 		// data item
 			$item = $this->get_data_item($value);
