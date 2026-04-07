@@ -1142,6 +1142,7 @@ component_portal.prototype.get_search_value = function() {
 	const value_len = current_value.length
 	for (let i = 0; i < value_len; i++) {
 		new_value.push({
+			id 					: current_value[i].id,
 			section_tipo		: current_value[i].section_tipo,
 			section_id			: current_value[i].section_id,
 			from_component_tipo	: current_value[i].from_component_tipo
