@@ -3,7 +3,7 @@
         'name' => 'renderpci/dedalo',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => '9f5ddf98773484ce0eb063987e62647b94d374d7',
+        'reference' => 'b728ef785727014dc742e99540aabe4da6121371',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -112,7 +112,7 @@
         'renderpci/dedalo' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => '9f5ddf98773484ce0eb063987e62647b94d374d7',
+            'reference' => 'b728ef785727014dc742e99540aabe4da6121371',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
