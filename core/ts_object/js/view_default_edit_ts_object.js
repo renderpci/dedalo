@@ -238,12 +238,11 @@ export const render_children = async function(options) {
 
 		// Append node to the proper container
 		if (node_wrapper) {
+			const target_node = (child_data.is_descriptor || self.is_root_node)
+				? self.children_container
+				: self.nd_container
 			requestAnimationFrame(() => {
-				if (child_data.is_descriptor || self.is_root_node) {
-					self.children_container.appendChild( node_wrapper )
-				}else{
-					self.nd_container.appendChild( node_wrapper )
-				}
+				target_node.appendChild( node_wrapper )
 			});
 		}else{
 			console.warn('Error. Ignored invalid node wrapper. ts_object_instance:', ts_object_instance);
@@ -320,10 +319,6 @@ export const render_child = async function(self, child_data, virtual_order) {
 	})
 
 	await ts_object_instance.build(false)
-
-	if(SHOW_DEBUG) {
-		console.log('2 - render_child built child ts_object_instance:', ts_object_instance);
-	}
 
 	const node_wrapper = await ts_object_instance.render({
 		render_level : 'full'
