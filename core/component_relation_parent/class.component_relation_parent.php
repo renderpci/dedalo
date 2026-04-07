@@ -69,6 +69,9 @@ class component_relation_parent extends component_relation_common {
 				);
 				$locator->type = $this->default_relation_type;
 			}
+		
+		// Set order for new parent
+			$this->set_child_order($locator->section_tipo, (int)$locator->section_id);
 
 		// Add current locator to component data
 			if (!$this->add_locator_to_data($locator)) {
@@ -88,6 +91,9 @@ class component_relation_parent extends component_relation_common {
 	* @return bool
 	*/
 	public function remove_parent( locator $locator ) : bool {
+
+		// Remove order and recalculate siblings
+		$this->remove_child_order($locator->section_tipo, (int)$locator->section_id);
 
 		// remove current locator from component data
 		if (!$this->remove_locator_from_data($locator)) {
@@ -485,4 +491,206 @@ class component_relation_parent extends component_relation_common {
 
 
 
-}//end class component_relation_parent
+	/**
+	* GET_ORDER_DATAFRAME
+	* Get the order component (dataframe) for this section from section_map
+	* @return component_number|null
+	*/
+	protected function get_order_dataframe() : ?component_number {
+		$section_map = section::get_section_map($this->section_tipo);
+		
+		$order_tipo = $section_map->thesaurus->order ?? null;
+		if (empty($order_tipo)) {
+			return null;
+		}
+
+		return component_common::get_instance(
+			'component_number',
+			$order_tipo,
+			$this->section_id,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			$this->section_tipo
+		);
+	}//end get_order_dataframe
+
+
+
+	/**
+	* SET_CHILD_ORDER
+	* Set order value for the new parent by getting parent's children count
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return bool
+	*/
+	protected function set_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
+		$section_map = section::get_section_map($this->section_tipo);
+		$order_tipo = $section_map->thesaurus->order ?? null;
+		if (empty($order_tipo)) {
+			debug_log(__METHOD__ . " No order component defined in section_map", logger::WARNING);
+			return false;
+		}
+
+		// Get parent's children count using component_relation_children
+		$children = component_relation_children::get_children_of_type(
+			$parent_section_id,
+			$parent_section_tipo,
+			'descriptor'
+		);
+
+		$next_order = count($children) + 1;
+
+		// Set this child's order in THEIR own order component
+		$order_component = $this->get_order_dataframe();
+		if ($order_component === null) {
+			return false;
+		}
+
+		$add_result = $order_component->add_value_with_context(
+			$next_order,
+			$parent_section_tipo,
+			$parent_section_id
+		);
+
+		if($add_result===true){
+			return $order_component->save();
+		}
+		return false;
+	}//end set_child_order
+
+
+
+	/**
+	* REMOVE_CHILD_ORDER
+	* Remove order for removed parent and recalculate siblings
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return bool
+	*/
+	protected function remove_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
+		$section_map = section::get_section_map($this->section_tipo);
+		$order_tipo = $section_map->thesaurus->order ?? null;
+		if (empty($order_tipo)) {
+			return false;
+		}
+
+		// Set this child's order in THEIR own order component
+		$order_component = $this->get_order_dataframe();
+		if ($order_component === null) {
+			return false;
+		}
+
+		$remove_result = $order_component->remove_by_context(
+			$parent_section_tipo,
+			$parent_section_id
+		);
+		
+		if($remove_result===true){
+			return $order_component->save();
+		}
+
+		return true;
+	}//end remove_child_order
+
+
+
+	/**
+	* GET_NEXT_ORDER_IN_CONTEXT
+	* Get the next order value by asking parent for children count
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return int
+	*/
+	public function get_next_order_in_context(string $parent_section_tipo, int $parent_section_id) : int {
+		$children = component_relation_children::get_children_of_type(
+			$parent_section_id,
+			$parent_section_tipo,
+			'descriptor'
+		);
+		
+		return count($children) + 1;
+	}//end get_next_order_in_context
+
+
+
+	/**
+	* RECALCULATE_SIBLING_ORDERS
+	* Recalculate orders for all siblings of a given parent
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return bool
+	*/
+	public function recalculate_sibling_orders(string $parent_section_tipo, int $parent_section_id) : bool {
+
+		return self::recalculate_sibling_orders_static(
+			$this->section_tipo,
+			$parent_section_tipo,
+			$parent_section_id
+		);
+	}//end recalculate_sibling_orders
+
+
+
+	/**
+	* RECALCULATE_SIBLING_ORDERS_STATIC
+	* Static version to recalculate orders for all siblings of a given parent
+	* @param string $section_tipo
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return bool
+	*/
+	public static function recalculate_sibling_orders_static( string $section_tipo, string $parent_section_tipo, int $parent_section_id ) : bool {
+
+		$section_map = section::get_section_map($section_tipo);
+		$order_tipo = $section_map->thesaurus->order ?? null;
+		if (empty($order_tipo)) {
+			return false;
+		}
+
+		// Get all children of the parent
+		$children = component_relation_children::get_children_of_type(
+			$parent_section_id,
+			$parent_section_tipo,
+			'descriptor'
+		);
+
+		// Update each sibling's order in THEIR own component
+		$order = 1;
+		foreach ($children as $child_locator) {
+			$sibling_order_component = component_common::get_instance(
+				'component_number',
+				$order_tipo,
+				$child_locator->section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				$child_locator->section_tipo
+			);
+
+			// Get current value to skip unchanged
+			$current_value = $sibling_order_component->get_value_by_context(
+				$parent_section_tipo,
+				$parent_section_id
+			);
+
+			// Skip if order already correct
+			if ((int)$current_value === $order) {
+				$order++;
+				continue;
+			}
+
+			$order_result = $sibling_order_component->update_value_by_context(
+				$order++,
+				$parent_section_tipo,
+				$parent_section_id
+			);
+			if($order_result === true){
+				$sibling_order_component->save();
+			}
+		}
+
+		return true;
+	}//end recalculate_sibling_orders_static
+
+
+
+	}//end class component_relation_parent
