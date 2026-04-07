@@ -12,11 +12,14 @@ namespace PHPUnit\TextUI\Configuration;
 use const DIRECTORY_SEPARATOR;
 use const PATH_SEPARATOR;
 use function array_diff;
+use function array_key_exists;
+use function array_values;
 use function assert;
 use function dirname;
 use function explode;
 use function is_int;
 use function realpath;
+use function sprintf;
 use function time;
 use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Runner\TestSuiteSorter;
@@ -329,7 +332,16 @@ final readonly class Merger
 
         if ($cliConfiguration->hasExtensions()) {
             foreach ($cliConfiguration->extensions() as $extension) {
-                $extensionBootstrappers[] = [
+                if (array_key_exists($extension, $extensionBootstrappers)) {
+                    EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                        sprintf(
+                            'Extension "%s" is configured more than once on the command line',
+                            $extension,
+                        ),
+                    );
+                }
+
+                $extensionBootstrappers[$extension] = [
                     'className'  => $extension,
                     'parameters' => [],
                 ];
@@ -337,7 +349,16 @@ final readonly class Merger
         }
 
         foreach ($xmlConfiguration->extensions() as $extension) {
-            $extensionBootstrappers[] = [
+            if (array_key_exists($extension->className(), $extensionBootstrappers)) {
+                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                    sprintf(
+                        'Extension "%s" is configured more than once',
+                        $extension->className(),
+                    ),
+                );
+            }
+
+            $extensionBootstrappers[$extension->className()] = [
                 'className'  => $extension->className(),
                 'parameters' => $extension->parameters(),
             ];
@@ -371,6 +392,7 @@ final readonly class Merger
         $coverageTextShowUncoveredFiles = false;
         $coverageTextShowOnlySummary    = false;
         $coverageXml                    = null;
+        $coverageXmlIncludeSource       = true;
         $coverageFromXmlConfiguration   = true;
 
         if ($cliConfiguration->hasNoCoverage() && $cliConfiguration->noCoverage()) {
@@ -460,6 +482,12 @@ final readonly class Merger
             $coverageXml = $cliConfiguration->coverageXml();
         } elseif ($coverageFromXmlConfiguration && $xmlConfiguration->codeCoverage()->hasXml()) {
             $coverageXml = $xmlConfiguration->codeCoverage()->xml()->target()->path();
+        }
+
+        if ($cliConfiguration->hasExcludeSourceFromXmlCoverage()) {
+            $coverageXmlIncludeSource = !$cliConfiguration->excludeSourceFromXmlCoverage();
+        } elseif ($coverageFromXmlConfiguration && $xmlConfiguration->codeCoverage()->hasXml()) {
+            $coverageXmlIncludeSource = $xmlConfiguration->codeCoverage()->xml()->includeSource();
         }
 
         if ($cliConfiguration->hasBackupGlobals()) {
@@ -750,15 +778,25 @@ final readonly class Merger
             $excludeFilter = $cliConfiguration->excludeFilter();
         }
 
+        $ignoreTestSelectionInXmlConfiguration = false;
+
+        if ($cliConfiguration->hasAll()) {
+            $ignoreTestSelectionInXmlConfiguration = true;
+        }
+
+        $groups = [];
+
         if ($cliConfiguration->hasGroups()) {
             $groups = $cliConfiguration->groups();
-        } else {
+        } elseif (!$ignoreTestSelectionInXmlConfiguration) {
             $groups = $xmlConfiguration->groups()->include()->asArrayOfStrings();
         }
 
+        $excludeGroups = [];
+
         if ($cliConfiguration->hasExcludeGroups()) {
             $excludeGroups = $cliConfiguration->excludeGroups();
-        } else {
+        } elseif (!$ignoreTestSelectionInXmlConfiguration) {
             $excludeGroups = $xmlConfiguration->groups()->exclude()->asArrayOfStrings();
         }
 
@@ -893,6 +931,14 @@ final readonly class Merger
             $displayDetailsOnSkippedTests = true;
         }
 
+        $issueTriggerIdentificationNeeded = $xmlConfiguration->source()->ignoreSelfDeprecations() || $xmlConfiguration->source()->ignoreDirectDeprecations() || $xmlConfiguration->source()->ignoreIndirectDeprecations();
+
+        if ($issueTriggerIdentificationNeeded && !$xmlConfiguration->source()->identifyIssueTrigger()) {
+            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                'The identification of issue triggers is disabled. However, ignoring self-deprecations, direct deprecations, or indirect deprecations is requested.',
+            );
+        }
+
         return new Configuration(
             $cliConfiguration->arguments(),
             $configurationFile,
@@ -921,6 +967,7 @@ final readonly class Merger
                 $xmlConfiguration->source()->ignoreSelfDeprecations(),
                 $xmlConfiguration->source()->ignoreDirectDeprecations(),
                 $xmlConfiguration->source()->ignoreIndirectDeprecations(),
+                $xmlConfiguration->source()->identifyIssueTrigger(),
             ),
             $testResultCacheFile,
             $coverageClover,
@@ -942,6 +989,7 @@ final readonly class Merger
             $coverageTextShowUncoveredFiles,
             $coverageTextShowOnlySummary,
             $coverageXml,
+            $coverageXmlIncludeSource,
             $pathCoverage,
             $xmlConfiguration->codeCoverage()->ignoreDeprecatedCodeUnits(),
             $disableCodeCoverageIgnore,
@@ -980,7 +1028,7 @@ final readonly class Merger
             $columns,
             $noExtensions,
             $pharExtensionDirectory,
-            $extensionBootstrappers,
+            array_values($extensionBootstrappers),
             $backupGlobals,
             $backupStaticProperties,
             $beStrictAboutChangesToGlobalState,
@@ -1035,6 +1083,7 @@ final readonly class Merger
             $includeTestSuite,
             $excludeTestSuite,
             $xmlConfiguration->phpunit()->hasDefaultTestSuite() ? $xmlConfiguration->phpunit()->defaultTestSuite() : null,
+            $ignoreTestSelectionInXmlConfiguration,
             $testSuffixes,
             new Php(
                 DirectoryCollection::fromArray($includePaths),
