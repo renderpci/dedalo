@@ -8,26 +8,38 @@ class system {
 
 
 
+	static $info_instance;
+
+
+
 	/**
 	* GET_INFO
 	* Loads composer lib 'Linfo' and gets the main data for the system
-	* // @use linfo
-	* linfo lib installed via composer
 	* @see https://github.com/jrgp/linfo
-	* @return object $info
+	* @return object|null $info Returns Linfo instance or null if not available
 	*/
-	public static function get_info() : object {
+	public static function get_info() : ?object {
 
-		static $info_instance;
-		if (isset($info_instance)) {
-			return $info_instance;
+		if (isset(self::$info_instance)) {
+			return self::$info_instance;
 		}
 
-		include_once DEDALO_LIB_PATH . '/vendor/autoload.php';
-		$info_instance = new \Linfo\Linfo;
+		try {
+			include_once DEDALO_ROOT_PATH . '/vendor/autoload.php';
 
+			// Check if class exists before instantiating (composer dependency)
+			if (!class_exists('\Linfo\Linfo')) {
+				debug_log(__METHOD__ . " Linfo class not found. Run composer install.", logger::WARNING);
+				return null;
+			}
 
-		return $info_instance;
+			self::$info_instance = new \Linfo\Linfo;
+		} catch (Exception $e) {
+			debug_log(__METHOD__ . " Failed to instantiate Linfo: " . $e->getMessage(), logger::ERROR);
+			return null;
+		}
+
+		return self::$info_instance;
 	}//end get_info
 
 
@@ -36,11 +48,15 @@ class system {
 	* GET_RAM
 	* Get the system physical memory installed in the system
 	* in Gigabytes
-	* @return int $total_gb
+	* @return int $total_gb Returns 0 if info unavailable
 	*/
 	public static function get_ram() : int {
 
-		$info		= system::get_info();
+		$info = system::get_info();
+		if ($info === null) {
+			return 0;
+		}
+
 		$ram_info	= $info->getRam();
 		$total_gb	= intval( round((int)$ram_info['total'] / (1024 * 1024 * 1024), 0) );
 
@@ -60,6 +76,10 @@ class system {
 	public static function get_mhz() : ?int {
 
 		$info = system::get_info();
+		if ($info === null) {
+			return null;
+		}
+
 		$cpu_info = $info->getCPU();
 
 		$mhz_values = [];
