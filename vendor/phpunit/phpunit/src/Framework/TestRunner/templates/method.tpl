@@ -1,10 +1,12 @@
 <?php declare(strict_types=1);
 use PHPUnit\Event\Facade;
+use PHPUnit\Runner\IssueTriggerResolver;
 use PHPUnit\Runner\CodeCoverage;
 use PHPUnit\Runner\ErrorHandler;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
 use PHPUnit\TextUI\Configuration\CodeCoverageFilterRegistry;
 use PHPUnit\TextUI\Configuration\PhpHandler;
+use PHPUnit\TextUI\Configuration\SourceMapper;
 use PHPUnit\TestRunner\TestResult\PassedTests;
 
 // php://stdout does not obey output buffering. Any output would break
@@ -68,6 +70,10 @@ function __phpunit_run_isolated_test()
 
     ErrorHandler::instance()->useDeprecationTriggers($deprecationTriggers);
 
+    foreach (array_reverse($configuration->source()->issueTriggerResolvers()) as $className) {
+        ErrorHandler::instance()->addIssueTriggerResolver(new $className);
+    }
+
     $test = new {className}('{methodName}');
 
     $test->setData('{dataName}', unserialize('{data}'));
@@ -128,6 +134,11 @@ set_error_handler('__phpunit_error_handler');
 restore_error_handler();
 
 ConfigurationRegistry::loadFrom('{serializedConfiguration}');
+
+if ('{sourceMapFile}' !== '') {
+    SourceMapper::loadFrom('{sourceMapFile}', ConfigurationRegistry::get()->source());
+}
+
 (new PhpHandler)->handle(ConfigurationRegistry::get()->php());
 
 if ('{bootstrap}' !== '') {

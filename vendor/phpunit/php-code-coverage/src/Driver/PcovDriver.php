@@ -23,6 +23,8 @@ use SebastianBergmann\CodeCoverage\Filter;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 final class PcovDriver extends Driver
 {
@@ -68,9 +70,14 @@ final class PcovDriver extends Driver
         // @codeCoverageIgnoreEnd
     }
 
-    public function nameAndVersion(): string
+    public function name(): string
     {
-        return 'PCOV ' . phpversion('pcov');
+        return 'PCOV';
+    }
+
+    public function version(): string
+    {
+        return phpversion('pcov');
     }
 
     /**

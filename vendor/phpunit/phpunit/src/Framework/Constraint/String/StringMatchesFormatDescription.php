@@ -11,12 +11,21 @@ namespace PHPUnit\Framework\Constraint;
 
 use const DIRECTORY_SEPARATOR;
 use const PHP_EOL;
+use function assert;
+use function count;
 use function explode;
 use function implode;
+use function preg_last_error_msg;
 use function preg_match;
 use function preg_quote;
 use function preg_replace;
+use function sprintf;
+use function str_replace;
+use function strlen;
+use function strpos;
 use function strtr;
+use function substr;
+use PHPUnit\Framework\Exception as FrameworkException;
 use SebastianBergmann\Diff\Differ;
 use SebastianBergmann\Diff\Output\UnifiedDiffOutputBuilder;
 
@@ -40,17 +49,28 @@ final class StringMatchesFormatDescription extends Constraint
     /**
      * Evaluates the constraint for parameter $other. Returns true if the
      * constraint is met, false otherwise.
+     *
+     * @throws FrameworkException
      */
     protected function matches(mixed $other): bool
     {
         $other = $this->convertNewlines($other);
 
-        $matches = preg_match(
+        $matches = @preg_match(
             $this->regularExpressionForFormatDescription(
                 $this->convertNewlines($this->formatDescription),
             ),
             $other,
         );
+
+        if ($matches === false) {
+            throw new FrameworkException(
+                sprintf(
+                    'Format description cannot be matched: %s',
+                    preg_last_error_msg(),
+                ),
+            );
+        }
 
         return $matches > 0;
     }
@@ -69,40 +89,113 @@ final class StringMatchesFormatDescription extends Constraint
      * This method removes the expected differences by figuring out if a difference
      * is allowed by the use of a placeholder.
      *
-     * The problem here are %A and %a multiline placeholders since we look at the
-     * expected and actual output line by line. If differences allowed by those placeholders
-     * stretch over multiple lines they will still end up in the final diff.
-     * And since they mess up the line sync between the expected and actual output
-     * all following allowed changes will not be detected/removed anymore.
+     * For %A and %a multiline placeholders that can match across multiple lines,
+     * we use anchor lookahead: find the next non-multiline expected line and search
+     * for it in the actual output to determine how many actual lines the placeholder
+     * consumed, keeping expected and actual in sync.
      */
     protected function additionalFailureDescription(mixed $other): string
     {
-        $from = explode("\n", $this->formatDescription);
-        $to   = explode("\n", $this->convertNewlines($other));
+        $expected      = explode("\n", $this->formatDescription);
+        $expectedCount = count($expected);
+        $actual        = explode("\n", $this->convertNewlines($other));
+        $actualCount   = count($actual);
+        $synced        = [];
+        $expectedIndex = 0;
+        $actualIndex   = 0;
 
-        foreach ($from as $index => $line) {
-            // is the expected output line different from the actual output line
-            if (isset($to[$index]) && $line !== $to[$index]) {
-                $line = $this->regularExpressionForFormatDescription($line);
+        while ($expectedIndex < $expectedCount && $actualIndex < $actualCount) {
+            if ($expected[$expectedIndex] === $actual[$actualIndex]) {
+                $synced[] = $actual[$actualIndex];
 
-                // if the difference is allowed by a placeholder
-                // overwrite the expected line with the actual line to prevent it from showing up in the diff
-                if (preg_match($line, $to[$index]) > 0) {
-                    $from[$index] = $to[$index];
+                $expectedIndex++;
+                $actualIndex++;
+
+                continue;
+            }
+
+            if ($this->isMultilineMatch($expected[$expectedIndex])) {
+                $anchorExpectedIndex = $this->findNextAnchor($expected, $expectedIndex + 1);
+
+                if ($anchorExpectedIndex !== null) {
+                    $anchorActualIndex = $this->findAnchorInActual($expected[$anchorExpectedIndex], $actual, $actualIndex);
+
+                    if ($anchorActualIndex !== null) {
+                        for ($i = $actualIndex; $i < $anchorActualIndex; $i++) {
+                            $synced[] = $actual[$i];
+                        }
+
+                        $synced[] = $actual[$anchorActualIndex];
+
+                        $expectedIndex = $anchorExpectedIndex + 1;
+                        $actualIndex   = $anchorActualIndex + 1;
+
+                        continue;
+                    }
+                } else {
+                    // No anchor after multiline placeholder(s): consume all remaining actual lines
+                    for ($i = $actualIndex; $i < $actualCount; $i++) {
+                        $synced[] = $actual[$i];
+                    }
+
+                    $expectedIndex = $expectedCount;
+                    $actualIndex   = $actualCount;
+
+                    continue;
                 }
             }
+
+            // Single-line comparison
+            $regex = $this->regularExpressionForFormatDescription($expected[$expectedIndex]);
+
+            if (@preg_match($regex, $actual[$actualIndex]) > 0) {
+                $synced[] = $actual[$actualIndex];
+            } else {
+                $synced[] = $expected[$expectedIndex];
+            }
+
+            $expectedIndex++;
+            $actualIndex++;
         }
 
-        $from = implode("\n", $from);
-        $to   = implode("\n", $to);
+        while ($expectedIndex < $expectedCount) {
+            $synced[] = $expected[$expectedIndex];
+            $expectedIndex++;
+        }
 
-        return $this->differ()->diff($from, $to);
+        return $this->differ()->diff(implode("\n", $synced), implode("\n", $actual));
     }
 
     private function regularExpressionForFormatDescription(string $string): string
     {
+        $quoted      = '';
+        $startOffset = 0;
+        $length      = strlen($string);
+
+        while ($startOffset < $length) {
+            $start = strpos($string, '%r', $startOffset);
+
+            if ($start !== false) {
+                $end = strpos($string, '%r', $start + 2);
+
+                if ($end === false) {
+                    $end = $start = $length;
+                }
+            } else {
+                $start = $end = $length;
+            }
+
+            $quoted .= preg_quote(substr($string, $startOffset, $start - $startOffset), '/');
+
+            if ($end > $start) {
+                $quoted .= '(' . substr($string, $start + 2, $end - $start - 2) . ')';
+            }
+
+            $startOffset = $end + 2;
+        }
+
         $string = strtr(
-            preg_quote($string, '/'),
+            $quoted,
             [
                 '%%' => '%',
                 '%e' => preg_quote(DIRECTORY_SEPARATOR, '/'),
@@ -123,9 +216,48 @@ final class StringMatchesFormatDescription extends Constraint
         return '/^' . $string . '$/s';
     }
 
+    private function isMultilineMatch(string $line): bool
+    {
+        return preg_match('/%[aA]/', str_replace('%%', '', $line)) > 0;
+    }
+
+    /**
+     * @param list<string> $expected
+     */
+    private function findNextAnchor(array $expected, int $startIdx): ?int
+    {
+        for ($i = $startIdx, $len = count($expected); $i < $len; $i++) {
+            if (!$this->isMultilineMatch($expected[$i])) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $actual
+     */
+    private function findAnchorInActual(string $anchorLine, array $actual, int $startIdx): ?int
+    {
+        $anchorRegex = $this->regularExpressionForFormatDescription($anchorLine);
+
+        for ($i = $startIdx, $len = count($actual); $i < $len; $i++) {
+            if ($anchorLine === $actual[$i] || @preg_match($anchorRegex, $actual[$i]) > 0) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
     private function convertNewlines(string $text): string
     {
-        return preg_replace('/\r\n/', "\n", $text);
+        $result = preg_replace('/\r\n/', "\n", $text);
+
+        assert($result !== null);
+
+        return $result;
     }
 
     private function differ(): Differ

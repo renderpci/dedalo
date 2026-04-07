@@ -16,12 +16,12 @@ use function count;
 use function file_get_contents;
 use function interface_exists;
 use function is_bool;
-use function sprintf;
 use ArrayAccess;
 use Countable;
 use Generator;
-use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Framework\Constraint\ArrayHasKey;
+use PHPUnit\Framework\Constraint\ArraysAreEqual;
+use PHPUnit\Framework\Constraint\ArraysAreIdentical;
 use PHPUnit\Framework\Constraint\Callback;
 use PHPUnit\Framework\Constraint\Constraint;
 use PHPUnit\Framework\Constraint\Count;
@@ -210,6 +210,154 @@ abstract class Assert
     }
 
     /**
+     * Assert that two arrays are identical.
+     *
+     * The (key, value) relationship matters, the order of the (key, value) pairs in the array matters, and keys as well as values are compared strictly.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysAreIdentical(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreIdentical($expected, true, true),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays are identical while ignoring the order of their values.
+     *
+     * The (key, value) relationship matters, the order of the (key, value) pairs in the array does not matter, and keys as well as values are compared strictly.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysAreIdenticalIgnoringOrder(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreIdentical($expected, true, false),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays have identical values.
+     *
+     * The (key, value) relationship does not matter, the order of the (key, value) pairs in the array matters, and values are compared strictly.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysHaveIdenticalValues(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreIdentical($expected, false, true),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays have identical values while ignoring the order of these values.
+     *
+     * The (key, value) relationship does not matter, the order of the (key, value) pairs in the array does not matter, and values are compared strictly.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysHaveIdenticalValuesIgnoringOrder(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreIdentical($expected, false, false),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays are equal.
+     *
+     * The (key, value) relationship matters, the order of the (key, value) pairs in the array matters, and keys as well as values are compared loosely.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     */
+    final public static function assertArraysAreEqual(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreEqual($expected, true, true),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays are equal while ignoring the order of their values.
+     *
+     * The (key, value) relationship matters, the order of the (key, value) pairs in the array does not matter, and keys as well as values are compared loosely.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysAreEqualIgnoringOrder(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreEqual($expected, true, false),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays have equal values.
+     *
+     * The (key, value) relationship does not matter, the order of the (key, value) pairs in the array matters, and values are compared loosely.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     */
+    final public static function assertArraysHaveEqualValues(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreEqual($expected, false, true),
+            $message,
+        );
+    }
+
+    /**
+     * Assert that two arrays have equal values while ignoring the order of these values.
+     *
+     * The (key, value) relationship does not matter, the order of the (key, value) pairs in the array does not matter, and values are compared loosely.
+     *
+     * @param array<mixed> $expected
+     * @param array<mixed> $actual
+     *
+     * @throws ExpectationFailedException
+     */
+    final public static function assertArraysHaveEqualValuesIgnoringOrder(array $expected, array $actual, string $message = ''): void
+    {
+        self::assertThat(
+            $actual,
+            new ArraysAreEqual($expected, false, false),
+            $message,
+        );
+    }
+
+    /**
      * Asserts that a haystack contains a needle.
      *
      * @param iterable<mixed> $haystack
@@ -261,73 +409,6 @@ abstract class Assert
     final public static function assertNotContainsEquals(mixed $needle, iterable $haystack, string $message = ''): void
     {
         $constraint = new LogicalNot(new TraversableContainsEqual($needle));
-
-        self::assertThat($haystack, $constraint, $message);
-    }
-
-    /**
-     * Asserts that a haystack contains only values of a given type.
-     *
-     * @param 'array'|'bool'|'boolean'|'callable'|'double'|'float'|'int'|'integer'|'iterable'|'null'|'numeric'|'object'|'real'|'resource (closed)'|'resource'|'scalar'|'string' $type
-     * @param iterable<mixed>                                                                                                                                                   $haystack
-     *
-     * @throws Exception
-     * @throws ExpectationFailedException
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6056
-     */
-    final public static function assertContainsOnly(string $type, iterable $haystack, ?bool $isNativeType = null, string $message = ''): void
-    {
-        if ($isNativeType === null) {
-            $isNativeType = self::isNativeType($type);
-        }
-
-        if ($isNativeType) {
-            $replacement = match ($type) {
-                'array'             => 'assertContainsOnlyArray',
-                'bool'              => 'assertContainsOnlyBool',
-                'boolean'           => 'assertContainsOnlyBool',
-                'callable'          => 'assertContainsOnlyCallable',
-                'double'            => 'assertContainsOnlyFloat',
-                'float'             => 'assertContainsOnlyFloat',
-                'int'               => 'assertContainsOnlyInt',
-                'integer'           => 'assertContainsOnlyInt',
-                'iterable'          => 'assertContainsOnlyIterable',
-                'null'              => 'assertContainsOnlyNull',
-                'numeric'           => 'assertContainsOnlyNumeric',
-                'object'            => 'assertContainsOnlyObject',
-                'real'              => 'assertContainsOnlyFloat',
-                'resource'          => 'assertContainsOnlyResource',
-                'resource (closed)' => 'assertContainsOnlyClosedResource',
-                'scalar'            => 'assertContainsOnlyScalar',
-                'string'            => 'assertContainsOnlyString',
-            };
-
-            EventFacade::emitter()->testTriggeredPhpunitDeprecation(
-                null,
-                sprintf(
-                    'assertContainsOnly() is deprecated and will be removed in PHPUnit 13. ' .
-                    'Please use %s($haystack) instead of assertContainsOnly(\'%s\', $haystack).',
-                    $replacement,
-                    $type,
-                ),
-            );
-
-            $constraint = TraversableContainsOnly::forNativeType(self::mapNativeType($type));
-        } else {
-            EventFacade::emitter()->testTriggeredPhpunitDeprecation(
-                null,
-                sprintf(
-                    'assertContainsOnly() is deprecated and will be removed in PHPUnit 13. ' .
-                    'Please use assertContainsOnlyInstancesOf(\'%s\', $haystack) instead of assertContainsOnly(\'%s\', $haystack).',
-                    $type,
-                    $type,
-                ),
-            );
-
-            /** @phpstan-ignore argument.type */
-            $constraint = TraversableContainsOnly::forClassOrInterface($type);
-        }
 
         self::assertThat($haystack, $constraint, $message);
     }
@@ -610,77 +691,6 @@ abstract class Assert
         self::assertThat(
             $haystack,
             TraversableContainsOnly::forClassOrInterface($className),
-            $message,
-        );
-    }
-
-    /**
-     * Asserts that a haystack does not contain only values of a given type.
-     *
-     * @param 'array'|'bool'|'boolean'|'callable'|'double'|'float'|'int'|'integer'|'iterable'|'null'|'numeric'|'object'|'real'|'resource (closed)'|'resource'|'scalar'|'string' $type
-     * @param iterable<mixed>                                                                                                                                                   $haystack
-     *
-     * @throws Exception
-     * @throws ExpectationFailedException
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6056
-     */
-    final public static function assertNotContainsOnly(string $type, iterable $haystack, ?bool $isNativeType = null, string $message = ''): void
-    {
-        if ($isNativeType === null) {
-            $isNativeType = self::isNativeType($type);
-        }
-
-        if ($isNativeType) {
-            $replacement = match ($type) {
-                'array'             => 'assertContainsNotOnlyArray',
-                'bool'              => 'assertContainsNotOnlyBool',
-                'boolean'           => 'assertContainsNotOnlyBool',
-                'callable'          => 'assertContainsNotOnlyCallable',
-                'double'            => 'assertContainsNotOnlyFloat',
-                'float'             => 'assertContainsNotOnlyFloat',
-                'int'               => 'assertContainsNotOnlyInt',
-                'integer'           => 'assertContainsNotOnlyInt',
-                'iterable'          => 'assertContainsNotOnlyIterable',
-                'null'              => 'assertContainsNotOnlyNull',
-                'numeric'           => 'assertContainsNotOnlyNumeric',
-                'object'            => 'assertContainsNotOnlyObject',
-                'real'              => 'assertContainsNotOnlyFloat',
-                'resource'          => 'assertContainsNotOnlyResource',
-                'resource (closed)' => 'assertContainsNotOnlyClosedResource',
-                'scalar'            => 'assertContainsNotOnlyScalar',
-                'string'            => 'assertContainsNotOnlyString',
-            };
-
-            EventFacade::emitter()->testTriggeredPhpunitDeprecation(
-                null,
-                sprintf(
-                    'assertNotContainsOnly() is deprecated and will be removed in PHPUnit 13. ' .
-                    'Please use %s($haystack) instead of assertNotContainsOnly(\'%s\', $haystack).',
-                    $replacement,
-                    $type,
-                ),
-            );
-
-            $constraint = TraversableContainsOnly::forNativeType(self::mapNativeType($type));
-        } else {
-            EventFacade::emitter()->testTriggeredPhpunitDeprecation(
-                null,
-                sprintf(
-                    'assertNotContainsOnly() is deprecated and will be removed in PHPUnit 13. ' .
-                    'Please use assertContainsNotOnlyInstancesOf(\'%s\', $haystack) instead of assertNotContainsOnly(\'%s\', $haystack).',
-                    $type,
-                    $type,
-                ),
-            );
-
-            /** @phpstan-ignore argument.type */
-            $constraint = TraversableContainsOnly::forClassOrInterface($type);
-        }
-
-        self::assertThat(
-            $haystack,
-            new LogicalNot($constraint),
             $message,
         );
     }
@@ -2813,18 +2823,6 @@ abstract class Assert
         return new TraversableContainsIdentical($value);
     }
 
-    /**
-     * @param 'array'|'bool'|'boolean'|'callable'|'double'|'float'|'int'|'integer'|'iterable'|'null'|'numeric'|'object'|'real'|'resource (closed)'|'resource'|'scalar'|'string' $type
-     *
-     * @throws Exception
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6060
-     */
-    final public static function containsOnly(string $type): TraversableContainsOnly
-    {
-        return TraversableContainsOnly::forNativeType(self::mapNativeType($type));
-    }
-
     final public static function containsOnlyArray(): TraversableContainsOnly
     {
         return TraversableContainsOnly::forNativeType(NativeType::Array);
@@ -3041,50 +3039,6 @@ abstract class Assert
         return new IsType(NativeType::String);
     }
 
-    /**
-     * @param 'array'|'bool'|'boolean'|'callable'|'double'|'float'|'int'|'integer'|'iterable'|'null'|'numeric'|'object'|'real'|'resource (closed)'|'resource'|'scalar'|'string' $type
-     *
-     * @throws UnknownNativeTypeException
-     *
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/6053
-     */
-    final public static function isType(string $type): IsType
-    {
-        $constraint = new IsType(self::mapNativeType($type));
-
-        $replacement = match ($type) {
-            'array'             => 'isArray',
-            'bool'              => 'isBool',
-            'boolean'           => 'isBool',
-            'callable'          => 'isCallable',
-            'double'            => 'isFloat',
-            'float'             => 'isFloat',
-            'int'               => 'isInt',
-            'integer'           => 'isInt',
-            'iterable'          => 'isIterable',
-            'null'              => 'isNull',
-            'numeric'           => 'isNumeric',
-            'object'            => 'isObject',
-            'real'              => 'isFloat',
-            'resource'          => 'isResource',
-            'resource (closed)' => 'isClosedResource',
-            'scalar'            => 'isScalar',
-            'string'            => 'isString',
-        };
-
-        EventFacade::emitter()->testTriggeredPhpunitDeprecation(
-            null,
-            sprintf(
-                'isType(\'%s\') is deprecated and will be removed in PHPUnit 13. ' .
-                'Please use the %s() method instead.',
-                $type,
-                $replacement,
-            ),
-        );
-
-        return $constraint;
-    }
-
     final public static function lessThan(mixed $value): LessThan
     {
         return new LessThan($value);
@@ -3194,57 +3148,5 @@ abstract class Assert
     final public static function resetCount(): void
     {
         self::$count = 0;
-    }
-
-    private static function isNativeType(string $type): bool
-    {
-        return $type === 'array' ||
-               $type === 'bool' ||
-               $type === 'boolean' ||
-               $type === 'callable' ||
-               $type === 'double' ||
-               $type === 'float' ||
-               $type === 'int' ||
-               $type === 'integer' ||
-               $type === 'iterable' ||
-               $type === 'null' ||
-               $type === 'numeric' ||
-               $type === 'object' ||
-               $type === 'real' ||
-               $type === 'resource' ||
-               $type === 'resource (closed)' ||
-               $type === 'scalar' ||
-               $type === 'string';
-    }
-
-    /**
-     * @throws UnknownNativeTypeException
-     */
-    private static function mapNativeType(string $type): NativeType
-    {
-        if (!self::isNativeType($type)) {
-            throw new UnknownNativeTypeException($type);
-        }
-
-        /** @phpstan-ignore match.unhandled */
-        return match ($type) {
-            'array'             => NativeType::Array,
-            'bool'              => NativeType::Bool,
-            'boolean'           => NativeType::Bool,
-            'callable'          => NativeType::Callable,
-            'double'            => NativeType::Float,
-            'float'             => NativeType::Float,
-            'int'               => NativeType::Int,
-            'integer'           => NativeType::Int,
-            'iterable'          => NativeType::Iterable,
-            'null'              => NativeType::Null,
-            'numeric'           => NativeType::Numeric,
-            'object'            => NativeType::Object,
-            'real'              => NativeType::Float,
-            'resource'          => NativeType::Resource,
-            'resource (closed)' => NativeType::ClosedResource,
-            'scalar'            => NativeType::Scalar,
-            'string'            => NativeType::String,
-        };
     }
 }

@@ -15,6 +15,8 @@ use SebastianBergmann\CodeCoverage\Data\RawCodeCoverageData;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 abstract class Driver
 {
@@ -76,7 +78,14 @@ abstract class Driver
         $this->collectBranchAndPathCoverage = false;
     }
 
-    abstract public function nameAndVersion(): string;
+    abstract public function name(): string;
+
+    abstract public function version(): string;
+
+    public function nameAndVersion(): string
+    {
+        return $this->name() . ' ' . $this->version();
+    }
 
     abstract public function start(): void;
 

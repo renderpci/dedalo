@@ -9,8 +9,12 @@
  */
 namespace SebastianBergmann\CodeCoverage;
 
+use function rtrim;
 use RuntimeException;
 
+/**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ */
 final class UnintentionallyCoveredCodeException extends RuntimeException implements Exception
 {
     /**
@@ -44,6 +48,6 @@ final class UnintentionallyCoveredCodeException extends RuntimeException impleme
             $message .= '- ' . $unit . "\n";
         }
 
-        return $message;
+        return rtrim($message);
     }
 }

@@ -31,6 +31,8 @@ use SebastianBergmann\LinesOfCode\LineCountingVisitor;
 
 /**
  * @internal This interface is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 final readonly class ParsingSourceAnalyser implements SourceAnalyser
 {
@@ -40,10 +42,6 @@ final readonly class ParsingSourceAnalyser implements SourceAnalyser
     public function analyse(string $sourceCodeFile, string $sourceCode, bool $useAnnotationsForIgnoringCode, bool $ignoreDeprecatedCode): AnalysisResult
     {
         $linesOfCode = max(substr_count($sourceCode, "\n") + 1, substr_count($sourceCode, "\r") + 1);
-
-        if ($linesOfCode === 0 && $sourceCode !== '') {
-            $linesOfCode = 1;
-        }
 
         assert($linesOfCode > 0);
 

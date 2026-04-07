@@ -16,7 +16,7 @@ use Countable;
 use IteratorAggregate;
 
 /**
- * @template-implements IteratorAggregate<int, Metadata>
+ * @template-implements IteratorAggregate<non-negative-int, Metadata>
  *
  * @immutable
  *
@@ -124,6 +124,16 @@ final readonly class MetadataCollection implements Countable, IteratorAggregate
             ...array_filter(
                 $this->metadata,
                 static fn (Metadata $metadata): bool => $metadata->isAfterClass(),
+            ),
+        );
+    }
+
+    public function isAllowMockObjectsWithoutExpectations(): self
+    {
+        return new self(
+            ...array_filter(
+                $this->metadata,
+                static fn (Metadata $metadata): bool => $metadata->isAllowMockObjectsWithoutExpectations(),
             ),
         );
     }
@@ -278,6 +288,16 @@ final readonly class MetadataCollection implements Countable, IteratorAggregate
         );
     }
 
+    public function isDataProviderClosure(): self
+    {
+        return new self(
+            ...array_filter(
+                $this->metadata,
+                static fn (Metadata $metadata): bool => $metadata->isDataProviderClosure(),
+            ),
+        );
+    }
+
     public function isDepends(): self
     {
         return new self(
@@ -367,16 +387,6 @@ final readonly class MetadataCollection implements Countable, IteratorAggregate
             ...array_filter(
                 $this->metadata,
                 static fn (Metadata $metadata): bool => $metadata->isIgnorePhpunitWarnings(),
-            ),
-        );
-    }
-
-    public function isRunClassInSeparateProcess(): self
-    {
-        return new self(
-            ...array_filter(
-                $this->metadata,
-                static fn (Metadata $metadata): bool => $metadata->isRunClassInSeparateProcess(),
             ),
         );
     }

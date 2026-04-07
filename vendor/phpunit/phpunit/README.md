@@ -88,11 +88,11 @@ These businesses support Sebastian Bergmann's work on PHPUnit:
         <tr>
             <td style="width: 30%; vertical-align: middle;"><a href="https://www.bubbleshooter.net/"><img alt="Bubble Shooter" src=".github/img/bubble-shooter.png" style="width: 200px;"/></a></td>
             <td style="width: 30%; vertical-align: middle;"><a href="https://www.in2it.be/phpunit-supporter/"><img alt="in2it vof" src=".github/img/in2it.svg" style="width: 200px;"/></a></td>
-            <td style="width: 30%; vertical-align: middle;"><a href="https://www.lambdatest.com/"><img alt="LambdaTest" src=".github/img/lambdatest.svg" style="width: 200px;"/></a></td>
+            <td style="width: 30%; vertical-align: middle;"><a href="https://l.rw.rw/php_unit"><img alt="Mailtrap" src=".github/img/mailtrap.svg" style="width: 200px;"/></a></td>
         </tr>
         <tr>
-            <td style="width: 30%; vertical-align: middle;"><a href="https://roave.com/"><img alt="Roave" src=".github/img/roave.svg" style="width: 200px;"/></a></td>
             <td style="width: 30%; vertical-align: middle;"><a href="https://testmo.com/"><img alt="Testmo GmbH" src=".github/img/testmo.svg" style="width: 200px;"/></a></td>
+            <td style="width: 30%; vertical-align: middle;"><a href="https://www.testmuai.com/?utm_medium=sponsor&utm_source=phpunit"><img alt="TestMu AI" src=".github/img/testmuai.svg" style="width: 200px;"/></a></td>
             <td style="width: 30%; vertical-align: middle;"><a href="https://tideways.com/"><img alt="Tideways GmbH" src=".github/img/tideways.svg" style="width: 200px;"/></a></td>
         </tr>
         <tr>
@@ -106,4 +106,4 @@ Would you like to see your logo here as well as on the [PHPUnit website](https:/
 Contact Sebastian Bergmann at [sponsoring@phpunit.de](mailto:sponsoring@phpunit.de) to learn more about how you can support his work on PHPUnit.
 
 Whether you are a CEO, CFO, CTO, or a developer: your company surely depends on Open Source software.
-[It is time to pay your share](https://opensourcepledge.com/) and support maintainers like [Sebastian Bergmann](https://sebastian-bergmann.de/open-source.html?ref=github).
+[It is time to pay your share](https://opensourcepledge.com/) and support maintainers like [Sebastian Bergmann](https://phpunit.de/sponsoring.html).
