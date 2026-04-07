@@ -675,10 +675,19 @@ class component_relation_children extends component_relation_common {
 	* @param string $section_tipo
 	* @param array $locators
 	* 	ascending order locators
+	* @param string $parent_section_tipo
+	* 	the parent section tipo to use as context for the order
+	* @param int $parent_section_id
+	* 	the parent section id to use as context for the order
 	* @return array|false $changed
 	* @see dd_ts_api::save_order
 	*/
-	public static function sort_children( string $section_tipo, array $locators ) : array|false {
+	public static function sort_children( 
+		string $section_tipo, 
+		array $locators,
+		string $parent_section_tipo,
+		int $parent_section_id
+	) : array|false {
 
 		$changed = [];
 
@@ -710,31 +719,31 @@ class component_relation_children extends component_relation_common {
 				$locator->section_tipo // string section_tipo
 			);
 
-			$data = $component->get_data();
-			$value = $data[0]->value ?? 1;
+			// Get current value for this parent context
+			$current_value = $component->get_value_by_context(
+				$parent_section_tipo,
+				$parent_section_id
+			);
 
-			// check if value changes
-			if ((int)$value===$order) {
-				// remains unchanged
+			// check if value changes (skip if same value)
+			if ((int)$current_value === $order) {
 				continue;
 			}
 
-			if(empty($data)) {
-				$data = [(object)[
-					'value' => $order
-				]];
+			// Update value with parent context using dataframe method
+			$updated = $component->update_value_by_context(
+				$order,
+				$parent_section_tipo,
+				$parent_section_id
+			);
+
+			if ($updated === true) {
+				$component->save();
+				$changed[] = (object)[
+					'value'		=> $order,
+					'locator'	=> $locator
+				];
 			}
-
-			$data[0]->value = $order;
-
-			// save changed value
-			$component->set_data( $data );
-			$component->save();
-
-			$changed[] = (object)[
-				'value'		=> $order,
-				'locator'	=> $locator
-			];
 		}
 
 
