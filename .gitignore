@@ -190,3 +190,4 @@ cline_mcp_settings.json
 /code
 diff_*.txt
 /lib/acc
+vendor/composer/installed.php
