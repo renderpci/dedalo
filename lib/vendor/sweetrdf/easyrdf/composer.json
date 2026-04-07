@@ -1,0 +1,67 @@
+{
+    "name": "sweetrdf/easyrdf",
+    "description": "EasyRdf is a PHP library designed to make it easy to consume and produce RDF.",
+    "type": "library",
+    "keywords": ["RDF", "Semantic Web", "Linked Data", "Turtle", "RDFa", "SPARQL"],
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Nicholas Humfrey",
+            "email": "njh@aelius.com",
+            "homepage": "http://www.aelius.com/njh/",
+            "role": "Developer"
+        },
+        {
+            "name": "Alexey Zakhlestin",
+            "email": "indeyets@gmail.com",
+            "homepage": "http://indeyets.ru/",
+            "role": "Developer"
+        },
+        {
+            "name": "Konrad Abicht",
+            "email": "hi@inspirito.de",
+            "homepage": "http://inspirito.de/",
+            "role": "Maintainer, Developer"
+        }
+    ],
+    "replace": {
+        "easyrdf/easyrdf":"1.1.*"
+    },
+    "require": {
+        "php": "^8.0",
+        "ext-dom" : "*",
+        "ext-mbstring": "*",
+        "ext-pcre": "*",
+        "ext-xmlreader" : "*",
+        "lib-libxml" : "*",
+        "sweetrdf/rdf-helpers": "^2.0"
+    },
+    "suggest": {
+        "ml/json-ld": "^1.0",
+        "semsol/arc2": "^3"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "ml/json-ld": "^1.0",
+        "phpunit/phpunit": "^9.5.0|^10.0.0",
+        "phpstan/phpstan": "^1.0",
+        "phpstan/phpstan-phpunit": "^1.0",
+        "semsol/arc2": "^3",
+        "zendframework/zend-http": "^2",
+        "laminas/laminas-http": "^2"
+    },
+    "autoload": {
+        "psr-4": {
+            "EasyRdf\\": "lib"
+        }
+    },
+    "autoload-dev": {
+        "files": [
+            "test/TestHelper.php"
+        ],
+        "psr-4": {
+            "Test\\": "test/",
+            "Tests\\": "tests/"
+        }
+    }
+}

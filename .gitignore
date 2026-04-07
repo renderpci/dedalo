@@ -83,7 +83,7 @@ lib/vendor/*
 # !lib/autoload.php
 # !composer.json
 # !composer.lock
-composer.json
+#composer.json
 composer.lock
 composer.phar
 /var
