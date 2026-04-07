@@ -47,6 +47,12 @@ jobs:
           sed -i "s/define('DEDALO_PASSWORD_CONN', 'mypassword')/define('DEDALO_PASSWORD_CONN', 'dedalo_test_pass')/" config/config_db.php
           sed -i "s/define('DEVELOPMENT_SERVER', false)/define('DEVELOPMENT_SERVER', true)/" config/config.php
 
+      - name: Initialize database
+        env:
+          PGPASSWORD: dedalo_test_pass
+        run: |
+          gunzip -c install/db/dedalo6_install.pgsql.gz | psql -h 127.0.0.1 -U dedalo_test -d dedalo_test
+
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
 
