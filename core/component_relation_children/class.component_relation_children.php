@@ -876,6 +876,43 @@ class component_relation_children extends component_relation_common {
 	}//end build_children_sqo
 
 
+
+	/**
+	* HAS_CHILDREN_OF_TYPE
+	* Check if the given child has any child descriptor or non descriptor.
+	* Used in Thesaurus to verify if a term has specific types of children (e.g., descriptors vs non-descriptors).
+	*
+	* @param int|string $section_id The section ID of the child.
+	* @param string $section_tipo The section tipo of the child.
+	* @param string $component_tipo The component tipo representing the relationship.
+	* @param string $type The type to check: 'descriptor' or 'non_descriptor'.
+	* @return bool True if children of the specified type exist, false otherwise.
+	*/
+	public static function has_children_of_type( int|string $section_id, string $section_tipo, string $component_tipo, string $type ) : bool {
+
+		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
+			if( empty($ar_parent_tipo) ){
+				return false;
+			}
+			$parent_tipo = $ar_parent_tipo[0];
+
+		// build SQO using unified builder with descriptor_type filter
+			$sqo = self::build_children_sqo(
+				$section_id,
+				$section_tipo,
+				$component_tipo,
+				$parent_tipo,
+				[
+					'limit'				=> 1,
+					'order'				=> false,
+					'descriptor_type'	=> $type
+				]
+			);
+			if ($sqo === null) {
+				return false;
+			}
+
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
 
