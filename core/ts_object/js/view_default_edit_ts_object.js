@@ -1058,6 +1058,8 @@ const render_id_column = function(self) {
 						text_node		: virtual_order,
 						parent			: id_column_content
 					})
+					// Set pointer
+					self.order_number_link = order_number_link
 					// click event
 					const click_handler = (e) => {
 						e.stopPropagation()
