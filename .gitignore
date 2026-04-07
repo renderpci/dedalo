@@ -84,7 +84,7 @@ lib/vendor/*
 # !composer.json
 # !composer.lock
 #composer.json
-composer.lock
+#composer.lock
 composer.phar
 /var
 
