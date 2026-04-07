@@ -6,9 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<link rel="shortcut icon" href="../../favicon.ico" />
 	<link rel="stylesheet" href="../../core/page/css/main.css" />
-	<!-- add mocha css, to show results https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
 	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
-	<!-- add unit_test custom styles p-->
 	<link rel="stylesheet" href="css/unit_test.css" media="print" onload="this.media='all'; this.onload=null;">
 	<script type="importmap">
 		{
@@ -18,32 +16,72 @@
 			}
 		}
 	</script>
-	<!-- add mocha framework code https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
 	<script src="../../lib/mocha/dist/mocha.js"></script>
 	<script>
-		// mocha.setup. Use "tdd" interface, check global leaks, and force all tests to be asynchronous
 		mocha.setup({
 			ui			: 'bdd',
 			checkLeaks	: true,
 			asyncOnly	: true
 		});
-		// mocha.growl(); // <-- Enables web notifications
 	</script>
-	<!-- add chai  https://unpkg.com/chai/chai.js | https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js -->
 	<script src="../../lib/chai/chai.js"></script>
 	<script>
-		// chai has a lot of stuff, let's make assert global
 		let assert = chai.assert;
 	</script>
 </head>
 <body>
-	<!-- the element with id="mocha" will contain test results -->
-		<div id="mocha"></div>
+	<div id="terminal" class="terminal">
+		<div class="terminal_title">dedalo — unit test</div>
 
-	<!-- content . Additional rendering container for components view etc. -->
-		<div id="content" class="section_record"></div>
+		<div class="terminal_prompt_bar">
+			<span class="terminal_prompt_prefix">~</span>
+			<span class="terminal_prompt_arrow">❯</span>
+			<input
+				type="text"
+				id="test_search"
+				class="terminal_input"
+				placeholder="filter tests"
+				autocomplete="off"
+				spellcheck="false"
+			/>
+			<div class="terminal_prompt_right">
+				<div id="test_global_stats" class="terminal_stats">
+					<span class="stat stat-total">0</span>
+					<span class="stat stat-pass">0</span>
+					<span class="stat stat-fail">0</span>
+					<span class="stat stat-pending">0</span>
+				</div>
+				<button id="test_run_all" class="terminal_btn" title="Run all tests sequentially">
+					<span class="run_all_text">run all</span>
+				</button>
+				<button id="theme_toggle" class="terminal_btn terminal_btn_icon" title="Toggle theme">
+					<svg class="theme_icon theme_icon_moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+					</svg>
+					<svg class="theme_icon theme_icon_sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+						<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+					</svg>
+				</button>
+			</div>
+		</div>
 
-	<!-- tests file -->
-		<script defer="defer" type="module" src="js/index.js"></script>
+		<div class="terminal_body">
+			<!-- sidebar: test list -->
+			<div id="sidebar" class="terminal_sidebar">
+				<div id="content" class="section_record terminal_content"></div>
+			</div>
+
+			<!-- main panel: test output via iframe -->
+			<div id="main_panel" class="terminal_main">
+				<div id="main_placeholder" class="terminal_placeholder">
+					<span class="placeholder_prefix">❯</span>
+					<span class="placeholder_text">select a test to run</span>
+				</div>
+				<iframe id="test_frame" class="test_frame" src="about:blank" style="display:none"></iframe>
+			</div>
+		</div>
+	</div>
+
+	<script defer="defer" type="module" src="js/index.js"></script>
 </body>
 </html>

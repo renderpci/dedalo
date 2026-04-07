@@ -98,7 +98,7 @@
 			section_id			: (section_id).toString(),
 			from_component_tipo	: from_component_tipo, // "test144"
 			type				: type,
-			id 					: 1
+			id					: 1
 		}
 
 		return value
@@ -130,7 +130,8 @@
 				second	: second,
 				time	: time
 			},
-			id : 1
+			id : 1,
+			lang : page_globals.dedalo_data_nolan
 		}
 		return data_element
 	}

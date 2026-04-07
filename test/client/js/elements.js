@@ -35,7 +35,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_3d_value, // return array
 		new_value_params	: [section_tipo, section_id, 'test26'],
 		new_value_action	: 'set_data'
@@ -49,7 +49,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_av_value, // return array
 		new_value_params	: [section_tipo, section_id, 'test94'],
 		new_value_action	: 'set_data'
@@ -63,7 +63,7 @@ export const permissions	= 2
 	// 	section_tipo	: section_tipo,
 	// 	section_id		: section_id,
 	// 	mode			: mode,
-	// 	lang			: page_globals.dedalo_data_nolan,
+	// 	lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 	// 	new_value		: fn.random_string,
 	// 	test_save		: false
 	// })
@@ -77,7 +77,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['dd501','test88']
 	})
@@ -89,7 +89,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_date_value
 	})
 
@@ -100,7 +100,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_email_value
 	})
 
@@ -113,7 +113,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: [section_tipo,'test70'] // [section_tipo, from_component_tipo, paginated_key]
 	})
@@ -125,7 +125,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_filter_records_value,
 		new_value_params	: [] // [section_tipo, from_component_tipo, paginated_key]
 	})
@@ -137,7 +137,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: [section_tipo,'test101'] // [section_tipo, from_component_tipo, paginated_key]
 	})
@@ -149,7 +149,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_geolocation,
 		new_value_params	: [] // [section_tipo, from_component_tipo, paginated_key]
 	})
@@ -163,7 +163,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_image_value,
 		new_value_params	: [],
 		new_value_action	: 'set_data'
@@ -191,7 +191,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan, // is nolan ?
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan', // is nolan ?
 		test_save		: false
 	})
 
@@ -204,7 +204,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan, // is nolan ?
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan', // is nolan ?
 		new_value		: fn.random_iri_value
 	})
 
@@ -215,7 +215,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan,
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value		: fn.random_json_value
 	})
 
@@ -226,7 +226,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan,
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value		: fn.random_number_value
 	})
 
@@ -237,7 +237,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan,
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value		: fn.random_string_value,
 		test_save		: false
 	})
@@ -263,7 +263,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['test38', 'test80', 0] // [section_tipo, from_component_tipo, paginated_key]
 	})
@@ -275,7 +275,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['dd64','test92']
 	})
@@ -287,7 +287,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['dd501','test87']
 	})
@@ -299,7 +299,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.custom_locator,
 		new_value_params	: [
 			section_tipo, // section_tipo
@@ -317,7 +317,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['es1','test25'],
 		test_save			: false
@@ -333,7 +333,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['es2','test169']
 	})
@@ -345,7 +345,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['es1','test71'],
 		test_save			: true
@@ -358,7 +358,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: (_arguments) => {		
 			const locator = fn.random_locator(_arguments)
 			locator.type_rel = 'dd620'
@@ -374,7 +374,7 @@ export const permissions	= 2
 		section_tipo	: section_tipo,
 		section_id		: section_id,
 		mode			: mode,
-		lang			: page_globals.dedalo_data_nolan,
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value		: fn.random_string,
 		test_save		: false
 	})
@@ -386,7 +386,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_security_access
 	})
 
@@ -397,7 +397,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['es1','test91']
 	})
@@ -409,7 +409,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_locator,
 		new_value_params	: ['lg1','test89']
 	})
@@ -421,7 +421,7 @@ export const permissions	= 2
 		section_tipo		: section_tipo,
 		section_id			: section_id,
 		mode				: mode,
-		lang				: page_globals.dedalo_data_nolan,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
 		new_value			: fn.random_svg_value,
 		new_value_action	: 'set_data'
 		// test_save		: false

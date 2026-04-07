@@ -1123,7 +1123,7 @@ vector_editor.prototype.save_data = async function(self) {
 	const all_layers = drawing.all_layers
 	const len = drawing.all_layers.length
 
-	for (var i = 0; i < all_layers.length; i++) {
+	for (let i = 0; i < all_layers.length; i++) {
 
 		// get the group of the layer, it's a 'g' node
 		// and get the JSON format of this
@@ -1147,7 +1147,7 @@ vector_editor.prototype.save_data = async function(self) {
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
 			action	: 'update',
-			key		: 0,
+			id		: entries?.id || null,
 			value	: entries
 		}
 

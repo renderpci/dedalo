@@ -144,7 +144,7 @@ const get_input_element = (i, datalist_item, self) => {
 			// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
-					key		: 0,
+					id		: entries[0]?.id || null,
 					value	: datalist_value
 				})
 
@@ -168,7 +168,7 @@ const get_input_element = (i, datalist_item, self) => {
 				// changed_data
 					const changed_data_item = Object.freeze({
 						action	: 'remove',
-						key		: false,
+						id		: null,
 						value	: null
 					})
 

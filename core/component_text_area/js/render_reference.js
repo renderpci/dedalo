@@ -248,11 +248,7 @@ export const render_reference = async function(options) {
 					if(locator.length > 0){
 
 						// if the locator is not empty, remove it of the component.
-						component_tags_reference.unlink_record({
-							paginated_key	: locator[0].paginated_key,
-							row_key			: null,
-							section_id		: locator[0].section_id
-						});
+						component_tags_reference.unlink_record(locator[0]);
 						// refresh the component of the tags to get the real data
 						// component_tags_reference.reset_filter_data()
 					}
@@ -359,7 +355,7 @@ export const render_reference = async function(options) {
 				// change data to set empty value in the component (it saved in Session instead DDBB)
 					const changed_data = [Object.freeze({
 						action	: 'set_data',
-						key		: 0,
+						id		: null,
 						value	: null
 					})]
 

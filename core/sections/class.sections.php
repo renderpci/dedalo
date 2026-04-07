@@ -447,6 +447,15 @@ class sections extends common {
 					}
 
 				// Delete the section record
+					// Get parents BEFORE deletion (needed for reference removal)
+					$parents_before_delete = null;
+					if ($delete_mode==='delete_record' && !empty($relation_children_tipo)) {
+						$parents_before_delete = component_relation_parent::get_parents(
+							$current_section_id,
+							$current_section_tipo
+						);
+					}
+
 					$section_record = section_record::get_instance( $current_section_tipo, (int)$current_section_id );
 					// perform the delete in correct function
 					$deleted = false;
@@ -464,7 +473,8 @@ class sections extends common {
 							component_relation_common::remove_parent_references(
 								$current_section_tipo,
 								$current_section_id,
-								null
+								null,
+								$parents_before_delete
 							);
 						}
 					}

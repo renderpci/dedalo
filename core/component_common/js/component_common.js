@@ -475,7 +475,9 @@ component_common.prototype.save = async function(new_changed_data) {
 		if (update_items.length > 0) {
 
 			const all_items_unchanged = update_items.every(item => {
-				const original_value = self.db_data.entries?.[item.key];
+				const original_value = item.id !== null && item.id !== undefined
+					? self.db_data.entries?.find(entry => entry?.id === item.id)
+					: self.db_data.entries?.[item.key];
 				return is_equal(item.value, original_value);
 			});
 
@@ -891,7 +893,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 * @param object changed_data_item
 * Sample data:
 * {
-*	key		: 0,
+*	id		: 'abc123',
 *	value	: input.value,
 *	action	: 'update'
 * }
@@ -901,19 +903,12 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 
 	const self = this
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.log("======= update_data_value changed_data_item:", clone(changed_data_item));
-			// const data_value = typeof self.data.value!=="undefined" ? self.data.value : null
-			// console.log("======= update_data_value PRE CHANGE:", clone(data_value) );
-		}
-
 	// changed_data_item
-		const action		= changed_data_item.action
-		const data_key		= typeof changed_data_item.key!=='undefined'
-			? changed_data_item.key // (!) allowed int 0 or bool false
+		const action			= changed_data_item.action
+		const changed_value		= changed_data_item.value
+		const changed_id		= typeof changed_data_item.id!=='undefined'
+			? changed_data_item.id
 			: null
-		const changed_value	= changed_data_item.value
 
 		self.data = self.data || {}
 
@@ -923,25 +918,39 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 			return true
 		}
 
-	// data.entries. When the data_key is false and value is null, the value is propagated to all items in the array
-		if (data_key===false && changed_value===null) {
-				// delete all values
-				self.data.entries = []
+	// resolve data_key from id
+		let data_key = null;
+		let id_not_found = false;
+		if (changed_id !== null) {
+			const idx = self.data.entries?.findIndex(entry => entry?.id === changed_id);
+			if (idx !== -1) {
+				data_key = idx;
+			}else{
+				id_not_found = true;
+			}
+		}
+
+	// data entries
+		if (action==='remove' && data_key===null && changed_value===null && !id_not_found) {
+			self.data.entries = [];
+		}else if (data_key===false && changed_value===null) {
+			self.data.entries = [];
+		}else if (data_key === null) {
+			if (changed_value !== null) {
+				self.data.entries = self.data.entries || [];
+				self.data.entries.push(changed_value);
+			}
 		}else{
 			if (changed_value===null && self.data.entries) {
-				// delete current value key from array
-				self.data.entries.splice(data_key, 1)
+				self.data.entries.splice(data_key, 1);
 			}else{
-				// add / update array key value
-				self.data.entries = self.data.entries || []
-				self.data.entries[data_key] = changed_value
+				self.data.entries = self.data.entries || [];
+				self.data.entries[data_key] = changed_value;
 			}
 		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			//console.log('***** update_data_value data_key:',clone(data_key));
-			//console.log('======= update_data_value:',clone(self.data.value));
 			console.log('======= [component_common] update_data_value POST CHANGE:', clone(self.data.entries), self.id);
 		}
 
@@ -1351,7 +1360,7 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 		self.data.changed_data = self.data.changed_data || []
 
 	// set changed_data item
-		const key = self.data.changed_data.findIndex(el => el.key===changed_data_item.key)
+		const key = self.data.changed_data.findIndex(el => el.id===changed_data_item.id)
 		if (key!==-1) {
 			// replace
 			self.data.changed_data[key] = changed_data_item

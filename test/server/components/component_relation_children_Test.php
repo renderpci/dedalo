@@ -332,6 +332,52 @@ final class component_relation_children_test extends BaseTestCase {
 
 
 	/**
+	* TEST_GET_CHILDREN_OF_TYPE
+	* @return void
+	*/
+	public function test_get_children_of_type() {
+		$section_id = 1;
+		$section_tipo = self::$section_tipo;
+
+		// test descriptor type (default)
+		$descriptor_children = component_relation_children::get_children_of_type($section_id, $section_tipo);
+		$this->assertTrue(
+			is_array($descriptor_children),
+			'Expected array from get_children_of_type(), got: ' . gettype($descriptor_children)
+		);
+
+		// test non_descriptor type
+		$non_descriptor_children = component_relation_children::get_children_of_type($section_id, $section_tipo, 'non_descriptor');
+		$this->assertTrue(
+			is_array($non_descriptor_children),
+			'Expected array from get_children_of_type(non_descriptor)'
+		);
+
+		// test with limit
+		$limited_children = component_relation_children::get_children_of_type($section_id, $section_tipo, 'descriptor', null, 5);
+		$this->assertTrue(
+			is_array($limited_children),
+			'Expected array with limit parameter'
+		);
+		$this->assertTrue(
+			count($limited_children) <= 5,
+			'Result count should not exceed limit'
+		);
+
+		// Additional assertions
+		$this->assertIsArray($descriptor_children, 'should always return array');
+		$this->assertIsArray($non_descriptor_children, 'should always return array');
+		foreach ($descriptor_children as $child) {
+			$this->assertIsObject($child, 'each child should be a locator object');
+		}
+		foreach ($non_descriptor_children as $child) {
+			$this->assertIsObject($child, 'each child should be a locator object');
+		}
+	}//end test_get_children_of_type
+
+
+
+	/**
 	* TEST_SORT_CHILDREN
 	* @return void
 	*/

@@ -137,7 +137,7 @@ const get_content_value = (i, datalist_item, self) => {
 
 			const changed_data = [Object.freeze({
 				action	: 'update',
-				key		: 0,
+				id		: entries[0]?.id || null,
 				value	: datalist_value
 			})]
 			self.change_value({

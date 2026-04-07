@@ -113,8 +113,8 @@ component_iri.prototype.change_handler = function(key, current_value) {
 	// change data
 		const changed_data_item = Object.freeze({
 			action	: 'update',
-			key		: key,
-			value	: current_value // full object value as {title: xx, uri: xxx}
+			id		: current_value?.id || null,
+			value	: current_value
 		})
 
 	// fix instance changed_data

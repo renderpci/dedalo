@@ -415,11 +415,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 			// fire the unlink_record method
 			// Note that this function refresh current instance
-				await self.unlink_record({
-					paginated_key	: paginated_key,
-					row_key			: row_key,
-					section_id		: section_id
-				})
+				await self.unlink_record(options.locator)
 
 			// remove the tooltip
 				dd_request_idle_callback(

@@ -88,6 +88,51 @@ export function get_section_tipo(data: data_item[] | null, options: parser_optio
 	return result.length > 0 ? result : null;
 }
 
+
+/**
+ * MAP_SECTION_TIPO_TO_NAME
+ * Maps section_tipo values to configured target names.
+ * Each locator's section_tipo is looked up in options.map.
+ * Unmapped section_tipos result in empty values (not null, to preserve chain flow).
+ *
+ * @param data    - Array of data items
+ * @param options - Parser options
+ * @param options.map - Dictionary of section_tipo -> target name, e.g. {"dc1": "ts_period", "ts1": "ts_thematic"}
+ * @returns Array of data items with mapped names as value
+ */
+export function map_section_tipo_to_name(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+
+	const map = options.map as Record<string, string> | undefined;
+	if (!map || typeof map !== 'object') return null;
+
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const val = item.value;
+		const locators = Array.isArray(val) ? val : [val];
+
+		const mapped_values: string[] = [];
+		for (const locator of locators) {
+			if (typeof locator === 'object' && locator !== null && 'section_tipo' in locator) {
+				const section_tipo = (locator as any).section_tipo as string;
+				if (section_tipo && section_tipo in map) {
+					mapped_values.push(map[section_tipo]);
+				}
+			}
+		}
+		result.push({
+			...item,
+			value: mapped_values
+		});
+	}
+
+	return result.length > 0 ? result : null;
+}
+
+
+
 /**
  * GET_TERM_ID
  * Extracts the term_id(s) from the data item value.

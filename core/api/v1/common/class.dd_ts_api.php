@@ -402,11 +402,11 @@ final class dd_ts_api {
 				$locator->set_from_component_tipo($component_relation_parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
 
-			$added = (bool)$component_relation_parent->add_locator_to_data( $locator );
+			$added = (bool)$component_relation_parent->add_parent( $locator );
 			if ($added===true) {
 
 				// Save relation parent data
-				$component_relation_parent->Save();
+				$component_relation_parent->save();
 
 				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
@@ -486,7 +486,7 @@ final class dd_ts_api {
 				$locator->set_section_id($old_parent_section_id);
 				$locator->set_from_component_tipo($parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->remove_locator_from_data($locator);
+			$result = $component_relation_parent->remove_parent($locator);
 			if (!$result) {
 				$response->errors[] = 'remove old parent failed';
 				$response->msg .= ' Remove old parent locator failed: ' . to_string($locator);
@@ -504,7 +504,7 @@ final class dd_ts_api {
 				$locator->set_section_id($new_parent_section_id);
 				$locator->set_from_component_tipo($parent_tipo);
 				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->add_locator_to_data($locator);
+			$result = $component_relation_parent->add_parent($locator);
 			if (!$result) {
 				$response->errors[] = 'add new parent failed';
 				$response->msg .= ' Add new parent locator failed: ' . to_string($locator);
@@ -517,7 +517,12 @@ final class dd_ts_api {
 			);
 
 		// save
-			$component_relation_parent->save();
+			$save_result = $component_relation_parent->save();
+
+		// Recalculate the order of the siblins
+			if($save_result) {
+				$component_relation_parent->recalculate_sibling_orders($old_parent_section_tipo, (int)$old_parent_section_id);
+			}
 
 		// response
 			$response->result	= true;
@@ -566,12 +571,26 @@ final class dd_ts_api {
 			$response->errors	= [];
 
 		// short vars
-			$source			= $rqo->source;
-			$section_tipo	= $source->section_tipo;
-			$ar_locators	= $source->ar_locators;
+			$source				= $rqo->source;
+			$section_tipo		= $source->section_tipo;
+			$ar_locators		= $source->ar_locators;
+			$parent_section_tipo= $source->parent_section_tipo ?? null;
+			$parent_section_id	= $source->parent_section_id ?? null;
+
+		// validate parent context
+			if (empty($parent_section_tipo) || empty($parent_section_id)) {
+				$response->msg = 'Error. parent_section_tipo and parent_section_id are required';
+				$response->errors[] = 'missing parent context';
+				return $response;
+			}
 
 		// sort
-			$result = component_relation_children::sort_children( $section_tipo, $ar_locators );
+			$result = component_relation_children::sort_children(
+				$section_tipo,
+				$ar_locators,
+				$parent_section_tipo,
+				(int)$parent_section_id
+			);
 
 		// response
 			$response->msg = $result===false

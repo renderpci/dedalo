@@ -1103,7 +1103,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		// changed_data
 			const changed_data_item = Object.freeze({
 				action		: 'update',
-				key			: key,
+				id			: self.current_value[key]?.id || null,
 				value		: self.current_value[key]
 			})
 		// fix instance changed_data
@@ -1199,7 +1199,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		// modify his own data with the new values
 		const changed_data = [Object.freeze({
 			action		: 'update',
-			key			: key,
+			id			: self.current_value[key]?.id || null, // geolocation doesn't has multiple 
 			value		: self.current_value[key]
 		})]
 		self.change_value({
@@ -1253,7 +1253,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				const recover_changed_data = [Object.freeze({
 					action		: 'update',
-					key			: key,
+					id			: self.current_value[key]?.id || null,
 					value		: self.current_value[key]
 				})]
 				self.change_value({
@@ -1290,7 +1290,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				const changed_data = [Object.freeze({
 					action		: 'update',
-					key			: key,
+					id			: self.current_value[key]?.id || null,
 					value		: self.current_value[key]
 				})]
 				self.change_value({

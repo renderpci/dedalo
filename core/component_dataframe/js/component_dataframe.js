@@ -73,7 +73,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 
 		const changed_data = [Object.freeze({
 			action	: 'insert',
-			key		: 0,
+			id		: null,
 			value	: locator
 		})]
 		const response = await self.change_value({

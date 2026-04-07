@@ -75,7 +75,7 @@ const add_events = function(self, wrapper) {
 				// changed_data
 					const changed_data_item = Object.freeze({
 						action	: 'update',
-						key		: JSON.parse(input.dataset.key),
+						id		: self.data.entries?.[JSON.parse(input.dataset.key)]?.id || null,
 						value	: { value : parsed_value }
 					})
 

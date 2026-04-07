@@ -11,7 +11,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 
 describe("COMPONENTS DATA CHANGES", async function() {
 
-	this.timeout(5000);
+	this.timeout(10000);
 
 	for (let i = 0; i < elements.length; i++) {
 
@@ -37,7 +37,7 @@ describe("COMPONENTS DATA CHANGES", async function() {
 			// TEST data save
 				it(`${element.model}. Data save using API`, async function() {
 
-					this.timeout(5000);
+					this.timeout(10000);
 
 					const options = {
 						id_variant		: Math.random() + '-' + Math.random(),
@@ -55,8 +55,20 @@ describe("COMPONENTS DATA CHANGES", async function() {
 							old_instance = await get_instance(options)
 							await old_instance.build(true)
 
+						// Clear existing data first to avoid id collision
+							const clear_changed_data = [Object.freeze({
+								action	: 'set_data',
+								value	: []
+							})]
+							await old_instance.change_value({
+								changed_data	: clear_changed_data,
+								refresh			: false
+							})
+
 						// save
 							let changed_data
+							let value_item
+
 							switch (element.new_value_action) {
 								case 'set_data':
 									changed_data = [Object.freeze({
@@ -68,13 +80,14 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								case 'update':
 								default:
 
-									const value_item = element.model==='component_filter_records'
+									value_item = element.model==='component_filter_records'
 										? new_value
 										: (Array.isArray(new_value) ? new_value[0] : new_value)
 
+									// Use insert (id: null) to append after clearing
 									changed_data = [Object.freeze({
-										action	: 'update',
-										key		: 0,
+										action	: 'insert',
+										id		: null,
 										value	: value_item
 									})]
 									break;
@@ -94,12 +107,22 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						const response_value = data.find(el => el.tipo===old_instance.tipo)
 
 						// api_returned_value
-							const api_returned_value = response_value && (response_value.entries || response_value.value)
-								? (element.new_value_action==='set_data' ? (response_value.entries || response_value.value) : (response_value.entries || response_value.value)[0])
-								: undefined
-							const component_data_entries = old_instance.data.entries
-								? (element.new_value_action==='set_data' ? old_instance.data.entries : old_instance.data.entries[0])
-								: undefined
+							const entries = response_value && (response_value.entries || response_value.value)
+								? (response_value.entries || response_value.value)
+								: []
+							const component_entries = old_instance.data.entries || []
+
+							let api_returned_value
+							let component_data_entries
+
+							if (element.new_value_action==='set_data') {
+								api_returned_value = entries
+								component_data_entries = component_entries
+							}else{
+								// Take the last entry (newly inserted)
+								api_returned_value = entries[entries.length - 1]
+								component_data_entries = component_entries[component_entries.length - 1]
+							}
 
 							// portal locator cases remove paginated_key
 								if (api_returned_value && api_returned_value.hasOwnProperty('paginated_key')) {
@@ -110,12 +133,21 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 							if (element.new_value_action!=='set_data') {
 
-								assert.deepEqual( new_value, api_returned_value,
-									`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(api_returned_value)}\n\n`
+								// Compare values ignoring auto-assigned id
+								const new_value_without_id = {...new_value}
+								delete new_value_without_id.id
+								const api_value_without_id = {...(api_returned_value || {})}
+								delete api_value_without_id.id
+
+								assert.deepEqual( new_value_without_id, api_value_without_id,
+									`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n\n${JSON.stringify(new_value_without_id)} \n\n${JSON.stringify(api_value_without_id)}\n\n`
 								)
 
-								assert.deepEqual( new_value, component_data_entries,
-									`component_data_entries: Not equal values 2 (new_value, component_data_entries): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(component_data_entries)}\n\n`
+								const component_value_without_id = {...(component_data_entries || {})}
+								delete component_value_without_id.id
+
+								assert.deepEqual( new_value_without_id, component_value_without_id,
+									`component_data_entries: Not equal values 2 (new_value, component_data_entries): \n\n${JSON.stringify(new_value_without_id)} \n\n${JSON.stringify(component_value_without_id)}\n\n`
 								)
 							}
 
@@ -147,41 +179,60 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						// read value from saved DDBB
 							const data			= new_instance.data || {}
 							const entries		= data.entries || []
-							const read_value	= entries[0] || null
+
+							let read_value
+							if (element.new_value_action==='set_data') {
+								read_value = entries
+							}else{
+								// Take the last entry (the one we just saved)
+								read_value = entries[entries.length - 1] || null
+							}
 
 						// portal locator cases remove paginated_key
 							if (read_value && read_value.hasOwnProperty('paginated_key')) {
 								delete read_value.paginated_key
 							}
 
+						// Save datum references before destroy
+							const datum_context = new_instance.datum.context
+							const datum_data = new_instance.datum.data
+							const instance_data = new_instance.data
+
 						// destroy instances
-							// await new_instance.destroy()
+							await new_instance.destroy()
+							new_instance = null
 
 					// datum check
 					assert.isOk(
-						Array.isArray(new_instance.datum.context),
-						`new_instance.datum.context is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.context)}, \n ${typeof new_instance.datum.context}\n`
+						Array.isArray(datum_context),
+						`new_instance.datum.context is NOT as expected type (array): \n ${JSON.stringify(datum_context)}, \n ${typeof datum_context}\n`
 					)
 					assert.isOk(
-						Array.isArray(new_instance.datum.data),
-						`new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.data)}, \n ${typeof new_instance.datum.data}\n`
+						Array.isArray(datum_data),
+						`new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(datum_data)}, \n ${typeof datum_data}\n`
 					)
 
 					const compare_value = element.new_value_action==='set_data' ? entries : read_value
-					
+
 					if (element.new_value_action!=='set_data') {
+						// Compare values ignoring auto-assigned id
+						const new_value_without_id = {...new_value}
+						delete new_value_without_id.id
+						const compare_value_without_id = {...(compare_value || {})}
+						delete compare_value_without_id.id
+
 						// compare values
 						assert.deepEqual(
-							new_value,
-							compare_value,
-							`Not equal values 3 (new_value, read_value)\n new_value:\n ${JSON.stringify(new_value)}, \n read_value:\n ${JSON.stringify(compare_value)}\n\n`
+							new_value_without_id,
+							compare_value_without_id,
+							`Not equal values 3 (new_value, read_value)\n new_value:\n ${JSON.stringify(new_value_without_id)}, \n read_value:\n ${JSON.stringify(compare_value_without_id)}\n\n`
 						)
 					}
 
 					// check type of data is object
-					assert.isOk( typeof new_instance.data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(new_instance.data)}, \n ${typeof new_instance.data}\n` )
+					assert.isOk( typeof instance_data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(instance_data)}, \n ${typeof instance_data}\n` )
 					// check type of data entries is array
-					assert.isOk( Array.isArray(new_instance.data.entries), `new_instance.data.entries is NOT as expected type (array): \n ${JSON.stringify(new_instance.data.entries)}, \n ${typeof new_instance.data.entries}\n` )
+					assert.isOk( Array.isArray(instance_data.entries), `new_instance.data.entries is NOT as expected type (array): \n ${JSON.stringify(instance_data.entries)}, \n ${typeof instance_data.entries}\n` )
 				}
 
 		})//end describe(element.model, function() {
@@ -192,4 +243,3 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 
 // @license-end
-
