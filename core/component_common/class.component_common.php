@@ -926,15 +926,25 @@ abstract class component_common extends common {
 
 			// Main components with dataframe and other relation components.
 			$relation_components = component_relation_common::get_components_with_relations();
-			$relation_components[] = 'component_iri';// add the component_iri
-			if ( is_array($data_tm) && in_array( $this->get_model(), $relation_components) ){
+			$current_model = $this->get_model();
+			// Literal components (component_iri, component_input_text, component_text_area, component_date, etc.)
+			// that have dataframe also need TM data filtering to separate their own items from dataframe locators.
+			$is_literal_with_dataframe = !in_array($current_model, $relation_components)
+				&& $current_model !== 'component_dataframe'
+				&& !empty($this->get_dataframe_ddo());
+			if ( is_array($data_tm) && (in_array($current_model, $relation_components) || $is_literal_with_dataframe) ){
 
 				// Get only the component data. Remove possible dataframe data
-				// component_iri exception, it doesn't have from_component_tipo to select its own tm data
-				if($this->get_model()==='component_iri'){
+				if($current_model==='component_iri'){
+					// component_iri: filter by iri property
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						// return only the objects with iri property
 						return is_object($el) && property_exists($el, 'iri');
+					}));
+				}elseif( $is_literal_with_dataframe ){
+					// Literal main components with dataframe: filter out dataframe locators.
+					// Dataframe locators always have section_id_key, section_tipo_key and main_component_tipo.
+					$data_tm = array_values( array_filter( $data_tm, function($el) {
+						return is_object($el) && !isset($el->section_id_key);
 					}));
 				}else{
 					// any other relation component
@@ -960,7 +970,7 @@ abstract class component_common extends common {
 				}
 
 				// If the component is a dataframe filter the tm data with the section_id_key also.
-				if($this->get_model()==='component_dataframe' && isset($this->caller_dataframe)){
+				if($current_model==='component_dataframe' && isset($this->caller_dataframe)){
 
 					$section_id_key			= $this->caller_dataframe->section_id_key;
 					$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
