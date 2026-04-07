@@ -52,6 +52,11 @@ trait search_component_date {
 		// Ensure q is a single value
 		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
 
+		// Remove the id property from q if exists
+		if (is_object($q) && isset($q->id)) {
+			unset($q->id);
+		}
+
 		if (empty($q) && empty($query_object->q_operator)) {
 			return false;
 		}
