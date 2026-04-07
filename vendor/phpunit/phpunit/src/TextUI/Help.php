@@ -170,6 +170,7 @@ final class Help
             ],
 
             'Selection' => [
+                ['arg' => '--all', 'desc' => 'Ignore test selection from XML configuration file'],
                 ['arg' => '--list-suites', 'desc' => 'List available test suites'],
                 ['arg' => '--testsuite <name>', 'desc' => 'Only run tests from the specified test suite(s)'],
                 ['arg' => '--exclude-testsuite <name>', 'desc' => 'Exclude tests from the specified test suite(s)'],
@@ -185,6 +186,7 @@ final class Help
                 ['arg' => '--filter <pattern>', 'desc' => 'Filter which tests to run'],
                 ['arg' => '--exclude-filter <pattern>', 'desc' => 'Exclude tests for the specified filter pattern'],
                 ['arg' => '--test-suffix <suffixes>', 'desc' => 'Only search for test in files with specified suffix(es). Default: Test.php,.phpt'],
+                ['arg' => '--test-files-file <file>', 'desc' => 'Only run test files listed in file (one file by line)'],
             ],
 
             'Execution' => [
@@ -246,7 +248,7 @@ final class Help
             ],
 
             'Reporting' => [
-                ['arg' => '--colors <flag>', 'desc' => 'Use colors in output ("never", "auto" or "always")'],
+                ['arg' => '--colors=<flag>', 'desc' => 'Use colors in output ("never", "auto" or "always")'],
                 ['arg'    => '--columns <n>', 'desc' => 'Number of columns to use for progress output'],
                 ['arg'    => '--columns max', 'desc' => 'Use maximum number of columns for progress output'],
                 ['arg'    => '--stderr', 'desc' => 'Write to STDERR instead of STDOUT'],
@@ -281,12 +283,12 @@ final class Help
             'Logging' => [
                 ['arg' => '--log-junit <file>', 'desc' => 'Write test results in JUnit XML format to file'],
                 ['arg' => '--log-otr <file>', 'desc' => 'Write test results in Open Test Reporting XML format to file'],
-                ['arg' => '--include-git-information', 'desc' => 'Include Git information in Open Test Reporting XML logfile'],
                 ['arg' => '--log-teamcity <file>', 'desc' => 'Write test results in TeamCity format to file'],
                 ['arg' => '--testdox-html <file>', 'desc' => 'Write test results in TestDox format (HTML) to file'],
                 ['arg' => '--testdox-text <file>', 'desc' => 'Write test results in TestDox format (plain text) to file'],
                 ['arg' => '--log-events-text <file>', 'desc' => 'Stream events as plain text to file'],
                 ['arg' => '--log-events-verbose-text <file>', 'desc' => 'Stream events as plain text with extended information to file'],
+                ['arg' => '--include-git-information', 'desc' => 'Include Git information in supported formats'],
                 ['arg' => '--no-logging', 'desc' => 'Ignore logging configured in the XML configuration file'],
             ],
 
@@ -301,6 +303,7 @@ final class Help
                 ['arg' => '--only-summary-for-coverage-text', 'desc' => 'Option for code coverage report in text format: only show summary'],
                 ['arg' => '--show-uncovered-for-coverage-text', 'desc' => 'Option for code coverage report in text format: show uncovered files'],
                 ['arg' => '--coverage-xml <dir>', 'desc' => 'Write code coverage report in XML format to directory'],
+                ['arg' => '--exclude-source-from-xml-coverage', 'desc' => 'Exclude <source> element from code coverage report in XML format'],
                 ['arg' => '--warm-coverage-cache', 'desc' => 'Warm static analysis cache'],
                 ['arg' => '--coverage-filter <dir>', 'desc' => 'Include <dir> in code coverage reporting'],
                 ['arg' => '--path-coverage', 'desc' => 'Report path coverage in addition to line coverage'],

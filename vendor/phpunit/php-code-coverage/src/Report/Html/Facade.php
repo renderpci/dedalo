@@ -14,7 +14,6 @@ use function copy;
 use function date;
 use function dirname;
 use function str_ends_with;
-use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\FileCouldNotBeWrittenException;
 use SebastianBergmann\CodeCoverage\Node\Directory as DirectoryNode;
 use SebastianBergmann\CodeCoverage\Report\Thresholds;
@@ -22,6 +21,11 @@ use SebastianBergmann\CodeCoverage\Util\Filesystem;
 use SebastianBergmann\Template\Exception;
 use SebastianBergmann\Template\Template;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ */
 final readonly class Facade
 {
     private string $templatePath;
@@ -39,12 +43,11 @@ final readonly class Facade
         $this->templatePath  = __DIR__ . '/Renderer/Template/';
     }
 
-    public function process(CodeCoverage $coverage, string $target): void
+    public function process(DirectoryNode $report, string $target): void
     {
         $target            = $this->directory($target);
-        $report            = $coverage->getReport();
         $date              = date('D M j G:i:s T Y');
-        $hasBranchCoverage = $coverage->getData(true)->functionCoverage() !== [];
+        $hasBranchCoverage = $report->numberOfExecutableBranches() > 0;
 
         $dashboard = new Dashboard(
             $this->templatePath,
@@ -98,7 +101,6 @@ final readonly class Facade
     {
         $dir = $this->directory($target . '_css');
 
-        copy($this->templatePath . 'css/billboard.min.css', $dir . 'billboard.min.css');
         copy($this->templatePath . 'css/bootstrap.min.css', $dir . 'bootstrap.min.css');
         copy($this->customCssFile->path(), $dir . 'custom.css');
         copy($this->templatePath . 'css/octicons.css', $dir . 'octicons.css');
@@ -108,7 +110,6 @@ final readonly class Facade
         copy($this->templatePath . 'icons/file-directory.svg', $dir . 'file-directory.svg');
 
         $dir = $this->directory($target . '_js');
-        copy($this->templatePath . 'js/billboard.pkgd.min.js', $dir . 'billboard.pkgd.min.js');
         copy($this->templatePath . 'js/bootstrap.bundle.min.js', $dir . 'bootstrap.bundle.min.js');
         copy($this->templatePath . 'js/jquery.min.js', $dir . 'jquery.min.js');
         copy($this->templatePath . 'js/file.js', $dir . 'file.js');
@@ -120,11 +121,24 @@ final readonly class Facade
 
         $template->setVar(
             [
-                'success-low'    => $this->colors->successLow(),
-                'success-medium' => $this->colors->successMedium(),
-                'success-high'   => $this->colors->successHigh(),
-                'warning'        => $this->colors->warning(),
-                'danger'         => $this->colors->danger(),
+                'breadcrumbs'         => $this->colors->breadcrumbs(),
+                'breadcrumbs-dark'    => $this->colors->breadcrumbsDark(),
+                'success-bar'         => $this->colors->successBar(),
+                'success-bar-dark'    => $this->colors->successBarDark(),
+                'success-high'        => $this->colors->successHigh(),
+                'success-high-dark'   => $this->colors->successHighDark(),
+                'success-medium'      => $this->colors->successMedium(),
+                'success-medium-dark' => $this->colors->successMediumDark(),
+                'success-low'         => $this->colors->successLow(),
+                'success-low-dark'    => $this->colors->successLowDark(),
+                'warning'             => $this->colors->warning(),
+                'warning-dark'        => $this->colors->warningDark(),
+                'warning-bar'         => $this->colors->warningBar(),
+                'warning-bar-dark'    => $this->colors->warningBarDark(),
+                'danger'              => $this->colors->danger(),
+                'danger-dark'         => $this->colors->dangerDark(),
+                'danger-bar'          => $this->colors->dangerBar(),
+                'danger-bar-dark'     => $this->colors->dangerBarDark(),
             ],
         );
 

@@ -42,6 +42,8 @@ final class DateTimeComparator extends ObjectComparator
         assert($actual instanceof DateTime || $actual instanceof DateTimeImmutable);
 
         $absDelta = abs($delta);
+
+        /** @phpstan-ignore argument.type */
         $delta    = new DateInterval(sprintf('PT%dS', $absDelta));
         $delta->f = $absDelta - floor($absDelta);
 
@@ -63,6 +65,7 @@ final class DateTimeComparator extends ObjectComparator
                 $expected->format('Y-m-d\TH:i:s.uO'),
                 $actual->format('Y-m-d\TH:i:s.uO'),
                 'Failed asserting that two DateTime objects are equal.',
+                $this->contextLines(),
             );
         }
     }

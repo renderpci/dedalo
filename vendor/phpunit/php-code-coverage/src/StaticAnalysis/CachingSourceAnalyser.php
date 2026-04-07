@@ -22,6 +22,8 @@ use SebastianBergmann\CodeCoverage\Version;
 
 /**
  * @internal This interface is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
  */
 final class CachingSourceAnalyser implements SourceAnalyser
 {
@@ -107,8 +109,14 @@ final class CachingSourceAnalyser implements SourceAnalyser
             return false;
         }
 
+        $data = file_get_contents($cacheFile);
+
+        if ($data === false) {
+            return false;
+        }
+
         return unserialize(
-            file_get_contents($cacheFile),
+            $data,
             [
                 'allowed_classes' => [
                     AnalysisResult::class,

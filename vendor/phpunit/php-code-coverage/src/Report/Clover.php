@@ -16,12 +16,17 @@ use function max;
 use function range;
 use function time;
 use DOMDocument;
-use SebastianBergmann\CodeCoverage\CodeCoverage;
+use SebastianBergmann\CodeCoverage\Node\Directory;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
 use SebastianBergmann\CodeCoverage\Util\Xml;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ */
 final class Clover
 {
     /**
@@ -30,7 +35,7 @@ final class Clover
      *
      * @throws WriteOperationFailedException
      */
-    public function process(CodeCoverage $coverage, ?string $target = null, ?string $name = null): string
+    public function process(Directory $report, ?string $target = null, ?string $name = null): string
     {
         $time = (string) time();
 
@@ -50,7 +55,6 @@ final class Clover
         $xmlCoverage->appendChild($xmlProject);
 
         $packages = [];
-        $report   = $coverage->getReport();
 
         foreach ($report as $item) {
             if (!$item instanceof File) {
@@ -74,39 +78,39 @@ final class Clover
                 $classMethods           = 0;
 
                 // Assumption: one namespace per file
-                if ($class['namespace'] !== '') {
-                    $namespace = $class['namespace'];
+                if ($class->namespace !== '') {
+                    $namespace = $class->namespace;
                 }
 
-                foreach ($class['methods'] as $methodName => $method) {
+                foreach ($class->methods as $methodName => $method) {
                     /** @phpstan-ignore equal.notAllowed */
-                    if ($method['executableLines'] == 0) {
+                    if ($method->executableLines == 0) {
                         continue;
                     }
 
                     $classMethods++;
-                    $classStatements        += $method['executableLines'];
-                    $coveredClassStatements += $method['executedLines'];
+                    $classStatements        += $method->executableLines;
+                    $coveredClassStatements += $method->executedLines;
 
                     /** @phpstan-ignore equal.notAllowed */
-                    if ($method['coverage'] == 100) {
+                    if ($method->coverage == 100) {
                         $coveredMethods++;
                     }
 
                     $methodCount = 0;
 
-                    foreach (range($method['startLine'], $method['endLine']) as $line) {
+                    foreach (range($method->startLine, $method->endLine) as $line) {
                         if (isset($coverageData[$line])) {
                             $methodCount = max($methodCount, count($coverageData[$line]));
                         }
                     }
 
-                    $lines[$method['startLine']] = [
-                        'ccn'        => $method['ccn'],
+                    $lines[$method->startLine] = [
+                        'ccn'        => $method->ccn,
                         'count'      => $methodCount,
-                        'crap'       => $method['crap'],
+                        'crap'       => $method->crap,
                         'type'       => 'method',
-                        'visibility' => $method['visibility'],
+                        'visibility' => $method->visibility,
                         'name'       => $methodName,
                     ];
                 }
@@ -118,15 +122,15 @@ final class Clover
                 $xmlFile->appendChild($xmlClass);
 
                 $xmlMetrics = $xmlDocument->createElement('metrics');
-                $xmlMetrics->setAttribute('complexity', (string) $class['ccn']);
+                $xmlMetrics->setAttribute('complexity', (string) $class->ccn);
                 $xmlMetrics->setAttribute('methods', (string) $classMethods);
                 $xmlMetrics->setAttribute('coveredmethods', (string) $coveredMethods);
-                $xmlMetrics->setAttribute('conditionals', (string) $class['executableBranches']);
-                $xmlMetrics->setAttribute('coveredconditionals', (string) $class['executedBranches']);
+                $xmlMetrics->setAttribute('conditionals', (string) $class->executableBranches);
+                $xmlMetrics->setAttribute('coveredconditionals', (string) $class->executedBranches);
                 $xmlMetrics->setAttribute('statements', (string) $classStatements);
                 $xmlMetrics->setAttribute('coveredstatements', (string) $coveredClassStatements);
-                $xmlMetrics->setAttribute('elements', (string) ($classMethods + $classStatements + $class['executableBranches']));
-                $xmlMetrics->setAttribute('coveredelements', (string) ($coveredMethods + $coveredClassStatements + $class['executedBranches']));
+                $xmlMetrics->setAttribute('elements', (string) ($classMethods + $classStatements + $class->executableBranches));
+                $xmlMetrics->setAttribute('coveredelements', (string) ($coveredMethods + $coveredClassStatements + $class->executedBranches));
                 $xmlClass->appendChild($xmlMetrics);
             }
 
