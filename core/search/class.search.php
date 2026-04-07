@@ -288,11 +288,15 @@ class search {
 		$mode = $this->sqo->mode ?? null;
 		$json_columns = ($mode==='tm') ? tm_db_manager::$json_columns : matrix_db_manager::$json_columns;
 
-		// wrap result in db_result iterator
-		$db_result = new db_result(
-			$result,
-			$json_columns
-		);
+		// wrap result in db_result iterator (unless already wrapped by search_children_recursive)
+		if ($result instanceof db_result) {
+			$db_result = $result;
+		} else {
+			$db_result = new db_result(
+				$result,
+				$json_columns
+			);
+		}
 
 
 		return $db_result;
@@ -308,9 +312,9 @@ class search {
 	* Searches the combination and updates main SQO with the new SQO (with all
 	* parents and children) to be used for pagination.
 	* @param \PgSql\Result $main_result
-	* @return \PgSql\Result|false $result
+	* @return db_result|false $result
 	*/
-	private function search_children_recursive( \PgSql\Result $main_result ) : \PgSql\Result|false {
+	private function search_children_recursive( \PgSql\Result $main_result ) : db_result|false {
 
 		$ar_row_children = [];
 		$ar_records = [];
@@ -328,9 +332,11 @@ class search {
 			$ar_row_children = [...$ar_row_children, ...$row_children];
 		}
 
-		// No children found case. Return the main search result.
+		// No children found case. Return the main search result wrapped in db_result.
 		if (empty($ar_row_children)) {
-			return $main_result;
+			// Reset pointer to beginning since it was already iterated
+			pg_result_seek($main_result, 0);
+			return new db_result($main_result);
 		}
 
 		// Merges parent and children records
@@ -828,7 +834,7 @@ class search {
 		$this->build_sql_projects_filter();
 		$this->build_filter_by_user_records();
 
-		$use_window = true;
+		$use_window = !empty($this->sql_obj->join) || !empty($this->sql_obj->order) ? true : false;
 
 		// sql_query
 		$sql_query = '';

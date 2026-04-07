@@ -42,7 +42,7 @@ trait where {
 		}
 
 		// avoid root user to be include in the results for section users.
-		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO) {
+		if ($this->main_section_tipo === DEDALO_SECTION_USERS_TIPO && $this->include_negative !== true) {
 			$this->sql_obj->main_where[] = $this->main_section_tipo_alias.'.section_id > 0';
 		}
 	}//end build_main_where

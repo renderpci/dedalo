@@ -280,6 +280,13 @@ class v6_to_v7 {
 			ADD CONSTRAINT ' . static::$table_dd_ontology . '_id_pkey
 			PRIMARY KEY ( id );
 
+			ALTER TABLE "' . static::$table_dd_ontology . '"
+			DROP CONSTRAINT IF EXISTS ' . static::$table_dd_ontology . '_tipo_key;
+
+			ALTER TABLE "' . static::$table_dd_ontology . '"
+			ADD CONSTRAINT ' . static::$table_dd_ontology . '_tipo_key
+			UNIQUE ( tipo );
+
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.id IS \'Unique table identifier\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.tipo IS \'Ontology identifier (ontology TLD | ontology instance ID, e.g., oh1 = Oral History)\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.parent IS \'Ontology identifier parent (ontology TLD | ontology instance ID, e.g., tch1 = Tangible Cultural Heritage -> Objects)\';

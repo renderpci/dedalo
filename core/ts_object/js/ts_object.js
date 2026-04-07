@@ -787,7 +787,10 @@ ts_object.prototype.get_children_recursive = function( options ) {
 * @return promise
 */
 ts_object.prototype.update_parent_data = async function(options) {
-console.warn('*** update_parent_data options:', options);
+	if(SHOW_DEBUG) {
+		console.warn('*** update_parent_data options:', options);
+	}
+
 	const {
 		section_id,
 		section_tipo,
@@ -947,18 +950,20 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 	// window managing
 	if(self.edit_window===null || self.edit_window.closed) {
 
+		const width_default = 1286
+
 		const height	= window.screen.availHeight
-		const width		= window.screen.availWidth > 1280
+		const width		= window.screen.availWidth > width_default
 			? window.screen.availWidth
-			: 1280
+			: width_default
 
 		self.edit_window = open_window({
 			url		: url,
 			target	: 'edit_window',
-			width	: 1280,
+			width	: width_default,
 			height	: height,
 			top		: 0,
-			left	: (width - 1280),
+			left	: (width - width_default),
 			on_blur : () => {
 				// refresh the instance
 				const instance = get_all_instances().find(el => parseInt(el.section_id)===parseInt(section_id) && el.section_tipo===section_tipo && el.model==='ts_object') || self

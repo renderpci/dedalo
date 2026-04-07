@@ -46,6 +46,7 @@ export const database_info = function() {
 	// database_info.prototype.build	= widget_common.prototype.build
 	database_info.prototype.render		= widget_common.prototype.render
 	database_info.prototype.destroy		= widget_common.prototype.destroy
+	database_info.prototype.refresh		= widget_common.prototype.refresh
 	database_info.prototype.get_value	= area_maintenance.prototype.get_value
 	// // render
 	database_info.prototype.edit		= render_database_info.prototype.list
@@ -186,7 +187,7 @@ database_info.prototype.rebuild_db_indexes = async function( tables ) {
 			options	: options
 		},
 		retries : 1, // one try only
-		timeout : 7200 * 1000 // 2 hours waiting response
+		timeout : 18000 * 1000 // 5 hours waiting response
 	})
 
 	// remove annoying rqo_string from object

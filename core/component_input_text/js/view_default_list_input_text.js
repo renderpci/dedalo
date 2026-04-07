@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {get_dataframe} from '../../component_common/js/component_common.js'
+	import {get_dataframe, activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
 
@@ -47,36 +47,14 @@ view_default_list_input_text.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self)
-		if (self.show_interface.read_only !== true && self.permissions > 1) {
-			wrapper.addEventListener('click', function(e){
-				e.stopPropagation()
 
-				// dataframe detection
-				if (ui.inside_dataframe(self)) {
-					return false
-				}
+	// click handler for edit mode activation
+		wrapper.addEventListener('click', (e) => {
+			e.stopPropagation()
+			activate_edit_in_list(self, e)
+		})
 
-				const wrapper_width	= wrapper.getBoundingClientRect().width
-				if (wrapper_width >= self.minimum_width_px) {
-					// inline way
-					self.change_mode({
-						mode	: 'edit',
-						view	: 'line'
-					})
-				}else{
-					// modal way
-					ui.render_edit_modal({
-						self		: self,
-						e			: e,
-						callback	: (dd_modal) => {
-							dd_modal.modal_content.style.width = '25rem'
-							dd_modal.modal_content.style.top = (e.clientY - 25) + 'px'
-						}
-					})
-				}
-			})
-		}
-
+	// render values
 		const fallback_length = fallback.length
 		for (let i = 0; i < fallback_length; i++) {
 

@@ -3159,9 +3159,9 @@ export const ui = {
 	* @param object options
 	* 	{
 	* 		self		: object,
-	* 		e			: mouse event,
 	* 		callback	: function,
-	* 		lang		: string
+	* 		lang		: string,
+	* 		on_close	: function
 	* 	}
 	* @return HTMLElement modal_node
 	*/
@@ -3171,6 +3171,7 @@ export const ui = {
 			const self		= options.self // component instance
 			const callback	= options.callback // function optional
 			const lang		= options.lang // string optional
+			const on_close	= options.on_close // function optional
 
 		// header
 			const header = ui.create_dom_element({
@@ -3218,7 +3219,9 @@ export const ui = {
 			body	 : body,
 			footer	 : footer,
 			on_close : () => {
-				// Nothing to do
+				if (on_close) {
+					on_close()
+				}
 			},
 			callback : (dd_modal) => {
 

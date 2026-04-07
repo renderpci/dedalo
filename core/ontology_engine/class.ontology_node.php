@@ -96,6 +96,11 @@ class ontology_node {
 	 */
 	private function __construct( string $tipo ) {
 
+		// Always initialize properties to avoid PHP 8.x "Typed property ... must not be accessed before initialization" errors
+		// This ensures that even if we bail out later, the class properties are in a stable state.
+		$this->tipo = $tipo;
+		$this->data = new stdClass();
+
 		if( !empty($tipo) ) {
 
 			// Checks and removes any characters other than TLD and section_id in the tipo string
@@ -111,11 +116,8 @@ class ontology_node {
 				return;
 			}
 
-			// Set tipo
-				$this->tipo = $safe_tipo;
-
-			// set data
-			$this->data = new stdClass();
+			// Finalize with safe version
+			$this->tipo = $safe_tipo;
 		}
 	}//end __construct
 

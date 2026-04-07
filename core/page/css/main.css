@@ -4950,7 +4950,7 @@ dd-modal .footer.distribute {
   padding-right: 3.617rem;
 }
 .jse-main .jse-menu > button.svelte-3erbu0 {
-  width: 2.35rem;
+  width: 2.25rem;
 }
 .json-container {
   background-color: #fcfcfc;
@@ -10350,6 +10350,66 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.database_info > .content_data > .group_container .recreate_db_options_container > div:not(:last-child) {
   border-right: 1px solid #cccccc;
 }
+.wrapper_widget.database_info > .content_data .indexes_container {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_label {
+  text-align: right;
+  padding-right: 1.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666666;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table_name {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #757575;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #000000;
+  padding-left: 0.5rem;
+  text-transform: none;
+  font-size: 1rem;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table thead {
+  background-color: #e9d6c2;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table thead th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  color: #666666;
+  border-bottom: 1px solid #bbbbbb;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table tbody tr:hover {
+  background-color: #efefef;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table tbody td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #cccccc;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table tbody td.index_name {
+  font-weight: 500;
+  color: #666666;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table tbody td.index_size {
+  text-align: right;
+  color: #757575;
+  white-space: nowrap;
+}
+.wrapper_widget.database_info > .content_data .indexes_container .indexes_table tbody td.indexdef {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #757575;
+  word-break: break-all;
+}
 /**
 * dedalo_api_test_environment
 *
@@ -14056,9 +14116,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .component_json.edit > .content_data {
   height: var(--media_min_height);
-  justify-content: center;
   max-height: var(--media_max_height);
   min-height: calc(var(--media_min_height) + 1.5rem);
+  justify-content: center;
 }
 @media screen and (max-width: 960px) {
   .component_json.edit > .content_data {

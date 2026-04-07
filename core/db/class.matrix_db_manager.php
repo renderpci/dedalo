@@ -1063,9 +1063,11 @@ class matrix_db_manager {
 					, $level
 				);
 			}else{
-				$lines = explode("\n", trim($sql_query));
-				$subquery = substr($lines[0] ?? '', 0, 250);
-				$sql_query_debug = '-- exec_search ' . $total_time_ms . ' ms - ' . count($params) . ' params [' .$stmt_name. '] - ' . $subquery;
+				$color = $total_time_ms > 15 ? ANSI_BOLD_RED : ANSI_BOLD_GREEN;
+				// $lines = explode("\n", trim($sql_query));
+				// $subquery = substr($lines[0] ?? '', 0, 250);
+				$subquery = str_replace("\n", ' ', debug_prepared_statement($sql_query, $params, $conn));
+				$sql_query_debug = '-- exec_search: ' . $color . $total_time_ms . ANSI_RESET . ' ms - ' . count($params) . ' params [' .$stmt_name. '] ' . $subquery;
 				if(isset($prepend_sql)) {
 					$sql_query_debug = $prepend_sql . $sql_query_debug;
 				}

@@ -1821,12 +1821,12 @@ const render_order_form = function(options) {
 		// The nodes are ordered manually (avoiding use 'render_children') to
 		// preserve the already open children ODM nodes.
 		const order_children	= self.caller.children_data.ar_children_data
-		const chidren_list		= [...self.caller.children_container.childNodes]
+		const children_list		= [...self.caller.children_container.childNodes]
 
 		for (const item of order_children) {
 
 			// Find wrapper into the parent children_container
-			const found_wrapper = chidren_list.find(el => {
+			const found_wrapper = children_list.find(el => {
 				return  el.dataset.section_tipo===item.section_tipo &&
 						el.dataset.section_id==item.section_id;
 			});
