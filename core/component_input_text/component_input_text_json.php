@@ -8,6 +8,8 @@
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
 	$properties		= $this->get_properties();
+	$unique			= isset($properties->unique) ? $properties->unique : false;
+	$has_dataframe	= isset($properties->has_dataframe) ? $properties->has_dataframe : false;
 
 
 
@@ -15,9 +17,6 @@
 	$context = [];
 
 	if($options->get_context===true) { //  && $permissions>0
-
-		$unique			= isset($properties->unique) ? $properties->unique : false;
-		$has_dataframe	= isset($properties->has_dataframe) ? $properties->has_dataframe : false;
 
 		$add_rqo = ($unique || $has_dataframe)
 			? true
@@ -94,14 +93,27 @@
 		// dataframe. If it exists, calculate the subdatum
 			if ($has_dataframe===true && $mode!=='search') {
 
-				// locators (using value key as section_id)
+				// locators (using item id as section_id)
 					$ar_locator	= [];
-					$safe_value	= !empty($value) ? $value : [null];
-					foreach ($safe_value as $key => $literal) {
+					$safe_value	= !empty($value) ? $value : [];
+					foreach ($safe_value as $current_value) {
+
+						if (!isset($current_value->id)) {
+							continue;
+						}
 
 						$locator = new locator();
 							$locator->set_section_tipo($this->section_tipo);
-							$locator->set_section_id($key);
+							$locator->set_section_id($current_value->id);
+						$ar_locator[] = $locator;
+					}
+
+				// Empty data: create a locator with next counter to get dataframe context
+					if( empty($ar_locator) ){
+						$counter = $this->get_counter();
+						$locator = new locator();
+							$locator->set_section_tipo($this->section_tipo);
+							$locator->set_section_id($counter+1);
 						$ar_locator[] = $locator;
 					}
 
