@@ -186,6 +186,7 @@ final class Help
                 ['arg' => '--filter <pattern>', 'desc' => 'Filter which tests to run'],
                 ['arg' => '--exclude-filter <pattern>', 'desc' => 'Exclude tests for the specified filter pattern'],
                 ['arg' => '--test-suffix <suffixes>', 'desc' => 'Only search for test in files with specified suffix(es). Default: Test.php,.phpt'],
+                ['arg' => '--test-files-file <file>', 'desc' => 'Only run test files listed in file (one file by line)'],
             ],
 
             'Execution' => [
@@ -282,12 +283,12 @@ final class Help
             'Logging' => [
                 ['arg' => '--log-junit <file>', 'desc' => 'Write test results in JUnit XML format to file'],
                 ['arg' => '--log-otr <file>', 'desc' => 'Write test results in Open Test Reporting XML format to file'],
-                ['arg' => '--include-git-information', 'desc' => 'Include Git information in Open Test Reporting XML logfile'],
                 ['arg' => '--log-teamcity <file>', 'desc' => 'Write test results in TeamCity format to file'],
                 ['arg' => '--testdox-html <file>', 'desc' => 'Write test results in TestDox format (HTML) to file'],
                 ['arg' => '--testdox-text <file>', 'desc' => 'Write test results in TestDox format (plain text) to file'],
                 ['arg' => '--log-events-text <file>', 'desc' => 'Stream events as plain text to file'],
                 ['arg' => '--log-events-verbose-text <file>', 'desc' => 'Stream events as plain text with extended information to file'],
+                ['arg' => '--include-git-information', 'desc' => 'Include Git information in supported formats'],
                 ['arg' => '--no-logging', 'desc' => 'Ignore logging configured in the XML configuration file'],
             ],
 

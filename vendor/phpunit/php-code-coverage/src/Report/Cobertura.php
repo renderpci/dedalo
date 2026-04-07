@@ -17,12 +17,17 @@ use function range;
 use function str_replace;
 use function time;
 use DOMImplementation;
-use SebastianBergmann\CodeCoverage\CodeCoverage;
+use SebastianBergmann\CodeCoverage\Node\Directory;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
 use SebastianBergmann\CodeCoverage\Util\Xml;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ */
 final class Cobertura
 {
     /**
@@ -30,11 +35,9 @@ final class Cobertura
      *
      * @throws WriteOperationFailedException
      */
-    public function process(CodeCoverage $coverage, ?string $target = null): string
+    public function process(Directory $report, ?string $target = null): string
     {
         $time = (string) time();
-
-        $report = $coverage->getReport();
 
         $implementation = new DOMImplementation;
 

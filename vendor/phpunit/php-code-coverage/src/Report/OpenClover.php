@@ -20,19 +20,24 @@ use function str_replace;
 use function time;
 use DOMDocument;
 use DOMElement;
-use SebastianBergmann\CodeCoverage\CodeCoverage;
+use SebastianBergmann\CodeCoverage\Node\Directory;
 use SebastianBergmann\CodeCoverage\Node\File;
 use SebastianBergmann\CodeCoverage\Util\Filesystem;
 use SebastianBergmann\CodeCoverage\Util\Xml;
 use SebastianBergmann\CodeCoverage\Version;
 use SebastianBergmann\CodeCoverage\WriteOperationFailedException;
 
+/**
+ * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ */
 final class OpenClover
 {
     /**
      * @throws WriteOperationFailedException
      */
-    public function process(CodeCoverage $coverage, ?string $target = null, ?string $name = null): string
+    public function process(Directory $report, ?string $target = null, ?string $name = null): string
     {
         $time = (string) time();
 
@@ -55,7 +60,6 @@ final class OpenClover
 
         /** @var array<non-empty-string, DOMElement> $packages */
         $packages = [];
-        $report   = $coverage->getReport();
 
         foreach ($report as $item) {
             if (!$item instanceof File) {
