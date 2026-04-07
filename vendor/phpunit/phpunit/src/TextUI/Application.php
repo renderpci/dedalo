@@ -11,12 +11,15 @@ namespace PHPUnit\TextUI;
 
 use const PHP_EOL;
 use const PHP_VERSION;
+use function array_reverse;
 use function assert;
 use function class_exists;
+use function class_implements;
 use function defined;
 use function dirname;
 use function explode;
 use function function_exists;
+use function in_array;
 use function is_file;
 use function method_exists;
 use function printf;
@@ -49,9 +52,10 @@ use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
 use PHPUnit\Runner\DirectoryDoesNotExistException;
 use PHPUnit\Runner\ErrorHandler;
 use PHPUnit\Runner\Extension\ExtensionBootstrapper;
-use PHPUnit\Runner\Extension\Facade as ExtensionFacade;
+use PHPUnit\Runner\Extension\ExtensionFacade;
 use PHPUnit\Runner\Extension\PharLoader;
 use PHPUnit\Runner\GarbageCollection\GarbageCollectionHandler;
+use PHPUnit\Runner\IssueTriggerResolver\Resolver;
 use PHPUnit\Runner\Phpt\TestCase as PhptTestCase;
 use PHPUnit\Runner\ResultCache\DefaultResultCache;
 use PHPUnit\Runner\ResultCache\NullResultCache;
@@ -218,6 +222,7 @@ final readonly class Application
             }
 
             $this->configureDeprecationTriggers($configuration);
+            $this->configureIssueTriggerResolvers($configuration);
 
             $timer = new Timer;
             $timer->start();
@@ -588,12 +593,16 @@ final readonly class Application
             EventFacade::instance()->registerTracer(
                 new EventLogger(
                     $configuration->logEventsText(),
-                    false,
+                    $configuration->withTelemetry(),
                 ),
             );
         }
 
         if ($configuration->hasLogEventsVerboseText()) {
+            EventFacade::emitter()->testRunnerTriggeredPhpunitDeprecation(
+                'The "--log-events-verbose-text <file>" CLI option is deprecated and will be removed in PHPUnit 14. Use "--log-events-text <file> --with-telemetry" instead.',
+            );
+
             if (is_file($configuration->logEventsVerboseText())) {
                 unlink($configuration->logEventsVerboseText());
             }
@@ -784,14 +793,18 @@ final readonly class Application
             'methods'   => [],
         ];
 
+        $ignoreUndefinedTriggers = $configuration->source()->deprecationTriggers()['ignoreUndefinedTriggers'] ?? false;
+
         foreach ($configuration->source()->deprecationTriggers()['functions'] as $function) {
             if (!function_exists($function)) {
-                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                    sprintf(
-                        'Function %s cannot be configured as a deprecation trigger because it is not declared',
-                        $function,
-                    ),
-                );
+                if (!$ignoreUndefinedTriggers) {
+                    EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                        sprintf(
+                            'Function %s cannot be configured as a deprecation trigger because it is not declared',
+                            $function,
+                        ),
+                    );
+                }
 
                 continue;
             }
@@ -814,13 +827,15 @@ final readonly class Application
             [$className, $methodName] = explode('::', $method);
 
             if (!class_exists($className) || !method_exists($className, $methodName)) {
-                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                    sprintf(
-                        'Method %s::%s cannot be configured as a deprecation trigger because it is not declared',
-                        $className,
-                        $methodName,
-                    ),
-                );
+                if (!$ignoreUndefinedTriggers) {
+                    EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                        sprintf(
+                            'Method %s::%s cannot be configured as a deprecation trigger because it is not declared',
+                            $className,
+                            $methodName,
+                        ),
+                    );
+                }
 
                 continue;
             }
@@ -833,6 +848,38 @@ final readonly class Application
 
         if ($deprecationTriggers !== ['functions' => [], 'methods' => []]) {
             ErrorHandler::instance()->useDeprecationTriggers($deprecationTriggers);
+        }
+    }
+
+    private function configureIssueTriggerResolvers(Configuration $configuration): void
+    {
+        $classNames = $configuration->source()->issueTriggerResolvers();
+
+        foreach (array_reverse($classNames) as $className) {
+            if (!class_exists($className)) {
+                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                    sprintf(
+                        'Class %s cannot be used as an issue trigger resolver because it does not exist',
+                        $className,
+                    ),
+                );
+
+                continue;
+            }
+
+            if (!in_array(Resolver::class, class_implements($className), true)) {
+                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
+                    sprintf(
+                        'Class %s cannot be used as an issue trigger resolver because it does not implement %s',
+                        $className,
+                        Resolver::class,
+                    ),
+                );
+
+                continue;
+            }
+
+            ErrorHandler::instance()->addIssueTriggerResolver(new $className);
         }
     }
 

@@ -11,7 +11,6 @@ namespace SebastianBergmann\Diff;
 
 use const PREG_UNMATCHED_AS_NULL;
 use function array_pop;
-use function assert;
 use function count;
 use function max;
 use function preg_match;
@@ -23,13 +22,15 @@ use function preg_split;
 final class Parser
 {
     /**
-     * @return Diff[]
+     * @return list<Diff>
      */
     public function parse(string $string): array
     {
         $lines = preg_split('(\r\n|\r|\n)', $string);
 
-        if (!empty($lines) && $lines[count($lines) - 1] === '') {
+        if ($lines !== false &&
+            $lines !== [] &&
+            $lines[count($lines) - 1] === '') {
             array_pop($lines);
         }
 
@@ -48,9 +49,6 @@ final class Parser
                     $collected = [];
                 }
 
-                assert(!empty($fromMatch['file']));
-                assert(!empty($toMatch['file']));
-
                 $diff = new Diff($fromMatch['file'], $toMatch['file']);
 
                 $i++;
@@ -63,7 +61,7 @@ final class Parser
             }
         }
 
-        if ($diff !== null && count($collected)) {
+        if ($diff !== null && $collected !== []) {
             $this->parseFileDiff($diff, $collected);
 
             $diffs[] = $diff;

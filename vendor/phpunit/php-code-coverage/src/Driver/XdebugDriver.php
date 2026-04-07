@@ -29,6 +29,8 @@ use SebastianBergmann\CodeCoverage\Filter;
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
  *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
  * @see https://xdebug.org/docs/code_coverage#xdebug_get_code_coverage
  *
  * @phpstan-type XdebugLinesCoverageType array<int, int>
@@ -108,14 +110,14 @@ final class XdebugDriver extends Driver
         return RawCodeCoverageData::fromXdebugWithoutPathCoverage($data);
     }
 
-    public function nameAndVersion(): string
+    public function name(): string
     {
-        return 'Xdebug ' . phpversion('xdebug');
+        return 'Xdebug';
     }
 
-    public function isXdebug(): true
+    public function version(): string
     {
-        return true;
+        return phpversion('xdebug');
     }
 
     /**

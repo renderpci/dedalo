@@ -52,18 +52,18 @@ use PHPUnit\Framework\Test;
 use PHPUnit\Runner\CodeCoverage;
 use PHPUnit\Runner\CodeCoverageFileExistsException;
 use PHPUnit\Runner\Exception;
+use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
 use PHPUnit\Util\PHP\Job;
 use PHPUnit\Util\PHP\JobRunnerRegistry;
 use SebastianBergmann\CodeCoverage\Data\RawCodeCoverageData;
 use SebastianBergmann\CodeCoverage\InvalidArgumentException;
 use SebastianBergmann\CodeCoverage\ReflectionException;
-use SebastianBergmann\CodeCoverage\Test\TestSize\TestSize;
-use SebastianBergmann\CodeCoverage\Test\TestStatus\TestStatus;
+use SebastianBergmann\CodeCoverage\Test\TestSize;
+use SebastianBergmann\CodeCoverage\Test\TestStatus;
 use SebastianBergmann\CodeCoverage\TestIdMissingException;
 use SebastianBergmann\CodeCoverage\UnintentionallyCoveredCodeException;
 use staabm\SideEffectsDetector\SideEffect;
 use staabm\SideEffectsDetector\SideEffectsDetector;
-use Throwable;
 
 /**
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -157,18 +157,27 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
         }
 
         if (CodeCoverage::instance()->isActive()) {
+            // @codeCoverageIgnoreStart
             $codeCoverageCacheDirectory = null;
 
             if (CodeCoverage::instance()->codeCoverage()->cachesStaticAnalysis()) {
                 $codeCoverageCacheDirectory = CodeCoverage::instance()->codeCoverage()->cacheDirectory();
             }
 
+            $bootstrap = '';
+
+            if (ConfigurationRegistry::get()->hasBootstrap()) {
+                $bootstrap = ConfigurationRegistry::get()->bootstrap();
+            }
+
             (new Renderer)->renderForCoverage(
                 $code,
                 CodeCoverage::instance()->codeCoverage()->collectsBranchAndPathCoverage(),
                 $codeCoverageCacheDirectory,
+                $bootstrap,
                 $this->coverageFiles(),
             );
+            // @codeCoverageIgnoreEnd
         }
 
         $jobResult = JobRunnerRegistry::run(
@@ -187,16 +196,18 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
         $output = $jobResult->stdout();
 
         if (CodeCoverage::instance()->isActive()) {
+            // @codeCoverageIgnoreStart
             $coverage = $this->cleanupForCoverage();
 
-            CodeCoverage::instance()->codeCoverage()->start($this->filename, TestSize::large());
+            CodeCoverage::instance()->codeCoverage()->start($this->filename, TestSize::Large);
 
             CodeCoverage::instance()->codeCoverage()->append(
                 $coverage,
                 $this->filename,
                 true,
-                TestStatus::unknown(),
+                TestStatus::Unknown,
             );
+            // @codeCoverageIgnoreEnd
         }
 
         $passed = true;
@@ -234,10 +245,6 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
             } else {
                 $emitter->testFailed($this->valueObjectForEvents(), ThrowableBuilder::from($failure), null);
             }
-
-            $passed = false;
-        } catch (Throwable $t) {
-            $emitter->testErrored($this->valueObjectForEvents(), ThrowableBuilder::from($t));
 
             $passed = false;
         }
@@ -299,7 +306,6 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
     /**
      * @param array<non-empty-string, non-empty-string> $sections
      *
-     * @throws Exception
      * @throws ExpectationFailedException
      */
     private function assertPhptExpectation(array $sections, string $output): void
@@ -323,8 +329,6 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
                 return;
             }
         }
-
-        throw new InvalidPhptFileException;
     }
 
     /**
@@ -454,6 +458,8 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
     }
 
     /**
+     * @codeCoverageIgnore
+     *
      * @phpstan-ignore return.internalClass
      */
     private function cleanupForCoverage(): RawCodeCoverageData
@@ -679,6 +685,7 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
             'report_zend_debug=0',
         ];
 
+        // @codeCoverageIgnoreStart
         if (extension_loaded('pcov')) {
             if ($collectCoverage) {
                 $settings[] = 'pcov.enabled=1';
@@ -692,6 +699,7 @@ final readonly class TestCase implements Reorderable, SelfDescribing, Test
                 $settings[] = 'xdebug.mode=coverage';
             }
         }
+        // @codeCoverageIgnoreEnd
 
         return $settings;
     }

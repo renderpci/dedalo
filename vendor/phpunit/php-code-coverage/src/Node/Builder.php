@@ -10,24 +10,21 @@
 namespace SebastianBergmann\CodeCoverage\Node;
 
 use const DIRECTORY_SEPARATOR;
-use function array_shift;
-use function basename;
 use function count;
-use function dirname;
 use function explode;
-use function implode;
 use function is_file;
 use function sha1_file;
 use function str_ends_with;
-use function str_replace;
-use function str_starts_with;
 use function substr;
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\Data\ProcessedCodeCoverageData;
 use SebastianBergmann\CodeCoverage\StaticAnalysis\FileAnalyser;
+use SebastianBergmann\CodeCoverage\Util\PathReducer;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for phpunit/php-code-coverage
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for phpunit/php-code-coverage
  *
  * @phpstan-import-type TestType from CodeCoverage
  */
@@ -40,19 +37,36 @@ final readonly class Builder
         $this->analyser = $analyser;
     }
 
-    public function build(CodeCoverage $coverage): Directory
+    /**
+     * @param array<string, TestType> $testResults
+     */
+    public function build(ProcessedCodeCoverageData $codeCoverage, array $testResults, string $basePath = ''): Directory
     {
-        $data       = clone $coverage->getData(); // clone because path munging is destructive to the original data
-        $commonPath = $this->reducePaths($data);
-        $root       = new Directory(
-            $commonPath,
-            null,
-        );
+        // Clone because path munging is destructive to the original data
+        $codeCoverage = clone $codeCoverage;
+
+        $commonPath = (new PathReducer)->reduce($codeCoverage);
+
+        if ($commonPath === '') {
+            $commonPath = '.';
+        }
+
+        $rootPath = $commonPath;
+
+        if ($basePath !== '') {
+            if ($commonPath === '.') {
+                $rootPath = $basePath;
+            } else {
+                $rootPath = $basePath . DIRECTORY_SEPARATOR . $commonPath;
+            }
+        }
+
+        $root = new Directory($rootPath, null);
 
         $this->addItems(
             $root,
-            $this->buildDirectoryStructure($data),
-            $coverage->getTests(),
+            $this->buildDirectoryStructure($codeCoverage),
+            $testResults,
         );
 
         return $root;
@@ -138,14 +152,14 @@ final readonly class Builder
      *
      * @return array<string, array<string, array{lineCoverage: array<int, int>, functionCoverage: array<string, array<int, int>>}>>
      */
-    private function buildDirectoryStructure(ProcessedCodeCoverageData $data): array
+    private function buildDirectoryStructure(ProcessedCodeCoverageData $codeCoverage): array
     {
         $result = [];
 
-        $lineCoverage     = $data->lineCoverage();
-        $functionCoverage = $data->functionCoverage();
+        $lineCoverage     = $codeCoverage->lineCoverage();
+        $functionCoverage = $codeCoverage->functionCoverage();
 
-        foreach ($data->coveredFiles() as $originalPath) {
+        foreach ($codeCoverage->coveredFiles() as $originalPath) {
             $path    = explode(DIRECTORY_SEPARATOR, $originalPath);
             $pointer = &$result;
             $max     = count($path);
@@ -167,113 +181,5 @@ final readonly class Builder
         }
 
         return $result;
-    }
-
-    /**
-     * Reduces the paths by cutting the longest common start path.
-     *
-     * For instance,
-     *
-     * <code>
-     * Array
-     * (
-     *     [/home/sb/Money/Money.php] => Array
-     *         (
-     *             ...
-     *         )
-     *
-     *     [/home/sb/Money/MoneyBag.php] => Array
-     *         (
-     *             ...
-     *         )
-     * )
-     * </code>
-     *
-     * is reduced to
-     *
-     * <code>
-     * Array
-     * (
-     *     [Money.php] => Array
-     *         (
-     *             ...
-     *         )
-     *
-     *     [MoneyBag.php] => Array
-     *         (
-     *             ...
-     *         )
-     * )
-     * </code>
-     */
-    private function reducePaths(ProcessedCodeCoverageData $coverage): string
-    {
-        $coveredFiles = $coverage->coveredFiles();
-
-        if ($coveredFiles === []) {
-            return '.';
-        }
-
-        $commonPath = '';
-        $paths      = $coveredFiles;
-
-        if (count($paths) === 1) {
-            $commonPath = dirname($paths[0]) . DIRECTORY_SEPARATOR;
-            $coverage->renameFile($paths[0], basename($paths[0]));
-
-            return $commonPath;
-        }
-
-        $max = count($paths);
-
-        for ($i = 0; $i < $max; $i++) {
-            // strip phar:// prefixes
-            if (str_starts_with($paths[$i], 'phar://')) {
-                $paths[$i] = substr($paths[$i], 7);
-                $paths[$i] = str_replace('/', DIRECTORY_SEPARATOR, $paths[$i]);
-            }
-
-            $paths[$i] = explode(DIRECTORY_SEPARATOR, $paths[$i]);
-
-            if ($paths[$i][0] === '') {
-                $paths[$i][0] = DIRECTORY_SEPARATOR;
-            }
-        }
-
-        $done = false;
-        $max  = count($paths);
-
-        while (!$done) {
-            for ($i = 0; $i < $max - 1; $i++) {
-                if (!isset($paths[$i][0]) ||
-                    !isset($paths[$i + 1][0]) ||
-                    $paths[$i][0] !== $paths[$i + 1][0]) {
-                    $done = true;
-
-                    break;
-                }
-            }
-
-            if (!$done) {
-                $commonPath .= $paths[0][0];
-
-                if ($paths[0][0] !== DIRECTORY_SEPARATOR) {
-                    $commonPath .= DIRECTORY_SEPARATOR;
-                }
-
-                for ($i = 0; $i < $max; $i++) {
-                    array_shift($paths[$i]);
-                }
-            }
-        }
-
-        $original = $coveredFiles;
-        $max      = count($original);
-
-        for ($i = 0; $i < $max; $i++) {
-            $coverage->renameFile($original[$i], implode(DIRECTORY_SEPARATOR, $paths[$i]));
-        }
-
-        return substr($commonPath, 0, -1);
     }
 }
