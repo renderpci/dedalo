@@ -10,7 +10,8 @@
 		get_instance,
 		add_instance,
 		get_instance_by_id,
-		get_all_instances
+		get_all_instances,
+		get_instances_custom_map
 	} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -663,28 +664,32 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	// This ensures consistent ordering (1-based) for all descriptors and syncs
 	// the new order values to their corresponding instance objects.
 	const children_data_descriptors = (this.children_data.ar_children_data || []).filter(el => el.is_descriptor===true)
+
+	// Build a lookup Map of child instances for O(1) access
+	// Key: section_tipo + section_id + children_tipo (unique per child)
+	const children_map = get_instances_custom_map(instance => {
+		if (instance.model !== 'ts_object' ||
+			instance.ts_parent !== self.ts_id ||
+			instance.thesaurus_mode !== self.thesaurus_mode) {
+			return null // exclude non-relevant instances
+		}
+		return `${instance.section_tipo}_${instance.section_id}_${instance.children_tipo}`
+	})
+
 	children_data_descriptors.forEach((child, index) => {
 
 		// Create a new sequential order (1-based index)
 		const virtual_order = index + 1
 
-		// Build instance key to locate the corresponding ts_object instance
-		const key = key_instances_builder({
-			section_tipo 	: child.section_tipo,
-			section_id 		: child.section_id,
-			children_tipo 	: child.children_tipo,
-			thesaurus_mode 	: self.thesaurus_mode // expected: 'default'
-		});
+		// O(1) lookup using the pre-built Map
+		const map_key = `${child.section_tipo}_${child.section_id}_${child.children_tipo}`
+		const instance = children_map.get(map_key)
 
 		// Sync the new order to the instance (if found)
-		const instance = get_instance_by_id(key)
 		if (instance) {
 			instance.virtual_order = virtual_order
-		}else{
-			console.warn('Instance not found for key:', key);
 		}
 	})
-
 
 	return true
 }//end remove_children_item
