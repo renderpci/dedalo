@@ -34,6 +34,7 @@
 			justify-content: center;
 			max-height: var(--media_max_height);
 			min-height: calc(var(--media_min_height) + 1.5rem);
+			justify-content: center;
 
 			@media screen and (max-width: @width_break_point_1) {
 				min-height: unset;
@@ -46,6 +47,9 @@
 				position: relative;
 				z-index: 0;
 				min-height: var(--media_min_height); // 404px;
+				// max-height: inherit;
+				// resize: vertical;
+				// overflow: auto;
 
 				&.read_only{
 					overflow: auto;

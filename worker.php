@@ -60,22 +60,22 @@ while ($request = $psr7Worker->waitRequest()) {
         metrics::reset();
         $GLOBALS['DEDALO_RAW_BODY'] = null;
 
-        // Clear static class caches to prevent cross-request pollution
-        if (class_exists('common')) {
-            common::clear();
-        }
-        if (class_exists('section')) {
-            section::clear();
-        }
-        if (class_exists('component_common')) {
-            component_common::clear();
-        }
-        if (class_exists('section_record_instances_cache')) {
-            section_record_instances_cache::clear();
-        }
-        if (class_exists('component_instances_cache')) {
-            component_instances_cache::clear();
-        }
+        // // Clear static class caches to prevent cross-request pollution
+        // if (class_exists('common')) {
+        //     common::clear();
+        // }
+        // if (class_exists('section')) {
+        //     section::clear();
+        // }
+        // if (class_exists('component_common')) {
+        //     component_common::clear();
+        // }
+        // if (class_exists('section_record_instances_cache')) {
+        //     section_record_instances_cache::clear();
+        // }
+        // if (class_exists('component_instances_cache')) {
+        //     component_instances_cache::clear();
+        // }
 
         // 2. Hydrate PHP Globals from PSR-7 Request
         $_SERVER = $request->getServerParams();

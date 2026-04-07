@@ -31,6 +31,7 @@
 // Functions
 	$ar_function = [];
 
+	// f_unaccent
 	$ar_function[] = (object)[
 		'add' => '
 			CREATE OR REPLACE FUNCTION f_unaccent(text)
@@ -57,7 +58,7 @@
 		'info' => 'Used to remove accents from a text string. Useful for case-insensitive and accent-insensitive searches.'
 	];
 
-	// Create function with base flat locators st=section_tipo si=section_id (dd64_1)
+	// data_relations_flat_st_si. Create function with base flat locators st=section_tipo si=section_id (dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_st_si(data) @> \'["dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
@@ -91,7 +92,7 @@
 		'info' => 'Aggregates relation section_tipo and section_id into a flat string format (e.g., oh1_3) for easier indexing and searching.'
 	];
 
-	// Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (tchi7_dd64_1)
+	// data_relations_flat_fct_st_si. Create function with base flat locators fct=from_section_tipo st=section_tipo si=section_id (tchi7_dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_fct_st_si(data) @> \'["tchi7_dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
@@ -126,7 +127,7 @@
 		'info' => 'Aggregates relation from_component_tipo, section_tipo and section_id into a flat string format (e.g., oh25_oh1_3) for easier indexing and searching.'
 	];
 
-	// Create function with base flat locators ty=type st=section_tipo si=section_id (dd151_dd64_1)
+	// data_relations_flat_ty_st_si. Create function with base flat locators ty=type st=section_tipo si=section_id (dd151_dd64_1)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st_si(relation) @> \'["dd151_dd64_1"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '
@@ -161,7 +162,7 @@
 		'info' => 'Aggregates relation type, section_tipo and section_id into a flat string format (e.g., dd151_oh1_3) for easier indexing and searching.'
 	];
 
-	// Create function with base flat locators ty=type st=section_tipo (dd96_rsc197)
+	// data_relations_flat_ty_st. Create function with base flat locators ty=type st=section_tipo (dd96_rsc197)
 	// example: SELECT * FROM matrix WHERE data_relations_flat_ty_st(relation) @> \'["dd96_rsc197"]\'::jsonb;
 	$ar_function[] = (object)[
 		'add' => '

@@ -27,10 +27,20 @@ class database_info {
 		$info = pg_version(DBi::_getConnection()) ?? [];
 		$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 
+		// indexes
+		$indexes = [];
+		foreach ($tables as $table) {
+			$table_indexes = db_tasks::get_table_indexes($table);
+			if (!empty($table_indexes)) {
+				$indexes[$table] = $table_indexes;
+			}
+		}
+
 		// result
 		$result = [
 			'info' => $info,
-			'tables' => $tables
+			'tables' => $tables,
+			'indexes' => $indexes
 		];
 
 		// response
@@ -132,7 +142,7 @@ class database_info {
 	*/
 	public static function recreate_db_assets( object $options ) : object {
 
-		set_time_limit(10800); // 3 hours
+		set_time_limit(18000); // 5 hours
 
 		$response = new stdClass();
 			$response->result	= new stdClass();

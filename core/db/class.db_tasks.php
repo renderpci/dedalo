@@ -598,7 +598,7 @@ class db_tasks {
 	public static function rebuild_indexes( array $selected_tables=[] ) : object {
 
 		// Increase PHP time out. This action can take a long time (minutes or hours)
-		set_time_limit(7200); // 2 hours
+		set_time_limit(18000); // 5 hours
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -619,58 +619,67 @@ class db_tasks {
 
 		// exec
 		$executed = [];
-		foreach ($ar_index as $index) {
+		try {
+			foreach ($ar_index as $index) {
 
-			// debug info
-			debug_log(__METHOD__
-				. " Executing rebuild_indexes SQL sentence " . PHP_EOL
-				. ' name: ' . trim($index->name)
-				. ' info: ' . trim($index->info)
-				, logger::WARNING
-			);
+				// debug info
+				debug_log(__METHOD__
+					. " Executing rebuild_indexes SQL sentence " . PHP_EOL
+					. ' name: ' . trim($index->name)
+					. ' info: ' . trim($index->info)
+					, logger::WARNING
+				);
 
-			$tables = $index->tables;
+				$tables = $index->tables;
 
-			foreach ($tables as $table) {
+				foreach ($tables as $table) {
 
-				// Skip if table is not in the selected tables list (if provided)
-				if (!empty($selected_tables) && !in_array($table, $selected_tables)) {
-					continue;
+					// Skip if table is not in the selected tables list (if provided)
+					if (!empty($selected_tables) && !in_array($table, $selected_tables)) {
+						continue;
+					}
+
+					// 0 Prevent errors if table not exists
+						$table_exists = DBi::check_table_exists($table);
+						if( $table_exists===false ) {
+							$response->errors[] = "Table $table does not exist. Ignored index $index->name";
+							continue;
+						}
+
+					// 1 Drop
+						// exec drop query
+						$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
+						$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+						$query_response	= db_tasks::exec_sql_query($sql_query);
+
+						if( $query_response->result===false ) {
+							$response->errors[] = $query_response->errors;
+							continue;
+						}
+
+					// 2 Add
+						// exec add query
+						$sql_query		= db_tasks::parse_sql_sentence($index->add, $table);
+						$sql_query		= db_tasks::clean_sql_sentence($sql_query);
+						$query_response	= db_tasks::exec_sql_query($sql_query);
+
+						if( $query_response->result===false ) {
+							$response->errors[] = $query_response->errors;
+							continue;
+						}
+
+					$executed[] = $sql_query;
 				}
 
-				// 0 Prevent errors if table not exists
-					$table_exists = DBi::check_table_exists($table);
-					if( $table_exists===false ) {
-						$response->errors[] = "Table $table does not exist. Ignored index $index->name";
-						continue;
-					}
-
-				// 1 Drop
-					// exec drop query
-					$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
-					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-					$query_response	= db_tasks::exec_sql_query($sql_query);
-
-					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->errors;
-						continue;
-					}
-
-				// 2 Add
-					// exec add query
-					$sql_query		= db_tasks::parse_sql_sentence($index->add, $table);
-					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-					$query_response	= db_tasks::exec_sql_query($sql_query);
-
-					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->errors;
-						continue;
-					}
-
-				$executed[] = $sql_query;
+				$response->success++;
 			}
-
-			$response->success++;
+		} catch (Exception $e) {
+			$response->errors[] = 'Exception in rebuild_indexes: ' . $e->getMessage();
+			debug_log(__METHOD__
+				. " Exception caught: " . $e->getMessage()
+				. ' Trace: ' . $e->getTraceAsString()
+				, logger::ERROR
+			);
 		}
 
 		// debug
@@ -822,6 +831,71 @@ class db_tasks {
 
 		return $tables;
 	}//end get_tables
+
+
+
+	/**
+	* GET_TABLE_INDEXES
+	* Retrieves index information for a given table from PostgreSQL system catalogs.
+	* Returns indexes sorted by size (largest first) with schema, name, size, and definition.
+	*
+	* @param string $table - Table name to query indexes for
+	* @return array $indexes - Array of associative arrays with keys: schemaname, tablename, indexname, index_size, indexdef
+	* @throws Exception - If database connection or query fails
+	*/
+	public static function get_table_indexes( string $table ) : array {
+
+		// connection
+		$conn = DBi::_getConnection();
+		if (!$conn) {
+			throw new Exception('Database connection failed');
+		}
+
+		// Sanitize table name to prevent SQL injection
+		$table = pg_escape_string($conn, $table);
+
+		$sql = "
+			SELECT
+				schemaname,
+				tablename,
+				indexname,
+				pg_size_pretty(pg_relation_size(indexname::regclass)) as index_size,
+				indexdef
+			FROM pg_indexes
+			WHERE tablename = '{$table}'
+			ORDER BY pg_relation_size(indexname::regclass) DESC;
+		";
+		$result = pg_query($conn, $sql);
+
+		// Error handling for the query
+		if (!$result) {
+			debug_log(__METHOD__
+				. " Database query failed " . PHP_EOL
+				. ' Error: '. pg_last_error($conn)
+				, logger::ERROR
+			);
+			return [];
+		}
+
+		$indexes = [];
+		while ($row = pg_fetch_assoc($result)) {
+			$indexes[] = [
+				'schemaname' => $row['schemaname'],
+				'tablename' => $row['tablename'],
+				'indexname' => $row['indexname'],
+				'index_size' => $row['index_size'],
+				'indexdef' => $row['indexdef']
+			];
+		}
+
+		// Free the result resource
+		pg_free_result($result);
+
+		return $indexes;
+	}//end get_table_indexes
+
+
+
 
 
 	/**

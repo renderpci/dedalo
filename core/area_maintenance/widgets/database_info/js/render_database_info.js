@@ -72,6 +72,7 @@ const get_content_data_edit = async function(self) {
 		const database	= info.IntervalStyle || ''
 		const server	= info.server || ''
 		const host		= info.host || ''
+		const indexes 	= value.indexes || []
 
 	// content_data
 	const content_data = ui.create_dom_element({
@@ -93,6 +94,10 @@ const get_content_data_edit = async function(self) {
 		inner_html		: JSON.stringify(info, null, 2),
 		parent			: content_data
 	})
+
+	// indexes table
+	const indexes_container = render_indexes_table(indexes)
+	content_data.appendChild(indexes_container)
 
 	// form init
 	if (self.caller?.init_form) {
@@ -121,6 +126,129 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_INDEXES_TABLE
+* Creates a formatted table to display database indexes
+* @param object indexes - Object with table names as keys and arrays of index objects as values
+* @return HTMLElement indexes_container
+*/
+const render_indexes_table = (indexes) => {
+
+	// indexes_container
+	const indexes_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'indexes_container'
+	})
+
+	// indexes toggle label
+	const indexes_label = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'indexes_label icon_arrow',
+		inner_html		: get_label.indexes || 'Indexes',
+		parent			: indexes_container
+	})
+
+	// indexes content container
+	const indexes_content = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'indexes_content hide',
+		parent			: indexes_container
+	})
+
+	// mouse up event - toggle visibility
+	const toggle_handler = (e) => {
+		indexes_content.classList.toggle('hide')
+		if (indexes_content.classList.contains('hide')) {
+			indexes_label.classList.remove('up')
+		} else {
+			indexes_label.classList.add('up')
+		}
+	}
+	indexes_label.addEventListener('mouseup', toggle_handler)
+
+	// iterate each table group
+	for (const table_name in indexes) {
+		const table_indexes = indexes[table_name]
+		if (!Array.isArray(table_indexes) || table_indexes.length === 0) continue
+
+		// table group header
+		ui.create_dom_element({
+			element_type	: 'h4',
+			class_name		: 'indexes_table_name',
+			inner_html		: table_name,
+			parent			: indexes_content
+		})
+
+		// create table element
+		const table = ui.create_dom_element({
+			element_type	: 'table',
+			class_name		: 'indexes_table',
+			parent			: indexes_content
+		})
+
+		// table header
+		const thead = ui.create_dom_element({
+			element_type	: 'thead',
+			parent			: table
+		})
+		const header_row = ui.create_dom_element({
+			element_type	: 'tr',
+			parent			: thead
+		})
+		ui.create_dom_element({
+			element_type	: 'th',
+			inner_html		: get_label.index_name || 'Index Name',
+			parent			: header_row
+		})
+		ui.create_dom_element({
+			element_type	: 'th',
+			inner_html		: get_label.size || 'Size',
+			parent			: header_row
+		})
+		ui.create_dom_element({
+			element_type	: 'th',
+			inner_html		: get_label.definition || 'Definition',
+			parent			: header_row
+		})
+
+		// table body
+		const tbody = ui.create_dom_element({
+			element_type	: 'tbody',
+			parent			: table
+		})
+
+		// add rows for each index
+		for (const index of table_indexes) {
+			const row = ui.create_dom_element({
+				element_type	: 'tr',
+				parent			: tbody
+			})
+			ui.create_dom_element({
+				element_type	: 'td',
+				class_name		: 'index_name',
+				inner_html		: index.indexname || '',
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'td',
+				class_name		: 'index_size',
+				inner_html		: index.index_size || '',
+				parent			: row
+			})
+			ui.create_dom_element({
+				element_type	: 'td',
+				class_name		: 'indexdef',
+				inner_html		: index.indexdef || '',
+				parent			: row
+			})
+		}
+	}
+
+	return indexes_container
+}//end render_indexes_table
 
 
 

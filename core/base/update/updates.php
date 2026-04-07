@@ -196,8 +196,8 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query(implode(PHP_EOL, $comments_sentences));
 		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('ANALYZE ' . implode(', ', array_map(fn($t) => '"' . $t . '"', $other_tables)) . ';');
 
-		// Create new temprary table with key -> value
-		// Use to storage temporay sections (sections without section_id or section_id=0)
+		// Create new temporary table with key -> value
+		// Use to storage temporary sections (sections without section_id or section_id=0)
 		// key string as section_tipo_user_id or any other string combination as section_tipo_section_id_user_id
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			CREATE UNLOGGED TABLE IF NOT EXISTS temp (
@@ -321,18 +321,18 @@ $updates->$v = new stdClass();
 
 	// SCRIPTS ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		// Only checks data without save
-			$updates->$v->run_scripts[] = (object)[
-				'info'			=> 'CHECK all data in PostgreSQL to use v7 new format (ONLY CHECKS DATA WITHOUT SAVE. STOPS THE UPDATE IF FOUND ERRORS)',
-				'script_class'	=> 'v6_to_v7',
-				'script_method'	=> 'reformat_matrix_data',
-				'stop_on_error'	=> true,
-				'script_vars'	=> [
-					$ar_tables,
-					false, // save option. On false, only data review is made. Not save
-					'matrix_processor' // process type
-				] // Note that only ONE argument encoded is sent
-			];
+		// Only checks data without save (DEBUG ONLY)
+			// $updates->$v->run_scripts[] = (object)[
+			// 	'info'			=> 'CHECK all data in PostgreSQL to use v7 new format (ONLY CHECKS DATA WITHOUT SAVE. STOPS THE UPDATE IF FOUND ERRORS)',
+			// 	'script_class'	=> 'v6_to_v7',
+			// 	'script_method'	=> 'reformat_matrix_data',
+			// 	'stop_on_error'	=> true,
+			// 	'script_vars'	=> [
+			// 		$ar_tables,
+			// 		false, // save option. On false, only data review is made. Not save
+			// 		'matrix_processor' // process type
+			// 	] // Note that only ONE argument encoded is sent
+			// ];
 
 		// Updates all data in PostgreSQL with the new v7 format
 			$updates->$v->run_scripts[] = (object)[

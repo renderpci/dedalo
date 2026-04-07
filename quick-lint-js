@@ -1,0 +1,13 @@
+{
+  "global-groups": ["browser", "ecmascript", "jest"],
+  "globals": {
+    "page_globals": {"writable": true},
+    "SHOW_DEBUG": {"writable": false}
+    "get_label": {
+        "writable": false
+    },
+    "DEDALO_CORE_URL":{
+        "writable": false
+    }
+  }
+}

@@ -176,9 +176,10 @@ data_manager.request = async function(options) {
 	}
 	// Adding 'time' param prevents potential proxy problems in 'no-cache' calls
 	// 'time' param is ignored by the API endpoint (@see ../json/index.php)
-	const safe_url = merged_options.cache === 'no-cache'
-		? url + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
-		: url
+	// const safe_url = merged_options.cache === 'no-cache'
+	// 	? url // + '?time=' + performance.now() + Math.floor(Math.random() * 1000)
+	// 	: url
+	const safe_url = url
 
 	// using worker cases.
 		// Note that execution is slower, but it is useful for low priority
