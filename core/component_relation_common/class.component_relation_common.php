@@ -954,17 +954,19 @@ class component_relation_common extends component_common {
 	* @param int $section_id
 	* @param array|null $filter
 	* 	Is array of locators. Default is bool false
+	* @param array|null $parents
+	* 	Pre-fetched parents array (to avoid reading from deleted section)
 	* @return object $response
 	*/
-	public static function remove_parent_references( string $section_tipo, $section_id, ?array $filter=null ) : object {
+	public static function remove_parent_references( string $section_tipo, $section_id, ?array $filter=null, ?array $parents=null ) : object {
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= '';
 
-		// short vars
-			$parents = component_relation_parent::get_parents(
+		// short vars - use pre-fetched parents if provided
+			$parents = $parents ?? component_relation_parent::get_parents(
 				$section_id,
 				$section_tipo
 			);
