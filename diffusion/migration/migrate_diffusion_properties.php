@@ -1917,6 +1917,36 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 2.6 "diffusion_sql::map_quality_to_int"
+							if($process_dato && $process_dato === 'diffusion_sql::map_quality_to_int'
+								|| $process_dato === 'diffusion_sql::map_locator_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_autocomplete map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
 							$data_to_be_used = $props->data_to_be_used ?? null;
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
 							if($data_to_be_used && $data_to_be_used === "dato"){
