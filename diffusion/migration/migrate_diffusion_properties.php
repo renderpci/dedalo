@@ -2995,6 +2995,35 @@ function process_node($node, $level) {
 								break;
 							}
 
+							$data_to_be_used = $props->data_to_be_used ?? null;
+							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
+							if($data_to_be_used && $data_to_be_used === "dato"){
+								
+								$parser_process = (object)[
+									'fn' => 'parser_locator::get_section_id',
+									'output_format' => 'json'
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_sample = ["1","55"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_relation_parent (relation) -> mapped section_id values\n";							
+								break;								
+							}
+
 							break;
 						
 						case 'component_radio_button':
