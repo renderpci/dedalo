@@ -279,5 +279,116 @@ abstract class diffusion_fn {
 
 
 
+	/**
+	 * MAP_LOCATOR_TO_SECTION_LABEL
+	 * Extracts the label/term for each locator's referenced section tipo.
+	 *
+	 * This method takes a component's data (array of locators) and resolves each
+	 * locator's section_tipo to its human-readable label from the ontology. It produces
+	 * one diffusion_data_object per language available for each term.
+	 *
+	 * Useful for exporting references where you need the section name rather than
+	 * the technical section_tipo identifier.
+	 *
+	 * Logic flow:
+	 * 1. Get the component's data (array of locators)
+	 * 2. If empty, return a null-valued diffusion_data_object
+	 * 3. For each locator, extract the section_tipo
+	 * 4. Look up the ontology node for that section_tipo
+	 * 5. Get all available term translations (term_data)
+	 * 6. Create one diffusion_data_object per language/term pair
+	 *
+	 * @param object $element_instance
+	 * 	The component instance containing locator data. Typically a relation component
+	 * 	or any component that stores references to other sections.
+	 * @param object|null $ddo
+	 * 	The diffusion data object containing metadata like 'id' for the output.
+	 * @param string|null $diffusion_element_tipo
+	 * 	The diffusion element tipo (unused in this method but kept for API consistency).
+	 *
+	 * @return array Array of `diffusion_data_object` instances with section labels per language.
+	 *
+	 * @sample Input: Element with data containing locator to section 'rsc197'
+	 * @sample Output:
+	 * ```php
+	 * [
+	 * 	(object) [
+	 * 		'tipo'  => 'rsc197',
+	 * 		'lang'  => 'lg-eng',
+	 * 		'value' => 'People',  // English label for section 'rsc197'
+	 * 		'id'    => 'a'
+	 * 	],
+	 * 	(object) [
+	 * 		'tipo'  => 'rsc197',
+	 * 		'lang'  => 'lg-spa',
+	 * 		'value' => 'Persona',  // Spanish label for section 'rsc197'
+	 * 		'id'    => 'a'
+	 * 	]
+	 * ]
+	 * ```
+	 *
+	 * @see ontology_node::get_instance()
+	 * @see ontology_node::get_term_data()
+	 * @see diffusion_data_object
+	 */
+	public static function map_locator_to_section_label( object $element_instance, $ddo=null, ?string $diffusion_element_tipo=null ) : array {
+
+		// Get the component's locator data
+		$data	= $element_instance->get_data();
+		$langs	= DEDALO_DIFFUSION_LANGS;		
+
+		$diffusion_data = [];
+		
+		// Handle empty data case - return null-valued object
+		if(empty($data)){
+			$diffusion_data[] = new diffusion_data_object( (object)[
+				'tipo'	=> $element_instance->tipo,
+				'lang'	=> null,
+				'value'	=> null,
+				'id'	=> $ddo->id ?? null
+			]);
+
+			return $diffusion_data;
+		}
+
+		// Process each locator in the data array
+		foreach($data as $locator){
+			
+			// Extract the section_tipo from the locator
+			$section_tipo = $locator->section_tipo ?? null;
+			if(empty($section_tipo)){
+				continue;  // Skip invalid locators
+			}
+
+			// Get the ontology node for this section_tipo
+			$term_node = ontology_node::get_instance($section_tipo);
+			if(empty($term_node)){
+				continue;  // Skip if ontology node not found
+			}
+
+			// Get all term translations for this section_tipo
+			// Returns array like ['lg-eng' => 'Audio', 'lg-spa' => 'Audio']
+			$term_data = $term_node->get_term_data();
+			if(empty($term_data)){
+				continue;  // Skip if no term data available
+			}
+
+			// Create one diffusion object per language translation
+			foreach($term_data as $lang => $term){
+				$diffusion_data[] = new diffusion_data_object( (object)[
+					'tipo'	=> $element_instance->tipo,
+					'lang'	=> $lang,
+					'value'	=> $term,
+					'id'	=> $ddo->id ?? null
+				]);
+			}
+
+			}
+
+		return $diffusion_data;
+	}//end map_locator_to_section_label
+
+
+
 
 }//end class v1_functions
