@@ -240,6 +240,29 @@ class search {
 			metrics::$search_total_calls++;
 		}
 
+		// children recursive dedicated path
+		// We use a dedicated search instance to fetch all parent records first (limit 'all'),
+		// then we find their children and perform the final combined search.
+		// This avoids side effects on the current instance.
+		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
+			
+			// Create a dedicated search for all parents
+			$parents_sqo = clone $this->sqo;
+			$parents_sqo->children_recursive = false;
+			$parents_sqo->limit  = 'all';
+			$parents_sqo->offset = 0;
+			
+			$parents_search = search::get_instance($parents_sqo);
+			$parents_db_result = $parents_search->search();
+			
+			if (!$parents_db_result) {
+				return false;
+			}
+
+			// Process parents to find children and execute final combined search
+			return $this->search_children_recursive($parents_db_result->get_result());
+		}
+
 		// parse SQO. Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_sql_query();
 
@@ -254,11 +277,10 @@ class search {
 		}
 
 		// children recursive
-		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			// Override result adding children.
-			$result	= $this->search_children_recursive( $result );
-		}
-
+		// Note: intercepted at the beginning of search() if sqo->children_recursive is true
+		// This block is left only for the case when search_children_recursive() is called directly (rarely)
+		// but since we intercepted it above, this should be redundant for normal search calls.
+		
 		// debug
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time,'ms');
@@ -311,10 +333,10 @@ class search {
 	* Creates a new SQO with all section_id of parents and children.
 	* Searches the combination and updates main SQO with the new SQO (with all
 	* parents and children) to be used for pagination.
-	* @param \PgSql\Result $main_result
+	* @param object $main_result (\PgSql\Result)
 	* @return db_result|false $result
 	*/
-	private function search_children_recursive( \PgSql\Result $main_result ) : db_result|false {
+	private function search_children_recursive( object $main_result ) : db_result|false {
 
 		$ar_row_children = [];
 		$ar_records = [];
@@ -366,15 +388,6 @@ class search {
 
 		// Update current SQO changing properties to allow pagination
 		$this->sqo->filter				= $new_sqo->filter;
-
-		// Restore original limit and offset if they were saved (by parse_sql_query when children_recursive was true)
-		if (isset($this->sqo->original_limit)) {
-			$this->sqo->limit  = $this->sqo->original_limit;
-			$this->sqo->offset = $this->sqo->original_offset;
-			unset($this->sqo->original_limit);
-			unset($this->sqo->original_offset);
-		}
-
 		$this->sqo->total				= count($ar_rows_mix);
 		$this->sqo->children_recursive	= false;
 		$this->sqo->parsed				= true;
@@ -399,15 +412,6 @@ class search {
 
 		// clone original sqo
 			$new_sqo = clone $this->sqo;
-
-		// Restore original limit and offset if they were saved (by parse_sql_query when children_recursive was true)
-			if (isset($this->sqo->original_limit)) {
-				$new_sqo->limit  = $this->sqo->original_limit;
-				$new_sqo->offset = $this->sqo->original_offset;
-				// Clean up to avoid passing them down to next search
-				unset($new_sqo->original_limit);
-				unset($new_sqo->original_offset);
-			}
 
 		// force re - parse
 			$new_sqo->parsed = false;
@@ -757,23 +761,8 @@ class search {
 		// pre_parse_sql_query if not already parsed
 		$parsed = $this->sqo->parsed ?? false;
 		if ($parsed!==true) {
-
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
-		}
-
-		// children_recursive case
-		if(isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			
-			// Save original limit and offset for later use in generate_children_recursive_search
-			// if they are not already saved (e.g. if we are in a sub-search)
-			if (!isset($this->sqo->original_limit)) {
-				$this->sqo->original_limit = $this->sqo->limit ?? 'all';
-				$this->sqo->original_offset = $this->sqo->offset ?? 0;
-			}
-
-			$this->sqo->limit	= 'all';
-			$this->sqo->offset	= 0;
 		}
 
 		$search_type = null;
