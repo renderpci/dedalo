@@ -121,8 +121,8 @@ class diffusion_rdf {
 			}
 
 		// Directory (skipped in pure mode: no file saving, no filesystem side effects)
+		$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma';
 		if ($pure === false) {
-			$sub_path    = '/rdf/'.$this->service_name.'/';	 // nomisma/';
 			$folder_path = DEDALO_MEDIA_PATH . $sub_path;
 			if (!is_dir($folder_path)) {
 				if(!mkdir($folder_path, 0777, true)) {
