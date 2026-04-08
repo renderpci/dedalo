@@ -2313,14 +2313,32 @@ function process_node($node, $level) {
 									break;
 									
 								}
+
+
+
 								
 								if($final_method_cp === 'get_diffusion_dato') {
-									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
-										$final_target,
+									$new_props = new stdClass();
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									$new_props->process = get_diffusion_dato(
+										$model_cp,
 										null,
 										$final_args,
-										null
+										null,
+										$ddo_map_cp
 									);
+
+									if(isset($props->is_publicable) && $props->is_publicable === true) {
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									break;
+
 								} else if($final_method_cp === 'get_diffusion_resolve_value') {
 									$separator = $final_args->separator ?? ' ';
 									$output_v5 = $final_args->output ?? null;
