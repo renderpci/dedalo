@@ -429,6 +429,36 @@ function process_node($node, $level) {
 							// 2 "process_dato" first level
 							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
 
+
+								// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_locator_to_section_label")
+							{			
+								$parser_process = (object)[											
+									'fn' => 'map_locator_to_section_label',
+									"output_format" => "json"
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["object","catalog"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+								break;
+							}
+
+
 							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
 							if( $process_dato 
 								&& $process_dato=== "diffusion_sql::map_locator_to_terminoID"
