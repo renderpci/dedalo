@@ -130,8 +130,8 @@ abstract class diffusion_fn {
 			$caller_section_tipo = $element_instance->get_section_tipo();
 
 			$locator_to_find = new locator();
-			$locator_to_find->set_section_tipo($caller_section_tipo);
-			$locator_to_find->set_section_id($caller_section_id);
+				$locator_to_find->set_section_tipo($caller_section_tipo);
+				$locator_to_find->set_section_id($caller_section_id);
 
 			$section_tipo = $data[0]->section_tipo;
 			$section_id = $data[0]->section_id;
@@ -169,12 +169,16 @@ abstract class diffusion_fn {
 			}
 		}
 
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $tipo,
+			'lang'	=> $lang,
+			'value'	=> $norder,
+			'id'	=> $ddo->id ?? null
+		]);
+
 		// Override data. Mimic basic value data
-		return $new_data = [(object)[
-			'value' => $norder,
-			'lang' 	=> $lang,
-			'id' 	=> 1
-		]];
+		$diffusion_data = [$diffusion_data_object];
+		return $diffusion_data;
 
 	}//end map_parent_to_norder
 
