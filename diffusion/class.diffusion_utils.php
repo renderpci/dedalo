@@ -1,5 +1,7 @@
 <?php declare(strict_types=1);
 
+use PhpParser\Node\Stmt\Foreach_;
+
 /**
  * DIFFUSION_UTILS
  * Utility class for common diffusion mapping and resolution logic.
@@ -122,20 +124,18 @@ class diffusion_utils {
 
 		$node = ontology_node::get_instance($ontology_node_tipo);
 		if (!$node) return null;
-		
+
 		$parent = $node->get_parent();
 		if (empty($parent)) return null;
 
 		$model = ontology_node::get_model_by_tipo($parent);
-		if ($model === 'diffusion_element') {
+		if ($model === 'diffusion_element' || $model === 'diffusion_element_alias') {
 			return $parent;
 		}else if ($model === 'diffusion_domain') {
 			return null;
 		} else{
 			return self::get_diffusion_element($parent);
 		}
-		
-
 	}// end get_diffusion_element
 
 
@@ -182,160 +182,374 @@ class diffusion_utils {
 	 * @see ontology_node::get_ar_recursive_children() For tree traversal
 	 * @see ontology_node::get_ar_tipo_by_model_and_relation() For relation resolution
 	 */
-	public static function get_section_diffusion_nodes( string $section_tipo) : array {
+	/**
+	 * GET_SECTION_DIFFUSION_NODES
+	 * Walks down the virtual diffusion tree (resolving aliases) to find nodes
+	 * that match the specified section_tipo. Preserves the exact alias hierarchy.
+	 *
+	 * @param string $section_tipo The section to find diffusion nodes for
+	 * @return array Array of matching source elements mapped with their alias tree parents
+	 */
+	public static function get_virtual_diffusion_tree() : array {
 
-		// get diffucion domain tipo
+		static $virtual_tree_cache = null;
+		
+		if ($virtual_tree_cache !== null) {
+			return $virtual_tree_cache;
+		}
+		
 		$diffusion_domain_tipo = self::get_diffusion_domain_tipo();
 		if ($diffusion_domain_tipo === null) {
+			debug_log(__METHOD__
+				. " get_diffusion_domain_tipo returned null. Check DEDALO_DIFFUSION_TIPO and DEDALO_DIFFUSION_DOMAIN constants."
+				, logger::WARNING
+			);
 			return [];
 		}
 
-		// Get all recursive children nodes under the diffusion domain tree
-		// This retrieves the entire diffusion ontology structure from root
-		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
-			$diffusion_domain_tipo		
+		// 1. Find all real tipos that are aliased within the domain to suppress their naked presence
+		$main_diffusion_nodes = ontology_node::get_ar_recursive_children($diffusion_domain_tipo);
+		$consumed_by_alias = [];
+		foreach ($main_diffusion_nodes as $node_tipo) {
+			$model = ontology_node::get_model_by_tipo($node_tipo);
+			if (str_contains($model, '_alias')) {
+				$real_tipo = self::resolve_alias_recursive($node_tipo);
+				if ($real_tipo) {
+					$consumed_by_alias[] = $real_tipo;
+				}
+			}
+		}
+
+		// 2. Walk the virtual diffusion structure top-down
+		$all_virtual_nodes = [];
+		$path = [];
+		self::walk_virtual_diffusion_tree(
+			$diffusion_domain_tipo, 
+			$path, 
+			$all_virtual_nodes, 
+			$consumed_by_alias
 		);
-		
-		// Initialize result array to collect matching source elements
+
+		$virtual_tree_cache = $all_virtual_nodes;
+		return $virtual_tree_cache;
+	}
+
+
+	/**
+	 * GET_SECTION_DIFFUSION_NODES
+	 * Walks down the virtual diffusion tree (resolving aliases) to find nodes
+	 * that match the specified section_tipo. Preserves the exact alias hierarchy.
+	 *
+	 * @param string $section_tipo The section to find diffusion nodes for
+	 * @return array Array of matching source elements mapped with their alias tree parents
+	 */
+	public static function get_section_diffusion_nodes( string $section_tipo ) : array {
+
+		$all_virtual_nodes = self::get_virtual_diffusion_tree();
+
+		// 3. Filter for matching section and format output correctly
 		$source_elements = [];
-		
-		// Iterate through each diffusion node to find those targeting our section
-		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
-			
-			// Resolve which section_tipo this diffusion node is related to
-			// Uses ontology relation system to find 'related' sections
-			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
-				$diffusion_tipo,		// The diffusion node to check relations from
-				'section',			// The target model type to find
-				'related',			// The relation type to match
-				true				// Recursive search
-			);
-			
-			// Check each related section for a match with requested section_tipo
-			foreach ($ar_sections as $current_section_tipo) {
+		foreach ($all_virtual_nodes as $vnode) {
 
-				// Skip if this diffusion node targets a different section
-				if($current_section_tipo !== $section_tipo) {
-					continue;
-				}
+			// A node matches if it or its real target has a section relation
+			$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->tipo, 'section', 'related', true);
+			if (empty($ar_related_sections) && $vnode->real_tipo) {
+				$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->real_tipo, 'section', 'related', true);
+			}
 
-				// PARENTS RESOLUTION
-				// Build ascending chain from section up to diffusion_domain
-				// This shows the hierarchy of diffusion containers
-				$parents = [];
-				$current_tipo = $diffusion_tipo;
+			if (!empty($ar_related_sections) && in_array($section_tipo, $ar_related_sections)) {
 				
-				// Traverse upward through parent nodes
-				while(true) {
-					// Get the parent node instance and its tipo
-					$parent_node = ontology_node::get_instance($current_tipo);
-					$parent_tipo = $parent_node->get_parent();
-					
-					// Stop if no parent exists (reached ontology root)
-					if($parent_tipo === null) {
-						break;
-					}
-					
-					// Get the model name for this parent
-					$parent_model = ontology_node::get_model_by_tipo($parent_tipo);
-					
-					// Stop if model cannot be determined
-					if(empty($parent_model)) {
-						break;
-					}
-				
-					// Build the parent item with basic ontology info
-					$parent_item = (object)[
-						'tipo' => $parent_tipo,
-						'model' => $parent_model,
-						'label' => ontology_node::get_term_by_tipo($parent_tipo)
-					];
+				$item = new stdClass();
+				$item->tipo    = $vnode->tipo;
+				$item->model   = $vnode->model;
+				$item->label   = $vnode->label;
+				$item->parents = $vnode->parents;
 
-					// Special handling for diffusion_element nodes
-					// Extract the diffusion type (e.g., 'sql', 'xml') from properties
-					if($parent_model === 'diffusion_element') {
-						$diffusion_element_instance = ontology_node::get_instance($parent_tipo);
-						$diffusion_element_properties = $diffusion_element_instance->get_properties();
-						
-						// Extract diffusion type from properties JSON
-						$type = $diffusion_element_properties->diffusion->type ?? null;
-						
-						// Log error and mark if diffusion type is missing
-						if(!$type) {
-							debug_log(__METHOD__
-								. " Missing diffusion type in properties for diffusion element: " . $parent_tipo 
-								, logger::ERROR
-							);
-							$type = 'unknown';
-							$parent_item->error = true;
-						}
-						$parent_item->type = $type;
-					}
+				// Map children fields (Alias own + real non-overridden)
+				$ar_children = [];
+				foreach ($vnode->children_tipos as $child_tipo) {
+					$child_node = ontology_node::get_instance($child_tipo);
+					$relation_tipo = $child_node->get_relation_tipos()[0] ?? null;
 
-					// Add this parent to the chain
-					$parents[] = $parent_item;
-
-					// Stop when we reach diffusion_domain (top of diffusion hierarchy)
-					if($parent_model === 'diffusion_domain') {
-						break;
-					}
-
-					// Move up to the parent for next iteration
-					$current_tipo = $parent_tipo;
-				}
-
-				// CHILDREN RESOLUTION
-				// Build descending tree of all nodes under this section
-				// This shows components and their ontology relations
-				$children = [];
-				
-				// Get all recursive children of the section
-				$children_nodes = ontology_node::get_ar_recursive_children($diffusion_tipo);
-				
-				// Process each child node
-				foreach ($children_nodes as $child_tipo) {
-					// Get child node instance and basic properties
-					$child_node 	= ontology_node::get_instance($child_tipo);
-					$child_model 	= $child_node->get_model();
-					$child_label 	= $child_node->get_term($child_tipo);
-					
-					// Get the first relation tipo (if any exists)
-					$relation_tipo 	= $child_node->get_relation_tipos()[0] ?? null;						
-					
-					// Initialize relation info as null
-					$relation_model = null;
-					$relation_label = null;
-					
-					// Resolve relation model and label if relation exists
-					if ($relation_tipo !== null) {
-						$relation_model = ontology_node::get_model_by_tipo($relation_tipo);
-						$relation_label = ontology_node::get_term_by_tipo($relation_tipo);
-					}						
-
-					// Build child object with ontology info and relation data
-					$children[] = (object)[
-						'tipo' 			=> $child_tipo,
-						'model' 		=> $child_model,
-						'label' 		=> $child_label,
-						'related_tipo' 	=> $relation_tipo,
-						'related_model' => $relation_model,
-						'related_label' => $relation_label
+					$ar_children[] = (object)[
+						'tipo'          => $child_tipo,
+						'model'         => $child_node->get_model(),
+						'label'         => $child_node->get_term($child_tipo),
+						'related_tipo'  => $relation_tipo,
+						'related_model' => $relation_tipo ? ontology_node::get_model_by_tipo($relation_tipo) : null,
+						'related_label' => $relation_tipo ? ontology_node::get_term_by_tipo($relation_tipo)  : null
 					];
 				}
+				$item->children = $ar_children;
 
-				// Build final source element object combining all resolved data
-				$source_elements[] = (object)[
-					'tipo' 		=> $diffusion_tipo,
-					'model' 	=> ontology_node::get_model_by_tipo($diffusion_tipo),
-					'label' 	=> ontology_node::get_term_by_tipo($diffusion_tipo),
-					'parents' 	=> $parents,
-					'children' 	=> $children
-				];
-			}//foreach ($ar_sections as $current_section_tipo)
-		}//foreach ($ar_diffusion_nodes as $diffusion_tipo)
-	
+				$source_elements[] = $item;
+			}
+		}
+
 		return $source_elements;
 	}//end get_section_diffusion_nodes
+
+
+	/**
+	 * WALK_VIRTUAL_DIFFUSION_TREE
+	 * Recursively walks the diffusion structure starting from root, resolving aliases.
+	 * Builds a list of virtual nodes with their exact alias parent paths.
+	 *
+	 * @param string $current_tipo The current node to visit
+	 * @param array $path Accumulated list of ancestors (stdClass objects)
+	 * @param array &$all_virtual_nodes Accumulator receiving all valid virtual nodes
+	 * @param array &$consumed_by_alias Tracking array to prevent real node duplication
+	 */
+	private static function walk_virtual_diffusion_tree(string $current_tipo, array $path, array &$all_virtual_nodes, array &$consumed_by_alias) {
+
+		$resolved = self::resolve_node_with_alias($current_tipo);
+
+		if (!$resolved->is_alias && in_array($current_tipo, $consumed_by_alias)) {
+			// Real node consumed by an alias somewhere else: skip this raw branch
+			return;
+		}
+
+		$vnode = new stdClass();
+		$vnode->tipo       = $resolved->tipo;
+		$vnode->model      = $resolved->model;
+		$vnode->label      = $resolved->label;
+		$vnode->properties = $resolved->properties;
+		$vnode->real_tipo  = $resolved->real_tipo;
+		$vnode->parents    = $path;
+
+		// Merge recursive children properties (alias own + real non-overridden) 
+		// Note we use full recursive children to populate the fields list for the UI
+		$own_children  = ontology_node::get_ar_recursive_children($current_tipo) ?: [];
+		$real_children = [];
+		if ($resolved->is_alias && $resolved->real_tipo !== null) {
+			$real_children = ontology_node::get_ar_recursive_children($resolved->real_tipo) ?: [];
+		}
+
+		$merged_children_tipos = [];
+		$labels_seen = [];
+		foreach ($own_children as $child_tipo) {
+			$label = ontology_node::get_term_by_tipo($child_tipo);
+			$labels_seen[$label] = true;
+			$merged_children_tipos[] = $child_tipo;
+		}
+		foreach ($real_children as $child_tipo) {
+			$label = ontology_node::get_term_by_tipo($child_tipo);
+			if (!isset($labels_seen[$label])) {
+				$merged_children_tipos[] = $child_tipo;
+			}
+		}
+
+		$vnode->children_tipos = $merged_children_tipos;
+		$all_virtual_nodes[] = $vnode;
+
+		// Update path mapping for descending structure
+		$path_item = new stdClass();
+		$path_item->tipo  = $resolved->tipo;
+		$path_item->model = $resolved->model;
+		$path_item->label = $resolved->label;
+		if ($resolved->model === 'diffusion_element' || $resolved->model === 'diffusion_element_alias') {
+			$path_item->type = $resolved->properties->diffusion->type ?? 'unknown';
+		}
+		
+		$new_path = array_merge([$path_item], $path); // Puts immediate parent first
+
+		// Recursively explore ALL children to ensure deeply nested elements 
+		// (like RDF components, XML fields, etc.) that may hold the section relation 
+		// are mapped under this virtual hierarchy.
+		$ar_children_tipos = ontology_node::get_ar_children($current_tipo) ?: [];
+		
+		if ($resolved->is_alias && $resolved->real_tipo) {
+			$real_children = ontology_node::get_ar_children($resolved->real_tipo) ?: [];
+			$ar_children_tipos = array_merge($ar_children_tipos, $real_children);
+		}
+
+		$ar_children_tipos = array_unique($ar_children_tipos);
+		foreach ($ar_children_tipos as $child_tipo) {
+			self::walk_virtual_diffusion_tree($child_tipo, $new_path, $all_virtual_nodes, $consumed_by_alias);
+		}
+	}//end walk_virtual_diffusion_tree
+
+
+
+	/**
+	 * RESOLVE_ONTOLOGY_NODE_ALIAS
+	 * Keeps alias nodes in the flat list and brings in real-node subtrees
+	 * when the real node lives outside the original tree (i.e. was not
+	 * already traversed as a direct descendant of the diffusion domain).
+	 *
+	 * Deduplicates to prevent the same real subtree from appearing twice
+	 * when multiple aliases resolve to the same real node.
+	 *
+	 * @param array $nodes Array of ontology node tipos
+	 * @return array Expanded array with alias nodes kept + real subtrees added
+	 */
+	public static function resolve_ontology_node_alias(array $nodes) : array {
+
+		$resolved = [];
+		// Track already-expanded real tipos to avoid duplicates
+		$expanded_real_tipos = [];
+
+		foreach ($nodes as $node_tipo) {
+			$model = ontology_node::get_model_by_tipo($node_tipo);
+			if (str_contains($model, '_alias')) {
+				// Always keep alias node
+				$resolved[] = $node_tipo;
+
+				$resolved_tipo = self::resolve_alias_recursive($node_tipo);
+				if ($resolved_tipo !== null
+					&& !in_array($resolved_tipo, $nodes)
+					&& !in_array($resolved_tipo, $expanded_real_tipos)
+				) {
+					// Real node is outside the tree and not yet expanded
+					$expanded_real_tipos[] = $resolved_tipo;
+					$resolved[] = $resolved_tipo;
+					$resolved_children = ontology_node::get_ar_recursive_children($resolved_tipo);
+					if (!empty($resolved_children)) {
+						$resolved = array_merge($resolved, $resolved_children);
+					}
+				}
+			} else {
+				$resolved[] = $node_tipo;
+			}
+		}
+
+		return $resolved;
+	}//end resolve_ontology_node_alias
+
+
+
+	/**
+	 * RESOLVE_ALIAS_RECURSIVE
+	 * Recursively resolves an alias node to its final target.
+	 * Handles chains of aliases (alias pointing to alias).
+	 *
+	 * @param string $tipo The alias node tipo to resolve
+	 * @param int $max_depth Maximum recursion depth to prevent infinite loops
+	 * @return string|null The final resolved tipo, or null if not resolvable
+	 */
+	private static function resolve_alias_recursive(string $tipo, int $max_depth = 10) : ?string {
+
+		if ($max_depth <= 0) {
+			debug_log(__METHOD__
+				. " Max recursion depth reached for tipo: " . $tipo
+				, logger::WARNING
+			);
+			return null;
+		}
+
+		$resolved_tipo = self::resolve_alias_target($tipo);
+		if ($resolved_tipo === null) {
+			return null;
+		}
+
+		// Check if resolved node is also an alias
+		$resolved_model = ontology_node::get_model_by_tipo($resolved_tipo);
+		if (str_contains($resolved_model, '_alias')) {
+			return self::resolve_alias_recursive($resolved_tipo, $max_depth - 1);
+		}
+
+		return $resolved_tipo;
+	}//end resolve_alias_recursive
+
+
+
+	/**
+	 * RESOLVE_ALIAS_TARGET
+	 * Resolves a single alias node to its immediate target.
+	 * Extracts the target model from the alias model name (e.g., 'diffusion_element_alias' -> 'diffusion_element').
+	 *
+	 * @param string $alias_tipo The alias node tipo
+	 * @return string|null The resolved target tipo, or null if not found
+	 */
+	private static function resolve_alias_target(string $alias_tipo) : ?string {
+
+		$model = ontology_node::get_model_by_tipo($alias_tipo);
+		if (!str_contains($model, '_alias')) {
+			return null;
+		}
+
+		$target_model = str_replace('_alias', '', $model);
+		$resolved_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+			$alias_tipo,
+			$target_model,
+			'related',
+			false
+		)[0] ?? null;
+
+		if ($resolved_tipo === null) {
+			debug_log(__METHOD__
+				. " Unable to resolve alias tipo: " . $alias_tipo
+				. " target_model: " . $target_model
+				, logger::WARNING
+			);
+		}
+
+		return $resolved_tipo;
+	}//end resolve_alias_target
+
+
+
+	/**
+	 * RESOLVE_NODE_WITH_ALIAS
+	 * Given any ontology node tipo, applies the alias contract:
+	 * - If the node is an alias, resolves the real node
+	 * - Returns merged info where alias wins for tipo/term
+	 * - Properties and section relations inherited from real node when alias has none
+	 *
+	 * @param string $tipo The node tipo (can be alias or real)
+	 * @return object {
+	 *   string  tipo       : the alias tipo (or node tipo if not alias)
+	 *   string  label      : the alias term (or node term)
+	 *   string  model      : the actual model (e.g. 'diffusion_element_alias')
+	 *   ?string real_tipo  : the resolved real tipo (null if not alias)
+	 *   ?object properties : effective properties (alias own or inherited from real)
+	 *   bool    is_alias   : whether the node is an alias
+	 * }
+	 */
+	public static function resolve_node_with_alias(string $tipo) : object {
+
+		$model    = ontology_node::get_model_by_tipo($tipo);
+		$is_alias = str_contains($model, '_alias');
+		$label    = ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, false);
+
+		$result = (object)[
+			'tipo'       => $tipo,
+			'label'      => $label,
+			'model'      => $model,
+			'real_tipo'  => null,
+			'properties' => null,
+			'is_alias'   => $is_alias
+		];
+
+		if ($is_alias) {
+			$real_tipo = self::resolve_alias_recursive($tipo);
+			$result->real_tipo = $real_tipo;
+
+			if ($real_tipo !== null) {
+				// Get alias own properties first
+				$alias_node   = ontology_node::get_instance($tipo);
+				$alias_props  = $alias_node->get_properties();
+
+				// Inherit from real if alias has none
+				if (empty($alias_props) || (is_object($alias_props) && empty((array)$alias_props))) {
+					$real_node  = ontology_node::get_instance($real_tipo);
+					$result->properties = $real_node->get_properties();
+				} else {
+					$result->properties = $alias_props;
+				}
+			}
+		} else {
+			$node = ontology_node::get_instance($tipo);
+			$result->properties = $node->get_properties();
+		}
+
+		// Fallback label
+		if (empty($result->label)) {
+			$result->label = '<em>' . ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true, true) . '</em>';
+		}
+
+		return $result;
+	}//end resolve_node_with_alias
 
 
 
@@ -378,47 +592,6 @@ class diffusion_utils {
 	}//end get_diffusion_domain_tipo
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	/**
 	* HAVE_SECTION_DIFFUSION
 	* Return correspondence of current section in diffusion domain
@@ -431,13 +604,13 @@ class diffusion_utils {
 	public static function have_section_diffusion( string $section_tipo, ?array $ar_diffusion_map_elements=null ) : bool {
 
 		// cache
-			$use_cache = true;
-			if ($use_cache===true) {
-				// session
-				if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {                  
-					return $_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo];
-				}
-			}
+			// $use_cache = true;
+			// if ($use_cache===true) {
+			// 	// session
+			// 	if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {                  
+			// 		return $_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo];
+			// 	}
+			// }
 
 		// default is false
 		$have_section_diffusion = false;
@@ -480,10 +653,10 @@ class diffusion_utils {
 		}
 
 		// cache
-			if ($use_cache===true) {
-				// session
-				$_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo] = $have_section_diffusion;
-			}
+		// if ($use_cache===true) {
+		// 	// session
+		// 	$_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo] = $have_section_diffusion;
+		// }
 
 
 		return $have_section_diffusion;
@@ -632,7 +805,7 @@ class diffusion_utils {
 						'database', // model_name
 						'children', // relation_type
 						true // search_exact
-					)[0] ?? null;
+						)[0] ?? null;
 
 					// database_alias case try
 					if (empty($diffusion_database_tipo)) {
@@ -654,18 +827,18 @@ class diffusion_utils {
 						// Try to resolve real database to ensure if properly configured
 						$diffusion_database_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
 							$database_alias_tipo,
-							'database',
-							'related',
-							false
-						)[0] ?? null;
+								'database',
+								'related',
+								false
+							)[0] ?? null;
 						if (empty($diffusion_database_tipo)) {
-							debug_log(__METHOD__
+								debug_log(__METHOD__
 								. " Unable to resolve the real database from database_alias. Configure your database_alias to continue" . PHP_EOL
 								. ' database_alias tipo: ' . to_string($diffusion_database_tipo)
-								, logger::ERROR
-							);
-							continue;
-						}
+									, logger::ERROR
+								);
+								continue;
+							}
 
 						// Get db name from the alias
 						$diffusion_database_name = ontology_node::get_term_by_tipo($database_alias_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -692,7 +865,7 @@ class diffusion_utils {
 					}
 
 				// add diffusion_map item
-					$diffusion_map->{$diffusion_group_tipo}[] = $item;
+				$diffusion_map->{$diffusion_group_tipo}[] = $item;
 			}//end foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo)
 
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
