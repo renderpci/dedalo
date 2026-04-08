@@ -728,7 +728,8 @@ function process_node($node, $level) {
 										$model,
 										$custom_arguments,
 										$process_dato_arguments,
-										$output										
+										$output,
+										$ddo_map								
 									);
 
 									// "is_publicable" = true
