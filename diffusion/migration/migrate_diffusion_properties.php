@@ -3049,12 +3049,10 @@ function process_node($node, $level) {
 
 
 							// 4 "diffusion_sql::map_parent_to_norder"
-							if($process_dato_rp
-								&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder'))
+							if($process_dato_rp	&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder'))
 							{
 
 								$process_dato_arguments = $props->process_dato_arguments ?? null;
-
 						
 								$parser_process = (object)[
 									'fn' => 'map_parent_to_norder',
