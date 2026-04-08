@@ -1,6 +1,6 @@
 <?php
 
-function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, $output){
+function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, $output, $ddo_map=null){
 
     $process = new stdClass();
 
@@ -75,6 +75,9 @@ function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, 
 				],
 				"output_format" => "json"
 			];
+			if($ddo_map){
+				$parser_process->ddo_map = $ddo_map;
+			}
 			$process = $parser_process;
 			$process->output_sample = ["1","55"];
 			break;
