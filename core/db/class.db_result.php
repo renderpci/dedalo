@@ -118,6 +118,16 @@ class db_result implements IteratorAggregate
 	{
 		pg_free_result($this->result);
 	}
+
+	/**
+	 * GET_RESULT
+	 * Returns the raw PostgreSQL result object
+	 * @return \PgSql\Result
+	 */
+	public function get_result(): \PgSql\Result
+	{
+		return $this->result;
+	}
 	
 	public function __destruct()
 	{
