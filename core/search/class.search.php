@@ -321,11 +321,19 @@ class search {
 		while ( $row = pg_fetch_object($main_result) ) {
 
 			// row expected an object as {section_tipo: oh1, section_id: 2} (select previously changed on parse sqo)
+			// Note: when full_count is set, section_tipo may not be selected, so we fall back to main_section_tipo
 			$ar_records[] = $row;
 
+			$section_id = $row->section_id ?? null;
+			if ($section_id === null) {
+				continue; // Skip rows without section_id
+			}
+
+			$section_tipo = $row->section_tipo ?? $this->main_section_tipo;
+
 			$row_children = component_relation_children::get_children_recursive(
-				$row->section_id, // string section_id
-				$row->section_tipo, // string section_tipo
+				$section_id, // string|int section_id
+				$section_tipo, // string section_tipo
 				null // string|null component_tipo
 			);
 
@@ -334,6 +342,13 @@ class search {
 
 		// No children found case. Return the main search result wrapped in db_result.
 		if (empty($ar_row_children)) {
+			// Update total with parents count even if no children are found
+			$this->sqo->total = count($ar_records);
+
+			if (SHOW_DEBUG===true) {
+				debug_log(__METHOD__ . " No recursive children found. Parents count: " . count($ar_records), logger::DEBUG);
+			}
+
 			// Reset pointer to beginning since it was already iterated
 			pg_result_seek($main_result, 0);
 			return new db_result($main_result);
@@ -351,9 +366,22 @@ class search {
 
 		// Update current SQO changing properties to allow pagination
 		$this->sqo->filter				= $new_sqo->filter;
+
+		// Restore original limit and offset if they were saved (by parse_sql_query when children_recursive was true)
+		if (isset($this->sqo->original_limit)) {
+			$this->sqo->limit  = $this->sqo->original_limit;
+			$this->sqo->offset = $this->sqo->original_offset;
+			unset($this->sqo->original_limit);
+			unset($this->sqo->original_offset);
+		}
+
 		$this->sqo->total				= count($ar_rows_mix);
 		$this->sqo->children_recursive	= false;
 		$this->sqo->parsed				= true;
+
+		if (SHOW_DEBUG===true) {
+			debug_log(__METHOD__ . " Recursive children search completed. Total (parents+children): " . $this->sqo->total, logger::DEBUG);
+		}
 
 
 		return $result;
@@ -371,6 +399,15 @@ class search {
 
 		// clone original sqo
 			$new_sqo = clone $this->sqo;
+
+		// Restore original limit and offset if they were saved (by parse_sql_query when children_recursive was true)
+			if (isset($this->sqo->original_limit)) {
+				$new_sqo->limit  = $this->sqo->original_limit;
+				$new_sqo->offset = $this->sqo->original_offset;
+				// Clean up to avoid passing them down to next search
+				unset($new_sqo->original_limit);
+				unset($new_sqo->original_offset);
+			}
 
 		// force re - parse
 			$new_sqo->parsed = false;
@@ -727,6 +764,14 @@ class search {
 
 		// children_recursive case
 		if(isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
+			
+			// Save original limit and offset for later use in generate_children_recursive_search
+			// if they are not already saved (e.g. if we are in a sub-search)
+			if (!isset($this->sqo->original_limit)) {
+				$this->sqo->original_limit = $this->sqo->limit ?? 'all';
+				$this->sqo->original_offset = $this->sqo->offset ?? 0;
+			}
+
 			$this->sqo->limit	= 'all';
 			$this->sqo->offset	= 0;
 		}

@@ -32,8 +32,39 @@ trait count {
 
 		// children recursive, to count the children is necessary do a search to know if the term has children
 		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
+			// Save current full_count state
+			$full_count_backup = $this->sqo->full_count ?? false;
+			// Temporarily disable full_count to get actual parents
+			$this->sqo->full_count = false;
+
 			// search as normal search to get the children_recursive sqo to be used for count.
 			$this->search();
+
+			// Restore full_count state
+			$this->sqo->full_count = $full_count_backup;
+
+			// The total is already calculated by search_children_recursive() in $this->sqo->total
+			// Use it directly instead of running a new count query
+			$total = $this->sqo->total ?? 0;
+
+			// debug
+			if(SHOW_DEBUG===true) {
+				$exec_time = exec_time_unit($start_time, 'ms');
+				$records_data->debug = $records_data->debug ?? new stdClass();
+				$records_data->debug->generated_time['get_records_data'] = $exec_time;
+				$records_data->debug->strQuery = 'Total from children_recursive search: ' . $total;
+				$this->sqo->generated_time = $exec_time;
+				metrics::$search_total_time += $exec_time;
+				
+				// Add extra debug info
+				$records_data->debug->children_recursive_total = $total;
+			}
+
+			// set total
+			$records_data->total = $total;
+			$this->sqo->total = $total;
+
+			return $records_data;
 		}
 
 		// ONLY_COUNT
