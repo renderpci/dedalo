@@ -2967,6 +2967,34 @@ function process_node($node, $level) {
 								break;
 							}
 
+
+							// 4 "diffusion_sql::map_parent_to_norder"
+							if($process_dato_rp
+								&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder'))
+							{
+
+								$process_dato_arguments = $props->process_dato_arguments ?? null;
+
+						
+								$parser_process = (object)[
+									'fn' => 'map_parent_to_norder',
+									'output_format' => 'int'
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = [1];
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] relation_model map_parent_to_norder\n";
+								break;
+							}
+
 							break;
 						
 						case 'component_radio_button':
