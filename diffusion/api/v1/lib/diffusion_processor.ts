@@ -90,7 +90,7 @@ function resolve_database_name(main: main_node[]): string {
 
 	// Look for database definition in the hierarchy (model: "database")
 	for (const node of main) {
-		if (node.model === 'database' && node.term) {
+		if (node.model === 'database' || node.model === 'database_alias' && node.term) {
 			return node.term;
 		}
 	}

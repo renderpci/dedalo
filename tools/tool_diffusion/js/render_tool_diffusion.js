@@ -311,7 +311,7 @@ export const render_publication_items = function(self) {
 				for (const node of group.nodes) {
 
 					// find diffusion_element parent for type and element_tipo
-						const diffusion_element_parent = node.parents.find(p => p.model === 'diffusion_element')
+						const diffusion_element_parent = node.parents.find(p => p.model === 'diffusion_element' || p.model === 'diffusion_element_alias')
 						const element_tipo = diffusion_element_parent ? diffusion_element_parent.tipo : null
 						const type = diffusion_element_parent ? diffusion_element_parent.type : null
 
