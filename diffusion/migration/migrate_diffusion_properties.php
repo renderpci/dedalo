@@ -2471,7 +2471,8 @@ function process_node($node, $level) {
 
 									$output = $final_args->output ?? null;									
 									
-									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$new_props = new stdClass(); 
+									$new_props->process = get_diffusion_value(
 										$final_target,
 										$model_cp,
 										null,
