@@ -2313,9 +2313,6 @@ function process_node($node, $level) {
 									break;
 									
 								}
-
-
-
 								
 								if($final_method_cp === 'get_diffusion_dato') {
 									$new_props = new stdClass();
@@ -3049,28 +3046,77 @@ function process_node($node, $level) {
 
 
 							// 4 "diffusion_sql::map_parent_to_norder"
-							if($process_dato_rp	&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder'))
-							{
+							if($process_dato_rp	&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder')) {
 
-								$process_dato_arguments = $props->process_dato_arguments ?? null;
-						
-								$parser_process = (object)[
-									'fn' => 'map_parent_to_norder',
-									'output_format' => 'int'
-								];
+								$source_related_tipo = $rel_info['tipo'];
 
-								$new_props = new stdClass();
-									$new_props->process = $parser_process;
+								$section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+									$source_related_tipo, 
+									'section',
+									'parent',
+									true)[0];
+									
+								if (!empty($section_tipo)) {
+									$section_map = section::get_section_map($section_tipo);
+									
+									$order_tipo = $section_map->thesaurus->order ?? null;
+
+									
+									if (empty($order_tipo)) {
+										break;
+									}						
+
+									$tld_source = get_tld_from_tipo($tipo);
+									$source_section_tipo = $tld_source.'0';
+									$source_section_id = get_section_id_from_tipo($tipo);
+
+									$conneted_model = ontology_node::get_model_by_tipo(DEDALO_ONTOLOGY_CONNECTED_TO_TIPO);
+
+									$component_relation = component_common::get_instance(
+										$conneted_model,
+										DEDALO_ONTOLOGY_CONNECTED_TO_TIPO,
+										$source_section_id,
+										'edit',
+										DEDALO_DATA_NOLAN,
+										$source_section_tipo
+									);
+
+									$tld = get_tld_from_tipo($order_tipo);
+									$section_tipo = $tld.'0';
+									$section_id = get_section_id_from_tipo($order_tipo);
+
+									$related_data = new locator();
+										$related_data->set_section_tipo($section_tipo);
+										$related_data->set_section_id($section_id);
+
+									$data_entry = [$related_data ];
+								
+									$component_relation->set_data($data_entry);
+									$component_relation->save();
+
+									$order_model = ontology_node::get_model_by_tipo($order_tipo); 
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$order_tipo,
+										$order_model,
+										null,
+										null,
+										null,
+										null,
+										null,
+										null
+									);	
+
 									$new_props->process->output_sample = [1];
 
-								if(isset($props->is_publicable) && $props->is_publicable === true){
-									$new_props->is_publishable = $props->is_publicable;
-								}
-								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
 
-								echo "{$indent}- [$tipo] $model_name\n";
-								echo "{$indent}  [RULE APPLIED] relation_model map_parent_to_norder\n";
-								break;
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] relation_model map_parent_to_norder\n";
+									break;
+								}
 							}
 
 							$data_to_be_used = $props->data_to_be_used ?? null;
