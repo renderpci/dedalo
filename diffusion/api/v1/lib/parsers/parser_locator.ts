@@ -231,7 +231,7 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	let   max_depth = 0;
 
 	for (const item of data) {
-		const parents_map = (item as any).parents;
+		const parents_map = (item as any).meta;
 		const val         = item.value;
 		const values      = Array.isArray(val) ? val : [val];
 
@@ -450,14 +450,14 @@ function filter_chain_by_term_id(chain: any[], options: parser_options): any[] {
 }
 
 /**
- * Helper: iterate all chain entries in parents_map and apply a transform function.
- * Returns a new data array with modified parents_map.
+ * Helper: iterate all chain entries in meta(with the parents data) map and apply a transform function.
+ * Returns a new data array with modified meta map.
  */
 function map_chains(data: data_item[], transform: (chain: any[]) => any[]): data_item[] {
 
 	return data.map(item => {
 
-		const parents_map = (item as any).parents;
+		const parents_map = (item as any).meta;
 		if (!parents_map) return item;
 
 		const new_map: Record<string, any[]> = {};
@@ -469,7 +469,7 @@ function map_chains(data: data_item[], transform: (chain: any[]) => any[]): data
 			}
 		}
 
-		return { ...item, parents: new_map };
+		return { ...item, meta: new_map };
 	});
 }
 
