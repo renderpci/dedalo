@@ -320,6 +320,8 @@ ts_object.prototype.init = async function(options) {
 	self.permissions_indexation	= options.permissions_indexation
 	// string area_model. Model of current thesaurus/ontology area
 	self.area_model = options.area_model
+	// int order. Order value from ts data
+	self.order = options.order ?? null
 
 	// virtual order
 	self.virtual_order = options.virtual_order || null
@@ -1752,12 +1754,23 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 		const key = key_instances_builder(data_item); // normalized id of the instance
 		const found_instance = get_instance_by_id(key); // Look in all Dédalo instances Map
+
+		// callers (needed in both cache-hit and new-instance paths)
+		const root_caller	= self.caller // area_thesaurus
+		const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
+
 		if (found_instance) {
 
-			// Instance already exists
+			// Instance already exists — refresh mutable (non-key) props
 			if(SHOW_DEBUG===true) {
 				console.log('==== Matched already existing instance. found_instance:', key, found_instance);
 			}
+			found_instance.caller		= caller
+			found_instance.linker		= self.linker
+			found_instance.area_model	= root_caller.model
+			found_instance.is_ontology	= (root_caller.model === 'area_ontology')
+			found_instance.mode			= 'search'
+			found_instance.data			= data_item
 
 			// Add to map
 			const map_id = `${found_instance.section_tipo}_${found_instance.section_id}`
@@ -1765,34 +1778,29 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 		}else{
 
-			// New instance creation
+			// New instance — pass all props (key-parts + non-key) in a single call
 			const new_instance = await ts_object.get_instance({
-				// key_parts only
+				// key_parts
 				section_tipo		: data_item.section_tipo,
 				section_id			: data_item.section_id,
 				children_tipo		: data_item.children_tipo,
 				target_section_tipo	: null,
-				thesaurus_mode		: self.thesaurus_mode
-			});
+				thesaurus_mode		: self.thesaurus_mode,
+				ts_parent			: data_item.ts_parent,
+				// non-key props
+				caller				: caller,
+				linker				: self.linker,
+				is_root_node		: data_item.ts_parent === 'root',
+				ts_id				: data_item.ts_id,
+				order				: data_item.order,
+				area_model			: root_caller.model,
+				is_ontology			: root_caller.model === 'area_ontology',
+				mode				: 'search', // hide some elements like 'order'
+				data				: data_item  // inject row as data itself
+			})
 			if(SHOW_DEBUG===true) {
 				console.log('++++ Created new instance. new_instance:', key, new_instance);
 			}
-
-			// callers
-			const root_caller	= self.caller // area_thesaurus
-			const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
-
-			// set new properties (overwrites possible cached properties)
-			new_instance.caller			= caller
-			new_instance.linker			= self.linker // usually a portal component instance
-			new_instance.is_root_node	= data_item.ts_parent === 'root'
-			new_instance.ts_id			= data_item.ts_id
-			new_instance.ts_parent		= data_item.ts_parent
-			new_instance.order			= data_item.order
-			new_instance.area_model		= root_caller.model
-			new_instance.is_ontology	= (root_caller.model === 'area_ontology')
-			new_instance.mode			= 'search' // hide some elements like 'order'
-			new_instance.data			= data_item // inject row as data itself
 
 			// Build the instance without load from API (data is already injected)
 			await new_instance.build(false)
@@ -1857,30 +1865,52 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 	// Open all parents to render and display they children.
 	// Ensure that all rendering children are complete before highlighting the nodes.
-	await Promise.all(
-		Array.from(instances_to_open.values()).map(async (parent_instance) => {
-			if(SHOW_DEBUG===true) {
-				console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
+	// IMPORTANT: instances must be opened top-down (ancestors first) so that each
+	// parent's render_child() updates children_container on its children BEFORE
+	// those children's own render_children() reads self.children_container.
+	// Processing concurrently (Promise.all) creates a race condition where a child
+	// instance reads its stale (Phase-1 detached) children_container.
+	const sorted_instances_to_open = Array.from(instances_to_open.values()).sort((a, b) => {
+		// Ancestors have ts_parent closer to 'root'; sort by depth (shallow first)
+		const depth = (instance) => {
+			let d = 0
+			let current = instance
+			while (current.ts_parent && current.ts_parent !== 'root') {
+				current = search_instances_map.get(current.ts_parent) || instances_to_open.get(current.ts_parent)
+				if (!current) break
+				d++
 			}
+			return d
+		}
+		return depth(a) - depth(b)
+	})
 
-			// Render and add children nodes into self.children_container or parent_nd_container
-			await parent_instance.render_children({
-				clean_children_container	: true,
-				children_data				: parent_instance.children_data
-			})
+	for (const parent_instance of sorted_instances_to_open) {
+		if(SHOW_DEBUG===true) {
+			console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
+		}
 
-			// Update styles. Note that unsync (requestAnimationFrame) is used.
-			// This allows the children render to be completed before apply the styles.
-			requestAnimationFrame(() => {
-				// show children container
-				parent_instance.children_container.classList.remove('hide')
-				// set arrow down
-				parent_instance.link_children_element.classList.add('open')
-				// set is_open flag to sync with toggle logic
-				parent_instance.is_open = true
-			})
+		// Render and add children nodes into self.children_container or parent_nd_container
+		await parent_instance.render_children({
+			clean_children_container	: true,
+			children_data				: parent_instance.children_data
 		})
-	);
+
+		// Update styles. Note that unsync (requestAnimationFrame) is used.
+		// This allows the children render to be completed before apply the styles.
+		requestAnimationFrame(() => {
+			// show children container
+			if (parent_instance.children_container) {
+				parent_instance.children_container.classList.remove('hide')
+			}
+			// set arrow open (link_children_element may be null when has_descriptor_children was false at render time)
+			if (parent_instance.link_children_element) {
+				parent_instance.link_children_element.classList.add('open')
+			}
+			// set is_open flag to sync with toggle logic
+			parent_instance.is_open = true
+		})
+	}
 	// Clear Maps when done
 	instances_to_open.clear();
 
@@ -1893,7 +1923,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		instances_to_hilite.forEach(instance => {
 			if (instance.term_node) {
 				if(SHOW_DEBUG===true) {
-					console.log('Hiliting instance:',instance.ts_id, instance);
+					console.log('Hiliting instance:', instance.ts_id, instance);
 				}
 				requestAnimationFrame(() => {
 					instance.hilite_element(instance.term_node, false)

@@ -304,17 +304,17 @@ export const render_child = async function(self, child_data, virtual_order) {
 		children_tipo			: child_data.children_tipo,
 		target_section_tipo		: null,
 		thesaurus_mode			: self.thesaurus_mode,
+		ts_parent				: self.section_tipo + '_' + self.section_id,
 		// Others
 		caller					: self,
 		linker					: self.linker, // usually a portal component instance
-		thesaurus_view_mode		: self.hesaurus_view_mode,
+		thesaurus_view_mode		: self.thesaurus_view_mode,
 		is_root_node			: false,
 		is_ontology				: self.is_ontology,
 		virtual_order			: virtual_order,
 		has_descriptor_children	: child_data.has_descriptor_children,
 		area_model				: self.area_model,
 		ts_id					: child_data.section_tipo + '_' + child_data.section_id,
-		ts_parent				: self.section_tipo + '_' + self.section_id,
 		data					: child_data // inject data to prevent calculate it again on build
 	})
 
