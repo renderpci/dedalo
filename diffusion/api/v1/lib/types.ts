@@ -119,7 +119,7 @@ export interface entry_value {
 	lang:        string | null;
 	value:       unknown;
 	id:          string | null;
-	parents?:    any[];
+	meta?:       any;
 	section_id?:   string | number | null;
 	section_tipo?: string | null;
 }
@@ -130,7 +130,7 @@ export interface data_item {
 	value: any;
 	tipo?: string;
 	lang?: string | null;
-	parents?: any;
+	meta?: any;
 	section_id?:   string | number | null;
 	section_tipo?: string | null;
 }
