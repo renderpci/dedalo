@@ -1796,6 +1796,10 @@ const render_order_form = function(options) {
 	// Prevent the event from bubbling up (e.g. to the tree view click)
 	const keydown_handler = (e) => {
 		e.stopPropagation()
+		// Blur on Escape key to cancel the edit
+		if (e.key === 'Escape') {
+			input.blur()
+		}
 	}
 	input.addEventListener('keydown', keydown_handler);
 
