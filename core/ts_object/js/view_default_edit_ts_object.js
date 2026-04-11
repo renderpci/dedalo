@@ -1792,8 +1792,7 @@ const render_order_form = function(options) {
 	input.classList.add('id_column_link','input_order')
 	input.value = old_value
 
-	// keydown event
-	// Prevent the event from bubbling up (e.g. to the tree view click)
+	// keydown event - prevent the event from bubbling up (e.g. to the tree view click)
 	const keydown_handler = (e) => {
 		e.stopPropagation()
 		// Blur on Escape key to cancel the edit
@@ -1803,7 +1802,7 @@ const render_order_form = function(options) {
 	}
 	input.addEventListener('keydown', keydown_handler);
 
-	// Async change handler – called when the user presses Enter
+	// change handler – called when the user presses Enter
 	const change_handler = async () => {
 
 		const wrapper = self.node

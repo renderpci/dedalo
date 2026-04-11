@@ -69,7 +69,7 @@ class component_relation_parent extends component_relation_common {
 				);
 				$locator->type = $this->default_relation_type;
 			}
-		
+
 		// Set order for new parent
 			$this->set_child_order($locator->section_tipo, (int)$locator->section_id);
 
@@ -498,7 +498,7 @@ class component_relation_parent extends component_relation_common {
 	*/
 	protected function get_order_dataframe() : ?component_number {
 		$section_map = section::get_section_map($this->section_tipo);
-		
+
 		$order_tipo = $section_map->thesaurus->order ?? null;
 		if (empty($order_tipo)) {
 			return null;
@@ -584,7 +584,7 @@ class component_relation_parent extends component_relation_common {
 			$parent_section_tipo,
 			$parent_section_id
 		);
-		
+
 		if($remove_result===true){
 			return $order_component->save();
 		}
@@ -607,7 +607,7 @@ class component_relation_parent extends component_relation_common {
 			$parent_section_tipo,
 			'descriptor'
 		);
-		
+
 		return count($children) + 1;
 	}//end get_next_order_in_context
 
