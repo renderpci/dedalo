@@ -723,10 +723,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 			// fixed id for search presets
 			entry.id = 1
-			
+
 			return entry
 		})
-		
+
 		// value is into the data.entries array
 		return parsed_entries;
 	}
