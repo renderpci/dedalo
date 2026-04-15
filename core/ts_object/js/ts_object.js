@@ -1464,6 +1464,15 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 						// change the value of the current DOM element
 						self.term_text.textContent = value
 
+						// Update ts_object instance
+						const ar_elements = (self.data?.ar_elements && Array.isArray(self.data.ar_elements))
+							? self.data.ar_elements
+							: [];
+						const term = ar_elements.find(el => el && el.type === 'term');
+						if (term && 'value' in term) {
+							term.value = value;
+						}
+
 						dd_request_idle_callback(
 							() => {
 								// destroy
