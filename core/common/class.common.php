@@ -2192,7 +2192,7 @@ abstract class common {
 							case ($model==='dd_grid' && $section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO):
 
 								// tm case
-								$tm_record = tm_record::get_instance($section_id);
+								$tm_record = tm_record::get_instance((int)$section_id);
 
 								$tm_data = $tm_record->get_data();
 								$component_tipo = $tm_data->tipo;

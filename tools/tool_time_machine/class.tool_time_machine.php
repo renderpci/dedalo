@@ -41,7 +41,7 @@ class tool_time_machine extends tool_common {
 			$caller_dataframe	= $options->caller_dataframe;
 
 		// data. extract data from matrix_time_machine table
-			$tm_record	= tm_record::get_instance( $matrix_id );
+			$tm_record	= tm_record::get_instance( (int)$matrix_id );
 
 		// get time machine data with the matrix_id
 		// if the component has a dataframe the data will has both data: main data and dataframe data.

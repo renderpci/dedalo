@@ -615,7 +615,7 @@ class section_record {
 				unset($tm_record);
 
 				// get the saved tm data and compare it with the new data. If they are equal, then save them to time machine else throw an error message;
-				$test_tm_record = tm_record::get_instance($id);
+				$test_tm_record = tm_record::get_instance((int)$id);
 				$saved_tm_data = $test_tm_record->get_data();
 
 				// JSON encode and decode to compare objects
