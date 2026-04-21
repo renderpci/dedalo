@@ -1132,7 +1132,7 @@ final class dd_utils_api {
 
 		// short vars
 			$file_names	= is_array($options->file_name) ? $options->file_name : [$options->file_name];
-			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
+			$key_dir	= sanitize_key_dir($options->key_dir ?? ''); // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// dir
 			$user_id	= logged_user_id();
