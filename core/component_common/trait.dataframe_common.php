@@ -3,7 +3,7 @@
  * TRAIT DATAFRAME_COMMON
  * Provides generic dataframe functionality for components.
  * Allows linking to another component in the same section for extended data.
- * 
+ *
  * Usage:
  * - Component declares 'dataframe' property in ontology with component_tipo
  * - This trait provides methods to manage data with context properties
@@ -41,7 +41,7 @@ trait dataframe_common {
 	public function get_dataframe_tipo() : ?string {
 		$ontology_node = ontology_node::get_instance($this->tipo);
 		$properties = $ontology_node->get_properties();
-		
+
 		// Handle cases where properties, dataframe, or component_tipo return false
 		if (!$properties instanceof stdClass) {
 			return null;
@@ -52,14 +52,14 @@ trait dataframe_common {
 		if (!isset($properties->dataframe->component_tipo)) {
 			return null;
 		}
-		
+
 		$value = $properties->dataframe->component_tipo;
-		
+
 		// Ensure we return null for any falsy value (false, null, empty string)
 		if ($value === false || $value === null || $value === '') {
 			return null;
 		}
-		
+
 		return (string)$value;
 	}//end get_dataframe_tipo
 
@@ -74,9 +74,9 @@ trait dataframe_common {
 		if (empty($dataframe_tipo)) {
 			return null;
 		}
-		
+
 		$model = ontology_node::get_model_by_tipo($dataframe_tipo);
-		
+
 		return $model ?? null;
 	}//end get_dataframe_model
 
@@ -105,7 +105,7 @@ trait dataframe_common {
 		}
 
 		$filtered = array_values(array_filter($data, function($item) use ($section_tipo_key, $section_id_key) {
-			return isset($item->section_tipo_key) 
+			return isset($item->section_tipo_key)
 				&& $item->section_tipo_key === $section_tipo_key
 				&& isset($item->section_id_key)
 				&& (int)$item->section_id_key === (int)$section_id_key;
@@ -132,7 +132,7 @@ trait dataframe_common {
 			$new_item->section_id_key = $section_id_key;
 
 		$data[] = $new_item;
-		
+
 		return $this->set_data($data);
 	}//end add_value_with_context
 
@@ -146,10 +146,10 @@ trait dataframe_common {
 	 */
 	public function remove_by_context(string $section_tipo_key, int $section_id_key) : bool {
 		$data = $this->get_data() ?? [];
-		
+
 		$filtered = array_values(array_filter($data, function($item) use ($section_tipo_key, $section_id_key) {
 			return !(
-				isset($item->section_tipo_key) 
+				isset($item->section_tipo_key)
 				&& $item->section_tipo_key === $section_tipo_key
 				&& isset($item->section_id_key)
 				&& (int)$item->section_id_key === (int)$section_id_key
@@ -172,7 +172,7 @@ trait dataframe_common {
 		if (empty($context_data)) {
 			return null;
 		}
-		
+
 		return $context_data[0]->value ?? null;
 	}//end get_value_by_context
 
@@ -188,14 +188,14 @@ trait dataframe_common {
 	public function update_value_by_context($value, string $section_tipo_key, int $section_id_key) : bool {
 		$data = $this->get_data() ?? [];
 		$found = false;
-		
+
 		foreach ($data as $item) {
-			if (isset($item->section_tipo_key) 
+			if (isset($item->section_tipo_key)
 				&& $item->section_tipo_key === $section_tipo_key
 				&& isset($item->section_id_key)
 				&& (int)$item->section_id_key === (int)$section_id_key) {
-				$item->value = $value;
-				$found = true;
+					$item->value = $value;
+					$found = true;
 				break;
 			}
 		}

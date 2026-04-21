@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /** @var area_thesaurus $this */
 // JSON data controller
 

@@ -10,7 +10,8 @@
 		get_instance,
 		add_instance,
 		get_instance_by_id,
-		get_all_instances
+		get_all_instances,
+		get_instances_custom_map
 	} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -319,6 +320,8 @@ ts_object.prototype.init = async function(options) {
 	self.permissions_indexation	= options.permissions_indexation
 	// string area_model. Model of current thesaurus/ontology area
 	self.area_model = options.area_model
+	// int order. Order value from ts data
+	self.order = options.order ?? null
 
 	// virtual order
 	self.virtual_order = options.virtual_order || null
@@ -663,28 +666,32 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	// This ensures consistent ordering (1-based) for all descriptors and syncs
 	// the new order values to their corresponding instance objects.
 	const children_data_descriptors = (this.children_data.ar_children_data || []).filter(el => el.is_descriptor===true)
+
+	// Build a lookup Map of child instances for O(1) access
+	// Key: section_tipo + section_id + children_tipo (unique per child)
+	const children_map = get_instances_custom_map(instance => {
+		if (instance.model !== 'ts_object' ||
+			instance.ts_parent !== self.ts_id ||
+			instance.thesaurus_mode !== self.thesaurus_mode) {
+			return null // exclude non-relevant instances
+		}
+		return `${instance.section_tipo}_${instance.section_id}_${instance.children_tipo}`
+	})
+
 	children_data_descriptors.forEach((child, index) => {
 
 		// Create a new sequential order (1-based index)
 		const virtual_order = index + 1
 
-		// Build instance key to locate the corresponding ts_object instance
-		const key = key_instances_builder({
-			section_tipo 	: child.section_tipo,
-			section_id 		: child.section_id,
-			children_tipo 	: child.children_tipo,
-			thesaurus_mode 	: self.thesaurus_mode // expected: 'default'
-		});
+		// O(1) lookup using the pre-built Map
+		const map_key = `${child.section_tipo}_${child.section_id}_${child.children_tipo}`
+		const instance = children_map.get(map_key)
 
 		// Sync the new order to the instance (if found)
-		const instance = get_instance_by_id(key)
 		if (instance) {
 			instance.virtual_order = virtual_order
-		}else{
-			console.warn('Instance not found for key:', key);
 		}
 	})
-
 
 	return true
 }//end remove_children_item
@@ -1288,7 +1295,8 @@ ts_object.prototype.swap_parent = async function (options) {
 
 	// update moving instance caller.
 	// It is important to allow the term to be moved again without causing any inconsistencies.
-	moving_instance.caller = target_instance
+	moving_instance.caller		= target_instance
+	moving_instance.ts_parent	= target_instance.ts_id
 
 	// Move moving instance node from old parent to the new one (current dropped)
 	target_instance.children_container.appendChild( moving_instance.node );
@@ -1456,6 +1464,15 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 						const value = ar_values.map(el => el.value).join(' ')
 						// change the value of the current DOM element
 						self.term_text.textContent = value
+
+						// Update ts_object instance
+						const ar_elements = (self.data?.ar_elements && Array.isArray(self.data.ar_elements))
+							? self.data.ar_elements
+							: [];
+						const term = ar_elements.find(el => el && el.type === 'term');
+						if (term && 'value' in term) {
+							term.value = value;
+						}
 
 						dd_request_idle_callback(
 							() => {
@@ -1747,12 +1764,23 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 		const key = key_instances_builder(data_item); // normalized id of the instance
 		const found_instance = get_instance_by_id(key); // Look in all Dédalo instances Map
+
+		// callers (needed in both cache-hit and new-instance paths)
+		const root_caller	= self.caller // area_thesaurus
+		const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
+
 		if (found_instance) {
 
-			// Instance already exists
+			// Instance already exists — refresh mutable (non-key) props
 			if(SHOW_DEBUG===true) {
 				console.log('==== Matched already existing instance. found_instance:', key, found_instance);
 			}
+			found_instance.caller		= caller
+			found_instance.linker		= self.linker
+			found_instance.area_model	= root_caller.model
+			found_instance.is_ontology	= (root_caller.model === 'area_ontology')
+			found_instance.mode			= 'search'
+			found_instance.data			= data_item
 
 			// Add to map
 			const map_id = `${found_instance.section_tipo}_${found_instance.section_id}`
@@ -1760,34 +1788,29 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 		}else{
 
-			// New instance creation
+			// New instance — pass all props (key-parts + non-key) in a single call
 			const new_instance = await ts_object.get_instance({
-				// key_parts only
+				// key_parts
 				section_tipo		: data_item.section_tipo,
 				section_id			: data_item.section_id,
 				children_tipo		: data_item.children_tipo,
 				target_section_tipo	: null,
-				thesaurus_mode		: self.thesaurus_mode
-			});
+				thesaurus_mode		: self.thesaurus_mode,
+				ts_parent			: data_item.ts_parent,
+				// non-key props
+				caller				: caller,
+				linker				: self.linker,
+				is_root_node		: data_item.ts_parent === 'root',
+				ts_id				: data_item.ts_id,
+				order				: data_item.order,
+				area_model			: root_caller.model,
+				is_ontology			: root_caller.model === 'area_ontology',
+				mode				: 'search', // hide some elements like 'order'
+				data				: data_item  // inject row as data itself
+			})
 			if(SHOW_DEBUG===true) {
 				console.log('++++ Created new instance. new_instance:', key, new_instance);
 			}
-
-			// callers
-			const root_caller	= self.caller // area_thesaurus
-			const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
-
-			// set new properties (overwrites possible cached properties)
-			new_instance.caller			= caller
-			new_instance.linker			= self.linker // usually a portal component instance
-			new_instance.is_root_node	= data_item.ts_parent === 'root'
-			new_instance.ts_id			= data_item.ts_id
-			new_instance.ts_parent		= data_item.ts_parent
-			new_instance.order			= data_item.order
-			new_instance.area_model		= root_caller.model
-			new_instance.is_ontology	= (root_caller.model === 'area_ontology')
-			new_instance.mode			= 'search' // hide some elements like 'order'
-			new_instance.data			= data_item // inject row as data itself
 
 			// Build the instance without load from API (data is already injected)
 			await new_instance.build(false)
@@ -1852,30 +1875,52 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 
 	// Open all parents to render and display they children.
 	// Ensure that all rendering children are complete before highlighting the nodes.
-	await Promise.all(
-		Array.from(instances_to_open.values()).map(async (parent_instance) => {
-			if(SHOW_DEBUG===true) {
-				console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
+	// IMPORTANT: instances must be opened top-down (ancestors first) so that each
+	// parent's render_child() updates children_container on its children BEFORE
+	// those children's own render_children() reads self.children_container.
+	// Processing concurrently (Promise.all) creates a race condition where a child
+	// instance reads its stale (Phase-1 detached) children_container.
+	const sorted_instances_to_open = Array.from(instances_to_open.values()).sort((a, b) => {
+		// Ancestors have ts_parent closer to 'root'; sort by depth (shallow first)
+		const depth = (instance) => {
+			let d = 0
+			let current = instance
+			while (current.ts_parent && current.ts_parent !== 'root') {
+				current = search_instances_map.get(current.ts_parent) || instances_to_open.get(current.ts_parent)
+				if (!current) break
+				d++
 			}
+			return d
+		}
+		return depth(a) - depth(b)
+	})
 
-			// Render and add children nodes into self.children_container or parent_nd_container
-			await parent_instance.render_children({
-				clean_children_container	: true,
-				children_data				: parent_instance.children_data
-			})
+	for (const parent_instance of sorted_instances_to_open) {
+		if(SHOW_DEBUG===true) {
+			console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
+		}
 
-			// Update styles. Note that unsync (requestAnimationFrame) is used.
-			// This allows the children render to be completed before apply the styles.
-			requestAnimationFrame(() => {
-				// show children container
-				parent_instance.children_container.classList.remove('hide')
-				// set arrow down
-				parent_instance.link_children_element.classList.add('open')
-				// set is_open flag to sync with toggle logic
-				parent_instance.is_open = true
-			})
+		// Render and add children nodes into self.children_container or parent_nd_container
+		await parent_instance.render_children({
+			clean_children_container	: true,
+			children_data				: parent_instance.children_data
 		})
-	);
+
+		// Update styles. Note that unsync (requestAnimationFrame) is used.
+		// This allows the children render to be completed before apply the styles.
+		requestAnimationFrame(() => {
+			// show children container
+			if (parent_instance.children_container) {
+				parent_instance.children_container.classList.remove('hide')
+			}
+			// set arrow open (link_children_element may be null when has_descriptor_children was false at render time)
+			if (parent_instance.link_children_element) {
+				parent_instance.link_children_element.classList.add('open')
+			}
+			// set is_open flag to sync with toggle logic
+			parent_instance.is_open = true
+		})
+	}
 	// Clear Maps when done
 	instances_to_open.clear();
 
@@ -1888,7 +1933,7 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		instances_to_hilite.forEach(instance => {
 			if (instance.term_node) {
 				if(SHOW_DEBUG===true) {
-					console.log('Hiliting instance:',instance.ts_id, instance);
+					console.log('Hiliting instance:', instance.ts_id, instance);
 				}
 				requestAnimationFrame(() => {
 					instance.hilite_element(instance.term_node, false)
@@ -2054,178 +2099,107 @@ const scroll_to_node = (node_to_scroll) => {
 ts_object.prototype.save_order = async function( value ) {
 
 	const self = this
-
-	let new_value = parseInt( value )
-
+	const new_value = parseInt( value )
 	const old_value = parseInt( self.virtual_order )
 
-	// check is new_value is valid
-	if (isNaN(new_value) || new_value===old_value) {
-		if(SHOW_DEBUG===true) {
-			console.log("[ts_object.save_order] Value is not changed or invalid. ignored save_order action")
-		}
-		return Promise.resolve(false);
+	// 1. Validation: check if change is needed
+	if (isNaN(new_value) || new_value === old_value) {
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] Value unchanged or invalid. Ignoring save_order.");
+		return false
 	}
 
-	// short vars
-	// children nodes of type 'wrap_ts_object'
-	const child_nodes		= [...(self.caller?.children_container?.childNodes || [])].filter(el => el.classList.contains('wrap_ts_object'))
-	const child_nodes_len	= child_nodes.length
-
-	// new_value. Prevent set invalid values
-	if ( new_value > child_nodes_len ){
-		new_value = child_nodes_len // max value is array length
-	}else if ( new_value < 1 ) {
-		new_value = 1; // min value is 1
+	const parent_instance = self.caller
+	if (!parent_instance) {
+		console.error("[ts_object.save_order] Missing parent instance (caller)");
+		return false
 	}
 
-	// ar_locators. Iterate child_nodes elements
-	const ar_locators = []
-	for (let i = 0; i < child_nodes_len; i++) {
-		if (child_nodes[i].dataset.section_tipo && child_nodes[i].dataset.section_id) {
-			ar_locators.push({
-				section_tipo	: child_nodes[i].dataset.section_tipo,
-				section_id		: child_nodes[i].dataset.section_id
-			})
+	// 2. Sibling Discovery: Use parent's ar_children_data as the source of truth
+	// This ensures we have a complete and authoritative list of siblings.
+	const ar_children_data = parent_instance.children_data?.ar_children_data || []
+
+	// Find the current instance's index in the data array
+	const current_data_index = ar_children_data.findIndex(item =>
+		item.section_tipo === self.section_tipo && item.section_id === self.section_id
+	)
+
+	if (current_data_index === -1) {
+		console.error("[ts_object.save_order] Self not found in parent's children data. Aborting.", {
+			section_tipo : self.section_tipo,
+			section_id   : self.section_id
+		})
+		return false
+	}
+
+	// 3. Reordering Logic: Perform the move directly on the authoritative data array
+	const total_siblings = ar_children_data.length
+	const target_index   = Math.max(0, Math.min(new_value - 1, total_siblings - 1))
+
+	if (current_data_index === target_index) {
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] Target index matches current index. Ignoring action.");
+		return false
+	}
+
+	// Move the item in ar_children_data
+	const [moved_item] = ar_children_data.splice(current_data_index, 1)
+	ar_children_data.splice(target_index, 0, moved_item)
+
+	// Build locators for the API based on the final data order
+	const ar_locators = ar_children_data.map(item => ({
+		section_tipo : item.section_tipo,
+		section_id	 : item.section_id
+	}))
+
+	// 4. Runtime Synchronization: Update live instances virtual_order
+	// Identify all cached ts_object instances to update their order
+	const instances_pool = get_all_instances().filter(inst => inst.model === 'ts_object')
+
+	ar_locators.forEach((loc, i) => {
+		const found = instances_pool.find(inst =>
+			inst.section_tipo === loc.section_tipo && inst.section_id === loc.section_id
+		)
+		if (found) {
+			found.virtual_order = i + 1
+		}
+	})
+
+	// 5. Persistence: API Request
+	const rqo = {
+		dd_api			: 'dd_ts_api',
+		prevent_lock	: true,
+		action			: 'save_order',
+		source			: {
+			section_tipo		: self.section_tipo,
+			ar_locators			: ar_locators,
+			parent_section_tipo	: parent_instance.section_tipo,
+			parent_section_id	: parent_instance.section_id
 		}
 	}
 
-	// sort array with new keys
-		// function move_locator(ar_locators, from, to) {
-		// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
-		// };
+	try {
+		const api_response = await data_manager.request({ body : rqo })
 
-		// move_locator
-		function move_locator(array, pos1, pos2) {
-			// local variables
-			let i, tmp;
-			// cast input parameters to integers
-			pos1 = parseInt(pos1, 10);
-			pos2 = parseInt(pos2, 10);
-			// if positions are different and inside array
-			if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
-			  // save element from position 1
-			  tmp = array[pos1];
-			  // move element down and shift other elements up
-			  if (pos1 < pos2) {
-				for (i = pos1; i < pos2; i++) {
-				  array[i] = array[i + 1];
-				}
-			  }
-			  // move element up and shift other elements down
-			  else {
-				for (i = pos1; i > pos2; i--) {
-				  array[i] = array[i - 1];
-				}
-			  }
-			  // put element from position 1 to destination
-			  array[pos2] = tmp;
-			}
-			return array
-		}//end move_locator
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] api_response", api_response)
 
-	// order_ar_locators
-		const from	= parseInt(old_value)-1
-		const to	= parseInt(new_value)-1
-		move_locator(ar_locators, from, to)
-
-	// Update load instances and values before call API
-
-		// Update parent instance children data order
-
-		// current_ar_children_data from caller (parent instance)
-		const current_ar_children_data = self.caller?.children_data?.ar_children_data || []
-
-		// order_reference as [ts1_7,ts1_25]
-		const order_reference = ar_locators.map(el => el.section_tipo + '_' + el.section_id)
-
-		// order_children. New array with sorted children
-		const order_children = current_ar_children_data.sort((a, b) => {
-
-			const index_a = order_reference.indexOf(a.section_tipo + '_' + a.section_id);
-			const index_b = order_reference.indexOf(b.section_tipo + '_' + b.section_id);
-
-			// Place items not found in order_reference (index of -1) at the end.
-			if (index_a === -1 && index_b !== -1) return 1;
-			if (index_b === -1 && index_a !== -1) return -1;
-
-			// Otherwise, sort by the indices
-			return index_a - index_b;
-		});
-
-		// overwrite value
-		if (self.caller?.children_data) {
-			self.caller.children_data.ar_children_data = order_children
+		if (!api_response?.result) {
+			throw new Error(api_response?.msg || 'Error on save order response')
 		}
 
-		// Create a custom instances list with only ts_object instances
-		const ts_object_instances_list = get_all_instances().filter(el => {
-			if (el.model==='ts_object' && el.section_tipo && el.section_id) {
-				return el
-			}
-			return false
+		// Success notification
+		event_manager.publish('notification', {
+			msg			: api_response.msg || 'Order updated successfully',
+			type		: 'success',
+			remove_time	: 1200
 		})
 
-		const order_children_length = order_children.length
-		for (let i = 0; i < order_children_length; i++) {
-
-			const item = order_children[i]
-
-			const found = ts_object_instances_list.find(el =>
-				el.section_tipo===item.section_tipo && el.section_id==item.section_id
-			)
-			if (found) {
-				// Set the new position value
-				found.virtual_order = i + 1
-			}else{
-				console.error('Unable to find the instance for child:', item);
-			}
-		}
-
-	// API request to save_order in database
-		const rqo = {
-			dd_api			: 'dd_ts_api',
-			prevent_lock	: true,
-			action			: 'save_order',
-			source			: {
-				section_tipo		: self.section_tipo,
-				ar_locators			: ar_locators,
-				parent_section_tipo	: self.caller?.section_tipo,
-				parent_section_id	: self.caller?.section_id
-			}
-		}
-		// API request. Don't wait here
-		data_manager.request({
-			body : rqo
+	} catch (error) {
+		console.error('[ts_object.save_order] Persisting order failed:', error)
+		event_manager.publish('notification', {
+			msg			: `Failed to save new order: ${error.message}`,
+			type		: 'error',
+			remove_time	: 10000
 		})
-		.then(function(api_response){
-			// debug
-			if(SHOW_DEBUG===true) {
-				console.log("[ts_object.save_order] api_response", api_response)
-			}
-
-			// error handling
-			if (!api_response?.result) {
-				console.error('Error on save order. api_response:', api_response);
-				// bubbles notifications
-				const msg = SHOW_DEBUG
-					? 'Error on save order. ' + api_response?.msg || 'Unknown error'
-					: 'Error on save order.'
-				event_manager.publish('notification', {
-					msg			: msg,
-					type		: 'error',
-					remove_time	: 10000
-				})
-			}else{
-				// Bubbles notification
-				event_manager.publish('notification', {
-					msg			: api_response?.msg || 'OK',
-					type		: 'success',
-					remove_time	: 1200
-				})
-			}
-		})
-
+	}
 
 	return true
 }//end save_order

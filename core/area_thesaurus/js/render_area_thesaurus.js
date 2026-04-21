@@ -71,6 +71,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 								section_id				: item.section_id,
 								children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
 								thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+								ts_parent				: 'root',
 								// others
 								caller					: self,
 								linker					: self.linker, // usually a portal component instance
@@ -173,6 +174,7 @@ render_area_thesaurus.prototype.list = async function(options) {
 									section_id				: item.section_id,
 									children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
 									thesaurus_mode			: self.context?.thesaurus_mode || 'default',
+									ts_parent				: 'root',
 									// others
 									caller					: self,
 									linker					: self.linker,
@@ -442,6 +444,7 @@ export const render_root_term = function (options) {
 		section_id			: section_id,
 		children_tipo		: children_tipo,
 		thesaurus_mode		: self.context?.thesaurus_mode || null,
+		ts_parent			: 'root',
 		// others
 		thesaurus_view_mode	: thesaurus_view_mode,
 		caller				: self,

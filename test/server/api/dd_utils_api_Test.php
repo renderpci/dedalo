@@ -234,9 +234,10 @@ final class dd_utils_api_Test extends BaseTestCase {
 			'expected result type is boolean ' .gettype($response->result)
 		);
 
+		// db_data is array : $db_data_array = $db_result->fetch_all()
 		$this->assertTrue(
 			gettype($response->db_data)==='array',
-			'expected db_data type is object ' .gettype($response->db_data)
+			'expected db_data type is array ' .gettype($response->db_data)
 		);
 	}//end test_convert_search_object_to_sql_query
 

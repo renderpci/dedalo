@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /** @var component_date $this */
 // JSON data component controller
 

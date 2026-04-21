@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEBUG */
+/*global page_globals, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -55,8 +55,8 @@ export const get_editing_preset_json_filter = async function(self) {
 	// cache
 		if (self.component_json_data) {
 			// data already is fixed
-			const json_filter = self.component_json_data.value && self.component_json_data.value[0]
-				? self.component_json_data.value[0]
+			const json_filter = self.component_json_data.entries && self.component_json_data.entries[0]
+				? self.component_json_data.entries[0]
 				: null
 			return json_filter
 		}
@@ -120,7 +120,7 @@ export const get_editing_preset_json_filter = async function(self) {
 			use_worker	: true
 		})
 		// debug
-		if(SHOW_DEVELOPER===true) {
+		if(SHOW_DEBUG===true) {
 			console.log(`${self.model} [get_editing_preset_json_filter] api_response:`, api_response);
 		}
 
@@ -139,7 +139,7 @@ export const get_editing_preset_json_filter = async function(self) {
 					}
 				)
 				// debug
-				if(SHOW_DEVELOPER===true) {
+				if(SHOW_DEBUG===true) {
 					console.error('SERVER: page_globals.api_errors:', page_globals.api_errors);
 				}
 
@@ -178,7 +178,7 @@ export const get_editing_preset_json_filter = async function(self) {
 			tipo			: presets_component_json_tipo,
 			section_tipo	: temp_presets_section_tipo,
 			section_id		: section_id,
-			value			: [json_filter]
+			entries			: [json_filter]
 		}
 
 	return json_filter
@@ -204,7 +204,7 @@ export const load_user_search_presets = async function(self) {
 			section_tipo		: 'dd64',
 			from_component_tipo	: presets_component_public_value_tipo // 'dd640'
 		}
-		const fiter = {
+		const filter = {
 			"$and": [
 				{
 					q		: self.section_tipo,
@@ -247,7 +247,7 @@ export const load_user_search_presets = async function(self) {
 			section_tipo	: [{
 				tipo : presets_section_tipo // 'dd623'
 			}],
-			filter			: fiter,
+			filter			: filter,
 			limit			: 15,
 			offset			: 0
 		}
@@ -257,8 +257,8 @@ export const load_user_search_presets = async function(self) {
 			sqo			: sqo,
 			api_engine	: 'dedalo',
 			type		: 'main',
-			show	: {
-				ddo_map :[{
+			show 		: {
+				ddo_map : [{
 					tipo			: presets_component_name_value_tipo, // 'dd624',
 					section_tipo	: presets_section_tipo, // 'dd623',
 					parent			: presets_section_tipo // 'dd623'
@@ -306,7 +306,7 @@ export const edit_user_search_preset = async function(self, section_id) {
 			api_engine	: 'dedalo',
 			type		: 'main',
 			show		: {
-				ddo_map :[
+				ddo_map : [
 					{
 						tipo			: presets_component_name_value_tipo, // 'dd624',
 						section_tipo	: presets_section_tipo, // 'dd623'
@@ -423,114 +423,111 @@ export const load_search_preset = async function(options) {
 * @param string options.section_tipo - The section type for the preset (user or temp)
 * @return promise string|bool - The new section ID or false on error
 */
-export const create_new_search_preset = function(options) {
+export const create_new_search_preset = async function(options) {
 
 	// options
-		const self			= options.self
-		const section_tipo	= options.section_tipo // temp or user preset section
+	const self			= options.self
+	const section_tipo	= options.section_tipo // temp or user preset section
 
 	// short vars
-		const locator_user	= {
-			section_id		: '' + page_globals.user_id,
-			section_tipo	: 'dd128'
+	const locator_user	= {
+		section_id		: '' + page_globals.user_id,
+		section_tipo	: 'dd128'
+	}
+
+	// data_manager. create
+	const rqo = {
+		action	: 'create',
+		source	: {
+			section_tipo : section_tipo
 		}
-
-	return new Promise(async function(resolve){
-
-		// data_manager. create
-			const rqo = {
-				action	: 'create',
-				source	: {
-					section_tipo : section_tipo
-				}
-			}
-			const api_response = await data_manager.request({
-				body		: rqo,
-				use_worker	: true
-			})
-			if (api_response.result && api_response.result>0) {
-
-				const new_section_id = api_response.result
-
-				const save_promises = []
-
-				// save section_tipo value
-					save_promises.push(
-						(async () => {
-							const component_instance_section_tipo = await get_instance({
-								tipo			: presets_component_section_value_tipo, // 'dd642',
-								model			: 'component_input_text',
-								section_tipo	: section_tipo,
-								section_id		: new_section_id,
-								mode			: 'edit'
-							})
-							await component_instance_section_tipo.build(true)
-							const changed_data_section = [{
-								action	: 'insert',
-								id		: null,
-								value	: {value: self.section_tipo}
-							}]
-							await component_instance_section_tipo.save(changed_data_section)
-						})()
-					)
-
-				// save user value
-					save_promises.push(
-						(async () => {
-							const component_instance_user = await get_instance({
-								tipo			: presets_component_user_id_value_tipo, // 'dd654',
-								model			: 'component_select',
-								section_tipo	: section_tipo,
-								section_id		: new_section_id,
-								mode			: 'edit'
-							})
-							await component_instance_user.build(true)
-							const changed_data_user = [{
-								action	: 'insert',
-								id		: null,
-								value	: locator_user
-							}]
-							await component_instance_user.save(changed_data_user)
-						})()
-					)
-
-				// save current DOM filter
-					save_promises.push(
-						(async () => {
-							const component_instance_user = await get_instance({
-								tipo			: presets_component_json_tipo, // 'dd625',
-								model			: 'component_json',
-								section_tipo	: section_tipo,
-								section_id		: new_section_id,
-								mode			: 'edit'
-							})
-							await component_instance_user.build(true)
-
-							// parse current DOM filter for save it
-							const json_filter_parsed = self.parse_dom_to_json_filter({
-								save_arguments : true
-							})
-
-							const json_filter = json_filter_parsed.filter
-							if (json_filter) {
-								const changed_data_user = [{
-									action	: 'insert',
-									id		: null,
-									value	: json_filter
-								}]
-								await component_instance_user.save(changed_data_user)
-							}
-						})()
-					)
-
-				await Promise.all(save_promises)
-
-				resolve(new_section_id)
-			}else{
-				console.error('Error on create new preset section. api_response: ', api_response);
-				resolve(false)
-			}
+	}
+	const api_response = await data_manager.request({
+		body		: rqo,
+		use_worker	: true
 	})
+
+	if (!api_response.result || api_response.result <= 0) {
+		console.error('Error on create new preset section. api_response:', api_response);
+		return false
+	}
+
+	const new_section_id = api_response.result
+
+	const save_promises = []
+
+	// save section_tipo value
+	save_promises.push(
+		(async () => {
+			const component_instance_section_tipo = await get_instance({
+				tipo			: presets_component_section_value_tipo, // 'dd642',
+				model			: 'component_input_text',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_section_tipo.build(true)
+			const changed_data_section = [{
+				action	: 'insert',
+				id		: null,
+				value	: {value: self.section_tipo}
+			}]
+			await component_instance_section_tipo.save(changed_data_section)
+		})()
+	)
+
+	// save user value
+	save_promises.push(
+		(async () => {
+			const component_instance_user = await get_instance({
+				tipo			: presets_component_user_id_value_tipo, // 'dd654',
+				model			: 'component_select',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_user.build(true)
+			const changed_data_user = [{
+				action	: 'insert',
+				id		: null,
+				value	: locator_user
+			}]
+			await component_instance_user.save(changed_data_user)
+		})()
+	)
+
+	// save current DOM filter
+	save_promises.push(
+		(async () => {
+			const component_instance_json = await get_instance({
+				tipo			: presets_component_json_tipo, // 'dd625',
+				model			: 'component_json',
+				section_tipo	: section_tipo,
+				section_id		: new_section_id,
+				mode			: 'edit'
+			})
+			await component_instance_json.build(true)
+
+			// parse current DOM filter for save it
+			const json_filter_parsed = self.parse_dom_to_json_filter({
+				save_arguments : true
+			})
+
+			const json_filter = json_filter_parsed.filter
+			if (json_filter) {
+				const changed_data_json = [{
+					action	: 'insert',
+					id		: null,
+					value	: json_filter
+				}]
+				await component_instance_json.save(changed_data_json)
+			}
+		})()
+	)
+
+	await Promise.all(save_promises)
+
+	return new_section_id
 }//end create_new_search_preset
 
 
@@ -547,58 +544,68 @@ export const create_new_search_preset = function(options) {
 export const save_preset = async function(options) {
 
 	// options
-		const self			= options.self
-		const section_tipo	= options.section_tipo
-		const section_id	= options.section_id
+	const self			= options.self
+	const section_tipo	= options.section_tipo
+	const section_id	= options.section_id
 
-		if (!section_tipo || !section_id) {
-			console.error('Invalid section_tipo or section_id:', section_tipo, section_id );
-			return
-		}
+	// Verify vars
+	if (!section_tipo || !section_id) {
+		console.error('Invalid section_tipo or section_id:', section_tipo, section_id);
+		return false
+	}
+
 	// filter value
-		const filter_obj = await self.parse_dom_to_json_filter({}).filter
-		filter_obj.id = 1
-	return new Promise(async function(resolve){
+	const parsed = self.parse_dom_to_json_filter({})
+	const filter_obj = parsed.filter
 
-		// rqo. save
-			const rqo = {
-				action	: 'save',
-				source	: {
-					tipo			: presets_component_json_tipo,
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					lang			: page_globals.dedalo_data_nolan,
-					type			: 'component'
-				},
-				data	: {
-					changed_data : [
-						{
-							action	: 'update',
-							id		: 1,
-							value	: { value : filter_obj }
-						}
-					]
+	// Validate filter_obj
+	if (!filter_obj) {
+		console.error('Invalid filter_obj from parse_dom_to_json_filter');
+		return false
+	}
+
+	// rqo. save
+	const rqo = {
+		action	: 'save',
+		source	: {
+			tipo			: presets_component_json_tipo,
+			section_tipo	: section_tipo,
+			section_id		: section_id,
+			lang			: page_globals.dedalo_data_nolan,
+			type			: 'component'
+		},
+		data	: {
+			changed_data : [
+				{
+					action	: 'update',
+					id		: 1,
+					value	: { value : filter_obj }
 				}
-			}
+			]
+		}
+	}
 
-		// API request
-			const api_response = await data_manager.request({
-				body		: rqo,
-				use_worker	: true
-			})
-
-		// error check
-			if (!api_response.result) {
-				console.error(`Error on create save preset section (${section_tipo} - ${section_id}). api_response: `, api_response);
-			}
-
-		// Update cache with the new filter
-		// Used when user back from a tool and open the search
-		// if the cache is not refresh the data search changes will be accumulated into the components
-			self.component_json_data.value = [filter_obj]
-
-		resolve(api_response)
+	// API request
+	const api_response = await data_manager.request({
+		body		: rqo,
+		use_worker	: true
 	})
+
+	// error check
+	if (!api_response.result) {
+		console.error(`Error on save preset (${section_tipo} - ${section_id}). api_response:`, api_response);
+		return false
+	}
+
+	// Update cache with the new filter
+	// Used when user back from a tool and open the search
+	// if the cache is not refresh the data search changes will be accumulated into the components
+	if (self.component_json_data) {
+		self.component_json_data.entries = [filter_obj]
+	}
+
+
+	return api_response
 }//end save_preset
 
 

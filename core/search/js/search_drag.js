@@ -22,8 +22,8 @@
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
 
-		return true
-	}//end ondrag_start
+		return true;
+	}//end on_dragstart
 
 
 	/**
@@ -36,6 +36,7 @@
 		event.preventDefault();
 		event.stopPropagation();
 
+		return false;
 	}//end on_dragover
 
 
@@ -44,10 +45,11 @@
 	* ON_DRAGLEAVE
 	* Handles the dragleave event.
 	* @param HTMLElement obj - The element being left
-	* @param DragEvent event - The drag event
+	* @return bool
 	*/
-	export const on_dragleave = function(obj, event) {
+	export const on_dragleave = function(obj) {
 
+		return false;
 	}//end on_dragleave
 
 
@@ -60,10 +62,10 @@
 	* @return bool
 	*/
 	export const on_drop = function(obj, event) {
-		event.preventDefault() // Necessary. Allows us to drop.
-		event.stopPropagation()
+		event.preventDefault(); // Necessary. Allows us to drop.
+		event.stopPropagation();
 
-		const self = this
+		const self = this // reference to 'search' (non instance)
 
 		const data 		  = event.dataTransfer.getData('text/plain') // element thats move
 		const wrap_target = obj // element on user leaves source wrap
@@ -84,10 +86,9 @@
 		.then(()=>{
 			// Update the state and save
 			self.update_state({state : 'changed'})
-
 		});
 
-		return true
+		return true;
 	}//end on_drop
 
 

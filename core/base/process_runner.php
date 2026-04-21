@@ -23,8 +23,10 @@
 		ini_set('error_log', $error_log_path);
 	}
 
-// server environment. Restore from command arguments
-	$_SERVER = $data['server'];
+// server environment. Restore from command arguments (merge to avoid wiping useful values)
+	if (!empty($data['server']) && is_array($data['server'])) {
+		$_SERVER = array_merge($_SERVER, $data['server']);
+	}
 
 // user_id
 	$user_id = (int)$data['user_id'];
@@ -43,51 +45,86 @@
 	session_write_close();
 
 // only logged users can access SSE events
-	if(login::is_logged()!==true) {
+	if (login::is_logged()!==true) {
 		die('Authentication error: please login');
 	}
 
-// safe_data. data check
+// safe_data. data check (sanitize strings recursively, preserve arrays/objects)
 	$safe_data = [];
+	$sanitize = null;
+	$sanitize = function ($value) use (&$sanitize) {
+		if (is_string($value)) {
+			return safe_xss($value);
+		}
+		if (is_array($value)) {
+			$res = [];
+			foreach ($value as $k => $v) {
+				$res[$k] = $sanitize($v);
+			}
+			return $res;
+		}
+		if (is_object($value)) {
+			$res = new stdClass();
+			foreach ((array)$value as $k => $v) {
+				$res->$k = $sanitize($v);
+			}
+			return $res;
+		}
+		return $value;
+	};
+
 	foreach ($data as $key => $value) {
-		$safe_value = safe_xss($value);
-		if ($safe_value!==$value) {
-			die("Invalid value [$key]: ". to_string($value));
+		$safe_value = $sanitize($value);
+		if (is_string($value) && $safe_value !== $value) {
+			die("Invalid value [$key]: " . to_string($value));
 		}
 		$safe_data[$key] = $safe_value;
 	}
 
 // output manager
 	// class_name
-	$output_class_name		= $safe_data['class_name'];
+	$output_class_name		= $safe_data['class_name'] ?? null;
 	// method_name
-	$output_method_name		= $safe_data['method_name'];
+	$output_method_name		= $safe_data['method_name'] ?? null;
 	// params
 	$output_params			= $safe_data['params'] ?? new stdClass();
 
-	// include class file
-	if (isset($safe_data['file'])) {
+	if (empty($output_class_name) || !is_string($output_class_name)) {
+		die('Invalid class_name');
+	}
+	if (empty($output_method_name) || !is_string($output_method_name)) {
+		die('Invalid method_name');
+	}
+
+	// include class file (validate realpath and restrict to project tree)
+	if (!empty($safe_data['file'])) {
 		$allow_url_include = ini_get('allow_url_include');
-		if ($allow_url_include==='On' || $allow_url_include==true) {
+		if ($allow_url_include === 'On' || $allow_url_include == true) {
 			die('Invalid server config. Remote files are not allowed');
 		}
-		// file_exists get false for remote files. It is used here for security reasons too
-		if (!file_exists($safe_data['file'])) {
+		$requested = $safe_data['file'];
+		$real_requested = realpath($requested);
+		$base_dir = realpath(dirname(__FILE__, 3));
+		if ($real_requested === false || strpos($real_requested, $base_dir) !== 0) {
 			debug_log(__METHOD__
 				. " Request file for include is not valid " . PHP_EOL
-				. ' file: ' . to_string($safe_data['file'])
+				. ' file: ' . to_string($requested)
 				, logger::ERROR
 			);
 			die('Invalid file');
 		}
-		include_once($safe_data['file']);
+		include_once $real_requested;
 	}
 
 	// check callable
-	// if (!is_callable($output_class_name::$output_method_name)) {
-	// 	debug_log(__METHOD__." Error. Method it's not callable ".to_string($output_class_name .':'.$output_method_name), logger::ERROR);
-	// 	return null;
-	// }
+	if (!class_exists($output_class_name)) {
+		debug_log(__METHOD__ . " Error. Class not found: " . $output_class_name, logger::ERROR);
+		die('Invalid class');
+	}
+	if (!is_callable([$output_class_name, $output_method_name])) {
+		debug_log(__METHOD__ . " Error. Method is not callable: " . $output_class_name . ':' . $output_method_name, logger::ERROR);
+		die('Invalid method');
+	}
 
 	// exec output
 	$output_params	= (object)json_decode( json_encode($output_params) );

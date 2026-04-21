@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /************************************************************************
 
     Dédalo : Intangible Cultural Heritage Management Platform
