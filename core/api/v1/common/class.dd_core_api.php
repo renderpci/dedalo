@@ -731,6 +731,23 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// check permissions using sqo->section_tipo
+			$ar_section_tipo = $rqo->sqo->section_tipo ?? [$rqo->options->section_tipo];
+			foreach ($ar_section_tipo as $curr_section_tipo) {
+				$section = section::get_instance($curr_section_tipo);
+				if (!$section) {
+					$response->msg = 'API Error: Invalid section or insufficient permissions to evaluate';
+					$response->errors[] = 'invalid_section';
+					return $response;
+				}
+				$permissions = $section->get_section_permissions($curr_section_tipo, $curr_section_tipo);
+				if ($permissions < 1) { // 1 = read, 2 = write, 3 = admin
+					$response->msg = "API Error: Insufficient permissions to read section {$curr_section_tipo}";
+					$response->errors[] = 'permissions_denied';
+					return $response;
+				}
+			}
+
 		// options
 			$sqo			= $rqo->sqo ?? null;
 			$options		= $rqo->options ?? null;
