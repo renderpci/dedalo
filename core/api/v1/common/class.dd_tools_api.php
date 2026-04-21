@@ -131,7 +131,7 @@ final class dd_tools_api {
 				}
 				return $response;
 			}
-			require $class_file;
+			require_once $class_file;
 
 		// method (static)
 			if (!method_exists($tool_name, $tool_method)) {
