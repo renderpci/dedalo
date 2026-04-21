@@ -166,7 +166,7 @@ const get_content_value = (i, datalist_item, self) => {
 			// therefore, a new id will be generated on save.
 			const changed_data = [Object.freeze({
 				action	: 'update',
-				id		: entries[0].id,
+				id		: entries[0] ? entries[0].id : null,
 				value	: datalist_value
 			})]
 			self.change_value({
