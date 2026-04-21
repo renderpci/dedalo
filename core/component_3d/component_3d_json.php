@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /** @var component_3d $this */
 // JSON data component controller (this controls the context and the data, coming from the PHP class, that are sent to client -> JS object)
 

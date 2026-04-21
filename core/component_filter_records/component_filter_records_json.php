@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /** @var component_filter_records $this */
 // JSON data component controller
 

@@ -1,6 +1,4 @@
-<?php
-
-
+<?php declare(strict_types=1);
 // config dedalo
 require dirname(__FILE__, 5).'/config/config.php';
 
