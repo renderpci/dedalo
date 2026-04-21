@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_media_common.php';
+include_once 'trait.search_component_media_common.php';
 /**
 * INTERFACE COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media

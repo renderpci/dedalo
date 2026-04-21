@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_iri.php';
+include_once 'trait.search_component_iri.php';
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
