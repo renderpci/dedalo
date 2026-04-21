@@ -805,7 +805,20 @@ final class dd_utils_api {
 
 				// move file to target path
 					$target_path	= $tmp_dir . '/' . $name;
-					$moved			= move_uploaded_file($file_tmp_name, $target_path);
+					// Handle move file.
+					// If we are in RoadRunner, we use moveTo() from PSR-7 object
+					if (isset($file_to_upload['psr7']) && $file_to_upload['psr7'] instanceof \Psr\Http\Message\UploadedFileInterface) {
+						try {
+							$file_to_upload['psr7']->moveTo($target_path);
+							$moved = true;
+						} catch (\Throwable $e) {
+							$moved = false;
+							debug_log(__METHOD__ . ' Error moving PSR-7 file: ' . $e->getMessage(), logger::ERROR);
+						}
+					} else {
+						// Native PHP upload
+						$moved = move_uploaded_file($file_tmp_name, $target_path);
+					}
 					// verify move file is successful
 					if ($moved !== true) {
 						$response->msg .= 'Error moving uploaded file.';
