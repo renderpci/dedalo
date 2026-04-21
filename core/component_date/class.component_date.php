@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_date.php';
-include 'trait.search_component_date_tm.php';
+include_once 'trait.search_component_date.php';
+include_once 'trait.search_component_date_tm.php';
 /**
 * CLASS COMPONENT DATE
 * data_column_name : 'date'

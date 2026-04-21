@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_section_id.php';
+include_once 'trait.search_component_section_id.php';
 /**
 * CLASS COMPONENT_SECTION_ID
 * @note This component is read only dont't save or set data,

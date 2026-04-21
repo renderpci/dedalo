@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_common.php';
-include 'trait.dataframe_common.php';
+include_once 'trait.search_component_common.php';
+include_once 'trait.dataframe_common.php';
 /**
 * COMPONENT_COMMON
 * Common methods of all components

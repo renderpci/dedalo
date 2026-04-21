@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_relation_index.php';
+include_once 'trait.search_component_relation_index.php';
 /**
 * CLASS COMPONENT_RELATION_INDEX
 *

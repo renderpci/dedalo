@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_relation_common.php';
-include 'trait.search_component_relation_common_tm.php';
+include_once 'trait.search_component_relation_common.php';
+include_once 'trait.search_component_relation_common_tm.php';
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component data
