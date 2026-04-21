@@ -720,11 +720,13 @@ final class dd_utils_api {
 
 			// CHECKING
 				$known_mime_types = self::get_known_mime_types();
-				// Check MIME type
+				// Check MIME type and find matching entry
 					$mime_is_known = false;
+					$matched_mime_entry = null;
 					foreach ($known_mime_types as $current_mime) {
 						if ($current_mime['mime']===$file_mime) {
 							$mime_is_known = true;
+							$matched_mime_entry = $current_mime;
 							break;
 						}
 					}
@@ -742,7 +744,7 @@ final class dd_utils_api {
 						$response->msg .= $msg;
 						return $response;
 					}
-				// check extension
+				// check extension is in the whitelist at all
 					$extension_is_allowed = false;
 					foreach ($known_mime_types as $current_mime) {
 						if (in_array($extension, $current_mime['extension'])) {
@@ -757,6 +759,18 @@ final class dd_utils_api {
 							. ' extension from file_name: '. to_string($extension) .PHP_EOL
 							. ' file_name: '. to_string($file_name) .PHP_EOL
 							. ' file_to_upload: '. to_string($file_to_upload)
+							, logger::ERROR
+						);
+						return $response;
+					}
+				// cross-validate: extension must belong to the same MIME type entry as the detected MIME
+					if ($matched_mime_entry !== null && !in_array($extension, $matched_mime_entry['extension'])) {
+						$response->msg .= "Error. Extension '".$extension."' does not match MIME type '".$file_mime."'";
+						debug_log(__METHOD__
+							. ' '.$response->msg .PHP_EOL
+							. ' extension: '. to_string($extension) .PHP_EOL
+							. ' file_mime: '. to_string($file_mime) .PHP_EOL
+							. ' file_name: '. to_string($file_name)
 							, logger::ERROR
 						);
 						return $response;
