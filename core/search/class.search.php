@@ -240,6 +240,29 @@ class search {
 			metrics::$search_total_calls++;
 		}
 
+		// children recursive dedicated path
+		// We use a dedicated search instance to fetch all parent records first (limit 'all'),
+		// then we find their children and perform the final combined search.
+		// This avoids side effects on the current instance.
+		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
+			
+			// Create a dedicated search for all parents
+			$parents_sqo = clone $this->sqo;
+			$parents_sqo->children_recursive = false;
+			$parents_sqo->limit  = 'all';
+			$parents_sqo->offset = 0;
+			
+			$parents_search = search::get_instance($parents_sqo);
+			$parents_db_result = $parents_search->search();
+			
+			if (!$parents_db_result) {
+				return false;
+			}
+
+			// Process parents to find children and execute final combined search
+			return $this->search_children_recursive($parents_db_result->get_result());
+		}
+
 		// parse SQO. Converts JSON search_query_object to SQL query string
 		$sql_query = $this->parse_sql_query();
 
@@ -254,11 +277,10 @@ class search {
 		}
 
 		// children recursive
-		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			// Override result adding children.
-			$result	= $this->search_children_recursive( $result );
-		}
-
+		// Note: intercepted at the beginning of search() if sqo->children_recursive is true
+		// This block is left only for the case when search_children_recursive() is called directly (rarely)
+		// but since we intercepted it above, this should be redundant for normal search calls.
+		
 		// debug
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time,'ms');
@@ -311,21 +333,29 @@ class search {
 	* Creates a new SQO with all section_id of parents and children.
 	* Searches the combination and updates main SQO with the new SQO (with all
 	* parents and children) to be used for pagination.
-	* @param \PgSql\Result $main_result
+	* @param object $main_result (\PgSql\Result)
 	* @return db_result|false $result
 	*/
-	private function search_children_recursive( \PgSql\Result $main_result ) : db_result|false {
+	private function search_children_recursive( object $main_result ) : db_result|false {
 
 		$ar_row_children = [];
 		$ar_records = [];
 		while ( $row = pg_fetch_object($main_result) ) {
 
 			// row expected an object as {section_tipo: oh1, section_id: 2} (select previously changed on parse sqo)
+			// Note: when full_count is set, section_tipo may not be selected, so we fall back to main_section_tipo
 			$ar_records[] = $row;
 
+			$section_id = $row->section_id ?? null;
+			if ($section_id === null) {
+				continue; // Skip rows without section_id
+			}
+
+			$section_tipo = $row->section_tipo ?? $this->main_section_tipo;
+
 			$row_children = component_relation_children::get_children_recursive(
-				$row->section_id, // string section_id
-				$row->section_tipo, // string section_tipo
+				$section_id, // string|int section_id
+				$section_tipo, // string section_tipo
 				null // string|null component_tipo
 			);
 
@@ -334,6 +364,13 @@ class search {
 
 		// No children found case. Return the main search result wrapped in db_result.
 		if (empty($ar_row_children)) {
+			// Update total with parents count even if no children are found
+			$this->sqo->total = count($ar_records);
+
+			if (SHOW_DEBUG===true) {
+				debug_log(__METHOD__ . " No recursive children found. Parents count: " . count($ar_records), logger::DEBUG);
+			}
+
 			// Reset pointer to beginning since it was already iterated
 			pg_result_seek($main_result, 0);
 			return new db_result($main_result);
@@ -354,6 +391,10 @@ class search {
 		$this->sqo->total				= count($ar_rows_mix);
 		$this->sqo->children_recursive	= false;
 		$this->sqo->parsed				= true;
+
+		if (SHOW_DEBUG===true) {
+			debug_log(__METHOD__ . " Recursive children search completed. Total (parents+children): " . $this->sqo->total, logger::DEBUG);
+		}
 
 
 		return $result;
@@ -720,15 +761,8 @@ class search {
 		// pre_parse_sql_query if not already parsed
 		$parsed = $this->sqo->parsed ?? false;
 		if ($parsed!==true) {
-
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
-		}
-
-		// children_recursive case
-		if(isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			$this->sqo->limit	= 'all';
-			$this->sqo->offset	= 0;
 		}
 
 		$search_type = null;

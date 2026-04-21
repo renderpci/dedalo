@@ -145,9 +145,9 @@ class area_graph extends area_common {
 	/**
 	* GET_ACTIVE_NETWORKS_SECTIONS
 	* Search for all active networks sections
-	* @return db_result $db_result
+	* @return db_result|false $db_result
 	*/
-	public static function get_active_networks_sections() : db_result {
+	public static function get_active_networks_sections() : db_result|false {
 
 		$section_tipo	= 'nexus40'; // hierarchy1
 		$active_tipo	= 'nexus44'; // hierarchy4

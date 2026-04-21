@@ -314,50 +314,72 @@ class dd_diffusion_api {
 	 */
 	private static function build_main_hierarchy(string $diffusion_tipo): array {
 
-		$main = [];
-		$current_tipo = $diffusion_tipo;
+		$virtual_tree = diffusion_utils::get_virtual_diffusion_tree();
+		
+		$target_vnode = null;
+		foreach ($virtual_tree as $vnode) {
+			// Find the target node in the fully resolved virtual tree
+			if ($vnode->tipo === $diffusion_tipo) {
+				$target_vnode = $vnode;
+				break;
+			}
+		}
+
+		if (!$target_vnode) {
+			debug_log(__METHOD__ . " Could not find diffusion_tipo {$diffusion_tipo} in virtual tree.", logger::WARNING);
+			return [];
+		}
+
 		$hierarchy = [];
+		
+		// The vnode->parents array contains parents from immediate parent at index 0 up to domain at last index.
+		// Assemble full path tipos top-down: domain -> ... -> parent -> target
+		$path_tipos = [];
+		if (!empty($target_vnode->parents)) {
+			foreach (array_reverse($target_vnode->parents) as $p) {
+				$path_tipos[] = $p->tipo;
+			}
+		}
+		$path_tipos[] = $diffusion_tipo;
 
-		// Traverse up the hierarchy
-		while ($current_tipo) {
-			$node = ontology_node::get_instance($current_tipo);
-			if (!$node) break;
-
-			$model_tipo = $node->get_model_tipo();
-			$model_name = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG);
-			$term       = $node->get_term(DEDALO_STRUCTURE_LANG);
-			$parent     = $node->get_parent();
-			$properties = $node->get_properties();
+		// Now traverse downwards to build the exact main array objects expected by frontend
+		$parent_tipo = null;
+		foreach ($path_tipos as $tipo) {
+			
+			$resolved = diffusion_utils::resolve_node_with_alias($tipo);
+			
+			if ($resolved->is_alias) {
+				$model_name = $resolved->model;
+				$term       = $resolved->label;
+				$properties = $resolved->properties;
+			} else {
+				$node = ontology_node::get_instance($tipo);
+				$model_tipo = $node->get_model_tipo();
+				$model_name = ontology_node::get_term_by_tipo($model_tipo, DEDALO_STRUCTURE_LANG);
+				$term       = $node->get_term(DEDALO_STRUCTURE_LANG);
+				$properties = $node->get_properties();
+			}
 
 			$item = (object)[
-				'diffusion_tipo' => $current_tipo,
+				'diffusion_tipo' => $tipo,
 				'term'           => $term,
 				'model'          => $model_name
 			];
 
-			if ($parent) {
-				$item->parent = $parent;
+			if ($parent_tipo) {
+				$item->parent = $parent_tipo;
 			}
 
-			// Add properties for diffusion_element
-			if ($model_name === 'diffusion_element' && $properties) {
+			// Add properties for diffusion_element and diffusion_element_alias
+			if (($model_name === 'diffusion_element' || $model_name === 'diffusion_element_alias') && !empty($properties)) {
 				$item->properties = $properties;
 			}
 
 			$hierarchy[] = $item;
-
-			// Stop at diffusion_domain
-			if ($model_name === 'diffusion_domain') {
-				break;
-			}
-
-			$current_tipo = $parent;
+			$parent_tipo = $tipo; // Next node's parent is this node
 		}
 
-		// Reverse to get top-down order (domain -> group -> element -> database)
-		$main = array_reverse($hierarchy);
-
-		return $main;
+		return $hierarchy;
 	}
 
 

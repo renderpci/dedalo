@@ -103,6 +103,32 @@ final class dd_manager {
 				return $response;
 			}
 
+		// dd_api class whitelist check
+			$allowed_api_classes = [
+				'dd_core_api',
+				'dd_area_maintenance_api',
+				'dd_utils_api',
+				'dd_diffusion_api',
+				'dd_tools_api',
+				'dd_ts_api',
+				'dd_component_portal_api',
+				'dd_component_text_area_api',
+				'dd_component_av_api',
+				'dd_component_3d_api'
+			];
+			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
+			if (!in_array($dd_api_type, $allowed_api_classes, true)) {
+
+				debug_log(__METHOD__." Error. Invalid API class: $dd_api_type", logger::ERROR);
+
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error. Invalid API class: '.$dd_api_type;
+					$response->errors[]	= 'invalid_api_class';
+				return $response;
+			}
+			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
+
 		// logged check
 			$no_login_needed_actions = [
 				'start',
@@ -133,8 +159,6 @@ final class dd_manager {
 			}
 
 		// actions
-			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
-			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
 			if ( !method_exists($dd_api, $rqo->action) ) {
 				// error
 				$response = new stdClass();

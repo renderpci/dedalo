@@ -11,7 +11,7 @@
  *     → Client response (NDJSON stream with per-record progress)
  */
 
-import { call_dd_diffusion_api }      from './lib/php_client';
+import { call_dd_diffusion_api, check_auth } from './lib/php_client';
 import { check_bun_health, enrich_diffusion_info_with_readiness } from './lib/status';
 import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
@@ -829,6 +829,13 @@ const server = Bun.serve({
 					}
 				}
 				case 'get_process_status': {
+					const is_auth = await check_auth(cookie_header);
+					if (!is_auth) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					return handle_get_process_status(body as any);
 				}
 				case 'validate': {
@@ -840,10 +847,24 @@ const server = Bun.serve({
 					return Response.json(result);
 				}
 				case 'list_processes': {
+					const is_auth_list = await check_auth(cookie_header);
+					if (!is_auth_list) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const logs = get_all_processes();
 					return Response.json({ result: true, processes: logs });
 				}
 				case 'get_diffusion_status': {
+					const is_auth_status = await check_auth(cookie_header);
+					if (!is_auth_status) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const health = await check_bun_health(cookie_header ?? undefined);
 					return Response.json({ result: health.result, msg: health.msg, data: health });
 				}

@@ -244,8 +244,8 @@ class login extends common {
 					return $response;
 				}
 
-			// password match check
-				if( $password_encrypted!==$password_data ) {
+			// password match check (constant-time comparison to prevent timing attacks)
+				if( !hash_equals($password_encrypted, $password_data) ) {
 
 					#
 					# STOP : PASSWORD IS WRONG
@@ -405,7 +405,7 @@ class login extends common {
 				: null;
 
 		// IP validation
-			if (!empty(SAML_CONFIG['idp_ip'])) {
+			if (defined('SAML_CONFIG') && !empty(SAML_CONFIG['idp_ip'])) {
 				$client_ip = get_client_ip();
 				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";

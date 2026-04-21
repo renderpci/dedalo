@@ -11,6 +11,7 @@ import type { rqo, php_api_response } from './types';
 
 const DEDALO_API_URL = process.env.DEDALO_API_URL || 'http://localhost:8080/dedalo/core/api/v1/json/';
 const REQUEST_TIMEOUT_MS = 120_000; // 2 minutes per chunk call
+const AUTH_TIMEOUT_MS    = 5_000;   // 5 seconds for auth check calls
 
 
 
@@ -76,5 +77,55 @@ export async function call_dd_diffusion_api(
 			msg:    `Failed to call PHP diffusion_api: ${err_msg}`,
 			errors: [err_msg]
 		};
+	}
+}
+
+
+
+/**
+ * CHECK_AUTH
+ * Validates the user session by calling the PHP API.
+ * Uses the lightweight 'get_environment' action which returns auth state.
+ * Returns true if the user is authenticated, false otherwise.
+ *
+ * @param cookie_header  - Raw Cookie header from the browser request
+ * @returns Whether the user has a valid authenticated session
+ */
+export async function check_auth(cookie_header?: string | null): Promise<boolean> {
+
+	if (!cookie_header) {
+		return false;
+	}
+
+	try {
+		const controller = new AbortController();
+		const timeout_id = setTimeout(() => controller.abort(), AUTH_TIMEOUT_MS);
+
+		const response = await fetch(DEDALO_API_URL, {
+			method:  'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Cookie':       cookie_header,
+			},
+			body: JSON.stringify({
+				action: 'get_environment',
+				dd_api: 'dd_core_api',
+			}),
+			signal: controller.signal,
+		});
+
+		clearTimeout(timeout_id);
+
+		if (!response.ok) {
+			return false;
+		}
+
+		const data = await response.json() as any;
+
+		// get_environment returns login_data with is_logged state
+		return data?.result?.login_data?.is_logged === true;
+
+	} catch {
+		return false;
 	}
 }

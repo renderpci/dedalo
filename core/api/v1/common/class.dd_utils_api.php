@@ -578,7 +578,7 @@ final class dd_utils_api {
 		// options
 			$options		= $rqo->options;
 			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
-			$key_dir		= $options->key_dir; // string like 'tool_upload'
+			$key_dir		= sanitize_key_dir($options->key_dir ?? ''); // string like 'tool_upload'
 			$tipo			= $options->tipo ?? null;
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
@@ -720,11 +720,13 @@ final class dd_utils_api {
 
 			// CHECKING
 				$known_mime_types = self::get_known_mime_types();
-				// Check MIME type
+				// Check MIME type and find matching entry
 					$mime_is_known = false;
+					$matched_mime_entry = null;
 					foreach ($known_mime_types as $current_mime) {
 						if ($current_mime['mime']===$file_mime) {
 							$mime_is_known = true;
+							$matched_mime_entry = $current_mime;
 							break;
 						}
 					}
@@ -742,7 +744,7 @@ final class dd_utils_api {
 						$response->msg .= $msg;
 						return $response;
 					}
-				// check extension
+				// check extension is in the whitelist at all
 					$extension_is_allowed = false;
 					foreach ($known_mime_types as $current_mime) {
 						if (in_array($extension, $current_mime['extension'])) {
@@ -757,6 +759,18 @@ final class dd_utils_api {
 							. ' extension from file_name: '. to_string($extension) .PHP_EOL
 							. ' file_name: '. to_string($file_name) .PHP_EOL
 							. ' file_to_upload: '. to_string($file_to_upload)
+							, logger::ERROR
+						);
+						return $response;
+					}
+				// cross-validate: extension must belong to the same MIME type entry as the detected MIME
+					if ($matched_mime_entry !== null && !in_array($extension, $matched_mime_entry['extension'])) {
+						$response->msg .= "Error. Extension '".$extension."' does not match MIME type '".$file_mime."'";
+						debug_log(__METHOD__
+							. ' '.$response->msg .PHP_EOL
+							. ' extension: '. to_string($extension) .PHP_EOL
+							. ' file_mime: '. to_string($file_mime) .PHP_EOL
+							. ' file_name: '. to_string($file_name)
 							, logger::ERROR
 						);
 						return $response;
@@ -952,7 +966,7 @@ final class dd_utils_api {
 			$options		= $rqo->options;
 			$files_chunked	= $options->files_chunked;
 			$file_data		= $options->file_data;
-			$key_dir 		= $file_data->key_dir;
+			$key_dir 	= sanitize_key_dir($file_data->key_dir ?? '');
 
 		// response
 			$response = new stdClass();
@@ -1070,7 +1084,7 @@ final class dd_utils_api {
 			$response->msg 		= 'Error. Request failed';
 
 		// options
-			$key_dir = $rqo->options->key_dir ?? null;
+			$key_dir = sanitize_key_dir($rqo->options->key_dir ?? '');
 
 		// dir
 			$user_id = logged_user_id();
@@ -1131,7 +1145,7 @@ final class dd_utils_api {
 
 		// short vars
 			$file_names	= is_array($options->file_name) ? $options->file_name : [$options->file_name];
-			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
+			$key_dir	= sanitize_key_dir($options->key_dir ?? ''); // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// dir
 			$user_id	= logged_user_id();
@@ -1909,16 +1923,13 @@ final class dd_utils_api {
 			],
 			[
 				'mime'		=> 'text/html',
-				'extension'	=> ['html','htm','php']
+				'extension'	=> ['html','htm']
 			],
 			[
 				'mime'		=> 'text/css',
 				'extension'	=> ['css','csv']
 			],
-			[
-				'mime'		=> 'application/javascript',
-				'extension'	=> ['js']
-			],
+			// application/javascript removed: prevents script injection via uploaded .js files
 			[
 				'mime'		=> 'application/json',
 				'extension'	=> ['json']
@@ -1927,10 +1938,7 @@ final class dd_utils_api {
 				'mime'		=> 'application/xml',
 				'extension'	=> ['xml']
 			],
-			[
-				'mime'		=> 'application/x-shockwave-flash',
-				'extension'	=> ['swf']
-			],
+			// application/x-shockwave-flash removed: prevents Flash-based XSS via uploaded .swf files
 			[
 				'mime'		=> 'video/x-flv',
 				'extension'	=> ['flv']
@@ -1993,10 +2001,7 @@ final class dd_utils_api {
 				'mime'		=> 'application/octet-stream',
 				'extension'	=> ['blob','fbx','obj','glb']
 			],
-			[
-				'mime'		=> 'application/x-msdownload',
-				'extension'	=> ['exe','msi']
-			],
+			// application/x-msdownload removed: prevents executable uploads (.exe, .msi)
 			[
 				'mime'		=> 'application/vnd.ms-cab-compressed',
 				'extension'	=> ['cab']

@@ -90,7 +90,7 @@ function resolve_database_name(main: main_node[]): string {
 
 	// Look for database definition in the hierarchy (model: "database")
 	for (const node of main) {
-		if (node.model === 'database' && node.term) {
+		if (node.model === 'database' || node.model === 'database_alias' && node.term) {
 			return node.term;
 		}
 	}
@@ -260,7 +260,7 @@ function process_record(
 			if (has_parser) {
 				const all_data_items: data_item[] = entries.map((e: entry_value) => {
 					const item: data_item = { id: e.id, value: e.value, tipo: e.tipo, lang: e.lang };
-					if (e.parents)     item.parents      = e.parents;
+					if (e.meta)        item.meta         = e.meta;
 					if (e.section_id   != null) item.section_id   = e.section_id;
 					if (e.section_tipo != null) item.section_tipo = e.section_tipo;
 					return item;
@@ -350,8 +350,8 @@ function process_record(
 					tipo:  e.tipo,
 					lang:  e.lang,
 				};
-				if(e.parents){
-					item.parents = e.parents;
+				if (e.meta) {
+					item.meta = e.meta;
 				}
 				if (e.section_id !== undefined && e.section_id !== null) {
 					item.section_id = e.section_id;

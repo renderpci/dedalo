@@ -280,7 +280,7 @@ export async function enrich_diffusion_info_with_readiness(
 	await Promise.all(section_diffusion_nodes.map(async (node: any) => {
 
 		const parents: any[] = node.parents ?? [];
-		const diffusion_element_parent = parents.find((p: any) => p.model === 'diffusion_element');
+		const diffusion_element_parent = parents.find((p: any) => p.model === 'diffusion_element' || p.model === 'diffusion_element_alias');
 
 		if (!diffusion_element_parent) {
 			return;
@@ -288,7 +288,7 @@ export async function enrich_diffusion_info_with_readiness(
 
 		const element_tipo  = diffusion_element_parent.tipo as string;
 		const type          = (diffusion_element_parent.type as string) ?? 'unknown';
-		const database_parent = parents.find((p: any) => p.model === 'database');
+		const database_parent = parents.find((p: any) => p.model === 'database' || p.model === 'database_alias');
 		const database_name   = (database_parent?.label as string) ?? null;
 
 		const readiness = await get_readiness(element_tipo, type, database_name);
