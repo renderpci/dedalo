@@ -1103,7 +1103,7 @@ class component_relation_common extends component_common {
 						// add parents
 						case $fn==='add_parents':
 							$diffusion_data_object->set_value( $data );
-							$diffusion_data_object->parents = $fn_data;
+							$diffusion_data_object->meta = $fn_data;
 
 							return $diffusion_data;
 						// if the function is a method of the current component

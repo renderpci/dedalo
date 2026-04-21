@@ -42,8 +42,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
             ALTER TABLE \"matrix_activity_test\"
             ALTER \"id\" TYPE integer,
             ALTER \"id\" SET DEFAULT nextval('matrix_activity_test_id_seq'),
-            ALTER \"id\" SET NOT NULL
-            COMMENT ON COLUMN \"matrix_activity_test\".\"id\" IS '';
+            ALTER \"id\" SET NOT NULL;
 		";
 		pg_query($conn, $sql);
 

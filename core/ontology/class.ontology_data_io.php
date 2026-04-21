@@ -712,7 +712,7 @@ class ontology_data_io {
 			]);
 
 			if ( !empty($response->result) ){
-				$response->result = json_decode($response->result);
+				$response->result = json_decode($response->result) ?? false;
 			}
 
 

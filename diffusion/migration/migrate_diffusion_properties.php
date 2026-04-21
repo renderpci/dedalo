@@ -429,6 +429,36 @@ function process_node($node, $level) {
 							// 2 "process_dato" first level
 							$process_dato = isset($props->process_dato) ? $props->process_dato : null;
 
+
+								// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
+							if( $process_dato 
+								&& $process_dato=== "diffusion_sql::map_locator_to_section_label")
+							{			
+								$parser_process = (object)[											
+									'fn' => 'map_locator_to_section_label',
+									"output_format" => "json"
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = $parser_process;
+									$new_props->process->output_sample = ["object","catalog"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+								
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] diffusion_sql::map_locator_to_terminoID\n";
+								break;
+							}
+
+
 							// 2.1 "process_dato" = "diffusion_sql::map_locator_to_terminoID"
 							if( $process_dato 
 								&& $process_dato=== "diffusion_sql::map_locator_to_terminoID"
@@ -698,7 +728,8 @@ function process_node($node, $level) {
 										$model,
 										$custom_arguments,
 										$process_dato_arguments,
-										$output										
+										$output,
+										$ddo_map								
 									);
 
 									// "is_publicable" = true
@@ -1886,6 +1917,36 @@ function process_node($node, $level) {
 								break;
 							}
 
+							// 2.6 "diffusion_sql::map_quality_to_int"
+							if($process_dato && $process_dato === 'diffusion_sql::map_quality_to_int'
+								|| $process_dato === 'diffusion_sql::map_locator_to_int') {
+
+								$parser_process = [
+									(object)[
+										'fn' => 'parser_locator::get_section_id',
+										'id' => 'a'
+									],
+									(object)[
+										'fn' => 'parser_helper::get_first',
+										'id' => 'a'
+									]
+								];
+
+								$new_props = new stdClass();
+								$new_props->process = new stdClass();
+								$new_props->process->parser = $parser_process;
+								$new_props->process->output_format = 'int';
+
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+								if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_autocomplete map_quality_to_int -> get_diffusion_dato\n";
+								break;
+							}
+
 							$data_to_be_used = $props->data_to_be_used ?? null;
 							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
 							if($data_to_be_used && $data_to_be_used === "dato"){
@@ -2254,12 +2315,27 @@ function process_node($node, $level) {
 								}
 								
 								if($final_method_cp === 'get_diffusion_dato') {
-									$new_props = new stdClass(); $new_props->process = get_diffusion_dato(
-										$final_target,
+									$new_props = new stdClass();
+									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									$new_props->process = get_diffusion_dato(
+										$model_cp,
 										null,
 										$final_args,
-										null
+										null,
+										$ddo_map_cp
 									);
+
+									if(isset($props->is_publicable) && $props->is_publicable === true) {
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){
+										$new_props->varchar = $props->varchar;
+									}
+									
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] get_diffusion_resolve_value\n";
+									break;
+
 								} else if($final_method_cp === 'get_diffusion_resolve_value') {
 									$separator = $final_args->separator ?? ' ';
 									$output_v5 = $final_args->output ?? null;
@@ -2392,7 +2468,8 @@ function process_node($node, $level) {
 
 									$output = $final_args->output ?? null;									
 									
-									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$new_props = new stdClass(); 
+									$new_props->process = get_diffusion_value(
 										$final_target,
 										$model_cp,
 										null,
@@ -2965,6 +3042,110 @@ function process_node($node, $level) {
 								echo "{$indent}- [$tipo] $model_name\n";
 								echo "{$indent}  [RULE APPLIED] relation_model map_locator_to_term_id\n";
 								break;
+							}
+
+
+							// 4 "diffusion_sql::map_parent_to_norder"
+							if($process_dato_rp	&& ($process_dato_rp === 'diffusion_sql::map_parent_to_norder')) {
+
+								$source_related_tipo = $rel_info['tipo'];
+
+								$section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+									$source_related_tipo, 
+									'section',
+									'parent',
+									true)[0];
+									
+								if (!empty($section_tipo)) {
+									$section_map = section::get_section_map($section_tipo);
+									
+									$order_tipo = $section_map->thesaurus->order ?? null;
+
+									
+									if (empty($order_tipo)) {
+										break;
+									}						
+
+									$tld_source = get_tld_from_tipo($tipo);
+									$source_section_tipo = $tld_source.'0';
+									$source_section_id = get_section_id_from_tipo($tipo);
+
+									$conneted_model = ontology_node::get_model_by_tipo(DEDALO_ONTOLOGY_CONNECTED_TO_TIPO);
+
+									$component_relation = component_common::get_instance(
+										$conneted_model,
+										DEDALO_ONTOLOGY_CONNECTED_TO_TIPO,
+										$source_section_id,
+										'edit',
+										DEDALO_DATA_NOLAN,
+										$source_section_tipo
+									);
+
+									$tld = get_tld_from_tipo($order_tipo);
+									$section_tipo = $tld.'0';
+									$section_id = get_section_id_from_tipo($order_tipo);
+
+									$related_data = new locator();
+										$related_data->set_section_tipo($section_tipo);
+										$related_data->set_section_id($section_id);
+
+									$data_entry = [$related_data ];
+								
+									$component_relation->set_data($data_entry);
+									$component_relation->save();
+
+									$order_model = ontology_node::get_model_by_tipo($order_tipo); 
+									$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+										$order_tipo,
+										$order_model,
+										null,
+										null,
+										null,
+										null,
+										null,
+										null
+									);	
+
+									$new_props->process->output_sample = [1];
+
+									if(isset($props->is_publicable) && $props->is_publicable === true){
+										$new_props->is_publishable = $props->is_publicable;
+									}
+									if(isset($props->varchar)){ $new_props->varchar = $props->varchar; }
+
+									echo "{$indent}- [$tipo] $model_name\n";
+									echo "{$indent}  [RULE APPLIED] relation_model map_parent_to_norder\n";
+									break;
+								}
+							}
+
+							$data_to_be_used = $props->data_to_be_used ?? null;
+							// 3 "data_to_be_used" alone. It can be set as is_publicabe or not
+							if($data_to_be_used && $data_to_be_used === "dato"){
+								
+								$parser_process = (object)[
+									'fn' => 'parser_locator::get_section_id',
+									'output_format' => 'json'
+								];
+
+								$new_props = new stdClass();
+									$new_props->process = new stdClass();
+									$new_props->process->parser = $parser_process;
+									$new_props->process->output_sample = ["1","55"];
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] component_relation_parent (relation) -> mapped section_id values\n";							
+								break;								
 							}
 
 							break;

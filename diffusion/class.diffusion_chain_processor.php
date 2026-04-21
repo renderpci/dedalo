@@ -515,15 +515,30 @@ class diffusion_chain_processor {
 	private static function build_section_diffusion_map(string $diffusion_element_tipo): array {
 		
 		$map = [];
+		$virtual_tree = diffusion_utils::get_virtual_diffusion_tree();
+
+		// Find virtual nodes inside this element's scope
+		$scope_vnodes = [];
+		foreach ($virtual_tree as $vnode) {
+			$in_scope = false;
+			if ($vnode->tipo === $diffusion_element_tipo) {
+				$in_scope = true;
+			} else {
+				foreach ($vnode->parents as $p) {
+					if ($p->tipo === $diffusion_element_tipo) {
+						$in_scope = true;
+						break;
+					}
+				}
+			}
+			if ($in_scope) {
+				$scope_vnodes[] = $vnode;
+			}
+		}
 		
-		// Get all recursive children nodes under the element scope node tree
-		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
-			$diffusion_element_tipo			
-		);
-		
-		foreach ($ar_diffusion_nodes as $diffusion_tipo) {
-			
+		foreach ($scope_vnodes as $vnode) {
 			// Resolve which section_tipo this diffusion container node targets and maps
+			$diffusion_tipo = $vnode->tipo;
 			$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_tipo,
 				'section',
@@ -531,12 +546,19 @@ class diffusion_chain_processor {
 				true
 			);
 
-			$model_name = ontology_node::get_model_by_tipo($diffusion_tipo);
+			// Fallback to real node representation if alias has no explicit target
+			if (empty($ar_sections) && !empty($vnode->real_tipo)) {
+				$ar_sections = ontology_node::get_ar_tipo_by_model_and_relation(
+					$vnode->real_tipo,
+					'section',
+					'related',
+					true
+				);
+			}
 			
 			foreach ($ar_sections as $section_tipo) {
-				
 				// Keep first match fallback default; let alias variants override generic models
-				if (!isset($map[$section_tipo]) || str_contains($model_name, '_alias')) {
+				if (!isset($map[$section_tipo]) || str_contains($vnode->model, '_alias')) {
 					$map[$section_tipo] = $diffusion_tipo;
 				}
 			}
@@ -551,52 +573,13 @@ class diffusion_chain_processor {
 	 * GET_SECTION_DIFFUSION_NODE
 	 * Returns the diffusion_tipo for a section within current scope.
 	 * 
-	 * When multiple candidates target the same section, priority is given to
-	 * alias models (e.g., `table_alias` over generic `table`). This ensures that 
-	 * explicit contextual mappings or alternate views defined in the ontology 
-	 * take precedence over standard generic mappings during resolution.
-	 * 
 	 * @param string $section_tipo
 	 * @return string|null diffusion_tipo or null if not in scope
 	 */
 	public static function get_section_diffusion_node(string $section_tipo): ?string {
-		// 1. Check internal map scope
+		// 1. Check internal map scope, which now leverages complete virtual tree resolution
 		if (isset(self::$section_diffusion_map[$section_tipo])) {
 			return self::$section_diffusion_map[$section_tipo];
-		}
-
-		// Fetch all children nodes defined recursively under the current diffusion element scope
-		$ar_diffusion_nodes = ontology_node::get_ar_recursive_children(
-			self::$diffusion_element_tipo		
-		);
-
-		$candidates = [];
-		foreach ($ar_diffusion_nodes as $current_tipo) {
-			
-			// Resolve the target section_tipo that this node is configured to represent
-			$current_target_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-				$current_tipo,
-				'section',
-				'related',
-				true
-			)[0] ?? null;
-
-			// Store matches indexed by model_name for priority scoring and overrides below
-			if($current_target_section_tipo && $current_target_section_tipo === $section_tipo) {
-
-				$model_name = ontology_node::get_model_by_tipo($current_tipo);
-				$candidates[$model_name] = $current_tipo;
-			}
-		}
-
-		// Note: Giving priority to the table alias when more than one item (e.g. table) 
-		// is targeting to the dessired section tipo (E.g. 'table' => 'ts' and 'table_alias' => 'ts_themes').
-		if( !empty($candidates) ) {
-			$aliasKey = array_find($candidates, fn($k) => str_contains($k, '_alias'));
-			if($aliasKey) {
-				return $candidates[$aliasKey];
-			}
-			return array_key_first($candidates);
 		}
 
 		return null;
