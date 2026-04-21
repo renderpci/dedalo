@@ -1910,16 +1910,13 @@ final class dd_utils_api {
 			],
 			[
 				'mime'		=> 'text/html',
-				'extension'	=> ['html','htm','php']
+				'extension'	=> ['html','htm']
 			],
 			[
 				'mime'		=> 'text/css',
 				'extension'	=> ['css','csv']
 			],
-			[
-				'mime'		=> 'application/javascript',
-				'extension'	=> ['js']
-			],
+			// application/javascript removed: prevents script injection via uploaded .js files
 			[
 				'mime'		=> 'application/json',
 				'extension'	=> ['json']
@@ -1928,10 +1925,7 @@ final class dd_utils_api {
 				'mime'		=> 'application/xml',
 				'extension'	=> ['xml']
 			],
-			[
-				'mime'		=> 'application/x-shockwave-flash',
-				'extension'	=> ['swf']
-			],
+			// application/x-shockwave-flash removed: prevents Flash-based XSS via uploaded .swf files
 			[
 				'mime'		=> 'video/x-flv',
 				'extension'	=> ['flv']
@@ -1994,10 +1988,7 @@ final class dd_utils_api {
 				'mime'		=> 'application/octet-stream',
 				'extension'	=> ['blob','fbx','obj','glb']
 			],
-			[
-				'mime'		=> 'application/x-msdownload',
-				'extension'	=> ['exe','msi']
-			],
+			// application/x-msdownload removed: prevents executable uploads (.exe, .msi)
 			[
 				'mime'		=> 'application/vnd.ms-cab-compressed',
 				'extension'	=> ['cab']
