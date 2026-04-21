@@ -235,7 +235,7 @@ final class dd_utils_api_Test extends BaseTestCase {
 		);
 
 		$this->assertTrue(
-			gettype($response->db_data)==='object',
+			gettype($response->db_data)==='array',
 			'expected db_data type is object ' .gettype($response->db_data)
 		);
 	}//end test_convert_search_object_to_sql_query
