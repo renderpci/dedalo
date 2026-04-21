@@ -578,7 +578,7 @@ final class dd_utils_api {
 		// options
 			$options		= $rqo->options;
 			$file_to_upload	= $options->file_to_upload ?? $options->file ?? $options->upload;	// assoc array Added from PHP input '$_FILES'
-			$key_dir		= $options->key_dir; // string like 'tool_upload'
+			$key_dir		= sanitize_key_dir($options->key_dir ?? ''); // string like 'tool_upload'
 			$tipo			= $options->tipo ?? null;
 			$chunked		= isset($options->chunked) // received as string 'true'|'false'
 				? (bool)json_decode($options->chunked)
@@ -939,7 +939,7 @@ final class dd_utils_api {
 			$options		= $rqo->options;
 			$files_chunked	= $options->files_chunked;
 			$file_data		= $options->file_data;
-			$key_dir 		= $file_data->key_dir;
+			$key_dir 	= sanitize_key_dir($file_data->key_dir ?? '');
 
 		// response
 			$response = new stdClass();
@@ -1057,7 +1057,7 @@ final class dd_utils_api {
 			$response->msg 		= 'Error. Request failed';
 
 		// options
-			$key_dir = $rqo->options->key_dir ?? null;
+			$key_dir = sanitize_key_dir($rqo->options->key_dir ?? '');
 
 		// dir
 			$user_id = logged_user_id();
