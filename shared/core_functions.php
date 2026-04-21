@@ -1507,7 +1507,9 @@ function safe_xss(mixed $value) : mixed {
 	if (!empty($value) && is_string($value)) {
 
 		if ($decode_json=json_decode($value)) {
-			// If var is a stringify JSON, not verify string now
+			// If var is a stringify JSON, sanitize the decoded content recursively
+			$decode_json = safe_xss_recursive($decode_json);
+			$value = json_encode($decode_json, JSON_UNESCAPED_UNICODE);
 		}else{
 			// It's NOT JSON data
 			$value = strip_tags($value,'<br><strong><em>');
@@ -1517,6 +1519,40 @@ function safe_xss(mixed $value) : mixed {
 
 	return $value;
 }//end safe_xss
+
+
+
+/**
+* SAFE_XSS_RECURSIVE
+* Recursively sanitizes object/array values with htmlspecialchars
+* @param mixed $data
+* @return mixed
+*/
+function safe_xss_recursive(mixed $data) : mixed {
+
+	if (is_object($data)) {
+		foreach (get_object_vars($data) as $key => $val) {
+			$data->{$key} = safe_xss_recursive($val);
+		}
+		return $data;
+	}
+
+	if (is_array($data)) {
+		foreach ($data as $key => $val) {
+			$data[$key] = safe_xss_recursive($val);
+		}
+		return $data;
+	}
+
+	if (is_string($data)) {
+		$data = strip_tags($data, '<br><strong><em>');
+		$data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
+	}
+
+	return $data;
+}//end safe_xss_recursive
+
+
 
 
 
