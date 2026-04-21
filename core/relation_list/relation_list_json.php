@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 // configuration vars
 	$tipo			= $this->tipo;
 	$section_tipo	= $this->section_tipo;

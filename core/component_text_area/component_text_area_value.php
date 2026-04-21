@@ -1,10 +1,33 @@
 <?php declare(strict_types=1);
+/**
+ * COMPONENT_TEXT_AREA VALUE PROCESSOR
+ *
+ * Processes and formats component_text_area data into grid columns based on format_columns.
+ * This file is included within component_text_area class context.
+ *
+ * Expected context variables (from including class):
+ * - $this->locator: object with section_tipo, section_id, component_tipo, tag_id
+ * - $this->section_tipo: string section tipo
+ * - $this->section_id: int section ID
+ * - $this->mode: string edit/list mode
+ * - $this->lang: string current language
+ * - $data: array component data from database
+ * - $format_columns: string output format (av|pdf|svg|geo|text)
+ *
+ * Output:
+ * - $data: array of dd_grid_cell_object instances representing grid columns
+ *
+ * Format columns:
+ * - 'av': Audio/Video format with timecodes, player buttons, download options
+ * - 'pdf': PDF format with section link, tag_id, and text fragment
+ * - default: Basic format with section link and text fragment
+ *
+ * @package Dedalo
+ * @subpackage Components
+ * @see component_text_area::get_value()
+ */
 
-// Process different values of the component_text_area
-// split the data into columns, it depends of the format_column.
-// format_columns allowed: av, pdf, svg, geo, text
-
-	// component data
+	// COMPONENT DATA: Extract raw text value with fallback to default language
 		$full_raw_text	= $data[0]->value ?? '';
 		if ( empty($full_raw_text) ) {
 			$data_fallback = $this->get_component_data_fallback(
@@ -14,20 +37,20 @@
 			$full_raw_text	= $data_fallback[0]->value ?? '';
 		}
 
-	// short vars
-		$locator		= $this->locator; // the locator used to instance the text_area with full properties as tag_id
+	// SHORT VARS: Extract locator properties for easy access
+		$locator		= $this->locator;
 		$section_tipo	= $locator->section_tipo;
 		$section_id		= $locator->section_id;
 		$component_tipo	= $locator->component_tipo ?? null;
 		$tag_id			= $locator->tag_id ?? null;
 		$lang			= DEDALO_DATA_LANG;
 
-	// context
+	// CONTEXT: Get permissions and available tools
 		$permissions		= $this->get_component_permissions();
 		$structure_context	= $this->get_structure_context( $permissions );
 		$tools				= $structure_context->tools ?? [];
 
-	// tag_type from locator relation type
+	// TAG_TYPE: Determine tag type (index/struct) from locator relation type
 		switch ($locator->type) {
 			case DEDALO_RELATION_TYPE_INDEX_TIPO:
 				$tag_type = 'index';
@@ -45,7 +68,7 @@
 				break;
 		}
 
-	// fragment
+	// FRAGMENT: Extract text fragment based on tag_id
 		if(isset($tag_id)) {
 			$fragment_info = component_text_area::get_fragment_text_from_tag(
 				$tag_id,
@@ -99,14 +122,14 @@
 
 		$text_fragment	= $fragment_info->text ?? '';
 
-	// data
-		// reset data
+	// DATA OUTPUT: Build grid columns based on format_columns
+		// Reset data array for output
 		$data = [];
 		switch ($format_columns) {
 
 			case 'av':
 
-				// tc info
+				// TIMECODE INFO: Calculate TC in/out and duration from fragment tags
 					$tag_in_pos		= $fragment_info->tag_in_pos  ?? 0;
 					$tag_out_pos	= $fragment_info->tag_out_pos ?? 0;
 
@@ -148,13 +171,13 @@
 					$section_top_tipo	= $locator->section_top_tipo ?? null;
 					$section_top_id		= $locator->section_top_id ?? null;
 
-				// tool_indexation_context. This component have a 'tool_indexation' tool
+				// TOOL CONTEXT: Get tool_indexation context for button actions
 					$tool_indexation_context = array_find($tools, function($el){
 						return $el->name==='tool_indexation';
 					}) ?? new stdClass();
 
-				// columns
-					// section_id
+				// COLUMNS: Build grid cells for AV format output
+					// Column 1: Section record link
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'record_link',
@@ -165,7 +188,7 @@
 							]] // array value
 						]);
 
-					// tag_id
+					// Column 2: Tag ID button (opens tool_indexation)
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'button',
@@ -197,8 +220,7 @@
 							]]
 						]);
 
-					// button_tool_indexation
-						// cell
+					// Column 3: Tool indexation button
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'button',
@@ -225,9 +247,8 @@
 							]]
 						]); // array value
 
-					// button_tool_transcription
-
-						// tool_transcription_context. Using related component av context (17-01-2024)
+					// Column 4: Tool transcription button
+						// Get transcription tool context from related AV component
 							$component_av_tipo	= $this->get_related_component_av_tipo(); // 'rsc35';
 							$component_av_model	= ontology_node::get_model_by_tipo($component_av_tipo,true);
 							$component_av		= component_common::get_instance(
@@ -273,7 +294,7 @@
 							]]
 						]]); // array value
 
-					// button_av_player
+					// Column 5: AV player button
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'button',
@@ -296,7 +317,7 @@
 							]
 						]]); // array value
 
-					// text_fragment
+					// Column 6: Text fragment content
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'text',
@@ -304,7 +325,7 @@
 							'value'			=> [$text_fragment] // array value
 						]);
 
-					// tc_in
+					// Column 7: Timecode IN
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'text',
@@ -312,7 +333,7 @@
 							'value'			=> [$tc_in] // array value
 						]);
 
-					// tc_out
+					// Column 8: Timecode OUT
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'text',
@@ -320,7 +341,7 @@
 							'value'			=> [$tc_out] // array value
 						]);
 
-					// duration_tc
+					// Column 9: Duration timecode
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
 							'cell_type'		=> 'text',
@@ -328,7 +349,7 @@
 							'value'			=> [$duration_tc] // array value
 						]);
 
-					// button_download_av
+					// Column 10: Download AV fragment button (no watermark)
 						$watermark = false;
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
@@ -356,7 +377,7 @@
 							]]
 						]);
 
-					// button_download_av with watermark
+					// Column 11: Download AV fragment button (with watermark)
 						$watermark = true;
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
@@ -386,7 +407,8 @@
 				break;
 
 			case 'pdf':
-				// section_id
+				// PDF FORMAT: 3 columns (section_link, tag_id, text_fragment)
+				// Column 1: Section record link
 					$data[] = new dd_grid_cell_object((object)[
 						'type'			=> 'column',
 						'cell_type'		=> 'record_link',
@@ -396,14 +418,14 @@
 							'section_tipo'	=> $section_tipo
 						]] // array value
 					]);
-				// tag_id
+				// Column 2: Tag ID text
 					$data[] = new dd_grid_cell_object((object)[
 						'type'			=> 'column',
 						'cell_type'		=> 'text',
 						'class_list'	=> 'tag_id',
 						'value'			=> [$tag_id] // array value
 					]);
-				// text_fragment
+				// Column 3: Text fragment content
 					$data[] = new dd_grid_cell_object((object)[
 						'type'			=> 'column',
 						'cell_type'		=> 'text',
@@ -413,7 +435,8 @@
 				break;
 
 			default:
-				// section_id
+				// DEFAULT FORMAT: 2 columns (section_link, text_fragment)
+				// Column 1: Section record link
 					$data[] = new dd_grid_cell_object((object)[
 						'type'			=> 'column',
 						'cell_type'		=> 'record_link',
@@ -423,7 +446,7 @@
 							'section_tipo'	=> $section_tipo
 						]] // array value
 					]);
-				// text_fragment
+				// Column 2: Text fragment content
 					$data[] = new dd_grid_cell_object((object)[
 						'type'			=> 'column',
 						'cell_type'		=> 'text',

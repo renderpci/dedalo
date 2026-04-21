@@ -238,12 +238,11 @@ export const render_children = async function(options) {
 
 		// Append node to the proper container
 		if (node_wrapper) {
+			const target_node = (child_data.is_descriptor || self.is_root_node)
+				? self.children_container
+				: self.nd_container
 			requestAnimationFrame(() => {
-				if (child_data.is_descriptor || self.is_root_node) {
-					self.children_container.appendChild( node_wrapper )
-				}else{
-					self.nd_container.appendChild( node_wrapper )
-				}
+				target_node.appendChild( node_wrapper )
 			});
 		}else{
 			console.warn('Error. Ignored invalid node wrapper. ts_object_instance:', ts_object_instance);
@@ -305,25 +304,21 @@ export const render_child = async function(self, child_data, virtual_order) {
 		children_tipo			: child_data.children_tipo,
 		target_section_tipo		: null,
 		thesaurus_mode			: self.thesaurus_mode,
+		ts_parent				: self.section_tipo + '_' + self.section_id,
 		// Others
 		caller					: self,
 		linker					: self.linker, // usually a portal component instance
-		thesaurus_view_mode		: self.hesaurus_view_mode,
+		thesaurus_view_mode		: self.thesaurus_view_mode,
 		is_root_node			: false,
 		is_ontology				: self.is_ontology,
 		virtual_order			: virtual_order,
 		has_descriptor_children	: child_data.has_descriptor_children,
 		area_model				: self.area_model,
 		ts_id					: child_data.section_tipo + '_' + child_data.section_id,
-		ts_parent				: self.section_tipo + '_' + self.section_id,
 		data					: child_data // inject data to prevent calculate it again on build
 	})
 
 	await ts_object_instance.build(false)
-
-	if(SHOW_DEBUG) {
-		console.log('2 - render_child built child ts_object_instance:', ts_object_instance);
-	}
 
 	const node_wrapper = await ts_object_instance.render({
 		render_level : 'full'
@@ -1797,14 +1792,17 @@ const render_order_form = function(options) {
 	input.classList.add('id_column_link','input_order')
 	input.value = old_value
 
-	// keydown event
-	// Prevent the event from bubbling up (e.g. to the tree view click)
+	// keydown event - prevent the event from bubbling up (e.g. to the tree view click)
 	const keydown_handler = (e) => {
 		e.stopPropagation()
+		// Blur on Escape key to cancel the edit
+		if (e.key === 'Escape') {
+			input.blur()
+		}
 	}
 	input.addEventListener('keydown', keydown_handler);
 
-	// Async change handler – called when the user presses Enter
+	// change handler – called when the user presses Enter
 	const change_handler = async () => {
 
 		const wrapper = self.node

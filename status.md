@@ -9,8 +9,8 @@ Information regarding project tasks and migration progress. NOT for agents.
 1. **Installation**: Refactor for clean installation and v6 migration compatibility.
 2. **Ontology Update**: Export from version 6 and import into master v7.
 3. **Time Machine**: Fix broken section (dd15) and search functionality.
-    *   Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
-    *   Permissions for non root users do not work in time machine. Profile do not display the time machine section to set permissions. Set temporally as 1 in core/security/class.security.php
+    * Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
+    * Permissions for non root users do not work in time machine. Profile do not display the time machine section to set permissions. Set temporally as 1 in core/security/class.security.php
     * Section list is not working properly. See `People` in mdcat for sample.
 6. **Ontology Documentation**: Add Markdown output capability to allow AI tools to read the Ontology.
 7. **Data Update (v7)**: Remove the `is_portal` property from activity data (dependent on `TOP_TIPO`).
@@ -35,3 +35,10 @@ Information regarding project tasks and migration progress. NOT for agents.
 19. Save CSV files on import, etc. a time machine like images
 20. Unify `ddo_map` as `ddo_chain` in all Dédalo apperances.
 21. Fix component portal issues with multiple sections. Case Collections of numisdata4.
+22. **dataframe**: Universal dataframe for relations and literals
+23. **components**: Overall stability and unit test server and client
+24. **diffusion**: Diffusion log implemtation
+25. **database**: Index revission (activity, time machine, etc.)
+26. **global**: Stability: search, cache, section, etc.
+27. **style**: Area maintenace restyling (dashboard as Enterprise)
+28. **style**: Restyling menu? and dark mode.
