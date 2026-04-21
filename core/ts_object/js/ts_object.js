@@ -1295,7 +1295,8 @@ ts_object.prototype.swap_parent = async function (options) {
 
 	// update moving instance caller.
 	// It is important to allow the term to be moved again without causing any inconsistencies.
-	moving_instance.caller = target_instance
+	moving_instance.caller		= target_instance
+	moving_instance.ts_parent	= target_instance.ts_id
 
 	// Move moving instance node from old parent to the new one (current dropped)
 	target_instance.children_container.appendChild( moving_instance.node );
@@ -2098,178 +2099,107 @@ const scroll_to_node = (node_to_scroll) => {
 ts_object.prototype.save_order = async function( value ) {
 
 	const self = this
-
-	let new_value = parseInt( value )
-
+	const new_value = parseInt( value )
 	const old_value = parseInt( self.virtual_order )
 
-	// check is new_value is valid
-	if (isNaN(new_value) || new_value===old_value) {
-		if(SHOW_DEBUG===true) {
-			console.log("[ts_object.save_order] Value is not changed or invalid. ignored save_order action")
-		}
-		return Promise.resolve(false);
+	// 1. Validation: check if change is needed
+	if (isNaN(new_value) || new_value === old_value) {
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] Value unchanged or invalid. Ignoring save_order.");
+		return false
 	}
 
-	// short vars
-	// children nodes of type 'wrap_ts_object'
-	const child_nodes		= [...(self.caller?.children_container?.childNodes || [])].filter(el => el.classList.contains('wrap_ts_object'))
-	const child_nodes_len	= child_nodes.length
-
-	// new_value. Prevent set invalid values
-	if ( new_value > child_nodes_len ){
-		new_value = child_nodes_len // max value is array length
-	}else if ( new_value < 1 ) {
-		new_value = 1; // min value is 1
+	const parent_instance = self.caller
+	if (!parent_instance) {
+		console.error("[ts_object.save_order] Missing parent instance (caller)");
+		return false
 	}
 
-	// ar_locators. Iterate child_nodes elements
-	const ar_locators = []
-	for (let i = 0; i < child_nodes_len; i++) {
-		if (child_nodes[i].dataset.section_tipo && child_nodes[i].dataset.section_id) {
-			ar_locators.push({
-				section_tipo	: child_nodes[i].dataset.section_tipo,
-				section_id		: child_nodes[i].dataset.section_id
-			})
+	// 2. Sibling Discovery: Use parent's ar_children_data as the source of truth
+	// This ensures we have a complete and authoritative list of siblings.
+	const ar_children_data = parent_instance.children_data?.ar_children_data || []
+
+	// Find the current instance's index in the data array
+	const current_data_index = ar_children_data.findIndex(item =>
+		item.section_tipo === self.section_tipo && item.section_id === self.section_id
+	)
+
+	if (current_data_index === -1) {
+		console.error("[ts_object.save_order] Self not found in parent's children data. Aborting.", {
+			section_tipo : self.section_tipo,
+			section_id   : self.section_id
+		})
+		return false
+	}
+
+	// 3. Reordering Logic: Perform the move directly on the authoritative data array
+	const total_siblings = ar_children_data.length
+	const target_index   = Math.max(0, Math.min(new_value - 1, total_siblings - 1))
+
+	if (current_data_index === target_index) {
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] Target index matches current index. Ignoring action.");
+		return false
+	}
+
+	// Move the item in ar_children_data
+	const [moved_item] = ar_children_data.splice(current_data_index, 1)
+	ar_children_data.splice(target_index, 0, moved_item)
+
+	// Build locators for the API based on the final data order
+	const ar_locators = ar_children_data.map(item => ({
+		section_tipo : item.section_tipo,
+		section_id	 : item.section_id
+	}))
+
+	// 4. Runtime Synchronization: Update live instances virtual_order
+	// Identify all cached ts_object instances to update their order
+	const instances_pool = get_all_instances().filter(inst => inst.model === 'ts_object')
+
+	ar_locators.forEach((loc, i) => {
+		const found = instances_pool.find(inst =>
+			inst.section_tipo === loc.section_tipo && inst.section_id === loc.section_id
+		)
+		if (found) {
+			found.virtual_order = i + 1
+		}
+	})
+
+	// 5. Persistence: API Request
+	const rqo = {
+		dd_api			: 'dd_ts_api',
+		prevent_lock	: true,
+		action			: 'save_order',
+		source			: {
+			section_tipo		: self.section_tipo,
+			ar_locators			: ar_locators,
+			parent_section_tipo	: parent_instance.section_tipo,
+			parent_section_id	: parent_instance.section_id
 		}
 	}
 
-	// sort array with new keys
-		// function move_locator(ar_locators, from, to) {
-		// 	return ar_locators.splice(to, 0, ar_locators.splice(from, 1)[0]);
-		// };
+	try {
+		const api_response = await data_manager.request({ body : rqo })
 
-		// move_locator
-		function move_locator(array, pos1, pos2) {
-			// local variables
-			let i, tmp;
-			// cast input parameters to integers
-			pos1 = parseInt(pos1, 10);
-			pos2 = parseInt(pos2, 10);
-			// if positions are different and inside array
-			if (pos1 !== pos2 && 0 <= pos1 && pos1 <= array.length && 0 <= pos2 && pos2 <= array.length) {
-			  // save element from position 1
-			  tmp = array[pos1];
-			  // move element down and shift other elements up
-			  if (pos1 < pos2) {
-				for (i = pos1; i < pos2; i++) {
-				  array[i] = array[i + 1];
-				}
-			  }
-			  // move element up and shift other elements down
-			  else {
-				for (i = pos1; i > pos2; i--) {
-				  array[i] = array[i - 1];
-				}
-			  }
-			  // put element from position 1 to destination
-			  array[pos2] = tmp;
-			}
-			return array
-		}//end move_locator
+		if (SHOW_DEBUG) console.log("[ts_object.save_order] api_response", api_response)
 
-	// order_ar_locators
-		const from	= parseInt(old_value)-1
-		const to	= parseInt(new_value)-1
-		move_locator(ar_locators, from, to)
-
-	// Update load instances and values before call API
-
-		// Update parent instance children data order
-
-		// current_ar_children_data from caller (parent instance)
-		const current_ar_children_data = self.caller?.children_data?.ar_children_data || []
-
-		// order_reference as [ts1_7,ts1_25]
-		const order_reference = ar_locators.map(el => el.section_tipo + '_' + el.section_id)
-
-		// order_children. New array with sorted children
-		const order_children = current_ar_children_data.sort((a, b) => {
-
-			const index_a = order_reference.indexOf(a.section_tipo + '_' + a.section_id);
-			const index_b = order_reference.indexOf(b.section_tipo + '_' + b.section_id);
-
-			// Place items not found in order_reference (index of -1) at the end.
-			if (index_a === -1 && index_b !== -1) return 1;
-			if (index_b === -1 && index_a !== -1) return -1;
-
-			// Otherwise, sort by the indices
-			return index_a - index_b;
-		});
-
-		// overwrite value
-		if (self.caller?.children_data) {
-			self.caller.children_data.ar_children_data = order_children
+		if (!api_response?.result) {
+			throw new Error(api_response?.msg || 'Error on save order response')
 		}
 
-		// Create a custom instances list with only ts_object instances
-		const ts_object_instances_list = get_all_instances().filter(el => {
-			if (el.model==='ts_object' && el.section_tipo && el.section_id) {
-				return el
-			}
-			return false
+		// Success notification
+		event_manager.publish('notification', {
+			msg			: api_response.msg || 'Order updated successfully',
+			type		: 'success',
+			remove_time	: 1200
 		})
 
-		const order_children_length = order_children.length
-		for (let i = 0; i < order_children_length; i++) {
-
-			const item = order_children[i]
-
-			const found = ts_object_instances_list.find(el =>
-				el.section_tipo===item.section_tipo && el.section_id==item.section_id
-			)
-			if (found) {
-				// Set the new position value
-				found.virtual_order = i + 1
-			}else{
-				console.error('Unable to find the instance for child:', item);
-			}
-		}
-
-	// API request to save_order in database
-		const rqo = {
-			dd_api			: 'dd_ts_api',
-			prevent_lock	: true,
-			action			: 'save_order',
-			source			: {
-				section_tipo		: self.section_tipo,
-				ar_locators			: ar_locators,
-				parent_section_tipo	: self.caller?.section_tipo,
-				parent_section_id	: self.caller?.section_id
-			}
-		}
-		// API request. Don't wait here
-		data_manager.request({
-			body : rqo
+	} catch (error) {
+		console.error('[ts_object.save_order] Persisting order failed:', error)
+		event_manager.publish('notification', {
+			msg			: `Failed to save new order: ${error.message}`,
+			type		: 'error',
+			remove_time	: 10000
 		})
-		.then(function(api_response){
-			// debug
-			if(SHOW_DEBUG===true) {
-				console.log("[ts_object.save_order] api_response", api_response)
-			}
-
-			// error handling
-			if (!api_response?.result) {
-				console.error('Error on save order. api_response:', api_response);
-				// bubbles notifications
-				const msg = SHOW_DEBUG
-					? 'Error on save order. ' + api_response?.msg || 'Unknown error'
-					: 'Error on save order.'
-				event_manager.publish('notification', {
-					msg			: msg,
-					type		: 'error',
-					remove_time	: 10000
-				})
-			}else{
-				// Bubbles notification
-				event_manager.publish('notification', {
-					msg			: api_response?.msg || 'OK',
-					type		: 'success',
-					remove_time	: 1200
-				})
-			}
-		})
-
+	}
 
 	return true
 }//end save_order
