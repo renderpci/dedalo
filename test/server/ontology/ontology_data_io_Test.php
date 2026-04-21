@@ -1,5 +1,7 @@
 <?php declare(strict_types=1);
 // PHPUnit classes
+
+use EasyRdf\Literal\Boolean;
 use PHPUnit\Framework\TestCase;
 // bootstrap
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
@@ -577,11 +579,11 @@ final class ontology_data_io_test extends BaseTestCase {
 
 		// bad URL
 		$server = (object)[
-			'url' => 'https://master.render.es/dedalo'
+			'url' => 'https://master.dedalo.dev/dedalo'
 		];
 
 		$response = ontology_data_io::check_remote_server( $server );
-			// dump($response, ' test_check_remote_server response 1 ++ '.to_string());
+			 dump($response, ' test_check_remote_server response 1 ++ '.to_string());
 
 		$expected = 'object';
 		$this->assertTrue(
@@ -591,7 +593,7 @@ final class ontology_data_io_test extends BaseTestCase {
 			.'response: ' . to_string($response) . PHP_EOL
 		);
 
-		$expected = 'NULL';
+		$expected = 'boolean';
 		$this->assertTrue(
 			gettype($response->result)===$expected ,
 			'expected: ' . to_string($expected) . PHP_EOL
@@ -599,7 +601,7 @@ final class ontology_data_io_test extends BaseTestCase {
 			.'response: ' . to_string($response) . PHP_EOL
 		);
 
-		$expected = NULL;
+		$expected = false;
 		$this->assertTrue(
 			$response->result===$expected ,
 			'expected: ' . to_string($expected) . PHP_EOL
