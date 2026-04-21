@@ -244,8 +244,8 @@ class login extends common {
 					return $response;
 				}
 
-			// password match check
-				if( $password_encrypted!==$password_data ) {
+			// password match check (constant-time comparison to prevent timing attacks)
+				if( !hash_equals($password_encrypted, $password_data) ) {
 
 					#
 					# STOP : PASSWORD IS WRONG
