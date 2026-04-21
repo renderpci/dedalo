@@ -756,6 +756,15 @@ final class dd_core_api {
 			$model			= $options->model ?? ontology_node::get_model_by_tipo($tipo);
 			$type 			= $options->type;
 
+		// permissions check for the section
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 1) {
+				$response->msg = "Error. You don't have enough permissions to read this section ($section_tipo). permissions:$permissions";
+				$response->errors[] = 'insufficient permissions';
+				debug_log(__METHOD__ . " $response->msg ", logger::ERROR);
+				return $response;
+			}
+
 		$raw_data = [];
 
 		// search if not empty
@@ -849,6 +858,19 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// permissions. Get the section permissions and check if the user can create a record
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if($permissions < 2) {
+				$response->errors[]	= 'insufficient permissions';
+				$response->msg		= "Error. You don't have enough permissions to create a record in this section ($section_tipo). permissions:$permissions";
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " section_tipo:$section_tipo "
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// section
 			$section	= section::get_instance( $section_tipo );
 			$section_id	= $section->create_record(); // Section save, returns the created section_id
@@ -912,6 +934,19 @@ final class dd_core_api {
 
 		// section_record
 		// section_record duplicate current. Returns the section_id created
+
+		// permissions check. Ensure user can at least READ the source record
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 2) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg      = 'Error. You don\'t have enough permissions to read the source record ('.$section_tipo.'). permissions:'.to_string($permissions);
+				debug_log(__METHOD__
+					. " $response->msg "
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 			$section_record	= section_record::get_instance( $section_tipo, (int)$section_id );
 			$section_id	= $section_record->duplicate();
 
@@ -1006,6 +1041,18 @@ final class dd_core_api {
 				$options->sqo						= $rqo->sqo ?? null;
 				$options->delete_diffusion_records	= $rqo->options->delete_diffusion_records ?? null;
 				$options->delete_with_children		= $rqo->options->delete_with_children ?? false;
+
+		// permissions. Check if the user has enough permissions to delete (permissions >= 2)
+			$permissions = common::get_permissions($options->section_tipo, $options->section_tipo);
+			if ($permissions < 2) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg      = 'Error. You don\'t have enough permissions to delete this section ('.$options->section_tipo.'). permissions:'.to_string($permissions);
+				debug_log(__METHOD__
+					. " $response->msg "
+					, logger::ERROR
+				);
+				return $response;
+			}
 
 		// Delete in sections
 			$sections = sections::get_instance( null, null );
