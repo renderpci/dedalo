@@ -1554,6 +1554,27 @@ function safe_xss_recursive(mixed $data) : mixed {
 
 
 
+/**
+* SANITIZE_KEY_DIR
+* Prevents path traversal attacks by stripping directory separators and null bytes.
+* Only allows alphanumeric, underscore, hyphen, and dot characters.
+* @param string $key_dir
+* @return string
+*/
+function sanitize_key_dir(string $key_dir) : string {
+
+	// Remove null bytes
+	$key_dir = str_replace(chr(0), '', $key_dir);
+
+	// Remove any path traversal sequences
+	$key_dir = str_replace(['../', '..\\', '/', '\\'], '', $key_dir);
+
+	// Allow only safe characters: alphanumeric, underscore, hyphen, dot
+	$key_dir = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $key_dir);
+
+	return $key_dir;
+}//end sanitize_key_dir
+
 
 
 /**
