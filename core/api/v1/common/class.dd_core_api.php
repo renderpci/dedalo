@@ -831,7 +831,7 @@ final class dd_core_api {
 	* CREATE
 	* Creates a new database record of given section tipo
 	* and returns the new section_id assigned by the counter
-	* @param object $json_data
+	* @param object $rqo
 	* sample:
 	* {
 	*    "action": "create",
@@ -1348,7 +1348,7 @@ final class dd_core_api {
 	/**
 	* COUNT
 	* Exec a SQL records count of given SQO
-	* @param object $json_data
+	* @param object $rqo
 	* sample:
 		* {
 		*    "action": "count",
@@ -1706,7 +1706,7 @@ final class dd_core_api {
 			$action				= $ddo_source->action ?? 'search';
 			$mode				= $ddo_source->mode ?? 'list';
 			$view				= $ddo_source->view ?? null;
-			$lang				= $ddo_source->lang ?? null;
+			$lang				= $ddo_source->lang ?? DEDALO_DATA_LANG;
 			$tipo				= $ddo_source->tipo ?? null;
 			$section_tipo		= $ddo_source->section_tipo ?? $ddo_source->tipo;
 			$section_id			= $ddo_source->section_id ?? null;
@@ -1834,7 +1834,7 @@ final class dd_core_api {
 							$sqo, // object $search_query_object = null
 							$tipo, // string $caller_tipo = null (section/portal)
 							$mode, // string $mode = 'list'
-							$lang // string $lang = DEDALO_DATA_NOLAN
+							(string)($lang ?? DEDALO_DATA_LANG) // string $lang = DEDALO_DATA_LANG
 						);
 
 
@@ -1899,7 +1899,7 @@ final class dd_core_api {
 							$sqo,
 							$tipo, // string $caller_tipo = null (section/portal)
 							$mode,
-							$lang ?? DEDALO_DATA_LANG
+							(string)($lang ?? DEDALO_DATA_LANG)
 						);
 
 					// store sqo section
@@ -2134,7 +2134,7 @@ final class dd_core_api {
 			$permissions = common::get_permissions($section_tipo, $tipo);
 			if (!empty($result->data) && $permissions<1 && isset($element) && $element->get_model()!=='menu') {
 
-				// $result->data = [];
+				$result->data = [];
 
 				debug_log(__METHOD__
 					.' Identified non enough permissions call' . PHP_EOL
