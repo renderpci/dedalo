@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_relation_children.php';
+include_once 'trait.search_component_relation_children.php';
 /**
 * COMPONENT_RELATION_CHILDREN
 * Class to manage children relations between sections.

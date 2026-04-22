@@ -78,7 +78,7 @@
 				// when the caller is a Time Machine section
 				// $current_record is a Time Machine Record then we need to convert it into a Section Record
 				if( $mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ){
-					$tm_record = tm_record::get_instance( $current_record->id );
+					$tm_record = tm_record::get_instance( (int)$current_record->id );
 					$tm_record->set_data( $current_record );
 					// OVERWRITE! section_id and section_tipo to convert it into a regular section record
 					$current_record = $tm_record->get_section_record();

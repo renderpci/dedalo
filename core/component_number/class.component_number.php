@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_number.php';
-include 'trait.search_component_number_tm.php';
+include_once 'trait.search_component_number.php';
+include_once 'trait.search_component_number_tm.php';
 /**
 * CLASS COMPONENT_NUMBER
 * Manage numbers with specific precision

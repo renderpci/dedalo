@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-include 'trait.search_component_json.php';
+include_once 'trait.search_component_json.php';
 /**
 * CLASS COMPONENT_JSON
 * Manages JSON data
