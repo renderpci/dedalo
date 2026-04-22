@@ -11,10 +11,10 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
-		render_column_remove,
 		activate_autocomplete,
 		get_buttons
 	} from './render_edit_component_portal.js'
+	import { render_column_remove } from './view_line_edit_portal.js'
 
 
 
