@@ -1834,7 +1834,7 @@ final class dd_core_api {
 							$sqo, // object $search_query_object = null
 							$tipo, // string $caller_tipo = null (section/portal)
 							$mode, // string $mode = 'list'
-							(string)($lang ?? DEDALO_DATA_LANG) // string $lang = DEDALO_DATA_LANG
+							(string)$lang // string $lang = DEDALO_DATA_LANG
 						);
 
 
@@ -1899,7 +1899,7 @@ final class dd_core_api {
 							$sqo,
 							$tipo, // string $caller_tipo = null (section/portal)
 							$mode,
-							(string)($lang ?? DEDALO_DATA_LANG)
+							(string)($lang)
 						);
 
 					// store sqo section
