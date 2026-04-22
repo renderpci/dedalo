@@ -281,7 +281,7 @@ const rebuild_columns_map = async function(self) {
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
 				width		: 'auto',
-				callback	: view_line_edit_portal.render_column_remove
+				callback	: render_column_remove
 			})
 		}
 
@@ -379,7 +379,7 @@ view_line_edit_portal.render_column_id = function(options) {
 * @param object options
 * @return HTMLElement button_remove
 */
-view_line_edit_portal.render_column_remove = function(options) {
+export const render_column_remove = function(options) {
 
 	// options
 		const self				= options.caller
