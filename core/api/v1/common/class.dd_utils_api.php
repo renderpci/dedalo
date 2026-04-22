@@ -1141,6 +1141,9 @@ final class dd_utils_api {
 		// delete each file
 			foreach ($file_names as $file_name) {
 
+				// sanitize file_name to prevent path traversal
+					$file_name = sanitize_file_name($file_name);
+
 				// file_path
 					$file_path = $tmp_dir . '/' . $file_name;
 
