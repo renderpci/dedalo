@@ -252,7 +252,7 @@ class tool_export extends tool_common {
 							$column_label = $column_tipo;
 						}
 						$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-							? $column_label.' '.$column_path[1]+1
+							? $column_label.' '.(isset($column_path[1]) ? $column_path[1]+1 : '1')
 							: $column_label;
 					}
 				}
