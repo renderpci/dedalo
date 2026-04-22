@@ -152,6 +152,16 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
 				$response->errors	= [];
 
+		// whitelist validation - get valid widget IDs from area_maintenance
+			$area_maintenance		= area_common::get_instance('area_maintenance', DEDALO_AREA_MAINTENANCE_TIPO, 'list');
+			$ar_widgets				= $area_maintenance->get_ar_widgets();
+			$valid_widget_ids		= array_map(fn($widget) => $widget->id, $ar_widgets);
+			if (!in_array($class_name, $valid_widget_ids)) {
+				$response->errors[] = 'Invalid widget name: ' . $class_name;
+				debug_log(__METHOD__ . ' Error: Widget not in whitelist: ' . $class_name, logger::ERROR);
+				return $response;
+			}
+
 		// include the widget class
 			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
 			if( !file_exists($widget_class_file) ) {
