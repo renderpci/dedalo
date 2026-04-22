@@ -143,7 +143,7 @@ final class dd_area_maintenance_api {
 
 		// source
 			$source			= $rqo->source;
-			$class_name		= $source->model;
+			$class_name		= sanitize_key_dir($source->model);
 			$class_method	= $source->action;
 
 		// response
@@ -154,10 +154,11 @@ final class dd_area_maintenance_api {
 
 		// include the widget class
 			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
-			if( !include $widget_class_file ) {
+			if( !file_exists($widget_class_file) ) {
 				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
 			}
+			require_once $widget_class_file;
 
 		// check valid options
 			if (!is_object($options)) {
