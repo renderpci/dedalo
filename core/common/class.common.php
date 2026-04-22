@@ -1916,6 +1916,10 @@ abstract class common {
 
 		// cache. fix context dd_object
 			if ($use_cache===true) {
+				if (count(self::$structure_context_cache)>1000) {
+					// clean array to prevent memory leaks
+					self::$structure_context_cache = [];
+				}
 				self::$structure_context_cache[$ddo_key] = $dd_object;
 			}
 
@@ -2599,6 +2603,12 @@ abstract class common {
 				return $this->request_config;
 			}
 
+		// reset ddo_map if it grows too large to prevent memory issues during export
+			if (count(dd_core_api::$ddo_map) > 1000) {
+				dd_core_api::$ddo_map = [];
+				debug_log(__METHOD__ . " Reset ddo_map to prevent memory issues", logger::DEBUG);
+			}
+
 		// 2. Attempt to retrieve from static cache
 		// cache. Experimental 10-08-2023. Note that 'get_ar_request_config' is affected by section_id when sqo->fixed_filter is defined
 			static $resolved_request_config_parsed = [];
@@ -2914,6 +2924,10 @@ abstract class common {
 			static $resolved_request_properties_parsed = [];
 			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+			// limit cache
+			if (count($resolved_request_properties_parsed)>2000) {
+				$resolved_request_properties_parsed = [];
+			}
 
 			// @todo : Remove section_id from cache $resolved_key (resolve numisdata4 list problem before)
 				// @note : To verify this cache behavior, see numisdata4 list
