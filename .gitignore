@@ -87,6 +87,7 @@ vendor/*
 #composer.json
 #composer.lock
 composer.phar
+composer.local.json
 /var
 
 # Ignore paths that contain generated content.
