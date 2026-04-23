@@ -101,7 +101,7 @@ final class dd_tools_api {
 
 		// source
 			$source			= $rqo->source;
-			$tool_name		= $source->model;
+			$tool_name		= sanitize_key_dir($source->model);
 			$tool_method	= $source->action;
 
 		// response
@@ -119,6 +119,15 @@ final class dd_tools_api {
 					. ' options: ' .to_string($options)
 					, logger::ERROR
 				);
+				return $response;
+			}
+
+		// whitelist validation - get valid tool names from registered tools
+			$registered_tools	= tool_common::get_all_registered_tools();
+			$valid_tool_names	= array_map(fn($tool) => $tool->name, $registered_tools);
+			if (!in_array($tool_name, $valid_tool_names)) {
+				$response->errors[] = 'Invalid tool name: ' . $tool_name;
+				debug_log(__METHOD__ . ' Error: Tool not in whitelist: ' . $tool_name, logger::ERROR);
 				return $response;
 			}
 

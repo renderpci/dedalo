@@ -1137,6 +1137,10 @@ class hierarchy extends ontology {
 	*/
 	public static function parse_simple_schema_changes_file( string $filename ) : array {
 
+		// sanitize filename to prevent path traversal
+			$filename = sanitize_file_name($filename);
+			$filename = basename($filename); // strip any path components
+
 		// file_path
 			$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
 			$file_path				= $simple_schema_dir_path . $filename;
