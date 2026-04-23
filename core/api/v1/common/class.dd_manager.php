@@ -159,11 +159,19 @@ final class dd_manager {
 			}
 
 		// actions
-			if ( !method_exists($dd_api, $rqo->action) ) {
+			$is_valid_public_method = false;
+			if (method_exists($dd_api, $rqo->action)) {
+				$reflection = new ReflectionMethod($dd_api, $rqo->action);
+				if ($reflection->isPublic() && $reflection->isStatic()) {
+					$is_valid_public_method = true;
+				}
+			}
+
+			if ( !$is_valid_public_method ) {
 				// error
 				$response = new stdClass();
 					$response->result	= false;
-					$response->msg		= "Error. Undefined $dd_api_type method (action) : ".$rqo->action;
+					$response->msg		= "Error. Undefined or unauthorized $dd_api_type method (action) : ".$rqo->action;
 					$response->errors[]	= 'Undefined method';
 					$response->action	= $action;
 				return $response;

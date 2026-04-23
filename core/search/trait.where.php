@@ -379,18 +379,21 @@ trait where {
 
 			// section_id (int)
 				if (property_exists($current_locator, 'section_id') && !empty($current_locator->section_id)) {
-					$ar_current[] = $table.'.section_id='.$current_locator->section_id;
+					$placeholder = $this->get_placeholder((string)$current_locator->section_id);
+					$ar_current[] = $table.'.section_id='.$placeholder;
 				}
 
 			// section_tipo (string)
 				if (property_exists($current_locator, 'section_tipo') && !empty($current_locator->section_tipo)) {
-					$ar_current[] = $table.'.section_tipo=\''.$current_locator->section_tipo.'\'';
+					$placeholder = $this->get_placeholder((string)$current_locator->section_tipo);
+					$ar_current[] = $table.'.section_tipo='.$placeholder;
 				}
 
 			// tipo (string). time machine case (column 'tipo' exists)
 				if (property_exists($current_locator, 'tipo') && !empty($current_locator->tipo)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.tipo=\''.$current_locator->tipo.'\'';
+						$placeholder = $this->get_placeholder((string)$current_locator->tipo);
+						$ar_current[] = $table.'.tipo='.$placeholder;
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'tipo' in locator because is only allowed in time machine table."
@@ -401,13 +404,15 @@ trait where {
 
 			// type (string)
 				if (property_exists($current_locator, 'type') && !empty($current_locator->type)) {
-					$ar_current[] = $table.'.type='.$current_locator->type;
+					$placeholder = $this->get_placeholder((string)$current_locator->type);
+					$ar_current[] = $table.'.type='.$placeholder;
 				}
 
 			// lang (string). time machine case (column 'lang' exists)
 				if (property_exists($current_locator, 'lang') && !empty($current_locator->lang)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.lang=\''.$current_locator->lang.'\'';
+						$placeholder = $this->get_placeholder((string)$current_locator->lang);
+						$ar_current[] = $table.'.lang='.$placeholder;
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'lang' in locator because is only allowed in time machine table."
@@ -419,7 +424,8 @@ trait where {
 			// matrix_id (int). time machine case (column 'id' exists and is used)
 				if (property_exists($current_locator, 'matrix_id') && !empty($current_locator->matrix_id)) {
 					if ($this->matrix_table==='matrix_time_machine') {
-						$ar_current[] = $table.'.id='.$current_locator->matrix_id;
+						$placeholder = $this->get_placeholder((string)$current_locator->matrix_id);
+						$ar_current[] = $table.'.id='.$placeholder;
 					}else{
 						debug_log(__METHOD__
 							." Ignored property 'matrix_id' in locator because is only allowed in time machine table."
@@ -455,6 +461,7 @@ trait where {
 		// short vars
 			$section_tipo		= $this->main_section_tipo;
 			$section_alias		= $this->main_section_tipo_alias;
+			$datos_container	= section_record_data::get_column_name('section');
 
 			$user_id			= logged_user_id(); // Logged user id
 			if (empty($user_id)) {
@@ -566,15 +573,15 @@ trait where {
 						}else{
 
 							// Default case. Filter by any of user projects
-							$ar_section_id = [];
+							$ar_placeholders = [];
 							foreach ($ar_projects as $current_project_locator) {
-								$ar_section_id[] = $current_project_locator->section_id;
+								$ar_placeholders[] = $this->get_placeholder((string)$current_project_locator->section_id);
 							}
-							$search_ids = implode("','", $ar_section_id);
+							$search_placeholders = implode(",", $ar_placeholders);
 
 							$this->sql_obj->where[] = "EXISTS ( SELECT 1
 								FROM jsonb_array_elements({$section_alias}.relation::jsonb->'{$component_filter_tipo}') AS item
-								WHERE item->>'section_id' IN ('{$search_ids}')
+								WHERE item->>'section_id' IN ({$search_placeholders})
 							)";
 						}
 						break;

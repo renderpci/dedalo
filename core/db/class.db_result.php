@@ -131,8 +131,14 @@ class db_result implements IteratorAggregate
 	
 	public function __destruct()
 	{
-		if (isset($this->result)) {
-			$this->free();
+		if (isset($this->result) && $this->result instanceof \PgSql\Result) {
+			try {
+				// Check if the result is still valid before trying to free it
+				// In PHP 8.1+ PgSql\Result objects are used instead of resources
+				@$this->free();
+			} catch (\Error $e) {
+				// Silently ignore if already closed
+			}
 		}
 	}
 }
