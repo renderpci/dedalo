@@ -167,4 +167,69 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 
 
 
+/**
+* BUILD_CHANGED_DATA_ITEM
+* Parses the select value and builds a frozen changed_data_item object.
+* Used by edit views (via handle_select_change) and search view (directly).
+* @param HTMLSelectElement select
+* @param int|null id
+* @return object {changed_data_item, parsed_value}
+*/
+export const build_changed_data_item = function(select, id=null) {
+
+	// parse select value from JSON string to object locator
+	const parsed_value = (select.value.length > 0)
+		? JSON.parse(select.value)
+		: null
+
+	// add id to parsed_value if available
+	if (parsed_value && id) {
+		parsed_value.id = id
+	}
+
+	// build changed_data_item
+	const changed_data_item = Object.freeze({
+		action	: (parsed_value != null) ? 'update' : 'remove',
+		id		: id,
+		value	: parsed_value // object locator or null expected
+	})
+
+	return {
+		changed_data_item	: changed_data_item,
+		parsed_value		: parsed_value
+	}
+}//end build_changed_data_item
+
+
+
+/**
+* HANDLE_SELECT_CHANGE
+* Common change handler for component_select across all edit views.
+* Parses the select value, builds changed_data_item, sets changed_data,
+* and saves via change_value. Returns parsed_value for view-specific hooks.
+* @param object self - Component instance
+* @param HTMLSelectElement select - The select DOM element
+* @param int|null id - Entry id from data
+* @return object|null parsed_value - The parsed locator or null
+*/
+export const handle_select_change = async function(self, select, id=null) {
+
+	// build changed_data_item (parse + freeze)
+	const {changed_data_item, parsed_value} = build_changed_data_item(select, id)
+
+	// fix instance changed_data
+	self.set_changed_data(changed_data_item)
+
+	// force to save on every change
+	await self.change_value({
+		changed_data	: [changed_data_item],
+		refresh			: false,
+		remove_dialog	: false
+	})
+
+	return parsed_value
+}//end handle_select_change
+
+
+
 // @license-end

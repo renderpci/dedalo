@@ -7,6 +7,7 @@
 // imports
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {handle_select_change} from './component_select.js'
 	import {
 		get_content_data
 	} from './render_edit_component_select.js'
@@ -75,6 +76,8 @@ const get_content_value = (i, current_value, self) => {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
+		const entry		= data.entries?.[0] || null
+		const id		= entry?.id || null
 		// add empty option at beginning of the datalist array
 		const empty_option = {
 			label	: '',
@@ -108,28 +111,9 @@ const get_content_value = (i, current_value, self) => {
 				}
 			})
 		// change event
-			select.addEventListener('change', function(){
-
-				const parsed_value	= (select.value.length>0)
-					? JSON.parse(select.value)
-					: null
-
-				// change data
-					const changed_data_item	= Object.freeze({
-						action	: (parsed_value != null) ? 'update' : 'remove',
-						id		: (parsed_value != null) ? parsed_value.id : null,
-						value	: parsed_value
-					})
-
-				// fix instance changed_data
-					self.set_changed_data(changed_data_item)
-
-				// force to save on every change
-					self.change_value({
-						changed_data	: [changed_data_item],
-						refresh			: false,
-						remove_dialog	: false
-					})
+			select.addEventListener('change', async function(){
+				// common change handler (parse, build changed_data_item, set_changed_data, change_value)
+				await handle_select_change(self, select, id)
 			})
 		// click event
 			select.addEventListener('click', function(e){
