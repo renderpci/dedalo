@@ -9,6 +9,7 @@
 	import {
 		get_buttons
 	} from './render_edit_component_radio_button.js'
+	import {handle_radio_change} from './component_radio_button.js'
 
 
 
@@ -129,21 +130,15 @@ const get_content_value = (i, datalist_item, self) => {
 			title			: label,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
+		input.addEventListener('change', async function() {
 
 			if (self.permissions===1){
 				return
 			}
 
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				id		: entries[0]?.id || null,
-				value	: datalist_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
+			// common change handler (clone value + add id, set_changed_data, change_value)
+			// read id dynamically from self.data (not from stale closure)
+			await handle_radio_change(self, datalist_value)
 
 			// update label checked status
 			update_status({

@@ -10,6 +10,7 @@
 	import {render_edit_component_radio_button} from './render_edit_component_radio_button.js'
 	import {render_list_component_radio_button} from './render_list_component_radio_button.js'
 	import {render_search_component_radio_button} from './render_search_component_radio_button.js'
+	import {clone} from '../../common/js/utils/index.js'
 
 
 
@@ -100,6 +101,76 @@ component_radio_button.prototype.focus_first_input = function() {
 
 	return true
 }//end focus_first_input
+
+
+
+/**
+* BUILD_CHANGED_DATA_ITEM
+* Clones the datalist value, adds the entry id to it, and builds a frozen changed_data_item object.
+* Used by edit views (via handle_radio_change) and search view (directly).
+* @param object|null datalist_value
+* 	Locator value from datalist
+* @param int|null id
+* 	Entry id from data
+* @return object {changed_data_item, value}
+*/
+export const build_changed_data_item = function(datalist_value, id=null) {
+
+	// clone datalist_value to avoid mutating the original
+	// and add id to the value if available
+	const parsed_value = (datalist_value != null)
+		? { ...clone(datalist_value), ...(id ? { id: id } : {}) }
+		: null
+
+	// build changed_data_item
+	const changed_data_item = Object.freeze({
+		action	: (parsed_value != null) ? 'update' : 'remove',
+		id		: id,
+		value	: parsed_value
+	})
+
+	return {
+		changed_data_item	: changed_data_item,
+		parsed_value		: parsed_value
+	}
+}//end build_changed_data_item
+
+
+
+/**
+* HANDLE_RADIO_CHANGE
+* Common change handler for component_radio_button across all edit views.
+* Resolves id dynamically from self.data (not from stale closure),
+* builds changed_data_item, sets changed_data, and saves via change_value.
+* @param object self - Component instance
+* @param object|null datalist_value - The locator value from datalist
+* @param int|null id - Entry id from data
+* @return object|null value - The value with id preserved, or null
+*/
+export const handle_radio_change = async function(self, datalist_value, id=null) {
+
+	// resolve id from current data if not provided
+	// (when component was initially empty, the closure id is null,
+	// but after first save the entry gets an id from the API)
+	if (id === null) {
+		id = self.data.entries?.[0]?.id ?? null
+	}
+
+	// build changed_data_item (clone value + add id + freeze)
+	const {changed_data_item, parsed_value} = build_changed_data_item(datalist_value, id)
+
+	// fix instance changed_data
+	self.set_changed_data(changed_data_item)
+
+	// force to save on every change
+	await self.change_value({
+		changed_data	: [changed_data_item],
+		refresh			: false,
+		remove_dialog	: false
+	})
+
+	return parsed_value
+}//end handle_radio_change
 
 
 
