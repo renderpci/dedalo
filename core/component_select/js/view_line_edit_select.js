@@ -76,8 +76,6 @@ const get_content_value = (i, current_value, self) => {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		const entry		= data.entries?.[0] || null
-		const id		= entry?.id || null
 		// add empty option at beginning of the datalist array
 		const empty_option = {
 			label	: '',
@@ -113,7 +111,9 @@ const get_content_value = (i, current_value, self) => {
 		// change event
 			select.addEventListener('change', async function(){
 				// common change handler (parse, build changed_data_item, set_changed_data, change_value)
-				await handle_select_change(self, select, id)
+				// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[0]?.id ?? null
+				await handle_select_change(self, select, current_id)
 			})
 		// click event
 			select.addEventListener('click', function(e){

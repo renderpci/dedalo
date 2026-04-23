@@ -214,6 +214,13 @@ export const build_changed_data_item = function(select, id=null) {
 */
 export const handle_select_change = async function(self, select, id=null) {
 
+	// resolve id from current data if not provided
+	// (when component was initially empty, the closure id is null,
+	// but after first save the entry gets an id from the API)
+	if (id === null) {
+		id = self.data.entries?.[0]?.id ?? null
+	}
+
 	// build changed_data_item (parse + freeze)
 	const {changed_data_item, parsed_value} = build_changed_data_item(select, id)
 
