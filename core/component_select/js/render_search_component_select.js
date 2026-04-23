@@ -98,8 +98,6 @@ const get_content_value = (i, current_value, self) => {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		const entry		= data.entries?.[i] || null
-		const id		= entry?.id || null
 		// add empty option at beginning of the datalist array
 		const empty_option = {
 			label	: '',
@@ -147,7 +145,9 @@ const get_content_value = (i, current_value, self) => {
 			select.addEventListener('change', function(){
 
 				// build changed_data_item from select value
-				const {changed_data_item} = build_changed_data_item(select, id)
+				// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[i]?.id ?? null
+				const {changed_data_item} = build_changed_data_item(select, current_id)
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data_item)

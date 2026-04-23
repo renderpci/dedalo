@@ -83,12 +83,6 @@ const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const data					= self.data || {}
-		const entries				= data.entries || []
-		const entry					= entries[0] || null
-		const id					= entry?.id || null
-		const section_id			= entry?.section_id || null
-		const section_tipo			= entry?.section_tipo || null
-		const main_component_tipo	= entry?.main_component_tipo || null
 		const datalist				= data.datalist || []
 
 	// add empty option at beginning of the datalist array
@@ -126,20 +120,27 @@ const get_content_value = (i, current_value, self) => {
 			const change_handler = async function(e) {
 
 				// when user changes the value of the select, remove its dataframe
-					if(section_id){
+				// read current entry values dynamically (they change after each save)
+					const current_entry = self.data.entries?.[0] || null
+					const current_section_id = current_entry?.section_id || null
+					const current_section_tipo = current_entry?.section_tipo || null
+					const current_main_component_tipo = current_entry?.main_component_tipo || null
+					if(current_section_id){
 						delete_dataframe({
 							self				: self,
 							section_id			: self.section_id,
 							section_tipo		: self.section_tipo,
-							section_id_key		: section_id,
-							section_tipo_key	: section_tipo,
-							main_component_tipo	: main_component_tipo,
+							section_id_key		: current_section_id,
+							section_tipo_key	: current_section_tipo,
+							main_component_tipo	: current_main_component_tipo,
 							delete_instance		: true
 						})
 					}
 
 				// common change handler (parse, build changed_data_item, set_changed_data, change_value)
-					const parsed_value = await handle_select_change(self, select, id)
+				// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[0]?.id ?? null
+				const parsed_value = await handle_select_change(self, select, current_id)
 
 				// show/hide button_edit based on value
 					if (select.button_edit) {
