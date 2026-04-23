@@ -1541,6 +1541,105 @@ final class dd_utils_api {
 
 
 	/**
+	* GET_PROCESS_STATUS_POLL
+	* One-shot polling version of get_process_status.
+	* Reads the process file once and returns a standard JSON response.
+	* Unlike the SSE version (`get_process_status`), this method does NOT use
+	* streaming, die(), or blocking loops — making it compatible with both
+	* PHP-FPM and RoadRunner worker contexts.
+	*
+	* The client calls this endpoint repeatedly via setInterval to monitor
+	* process progress with the same functional result as SSE at 1s update_rate.
+	*
+	* @param object $rqo
+	* {
+	*   options: {
+	*     pid:   int    Process ID
+	*     pfile: string Process output file name
+	*   }
+	* }
+	* @return object $response
+	* {
+	*   result:     bool
+	*   pid:        int
+	*   pfile:      string
+	*   is_running: bool
+	*   data:       object  { msg, counter, total, ... }
+	*   time:       string  Current server time
+	*   errors:     array
+	* }
+	*/
+	public static function get_process_status_poll(object $rqo) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+			$response = new stdClass();
+				$response->result		= false;
+				$response->msg			= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors		= [];
+
+		// only logged users can access process status
+			if (login::is_logged()!==true) {
+				$response->msg = 'Authentication error: please login';
+				$response->errors[] = 'Not logged';
+				return $response;
+			}
+
+		// options
+			$pfile	= $rqo->options->pfile ?? null;
+			$pid	= $rqo->options->pid ?? null;
+
+		// mandatory vars
+			if (empty($pfile) || empty($pid)) {
+				$response->msg = 'Error: pfile and pid are mandatory';
+				$response->errors[] = 'Missing pfile or pid';
+				return $response;
+			}
+
+		// process
+			$process = new process();
+				$process->setPid($pid);
+				$process->setFile(process::get_process_path() .'/'. $pfile);
+
+		// read process info (one shot)
+			$is_running	= $process->status(); // bool
+			$array_data	= $process->read(); // array
+
+			// decode last line
+			$value = isset($array_data[0])
+				? (json_decode($array_data[0]) ?? $array_data[0])
+				: '';
+
+			$data = is_object($value)
+				? $value
+				: (object)['msg' => $value];
+
+		// clean up finished process
+			if ($is_running===false) {
+				processes::delete_process_item(
+					$pid,
+					logged_user_id()
+				);
+			}
+
+		// response
+			$response->result		= true;
+			$response->pid			= $pid;
+			$response->pfile		= $pfile;
+			$response->is_running	= $is_running;
+			$response->data			= $data;
+			$response->time			= date("Y-m-d H:i:s");
+			$response->errors		= [];
+
+
+		return $response;
+	}//end get_process_status_poll
+
+
+
+	/**
 	* STOP_PROCESS
 	* @param object $rqo
 	* @return object $response
