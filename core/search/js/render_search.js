@@ -475,12 +475,18 @@ render_search.prototype.render_search_buttons = function(){
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
 			document.activeElement.blur()
-			// exec decoupled
-			dd_request_idle_callback(()=>{
+			// exec decoupled to allow UI to update before search starts
+			dd_request_idle_callback(async ()=>{
 				// exec search command (return promise resolved as bool)
-				self.exec_search()
-				// toggle filter container
-				toggle_search_panel(self) // toggle to open from default state close
+				await self.exec_search()
+				// toggle filter container if there are results
+				dd_request_idle_callback(async ()=>{
+					const caller = self.caller
+					const total = await caller.get_total()
+					if(total > 0) {
+						toggle_search_panel(self) // toggle to open from default state close
+					}
+				})
 			})
 		}
 		const submit_button = ui.create_dom_element({
