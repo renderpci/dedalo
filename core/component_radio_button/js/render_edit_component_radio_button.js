@@ -10,6 +10,7 @@
 	import {view_default_edit_radio_button} from './view_default_edit_radio_button.js'
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
 	import {view_rating_edit_radio_button} from './view_rating_edit_radio_button.js'
+	import {handle_radio_change, build_changed_data_item} from './component_radio_button.js'
 
 
 
@@ -160,19 +161,11 @@ const get_content_value = (i, datalist_item, self) => {
 		})
 		input_label.prepend(input)
 		// change handler
-		const change_handler = function() {
+		const change_handler = async function() {
 
-			// (!) Note that datalist_value do not includes the current value id, and
-			// therefore, a new id will be generated on save.
-			const changed_data = [Object.freeze({
-				action	: 'update',
-				id		: entries[0] ? entries[0].id : null,
-				value	: datalist_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
+			// common change handler (clone value + add id, set_changed_data, change_value)
+			// read id dynamically from self.data (not from stale closure)
+			await handle_radio_change(self, datalist_value)
 
 			// update label checked status
 			update_status(this)
@@ -310,13 +303,15 @@ export const get_buttons = (self) => {
 				// force possible input change before remove
 				document.activeElement.blur()
 
-				if (self.data.entries.length===0) {
+				if (!self.data?.entries || self.data.entries.length===0) {
 					return true
 				}
 
+				// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[0]?.id ?? null
 				const changed_data = [Object.freeze({
 					action	: 'remove',
-					id		: null,
+					id		: current_id,
 					value	: null
 				})]
 				self.change_value({

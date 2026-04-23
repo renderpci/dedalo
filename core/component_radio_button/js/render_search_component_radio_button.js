@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {build_changed_data_item} from './component_radio_button.js'
 
 
 
@@ -45,7 +46,7 @@ render_search_component_radio_button.prototype.search = async function(options) 
 		})
 		// set pointers
 		wrapper.content_data = content_data
-		
+
 
 	return wrapper
 }//end search
@@ -141,12 +142,10 @@ const get_input_element = (i, datalist_item, self) => {
 		input_label.prepend(input)
 		input.addEventListener('change', function() {
 
-			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					id		: entries[0]?.id || null,
-					value	: datalist_value
-				})
+			// build changed_data_item from datalist value
+			// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[0]?.id ?? null
+				const {changed_data_item} = build_changed_data_item(datalist_value, current_id)
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
@@ -166,11 +165,9 @@ const get_input_element = (i, datalist_item, self) => {
 				}
 
 				// changed_data
-					const changed_data_item = Object.freeze({
-						action	: 'remove',
-						id		: null,
-						value	: null
-					})
+				// read id dynamically from self.data (not from stale closure)
+					const current_id = self.data.entries?.[0]?.id ?? null
+					const {changed_data_item} = build_changed_data_item(null, current_id)
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data_item)
