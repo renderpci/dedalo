@@ -1027,7 +1027,12 @@ search.prototype.update_state = async function(options) {
 // SEARCH
 	/**
 	* EXEC_SEARCH
-	* @return promise
+	* Parses the current search DOM filter into a JSON query object and updates
+	* the caller instance (section or area) to execute the search.
+	* Includes race condition prevention via `self.searching` flag.
+	* Resets order and pagination offset (for sections) before dispatching.
+	* @return {Promise<bool|object>} - Resolves to `false` if already searching
+	*   or on error; otherwise returns the promise from `update_caller`.
 	*/
 	search.prototype.exec_search = async function() {
 
@@ -1035,14 +1040,11 @@ search.prototype.update_state = async function(options) {
 
 		// race condition prevention - return if already searching
 		if (self.searching===true) {
-			return Promise.resolve(false)
+			return false
 		}
 		self.searching = true
 
 		try {
-
-			// source search_action
-			self.source.search_action = 'search'
 
 			// section || area thesaurus
 			const caller = self.caller
@@ -1050,8 +1052,11 @@ search.prototype.update_state = async function(options) {
 			// caller null check
 			if (!caller) {
 				console.error('Error: caller is not defined');
-				return Promise.resolve(false)
+				return false
 			}
+
+			// source search_action (after caller check to avoid mutation on null caller)
+			self.source.search_action = 'search'
 
 			// Delete caller search_tipos (Ontology feature).
 			// This allow to re-create the RQO clean on build the caller again ignoring the URL search_tipos value.
@@ -1065,7 +1070,7 @@ search.prototype.update_state = async function(options) {
 			})
 
 			// reset order
-			json_query_obj.order = [];
+			json_query_obj.order = []
 
 			// pagination reset for section
 			if (caller.model === 'section') {
@@ -1081,6 +1086,9 @@ search.prototype.update_state = async function(options) {
 
 			return js_promise
 
+		} catch (error) {
+			console.error('Error on exec_search:', error);
+			return false
 		} finally {
 			self.searching = false
 		}
