@@ -485,6 +485,7 @@ export const ui = {
 
 				// css
 					const ar_css = [
+						'mini',
 						instance.model + '_mini' // add suffix '_mini'
 					]
 					wrapper.classList.add(...ar_css)
