@@ -70,13 +70,44 @@ export const component_filter = function(){
 
 
 
+/**
+* BUILD_CHANGED_DATA_ITEM
+* Builds a frozen changed_data_item object from checkbox state and datalist value.
+* Used by change_handler (edit) and search view change handler.
+* @param bool checked - Current checked state of the checkbox
+* @param object datalist_value - Locator from datalist {section_id, section_tipo}
+* @param array entries - Current data entries to resolve id from
+* @return object {changed_data_item, action}
+*/
+export const build_changed_data_item = function(checked, datalist_value, entries) {
+
+	const action		= (checked===true) ? 'insert' : 'remove'
+	const locator		= entries.find(item => {
+		return (item.section_id==datalist_value.section_id &&
+				item.section_tipo===datalist_value.section_tipo)
+	})
+	const changed_value	= (action==='insert') ? datalist_value : null
+
+	const changed_data_item = Object.freeze({
+		action	: action,
+		id		: locator?.id || null,
+		value	: changed_value
+	})
+
+	return {
+		changed_data_item	: changed_data_item,
+		action				: action
+	}
+}//end build_changed_data_item
+
+
 
 /**
 * CHANGE_HANDLER
-* Manages the change event actions
-* @param event e
-* @param int key
-* @param object self
+* Manages the change event actions across edit and search views.
+* Uses build_changed_data_item to construct the changed data uniformly.
+* @param object options
+*	{checked: bool, datalist_value: object}
 * @return bool
 */
 component_filter.prototype.change_handler = async function(options) {
@@ -84,31 +115,21 @@ component_filter.prototype.change_handler = async function(options) {
 	const self = this
 
 	// options
-		const data_entries 		= self.data.entries
+		const checked			= options.checked
 		const datalist_value	= options.datalist_value
-		const action			= options.action
 
-	// change data vars
-		// changed key. Find the data.value key (could be different of datalist key)
-		const locator = data_entries.find(item => {
-			return (item.section_id==datalist_value.section_id &&
-					item.section_tipo===datalist_value.section_tipo)
-		 })
-		const changed_value	= (action==='insert') ? datalist_value : null
-
-	// changed_data_item
-		const changed_data_item = Object.freeze({
-			action	: action,
-			id		: locator?.id || null,
-			value	: changed_value
-		})
+	// build changed_data_item using shared function
+		const {changed_data_item} = build_changed_data_item(
+			checked,
+			datalist_value,
+			self.data.entries || []
+		)
 
 	if (self.mode==='search') {
 
 		// update the instance data (previous to save)
 			self.update_data_value(changed_data_item)
-		// set data.changed_data. The change_data to the instance
-			// self.data.changed_data = changed_data
+
 		// publish search. Event to update the DOM elements of the instance
 			event_manager.publish('change_search_element', self)
 
@@ -135,5 +156,5 @@ component_filter.prototype.change_handler = async function(options) {
 }//end change_handler
 
 
-// @license-end
 
+// @license-end

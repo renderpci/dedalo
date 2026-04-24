@@ -179,29 +179,29 @@ export const get_input_element = (element, self) => {
 		})
 		// change event
 		const input_change_handler = (e) => {
-			e.preventDefault()
+				e.preventDefault()
 
-			// check all values
-				const checked_items = []
-				const all_inputs = self.node.content_data.querySelectorAll('.item_input')
-				for (let i = 0; i < all_inputs.length; i++) {
-					if(all_inputs[i].checked) {
-						checked_items.push(all_inputs[i])
+				// check all values
+					const checked_items = []
+					const all_inputs = self.node.content_data.querySelectorAll('.item_input')
+					for (let i = 0; i < all_inputs.length; i++) {
+						if(all_inputs[i].checked) {
+							checked_items.push(all_inputs[i])
+						}
 					}
-				}
-				if (checked_items.length<1 && self.mode!=='search') {
-					// restore checked
-					input_node.checked = true
-					alert( get_label.select_one_project || 'You must select at least one project' );
-					return
-				}
+					if (checked_items.length<1 && self.mode!=='search') {
+						// restore checked
+						input_node.checked = true
+						alert( get_label.select_one_project || 'You must select at least one project' );
+						return
+					}
 
-			// common change handler
-			self.change_handler({
-				datalist_value	: datalist_value,
-				action			: (input_node.checked===true) ? 'insert' : 'remove'
-			})
-		}
+				// common change handler
+				self.change_handler({
+					checked			: input_node.checked,
+					datalist_value	: datalist_value
+				})
+			}
 		input_node.addEventListener('change', input_change_handler)
 		// mousedown event
 		const mousedown_handler = (e) => {

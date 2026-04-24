@@ -187,7 +187,7 @@ final class component_filter_test extends BaseTestCase {
 		$reflection = new ReflectionClass($component);
 		$method = $reflection->getMethod('set_data_default');
 		$result	= $method->invoke($component);
-	
+
 		if (security::is_global_admin(TEST_USER_ID)) {
 			$this->assertTrue(
 				$result===true,
@@ -240,7 +240,7 @@ final class component_filter_test extends BaseTestCase {
 			$mode,
 			$lang,
 			$section_tipo
-		);	
+		);
 
 		$result	= $component->get_default_data_for_user(
 			1
@@ -391,7 +391,7 @@ final class component_filter_test extends BaseTestCase {
 				'expected column_count 0|1 : ' . PHP_EOL
 					. $result->column_count
 			);
-		}		
+		}
 	}//end test_get_grid_value
 
 
@@ -655,6 +655,134 @@ final class component_filter_test extends BaseTestCase {
 			'expected same dato'
 		);
 	}//end test_convert_dato_pre_490
+
+
+
+	/**
+	* TEST_LIFECYCLE_CREATE_ADD_CHANGE_REMOVE_DESTROY
+	* Full lifecycle: create → add data → change data → remove data → verify clean state
+	* @return void
+	*/
+	public function test_lifecycle_create_add_change_remove_destroy() {
+
+		// CREATE: instantiate the component
+			$component = $this->build_component_instance();
+			$original_data = $component->get_data();
+
+			$this->assertTrue(
+				get_class($component)==='component_filter',
+				'CREATE: expected class component_filter'
+			);
+			$this->assertTrue(
+				$component->get_tipo()===self::$tipo,
+				'CREATE: expected tipo '.self::$tipo
+			);
+			$this->assertTrue(
+				$component->get_section_tipo()===self::$section_tipo,
+				'CREATE: expected section_tipo '.self::$section_tipo
+			);
+			$this->assertTrue(
+				$component->get_lang()===DEDALO_DATA_NOLAN,
+				'CREATE: expected lang DEDALO_DATA_NOLAN (filter is always nolan)'
+			);
+
+		// ADD DATA: add a filter locator (project 1)
+			$component->set_data([]);
+			$component->save();
+
+			$locator_1 = new locator();
+				$locator_1->set_section_tipo('dd153');
+				$locator_1->set_section_id('1');
+				$locator_1->set_type(DEDALO_RELATION_TYPE_FILTER);
+				$locator_1->set_from_component_tipo(self::$tipo);
+
+			$add_result = $component->add_locator_to_data($locator_1);
+			$this->assertTrue(
+				$add_result===true,
+				'ADD: expected true on add_locator_to_data'
+			);
+			$component->save();
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				count($data)===1,
+				'ADD: expected 1 element after add'
+			);
+			$this->assertTrue(
+				$data[0]->section_id==='1',
+				'ADD: expected section_id 1'
+			);
+			$this->assertTrue(
+				$data[0]->section_tipo==='dd153',
+				'ADD: expected section_tipo dd153'
+			);
+
+		// ADD MORE DATA: add a second filter locator (project 7)
+			$locator_2 = new locator();
+				$locator_2->set_section_tipo('dd153');
+				$locator_2->set_section_id('7');
+				$locator_2->set_type(DEDALO_RELATION_TYPE_FILTER);
+				$locator_2->set_from_component_tipo(self::$tipo);
+
+			$add_result_2 = $component->add_locator_to_data($locator_2);
+			$this->assertTrue(
+				$add_result_2===true,
+				'ADD MORE: expected true on second add_locator_to_data'
+			);
+			$component->save();
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				count($data)===2,
+				'ADD MORE: expected 2 elements after second add'
+			);
+
+		// CHANGE DATA: replace with single locator
+			$locator_3 = new locator();
+				$locator_3->set_section_tipo('dd153');
+				$locator_3->set_section_id('2');
+				$locator_3->set_type(DEDALO_RELATION_TYPE_FILTER);
+				$locator_3->set_from_component_tipo(self::$tipo);
+
+			$component->set_data([$locator_3]);
+			$component->save();
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				count($data)===1,
+				'CHANGE: expected 1 element after set_data'
+			);
+			$this->assertTrue(
+				$data[0]->section_id==='2',
+				'CHANGE: expected section_id 2 after change'
+			);
+
+		// REMOVE DATA: remove the locator
+			$remove_result = $component->remove_locator_from_data($locator_3);
+			$this->assertTrue(
+				$remove_result===true,
+				'REMOVE: expected true on remove_locator_from_data'
+			);
+
+			$data = $component->get_data();
+			$this->assertTrue(
+				empty($data),
+				'REMOVE: expected empty data after remove'
+			);
+			$component->save();
+
+		// VERIFY CLEAN STATE: fresh instance should have no data
+			$fresh = $this->build_component_instance();
+			$fresh_data = $fresh->get_data();
+			$this->assertTrue(
+				empty($fresh_data),
+				'DESTROY: expected empty data on fresh instance after cleanup'
+			);
+
+		// RESTORE original data
+			$component->set_data($original_data);
+			$component->save();
+	}//end test_lifecycle_create_add_change_remove_destroy
 
 
 
