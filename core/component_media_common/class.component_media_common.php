@@ -2615,6 +2615,18 @@ class component_media_common extends component_common {
 			$file_path			= $this->get_media_filepath($default_quality);
 			if (!file_exists($file_path)) {
 				$this->build_version($default_quality);
+			}else if($delete_normalized_files===true && $this->quality !== $default_quality){
+				// default quality file exists but is stale (upload targeted a different quality like 'original').
+				// delete_normalized_files skips the default quality ($uploaded_file=null),
+				// so the old file survives and build_version is never called.
+				// Move the stale file to deleted and rebuild from the new original.
+				$move_file_options = new stdClass();
+					$move_file_options->quality			= $default_quality;
+					$move_file_options->file			= $file_path;
+					$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
+					$move_file_options->file_name		= $this->get_name();
+				$this->move_deleted_file( $move_file_options );
+				$this->build_version($default_quality);
 			}
 
 		// check alternatives
