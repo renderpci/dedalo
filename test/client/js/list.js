@@ -23,10 +23,11 @@ export const list_of_test = [
 	'test_diffusion',
 	'test_ts_object',
 	'test_ts_object_extended',
+	'test_component_common_changed_data',
 	'test_component_geolocation',
 	'test_component_select',
 	'test_component_select_lang',
-	'test_component_common_changed_data'
+	'test_component_radio_button'
 ]
 
 // group_stats: track pass/fail/pending per group
