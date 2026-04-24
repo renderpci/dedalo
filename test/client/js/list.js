@@ -26,6 +26,7 @@ export const list_of_test = [
 	'test_component_common_changed_data',
 	// components full test
 	'test_component_check_box',
+	'test_component_filter',
 	'test_component_geolocation',
 	'test_component_radio_button',
 	'test_component_select',
