@@ -5,6 +5,8 @@
 
 
 // imports
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_3d} from './view_default_edit_3d.js'
 
 
@@ -45,6 +47,66 @@ render_edit_component_3d.prototype.edit = async function(options) {
 			return view_default_edit_3d.render(self, options)
 	}
 }//end edit
+
+
+
+/**
+* GET_QUALITY_SELECTOR
+* @param object self
+* @return HTMLElement quality_selector
+*/
+export const get_quality_selector = (self) => {
+
+	// short vars
+		const data			= self.data || {}
+		const entries		= data.entries || []
+		const files_info	= entries[0] && entries[0].files_info
+			? entries[0].files_info
+			: []
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
+
+	const fragment = new DocumentFragment()
+
+	// create the quality selector
+		const quality_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'quality_selector',
+			parent			: fragment
+		})
+		quality_selector.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+		})
+		quality_selector.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
+		quality_selector.addEventListener('change', (e) =>{
+			const file_url = e.target.value
+			event_manager.publish('3d_quality_change_'+self.id, file_url)
+		})
+
+		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
+		const quality_list_len	= quality_list.length
+		for (let i = 0; i < quality_list_len; i++) {
+
+			const file_info = quality_list[i]
+
+			// create the node with the all qualities sent by server
+			const url = DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+
+			const select_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: url,
+				text_node		: quality_list[i].quality,
+				parent			: quality_selector
+			})
+			//set the default quality_list to config variable dedalo_image_quality_default
+			select_option.selected = quality_list[i].quality===quality ? true : false
+		}
+
+
+	return quality_selector
+}//end get_quality_selector
 
 
 

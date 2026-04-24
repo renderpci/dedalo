@@ -9,6 +9,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {get_quality_selector} from './render_edit_component_3d.js'
 
 
 
@@ -155,6 +156,7 @@ export const get_content_value = (i, current_value, self) => {
 				}
 			}
 			const error_handler = () => {
+				content_value.posterframe.removeEventListener('error', error_handler)
 				if (content_value.posterframe.src !== page_globals.fallback_image) {
 					content_value.posterframe.src = page_globals.fallback_image
 				}
@@ -190,7 +192,9 @@ export const get_content_value = (i, current_value, self) => {
 			viewer_3d.load(
 				file_url  // + '?t=' + (new Date()).getTime()
 			) // rootPath, fileMap
-			.catch((e) => this.onError(e))
+			.catch((e) => {
+				console.error('Error loading 3D model:', e)
+			})
 			.then((gltf) => {
 				dd_request_idle_callback(
 					() => {
@@ -218,8 +222,8 @@ export const get_content_value = (i, current_value, self) => {
 				const load_handler = function(e) {
 					this.removeEventListener('load', load_handler, false)
 					// if (content_value.posterframe.src!==page_globals.fallback_image) {
-					// 	ui.set_background_image(this, content_value)
-					// }
+				// 	ui.set_background_image(this, content_value)
+				// }
 				}
 				content_value.posterframe.addEventListener('load', load_handler, false)
 				content_value.posterframe.src = posterframe_url
@@ -238,6 +242,38 @@ export const get_content_value = (i, current_value, self) => {
 					})
 				}
 				content_value.addEventListener('mousedown', mousedown_handler);
+		}
+
+		// quality_change_handler. Subscribe to quality change events to reload the 3D viewer
+		// only when a viewer will actually be loaded (file_url is not null)
+		if(file_url) {
+			const quality_change_handler = async (file_url) => {
+
+				if (!self.viewer) {
+					console.warn('Ignored quality_change_handler call. No self.viewer is set');
+					return
+				}
+
+				try {
+					// show loading state
+					content_value.classList.add('loading')
+
+					// reload the 3D model with the new quality URL
+					await self.viewer.load(file_url)
+
+					if(SHOW_DEBUG===true) {
+						console.log('3d quality_change_handler loaded:', file_url);
+					}
+				} catch(error) {
+					console.error('Error on quality_change_handler:', error)
+				} finally {
+					// hide loading state
+					content_value.classList.remove('loading')
+				}
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('3d_quality_change_'+self.id, quality_change_handler)
+			)
 		}
 	};
 
@@ -297,61 +333,6 @@ export const get_content_value_read = (i, current_value, self) => {
 
 	return content_value
 }//end get_content_value_read
-
-
-
-/**
-* GET_QUALITY_SELECTOR
-* @param object content_value
-* @param object self
-* @return HTMLElement quality_selector
-*/
-export const get_quality_selector = (content_value, self) => {
-
-	// short vars
-		const data			= self.data || {}
-		const entries		= data.entries || []
-		const files_info	= entries[0] && entries[0].files_info
-			? entries[0].files_info
-			: []
-		const quality		= self.quality || self.context.features.quality
-		const extension		= self.context.features.extension
-
-	// fragment
-		const fragment = new DocumentFragment()
-
-	// create the quality selector
-		const quality_selector = ui.create_dom_element({
-			element_type	: 'select',
-			class_name		: 'quality_selector',
-			parent			: fragment
-		})
-		quality_selector.addEventListener('change', (e) =>{
-			const src = e.target.value
-		})
-
-		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
-		const quality_list_len	= quality_list.length
-		for (let i = 0; i < quality_list_len; i++) {
-
-			const file_info = quality_list[i]
-
-			// create the node with the all qualities sent by server
-			const url = DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
-
-			const select_option = ui.create_dom_element({
-				element_type	: 'option',
-				value			: url,
-				text_node		: quality_list[i].quality,
-				parent			: quality_selector
-			})
-			//set the default quality_list to config variable dedalo_image_quality_default
-			select_option.selected = quality_list[i].quality===quality ? true : false
-		}
-
-
-	return quality_selector
-}//end get_quality_selector
 
 
 
