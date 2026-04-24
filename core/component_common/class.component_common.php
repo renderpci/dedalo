@@ -3660,36 +3660,36 @@ abstract class component_common extends common {
 				$id = $changed_data->id ?? null;
 
 				if ($id !== null) {
-					// Search for the entry with matching id in the data array
-					$found = false;
-					foreach ($data as $data_key => $data_item) {
-						if (is_object($data_item) && isset($data_item->id) && $data_item->id == $id) {
-							// Found: replace the entire value at this array position
-							$data[$data_key] = $changed_data->value;
-							// Ensure the id is preserved in the new value object
-							if (!isset($data[$data_key]->id)) {
-								$data[$data_key]->id = $id;
-							}
-							$found = true;
-							break;
+				// Search for the entry with matching id in the data array
+				$found = false;
+				foreach ($data as $data_key => $data_item) {
+					if (is_object($data_item) && isset($data_item->id) && $data_item->id == $id) {
+						// Found: replace the entire value at this array position
+						$data[$data_key] = $changed_data->value;
+						// Ensure the id is preserved in the new value object
+						if (is_object($data[$data_key]) && !isset($data[$data_key]->id)) {
+							$data[$data_key]->id = $id;
 						}
+						$found = true;
+						break;
 					}
-					if (!$found) {
-						// Entry not found - log warning and add as new entry instead of failing
-						debug_log(__METHOD__
-							." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
-							, logger::WARNING
-						);
-						$data[] = $changed_data->value;
-					}
-				} else {
-					// No id provided - cannot target a specific entry, add as new
+				}
+				if (!$found) {
+					// Entry not found - log warning and add as new entry instead of failing
 					debug_log(__METHOD__
-						." Warning on update: no id provided. Adding as new entry.". PHP_EOL
+						." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
 						, logger::WARNING
 					);
 					$data[] = $changed_data->value;
 				}
+			} else {
+				// No id provided - cannot target a specific entry, add as new
+				debug_log(__METHOD__
+					." Warning on update: no id provided. Adding as new entry.". PHP_EOL
+					, logger::WARNING
+				);
+				$data[] = $changed_data->value;
+			}
 
 				// Persist the updated data in the current language
 				$this->set_data_lang( $data, $lang );
