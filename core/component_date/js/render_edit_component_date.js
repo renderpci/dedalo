@@ -245,6 +245,63 @@ export const get_ar_raw_data_value = (self) => {
 
 
 /**
+* ATTACH_INPUT_HANDLERS
+* Attaches common event handlers to a date/time/period input element.
+* Unifies the event handling pattern across all input types.
+* @param HTMLElement input
+* @param object self
+* @param function change_callback
+* @param object options
+*	@val RegExp|null options.input_filter_regex - Regex to filter input chars (null skips input handler)
+*	@val bool options.focus_on_mousedown - Force focus on mousedown instead of stopPropagation
+* @return void
+*/
+const attach_input_handlers = function(input, self, change_callback, options={}) {
+
+	const focus_on_mousedown	= options.focus_on_mousedown || false
+	const input_filter_regex	= options.input_filter_regex || null
+
+	// mousedown event
+		input.addEventListener('mousedown', function(e) {
+			if (focus_on_mousedown) {
+				input.focus()
+			} else {
+				e.stopPropagation()
+			}
+		})
+	// click event. Capture event propagation
+		input.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
+	// focus event. Activate the component
+		input.addEventListener('focus', function() {
+			// force activate on input focus (tabulating case)
+			if (!self.active) {
+				ui.component.activate(self)
+			}
+		})
+	// keydown event. Prevent to fire page events like open search panel
+		input.addEventListener('keydown', function(e) {
+			e.stopPropagation()
+			if(e.key==='Tab'){
+				ui.component.deactivate(self)
+				return
+			}
+		})
+	// input event. Filter invalid characters
+		if (input_filter_regex) {
+			input.addEventListener('input', function() {
+				const cleaned = input.value.replace(input_filter_regex, '')
+				input.value = cleaned
+			})
+		}
+	// change event
+		input.addEventListener('change', change_callback)
+}//end attach_input_handlers
+
+
+
+/**
 * GET_INPUT_DATE_NODE
 * Generic node rendered of date field node
 * @param int i
@@ -272,41 +329,8 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
-		// mousedown event. Capture event propagation
-			const mousedown_handler = function(e) {
-				e.stopPropagation()
-			}
-			input.addEventListener('mousedown', mousedown_handler)
-		// click event. Capture event propagation
-			const click_handler = function(e) {
-				e.stopPropagation()
-			}
-			input.addEventListener('click', click_handler)
-		// focus event
-			const focus_handler = function(e) {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self, false)
-				}
-			}
-			input.addEventListener('focus', focus_handler)
-		// keydown event. Prevent to fire page events like open search panel
-			const keydown_handler = function(e) {
-				e.stopPropagation()
-				if(e.key==='Tab' ){
-					ui.component.deactivate(self)
-				}
-			}
-			input.addEventListener('keydown', keydown_handler)
-		// input event. Prevent to input invalid characters like '>'
-			const input_handler = function(e) {				
-				// remove non accepted chars
-				const cleaned = input.value.replace(/[^0-9-\/\.,]/g, '');
-				input.value = cleaned;
-			}
-			input.addEventListener('input', input_handler)	
-		// change event
-			const change_event_handler = function(e) {
+		// attach common input handlers (mousedown, click, focus, keydown, input, change)
+			attach_input_handlers(input, self, function() {
 				return change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -315,8 +339,9 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 					date_input	: date_input,
 					type		: 'date'
 				})
-			}
-			input.addEventListener('change', change_event_handler)
+			}, {
+				input_filter_regex : /[^0-9-\/\.,]/g
+			})
 
 	// button_calendar
 		const button_calendar = render_button_calendar()
@@ -388,31 +413,8 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
-		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
-		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
-				e.stopPropagation()
-			})
-		// focus event. Activate the component
-			input.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self)
-				}
-			})
-		// keydown event. Prevent to fire page events like open search panel
-			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
-				if(e.key==='Tab'){
-					ui.component.deactivate(self)
-					return
-				}
-			})
-		// change event
-			const fn_change = function(e) {
+		// attach common input handlers (mousedown, click, focus, keydown, input, change)
+			attach_input_handlers(input, self, function() {
 				change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -421,8 +423,9 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 					date_input	: date_input,
 					type		: 'time'
 				})
-			}
-			input.addEventListener('change', fn_change)
+			}, {
+				input_filter_regex : /[^0-9:]/g
+			})
 
 	// button_calendar
 		const button_calendar = render_button_calendar()
@@ -652,18 +655,11 @@ export const render_input_element_period = (i, current_value, self) => {
 				placeholder		: 'Y',
 				parent			: year_pair_container
 			})
-			input_year.addEventListener('mousedown', (e) => {
-				// force focus before activate the component
-				input_year.focus()
+			// attach common input handlers (mousedown, click, focus, keydown, input, change)
+			attach_input_handlers(input_year, self, call_change_handler, {
+				focus_on_mousedown : true,
+				input_filter_regex : /[^0-9]/g
 			})
-			input_year.addEventListener('focus', function(e) {
-				e.stopPropagation()
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self)
-				}
-			})
-			input_year.addEventListener('change', call_change_handler)
 			// year label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -687,17 +683,11 @@ export const render_input_element_period = (i, current_value, self) => {
 				placeholder		: 'M',
 				parent			: month_pair_container
 			})
-			input_month.addEventListener('mousedown', (e) => {
-				// force focus before activate the component
-				input_month.focus()
+			// attach common input handlers (mousedown, click, focus, keydown, input, change)
+			attach_input_handlers(input_month, self, call_change_handler, {
+				focus_on_mousedown : true,
+				input_filter_regex : /[^0-9]/g
 			})
-			input_month.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self)
-				}
-			})
-			input_month.addEventListener('change', call_change_handler)
 			// month label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -719,17 +709,11 @@ export const render_input_element_period = (i, current_value, self) => {
 				placeholder		: 'D',
 				parent			: day_pair_container
 			})
-			input_day.addEventListener('mousedown', (e) => {
-				// force focus before activate the component
-				input_day.focus()
+			// attach common input handlers (mousedown, click, focus, keydown, input, change)
+			attach_input_handlers(input_day, self, call_change_handler, {
+				focus_on_mousedown : true,
+				input_filter_regex : /[^0-9]/g
 			})
-			input_day.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self)
-				}
-			})
-			input_day.addEventListener('change', call_change_handler)
 			// day label
 			ui.create_dom_element({
 				element_type	: 'label',
@@ -791,8 +775,10 @@ export const change_handler = function(options) {
 		const input_value	= options.input_value // string|object
 		const key			= options.key
 		const input_wrap	= options.input_wrap
-		const date_input	= options.date_input // like 'start'
-		const type			= options.type // date|time
+		const type			= options.type // date|time|period
+	// effective_key. Property name used to store the value in the entry item
+	// date/time use 'start'|'end' from date_input; period uses 'period'
+		const effective_key	= options.date_input || type // 'start'|'end'|'period'
 
 	// parse value
 		const response = (()=>{
@@ -842,18 +828,18 @@ export const change_handler = function(options) {
 				? JSON.parse(JSON.stringify(value[key]))
 				: {}
 
-			// replace value only in current date_input
+			// replace value only in current effective_key
 			if(new_value){
-				item[date_input] = new_value
+				item[effective_key] = new_value
 			}else{
-				// delete date_input (start|end)
-				delete item[date_input]
+				// delete effective_key (start|end|period)
+				delete item[effective_key]
 				// check if only id left
-				const date_input_key = Object.keys(item)
+				const item_keys = Object.keys(item)
 
-				if(date_input_key.length===1 && date_input_key[0]==='id'){
+				if(item_keys.length===1 && item_keys[0]==='id'){
 					return null
-				}else if(date_input_key.length===0){
+				}else if(item_keys.length===0){
 					return null
 				}
 			}
