@@ -67,6 +67,38 @@ export const component_check_box = function(){
 
 
 /**
+* BUILD_CHANGED_DATA_ITEM
+* Builds a frozen changed_data_item object from checkbox state and datalist value.
+* Used by change_handler (edit) and search view change handler.
+* @param bool checked - Current checked state of the checkbox
+* @param object datalist_value - Locator from datalist {section_id, section_tipo}
+* @param array entries - Current data entries to resolve id from
+* @return object {changed_data_item, action}
+*/
+export const build_changed_data_item = function(checked, datalist_value, entries) {
+
+	const action		= (checked===true) ? 'insert' : 'remove'
+	const locator		= entries.find(item => {
+		return (item.section_id==datalist_value.section_id &&
+				item.section_tipo===datalist_value.section_tipo)
+	})
+	const changed_value	= (action==='insert') ? datalist_value : null
+
+	const changed_data_item = Object.freeze({
+		action	: action,
+		id		: locator?.id || null,
+		value	: changed_value
+	})
+
+	return {
+		changed_data_item	: changed_data_item,
+		action				: action
+	}
+}//end build_changed_data_item
+
+
+
+/**
 * CHANGE_HANDLER
 * Manages the change event actions
 * @param object options
@@ -76,7 +108,6 @@ component_check_box.prototype.change_handler = async function(options) {
 
 	// options
 		const self				= options.self
-		const data_entries 		= self.data.entries || []
 		const e					= options.e // event
 		const i					= options.i // value key
 		const datalist_value	= options.datalist_value
@@ -85,28 +116,15 @@ component_check_box.prototype.change_handler = async function(options) {
 	// prevent event default
 		e.preventDefault()
 
-	// change data vars
-		const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-
-		const locator = data_entries.find(item => {
-			return (item.section_id==datalist_value.section_id &&
-					item.section_tipo===datalist_value.section_tipo)
-		 })
-
-		// // changed key. Find the data.value key (could be different of datalist key)
-		// const changed_key	= self.get_changed_key(
-		// 	action,
-		// 	datalist_value,
-		// 	self.data.entries
-		// )
-		const changed_value	= (action==='insert') ? datalist_value : null
+	// build changed_data_item using shared function
+		const {changed_data_item} = build_changed_data_item(
+			input_checkbox.checked,
+			datalist_value,
+			self.data.entries || []
+		)
 
 	// change data array
-		const changed_data = [Object.freeze({
-			action	: action,
-			id		: locator?.id || null,
-			value	: changed_value
-		})]
+		const changed_data = [changed_data_item]
 
 	// fix instance changed_data
 		self.data.changed_data = changed_data
