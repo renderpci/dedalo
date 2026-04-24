@@ -303,7 +303,7 @@ export const get_buttons = (self) => {
 			button_reset.addEventListener('click', function(e) {
 				e.stopPropagation()
 
-				if (self.data.entries.length===0) {
+				if (!self.data.entries || self.data.entries.length===0) {
 					return true
 				}
 

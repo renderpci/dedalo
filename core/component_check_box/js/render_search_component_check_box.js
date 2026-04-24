@@ -7,6 +7,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {build_changed_data_item} from './component_check_box.js'
 
 
 
@@ -143,28 +144,22 @@ const get_input_element = (i, current_value, self) => {
 			type			: 'checkbox'
 		})
 		option_label.prepend(input_checkbox)
-		input_checkbox.addEventListener('change', function() {
+		// change handler
+		const change_handler = function() {
 
-			const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-			const locator = entries.find(item => {
-			return (item.section_id==datalist_value.section_id &&
-					item.section_tipo===datalist_value.section_tipo)
-		 })
-			const changed_value	= (action==='insert') ? datalist_value : null
-
-			const changed_data_item = Object.freeze({
-				action	: action,
-				id		: locator?.id || null,
-				value	: changed_value
-			})
+			// build changed_data_item using shared function
+				const {changed_data_item} = build_changed_data_item(
+					input_checkbox.checked,
+					datalist_value,
+					entries
+				)
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})//end change event
+		}
+		input_checkbox.addEventListener('change', change_handler)
 
 		// checked option set on match
 			for (let j = 0; j < value_length; j++) {
