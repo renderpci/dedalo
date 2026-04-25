@@ -2729,11 +2729,8 @@ abstract class common {
 						// fix request_config
 							$this->request_config = [$request_config_object];
 
-						// merge and set ddo elements
-							dd_core_api::$ddo_map = array_merge(
-								dd_core_api::$ddo_map,
-								$request_config_object->show->ddo_map
-							);
+						// merge and set ddo elements with deduplication
+							$this->merge_ddo_map_with_deduplication($request_config_object->show->ddo_map);
 
 					return $this->request_config; // we have finished ! Note we stop here (!)
 				}//end if (!empty($requested_show))
@@ -2849,15 +2846,12 @@ abstract class common {
 				$current_request_config = $request_config[$i];
 
 				// skip empty ddo_map
-				if (empty($current_request_config->show->ddo_map)) {
+				if (empty($current_request_config->show->ddo_map ?? null)) {
 					continue;
 				}
 
-				// add ddo_map
-				dd_core_api::$ddo_map = array_merge(
-					dd_core_api::$ddo_map,
-					$current_request_config->show->ddo_map
-				);
+				// add ddo_map with deduplication
+				$this->merge_ddo_map_with_deduplication($current_request_config->show->ddo_map);
 			}
 
 		// cache
@@ -2883,6 +2877,43 @@ abstract class common {
 
 		return $this->request_config;
 	}//end build_request_config
+
+
+
+	/**
+	* MERGE_DDO_MAP_WITH_DEDUPLICATION
+	* Merge new ddo items into the global ddo_map while preventing duplicates
+	* @param array $new_ddo_map
+	* @return void
+	*/
+	private function merge_ddo_map_with_deduplication(array $new_ddo_map) : void {
+
+		// O(1) lookup index keyed by 'tipo_section_tipo'
+		static $ddo_map_index = [];
+
+		// Sync index with actual dd_core_api::$ddo_map state to handle partial removals
+		$ddo_map_index = [];
+		foreach (dd_core_api::$ddo_map as $existing_ddo) {
+			if (!is_object($existing_ddo) || !isset($existing_ddo->tipo) || !isset($existing_ddo->section_tipo)) {
+				continue;
+			}
+			$key = $existing_ddo->tipo . '_' . to_string($existing_ddo->section_tipo);
+			$ddo_map_index[$key] = true;
+		}
+
+		foreach ($new_ddo_map as $new_ddo) {
+
+			if (!is_object($new_ddo) || !isset($new_ddo->tipo) || !isset($new_ddo->section_tipo)) {
+				continue;
+			}
+
+			$key = $new_ddo->tipo . '_' . to_string($new_ddo->section_tipo);
+			if (!isset($ddo_map_index[$key])) {
+				dd_core_api::$ddo_map[] = $new_ddo;
+				$ddo_map_index[$key]    = true;
+			}
+		}
+	}//end merge_ddo_map_with_deduplication
 
 
 
