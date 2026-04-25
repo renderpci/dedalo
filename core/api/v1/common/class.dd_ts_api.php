@@ -258,6 +258,14 @@ final class dd_ts_api {
 			$section_tipo	= $source->section_tipo;
 			$section_id		= $source->section_id;
 
+		// SEC-10: check write permissions
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 2) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg = "Error. Insufficient permissions to create in section ($section_tipo)";
+				return $response;
+			}
+
 		// new section. Create a new empty section
 			$new_section = section::get_instance($section_tipo);
 			$new_section_id = $new_section->create_record();
@@ -467,6 +475,14 @@ final class dd_ts_api {
 			$new_parent_section_id		= $source->new_parent_section_id;
 			$new_parent_section_tipo	= $source->new_parent_section_tipo;
 
+		// SEC-11: check write permissions
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 2) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg = "Error. Insufficient permissions to update in section ($section_tipo)";
+				return $response;
+			}
+
 		// component_relation_parent
 			$parent_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true)[0];
 			$model_name		= ontology_node::get_model_by_tipo($parent_tipo,true);
@@ -576,6 +592,14 @@ final class dd_ts_api {
 			$ar_locators		= $source->ar_locators;
 			$parent_section_tipo= $source->parent_section_tipo ?? null;
 			$parent_section_id	= $source->parent_section_id ?? null;
+
+		// SEC-12: check write permissions
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 2) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg = "Error. Insufficient permissions to update order in section ($section_tipo)";
+				return $response;
+			}
 
 		// validate parent context
 			if (empty($parent_section_tipo) || empty($parent_section_id)) {
