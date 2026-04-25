@@ -1050,7 +1050,7 @@ class area_maintenance extends area_common {
 	public static function update_data_version(object $options) : object {
 
 		// options
-			$updates_checked = $options->updates_checked;
+			$updates_checked = (object)$options->updates_checked;
 
 		// set time limit
 			set_time_limit ( 259200 );  // 3 days
