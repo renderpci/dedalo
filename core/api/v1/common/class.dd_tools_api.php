@@ -143,8 +143,20 @@ final class dd_tools_api {
 			require_once $class_file;
 
 		// method (static)
-			if (!method_exists($tool_name, $tool_method)) {
-				$response->msg = 'Error. tool method \''.$tool_method.'\' do not exists ';
+			$is_valid = false;
+			if (method_exists($tool_name, $tool_method)) {
+				try {
+					$reflection = new ReflectionMethod($tool_name, $tool_method);
+					if ($reflection->isPublic() && $reflection->isStatic()) {
+						$is_valid = true;
+					}
+				} catch (Exception $e) {
+					// Ignore exception and leave is_valid false
+				}
+			}
+			if (!$is_valid) {
+				$response->msg = 'Error. tool method not accessible: '.$tool_method;
+				$response->errors[] = 'unauthorized_method';
 				return $response;
 			}
 
