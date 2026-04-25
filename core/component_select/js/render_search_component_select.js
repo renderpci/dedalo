@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {build_changed_data_item} from './component_select.js'
 
 
 
@@ -143,18 +144,13 @@ const get_content_value = (i, current_value, self) => {
 		// change event
 			select.addEventListener('change', function(){
 
-				const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
-
-				const changed_data_item = Object.freeze({
-					action	: (parsed_value != null) ? 'update' : 'remove',
-					id		: (parsed_value != null) ? parsed_value.id : null,
-					value	: parsed_value
-				})
+				// build changed_data_item from select value
+				// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[i]?.id ?? null
+				const {changed_data_item} = build_changed_data_item(select, current_id)
 
 				// update the instance data (previous to save)
 					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					// self.data.changed_data = changed_data
 				// publish search. Event to update the dom elements of the instance
 					event_manager.publish('change_search_element', self)
 			})//end event change
