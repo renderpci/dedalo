@@ -132,6 +132,8 @@
 
 
 // required files
+	// version. Info about current version and build
+	include(DEDALO_CORE_PATH . '/base/version.inc');
 	// logger. Logger class
 	include(DEDALO_CORE_PATH . '/logger/class.logger.php');
 	// core_functions. Basic common functions (before session start)
@@ -142,21 +144,36 @@
 	include(DEDALO_CONFIG_PATH . '/config_db.php');
 	// dd_tipos. List of main Dédalo resolved tipos
 	include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
-	// version. Info about current version and build
-	include(DEDALO_CORE_PATH . '/base/version.inc');
 
 
 
-// SESSIONS
+// sessions
 	define('DEDALO_SESSIONS_PATH', dirname(DEDALO_ROOT_PATH, 2) . '/sessions');
 
-	if (session_status()!==PHP_SESSION_ACTIVE) {
+	// handler: files | redis | memcached | postgresql | user
+	if (!defined('DEDALO_SESSION_HANDLER')) {
+		define('DEDALO_SESSION_HANDLER', 'files');
+	}
 
-		// HANDLER
-		$SESSION_HANDLER = 'files';	// files | memcached | user | postgresql
-		define('DEDALO_SESSION_HANDLER', $SESSION_HANDLER);
+	// save_path: define explicitly if needed (e.g. redis)
+	if (!defined('DEDALO_SESSION_SAVE_PATH')) {
+		switch (DEDALO_SESSION_HANDLER) {
+			case 'redis':
+				define('DEDALO_SESSION_SAVE_PATH', 'tcp://127.0.0.1:6379');
+				break;
+			case 'memcached':
+				define('DEDALO_SESSION_SAVE_PATH', '127.0.0.1:11211');
+				break;
+			case 'files':
+			default:
+				define('DEDALO_SESSION_SAVE_PATH', DEDALO_SESSIONS_PATH);
+				break;
+		}
+	}
 
-		// LIFETIME
+	if (session_status()!==PHP_SESSION_ACTIVE && !defined('DEDALO_RR_WORKER')) {
+
+		// lifetime
 		// Set max duration of dedalo user session
 		// Use ini directive to set session.gc_maxlifetime (Garbage Collection lifetime)
 		// Use session_cache_expire to set duration of session
@@ -165,16 +182,20 @@
 		$session_duration_hours	= $session_duration_hours ?? 8;
 		$timeout_seconds		= intval($session_duration_hours*3600); // in seconds
 
+		// session name
+		$sesion_name = 'dedalo_'.DEDALO_ENTITY;
+
 		// session start
 		$cookie_secure		= (DEDALO_PROTOCOL==='https://');
 		$cookie_samesite	= (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
+
 		session_start_manager([
-			'save_handler'				=> 'files',
+			'save_handler'				=> DEDALO_SESSION_HANDLER,
 			'timeout_seconds'			=> $timeout_seconds,
-			'save_path'					=> DEDALO_SESSIONS_PATH,
+			'save_path'					=> DEDALO_SESSION_SAVE_PATH,
 			// 'additional_save_path'	=> false, bool optional
 			'prevent_session_lock'		=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-			'session_name'				=> 'dedalo_'.DEDALO_ENTITY,
+			'session_name'				=> $sesion_name,
 			// cookie params
 			'cookie_secure'				=> $cookie_secure, // Only https (true | false)
 			'cookie_samesite'			=> $cookie_samesite // (None | Lax | Strict)

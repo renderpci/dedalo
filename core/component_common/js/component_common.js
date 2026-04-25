@@ -1573,7 +1573,7 @@ export const get_dataframe = async function(options) {
 	const mode					= options.mode
 	const lang					= options.lang
 
-	const request_config = self.context.request_config || null
+	const request_config = self.context?.request_config || null
 
 	// original_dataframe_ddo
 	const original_dataframe_ddo = request_config

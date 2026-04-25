@@ -60,6 +60,12 @@ trait search_component_relation_common {
         // remove the id property from q_raw if exists
         if (is_object($q_raw) && isset($q_raw->id)) {
             unset($q_raw->id);
+        } elseif (is_array($q_raw)) {
+            foreach ($q_raw as $item) {
+                if (is_object($item) && isset($item->id)) {
+                    unset($item->id);
+                }
+            }
         }
 
         // For unification, all non string are JSON encoded

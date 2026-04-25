@@ -24,6 +24,7 @@ export const list_of_test = [
 	'test_ts_object',
 	'test_ts_object_extended',
 	'test_component_geolocation',
+	'test_component_select',
 	'test_component_common_changed_data'
 ]
 
