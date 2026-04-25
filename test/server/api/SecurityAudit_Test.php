@@ -156,6 +156,116 @@ final class SecurityAudit_Test extends BaseTestCase {
         $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for read_raw");
     }
 
+    /**
+     * TEST_TS_ADD_CHILD_PERMISSION_CHECK
+     * Verify that add_child is blocked for sections the user cannot write to.
+     */
+    public function test_ts_add_child_permission_check() : void {
+        $this->force_limited_user_login(999);
+
+        $rqo = (object)[
+            'action' => 'add_child',
+            'dd_api' => 'dd_ts_api',
+            'source' => (object)[
+                'section_tipo' => self::$section_tipo,
+                'section_id' => '1'
+            ]
+        ];
+
+        $response = dd_ts_api::add_child($rqo);
+
+        $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for add_child");
+    }
+
+    /**
+     * TEST_TS_UPDATE_PARENT_PERMISSION_CHECK
+     * Verify that update_parent_data is blocked for sections the user cannot write to.
+     */
+    public function test_ts_update_parent_permission_check() : void {
+        $this->force_limited_user_login(999);
+
+        $rqo = (object)[
+            'action' => 'update_parent_data',
+            'dd_api' => 'dd_ts_api',
+            'source' => (object)[
+                'section_tipo' => self::$section_tipo,
+                'section_id' => '1',
+                'old_parent_section_tipo' => self::$section_tipo,
+                'old_parent_section_id' => '2',
+                'new_parent_section_tipo' => self::$section_tipo,
+                'new_parent_section_id' => '3'
+            ]
+        ];
+
+        $response = dd_ts_api::update_parent_data($rqo);
+
+        $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for update_parent_data");
+    }
+
+    /**
+     * TEST_TS_SAVE_ORDER_PERMISSION_CHECK
+     * Verify that save_order is blocked for sections the user cannot write to.
+     */
+    public function test_ts_save_order_permission_check() : void {
+        $this->force_limited_user_login(999);
+
+        $rqo = (object)[
+            'action' => 'save_order',
+            'dd_api' => 'dd_ts_api',
+            'source' => (object)[
+                'section_tipo' => self::$section_tipo,
+                'ar_locators' => [],
+                'parent_section_tipo' => self::$section_tipo,
+                'parent_section_id' => '1'
+            ]
+        ];
+
+        $response = dd_ts_api::save_order($rqo);
+
+        $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for save_order");
+    }
+
+    /**
+     * TEST_DIFFUSION_ONTOLOGY_MAP_PERMISSION_CHECK
+     * Verify that get_ontology_map is blocked for non-admin users.
+     */
+    public function test_diffusion_ontology_map_permission_check() : void {
+        $this->force_limited_user_login(999);
+
+        $rqo = (object)[
+            'action' => 'get_ontology_map',
+            'dd_api' => 'dd_diffusion_api',
+            'options' => (object)[
+                'diffusion_tipo' => 'rsc450'
+            ]
+        ];
+
+        $response = dd_diffusion_api::get_ontology_map($rqo);
+
+        $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for get_ontology_map for non-admins");
+    }
+
+    /**
+     * TEST_TOOL_REQUEST_REFLECTION_CHECK
+     * Verify that tool_request blocks non-public/non-static methods.
+     */
+    public function test_tool_request_reflection_check() : void {
+        $this->user_login();
+
+        $rqo = (object)[
+            'action' => 'tool_request',
+            'dd_api' => 'dd_tools_api',
+            'source' => (object)[
+                'model' => 'tool_time_machine', // valid standard tool
+                'action' => '__construct'
+            ]
+        ];
+
+        $response = dd_tools_api::tool_request($rqo);
+
+        $this->assertContains('unauthorized_method', $response->errors, "Should return unauthorized_method error for non-callable methods");
+    }
+
     private function force_limited_user_login(int $user_id) : void {
         login_test::force_login($user_id);
         $_SESSION['dedalo']['auth']['is_global_admin'] = false;

@@ -1389,19 +1389,18 @@ final class dd_core_api {
 			}
 
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
+			// SEC-09: check permissions for all sections, not only DEDALO_SECTION_USERS_TIPO
 			$ar_section_tipo = $sqo->section_tipo;
 			if( empty($ar_section_tipo) ){
 				$response->result = 0;
 				return $response;
 			}
 			foreach ($ar_section_tipo as $current_section_tipo) {
-				if($current_section_tipo===DEDALO_SECTION_USERS_TIPO) {
-					$permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
-					if($permissions<1){
-						$result = (object)[
-							'total' => 0
-						];
-					}
+				$permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
+				if ($permissions < 1) {
+					$response->result	= (object)['total' => 0];
+					$response->msg		= 'OK. Request done successfully';
+					return $response;
 				}
 			}
 
@@ -1634,7 +1633,7 @@ final class dd_core_api {
 			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
-			$skip_permissions		= $options->skip_permissions ?? false;
+			$skip_permissions		= false; // SEC-07: never allow client to skip permissions
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
