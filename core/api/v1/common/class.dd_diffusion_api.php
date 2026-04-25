@@ -81,6 +81,14 @@ class dd_diffusion_api {
 				throw new Exception("No section related to $diffusion_tipo");
 			}
 
+			// SEC-13: check read permissions for the section being diffused
+			$permissions = common::get_permissions($main_section_tipo, $main_section_tipo);
+			if ($permissions < 1) {
+				$response->errors[] = 'insufficient permissions';
+				$response->msg = "Error. Insufficient permissions to diffuse section ($main_section_tipo)";
+				return $response;
+			}
+
 			// =====================================================
 			// BUILD LANGS
 			// =====================================================
@@ -263,6 +271,14 @@ class dd_diffusion_api {
 	 */
 	public static function get_ontology_map(object $rqo): object {
 		$response = new stdClass();
+
+		// SEC-14: Restrict ontology map to global admins
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->result = false;
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to access ontology map.';
+			return $response;
+		}
 
 		$diffusion_tipo = $rqo->options->diffusion_tipo ?? null;
 		if (!$diffusion_tipo) {
