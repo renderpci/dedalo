@@ -59,6 +59,43 @@ export const page = function () {
 
 
 /**
+* RESTORE_SECTION_SELECTION
+* Reads local_db last_section_selection for a given section_tipo
+* and re-activates the matching component if found.
+* Called on full page render and on section re-render after pagination.
+* @param string section_tipo
+* @return bool
+*/
+page.prototype.restore_section_selection = async function(section_tipo) {
+
+	// get local db last_section_selection info for current section
+		const status_data = await data_manager.get_local_db_data(
+			'last_section_selection_' + section_tipo,
+			'status'
+		)
+		if (!status_data) {
+			return false
+		}
+
+	// find component in page all instances and active it if found
+		const all_instances = get_all_instances()
+		const component = all_instances.find(el =>
+			el.tipo === status_data.value.tipo &&
+			el.section_tipo === section_tipo
+		)
+		if (!component) {
+			return false
+		}
+
+	// activate component
+		ui.component.activate(component, true)
+
+	return true
+}//end restore_section_selection
+
+
+
+/**
 * INIT
 * @param object options
 * @return bool
@@ -193,26 +230,35 @@ page.prototype.init = async function(options) {
 						if (!section_context) {
 							return
 						}
-						// get local db last_section_selection info for current section
-						const status_data = await data_manager.get_local_db_data(
-							'last_section_selection_' + section_context.tipo,
-							'status'
-						)
-						if (!status_data) {
-							return
-						}
-						// find component in page all instances and active it if found
-						const all_instances = get_all_instances()
-						const component = all_instances.find(el => el.tipo===status_data.value.tipo && el.section_tipo===section_context.tipo)
-						if (!component) {
-							return
-						}
-						ui.component.activate(component, true)
+						// restore last section selection
+						self.restore_section_selection(section_context.tipo)
 					}
 				)
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('render_page', render_page_handler)
+			)
+
+		// event render_instance. Used by section pagination navigation
+		// to persist the active component selection across page changes
+			const render_instance_handler = (instance) => {
+				dd_request_idle_callback(
+					async () => {
+						// only edit mode is used. Ignore others
+						if (self.mode!=='edit') {
+							return
+						}
+						// only when a section is re-rendered after pagination
+						if (!instance || instance.model!=='section') {
+							return
+						}
+						// restore last section selection
+						self.restore_section_selection(instance.tipo)
+					}
+				)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_instance', render_instance_handler)
 			)
 
 		// event notifications. Render inspector bubbles into the activity container.
