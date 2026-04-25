@@ -33,6 +33,25 @@
 global $updates;
 $updates = new stdClass();
 
+$v=68; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 8;
+	$updates->$v->version_minor			= 9;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 8;
+	$updates->$v->update_from_minor		= 8;
+
+	// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
+		');
+		
+
 $v=688; #####################################################################################
 $updates->$v = new stdClass();
 
