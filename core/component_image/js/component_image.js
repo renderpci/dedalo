@@ -537,7 +537,7 @@ component_image.prototype.image_quality_change_handler = async function(url) {
 
 			// set the new source to the image node into the svg
 				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
-			}
+		}
 }//end image_quality_change_handler
 
 
