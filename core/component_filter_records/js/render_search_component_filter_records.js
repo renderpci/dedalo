@@ -5,7 +5,6 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -77,39 +76,11 @@ const add_events = function(self, wrapper) {
 			// update
 			if (e.target.matches('input[type="text"].input_value')) {
 
-				const section_tipo	= e.target.dataset.tipo
-				const key			= JSON.parse(e.target.dataset.key)
-				const value			= (e.target.value.length>0)
-					? {
-						tipo		: e.target.dataset.tipo,
-						// value	: self.validate_value(e.target.value.split(','))
-						value		: e.target.value.split(',')
-					  }
-					: null;
-
-				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
-					const current_entries	= self.data.entries || []
-					const entries_length	= current_entries.length
-					let key_found			= entries_length // default is last (length of array)
-					for (let i = 0; i < entries_length; i++) {
-						if(current_entries[i].tipo===section_tipo) {
-							key_found = i;
-							break;
-						}
-					}
-
-				const changed_data_item = Object.freeze({
-					action	: (value===null) ? 'remove' : 'update',
-					id		: current_entries[key_found]?.id || null,
-					value	: value
-				})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data_item)
-				// set data.changed_data. The change_data to the instance
-					// self.data.changed_data = changed_data
-				// publish search. Event to update the dom elements of the instance
-					event_manager.publish('change_search_element', self)
+				// common change handler
+					self.change_handler({
+						value	: e.target.value,
+						tipo	: e.target.dataset.tipo
+					})
 
 				return true
 			}
@@ -140,31 +111,6 @@ const get_content_data = function(self) {
 			class_name		: 'inputs_container',
 			parent			: fragment
 		})
-
-		// header
-			const header_li = ui.create_dom_element({
-				element_type	: 'li',
-				class_name		: 'header_li',
-				parent			: inputs_container
-			})
-			const header_tipo = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'tipo',
-				inner_html		: 'tipo',
-				parent			: header_li
-			})
-			const header_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label',
-				inner_html		: get_label.section || 'Section',
-				parent			: header_li
-			})
-			const header_value = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'value',
-				inner_html		: get_label.value || 'Value',
-				parent			: header_li
-			})
 
 		// inputs. render all items sequentially
 			for (let i = 0; i < datalist_length; i++) {
@@ -225,6 +171,7 @@ const get_input_element = (i, datalist_item, self) => {
 	// tipo
 		const option_tipo = ui.create_dom_element({
 			element_type	: 'span',
+			class_name 		: 'tipo',
 			inner_html		: tipo,
 			parent			: li
 		})
@@ -232,6 +179,7 @@ const get_input_element = (i, datalist_item, self) => {
 	// label
 		const option_label = ui.create_dom_element({
 			element_type	: 'span',
+			class_name 		: 'label',
 			inner_html		: label,
 			parent			: li
 		})
