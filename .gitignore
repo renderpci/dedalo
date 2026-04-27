@@ -59,33 +59,10 @@ core/extras/*
 !core/extras/numisdata
 !core/extras/muvaet
 
-# vendor ignore all except used public
-lib/vendor/*
+# vendor (composer)
 vendor/*
-# !lib/vendor/composer
-# !lib/vendor/myclabs
-# !lib/vendor/sweetrdf
-# saml login libs
-# !lib/vendor/robrichards
-# !lib/vendor/onelogin
-# !lib/vendor/sebastian
-# !lib/vendor/phpunit
-# !lib/vendor/linfo
-# !vendor/maxmind
-# !vendor/maxmind-db
-# !vendor/react
-# !vendor/symfony
-# !vendor/ringcentral
-# !vendor/geoip2
-# !vendor/socrata
-# !vendor/composer
-# !vendor/leafo
-# files
-# !lib/autoload.php
-# !composer.json
-# !composer.lock
 #composer.json
-#composer.lock
+composer.lock
 composer.phar
 composer.local.json
 /var
