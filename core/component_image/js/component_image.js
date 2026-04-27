@@ -6,6 +6,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
@@ -98,6 +99,11 @@ component_image.prototype.init = async function(options) {
 	// editor init vars
 		self.ar_layers				= []
 		self.vector_editor			= null
+
+	// subscribe to quality change event (unified handler)
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, self.image_quality_change_handler.bind(self))
+		)
 
 
 	return common_init
@@ -465,6 +471,74 @@ component_image.prototype.get_active_extensions = function() {
 }//end get_active_extensions
 
 
+
+/**
+* IMAGE_QUALITY_CHANGE_HANDLER
+* Unified handler for image quality changes across all views.
+* Handles both SVG object node updates and vector editor integration.
+* Subscribed to 'image_quality_change_'+self.id event in init.
+* @param string url
+*	The new image URL
+* @return void
+*/
+component_image.prototype.image_quality_change_handler = async function(url) {
+
+	const self = this
+
+	// store the current image source
+		self.img_src = url
+
+	// case 1: vector_editor is active
+	// when the vector editor is loaded, it manages the image through its stage
+		if (self.vector_editor) {
+			const image_definition = self.vector_editor.image_definition
+			const stage				= self.vector_editor.stage
+			if (image_definition && stage) {
+				image_definition.src = url
+				stage.setHref(image_definition.image_node, url)
+			}
+			return
+		}
+
+	// case 2: SVG object node (default edit view without vector editor)
+		const object_node = self.image_container?.object_node
+		if (!object_node) {
+			return
+		}
+
+	// svg document inside the object_node tag
+		const svg_doc = object_node.contentDocument
+	// Get the image item by tag name
+		const image_node = svg_doc
+			? await svg_doc.querySelector('image')
+			: null
+
+		if (image_node) {
+
+			// content_value is the parent of image_container
+				const content_value = self.image_container.parentElement
+
+			// add spinner when new image is loading
+				content_value.classList.add('loading')
+				image_node.addEventListener('load', function(){
+					content_value.classList.remove('loading')
+				})
+
+			// no load case (example: original tiff files)
+				image_node.addEventListener('error', function(){
+					content_value.classList.remove('loading')
+				})
+
+			// update t var from image URL
+				const beats = url.split('?')
+
+			// new_url with cache-busting timestamp
+				const new_url = beats[0] + '?t=' + (new Date()).getTime()
+
+			// set the new source to the image node into the svg
+				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
+			}
+}//end image_quality_change_handler
 
 
 

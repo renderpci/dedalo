@@ -196,16 +196,6 @@ vector_editor.prototype.init_canvas = async function(self) {
 			event_manager.subscribe('full_screen_'+self.id,  full_screen_handler)
 		)
 
-	// when the image change his quality
-	// change the source of the image, load it and re-calculate his size.
-		const image_quality_change_handler = (img_src) => {
-			image_definition.src = img_src
-			stage.setHref(image_definition.image_node, img_src);
-		}
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id, image_quality_change_handler)
-		)
-
 
 	return true
 }//end init_canvas
