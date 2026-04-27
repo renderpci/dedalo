@@ -65,7 +65,7 @@ render_edit_component_info.prototype.edit = async function(options) {
 * @param object self
 * @return HTMLElement content_data
 */
-export const get_content_data = function(self) {
+export const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -74,7 +74,7 @@ export const get_content_data = function(self) {
 		const widgets			= self.ar_instances
 		const widgets_length	= widgets.length
 		for (let i = 0; i < widgets_length; i++) {
-			const content_value = get_content_value(i, widgets[i], self)
+			const content_value = await get_content_value(i, widgets[i], self)
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -93,7 +93,7 @@ export const get_content_data = function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-export const get_content_value = (i, current_widget, self) => {
+export const get_content_value = async (i, current_widget, self) => {
 
 	const add_classes = self.view==='print'
 		? ' read_only'
@@ -106,13 +106,11 @@ export const get_content_value = (i, current_widget, self) => {
 		})
 
 	// widget
-		current_widget.build()
-		.then(function(){
-			current_widget.render()
-			.then(function(widget_node){
-				content_value.appendChild(widget_node)
-			})
-		})
+		await current_widget.build()
+		const widget_node = await current_widget.render()
+		if (widget_node) {
+			content_value.appendChild(widget_node)
+		}
 
 
 	return content_value

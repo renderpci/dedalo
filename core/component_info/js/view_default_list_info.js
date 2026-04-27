@@ -6,6 +6,9 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {
+		get_content_data
+	} from './render_edit_component_info.js'
 
 
 
@@ -42,34 +45,6 @@ view_default_list_info.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-
-/**
-* GET_CONTENT_DATA
-* @return DOM DocumentFragment
-*/
-export const get_content_data = async function(self) {
-
-	const fragment = new DocumentFragment()
-
-	// values (inputs)
-		const widgets			= self.ar_instances
-		const widgets_length	= widgets.length
-		for (let i = 0; i < widgets_length; i++) {
-
-			const current_widget = widgets[i]
-
-			await current_widget.build()
-			const widget_node = await current_widget.render()
-			if (widget_node) {
-				fragment.appendChild(widget_node)
-			}
-		}
-
-
-	return fragment
-}//end get_content_data
 
 
 

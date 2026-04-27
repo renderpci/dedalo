@@ -40,7 +40,7 @@ view_line_edit_info.render = async function(self, options) {
 		await self.get_widgets()
 
 	// content_data
-		const content_data = get_content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}

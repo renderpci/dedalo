@@ -49,7 +49,11 @@ export const component_info = function(){
 	component_info.prototype.destroy	= common.prototype.destroy
 
 	//change data
-	component_info.prototype.update_datum	= component_common.prototype.update_datum
+	component_info.prototype.save				= component_common.prototype.save
+	component_info.prototype.update_data_value	= component_common.prototype.update_data_value
+	component_info.prototype.update_datum		= component_common.prototype.update_datum
+	component_info.prototype.change_value		= component_common.prototype.change_value
+	component_info.prototype.set_changed_data	= component_common.prototype.set_changed_data
 
 	// render
 	component_info.prototype.list		= render_list_component_info.prototype.list
@@ -179,24 +183,34 @@ component_info.prototype.get_widgets = async function() {
 
 
 /**
-* UPDATE_DATA
+* UPDATE_DATA_VALUE
+* Override component_common.update_data_value to sync widget values
+* after the standard data update is applied.
+* @param object changed_data_item
 * @return bool
 */
-component_info.prototype.update_data = async function() {
+component_info.prototype.update_data_value = function(changed_data_item) {
 
 	const self = this
 
-	const value = self.data.entries || []
+	// call parent update_data_value first
+		const result = component_common.prototype.update_data_value.call(self, changed_data_item)
+		if (!result) {
+			return false
+		}
 
-	// iterate records
-		const widgets_properties		= self.context.properties.widgets
-		const widgets_properties_length	= widgets_properties.length
+	// sync widget instances with updated data
+		const value					= self.data.entries || []
+		const widgets_properties		= self.context?.properties?.widgets
+		if (!widgets_properties) {
+			return true
+		}
+		const widgets_properties_length = widgets_properties.length
 		for (let i = 0; i < widgets_properties_length; i++) {
 
-			const current_widget = widgets_properties[i]
-
-			const widget_name	= current_widget.widget_name
-			const widget_id		= self.id + '_'+ widget_name
+			const current_widget	= widgets_properties[i]
+			const widget_name		= current_widget.widget_name
+			const widget_id			= self.id + '_'+ widget_name
 
 			const loaded_widget	= self.ar_instances.find(item => item.id === widget_id)
 			const widget_value	= value.filter(item => item.widget === widget_name && item.key === i)
@@ -206,7 +220,6 @@ component_info.prototype.update_data = async function() {
 				event_manager.publish(`update_widget_value_${i}_${widget_id}`, widget_value)
 			}
 		}
-
 
 	return true
 }//end update_data
