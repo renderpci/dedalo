@@ -46,7 +46,7 @@ view_default_edit_info.render = async function(self, options) {
 		}
 
 	// buttons
-		const buttons = (self.permissions > 1)
+		const buttons = (self.permissions > 1 && self.mode==='edit')
 			? get_buttons(self)
 			: null
 

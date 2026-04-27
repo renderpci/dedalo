@@ -37,6 +37,7 @@ export const list_of_test = [
 	'test_component_av',
 	'test_component_image',
 	'test_component_filter_records',
+	'test_component_info',
 ]
 
 // group_stats: track pass/fail/pending per group

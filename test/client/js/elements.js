@@ -178,6 +178,7 @@ export const permissions	= 2
 		section_id		: section_id,
 		mode			: mode,
 		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
+		new_value		: fn.random_info_value,
 		test_save		: false
 	})
 

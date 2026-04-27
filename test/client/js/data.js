@@ -685,6 +685,37 @@
 		return [value]
 	}
 
+	export const random_info_value = function() {
+
+		const value = [
+			{
+				widget	: 'media_icons',
+				id		: 'id',
+				key		: 0,
+				value	: String(random_number(100))
+			},
+			{
+				widget	: 'media_icons',
+				id		: 'tc',
+				key		: 0,
+				value	: '01:25:58.000'
+			},
+			{
+				widget	: 'descriptors',
+				id		: 'indexation',
+				key		: 0,
+				value	: random_number(100)
+			}
+		]
+
+		const data_element = {
+			id		: 1,
+			value	: value,
+			lang	: 'lg-nolan'
+		}
+		return data_element
+	}
+
 	export const random_svg_value = function() {
 
 		const value =
