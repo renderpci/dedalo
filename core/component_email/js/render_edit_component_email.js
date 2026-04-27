@@ -127,8 +127,8 @@ const get_content_value = (i, current_value, self) => {
 			e.stopPropagation()
 		}
 		input.addEventListener('mousedown', mousedown_handler)
-		
-		// focus event		
+
+		// focus event
 		const focus_handler = (e) => {
 			// force activate on input focus (tabulating case)
 			if (!self.active) {
@@ -151,8 +151,8 @@ const get_content_value = (i, current_value, self) => {
 		const click_handler = (e) => {
 			e.stopPropagation()
 		}
-		input.addEventListener('click', click_handler)	
-	
+		input.addEventListener('click', click_handler)
+
 		// change event
 		const input_change_handler = (e) => {
 			change_handler(e, i, self)
@@ -167,7 +167,7 @@ const get_content_value = (i, current_value, self) => {
 					title			: get_label.delete || 'Delete',
 					class_name		: 'button remove hidden_button',
 					parent			: content_value
-				})				
+				})
 				const mouseup_handler = (e) => {
 					e.stopPropagation()
 					remove_handler(input, current_value?.id, self)
@@ -180,7 +180,7 @@ const get_content_value = (i, current_value, self) => {
 				element_type	: 'span',
 				class_name		: 'button email hidden_button',
 				parent			: content_value
-			})			
+			})
 			const mouseup_handler = (e) => {
 				e.stopPropagation()
 				self.send_email(input.value)
@@ -240,7 +240,7 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				title			: get_label.new || 'Add new input field',
 				parent			: fragment
-			})			
+			})
 			const click_handler = async (e) => {
 				e.stopPropagation()
 
@@ -263,15 +263,16 @@ export const get_buttons = (self) => {
 					changed_data	: changed_data,
 					refresh			: true
 				})
-				
-				const input_node = self.node.content_data[key]
-					? self.node.content_data[key].querySelector('input')
+
+				const new_key = self.data.entries.length - 1
+				const input_node = self.node.content_data[new_key]
+					? self.node.content_data[new_key].querySelector('input')
 					: null
 				if (input_node) {
 					input_node.focus()
 				}else{
-					console.warn('Empty input_node:', self.node.content_data, key);
-				}				
+					console.warn('Empty input_node:', self.node.content_data, new_key);
+				}
 			}
 			add_button.addEventListener('click', click_handler)
 		}
@@ -282,7 +283,7 @@ export const get_buttons = (self) => {
 				element_type	: 'span',
 				class_name		: 'button email_multiple',
 				parent			: fragment
-			})		
+			})
 			const click_handler = async (e) => {
 				e.stopPropagation()
 
@@ -364,8 +365,7 @@ export const get_buttons = (self) => {
 
 /**
 * CHANGE_HANDLER
-* Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
+* Validate and store current input value via self.change_value()
 * @param event e
 * @param int key
 * @param object self
@@ -405,51 +405,6 @@ export const change_handler = function(e, key, self) {
 
 	return true
 }//end change_handler
-
-
-
-/**
-* KEYUP_HANDLER
-* Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
-* @param event e
-* @param int key
-* @param object self
-* @return bool
-*/
-export const keyup_handler = function(e, key, self) {
-	e.preventDefault()
-
-	// tab/shift case catch
-	if (e.key==='Tab' || e.key==='Shift') {
-		return
-	}
-
-	// Enter key force to save changes
-	if (e.key==='Enter') {
-
-		// force to save current input if changed
-		const changed_data = self.data.changed_data || []
-		// change_value (save data)
-		self.change_value({
-			changed_data	: changed_data,
-			refresh			: false
-		})
-	}else{
-		// change data
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id		: (entries[key]?.id) || null,
-			value	: e.target.value || ''
-		})
-
-		// fix instance changed_data
-		self.set_changed_data(changed_data_item)
-	}
-
-
-	return true
-}//end keyup_handler
 
 
 

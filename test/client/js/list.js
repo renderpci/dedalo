@@ -32,6 +32,7 @@ export const list_of_test = [
 	'test_component_select',
 	'test_component_select_lang',
 	'test_component_date',
+	'test_component_email',
 	'test_component_3d',
 	'test_component_av',
 ]
