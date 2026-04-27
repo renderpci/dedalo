@@ -6,9 +6,9 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {change_handler, remove_handler} from './render_edit_component_input_text.js'
+	import {change_handler, remove_handler, check_duplicates} from './render_edit_component_input_text.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
 
 
@@ -161,24 +161,9 @@ const get_content_value = (i, current_value, self) => {
 		// change event
 			input.addEventListener('change', (e) => {
 				change_handler(e, i, self)
-				// mandatory style update
-				if (e.target.value && e.target.value.length) {
-					if (input.classList.contains('mandatory')) {
-						input.classList.remove('mandatory')
-					}
-				}else{
-					if (!input.classList.contains('mandatory')) {
-						input.classList.add('mandatory')
-					}
-				}
-
-				// is_unique check
-				if (self.context.properties.unique) {
-					check_duplicates(self, e.target.value)
-				}
 			})
 
-		// check duplicates
+		// check duplicates on unique property
 			if (self.context.properties.unique) {
 				// first check
 				setTimeout(function(){
@@ -358,62 +343,6 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
-
-
-
-/**
-* CHECK_DUPLICATES
-*  Search duplicates from database
-* @param object self
-* @param string|null value
-* @return Promise<void>
-*/
-const check_duplicates = async function(self, value) {
-
-	// empty case
-		if (!value || value.length<1) {
-			return
-		}
-
-	// into tool case
-		if (self.caller?.type==='tool') {
-			return
-		}
-
-	const equal_value = await self.find_equal(value)
-	if (equal_value) {
-		ui.component.add_component_warning(
-			self.node,
-			`Warning. Duplicated value '${value}' in id: ${equal_value}`,
-			'alert',
-			true, // clean buttons
-			function(e) {
-				e.stopPropagation()
-				const section_id = equal_value
-				// open new window
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-					tipo			: self.section_tipo,
-					id				: section_id,
-					mode			: 'edit',
-					menu			: false,
-					session_save	: false
-				})
-				open_window({
-					url		: url,
-					name	: 'section_id_' + section_id,
-					on_blur : function(e) {
-						// check again
-						check_duplicates(self, value)
-					}
-				})
-			}
-		)
-	}else{
-		if (self.node.warning_wrap) {
-			self.node.warning_wrap.remove()
-		}
-	}
-}//end check_duplicates
 
 
 

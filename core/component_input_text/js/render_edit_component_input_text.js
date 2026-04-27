@@ -5,7 +5,10 @@
 
 
 // imports
+	import {ui} from '../../common/js/ui.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {view_default_edit_input_text} from './view_default_edit_input_text.js'
 	import {view_line_edit_input_text} from './view_line_edit_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
@@ -82,13 +85,15 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 /**
 * CHANGE_HANDLER
 * Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
+* Handles mandatory class toggle and duplicate check generically.
+* Accepts optional post_process callback for view-specific logic.
 * @param event e
 * @param int key
 * @param object self
+* @param object options - { post_process: function(e, key, self) }
 * @return bool
 */
-export const change_handler = function(e, key, self) {
+export const change_handler = function(e, key, self, options={}) {
 
 	const data			= self.data || {}
 	const entries		= data.entries || []
@@ -113,10 +118,29 @@ export const change_handler = function(e, key, self) {
 
 	// change_value (save data)
 		self.change_value({
-			changed_data	: [changed_data_item],
-			refresh			: false
+			changed_data : [changed_data_item],
+			refresh		 : false
 		})
 
+	// mandatory style update
+		if (self.context.properties.mandatory) {
+			const input = e.target
+			if (input.value && input.value.length) {
+				input.classList.remove('mandatory')
+			}else{
+				input.classList.add('mandatory')
+			}
+		}
+
+	// is_unique check
+		if (self.context.properties.unique) {
+			check_duplicates(self, e.target.value)
+		}
+
+	// view-specific post-processing
+		if (typeof options.post_process==='function') {
+			options.post_process(e, key, self)
+		}
 
 	return true
 }//end change_handler
@@ -175,6 +199,63 @@ export const remove_handler = function(input, id, self) {
 
 	return response
 }//end remove_handler
+
+
+
+/**
+* CHECK_DUPLICATES
+* Search duplicates from database
+* @param object self
+* @param string|null value
+* @return Promise<void>
+*/
+export const check_duplicates = async function(self, value) {
+
+	// empty case
+		if (!value || value.length<1) {
+			return
+		}
+
+	// into tool case
+		if (self.caller?.type==='tool') {
+			return
+		}
+
+	const equal_value = await self.find_equal(value)
+	if (equal_value) {
+		ui.component.add_component_warning(
+			self.node,
+			`Warning. Duplicated value '${value}' in id: ${equal_value}`,
+			'alert',
+			true, // clean buttons
+			function(e) {
+				e.stopPropagation()
+				const section_id = equal_value
+				// open new window
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: self.section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					menu			: false,
+					session_save	: false
+				})
+				open_window({
+					url		: url,
+					name	: 'section_id_' + section_id,
+					on_blur : function(e) {
+						// check again
+						check_duplicates(self, value)
+					}
+				})
+			}
+		)
+	}else{
+		if (self.node.warning_wrap) {
+			self.node.warning_wrap.remove()
+			self.node.warning_wrap = null
+		}
+	}
+}//end check_duplicates
 
 
 
