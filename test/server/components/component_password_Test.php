@@ -76,7 +76,7 @@ final class component_password_test extends BaseTestCase {
 		$result	= $component->set_data([$pass]);
 		$this->assertTrue($result);
 		$current_data = $component->get_data();
-		
+
 		$this->assertIsArray($current_data);
 		$this->assertEquals(
 			component_password::encrypt_password($pass),
@@ -89,7 +89,7 @@ final class component_password_test extends BaseTestCase {
 			$this->assertTrue($result);
 			$current_data = $component->get_data();
 			// Since set_data encrypts, and sample data is already encrypted in data.json (likely),
-			// it will be double-encrypted if we pass it directly. 
+			// it will be double-encrypted if we pass it directly.
 			// But the test is just checking if it successfully sets.
 			$this->assertCount(count($sample_data), $current_data);
 		}
@@ -124,10 +124,12 @@ final class component_password_test extends BaseTestCase {
 		// $component->fake_value
 
 		$this->assertIsObject($result);
-		// Grid value for password should be an array of objects wrapping the fake value
+		// Grid value for password should contain the fake value as flat array
+		$this->assertIsArray($result->value);
 		$this->assertEquals(
-			null, $result->value[0]->value,
-			 '$result->value[0]->value: ' . json_encode($result->value[0]->value, JSON_PRETTY_PRINT) . PHP_EOL
+			$component->fake_value,
+			$result->value[0],
+			'grid value expected fake_value: ' . json_encode($result->value, JSON_PRETTY_PRINT)
 		);
 	}//end test_get_grid_value
 
@@ -144,7 +146,7 @@ final class component_password_test extends BaseTestCase {
 
 		$result	= $component->Save();
 
-		// Save should return the section_id (integer) or true/null depending on implementation, 
+		// Save should return the section_id (integer) or true/null depending on implementation,
 		// but should not be false.
 		$this->assertNotFalse($result, 'Save failed for ' . self::$model);
 	}//end test_Save
@@ -196,5 +198,114 @@ final class component_password_test extends BaseTestCase {
 			is_string($result) || $result === false || $result === null
 		);
 	}//end test_get_v6_root_password_data
+
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set empty array
+		$result = $component->set_data([]);
+		$this->assertTrue($result);
+		$this->assertNull($component->get_data());
+
+		// restore
+		$component->set_data($old_data);
+	}//end test_set_data_empty
+
+	/**
+	* TEST_save_and_reload
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set and save
+		$pass = 'TestR3load$';
+		$component->set_data([$pass]);
+		$save_result = $component->Save();
+		$this->assertNotFalse($save_result, 'Save failed');
+
+		// reload from DB
+		$reloaded = component_common::get_instance(
+			self::$model, self::$tipo, 1, 'edit', DEDALO_DATA_NOLAN, self::$section_tipo
+		);
+		$reloaded_data = $reloaded->get_data();
+		$this->assertIsArray($reloaded_data);
+		$this->assertEquals(
+			component_password::encrypt_password($pass),
+			$reloaded_data[0]->value
+		);
+
+		// restore
+		$component->set_data($old_data);
+		$component->Save();
+	}//end test_save_and_reload
+
+	/**
+	* TEST_is_empty
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// empty data (null)
+		$component->set_data(null);
+		$this->assertTrue($component->is_empty_data($component->get_data()));
+
+		// non-empty data
+		$component->set_data(['ValidP4ss!']);
+		$data = $component->get_data();
+		$this->assertFalse($component->is_empty_data($data));
+		if (!empty($data)) {
+			$this->assertFalse($component->is_empty($data[0]));
+		}
+
+		// restore
+		$component->set_data($old_data);
+	}//end test_is_empty
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		// get_identifier returns tipo_section_tipo_section_id
+		$expected = self::$tipo . '_' . self::$section_tipo . '_1';
+		$this->assertEquals($expected, $result);
+	}//end test_get_identifier
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				self::$model, self::$tipo, 1, $mode, DEDALO_DATA_NOLAN, self::$section_tipo
+			);
+			$this->assertEquals($mode, $component->mode, "mode expected {$mode}");
+			$this->assertInstanceOf(component_password::class, $component, "instance expected component_password for mode {$mode}");
+		}
+	}//end test_component_instance_modes
 
 }//end class component_password_test
