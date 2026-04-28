@@ -237,7 +237,8 @@ export const get_buttons = (self) => {
 				title			: get_label.new || 'New',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('mouseup', function(e) {
+
+			const add_handler = async function(e) {
 				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
@@ -245,19 +246,21 @@ export const get_buttons = (self) => {
 					id		: null,
 					value	: {value: null}
 				})]
-				self.change_value({
+
+				await self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
 				})
-				.then(()=>{
-					const input_node = self.node.content_data[key]
-						? self.node.content_data[key].querySelector('input')
-						: null
-					if (input_node) {
-						input_node.focus()
-					}
-				})
-			})
+
+				const new_key = self.data.entries.length - 1
+				const input_node = self.node.content_data[new_key]
+					? self.node.content_data[new_key].querySelector('input')
+					: null
+				if (input_node) {
+					input_node.focus()
+				}
+			}
+			button_add_input.addEventListener('mouseup', add_handler)
 		}
 
 	// buttons tools
