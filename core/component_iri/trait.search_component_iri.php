@@ -361,6 +361,8 @@ trait search_component_iri {
     */
     protected static function resolve_iri_contains_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['+', '*', '='], '', $q);
+        // escape point '.'
+        $q_clean = str_replace('.', '\.', $q_clean);
         $query_object->params = ['_Q1_' => $q_clean];
 
         $json_path = ($query_object->lang === 'all')
