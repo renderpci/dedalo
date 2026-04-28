@@ -101,7 +101,7 @@ final class component_number_test extends BaseTestCase {
 			$component->set_data([(object)['value' => 0]]);
 			$result = $component->get_data();
 			$this->assertIsArray($result);
-			$this->assertEquals(0.0, $result[0]->value); 
+			$this->assertEquals(0.0, $result[0]->value);
 	}//end test_get_data
 
 
@@ -356,6 +356,132 @@ final class component_number_test extends BaseTestCase {
 		$result = $component->conform_import_data($import_value, self::$tipo);
 		$this->assertEquals(55.7, $result->result[0]->value);
 	}//end test_conform_import_data
+
+
+
+	/**
+	* TEST_SET_DATA_EMPTY
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		// null
+			$result = $component->set_data(null);
+			$this->assertIsBool($result);
+			$this->assertTrue($result, 'expected true for set_data null');
+			$data = $component->get_data();
+			$this->assertNull($data, 'expected null after set_data null');
+
+		// empty array
+			$result = $component->set_data([]);
+			$this->assertTrue($result, 'expected true for set_data empty array');
+			$data = $component->get_data();
+			$this->assertNull($data, 'expected null after set_data empty array');
+
+		// array with null item
+			$result = $component->set_data([null]);
+			$this->assertTrue($result, 'expected true for set_data [null]');
+			$data = $component->get_data();
+			$this->assertNull($data, 'expected null after set_data [null]');
+
+		// array with null value (component_number filters null-value items to null)
+			$result = $component->set_data([(object)['value' => null]]);
+			$this->assertTrue($result);
+			$data = $component->get_data();
+			$this->assertTrue(
+				$data === null || (is_array($data) && $data[0]->value === null),
+				'expected null or array with null value item'
+			);
+
+		// restore original data
+			$component->set_data($original_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_SAVE_AND_RELOAD
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		// set new data
+			$component->set_properties((object)[
+				'type' => 'float',
+				'precision' => 2
+			]);
+			$new_data = [(object)['value' => 99.99]];
+			$component->set_data($new_data);
+
+		// save
+			$component->Save();
+
+		// reload from DB
+			$reloaded = component_common::get_instance(
+				'component_number',
+				self::$tipo,
+				1,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$result = $reloaded->get_data();
+			$this->assertIsArray($result, 'expected array after reload');
+			$this->assertEquals(99.99, $result[0]->value, 'expected saved value after reload');
+
+		// restore original data
+			$component->set_data($original_data);
+			$component->Save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_COMPONENT_INSTANCE_MODES
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				'component_number',
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$this->assertEquals($mode, $component->get_mode(), "expected mode {$mode}");
+			$this->assertEquals('component_number', $component->get_model(), 'expected model component_number');
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_GET_IDENTIFIER
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+		$this->assertIsString($result, 'expected string from get_identifier');
+		$this->assertStringContainsString(self::$tipo, $result, 'expected tipo in identifier');
+	}//end test_get_identifier
 
 
 
