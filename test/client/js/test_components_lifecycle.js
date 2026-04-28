@@ -215,6 +215,7 @@ async function life_cycle_test(element, view) {
 					if (new_instance.view!=='text') {
 						// console.log('new_instance.node:', new_instance.node, new_instance.mode, new_instance.view);
 						const skip_models = [
+							'component_inverse',
 							'component_portal',
 							'component_relation',
 							'component_3d',
