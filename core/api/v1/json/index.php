@@ -102,6 +102,8 @@ if (!empty($_FILES)) {
 		$rqo->action	= 'upload';
 		$rqo->dd_api	= 'dd_utils_api';
 		$rqo->options	= new stdClass();
+	} else if (!isset($rqo->options)) {
+		$rqo->options = new stdClass();
 	}
 	foreach (array_merge($_POST, $_GET) as $key => $value) {
 		$rqo->options->{$key} = safe_xss($value);
@@ -126,6 +128,9 @@ if (!empty($_FILES)) {
 				$clean_value = safe_xss($value);
 				$rqo->{$key} = is_array($clean_value) ? (object)$clean_value : $clean_value;
 			} else {
+				if (!isset($rqo->source)) {
+					$rqo->source = new stdClass();
+				}
 				$rqo->source->{$key} = safe_xss($value);
 			}
 		}
