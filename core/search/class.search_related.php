@@ -19,8 +19,6 @@ class search_related extends search {
 	* Build full final SQL query to send to DDBB
 	* Please note that special indexes and functions such as 'matrix_relations_flat_st_si'
 	* must exists to enable this search
-	* @param bool $full_count
-	*	default false
 	* @return string $sql_query
 	*/
 	public function parse_sql_query() : string {
