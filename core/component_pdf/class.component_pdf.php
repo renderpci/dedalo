@@ -989,8 +989,15 @@ class component_pdf extends component_media_common implements component_media_in
 		// source file
 			$source_file = $this->get_media_filepath( $this->get_original_quality() );
 
-		// get the extension of the document to be checked if valid to be processed
-			$original_extension = $this->get_original_extension();// like «pfd» or «doc»
+		// get the extension of the original file to check if it's a valid PDF
+		// Uses get_original_file_path() instead of get_original_extension() because
+		// get_original_extension() excludes files matching the target filename pattern,
+		// which incorrectly excludes the uploaded PDF and can return leftover file extensions (e.g. avif).
+		// get_original_file_path() correctly prefers files matching the component's default extension.
+			$original_file_path = $this->get_original_file_path();
+			$original_extension = $original_file_path
+				? strtolower(pathinfo($original_file_path, PATHINFO_EXTENSION))
+				: null;
 
 		// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
 		// this cases are: «odt», «doc», «pages» files, or other document file.
