@@ -107,7 +107,7 @@ export const get_content_data = function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+export const get_content_value = (i, current_value, self, options={}) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -165,7 +165,8 @@ const get_content_value = (i, current_value, self) => {
 		input.addEventListener('input', input_check_value_handler)
 
 	// button remove
-		if (i>0) {
+		const show_remove_button = options.show_remove_button !== false
+		if (i>0 && show_remove_button) {
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				title			: get_label.delete || 'Delete',

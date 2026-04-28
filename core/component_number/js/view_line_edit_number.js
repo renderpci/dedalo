@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import { change_handler} from './render_edit_component_number.js'
+	import {get_content_value} from './render_edit_component_number.js'
 
 
 
@@ -75,7 +75,7 @@ const get_content_data = function(self) {
 		const inputs_value	= (entries.length<1) ? [null] : entries // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
+			const content_value = get_content_value_edit(i, inputs_value[i], self)
 			content_data.appendChild(content_value)
 			// set pointers
 			content_data[i] = content_value
@@ -90,63 +90,19 @@ const get_content_data = function(self) {
 /**
 * GET_CONTENT_VALUE
 * Creates the current input text node
+* Uses shared get_content_value from render_edit_component_number.js
 * @param int i
 * @param object current_value
-* {
-*	id : 1,
-* 	value : 73
-* }
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value_edit = (i, current_value, self) => {
 
-	// content_value
-		const content_value = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content_value'
+	// Use shared get_content_value without remove button (line edit doesn't need it)
+		return get_content_value(i, current_value, self, {
+			show_remove_button: false
 		})
-
-	// input field
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_value',
-			value			: current_value?.value || '',
-			parent			: content_value
-		})
-		input.step = self.get_steps()
-		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
-		// focus event
-			input.addEventListener('focus', function() {
-				// force activate on input focus (tabulating case)
-				if (!self.active) {
-					ui.component.activate(self, false)
-				}
-			})
-		// keydown event
-			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
-				if(e.key==='Tab'){
-					ui.component.deactivate(self)
-					return
-				}
-			})
-		// click event
-			input.addEventListener('click', function(e) {
-				e.stopPropagation()
-			})//end click
-		// change event
-			input.addEventListener('change', (e) => {
-				change_handler(e, i, self)
-			})
-
-
-	return content_value
-}//end get_content_value
+}//end get_content_value_edit
 
 
 
