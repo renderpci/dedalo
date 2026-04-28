@@ -174,98 +174,98 @@ const get_content_value = function(i, current_value, self) {
 			return content_value
 		}
 
-	// iframe. PDF viewer (pdfjs) is loaded inside a iframe
-		const iframe = ui.create_dom_element({
-			element_type	: 'iframe',
-			class_name		: 'pdf_viewer_frame',
+	// pdf viewer container with loading placeholder
+		const viewer_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'pdf_viewer_container loading',
 			parent			: content_value
 		})
-		// iframe.setAttribute('allowfullscreen',true)
 
-		// webviewerloaded event. When the standard html of pdf.js is loaded, it is possible to get the library and set the PDF file
-			top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
-			async function fn_webviewerloaded() {
+	// lazy load: create iframe and setup viewer only when in viewport
+		const init_viewer = () => {
 
-				// shadow.addEventListener('load', (e) =>{
-				const locale_code = page_globals.locale || 'es-ES'
-				// Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
-				// the pdf_js is not necessary load here, we will use only the viewer
-				// self.pdf_js 						= iframe.contentWindow['pdfjs-dist/build/pdf'];
-
-				if (!iframe.contentWindow) {
-					console.warn('! Ignored not found iframe contentWindow:', 'fn_webviewerloaded');
-					return
-				}
-
-				// add css to change the interface
-				iframe.classList.add('loading')
-				iframe.addEventListener('load', function(e) {
-
-						const doc = iframe.contentDocument
-						const href_css = (self.permissions===1)
-							? DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_read_only.css' // css for read_only
-							: DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_edit.css' // css for edit
-
-						const css_link = document.createElement("link");
-						css_link.href = href_css
-						css_link.rel = 'stylesheet';
-						css_link.type = 'text/css';
-						doc.head.appendChild(css_link);
-
-						iframe.classList.remove('loading')
+			// iframe. PDF viewer (pdfjs) is loaded inside a iframe
+				const iframe = ui.create_dom_element({
+					element_type	: 'iframe',
+					class_name		: 'pdf_viewer_frame',
+					parent			: viewer_container
 				})
 
-				// options
-					const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
-					if (pdf_viewer_options) {
-						// remove the first page / default page of the library
-						pdf_viewer_options.set('defaultUrl', '');
-						// set correct locale
-						pdf_viewer_options.set('locale', locale_code);
-						pdf_viewer_options.set("enablePermissions", true); //allow PDF documents to disable copying in the viewer
+			// iframe load event: inject custom CSS and remove loading state
+				iframe.addEventListener('load', function() {
+
+					const doc = iframe.contentDocument
+					if (doc) {
+						const href_css = (self.permissions===1)
+							? DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_read_only.css'
+							: DEDALO_CORE_URL + '/component_pdf/css/pdfjs_default_edit.css'
+
+						const css_link = document.createElement('link')
+						css_link.href	= href_css
+						css_link.rel	= 'stylesheet'
+						css_link.type	= 'text/css'
+						doc.head.appendChild(css_link)
 					}
 
-				// pdf_viewer
-					self.pdf_viewer = await iframe.contentWindow['PDFViewerApplication'];
-					if (!self.pdf_viewer) {
+					viewer_container.classList.remove('loading')
+				})
+
+			// webviewerloaded event: configure pdfjs and open the PDF
+				const fn_webviewerloaded = async function() {
+
+					const locale_code = page_globals.locale || 'es-ES'
+
+					// NOTE: Libraries are loaded via <script> tag, create shortcut to access PDF.js exports.
+					// the pdf_js is not necessary load here, we will use only the viewer
+					// self.pdf_js = iframe.contentWindow['pdfjs-dist/build/pdf'];
+
+					if (!iframe.contentWindow) {
+						console.warn('! Ignored not found iframe contentWindow:', 'fn_webviewerloaded');
 						return
 					}
 
-				// console.log("PDFViewerApplicationOptions", PDFViewerApplicationOptions);
-				// console.log("/// pdf_url:",pdf_url);
+					// options
+						const pdf_viewer_options = await iframe.contentWindow['PDFViewerApplicationOptions'];
+						if (pdf_viewer_options) {
+							pdf_viewer_options.set('defaultUrl', '');
+							pdf_viewer_options.set('locale', locale_code);
+							pdf_viewer_options.set("enablePermissions", true); // allows PDF documents to disable copying in the viewer
+						}
 
-				// load the pdf in the viewer
-				self.pdf_viewer.open({
-					url : pdf_url
-				})
-				.then(function() {
-					// PDFViewerApplicationOptions.document.webL10n.setLanguage(locale_code)
-					// PDFViewerApplicationOptions.set('locale', locale_code);
-					// PDFViewerApplicationOptions.locale = locale_code
-					// PDFViewerApplicationOptions.set('locale', locale_code);
-					// console.log("PDFViewerApplication.pagesCount", self.pdf_viewer.pagesCount);
-				});
+					// pdf_viewer
+						self.pdf_viewer = await iframe.contentWindow['PDFViewerApplication'];
+						if (!self.pdf_viewer) {
+							return
+						}
 
-				// listener. Remove the listener to prevent navigation problems
-				top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
-			}//end fn_webviewerloaded
+					// load the pdf in the viewer
+						self.pdf_viewer.open({
+							url : pdf_url
+						})
 
-		// viewer_url. the standard html viewer of the pdf.js library
-			const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
+					// listener cleanup
+						top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
+				}//end fn_webviewerloaded
 
-		// set iframe URL on DOM entry
-			when_in_viewport(
-				iframe, // node to observe
-				() => { // callback function
-					iframe.src = viewer_url // load URL to iframe
-				}
-			)
+			// register webviewerloaded listener before setting src to prevent race conditions
+				top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
+
+			// set iframe src to start loading the pdfjs viewer
+				const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
+				iframe.src = viewer_url
+		}//end init_viewer
+
+	// observe viewport entry to lazy init the viewer
+		when_in_viewport(
+			viewer_container,
+			init_viewer
+		)
 
 	// fields. Bottom line with input offset options
 		const fields = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'fields',
-			parent			: content_value
+			parent			: viewer_container
 		})
 		// offset label
 		ui.create_dom_element({
@@ -286,18 +286,10 @@ const get_content_value = function(i, current_value, self) {
 
 			if (this.value.length>0) {
 
-				current_value.lib_data = current_value.lib_data || {}
-				// add/update offset
-				current_value.lib_data.offset = parseInt(this.value)
-
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					id		: self.data.entries[0].id || null,
-					value	: current_value
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
+				self.change_handler({
+					key		: 'offset',
+					value	: parseInt(this.value),
+					index	: 0
 				})
 			}
 		})
