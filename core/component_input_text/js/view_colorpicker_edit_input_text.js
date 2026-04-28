@@ -136,7 +136,7 @@ const get_content_value = (i, current_value, self) => {
 		color_picker.addEventListener("change", function(e){
 			input.value = e.target.value;
 			// dispatch change on text input to trigger change_handler (save)
-				input.dispatchEvent(new Event('change'))
+			input.dispatchEvent(new Event('change'))
 		});
 		color_picker.addEventListener('input', function(e){
 			input.value = e.target.value;
