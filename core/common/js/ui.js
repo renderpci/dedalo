@@ -979,24 +979,27 @@ export const ui = {
 		*/
 		add_component_warning : (wrapper_component, message, msg_type='alert', clean=true, on_click) => {
 
-			// warning_wrap. always check if already exists, else, create a new one and recycle it
-				const warning_wrap = wrapper_component.warning_wrap || (()=>{
+			// warning_wrap. always check if already exists and is still in the DOM, else, create a new one and recycle it
+				const existing_wrap = wrapper_component.warning_wrap
+				const warning_wrap = (existing_wrap && existing_wrap.isConnected)
+					? existing_wrap
+					: (()=>{
 
-					const new_warning_wrap = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'component_warning fade-in-fast',
-						parent			: wrapper_component
-					})
-					new_warning_wrap.addEventListener('dblclick', (e) => {
-						e.stopPropagation()
-						warning_wrap.remove()
-					})
+						const new_warning_wrap = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'component_warning fade-in-fast',
+							parent			: wrapper_component
+						})
+						new_warning_wrap.addEventListener('dblclick', (e) => {
+							e.stopPropagation()
+							warning_wrap.remove()
+						})
 
-					// set pointer to component wrapper
-					wrapper_component.warning_wrap = new_warning_wrap
+						// set pointer to component wrapper
+						wrapper_component.warning_wrap = new_warning_wrap
 
-					return new_warning_wrap
-				})()
+						return new_warning_wrap
+					})()
 
 			// clean previous buttons
 				if (clean===true) {
