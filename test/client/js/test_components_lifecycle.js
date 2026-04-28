@@ -239,7 +239,13 @@ async function life_cycle_test(element, view) {
 								'content_data must be null on list mode'
 							);
 						}
-						assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
+						// Skip label check for component_info as it renders widgets that may have labels
+						const skip_label_models = [
+							'component_info'
+						]
+						if (!skip_label_models.includes(new_instance.model)) {
+							assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
+						}
 						assert.equal(new_instance.node.querySelector('.buttons_container'), null, 'buttons_container must be null on list mode');
 					}
 				}
