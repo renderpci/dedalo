@@ -227,7 +227,7 @@ final class component_json_test extends BaseTestCase {
 
 		$this->assertIsObject($response);
 		$this->assertTrue($response->result, 'Error adding file: ' . $response->msg);
-		
+
 		// Clean up if the file was moved successfully, or if it still exists
 		if (file_exists($response->ready->full_file_path)) {
 			unlink($response->ready->full_file_path);
@@ -266,11 +266,11 @@ final class component_json_test extends BaseTestCase {
 
 		$this->assertIsObject($response);
 		$this->assertTrue($response->result, 'Error processing file: ' . $response->msg);
-		
+
 		// Verify data was set
 		$data = $component->get_data();
 		$this->assertIsArray($data);
-		
+
 		$uploaded_value = $data[0]->value;
 		$this->assertTrue(is_object($uploaded_value) || is_array($uploaded_value), 'Expected object or array, got ' . gettype($uploaded_value));
 	}//end test_process_uploaded_file
@@ -318,7 +318,7 @@ final class component_json_test extends BaseTestCase {
 		$result = $component->regenerate_component();
 
 		$this->assertTrue($result);
-		
+
 		$processed_data = $component->get_data();
 		$this->assertIsObject($processed_data[0]->value);
 		$this->assertEquals(1, $processed_data[0]->value->new);
@@ -327,6 +327,202 @@ final class component_json_test extends BaseTestCase {
 		$component->set_data($old_value);
 		$component->save();
 	}//end test_regenerate_component
+
+
+
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set null
+		$result = $component->set_data(null);
+		$this->assertTrue($result===true || $result===false, 'expected boolean return');
+		$this->assertTrue(
+			$component->get_data()===null,
+			'expected null after set_data(null)'
+		);
+
+		// set empty array
+		$result = $component->set_data([]);
+		$this->assertTrue($result===true || $result===false, 'expected boolean return');
+
+		// restore
+		$component->set_data($old_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set new data and save
+		$new_data = [
+			(object)[
+				'value' => (object)[
+					'save_test' => 'hello'
+				]
+			]
+		];
+		$component->set_data($new_data);
+		$component->save();
+
+		// reload component
+		$component2 = component_common::get_instance(
+			'component_json',
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+		$reloaded_data = $component2->get_data();
+
+		$this->assertIsArray($reloaded_data);
+		$this->assertIsObject($reloaded_data[0]->value);
+		$this->assertEquals('hello', $reloaded_data[0]->value->save_test);
+
+		// restore old data
+		$component2->set_data($old_data);
+		$component2->save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				'component_json',
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertEquals(
+				$mode,
+				$component->mode,
+				"mode expected {$mode}"
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_is_empty
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// is_empty_data: array-level check
+		$data = $component->get_data();
+		$is_empty_data = $component->is_empty_data($data);
+		$this->assertTrue(
+			gettype($is_empty_data)==='boolean',
+			'is_empty_data expected boolean'
+		);
+
+		// is_empty with null data_item
+		$result = $component->is_empty(null);
+		$this->assertTrue($result, 'is_empty(null) expected true');
+
+		// is_empty with valid data_item having value
+		$data_item = (object)[
+			'value' => (object)['test' => 1]
+		];
+		$result = $component->is_empty($data_item);
+		$this->assertFalse($result, 'is_empty with value expected false');
+
+		// is_empty with data_item having empty value
+		$data_item_empty = (object)[
+			'value' => null
+		];
+		$result = $component->is_empty($data_item_empty);
+		$this->assertTrue($result, 'is_empty with null value expected true');
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected string identifier'
+		);
+		$this->assertTrue(
+			str_contains($result, self::$tipo),
+			'identifier expected to contain tipo'
+		);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_process_uploaded_file_empty_data
+	* @return void
+	*/
+	public function test_process_uploaded_file_empty_data() {
+
+		$component = $this->build_component_instance();
+
+		// null file_data
+		$response = $component->process_uploaded_file(null, null);
+		$this->assertIsObject($response);
+		$this->assertFalse($response->result, 'expected false result for null file_data');
+
+		// incomplete file_data (full_file_path is null -> triggers TypeError)
+		// skip this case as PHP throws TypeError before component logic
+		// instead test with empty string path which component handles
+		$file_data = (object)[
+			'original_file_name' => 'test.json',
+			'full_file_name'	 => 'test.json',
+			'full_file_path'	 => ''
+		];
+		$response = $component->process_uploaded_file($file_data, null);
+		$this->assertIsObject($response);
+		$this->assertFalse($response->result, 'expected false result for empty file path');
+
+		// non-existent path
+		$file_data = (object)[
+			'original_file_name' => 'test.json',
+			'full_file_name'	 => 'test.json',
+			'full_file_path'	 => '/non/existent/path/test.json'
+		];
+		$response = $component->process_uploaded_file($file_data, null);
+		$this->assertIsObject($response);
+		$this->assertFalse($response->result, 'expected false result for non-existent file path');
+	}//end test_process_uploaded_file_empty_data
 
 
 

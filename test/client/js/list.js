@@ -41,6 +41,7 @@ export const livecycle_detail = [
 	'test_component_info',
 	'test_component_inverse',
 	'test_component_iri',
+	'test_component_json',
 	'test_component_radio_button',
 	'test_component_select',
 	'test_component_select_lang',
