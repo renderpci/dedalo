@@ -38,6 +38,7 @@ export const livecycle_detail = [
 
 	'test_component_geolocation',
 	'test_component_image',
+	'test_component_input_text',
 	'test_component_info',
 	'test_component_inverse',
 	'test_component_iri',
