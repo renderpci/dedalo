@@ -41,9 +41,8 @@ view_default_list_av.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+			add_styles : ['media','media_wrapper']
 		})
-		wrapper.classList.add('media','media_wrapper')
 		wrapper.appendChild(content_data)
 		// set pointers to content_data
 		wrapper.content_data = content_data
