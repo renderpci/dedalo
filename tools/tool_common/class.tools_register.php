@@ -1,26 +1,27 @@
 <?php declare(strict_types=1);
 /**
-* TOOLS_REGISTER
-* Manages tools registration process, from /tools directory elements to the
-* database, in section 'Registered Tools' (dd1324) where are parsed and saved
-* That section is not editable, is only for read, and is re-created on each
-* import tools action from management area.
-* Tools configuration section (dd996) is used to store the custom local configuration of the tools
-*/
+ * TOOLS_REGISTER
+ * Manages tools registration process, from /tools directory elements to the
+ * database, in section 'Registered Tools' (dd1324) where are parsed and saved
+ * That section is not editable, is only for read, and is re-created on each
+ * import tools action from management area.
+ * Tools configuration section (dd996) is used to store the custom local configuration of the tools
+ */
 class tools_register {
 
 
 	/**
 	 * TIPO and Section constants for tool registration
 	 */
-	public static $section_registered_tools_tipo	= 'dd1324'; // Tools register section
+	public static $section_registered_tools_tipo	= DEDALO_REGISTER_TOOLS_SECTION_TIPO; // 'dd1324'; // Tools register section
 	public static $tipo_tool_name					= 'dd1326'; // tool name like 'tool_transcription'
 	public static $tipo_tool_label					= 'dd799';
 	public static $tipo_ontology					= 'dd1334';
 	public static $tipo_version						= 'dd1327';
 	public static $tipo_developer					= 'dd1644';
+	public static $tipo_description					= 'dd612';
 	public static $tipo_dedalo_version_minimal		= 'dd1328';
-	public static $section_tools_config_tipo		= 'dd996';
+	public static $section_tools_config_tipo		= DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO; // 'dd996'; // Tools configuration
 	public static $tipo_affected_models				= 'dd1330';
 	public static $tipo_properties					= 'dd1335';
 	public static $tipo_always_active				= 'dd1601';
@@ -519,7 +520,7 @@ class tools_register {
 	 * Private helper to extract component data or values from a section record.
 	 * Used to DRY create_simple_tool_object.
 	 */
-	private static function get_val(int|string $section_id, string $section_tipo, string $tipo, $lang = DEDALO_DATA_NOLAN, $full_data = false) {
+	private static function get_val(int|string $section_id, string $section_tipo, string $tipo, string $lang = DEDALO_DATA_NOLAN, bool $full_data = false) : mixed {
 		$model = ontology_node::get_model_by_tipo($tipo, true);
 		$comp  = component_common::get_instance($model, $tipo, $section_id, 'list', $lang, $section_tipo);
 		return $full_data ? $comp->get_data() : $comp->get_value();
@@ -547,8 +548,8 @@ class tools_register {
 		$tool_object->label      = self::get_val($section_id, $section_tipo, self::$tipo_tool_label, DEDALO_DATA_LANG, true);
 		$tool_object->version    = self::get_val($section_id, $section_tipo, self::$tipo_version);
 		$tool_object->dd_version = self::get_val($section_id, $section_tipo, self::$tipo_dedalo_version_minimal);
-		$tool_object->developer  = self::get_val($section_id, $section_tipo, 'dd1644');
-		$tool_object->description = self::get_val($section_id, $section_tipo, 'dd612', DEDALO_DATA_LANG, true);
+		$tool_object->developer  = self::get_val($section_id, $section_tipo, self::$tipo_developer);
+		$tool_object->description = self::get_val($section_id, $section_tipo, self::$tipo_description, DEDALO_DATA_LANG, true);
 
 		// affected_models
 		$tool_object->affected_models = (function() use ($section_id, $section_tipo) {
@@ -735,10 +736,38 @@ class tools_register {
 	}
 
 
+
+	/**
+	* GET_CONFIG_LIST_CACHE_NAME
+	* Returns the filename used for file-based caching.
+	* @param string $key The cache key (normally the section tipo as 'dd996' or 'dd1324')
+	* @return string The cache filename
+	*/
+	public static function get_config_list_cache_name( string $key ) : string {
+		return DEDALO_ENTITY . '_cache_tools_config_list_' . $key . '.php';
+	}
+
+
+
 	/**
 	 * Private helper to fetch and parse configuration records from a specific section.
 	 */
 	private static function get_config_list(string $section_tipo, string $config_tipo) : array {
+
+		// cache
+		$use_cache = true;
+		if ($use_cache===true) {
+
+			// file cache
+			$key = $section_tipo;
+			$config_list = dd_cache::cache_from_file((object)[
+				'file_name'	=> self::get_config_list_cache_name($key),
+				'prefix' => ''
+			]);
+			if (!empty($config_list)) {
+				return $config_list;
+			}
+		}
 
 		$sqo_data = (object)[
 			'section_tipo' => [$section_tipo],
@@ -760,6 +789,15 @@ class tools_register {
 			$config_list[$name] = [
 				'config' => $config
 			];
+		}
+
+		// cache
+		if ($use_cache===true && login::is_logged()) {
+			dd_cache::cache_to_file((object)[
+				'file_name' => self::get_config_list_cache_name($key),
+				'prefix' => '',
+				'data' => $config_list
+			]);
 		}
 
 		return $config_list;

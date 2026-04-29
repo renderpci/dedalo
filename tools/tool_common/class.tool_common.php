@@ -53,7 +53,7 @@ class tool_common {
 
 	/**
 	* __CONSTRUCT
-	* @param string|int $section_id
+	* @param string|int|null $section_id
 	* @param string $section_tipo
 	* @return void
 	*/
@@ -118,7 +118,12 @@ class tool_common {
 		// tool name. Fixed on construct
 			$name = $this->name;
 
-			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
+			// tool_object
+			// If is already resolved, get from cached file 'development_cache_tools_all_registered_tools.php'
+			// else, fallback to 'tools_register::create_simple_tool_object' creation.
+			$registered_tools = self::get_all_registered_tools();
+			$tool_object = $registered_tools[$name] ?? tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
+
 			// sample tool object
 				// {
 				//   "name": "tool_transcription",
@@ -452,7 +457,7 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
-	* Alias of $this->get_structure_context method fro compatibility.
+	* Alias of $this->get_structure_context method for compatibility.
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
 	* @return dd_object $full_ddo
@@ -469,27 +474,46 @@ class tool_common {
 
 
 	/**
+	* GET_ALL_REGISTERED_TOOLS_CACHE_NAME
+	* Returns the filename used for file-based caching.
+	* @return string The cache filename
+	*/
+	public static function get_all_registered_tools_cache_name() : string {
+		return DEDALO_ENTITY . '_cache_tools_all_registered_tools.php';
+	}
+
+
+
+	/**
 	* GET_ALL_REGISTERED_TOOLS
 	*
 	* Retrieves the full list of tools registered in the database.
 	* This method constructs a simplified tool object for each registered tool,
 	* including its name, label, and client configuration.
 	*
-	* @return array List of simple_tool_objects
+	* @return array $registered_tools - List of simple_tool_objects
 	*/
 	public static function get_all_registered_tools() : array {
 
 		$registered_tools = [];
 
 		// cache
-		// Currently, it is not necessary to use the cache because the main caller
-		// (get_user_tools) is already catching the result.
 		// Enabled for performance in hydrate_tools_info and user_tools lookups.
 		$use_cache = true;
 		if ($use_cache===true) {
 			// static cache
 			if (isset(self::$all_registered_tools_cache)) {
 				return self::$all_registered_tools_cache;
+			}
+			// file cache
+			$all_registered_tools = dd_cache::cache_from_file((object)[
+				'file_name'	=> self::get_all_registered_tools_cache_name(),
+				'prefix' => ''
+			]);
+			if (!empty($all_registered_tools)) {
+				// store in static cache for subsequent calls in this request
+				self::$all_registered_tools_cache = $all_registered_tools;
+				return $all_registered_tools;
 			}
 		}
 
@@ -514,8 +538,8 @@ class tool_common {
 				$current_config	= $ar_config[$current_simple_tool_object->name] ?? null;
 
 				if(!is_array($current_config)){
-					$ar_config		= tools_register::get_all_default_config_tool_client();
-					$current_config	= $ar_config[$current_simple_tool_object->name] ?? null;
+					$default_config	= tools_register::get_all_default_config_tool_client();
+					$current_config	= $default_config[$current_simple_tool_object->name] ?? null;
 				}
 
 				if(!is_array($current_config)){
@@ -532,7 +556,7 @@ class tool_common {
 					: null;
 
 				// append tool object
-				$registered_tools[] = $current_simple_tool_object;
+				$registered_tools[$current_simple_tool_object->name] = $current_simple_tool_object;
 			}//end foreach ($db_result as $record)
 		}
 
@@ -540,6 +564,12 @@ class tool_common {
 		if ($use_cache===true) {
 			// static
 			self::$all_registered_tools_cache = $registered_tools;
+			// file cache
+			dd_cache::cache_to_file((object)[
+				'file_name' => self::get_all_registered_tools_cache_name(),
+				'prefix' => '',
+				'data' => $registered_tools
+			]);
 		}
 
 
@@ -552,13 +582,15 @@ class tool_common {
 	* GET_ACTIVE_TOOLS
 	* Search all active tools in registered tools section
 	* @param bool $use_cache = true
-	* @return db_result $db_result
+	* @return db_result|false $db_result
 	*/
 	public static function get_active_tools( bool $use_cache=true ) : db_result|false {
 
 		// cache
-			if ($use_cache===true && isset(self::$active_tools_cache)) {
-				return self::$active_tools_cache;
+			if ($use_cache===true) {
+				if(isset(self::$active_tools_cache)) {
+					return self::$active_tools_cache;
+				}
 			}
 
 		// get all active and registered tools
@@ -597,7 +629,7 @@ class tool_common {
 
 		// search
 			$search	= search::get_instance($sqo);
-			$db_result	= $search->search();
+			$db_result = $search->search();
 
 		// cache
 			if ($use_cache===true) {
@@ -617,7 +649,7 @@ class tool_common {
 	* Used in update code to get the tool list from the master
 	* @return array $tool_names
 	*/
-	public static function get_active_tool_names() {
+	public static function get_active_tool_names() : array {
 
 		$active_tools = tool_common::get_active_tools();
 
@@ -882,50 +914,49 @@ class tool_common {
 		// Working here... (!)
 		throw new Exception("Error Processing Request", 1);
 
+		// $response = new stdClass();
+		// 	$response->result	= false;
+		// 	$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// // options
+		// 	$tipo				= $options->tipo ?? null;
+		// 	$section_id			= $options->section_id ?? null;
+		// 	$section_tipo		= $options->section_tipo ?? null;
+		// 	$method				= $options->method ?? null;
+		// 	$method_arguments	= $options->method_arguments ?? null;
 
-		// options
-			$tipo				= $options->tipo ?? null;
-			$section_id			= $options->section_id ?? null;
-			$section_tipo		= $options->section_tipo ?? null;
-			$method				= $options->method ?? null;
-			$method_arguments	= $options->method_arguments ?? null;
+		// // component
+		// 	$model		= ontology_node::get_model_by_tipo($tipo,true);
+		// 	$component	= component_common::get_instance(
+		// 		$model,
+		// 		$tipo,
+		// 		$section_id,
+		// 		'list',
+		// 		DEDALO_DATA_NOLAN,
+		// 		$section_tipo
+		// 	);
+		// 	if (!empty($method) && method_exists($component, $method)) {
 
-		// component
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			if (!empty($method) && method_exists($component, $method)) {
+		// 		// call component
+		// 			$call_result = $component->{$method}($method_arguments);
 
-				// call component
-					$call_result = $component->{$method}($method_arguments);
+		// 		// response
+		// 			$response->result = isset($call_result->result)
+		// 				? $call_result->result
+		// 				: $call_result;
+		// 			$response->msg = isset($call_result->msg)
+		// 				? $call_result->msg
+		// 				: 'Request done ['.__FUNCTION__.']';
 
-				// response
-					$response->result = isset($call_result->result)
-						? $call_result->result
-						: $call_result;
-					$response->msg = isset($call_result->msg)
-						? $call_result->msg
-						: 'Request done ['.__FUNCTION__.']';
+		// 	}else{
 
-			}else{
-
-				// response error
-					$response->result	= false;
-					$response->msg		.= '. Method does not exists: '.$method .' in '.$model;
-			}
+		// 		// response error
+		// 			$response->result	= false;
+		// 			$response->msg		.= '. Method does not exists: '.$method .' in '.$model;
+		// 	}
 
 
-		return $response;
+		// return $response;
 	}//end call_component_method
 
 
