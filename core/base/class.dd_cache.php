@@ -697,7 +697,7 @@ class dd_cache {
 					return $cache_files_parsed;
 				  })()
 				: (function() use($base_path, $prefix){
-					$use_prefix = $prefix ?? dd_cache::get_cache_file_prefix();
+					$use_prefix		= $prefix ?? dd_cache::get_cache_file_prefix();
 					$file_pattern	= $base_path .'/'. $use_prefix .'*';
 					$found_files	= glob($file_pattern);
 					// Handle glob() failure

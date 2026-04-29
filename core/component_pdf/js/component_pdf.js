@@ -84,23 +84,23 @@ component_pdf.prototype.change_handler = function(options) {
 	const self = this
 
 	// options
-		const key		= options.key
-		const value		= options.value
-		const index		= options.index ?? 0
+	const key		= options.key
+	const value		= options.value
+	const index		= options.index ?? 0
 
 	// current_value
-		const current_value = self.data.entries?.[index]
+	const current_value = self.data.entries?.[index]
 	if (!current_value) {
 		console.warn('! Ignored change_handler: missing entry at index', index)
 		return
 	}
 
 	// update lib_data
-		current_value.lib_data = current_value.lib_data || {}
-		current_value.lib_data[key] = value
+	current_value.lib_data = current_value.lib_data || {}
+	current_value.lib_data[key] = value
 
 	// changed_data
-		const changed_data = [Object.freeze({
+	const changed_data = [Object.freeze({
 		action	: 'update',
 		id		: current_value.id || null,
 		value	: current_value

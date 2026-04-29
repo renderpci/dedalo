@@ -42,3 +42,4 @@ Information regarding project tasks and migration progress. NOT for agents.
 26. **global**: Stability: search, cache, section, etc.
 27. **style**: Area maintenace restyling (dashboard as Enterprise)
 28. **style**: Restyling menu? and dark mode.
+29. Tool propagation: Do not load the current selected component data like v6
