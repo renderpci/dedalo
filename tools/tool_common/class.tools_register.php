@@ -706,13 +706,13 @@ class tools_register {
 
 
 	/**
-	 * GET_ALL_CONFIG_TOOL
+	 * GET_ALL_CONFIG
 	 *
 	 * Returns current user configuration for all registered tools.
 	 *
 	 * @return array List of config objects {name, config}.
 	 */
-	public static function get_all_config_tool() : array {
+	public static function get_all_config() : array {
 		static $cache;
 		if (isset($cache)) return $cache;
 
@@ -778,7 +778,7 @@ class tools_register {
 		static $cache;
 		if (isset($cache)) return $cache;
 
-		$full_configs = self::get_all_config_tool();
+		$full_configs = self::get_all_config();
 		return $cache = self::filter_client_config($full_configs);
 	}
 

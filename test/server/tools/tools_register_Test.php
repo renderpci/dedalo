@@ -154,31 +154,31 @@ final class tools_register_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_ALL_CONFIG_TOOL
+	* TEST_GET_ALL_CONFIG
 	* @return void
 	*/
-	public function test_get_all_config_tool() {
+	public function test_get_all_config() {
 
-		$all_config_tool = tools_register::get_all_config_tool();
+		$all_config = tools_register::get_all_config();
 
 		$this->assertTrue(
-			gettype($all_config_tool)==='array',
-			'expected gettype all_config_tool is array'
-				.' and is : '.gettype($all_config_tool)
+			gettype($all_config)==='array',
+			'expected gettype all_config is array'
+				.' and is : '.gettype($all_config)
 		);
 
-		if (empty($all_config_tool)) {
+		if (empty($all_config)) {
 			// It's possible there are no configs yet
 			return;
 		}
 
-		if (isset($all_config_tool[0])) {
+		if (isset($all_config[0])) {
 			$this->assertTrue(
-				!empty($all_config_tool[0]),
+				!empty($all_config[0]),
 				'expected not empty value '
 			);
 		}
-	}//end test_get_all_config_tool
+	}//end test_get_all_config
 
 
 

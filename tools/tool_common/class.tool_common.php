@@ -686,7 +686,7 @@ class tool_common {
 			}
 
 		// get all tools config sections
-			$ar_config = tools_register::get_all_config_tool();
+			$ar_config = tools_register::get_all_config();
 
 		// select current from all tool config
 			$config = array_find($ar_config, function($el) use($tool_name) {
