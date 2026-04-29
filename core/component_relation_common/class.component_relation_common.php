@@ -47,8 +47,8 @@ class component_relation_common extends component_common {
 		// array|null ar_target_section_tipo
 		protected $ar_target_section_tipo;
 
-		// sub_columns_divison
-		protected $sub_columns_divison;
+		// sub_columns_division
+		protected $sub_columns_division;
 
 		// default_relation_type
 		protected $default_relation_type;
@@ -221,7 +221,6 @@ class component_relation_common extends component_common {
 							$ar_children[] = $ddo;
 							$result = get_children_recursive($ar_ddo, $ddo);
 							if (!empty($result)) {
-								$ar_children = [...$ar_children, ...$result];
 								$ar_children = [...$ar_children, ...$result];
 							}
 						}
@@ -491,7 +490,7 @@ class component_relation_common extends component_common {
 				if($id_obj===null){
 					// check if the current column_id is a locator column, else add the column_object at the end
 					$current_column_path = explode('|', (string)$current_column_obj->id);
-					if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0 || sizeof($current_column_path)>1){
+					if(isset($this->sub_columns_division) && $this->sub_columns_division===true && $current_key>0 || sizeof($current_column_path)>1){
 						// get the last position of the column group
 						$position = false;
 						foreach ($ar_columns_obj as $column_key => $column_value) {
@@ -745,7 +744,7 @@ class component_relation_common extends component_common {
 			debug_log(__METHOD__
 				." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") " . PHP_EOL
 				.' locator: ' . to_string($locator) . PHP_EOL
-				.' Type is mandatory : locator->type: ' . $locator->type
+				.' Type is mandatory : locator->type: ' . (isset($locator->type) ? $locator->type : 'undefined')
 				, logger::ERROR
 			);
 			return false;
@@ -788,7 +787,7 @@ class component_relation_common extends component_common {
 	* REMOVE_LOCATOR_FROM_DATA
 	* Removes from data one or more locators that accomplish given locator equality
 	* (!) Not save the result
-	* @param object $locator
+	* @param object $locator_to_remove
 	* @param array $ar_properties = []
 	* @return bool
 	*/
@@ -822,7 +821,7 @@ class component_relation_common extends component_common {
 					.' locator_to_remove: ' . to_string($locator_to_remove) . PHP_EOL
 					.' model: ' . get_called_class() . PHP_EOL
 					.' tipo: ' . $this->tipo . PHP_EOL
-					.' section_tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo . PHP_EOL
 					.' section_id: ' . $this->section_id
 					, logger::ERROR
 				);
@@ -2089,8 +2088,8 @@ class component_relation_common extends component_common {
 					break;
 
 				case 'ontology_sections':
-					$ontolgoy_sections = ontology::get_all_ontology_sections();
-					$ar_section_tipo = [...$ar_section_tipo, ...$ontolgoy_sections];
+					$ontology_sections = ontology::get_all_ontology_sections();
+					$ar_section_tipo = [...$ar_section_tipo, ...$ontology_sections];
 					break;
 
 				case 'field_value':
@@ -2431,7 +2430,7 @@ class component_relation_common extends component_common {
 							$filter->{$operator}[] =  $filter_item;
 
 						}else{
-							// if the component is other than section_id, create a q and path with every compnent_data.
+							// if the component is other than section_id, create a q and path with every component_data.
 							foreach ($component_data as $search_data) {
 
 								if( is_object( $search_data ) &&
@@ -2512,19 +2511,19 @@ class component_relation_common extends component_common {
 		// but if the ddo in not the $last ddo, do recursion to resolve the next level into the ddo chain.
 		if (!isset($last)) {
 
-			$current_compnent_data = [];
+			$current_component_data = [];
 
 			$children = component_relation_common::get_ddo_children_recursive($ar_ddo, $dd_object);
 			foreach($component_data as $element){
 				foreach ($children as $current_ddo_child) {
-					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $element);
+					$result_component_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $element);
 					// join the result data with the siblings resolution.
-					if (!empty($result_compnent_data)) {
-						$current_compnent_data = [...$current_compnent_data, ...$result_compnent_data];
+					if (!empty($result_component_data)) {
+						$current_component_data = [...$current_component_data, ...$result_component_data];
 					}
 				}
 			}
-			return $current_compnent_data;
+			return $current_component_data;
 		}
 
 
@@ -2999,7 +2998,11 @@ class component_relation_common extends component_common {
 			return $item->parent === 'self' || $item->parent === $section_tipo;
 		});
 		// get the ddo that match with the q definition
-		$tipo_to_be_resolved = end($ddo_map)->tipo;
+		$last_ddo = end($ddo_map);
+		if ($last_ddo === false) {
+			return false;
+		}
+		$tipo_to_be_resolved = $last_ddo->tipo;
 
 		$resolve_ddo = array_find($ddo_map, function($item) use ($tipo_to_be_resolved) {
 			return $item->tipo === $tipo_to_be_resolved;
@@ -3018,13 +3021,13 @@ class component_relation_common extends component_common {
 					$current_locator->section_tipo	= $element->section_tipo;
 					$current_locator->section_id	= $element->section_id;
 
-			$result_compnent_data = component_relation_common::resolve_component_data_recursively(
+			$result_component_data = component_relation_common::resolve_component_data_recursively(
 				$ddo_map,
 				$init_ddo,
 				$current_locator
 			);
 
-			$ar_data = [...$ar_data, ...$result_compnent_data];
+			$ar_data = [...$ar_data, ...$result_component_data];
 		}
 
 
