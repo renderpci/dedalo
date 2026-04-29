@@ -172,9 +172,10 @@ final class tools_register_test extends BaseTestCase {
 			return;
 		}
 
-		if (isset($all_config[0])) {
+		if (!empty($all_config)) {
+			$first_key = array_key_first($all_config);
 			$this->assertTrue(
-				!empty($all_config[0]),
+				!empty($all_config[$first_key]),
 				'expected not empty value '
 			);
 		}
@@ -196,9 +197,10 @@ final class tools_register_test extends BaseTestCase {
 				.' and is : '.gettype($all_default_config)
 		);
 
-		if (isset($all_default_config[0])) {
+		if (!empty($all_default_config)) {
+			$first_key = array_key_first($all_default_config);
 			$this->assertTrue(
-				!empty($all_default_config[0]->name),
+				!empty($first_key),
 				'expected not empty name value '
 			);
 		}
@@ -220,27 +222,26 @@ final class tools_register_test extends BaseTestCase {
 				.' and is : '.gettype($all_config_tool_client)
 		);
 
-		if (isset($all_config_tool_client[0])) {
+		if (!empty($all_config_tool_client)) {
+			$first_key = array_key_first($all_config_tool_client);
 			$this->assertTrue(
-				!empty($all_config_tool_client[0]->name),
+				!empty($first_key),
 				'expected not empty name value '
 			);
 		}
 
 		// check tools transcription (guaranteed to have dd1633 in registry)
 		$all_default_config_tool_client = tools_register::get_all_default_config_tool_client();
-		$tool_trans_config = array_find($all_default_config_tool_client, function($el){
-			return $el->name==='tool_transcription';
-		});
+		$tool_trans_config = $all_default_config_tool_client['tool_transcription'] ?? null;
 
 		$this->assertTrue(
 			is_object($tool_trans_config),
 			'expected tool_transcription in default client configs'
 		);
 
-		if (is_object($tool_trans_config)) {
+		if (is_array($tool_trans_config)) {
 
-			$transcriber_engine = $tool_trans_config->config->transcriber_engine ?? null;
+			$transcriber_engine = $tool_trans_config['config']->transcriber_engine ?? null;
 
 			$this->assertTrue(
 				is_object($transcriber_engine),
@@ -277,31 +278,27 @@ final class tools_register_test extends BaseTestCase {
 			$this->markTestSkipped('No default config tools client found');
 		}
 
-		if (isset($all_config_tool_client[0])) {
+		if (!empty($all_config_tool_client)) {
+			$first_key = array_key_first($all_config_tool_client);
 			$this->assertTrue(
-				!empty($all_config_tool_client[0]->name),
+				!empty($first_key),
 				'expected not empty tool name value '
 			);
 		}
 
-		// check for any valid object structure
-		$found = $all_config_tool_client[0] ?? null;
+		// check for any valid array structure
+		$found = $all_config_tool_client[array_key_first($all_config_tool_client)] ?? null;
 
 		if ($found) {
 			$this->assertTrue(
-				gettype($found)==='object',
-				'expected gettype found is object'
+				gettype($found)==='array',
+				'expected gettype found is array'
 					.' and is : '.gettype($found)
 			);
 
 			$this->assertTrue(
-				property_exists($found, 'name'),
-				'expected property name'
-			);
-
-			$this->assertTrue(
-				property_exists($found, 'config'),
-				'expected property config'
+				array_key_exists('config', $found),
+				'expected key config'
 			);
 		}
 	}//end test_get_all_default_config_tool_client

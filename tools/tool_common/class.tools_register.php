@@ -757,8 +757,7 @@ class tools_register {
 
 			if (!$name) continue;
 
-			$config_list[] = (object)[
-				'name'   => $name,
+			$config_list[$name] = [
 				'config' => $config
 			];
 		}
@@ -803,21 +802,22 @@ class tools_register {
 	 * Helper to filter config objects for properties visible to the client.
 	 */
 	private static function filter_client_config(array $configs) : array {
-		return array_map(function($item) {
+		$result = [];
+		foreach ($configs as $name => $item) {
 			$client_config = [];
-			if (!empty($item->config)) {
-				foreach ($item->config as $key => $prop) {
+			if (!empty($item['config'])) {
+				foreach ($item['config'] as $key => $prop) {
 					if (isset($prop->client) && $prop->client === true) {
 						$client_config[$key] = $prop;
 					}
 				}
 			}
 
-			return (object)[
-				'name'   => $item->name,
+			$result[$name] = [
 				'config' => !empty($client_config) ? (object)$client_config : null
 			];
-		}, $configs);
+		}
+		return $result;
 	}
 
 

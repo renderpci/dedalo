@@ -274,19 +274,15 @@ class tool_common {
 
 		// config. Add if exists config data for current tool
 			$ar_config		= tools_register::get_all_config_tool_client();
-			$config_data	= array_find($ar_config, function($el) use($name) {
-				return $el->name===$name;
-			});
+			$config_data	= $ar_config[$name] ?? null;
 			// fallback to default config
-			if(!is_object($config_data) || empty($config_data->config)){
+			if(!is_array($config_data) || empty($config_data['config'])){
 				$ar_config		= tools_register::get_all_default_config_tool_client();
-				$config_data	= array_find($ar_config, function($el) use($name) {
-					return $el->name===$name;
-				});
+				$config_data	= $ar_config[$name] ?? null;
 			}
 			// config
-			$config = is_object($config_data)
-				? $config_data->config
+			$config = is_array($config_data)
+				? $config_data['config']
 				: null;
 
 		// lang
@@ -515,18 +511,14 @@ class tool_common {
 				$current_simple_tool_object = tools_register::create_simple_tool_object($record->section_tipo, $record->section_id);
 
 				// append config
-				$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
-					return $el->name===$current_simple_tool_object->name;
-				});
+				$current_config	= $ar_config[$current_simple_tool_object->name] ?? null;
 
-				if(!is_object($current_config)){
+				if(!is_array($current_config)){
 					$ar_config		= tools_register::get_all_default_config_tool_client();
-					$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
-						return is_object($el) && is_object($current_simple_tool_object) && $el->name===$current_simple_tool_object->name;
-					});
+					$current_config	= $ar_config[$current_simple_tool_object->name] ?? null;
 				}
 
-				if(!is_object($current_config)){
+				if(!is_array($current_config)){
 					debug_log(__METHOD__
 						. " Ignored bad config " . PHP_EOL
 						. to_string($current_config)
@@ -535,8 +527,8 @@ class tool_common {
 					continue;
 				}
 
-				$current_simple_tool_object->config = is_object($current_config)
-					? $current_config->config
+				$current_simple_tool_object->config = is_array($current_config)
+					? $current_config['config']
 					: null;
 
 				// append tool object
@@ -669,9 +661,9 @@ class tool_common {
 	* GET_CONFIG
 	* Get given tool config if isset
 	* @param string $tool_name
-	* @return object|null $config
+	* @return array|null $config
 	*/
-	public static function get_config(string $tool_name) : ?object {
+	public static function get_config(string $tool_name) : ?array {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -689,19 +681,15 @@ class tool_common {
 			$ar_config = tools_register::get_all_config();
 
 		// select current from all tool config
-			$config = array_find($ar_config, function($el) use($tool_name) {
-				return $el->name===$tool_name;
-			});
+			$config = $ar_config[$tool_name] ?? null;
 
-			if(!is_object($config)){
+			if(!is_array($config)){
 				// get all tools config sections
 				$ar_config = tools_register::get_all_default_config();
-				$config = array_find($ar_config, function($el) use($tool_name) {
-					return $el->name===$tool_name;
-				});
+				$config = $ar_config[$tool_name] ?? null;
 
 				// no config is found at all
-				if(!is_object($config)){
+				if(!is_array($config)){
 					//cache
 					self::$cache_config_tool[$tool_name] = null;
 
@@ -1112,11 +1100,11 @@ class tool_common {
 	* 	tipo: string as 'dd47'
 	* 	section_tipo: string as 'rsc167'
 	* }
-	* @param object|null $tool_config = null
+	* @param array|null $tool_config = null
 	* 	Normally, is get from tools cache file, else will be calculated
 	* @return object|null $tool_config
 	*/
-	public static function get_tool_configuration( object $options, ?object $tool_config=null ) : ?object {
+	public static function get_tool_configuration( object $options, ?array $tool_config=null ) : ?object {
 
 		$tool_name		= $options->tool_name;
 		$tipo			= $options->tipo;
@@ -1127,13 +1115,13 @@ class tool_common {
 		$tool_configuration = $tool_config ?? tool_common::get_config($tool_name);
 
 		// check if has a properties and tool_config definition
-		if( isset($tool_configuration->config)
-			&& isset($tool_configuration->config->properties)
-			&& isset($tool_configuration->config->properties->tool_config) ){
+		if( isset($tool_configuration['config'])
+			&& isset($tool_configuration['config']->properties)
+			&& isset($tool_configuration['config']->properties->tool_config) ){
 			// tool config is an array with specific object for tipo and section_tipo
 			// (that need to match with the button_import definition and his section)
 			// find the definition that match with current section
-			$ar_tool_config = $tool_configuration->config->properties->tool_config ?? [];
+			$ar_tool_config = $tool_configuration['config']->properties->tool_config ?? [];
 
 			$tool_config = array_find($ar_tool_config, function($item) use($section_tipo, $tipo) {
 				return $item->section_tipo === $section_tipo && $item->tipo === $tipo;
