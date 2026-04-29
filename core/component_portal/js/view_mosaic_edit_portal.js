@@ -7,23 +7,16 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		render_column_id,
 		render_column_component_info,
 		render_column_remove,
 		get_buttons,
-		activate_autocomplete,
+		add_wrapper_events,
+		add_section_record_drag_and_drop,
 		render_references
 	} from './render_edit_component_portal.js'
-	import {
-		on_dragstart_mosaic,
-		on_dragover,
-		on_dragleave,
-		// on_dragend,
-		on_drop, // used to reorder inside the same portal
-	} from './drag_and_drop.js'
 
 
 
@@ -180,19 +173,8 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-		wrapper.addEventListener('dragover',function(e){
-			on_dragover(this, e, {
-				caller	: self
-			})
-		})
-		wrapper.addEventListener('dragleave',function(e){
-			on_dragleave(this, e)
-		})
-		wrapper.addEventListener('drop',function(e){
-			on_drop( this, e, {
-				caller	: self
-			})
-		})
+	// service autocomplete + drag/drop
+		add_wrapper_events(self, wrapper, {drag_drop: true})
 
 	// permissions control
 	// set on read only permissions, remove the context menu
@@ -202,19 +184,6 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				return false
 			});
 		}
-
-	// service autocomplete
-		const click_handler = (e) => {
-			e.stopPropagation()
-			dd_request_idle_callback(
-				() => {
-					if (self.active) {
-						activate_autocomplete(self, wrapper)
-					}
-				}
-			)
-		}
-		wrapper.addEventListener('click', click_handler)
 
 
 	return wrapper
@@ -251,7 +220,7 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 
 					// drag and drop
 					if (self.permissions >= 2) {
-						drag_and_drop({
+						add_section_record_drag_and_drop({
 							section_record_node : section_record_node,
 							paginated_key       : i,
 							total_records       : self.total,
@@ -298,33 +267,6 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 
 	return content_data
 }//end get_content_data
-
-
-
-/**
-* DRAG_AND_DROP
-* Set section_record_node ready to drag and drop
-* Mosaic use his own node to be draggable and droppable
-* also it uses the drag node of default behavior (dependent of section_id node)
-* but doesn't use the drop node (dependent of section_id node)
-* @param object options
-* @return bool
-*/
-const drag_and_drop = function(options) {
-
-	// options
-		const node	= options.section_record_node
-
-	// set properties/events
-		node.draggable = true
-		node.classList.add('draggable')
-		node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
-		node.addEventListener('dragover',function(e){on_dragover(this, e, options)})
-		node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-		node.addEventListener('drop',function(e){on_drop(this, e, options)})
-
-	return true
-}//end drag_and_drop
 
 
 

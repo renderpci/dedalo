@@ -20,6 +20,7 @@
 	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {
 		on_dragstart,
+		on_dragstart_mosaic,
 		on_dragover,
 		on_dragleave,
 		on_dragend,
@@ -999,6 +1000,83 @@ export const render_references = function(ar_references) {
 
 	return fragment
 }//end render_references
+
+
+
+/**
+* ADD_WRAPPER_EVENTS
+* Shared across views. Sets up common wrapper event handlers:
+* - Click handler for autocomplete activation
+* - Optional drag and drop events on wrapper
+* @param object self - Component instance
+* @param HTMLElement wrapper - Wrapper DOM element
+* @param object [options] - Options
+* @param bool [options.drag_drop=false] - Whether to add drag/drop events on wrapper
+* @return bool
+*/
+export const add_wrapper_events = function(self, wrapper, options={}) {
+
+	// click handler (autocomplete activation)
+		const click_handler = (e) => {
+			e.stopPropagation()
+			dd_request_idle_callback(
+				() => {
+					if (self.active) {
+						activate_autocomplete(self, wrapper)
+					}
+				}
+			)
+		}
+		wrapper.addEventListener('click', click_handler)
+
+	// drag and drop events on wrapper (optional, used by default and mosaic views)
+		if (options.drag_drop === true) {
+			wrapper.addEventListener('dragover', function(e) {
+				on_dragover(this, e, {
+					caller : self
+				})
+			})
+			wrapper.addEventListener('dragleave', function(e) {
+				on_dragleave(this, e)
+			})
+			wrapper.addEventListener('drop', function(e) {
+				on_drop(this, e, {
+					caller : self
+				})
+			})
+		}
+
+	return true
+}//end add_wrapper_events
+
+
+
+/**
+* ADD_SECTION_RECORD_DRAG_AND_DROP
+* Set section_record_node ready to drag and drop
+* Shared across views (line, mosaic)
+* @param object options
+* @return bool
+*/
+export const add_section_record_drag_and_drop = function(options) {
+
+	// options
+		const node = options.section_record_node
+		if(!node){
+			console.error('No node is given')
+			return false
+		}
+
+	// set properties/events
+		node.draggable = true
+		node.classList.add('draggable')
+		node.addEventListener('dragstart', function(e) { on_dragstart_mosaic(this, e, options) })
+		node.addEventListener('dragover', function(e) { on_dragover(this, e, options) })
+		node.addEventListener('dragleave', function(e) { on_dragleave(this, e) })
+		node.addEventListener('drop', function(e) { on_drop(this, e, options) })
+
+	return true
+}//end add_section_record_drag_and_drop
 
 
 

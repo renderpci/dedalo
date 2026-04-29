@@ -5,14 +5,12 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		render_column_remove,
-		activate_autocomplete,
+		add_wrapper_events,
 		get_buttons
 	} from './render_edit_component_portal.js'
 
@@ -108,29 +106,14 @@ view_tree_edit_portal.render = async function(self, options) {
 
 /**
 * ADD_EVENTS
+* Delegates to shared add_wrapper_events
 * @param object self
 * @param HTMLElement wrapper
 * @return bool
 */
 export const add_events = function(self, wrapper) {
 
-	// click delegated
-		const click_handler = (e) => {
-			e.stopPropagation()
-
-			// active autocomplete
-				dd_request_idle_callback(
-					() => {
-						if (self.active) {
-							activate_autocomplete(self, wrapper)
-						}
-					}
-				)
-		}
-		wrapper.addEventListener('click', click_handler)
-
-
-	return true
+	return add_wrapper_events(self, wrapper)
 }//end add_events
 
 
