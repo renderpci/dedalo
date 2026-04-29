@@ -689,7 +689,7 @@ class dd_cache {
 				? (function() use($cache_files, $prefix) {
 					$cache_files_parsed = [];
 					foreach ($cache_files as $file_name) {
-						$full_file_name = empty($prefix)
+						$full_file_name = $prefix===null
 							? dd_cache::get_cache_file_prefix() . $file_name
 							: $prefix . $file_name;
 						$cache_files_parsed[] = $full_file_name;
