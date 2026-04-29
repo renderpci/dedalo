@@ -35,7 +35,6 @@ export const livecycle_detail = [
 	'test_component_email',
 	'test_component_filter',
 	'test_component_filter_records',
-
 	'test_component_geolocation',
 	'test_component_image',
 	'test_component_input_text',
@@ -45,6 +44,7 @@ export const livecycle_detail = [
 	'test_component_json',
 	'test_component_number',
 	'test_component_password',
+	'test_component_pdf',
 	'test_component_radio_button',
 	'test_component_select',
 	'test_component_select_lang',
