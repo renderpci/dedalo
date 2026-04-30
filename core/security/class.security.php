@@ -29,6 +29,14 @@ class security {
 
 		public static $permissions_table_cache;
 
+		// read_only_scope. Server-only static flag used to grant a read-level
+		// permission shortcut for non-destructive flows (e.g. autocomplete /
+		// label resolution) where the user may not have direct access to the
+		// linked section but the resolution is needed to render a label.
+		// Must be set ONLY by trusted server code paths and reset in a finally
+		// block. Never trust this flag from a client-supplied rqo.
+		public static bool $read_only_scope = false;
+
 
 
 	/**
