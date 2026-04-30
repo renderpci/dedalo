@@ -597,5 +597,35 @@ class security {
 
 
 
+	/**
+	* ASSERT_TIPO_PERMISSION
+	* Throws a permission_exception if the logged user has insufficient
+	* permission on the (parent_tipo, tipo) pair. Use for component-level
+	* gating where the parent section_tipo and component tipo differ.
+	* @param string $parent_tipo
+	* @param string $tipo
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_tipo_permission(
+		string $parent_tipo,
+		string $tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$perm = common::get_permissions($parent_tipo, $tipo);
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on $parent_tipo / $tipo (required: $required_level, have: $perm)",
+				$context
+			);
+		}
+	}//end assert_tipo_permission
+
+
+
+
 
 }//end class security
