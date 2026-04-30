@@ -12,6 +12,24 @@ final class dd_area_maintenance_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Note: callers are still authorization-gated by area_maintenance access
+	* checks in `dd_manager`. This list is the orthogonal "is the method even
+	* dispatchable?" gate.
+	*/
+	public const API_ACTIONS = [
+		'class_request',
+		'widget_request',
+		'get_widget_value',
+		'lock_components_actions',
+		'modify_counter',
+		'get_simple_schema_changes_files',
+		'parse_simple_schema_changes_files'
+	];
+
+
+
+	/**
 	* CLASS_REQUEST
 	* Fixed caller class NOT include into the RQO : area_maintenance
 	* Call to class method given and return and object with the response
