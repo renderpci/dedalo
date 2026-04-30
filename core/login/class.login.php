@@ -1121,6 +1121,20 @@ class login extends common {
 					}
 			}
 
+		// SEC-004: regenerate session ID on successful authentication to prevent session fixation.
+		// Must run BEFORE writing any auth-related data to $_SESSION so the previous (anonymous /
+		// possibly attacker-planted) session id cannot be replayed.
+			if (session_status() === PHP_SESSION_ACTIVE) {
+				try {
+					session_regenerate_id(true);
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__
+						. ' session_regenerate_id failed: ' . $e->getMessage()
+						, logger::WARNING
+					);
+				}
+			}
+
 		// is_global_admin (before set user session vars)
 			$is_global_admin = (bool)security::is_global_admin($user_id);
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
