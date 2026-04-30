@@ -210,6 +210,15 @@ if ($recovery_mode === true) {
 
 
 
+// SEC-008: mint the per-session CSRF token while the session is still open
+// for writes. dd_manager will read $_SESSION['dedalo']['csrf_token'] on the
+// rest of the request lifecycle (it stays populated in memory even after the
+// session is closed below), so we only need to ensure the token is committed
+// to storage before any session_write_close() call further down.
+if (class_exists('dd_manager') && method_exists('dd_manager', 'bootstrap_csrf_token')) {
+	dd_manager::bootstrap_csrf_token();
+}
+
 // prevent_lock from session
 $session_closed = false;
 if (isset($rqo->prevent_lock) && $rqo->prevent_lock === true) {
