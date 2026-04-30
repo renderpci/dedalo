@@ -2234,9 +2234,26 @@ final class dd_core_api {
 			$result->context	= $context;
 			$result->data		= $data;
 
-		// permissions check. Prevent mistaken data resolutions
-			$permissions = common::get_permissions($section_tipo, $tipo);
-			if (!empty($result->data) && $permissions<1 && isset($element) && $element->get_model()!=='menu') {
+		// permissions check. Prevent mistaken data resolutions.
+			// Service / reflective models (e.g. `service_time_machine`) carry a
+			// bookkeeping `source->section_tipo` (`dd15`) that does NOT
+			// correspond to the data being read; their authorisation is enforced
+			// by the per-`sqo->section_tipo[]` gate at the top of this method.
+			// Apply the exemption based on the source `$model` (the original
+			// $ddo_source->model, which is "service_time_machine") rather than
+			// $element->get_model(): for action='search' the element is a
+			// `sections` instance whose model is 'sections', not the service
+			// label. Same check the pre-hoc gate uses.
+			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
+			$permissions	= common::get_permissions($section_tipo, $tipo);
+			if (
+				!empty($result->data)
+				&& $permissions < 1
+				&& isset($element)
+				&& $element->get_model() !== 'menu'
+				&& $model !== 'menu'
+				&& !$is_service_model
+			) {
 
 				$result->data = [];
 
