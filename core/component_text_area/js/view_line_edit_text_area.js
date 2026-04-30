@@ -102,14 +102,21 @@ const get_content_value = (i, current_value, self) => {
 		const ar_fallback_value		= data.fallback_value || []
 		const fallback				= get_fallback_value(entries, ar_fallback_value)
 		const dirty_fallback_value	= fallback[i]
-	// clean fallback of any tag
-		const fallback_fragment = document.createDocumentFragment();
-		const fb_content_value = ui.create_dom_element({
-			element_type	: 'div',
-			inner_html 		: dirty_fallback_value,
-			parent  		: fallback_fragment
-		})
-		const fallback_value = fallback_fragment.firstChild.innerText;
+	// clean fallback of any tag (deferred until needed)
+		let fallback_value = null
+		const get_fallback_value_clean = () => {
+			if (fallback_value !== null) {
+				return fallback_value
+			}
+			const fallback_fragment = document.createDocumentFragment()
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: dirty_fallback_value,
+				parent			: fallback_fragment
+			})
+			fallback_value = fallback_fragment.firstChild.innerText
+			return fallback_value
+		}
 
 	// value_string is a raw html without parse into nodes (txt format)
 		const value_string = current_value?.value
@@ -141,7 +148,7 @@ const get_content_value = (i, current_value, self) => {
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
-				inner_html		: fallback_value,
+				inner_html		: get_fallback_value_clean(),
 				parent			: value_container
 			  })
 			: null
@@ -185,7 +192,7 @@ const get_content_value = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					fallback_value		: fallback_value,
+					fallback_value		: get_fallback_value_clean(),
 					key					: i,
 					editor_config		: editor_config,
 					editor_class		: 'ddEditor' // ddEditor | InlineEditor
@@ -226,7 +233,13 @@ const get_content_value = (i, current_value, self) => {
 				dd_request_idle_callback(
 					() => {
 						init_current_service_text_editor()
-						value_container.classList.remove('loading')
+						.then(() => {
+							value_container.classList.remove('loading')
+						})
+						.catch((error) => {
+							value_container.classList.remove('loading')
+							console.error('[get_content_value] Error auto-initializing text editor:', error)
+						})
 					}
 				)
 
@@ -235,7 +248,7 @@ const get_content_value = (i, current_value, self) => {
 				// activate on user click
 
 				// click event
-				const fn_click_init = function(e) {
+				const click_handler = function(e) {
 					e.stopPropagation()
 
 					value_container.classList.add('loading')
@@ -243,22 +256,22 @@ const get_content_value = (i, current_value, self) => {
 					// init editor on user click
 					init_current_service_text_editor()
 					.then(function(service_editor) {
+						value_container.classList.remove('loading')
 						if (self.context.view === 'html_text') {
 							service_editor.editor.focus()
-							// service_editor.value_container.classList.remove('loading')
 						}else{
 							// trigger service_editor click action (show toolbar and focus it)
 							service_editor.click(e)
 						}
 					})
+					.catch(function(error) {
+						value_container.classList.remove('loading')
+						console.error('[get_content_value] Error initializing text editor on click:', error)
+					})
 					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('click', fn_click_init)
-				}//end fn_click_init
-				content_value.addEventListener('click', fn_click_init)
-				// mousedown event. Capture event propagation
-				content_value.addEventListener('mousedown', (e) => {
-					e.stopPropagation()
-				})
+					content_value.removeEventListener('mousedown', click_handler)
+				}//end click_handler
+				content_value.addEventListener('mousedown', click_handler)
 			}
 		}//end if (self.show_interface.read_only!==true)
 
@@ -400,6 +413,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 const get_custom_events = (self, i, text_editor) => {
 
 	const custom_events	= {}
+	const features		= self.context.features || {}
 
 	// focus
 		custom_events.focus = (evt, options) => {
@@ -407,12 +421,6 @@ const get_custom_events = (self, i, text_editor) => {
 				ui.component.activate(self)
 			}
 		}//end focus
-
-	// blur
-		// custom_events.blur = (evt, options) => {
-		// 	// save. text_editor save function calls current component save_value()
-		// 		text_editor.save()
-		// }//end blur
 
 	// click
 		custom_events.click = (evt, options) => {
@@ -422,19 +430,31 @@ const get_custom_events = (self, i, text_editor) => {
 			evt.stopPropagation()
 		}//end click
 
+	// keyup
+		custom_events.KeyUp = (evt, options) => {
+
+			// use the observe property into ontology of the components to subscribe to this events
+			switch(true) {
+
+				// NumpadEnter (enter key from numeric keyboard)
+				case (evt.code==='NumpadEnter'):
+					evt.preventDefault()
+					text_editor.save()
+					break;
+
+				// Tab
+				case evt.code==='Tab': {
+					evt.stopPropagation()
+					// prevent to jump cursor to another input
+					evt.preventDefault()
+					break;
+				}
+			}
+		}//end KeyUp
+
 	// changeData
 		custom_events.changeData = (evt, options) => {
-
-			const ar_changes	= options
-			const changes_len	= ar_changes.length
-			for (let i = changes_len - 1; i >= 0; i--) {
-				const change = ar_changes[i]
-				// create the event name as:
-				// editor_tag_geo_change_
-				// editor_tag_indexIn_change_
-				const event_name = 'editor_tag_'+ change.type + '_change_' + self.id_base
-				event_manager.publish(event_name, change)
-			}
+			self.change_data_handler(options)
 		}//end changeData event
 
 
