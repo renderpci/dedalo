@@ -674,6 +674,33 @@ class security {
 
 
 
+	/**
+	* ASSERT_LOCATOR_ARRAY_PERMISSION
+	* Iterates filter_by_locators and gates each unique section_tipo.
+	* @param array $filter_by_locators
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_locator_array_permission(
+		array $filter_by_locators,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$seen = [];
+		foreach ($filter_by_locators as $loc) {
+			$st = is_object($loc) ? ($loc->section_tipo ?? null) : null;
+			if ($st === null || isset($seen[$st])) {
+				continue;
+			}
+			$seen[$st] = true;
+			self::assert_section_permission($st, $required_level, $context);
+		}
+	}//end assert_locator_array_permission
+
+
+
 
 
 }//end class security
