@@ -48,12 +48,15 @@ function crop_50( object $request_options ) : object {
 	// Cropping the image
 
 	// Step 1: Generate 1-pixel grayscale image
-	$conver_to_bit = ImageMagick::get_imagemagick_installed_path() . " \"$source_image\" -colorspace gray -negate -threshold 5% -type bilevel \"$bit_image\"";
+	// Security: $source_image / $bit_image are derived from the user-uploaded
+	// filename (`tool_import_files::get_file_data()` concatenates `file_name`).
+	// escapeshellarg prevents command injection through crafted filenames.
+	$conver_to_bit = ImageMagick::get_imagemagick_installed_path() . " " . escapeshellarg($source_image) . " -colorspace gray -negate -threshold 5% -type bilevel " . escapeshellarg($bit_image);
 	shell_exec($conver_to_bit);
 
 	// Step 2: Extract grayscale values
 	$objects_info = $file_data['dir_path'] . '/objects_info.txt';
-	$cmd = ImageMagick::get_imagemagick_installed_path() . " \"$bit_image\" -define connected-components:verbose=true -define connected-components:area-threshold=30000 -connected-components 8 null: | awk 'NR>1{print $2, $5}' > \"$objects_info\"";
+	$cmd = ImageMagick::get_imagemagick_installed_path() . " " . escapeshellarg($bit_image) . " -define connected-components:verbose=true -define connected-components:area-threshold=30000 -connected-components 8 null: | awk 'NR>1{print $2, $5}' > " . escapeshellarg($objects_info);
 	shell_exec($cmd);
 
 	// Step 3: Parse bounding boxes from connected components data
@@ -93,16 +96,19 @@ function crop_50( object $request_options ) : object {
 	foreach ($regions as $key => $region) {
 		$outputFile = $file_data['dir_path'] . '/' .$file_data['file_name'] . '_crop-' .$key. '.' . $file_data['extension'];
 
+			// Security: %s placeholders carry user-controlled paths; switch to %s
+			// with explicit escapeshellarg() so quoted filenames cannot break out
+			// of the shell argument context. %d casts integer regions.
 			$cmd = sprintf(
-				ImageMagick::get_imagemagick_installed_path() . " \"%s\" -crop %dx%d+%d+%d +repage -background white -gravity center -extent %dx%d \"%s\"",
-				$source_image,
-				$region['w'], // crop width
-				$region['h'], // crop height
-				$region['x'], // crop from x point
-				$region['y'], // crop from y point
-				$region['w'],// expand to the width
-				$max_height, // expand to the max_height (the tiny image will expand with white to sustain the height in both images)
-				$outputFile,
+				ImageMagick::get_imagemagick_installed_path() . " %s -crop %dx%d+%d+%d +repage -background white -gravity center -extent %dx%d %s",
+				escapeshellarg($source_image),
+				(int)$region['w'], // crop width
+				(int)$region['h'], // crop height
+				(int)$region['x'], // crop from x point
+				(int)$region['y'], // crop from y point
+				(int)$region['w'],// expand to the width
+				(int)$max_height, // expand to the max_height (the tiny image will expand with white to sustain the height in both images)
+				escapeshellarg($outputFile),
 			);
 
 			exec($cmd);

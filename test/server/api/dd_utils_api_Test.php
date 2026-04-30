@@ -601,6 +601,9 @@ final class dd_utils_api_Test extends BaseTestCase {
 	*/
 	public function test_update_lock_components_state(): void {
 
+		// SEC: gated by `security::assert_section_permission` since SEC fix.
+			$this->user_login();
+
 		$rqo = json_handler::decode('
 			{
 				"dd_api": "dd_utils_api",

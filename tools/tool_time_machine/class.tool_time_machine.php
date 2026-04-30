@@ -9,6 +9,17 @@ class tool_time_machine extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'apply_value',
+		'bulk_revert_process'
+	];
+
+
+
+	/**
 	* APPLY_VALUE
 	* Set user selected value from time machine to current element data
 	* @param object $request_options
@@ -39,6 +50,34 @@ class tool_time_machine extends tool_common {
 			$matrix_id			= $options->matrix_id;
 			$model				= ontology_node::get_model_by_tipo($tipo,true);
 			$caller_dataframe	= $options->caller_dataframe;
+
+		// SEC-024 (§9.2): permission gate. Time-machine apply_value is a WRITE
+		// operation that overwrites the live row from a historical snapshot.
+		// The user must have write (>=2) on the target. For section-restore the
+		// gate is on the section_tipo; for component-restore it is on the
+		// (section_tipo, tipo) pair. Without this check any logged user with
+		// access to the time_machine tool could overwrite arbitrary records.
+			if (empty($section_tipo) || empty($tipo) || $matrix_id===null) {
+				$response->msg		= 'Error. Missing required parameters: section_tipo, tipo, matrix_id';
+				$response->errors[]	= 'invalid_request';
+				return $response;
+			}
+			if ($model === 'section') {
+				security::assert_section_permission($section_tipo, 2, __METHOD__);
+			} else {
+				security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+			}
+		// SEC-024 (§9.4): per-record gate. apply_value targets a specific
+		// section_id supplied by the caller; the schema gate above does not
+		// stop a user from restoring a historical snapshot into a record
+		// that lies outside their `filter_by_projects` scope.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope(
+					$section_tipo,
+					(int)$section_id,
+					__METHOD__
+				);
+			}
 
 		// data. extract data from matrix_time_machine table
 			$tm_record	= tm_record::get_instance( (int)$matrix_id );
@@ -335,6 +374,28 @@ class tool_time_machine extends tool_common {
 				$tipo			= $row->tipo;
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
+
+				// SEC-024 (§9.2): permission gate per row. The bulk process may
+				// span sections the caller has no write access on (e.g. it was
+				// originally executed by another user). Without this check any
+				// user with access to the time_machine tool could revert any
+				// historical bulk_process_id.
+				try {
+					security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+					// SEC-024 (§9.4): per-record gate. tm_record::search does
+					// NOT apply filter_by_projects, so the bulk-process row
+					// set may include records outside the caller's project
+					// scope.
+					security::assert_record_in_user_scope(
+						$section_tipo,
+						(int)$section_id,
+						__METHOD__
+					);
+				} catch (permission_exception $e) {
+					$response->errors[] = 'permissions_denied:'
+						. $section_tipo . '/' . $tipo . '#' . $section_id;
+					continue;
+				}
 
 				// search all changes of the component
 				$sub_values = (object)[

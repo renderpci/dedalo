@@ -29,6 +29,14 @@ class security {
 
 		public static $permissions_table_cache;
 
+		// read_only_scope. Server-only static flag used to grant a read-level
+		// permission shortcut for non-destructive flows (e.g. autocomplete /
+		// label resolution) where the user may not have direct access to the
+		// linked section but the resolution is needed to render a label.
+		// Must be set ONLY by trusted server code paths and reset in a finally
+		// block. Never trust this flag from a client-supplied rqo.
+		public static bool $read_only_scope = false;
+
 
 
 	/**
@@ -74,16 +82,13 @@ class security {
 			}
 
 		// read_only case. For speed and accessibility, return fixed value 1 here
-			// Some services like 'service_autocomplete' or 'search' use read only mode fro speed
-			// Autocomplete status inheritance
-			// Used to identify if the search has been fired by autocompletes(portal searches) or not (list)
-			// autocompletes need has access to target sections and components.
-			// When the action is search by autocompletes, the permissions need to be at least 1 (read).
-			// Note: take account that the project filter was applied in the search
-			// so, here the data is the result of the search to be processed by section
-			// to get the component data.
-			$read_only = dd_core_api::$rqo->source->config->read_only ?? false;
-			if ($read_only) {
+			// Some services like 'service_autocomplete' or 'search' use read only mode for speed
+			// (autocompletes need access to target sections and components to resolve labels).
+			// SECURITY: this flag MUST come from server-side code (security::$read_only_scope),
+			// never from the user-supplied rqo. A previous version trusted
+			// dd_core_api::$rqo->source->config->read_only, which let any logged user
+			// gain read access to almost every section by setting that flag.
+			if (self::$read_only_scope===true) {
 				// exclude some sections for security
 				$exclude_sections = [
 					DEDALO_SECTION_USERS_TIPO,
@@ -570,4 +575,313 @@ class security {
 
 
 
+	/**
+	* ASSERT_SECTION_PERMISSION
+	* Throws a permission_exception if the logged user has insufficient
+	* permission on $section_tipo. Use as a one-line gate at the top of
+	* API methods that operate on a section.
+	* @param string $section_tipo
+	* @param int $required_level 1=read, 2=write, 3=admin
+	* @param string $context Optional caller context for logs.
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_section_permission(
+		string $section_tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$perm = common::get_permissions($section_tipo, $section_tipo);
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on section $section_tipo (required: $required_level, have: $perm)",
+				$context
+			);
+		}
+	}//end assert_section_permission
+
+
+
+	/**
+	* ASSERT_TIPO_PERMISSION
+	* Throws a permission_exception if the logged user has insufficient
+	* permission on the (parent_tipo, tipo) pair. Use for component-level
+	* gating where the parent section_tipo and component tipo differ.
+	* @param string $parent_tipo
+	* @param string $tipo
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_tipo_permission(
+		string $parent_tipo,
+		string $tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$perm = common::get_permissions($parent_tipo, $tipo);
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on $parent_tipo / $tipo (required: $required_level, have: $perm)",
+				$context
+			);
+		}
+	}//end assert_tipo_permission
+
+
+
+	/**
+	* ASSERT_COMPONENT_PERMISSION
+	* Throws if the component's resolved permission level is below required.
+	* Use when an instantiated component is already at hand.
+	* @param component_common $component
+	* @param int $required_level
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_component_permission(
+		component_common $component,
+		int $required_level
+	) : void {
+		$perm = $component->get_component_permissions();
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on component {$component->get_tipo()} (required: $required_level, have: $perm)"
+			);
+		}
+	}//end assert_component_permission
+
+
+
+	/**
+	* ASSERT_SECTION_ARRAY_PERMISSION
+	* Throws on the first $section_tipo in the array that fails the gate.
+	* Use for SQO arrays like sqo.section_tipo[].
+	* @param array $ar_section_tipo
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_section_array_permission(
+		array $ar_section_tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		foreach ($ar_section_tipo as $st) {
+			if (!is_string($st)) {
+				continue;
+			}
+			self::assert_section_permission($st, $required_level, $context);
+		}
+	}//end assert_section_array_permission
+
+
+
+	/**
+	* ASSERT_LOCATOR_ARRAY_PERMISSION
+	* Iterates filter_by_locators and gates each unique section_tipo.
+	* @param array $filter_by_locators
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_locator_array_permission(
+		array $filter_by_locators,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$seen = [];
+		foreach ($filter_by_locators as $loc) {
+			$st = is_object($loc) ? ($loc->section_tipo ?? null) : null;
+			if ($st === null || isset($seen[$st])) {
+				continue;
+			}
+			$seen[$st] = true;
+			self::assert_section_permission($st, $required_level, $context);
+		}
+	}//end assert_locator_array_permission
+
+
+
+	/**
+	* USER_CAN_ACCESS_RECORD
+	* SEC-024 (§9.4): per-record visibility gate (`filter_by_projects` layer).
+	*
+	* Mirrors the logic that `search::build_sql_projects_filter` applies to
+	* every search query, but evaluated against a single (section_tipo,
+	* section_id). Returns true when the record falls inside the caller's
+	* `component_filter_master` scope (i.e. the user would see it through a
+	* normal list/search). Global admins and DEDALO_SUPERUSER bypass.
+	*
+	* This is layer 2 of Dédalo's two-tier ACL:
+	*   - layer 1 → `assert_*_permission` (schema-level, type-based)
+	*   - layer 2 → this helper (per-record, project-based)
+	*
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param int|null $user_id Defaults to logged_user_id().
+	* @return bool
+	*/
+	public static function user_can_access_record(
+		string $section_tipo,
+		int $section_id,
+		?int $user_id = null
+	) : bool {
+
+		if ($section_id < 1 || empty($section_tipo)) {
+			return false;
+		}
+
+		$user_id = $user_id ?? logged_user_id();
+		if (empty($user_id)) {
+			return false;
+		}
+
+		// superuser bypass
+			if ((int)$user_id === DEDALO_SUPERUSER) {
+				return true;
+			}
+
+		// global admin bypass — same exemption used by build_sql_projects_filter
+			if (self::is_global_admin((int)$user_id) === true) {
+				return true;
+			}
+
+		// sections that are exempt from filter_by_projects (mirrors switch in
+		// search::build_sql_projects_filter)
+			if ($section_tipo === DEDALO_SECTION_PROFILES_TIPO
+				|| $section_tipo === DEDALO_FILTER_SECTION_TIPO_DEFAULT
+			) {
+				return true;
+			}
+
+		// users section: a user can see their own user record plus users
+		// whose component_filter intersects their projects. The cheap path
+		// is "did the caller create this record?"; we fall through to the
+		// project-relation check otherwise.
+			if ($section_tipo === DEDALO_SECTION_USERS_TIPO) {
+				if ((int)$section_id === (int)$user_id) {
+					return true;
+				}
+				// fall through to default check
+			}
+
+		// default: load the section's component_filter and intersect with
+		// the user's project set.
+			$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo,
+				['component_filter'],
+				true,  // from_cache
+				true,  // resolve_virtual
+				true,  // recursive
+				true   // search_exact
+			);
+			$component_filter_tipo = $ar_component_filter[0] ?? null;
+			if (empty($component_filter_tipo)) {
+				// section has no component_filter → not subject to per-record
+				// project gating (legacy / config sections).
+				return true;
+			}
+
+		// user projects (cached by filter::get_user_projects)
+			$user_projects = filter::get_user_projects((int)$user_id);
+			if (empty($user_projects)) {
+				return false;
+			}
+			$user_project_keys = [];
+			foreach ($user_projects as $loc) {
+				$user_project_keys[$loc->section_tipo.'_'.$loc->section_id] = true;
+			}
+
+		// load the record's component_filter data
+			$model = ontology_node::get_model_by_tipo($component_filter_tipo, true);
+			if (empty($model)) {
+				return false;
+			}
+			$component = component_common::get_instance(
+				$model,
+				$component_filter_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			if ($component === null) {
+				return false;
+			}
+			$record_filter_data = $component->get_data();
+			if (empty($record_filter_data)) {
+				// record exists but has no project assignment → not visible to
+				// non-admin users (matches the behaviour of the SQL filter).
+				return false;
+			}
+
+			foreach ($record_filter_data as $loc) {
+				if (!is_object($loc)) {
+					continue;
+				}
+				$key = ($loc->section_tipo ?? '') .'_'. ($loc->section_id ?? '');
+				if (isset($user_project_keys[$key])) {
+					return true;
+				}
+			}
+
+		return false;
+	}//end user_can_access_record
+
+
+
+	/**
+	* ASSERT_RECORD_IN_USER_SCOPE
+	* SEC-024 (§9.4): throwing variant of `user_can_access_record`. Use this
+	* next to `assert_*_permission` whenever a tool method receives a
+	* caller-supplied `section_id` and is about to mutate or read it
+	* outside of a sqo (which already applies the project filter).
+	*
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $context Caller name for the exception (typically __METHOD__).
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_record_in_user_scope(
+		string $section_tipo,
+		int $section_id,
+		string $context = ''
+	) : void {
+		if (self::user_can_access_record($section_tipo, $section_id) === true) {
+			return;
+		}
+		throw new permission_exception(
+			'Record outside user scope (filter_by_projects)',
+			$context
+		);
+	}//end assert_record_in_user_scope
+
+
+
 }//end class security
+
+
+
+/**
+* CLASS PERMISSION_EXCEPTION
+* Thrown by security::assert_* helpers when the logged user has
+* insufficient permission for the requested action.
+* dd_manager catches this and converts it to a uniform error response.
+* Defined in this file (rather than its own dir) so it is loaded
+* together with the security class via the autoloader.
+*/
+final class permission_exception extends Exception {
+
+	public string $api_context;
+
+	public function __construct(string $message, string $context = '') {
+		parent::__construct($message);
+		$this->api_context = $context;
+	}
+
+}//end class permission_exception

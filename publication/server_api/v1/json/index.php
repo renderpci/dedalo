@@ -37,13 +37,18 @@
 
 
 // safe_xss
+	// SEC-027: scalar-only sanitiser for transport vars (code/lang/db_name/dedalo_get).
+	// Aligned with the global `safe_xss` in shared/core_functions.php: use json_last_error
+	// instead of truthiness so falsy-but-valid JSON ("null", "false", "0", "\"\"") is still
+	// sanitised. Drops the `<img>` whitelist — these vars never carry HTML markup.
 	$safe_xss = function($value) {
 
 		if (is_string($value) && !empty($value)) {
-			if ($decode_json = json_decode($value)) {
+			$decode_json = json_decode($value);
+			if (json_last_error() === JSON_ERROR_NONE && (is_object($decode_json) || is_array($decode_json))) {
 				// If var is a stringify JSON, not verify string yet
 			}else{
-				$value = strip_tags($value,'<br><strong><em><img>');
+				$value = strip_tags($value,'<br><strong><em>');
 				$value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 			}
 		}

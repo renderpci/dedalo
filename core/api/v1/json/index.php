@@ -51,12 +51,22 @@ if (!defined('DEDALO_ROOT_PATH')) {
 
 
 // Allow CORS setting from config.php
+// SEC-012: Access-Control-Allow-Origin must be a single origin or '*' per spec.
+// Only echo the request Origin when it matches DEDALO_CORS['allowed_origins'];
+// never combine '*' with Allow-Credentials: true.
 if (defined('DEDALO_CORS')) {
-	header('Access-Control-Allow-Origin: '  . implode(',', DEDALO_CORS['allowed_origins']) );
-	header('Access-Control-Allow-Methods: ' . implode(',', DEDALO_CORS['allowed_methods']) );
-	header('Access-Control-Allow-Headers: ' . implode(',', DEDALO_CORS['allowed_headers']) );
-	header('Access-Control-Max-Age: ' 		. DEDALO_CORS['max_age'] );
-	header('Access-Control-Allow-Credentials: true');
+	$cors_allowed_origins = isset(DEDALO_CORS['allowed_origins']) ? (array)DEDALO_CORS['allowed_origins'] : [];
+	$cors_request_origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+	header('Access-Control-Allow-Methods: ' . implode(', ', (array)(DEDALO_CORS['allowed_methods'] ?? [])) );
+	header('Access-Control-Allow-Headers: ' . implode(', ', (array)(DEDALO_CORS['allowed_headers'] ?? [])) );
+	header('Access-Control-Max-Age: '       . (string)(DEDALO_CORS['max_age'] ?? 86400) );
+	header('Vary: Origin');
+
+	if ($cors_request_origin !== '' && in_array($cors_request_origin, $cors_allowed_origins, true)) {
+		header('Access-Control-Allow-Origin: ' . $cors_request_origin);
+		header('Access-Control-Allow-Credentials: true');
+	}
 }
 
 
@@ -119,6 +129,12 @@ if (!empty($_FILES)) {
 		// Prevents potential proxy problems.
 	} else if (isset($_REQUEST['rqo'])) {
 		$rqo = json_handler::decode($_REQUEST['rqo']);
+		// SEC-010: bring this branch in line with the php://input and $_REQUEST fallbacks,
+		// which already sanitize via safe_xss / safe_xss_recursive. Without this, payloads
+		// passed through the legacy `rqo` form/query parameter reach dd_manager unsanitized.
+		if (is_object($rqo) || is_array($rqo)) {
+			$rqo = safe_xss_recursive($rqo);
+		}
 	} else {
 		$rqo = (object)[
 			'source' => (object)[]
@@ -199,6 +215,15 @@ if ($recovery_mode === true) {
 
 
 
+// SEC-008: mint the per-session CSRF token while the session is still open
+// for writes. dd_manager will read $_SESSION['dedalo']['csrf_token'] on the
+// rest of the request lifecycle (it stays populated in memory even after the
+// session is closed below), so we only need to ensure the token is committed
+// to storage before any session_write_close() call further down.
+if (class_exists('dd_manager') && method_exists('dd_manager', 'bootstrap_csrf_token')) {
+	dd_manager::bootstrap_csrf_token();
+}
+
 // prevent_lock from session
 $session_closed = false;
 if (isset($rqo->prevent_lock) && $rqo->prevent_lock === true) {
@@ -252,6 +277,12 @@ try {
 	// Final fallback error handling
 	dd_error::captureException($e);
 
+	// SEC-016: always log full trace server-side; never expose `$e->getTrace()` (contains
+	// argument arrays which may include passwords / tokens) nor the original `$rqo`
+	// (login/save_password/etc. carry credentials in `source`). Even with SHOW_DEBUG, a
+	// trace string + message is sufficient for developers and avoids leaking arguments.
+	error_log('Dedalo API EXCEPTION: ' . $e->getMessage() . PHP_EOL . $e->getTraceAsString());
+
 	$response = new stdClass();
 	$response->result	= false;
 	$response->msg		= (SHOW_DEBUG === true)
@@ -261,8 +292,10 @@ try {
 	if (SHOW_DEBUG === true) {
 		$response->debug = (object)[
 			'exception' => $e->getMessage(),
-			'trace'		=> $e->getTrace(),
-			'rqo'		=> $rqo
+			'trace'		=> $e->getTraceAsString(),
+			'file'		=> $e->getFile(),
+			'line'		=> $e->getLine()
+			// SEC-016: $rqo intentionally omitted; may contain credentials.
 		];
 	}
 

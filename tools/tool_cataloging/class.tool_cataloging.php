@@ -17,4 +17,11 @@ class tool_cataloging extends tool_common {
 
 
 
+	/**
+	* SEC-024 (§9.2): UI-only tool. No remotely callable methods.
+	*/
+	public const API_ACTIONS = [];
+
+
+
 }//end class tool_cataloging

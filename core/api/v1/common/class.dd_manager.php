@@ -27,6 +27,136 @@ final class dd_manager {
 
 	public static $version = '1.0.0'; // 05-06-2019
 
+	/**
+	* SEC-008: CSRF protection.
+	*
+	* The server mints a per-session 32-byte random token on first contact and
+	* echoes it back on every response (`$response->csrf_token`). The client
+	* must echo it on every subsequent state-changing call via the
+	* `X-Dedalo-Csrf-Token` HTTP header (or as `rqo->csrf_token` for clients
+	* that cannot set custom headers).
+	*
+	* The actions in CSRF_EXEMPT_ACTIONS are read-only / bootstrap calls that may
+	* run before the client has obtained a token; everything else is rejected
+	* with a 403-style error if the token is missing or wrong.
+	*/
+	private const CSRF_EXEMPT_ACTIONS = [
+		'start',
+		'get_environment',
+		'get_login_context',
+		'get_install_context',
+		'get_server_ready_status',
+		'get_ontology_update_info',
+		'get_code_update_info'
+	];
+
+
+
+	/**
+	* ENSURE_CSRF_TOKEN
+	* Returns the current per-session CSRF token. Mints a new one only if the
+	* session is still in PHP_SESSION_ACTIVE state (i.e. session_write_close()
+	* has not been called yet); otherwise it just returns whatever token is
+	* already stored, or '' when none. The API entrypoint calls
+	* {@see bootstrap_csrf_token()} BEFORE session_write_close() so that the
+	* token is persisted to storage on the very first request.
+	* @return string Token in hex (64 chars), or '' when none is available.
+	*/
+	private static function ensure_csrf_token() : string {
+
+		if (session_status() === PHP_SESSION_ACTIVE) {
+			if (!isset($_SESSION['dedalo']) || !is_array($_SESSION['dedalo'])) {
+				$_SESSION['dedalo'] = [];
+			}
+			if (empty($_SESSION['dedalo']['csrf_token']) || !is_string($_SESSION['dedalo']['csrf_token'])) {
+				try {
+					$_SESSION['dedalo']['csrf_token'] = bin2hex(random_bytes(32));
+				} catch (Throwable $e) {
+					debug_log(__METHOD__.' Error generating CSRF token: '.$e->getMessage(), logger::ERROR);
+					return '';
+				}
+			}
+		}
+		// Read directly: $_SESSION superglobal stays populated even after
+		// session_write_close() has been called by the API entrypoint.
+		$token = $_SESSION['dedalo']['csrf_token'] ?? '';
+		return is_string($token) ? $token : '';
+	}//end ensure_csrf_token
+
+
+
+	/**
+	* BOOTSTRAP_CSRF_TOKEN
+	* Public entrypoint hook: ensures a CSRF token exists in $_SESSION while the
+	* session is still open for writes. The API entrypoint MUST call this before
+	* session_write_close() so that the token is persisted to disk and the
+	* response can echo it back to the client.
+	* @return string The current/newly-minted token.
+	*/
+	public static function bootstrap_csrf_token() : string {
+
+		return self::ensure_csrf_token();
+	}//end bootstrap_csrf_token
+
+
+
+	/**
+	* GET_CSRF_TOKEN_FROM_REQUEST
+	* Pull the client-supplied token from the request, preferring the dedicated
+	* header but accepting a body field for clients that cannot set headers.
+	* @param object $rqo
+	* @return string
+	*/
+	private static function get_csrf_token_from_request(object $rqo) : string {
+
+		$header = $_SERVER['HTTP_X_DEDALO_CSRF_TOKEN'] ?? '';
+		if (is_string($header) && $header !== '') {
+			return $header;
+		}
+		if (isset($rqo->csrf_token) && is_string($rqo->csrf_token)) {
+			return $rqo->csrf_token;
+		}
+		// SEC-008: multipart upload fallback. The JSON entrypoint maps every
+		// POST field of an `action=upload` (or any FormData) request into
+		// `$rqo->options->{field}` (see core/api/v1/json/index.php). XHR
+		// clients that cannot reliably set custom headers (CORS, legacy
+		// editors like ckeditor) may instead include the token as a regular
+		// form field; honour that as the last fallback.
+		if (
+			isset($rqo->options)
+			&& is_object($rqo->options)
+			&& isset($rqo->options->csrf_token)
+			&& is_string($rqo->options->csrf_token)
+		) {
+			return $rqo->options->csrf_token;
+		}
+		return '';
+	}//end get_csrf_token_from_request
+
+
+
+	/**
+	* VERIFY_CSRF_TOKEN
+	* Returns true when the request carries a valid CSRF token matching the
+	* one stored in the user's session. Comparison is constant-time.
+	* @param object $rqo
+	* @return bool
+	*/
+	private static function verify_csrf_token(object $rqo) : bool {
+
+		// Note: do not gate on session_status(). The API entrypoint calls
+		// session_write_close() before dispatch when rqo->prevent_lock is true,
+		// which puts session_status() back to PHP_SESSION_NONE; however the
+		// $_SESSION superglobal is still populated in memory and remains the
+		// authoritative source for the expected token.
+		$expected = $_SESSION['dedalo']['csrf_token'] ?? '';
+		$provided = self::get_csrf_token_from_request($rqo);
+		if (!is_string($expected) || $expected === '' || !is_string($provided) || $provided === '') {
+			return false;
+		}
+		return hash_equals($expected, $provided);
+	}//end verify_csrf_token
+
 
 
 	/**
@@ -143,7 +273,10 @@ final class dd_manager {
 				'get_server_ready_status'
 			];
 			$action = $rqo->action ?? null;
-			if (true===in_array($action, $no_login_needed_actions)) {
+			// SEC-018: require $action to be a string and use strict comparison so that
+			// non-string values (e.g. arrays/ints from a hostile JSON body) cannot match
+			// the no-login allowlist via PHP's loose type juggling.
+			if (is_string($action) && in_array($action, $no_login_needed_actions, true)) {
 				// do not check login here
 			}else{
 				if (login::is_logged()!==true) {
@@ -158,12 +291,48 @@ final class dd_manager {
 				}
 			}
 
+		// SEC-008: CSRF check. Bootstrap/read-only actions in CSRF_EXEMPT_ACTIONS
+		// can be invoked before the client has obtained a token. Every other
+		// action must echo back the per-session token via the X-Dedalo-Csrf-Token
+		// header (or rqo->csrf_token).
+			if (is_string($action) && !in_array($action, self::CSRF_EXEMPT_ACTIONS, true)) {
+				if (!self::verify_csrf_token($rqo)) {
+
+					debug_log(__METHOD__." Error. Invalid or missing CSRF token [action:$action]", logger::ERROR);
+
+					// Note: HTTP status stays at 200 so the client can read the
+					// JSON body and execute its transparent-retry path. The rest
+					// of this API uses the same convention for app-level errors.
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. Invalid or missing CSRF token';
+						$response->errors[]	= 'csrf_failed';
+						$response->action	= $action;
+						// Provide a fresh token so the client can retry without a full
+						// re-bootstrap. (Only meaningful when the failure was 'missing'.)
+						$response->csrf_token = self::ensure_csrf_token();
+					return $response;
+				}
+			}
+
 		// actions
+		// SEC-024: opt-in explicit allowlist. When the API class declares an
+		// API_ACTIONS class constant the action MUST appear in it; otherwise we
+		// fall back to the historical "any public-static method on the class is
+		// callable" rule. The opt-in form is strongly preferred for new classes
+		// because it makes the API surface explicit and prevents an internal
+		// helper added later from accidentally becoming a remote endpoint.
 			$is_valid_public_method = false;
 			if (method_exists($dd_api, $rqo->action)) {
 				$reflection = new ReflectionMethod($dd_api, $rqo->action);
 				if ($reflection->isPublic() && $reflection->isStatic()) {
-					$is_valid_public_method = true;
+					if (defined($dd_api . '::API_ACTIONS')) {
+						$api_actions = constant($dd_api . '::API_ACTIONS');
+						$is_valid_public_method = is_array($api_actions)
+							&& in_array($rqo->action, $api_actions, true);
+					} else {
+						$is_valid_public_method = true;
+					}
 				}
 			}
 
@@ -189,8 +358,33 @@ final class dd_manager {
 						return $response;
 					}
 				}
-				$response			= $dd_api::{$rqo->action}( $rqo );
+				try {
+					$response			= $dd_api::{$rqo->action}( $rqo );
+				} catch (permission_exception $e) {
+					// SEC: a security::assert_* gate inside the API method denied the request.
+					// Convert to a uniform response so callers always see the same shape.
+					debug_log(__METHOD__
+						. ' permission_exception: ' . $e->getMessage() . PHP_EOL
+						. ' context: ' . $e->api_context . PHP_EOL
+						. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+						. ' action: ' . $rqo->action . PHP_EOL
+						. ' dd_api: ' . $dd_api
+						, logger::ERROR
+					);
+					$response = new stdClass();
+						$response->result	= false;
+						$response->msg		= 'Error. ' . $e->getMessage();
+						$response->errors	= ['permissions_denied'];
+				}
 				$response->action	= $action;
+			}
+
+		// SEC-008: attach the current CSRF token to every response so the client
+		// always has a fresh one to use on the next call. ensure_csrf_token() mints
+		// one on demand if the session does not yet have one (e.g. on the very
+		// first `start` call).
+			if (is_object($response)) {
+				$response->csrf_token = self::ensure_csrf_token();
 			}
 
 		// debug

@@ -24,4 +24,13 @@ class tool_user_admin extends tool_common {
 
 
 
+	/**
+	* SEC-024 (§9.2): UI-only tool. No remotely callable methods. The empty
+	* allowlist prevents inherited tool_common static methods from being
+	* dispatched via `dd_tools_api::tool_request` against this tool name.
+	*/
+	public const API_ACTIONS = [];
+
+
+
 }//end class tool_user_admin

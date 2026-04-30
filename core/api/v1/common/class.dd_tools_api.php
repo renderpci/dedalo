@@ -9,6 +9,16 @@ final class dd_tools_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'user_tools',
+		'tool_request'
+	];
+
+
+
+	/**
 	* USER_TOOLS
 	* Get user authorized tools filtered by custom list (optional)
 	* @param object $rqo
@@ -131,6 +141,25 @@ final class dd_tools_api {
 				return $response;
 			}
 
+		// per-user authorization check
+			// SECURITY: a tool name in the global registry is not enough. The logged user
+			// must also be authorized for the tool through their profile. A previous
+			// version of this method only checked the global whitelist, letting any logged
+			// user invoke any method on any registered tool (e.g. tool_user_admin).
+			$logged_user_id		= logged_user_id();
+			$user_tools			= tool_common::get_user_tools($logged_user_id);
+			$user_tool_names	= array_map(fn($tool) => $tool->name, $user_tools);
+			if (!in_array($tool_name, $user_tool_names, true)) {
+				$response->errors[] = 'Tool not authorized for current user: ' . $tool_name;
+				debug_log(__METHOD__
+					. ' Error: Tool not authorized for current user.' . PHP_EOL
+					. ' tool_name: ' . $tool_name . PHP_EOL
+					. ' user_id: ' . to_string($logged_user_id)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// load tool class file
 			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name .'.php';
 			if (!file_exists($class_file)) {
@@ -158,6 +187,27 @@ final class dd_tools_api {
 				$response->msg = 'Error. tool method not accessible: '.$tool_method;
 				$response->errors[] = 'unauthorized_method';
 				return $response;
+			}
+
+		// SEC-024 (§9.2): opt-in per-tool method allowlist. When the tool class
+			// declares an API_ACTIONS class constant the method MUST appear in it;
+			// otherwise the historical "any public-static method" rule is preserved.
+			// The opt-in form is strongly preferred for new tools because
+			// `tool_request` is a generic dispatch surface that bypasses
+			// `dd_manager`'s own allowlist.
+			if (defined($tool_name . '::API_ACTIONS')) {
+				$tool_actions = constant($tool_name . '::API_ACTIONS');
+				if (!is_array($tool_actions) || !in_array($tool_method, $tool_actions, true)) {
+					debug_log(__METHOD__
+						. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
+						. ' tool_name: ' . $tool_name . PHP_EOL
+						. ' tool_method: ' . $tool_method
+						, logger::ERROR
+					);
+					$response->msg = 'Error. tool method not allowed: ' . $tool_method;
+					$response->errors[] = 'unauthorized_method';
+					return $response;
+				}
 			}
 
 		// background_running / direct cases

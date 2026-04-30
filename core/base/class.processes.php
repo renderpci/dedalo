@@ -197,21 +197,23 @@ class processes {
 			$id		= self::RECORD_ID;
 			$table	= self::PROCESSES_TABLE;
 
-		// Authorization check: Only the process owner or the superuser can stop a process
-			// Note: Superuser can stop any process, regular users can only stop their own
-			if ($user_id!==DEDALO_SUPERUSER) {
-				$logged_user_id = logged_user_id();
-				if ($logged_user_id === null || $user_id !== $logged_user_id) {
-					debug_log(__METHOD__
-						. " user id is not the current user logged" . PHP_EOL
-						. ' user_id: ' . $user_id . PHP_EOL
-						. ' logged_user_id: ' . $logged_user_id
-						, logger::ERROR
-					);
-					$response->result	= false;
-					$response->errors[] = 'invalid user';
-					return $response;
-				}
+		// Authorization check: Only the process owner or the superuser can stop a process.
+			// SECURITY: the privileged path MUST be gated by the LOGGED session,
+			// not by the $user_id parameter (which the caller fully controls via rqo).
+			// A previous version skipped the check whenever $user_id===DEDALO_SUPERUSER,
+			// letting any logged user pass options.user_id=-1 and stop superuser processes.
+			$logged_user_id	= logged_user_id();
+			$is_superuser	= ((int)$logged_user_id === DEDALO_SUPERUSER);
+			if ($logged_user_id === null || (!$is_superuser && $user_id !== $logged_user_id)) {
+				debug_log(__METHOD__
+					. " user id is not the current user logged" . PHP_EOL
+					. ' user_id: ' . $user_id . PHP_EOL
+					. ' logged_user_id: ' . to_string($logged_user_id)
+					, logger::ERROR
+				);
+				$response->result	= false;
+				$response->errors[] = 'invalid user';
+				return $response;
 			}
 
 		// Fetch process list from database
@@ -331,19 +333,19 @@ class processes {
 				return false;
 			}
 
-		// Ensure the operating user is authorized (owner or superuser)
-			// Note: Superuser can delete any process, regular users can only delete their own
-			if ($user_id!==DEDALO_SUPERUSER) {
-				$logged_user_id = logged_user_id();
-				if ($logged_user_id === null || $user_id !== $logged_user_id) {
-					debug_log(__METHOD__
-						. " user id is not the current user logged" . PHP_EOL
-						. ' user_id: ' . $user_id . PHP_EOL
-						. ' logged_user_id: ' . $logged_user_id
-						, logger::ERROR
-					);
-					return false;
-				}
+		// Ensure the operating user is authorized (owner or superuser).
+			// SECURITY: gated by the LOGGED session, not by the $user_id parameter.
+			// Same fix as processes::stop — $user_id is caller-controlled.
+			$logged_user_id	= logged_user_id();
+			$is_superuser	= ((int)$logged_user_id === DEDALO_SUPERUSER);
+			if ($logged_user_id === null || (!$is_superuser && $user_id !== $logged_user_id)) {
+				debug_log(__METHOD__
+					. " user id is not the current user logged" . PHP_EOL
+					. ' user_id: ' . $user_id . PHP_EOL
+					. ' logged_user_id: ' . to_string($logged_user_id)
+					, logger::ERROR
+				);
+				return false;
 			}
 
 		// short context
@@ -385,6 +387,53 @@ class processes {
 
 		return true;
 	}//end delete_process_item
+
+
+
+	/**
+	 * GET_PROCESS_ITEM
+	 * Looks up a tracked process by pid (and optional pfile match) and returns
+	 * its registry entry, including the owning user_id. Used by callers that
+	 * need to verify ownership of a process before reading its output.
+	 *
+	 * @param int $pid
+	 * @param string|null $pfile Optional pfile to additionally match
+	 * @return object|null Process entry or null if not found
+	 */
+	public static function get_process_item( int $pid, ?string $pfile = null ) : ?object {
+
+		if ($pid <= 0) {
+			return null;
+		}
+
+		$id		= self::RECORD_ID;
+		$table	= self::PROCESSES_TABLE;
+
+		$sql_query	= 'SELECT data FROM "'.$table.'" WHERE id = $1';
+		$res		= matrix_db_manager::exec_search($sql_query, [$id]);
+		$num_rows	= $res===false ? 0 : pg_num_rows($res);
+		if ($num_rows<1) {
+			return null;
+		}
+
+		$row		= pg_fetch_result($res, 0, 0);
+		$json_data	= json_decode($row);
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($json_data)) {
+			return null;
+		}
+
+		foreach ($json_data as $entry) {
+			if (!is_object($entry) || ($entry->pid ?? null) !== $pid) {
+				continue;
+			}
+			if ($pfile !== null && ($entry->pfile ?? null) !== $pfile) {
+				continue;
+			}
+			return $entry;
+		}
+
+		return null;
+	}//end get_process_item
 
 
 

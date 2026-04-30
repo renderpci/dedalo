@@ -11,6 +11,15 @@ final class dd_component_info {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'get_widget_data'
+	];
+
+
+
+	/**
 	* get_widget_data
 	* Get given widget data for current component
 	*

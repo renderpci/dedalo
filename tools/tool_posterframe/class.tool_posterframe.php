@@ -29,6 +29,19 @@
  */
 class tool_posterframe extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'create_identifying_image',
+		'get_ar_identifying_image'
+	];
+
+
+
 	/**
 	 * CREATE_IDENTIFYING_IMAGE
 	 * Extract posterframe from audiovisual file and create identifying image in portal
@@ -80,11 +93,40 @@ class tool_posterframe extends tool_common {
 				if (empty($section_id)) $missing[] = 'section_id';
 				if (empty($item_value)) $missing[] = 'item_value';
 				if ($current_time === null) $missing[] = 'current_time';
-				
+
 				$response->msg = 'Error. Missing required parameters: ' . implode(', ', $missing);
 				$response->errors[] = $response->msg;
 				debug_log(__METHOD__ . " " . $response->msg, logger::ERROR);
 				return $response;
+			}
+
+		// SEC-024 (§9.2): WRITE gates. create_identifying_image both READS the
+		// source AV component (section_tipo, tipo) and WRITES a new portal
+		// record on (item_value->section_tipo, item_value->component_portal).
+			security::assert_tipo_permission($section_tipo, $tipo, 1, __METHOD__);
+		// SEC-024 (§9.4): per-record gate on the source AV record.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+			$portal_section_tipo	= $item_value->section_tipo	?? null;
+			$portal_component_tipo	= $item_value->component_portal ?? null;
+			if (empty($portal_section_tipo) || empty($portal_component_tipo)) {
+				$response->msg		= 'Error. Missing item_value->section_tipo or item_value->component_portal';
+				$response->errors[]	= 'invalid_request';
+				return $response;
+			}
+			security::assert_tipo_permission(
+				$portal_section_tipo,
+				$portal_component_tipo,
+				2,
+				__METHOD__
+			);
+		// SEC-024 (§9.4): per-record gate on the portal host record.
+			$portal_section_id = $item_value->section_id ?? null;
+			if (!empty($portal_section_id)) {
+				security::assert_record_in_user_scope(
+					$portal_section_tipo,
+					(int)$portal_section_id,
+					__METHOD__
+				);
 			}
 
 		try {
@@ -271,20 +313,22 @@ class tool_posterframe extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->errors	= [];
 
+		// options + validation outside the try/catch so permission_exception
+		// propagates to dd_manager rather than being masked.
+			$section_tipo = $request_options->section_tipo ?? null;
+			$section_id = $request_options->section_id ?? null;
+			if (empty($section_tipo) || empty($section_id)) {
+				$response->msg		= 'Error. Missing required parameters: section_tipo, section_id';
+				$response->errors[]	= 'invalid_request';
+				return $response;
+			}
+
+		// SEC-024 (§9.2): READ gate.
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+
 		try {
-			// options
-				$section_tipo = $request_options->section_tipo ?? null;
-				$section_id = $request_options->section_id ?? null;
-
-			// validate input
-				if (empty($section_tipo) || empty($section_id)) {
-					$missing = [];
-					if (empty($section_tipo)) $missing[] = 'section_tipo';
-					if (empty($section_id)) $missing[] = 'section_id';
-					
-					throw new Exception("Missing required parameters: " . implode(', ', $missing));
-				}
-
 			// section locators
 				$section = section::get_instance($section_id, $section_tipo);
 				if ($section === null) {

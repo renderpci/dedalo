@@ -23,6 +23,18 @@
  */
 class tool_pdf_extractor extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'get_pdf_data'
+	];
+
+
+
 	/**
 	 * GET_PDF_DATA
 	 * Extract text content from a PDF file using configured daemon processor
@@ -96,6 +108,10 @@ class tool_pdf_extractor extends tool_common {
 				debug_log(__METHOD__ . " $error_msg", logger::ERROR);
 				return $response;
 			}
+
+		// SEC-024 (§9.2): READ gate. get_pdf_data extracts text from a PDF
+		// component file; require read on (section_tipo, component_tipo).
+			security::assert_tipo_permission($section_tipo, $component_tipo, 1, __METHOD__);
 
 		try {
 			// component_pdf. Create the component to get the file path

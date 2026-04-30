@@ -855,20 +855,39 @@ class component_relation_children extends component_relation_common {
 				if (isset($section_map->thesaurus->order)) {
 					$order_component_tipo = $section_map->thesaurus->order;
 
-					$path = [
-						(object)[
-							'component_tipo'	=> $order_component_tipo,
-							'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($order_component_tipo,true) : $order_component_tipo,
-							'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($order_component_tipo) : $order_component_tipo,
-							'section_tipo'		=> $section_tipo,
-							'column'			=> '(jsonb_path_query_first(number, \'$.'.$order_component_tipo.'[*] ? (@.section_tipo_key == "'.$section_tipo.'" && @.section_id_key == '.$section_id.').value\') #>> \'{}\')::integer'
-						]
-					];
-					$order_obj = (object)[
-						'direction'	=> 'ASC',
-						'path'		=> $path
-					];
-					$sqo->set_order([$order_obj]);
+						// SEC-036 follow-up: defence-in-depth on the server-built SQL fragment.
+					// `$order_component_tipo`/`$section_tipo` originate from the section
+					// ontology map (server-internal) but `safe_tipo()` is applied anyway;
+					// `$section_id` is interpolated as plain integer. Field name is
+					// `column_sql` (not `column`) so `trait.order.php` recognises this
+					// as a trusted server-built fragment and skips the strict identifier
+					// regex; HTTP-supplied SQO must not carry `column_sql`.
+					$safe_order_tipo	= safe_tipo((string)$order_component_tipo);
+					$safe_section_tipo	= safe_tipo((string)$section_tipo);
+					$safe_section_id	= (int)$section_id;
+					if ($safe_order_tipo===false || $safe_section_tipo===false) {
+						debug_log(__METHOD__
+							." Ignored order build: invalid order/section tipo" . PHP_EOL
+							.' order_component_tipo: ' . to_string($order_component_tipo) . PHP_EOL
+							.' section_tipo: ' . to_string($section_tipo)
+							, logger::ERROR
+						);
+					} else {
+						$path = [
+							(object)[
+								'component_tipo'	=> $safe_order_tipo,
+								'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($safe_order_tipo,true) : $safe_order_tipo,
+								'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($safe_order_tipo) : $safe_order_tipo,
+								'section_tipo'		=> $safe_section_tipo,
+								'column_sql'		=> '(jsonb_path_query_first(number, \'$.'.$safe_order_tipo.'[*] ? (@.section_tipo_key == "'.$safe_section_tipo.'" && @.section_id_key == '.$safe_section_id.').value\') #>> \'{}\')::integer'
+							]
+						];
+						$order_obj = (object)[
+							'direction'	=> 'ASC',
+							'path'		=> $path
+						];
+						$sqo->set_order([$order_obj]);
+					}
 				}
 			}
 

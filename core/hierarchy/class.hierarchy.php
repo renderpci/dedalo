@@ -1013,7 +1013,9 @@ class hierarchy extends ontology {
 					if ($extension==='gz') {
 						$file_name = pathinfo($file,PATHINFO_BASENAME);
 						$url	= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
-						$a		= '<a href="'.$url.'" target="_blank">'.$url.'</a>';
+						// SEC-033: rel=noopener and htmlspecialchars on URL/label.
+						$safe_url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+						$a		= '<a href="'.$safe_url.'" target="_blank" rel="noopener noreferrer">'.$safe_url.'</a>';
 						$ar_link[] = $a;
 					}
 				}

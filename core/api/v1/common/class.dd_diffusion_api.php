@@ -10,6 +10,15 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
  */
 class dd_diffusion_api {
 
+	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'diffuse',
+		'get_diffusion_info',
+		'validate',
+		'get_ontology_map'
+	];
 
 	public static $datum = [];
 
@@ -228,6 +237,9 @@ class dd_diffusion_api {
 			);
 			return $response;
 		}
+
+		// SEC: read permission required to inspect diffusion configuration of a section
+		security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// levels default from config
 		$resolve_levels = diffusion_utils::get_resolve_levels();

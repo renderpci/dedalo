@@ -11,6 +11,16 @@ final class dd_component_3d_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'move_file_to_dir',
+		'delete_posterframe'
+	];
+
+
+
+	/**
 	* MOVE_FILE_TO_DIR
 	* Move a file from one location to another
 	* Usually used to move posterframe image
@@ -48,6 +58,9 @@ final class dd_component_3d_api {
 			$options	= $rqo->options;
 			$file_data	= $options->file_data;
 			$target_dir	= $options->target_dir;
+
+		// SEC: write permission required to bind an uploaded file to a component
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// response
 			$response = new stdClass();
@@ -158,6 +171,9 @@ final class dd_component_3d_api {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 				$response->errors   = [];
+
+		// SEC: write permission required to delete a posterframe
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo,true);

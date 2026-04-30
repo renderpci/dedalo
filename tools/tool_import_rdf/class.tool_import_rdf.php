@@ -24,6 +24,21 @@ require_once dirname(__FILE__, 3) .'/lib/vendor/autoload.php';
 */
 class tool_import_rdf extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. The other public-static methods on this
+	* class (get_class_map_to_dd, get_resource_to_dd_object, process_data_map,
+	* get_resource_match, set_data_into_component, create_new_resource) are
+	* internal helpers with positional / non-rqo signatures.
+	*/
+	public const API_ACTIONS = [
+		'get_rdf_data'
+	];
+
+
+
 	// EasyRdf files load (added in constructor for dynamic loading)
 	private static $easyrdf_loaded = false;
 
@@ -134,6 +149,16 @@ class tool_import_rdf extends tool_common {
 			$ontology_tipo	= $options->ontology_tipo ?? null;
 			$ar_values		= $options->ar_values ?? [];
 			$locator		= $options->locator ?? null;
+
+		// SEC-024 (§9.2): WRITE gate. RDF import resolves external URIs and
+		// writes resolved values into the component referenced by $locator.
+		// Caller must have write on the locator's section.
+			if (is_object($locator)) {
+				$loc_section_tipo = $locator->section_tipo ?? null;
+				if (!empty($loc_section_tipo)) {
+					security::assert_section_permission($loc_section_tipo, 2, __METHOD__);
+				}
+			}
 
 		// response
 			$response = new stdClass();

@@ -25,6 +25,22 @@ class tool_media_versions extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'get_files_info',
+		'delete_quality',
+		'build_version',
+		'conform_headers',
+		'rotate',
+		'sync_files',
+		'delete_version'
+	];
+
+
+
+	/**
 	 * GET_FILES_INFO
 	 * Get file info for every quality like 'datalist' do
 	 *
@@ -49,6 +65,11 @@ class tool_media_versions extends tool_common {
 					'msg'    => 'Error. Missing required parameters: tipo, section_id, section_tipo'
 				];
 			}
+
+		// SEC-024 (§9.2): READ gate.
+			security::assert_tipo_permission($section_tipo, $tipo, 1, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
 
 		// response
 			$response = new stdClass();
@@ -114,6 +135,11 @@ class tool_media_versions extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): WRITE gate. delete_quality removes a derived file.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+
 		try {
 			// component
 				$model		= ontology_node::get_model_by_tipo($tipo,true);
@@ -173,6 +199,11 @@ class tool_media_versions extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): WRITE gate. build_version writes derived files to disk.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+
 		try {
 			// component
 				$model		= ontology_node::get_model_by_tipo($tipo,true);
@@ -231,6 +262,11 @@ class tool_media_versions extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): WRITE gate. conform_headers rewrites the on-disk file.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+
 		try {
 			// component
 				$model		= ontology_node::get_model_by_tipo($tipo,true);
@@ -288,6 +324,11 @@ class tool_media_versions extends tool_common {
 				$response->errors[] = 'Missing required parameters: tipo, section_id, section_tipo, quality, degrees';
 				return $response;
 			}
+
+		// SEC-024 (§9.2): WRITE gate. rotate mutates derived files on disk.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
 
 		try {
 			// component
@@ -368,6 +409,11 @@ class tool_media_versions extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): WRITE gate. sync_files regenerates component metadata.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+
 		try {
 			// component
 				$model		= ontology_node::get_model_by_tipo($tipo, true);
@@ -446,6 +492,11 @@ class tool_media_versions extends tool_common {
 					'errors'	=> []
 				];
 			}
+
+		// SEC-024 (§9.2): WRITE gate. delete_version removes media files.
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
 
 		// response
 			$response = new stdClass();

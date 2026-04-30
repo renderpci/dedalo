@@ -704,6 +704,7 @@ export function download_file(options) {
 		const anchor	= document.createElement('a');
 		anchor.href		= url
 		anchor.target	= '_blank'
+		anchor.rel		= 'noopener noreferrer' // SEC-033
 		anchor.download	= file_name
 		anchor.click();
 		anchor.remove()

@@ -466,6 +466,15 @@ export const upload = async function(options) {
 					// request header
 					xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
+					// SEC-008: CSRF token. The upload action is not in the
+					// server-side CSRF_EXEMPT_ACTIONS allowlist, so every chunk
+					// must echo the per-session token. data_manager.request
+					// updates `window.page_globals.csrf_token` from each API
+					// response; reuse it here.
+					if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+						xhr.setRequestHeader("X-Dedalo-Csrf-Token", window.page_globals.csrf_token);
+					}
+
 					// FormData
 					const formdata = new FormData();
 						formdata.append('key_dir', key_dir);
@@ -476,6 +485,13 @@ export const upload = async function(options) {
 						formdata.append('chunk_index', chunk_index);
 						formdata.append('total_chunks', total_chunks);
 						formdata.append('file_to_upload', chunk);
+						// SEC-008: also send the CSRF token as a form field. The
+						// server reads it from $rqo->options->csrf_token as a
+						// fallback when the X-Dedalo-Csrf-Token header is dropped
+						// by an intermediary (proxy / CORS).
+						if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+							formdata.append('csrf_token', window.page_globals.csrf_token);
+						}
 
 					// upload_error (the upload ends in error)
 						xhr.upload.addEventListener("error", function(evt) {
@@ -561,12 +577,21 @@ export const upload = async function(options) {
 				// request header
 				xhr.setRequestHeader("X-File-Name", encodeURIComponent(file.name));
 
+				// SEC-008: CSRF token (see send_chunk for rationale).
+				if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+					xhr.setRequestHeader("X-Dedalo-Csrf-Token", window.page_globals.csrf_token);
+				}
+
 				const formdata = new FormData();
 					formdata.append('key_dir', key_dir);
 					formdata.append('file_name', file.name);
 					formdata.append('chunked', chunked);
 					formdata.append('file_to_upload', file);
 					formdata.append('tipo', tipo);
+					// SEC-008: CSRF token form-field fallback (see send_chunk).
+					if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+						formdata.append('csrf_token', window.page_globals.csrf_token);
+					}
 
 				// upload_load file (the upload ends successfully)
 					// xhr.upload.addEventListener("load", upload_load, false);

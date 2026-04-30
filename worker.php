@@ -63,22 +63,39 @@ while ($request = $psr7Worker->waitRequest()) {
         }
         $GLOBALS['DEDALO_RAW_BODY'] = null;
 
-        // // Clear static class caches to prevent cross-request pollution
-        // if (class_exists('common')) {
-        //     common::clear();
-        // }
-        // if (class_exists('section')) {
-        //     section::clear();
-        // }
-        // if (class_exists('component_common')) {
-        //     component_common::clear();
-        // }
-        // if (class_exists('section_record_instances_cache')) {
-        //     section_record_instances_cache::clear();
-        // }
-        // if (class_exists('component_instances_cache')) {
-        //     component_instances_cache::clear();
-        // }
+        // SEC-023: clear static class caches between requests. Without this, a long-running
+        // RoadRunner worker leaks per-user data across requests:
+        //   - section::$ar_section_instances and section_record/component instance caches
+        //     hold materialised section/component objects whose permission state was decided
+        //     for the previous user. A subsequent request from a different user could
+        //     receive cached data that bypasses fresh permission re-checks.
+        //   - common::$structure_context_cache / matrix_table_from_tipo are structure-only
+        //     and lower-risk, but clearing keeps lifetime bounded.
+        //   - object_cache holds DB-derived objects with no inherent per-user scoping.
+        // Each clear() call is a no-op when the class wasn't loaded yet for this request.
+        if (class_exists('common')) {
+            common::clear();
+        }
+        if (class_exists('section')) {
+            section::clear();
+        }
+        if (class_exists('hierarchy')) {
+            hierarchy::clear();
+        }
+        if (class_exists('component_common')) {
+            component_common::clear();
+        }
+        if (class_exists('ontology')) {
+            ontology::clear();
+        }
+        if (class_exists('section_record_instances_cache')) {
+            section_record_instances_cache::clear();
+        }
+        if (class_exists('component_instances_cache')) {
+            component_instances_cache::clear();
+        }
+        // SEC-023: error sentinel must not bleed into next request's debug payload.
+        unset($_ENV['DEDALO_LAST_ERROR']);
 
         // 2. Hydrate PHP Globals from PSR-7 Request
         $_SERVER = $request->getServerParams();
@@ -90,14 +107,36 @@ while ($request = $psr7Worker->waitRequest()) {
         $_REQUEST = array_merge($_GET, is_array($_POST) ? $_POST : []);
 
         // Function to apply CORS headers to a response
+        // SEC-003: only echo the Origin if it matches the configured DEDALO_CORS allowlist;
+        // never reflect arbitrary origins together with Allow-Credentials: true.
         $applyCors = function(Psr7\Response $res, $req) {
-            $origin = $req->getHeaderLine('Origin') ?: '*';
-            return $res
-                ->withHeader('Access-Control-Allow-Origin', $origin)
-                ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
-                ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Content-Range, Authorization, X-Requested-With')
-                ->withHeader('Access-Control-Allow-Credentials', 'true')
-                ->withHeader('Access-Control-Max-Age', '86400');
+            $origin = $req->getHeaderLine('Origin');
+            $allowed_origins = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_origins']))
+                ? (array)DEDALO_CORS['allowed_origins']
+                : [];
+            $allowed_methods = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_methods']))
+                ? implode(', ', (array)DEDALO_CORS['allowed_methods'])
+                : 'GET, POST, OPTIONS, PUT, DELETE';
+            $allowed_headers = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_headers']))
+                ? implode(', ', (array)DEDALO_CORS['allowed_headers'])
+                : 'Content-Type, Content-Range, Authorization, X-Requested-With';
+            $max_age = (defined('DEDALO_CORS') && isset(DEDALO_CORS['max_age']))
+                ? (string)DEDALO_CORS['max_age']
+                : '86400';
+
+            $res = $res
+                ->withHeader('Access-Control-Allow-Methods', $allowed_methods)
+                ->withHeader('Access-Control-Allow-Headers', $allowed_headers)
+                ->withHeader('Access-Control-Max-Age', $max_age)
+                ->withHeader('Vary', 'Origin');
+
+            if ($origin !== '' && in_array($origin, $allowed_origins, true)) {
+                $res = $res
+                    ->withHeader('Access-Control-Allow-Origin', $origin)
+                    ->withHeader('Access-Control-Allow-Credentials', 'true');
+            }
+
+            return $res;
         };
 
         // Handle OPTIONS (Preflight)
@@ -233,13 +272,20 @@ while ($request = $psr7Worker->waitRequest()) {
                 session_write_close();
             }
         } catch (\Throwable $e) {
-            // If an exception occurs, write it to the buffer
+            // If an exception occurs, write it to the buffer.
+            // SEC-016: never expose stack traces unless SHOW_DEBUG is true; always log them server-side.
+            error_log('RR Worker EXCEPTION: ' . $e->getMessage() . PHP_EOL . $e->getTraceAsString());
             if (ob_get_level() > 0) {
-                echo json_encode([
+                $error_payload = [
                     'result' => false,
-                    'msg' => "Dédalo Catch Error: " . $e->getMessage(),
-                    'trace' => (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) ? $e->getTraceAsString() : 'Hidden in production'
-                ]);
+                    'msg'    => (defined('SHOW_DEBUG') && SHOW_DEBUG === true)
+                        ? 'Dédalo Catch Error: ' . $e->getMessage()
+                        : 'Internal server error. Contact your admin.'
+                ];
+                if (defined('SHOW_DEBUG') && SHOW_DEBUG === true) {
+                    $error_payload['trace'] = $e->getTraceAsString();
+                }
+                echo json_encode($error_payload);
             }
 
             // Still close session if active

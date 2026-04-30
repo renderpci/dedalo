@@ -195,7 +195,7 @@ const get_value_element = (i, data, self) => {
 						const situation_total_value = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'value',
-							inner_html		: situation_total.value.value + '%',
+							inner_text		: situation_total.value.value + '%',
 							parent			: situation_total_node
 						})
 						// save the node for reuse later in 'update_widget_value' event
@@ -226,14 +226,14 @@ const get_value_element = (i, data, self) => {
 							// build the label with the lang name
 							const label_situation = ui.create_dom_element({
 								element_type	: 'label',
-								inner_html		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
+								inner_text		: (situation_translatable) ? project_langs[j].label+': ' : 'total :',
 								parent			: situation_detail_container
 							})
 							// create the node with the value
 							const item_situation = ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'value',
-								inner_html		: (situation_items_data) ? situation_items_data.value.value + '%' : '0%',
+								inner_text		: (situation_items_data) ? situation_items_data.value.value + '%' : '0%',
 								parent			: situation_detail_container
 							})
 							// build the label with the list name
@@ -244,7 +244,7 @@ const get_value_element = (i, data, self) => {
 
 							const label_list_situation = ui.create_dom_element({
 								element_type	: 'label',
-								inner_html		: datalist_item.label,
+								inner_text		: datalist_item.label,
 								parent			: situation_detail_container
 							})
 							// save the node for reuse later in 'update_widget_value' event

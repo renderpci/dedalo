@@ -276,7 +276,7 @@ const get_content_data = async function(self) {
 			// active_value
 			const update_total_pages = (value) => {
 				const total_pages_label	= new Intl.NumberFormat(locale, {}).format(value);
-				total_pages_node.innerHTML = (get_label.of || 'of') + ` ${total_pages_label}`
+				total_pages_node.textContent = (get_label.of || 'of') + ' ' + total_pages_label
 				total_pages_node.classList.remove('inactive')
 			}
 			active_values.push({
@@ -307,7 +307,7 @@ const get_content_data = async function(self) {
 						})
 				      })()
 				     : `Showing ${self.page_row_begin}-${self.page_row_end} of ${total_label}`
-				displayed_records_node.innerHTML = displayed_records_label
+				displayed_records_node.textContent = displayed_records_label
 			}
 			active_values.push({
 				name		: 'total',

@@ -25,6 +25,18 @@
  */
 class tool_tc extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'change_all_timecodes'
+	];
+
+
+
 	/**
 	 * CHANGE_ALL_TIMECODES
 	 * Apply offset adjustment to all timecode tags in component data
@@ -63,8 +75,8 @@ class tool_tc extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->errors	= [];
 
-		try {
-			// options with validation
+		// options with validation (kept outside the catch so permission_exception
+		// propagates to dd_manager).
 			$component_tipo = $options->component_tipo ?? null;
 			$section_tipo = $options->section_tipo ?? null;
 			$section_id = $options->section_id ?? null;
@@ -72,21 +84,19 @@ class tool_tc extends tool_common {
 			$offset_seconds = $options->offset_seconds ?? null;
 			$key = $options->key ?? null;
 
-			// validate required parameters
-			if (empty($component_tipo) || empty($section_tipo) || empty($section_id) || empty($lang)) {
-				$missing = [];
-				if (empty($component_tipo)) $missing[] = 'component_tipo';
-				if (empty($section_tipo)) $missing[] = 'section_tipo';
-				if (empty($section_id)) $missing[] = 'section_id';
-				if (empty($lang)) $missing[] = 'lang';
-				
-				throw new Exception('Missing required parameters: ' . implode(', ', $missing));
+			if (empty($component_tipo) || empty($section_tipo) || empty($section_id) || empty($lang) || $offset_seconds === null) {
+				$response->msg		= 'Error. Missing required parameters: component_tipo, section_tipo, section_id, lang, offset_seconds';
+				$response->errors[]	= 'invalid_request';
+				return $response;
 			}
 
-			if ($offset_seconds === null) {
-				throw new Exception('offset_seconds parameter is required');
-			}
+		// SEC-024 (§9.2): WRITE gate. change_all_timecodes overwrites every
+		// timecode tag in the component data.
+			security::assert_tipo_permission($section_tipo, $component_tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
 
+		try {
 			$offset_seconds = (int)$offset_seconds;
 
 			// component

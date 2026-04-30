@@ -12,6 +12,24 @@ final class dd_area_maintenance_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Note: callers are still authorization-gated by area_maintenance access
+	* checks in `dd_manager`. This list is the orthogonal "is the method even
+	* dispatchable?" gate.
+	*/
+	public const API_ACTIONS = [
+		'class_request',
+		'widget_request',
+		'get_widget_value',
+		'lock_components_actions',
+		'modify_counter',
+		'get_simple_schema_changes_files',
+		'parse_simple_schema_changes_files'
+	];
+
+
+
+	/**
 	* CLASS_REQUEST
 	* Fixed caller class NOT include into the RQO : area_maintenance
 	* Call to class method given and return and object with the response
@@ -67,6 +85,29 @@ final class dd_area_maintenance_api {
 				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
 				return $response;
 			}
+
+		// SEC-044: dispatch allowlist. When the target class declares
+		// API_ACTIONS, the requested method MUST appear in it. Mirrors the
+		// dd_manager / dd_tools_api gate (§9.1, §9.2) so an authenticated
+		// area_maintenance user cannot invoke arbitrary public-static methods
+		// (e.g. internal helpers like `get_file_constants`) that were never
+		// designed as remote API actions. Back-compat: classes without
+		// API_ACTIONS keep the legacy any-static behaviour.
+			if (defined($class_name . '::API_ACTIONS')) {
+				$allowed_actions = constant($class_name . '::API_ACTIONS');
+				if (!in_array($class_method, $allowed_actions, true)) {
+					$response->errors[] = 'method not in API_ACTIONS allowlist';
+					$response->msg = 'Error. Method \''.$class_method.'\' is not in '.$class_name.'::API_ACTIONS';
+					debug_log(__METHOD__
+						. ' Denied class_request: method not in allowlist' . PHP_EOL
+						. ' class_name: ' . $class_name . PHP_EOL
+						. ' class_method: ' . $class_method
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
+
 			try {
 
 				// background_running / direct cases
@@ -187,6 +228,27 @@ final class dd_area_maintenance_api {
 				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
 				return $response;
 			}
+
+		// SEC-044: same dispatch allowlist as class_request. Without it, a
+		// user with maintenance-area write could invoke arbitrary public
+		// static methods on the widget class (e.g. internal helpers,
+		// lifecycle hooks). Back-compat: widgets without API_ACTIONS keep
+		// the legacy any-static behaviour pending the per-widget rollout.
+			if (defined($class_name . '::API_ACTIONS')) {
+				$allowed_actions = constant($class_name . '::API_ACTIONS');
+				if (!in_array($class_method, $allowed_actions, true)) {
+					$response->errors[] = 'method not in API_ACTIONS allowlist';
+					$response->msg = 'Error. Method \''.$class_method.'\' is not in '.$class_name.'::API_ACTIONS';
+					debug_log(__METHOD__
+						. ' Denied widget_request: method not in allowlist' . PHP_EOL
+						. ' class_name: ' . $class_name . PHP_EOL
+						. ' class_method: ' . $class_method
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
+
 			try {
 
 				// background_running / direct cases

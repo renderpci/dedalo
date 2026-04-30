@@ -28,6 +28,31 @@
  */
 class tool_propagate_component_data extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'propagate_component_data'
+	];
+
+	/**
+	* SEC-024 / §9.1b: explicit allowlist of methods callable from CLI via
+	* `process_runner.php` (spawned by `exec_::request_cli` when the API
+	* caller passes `background_running:true`). Without this constant
+	* `process_runner` falls back to "any public-static method on the class
+	* is callable", which would expose any `tool_common`-inherited helper.
+	* @see core/base/process_runner.php
+	* @see tools/tool_propagate_component_data/js/tool_propagate_component_data.js
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'propagate_component_data'
+	];
+
+
+
 	/**
 	 * PROPAGATE_COMPONENT_DATA
 	 * Propagate component data changes across multiple section records
@@ -103,6 +128,19 @@ class tool_propagate_component_data extends tool_common {
 				if (!in_array($action, ['replace', 'delete', 'add'], true)) {
 					throw new Exception("Invalid action '$action'. Must be 'replace', 'delete', or 'add'");
 				}
+
+			// SEC-024 (§9.2): permission gate. Propagation is a bulk WRITE that
+			// modifies every record matched by the sqo. The caller must have
+			// write (>=2) on the (section_tipo, component_tipo) pair. Without
+			// this check any logged user with access to the propagate tool
+			// could overwrite/delete arbitrary component data across the
+			// section.
+				security::assert_tipo_permission(
+					$section_tipo,
+					$component_tipo,
+					2,
+					__METHOD__
+				);
 
 			// short vars
 				$model = ontology_node::get_model_by_tipo($component_tipo, true);
@@ -313,6 +351,11 @@ class tool_propagate_component_data extends tool_common {
 				$response->counter = $counter;
 				$response->memory = dd_memory_usage();
 
+		} catch (permission_exception $e) {
+			// SEC-024 (§9.2): let `dd_manager` translate this into the uniform
+			// permissions_denied JSON response rather than masking it as a
+			// generic error.
+			throw $e;
 		} catch (Exception $e) {
 			$response->result = false;
 			$response->msg = 'Error. ' . $e->getMessage();

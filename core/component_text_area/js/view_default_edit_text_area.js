@@ -1289,7 +1289,8 @@ const render_note = async function(options) {
 				// permissions check
 				if (!note_section.permissions || parseInt(note_section.permissions)<1) {
 					body.classList.add('content')
-					body.innerHTML = (get_label.no_access || 'Not access here') + ' ' + note_section.tipo
+					// SEC-030: textContent prevents HTML interpretation of note_section.tipo
+					body.textContent = (get_label.no_access || 'Not access here') + ' ' + note_section.tipo
 					return false
 				}
 
@@ -1312,12 +1313,13 @@ const render_note = async function(options) {
 					const by_user_label			= get_label.by_user || 'by user'
 					const created_by_user		= note_section.data.entries[0].created_by_user_name || 'undefined'
 					const header_label			= (get_label.note || 'Note') + ' ' + created_label +' '+ by_user_label + ': ' + created_by_user
-					header_label_node.innerHTML	= header_label
+					// SEC-030: textContent prevents HTML interpretation of user-editable created_by_user_name
+					header_label_node.textContent	= header_label
 
 				// section info (bottom)
 					const date_label			= get_label.date.toLowerCase() || 'date'
 					const created_date			= note_section.data.entries[0].created_date || ''
-					section_info.innerHTML		= created_label + ' ' + date_label + ': '+ created_date
+					section_info.textContent	= created_label + ' ' + date_label + ': '+ created_date
 					section_info.classList.remove('hide')
 					button_remove.classList.remove('hide')
 			}

@@ -23,6 +23,20 @@
  */
 class tool_export extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'get_export_grid'
+	];
+
+
+
+
+
 	/**
 	 * @var int Maximum execution time in seconds (10 hours)
 	 */
@@ -182,6 +196,19 @@ class tool_export extends tool_common {
 			$data_format		= $options->data_format;
 			$ar_ddo_to_export	= $options->ar_ddo_to_export;
 			$sqo				= $options->sqo;
+
+		// SEC-024 (§9.2): READ gate. get_export_grid serialises the entire
+		// records selection via the supplied sqo. Caller must have read (>=1)
+		// on the requested section_tipo, plus on every section_tipo named in
+		// the sqo (to mirror the dd_core_api::search/read gate).
+			if (empty($section_tipo)) {
+				$response->msg = 'Error. Missing section_tipo';
+				return $response;
+			}
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
+			if (isset($sqo->section_tipo) && is_array($sqo->section_tipo)) {
+				security::assert_section_array_permission($sqo->section_tipo, 1, __METHOD__);
+			}
 
 		// export options
 			$tool_export = new tool_export(null, $section_tipo);

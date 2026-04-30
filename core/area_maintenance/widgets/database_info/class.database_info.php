@@ -8,6 +8,25 @@ class database_info {
 
 
 	/**
+	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	* `get_value` is intentionally absent because it is invoked through the
+	* dedicated `get_widget_value` API action (which hard-codes the method
+	* name) rather than through `widget_request`.
+	*/
+	public const API_ACTIONS = [
+		'analyze_db',
+		'optimize_tables',
+		'recreate_db_assets',
+		'rebuild_db_indexes',
+		'rebuild_db_functions',
+		'rebuild_db_constraints',
+		'consolidate_tables',
+		'rebuild_user_stats'
+	];
+
+
+
+	/**
 	* GET_VALUE
 	* Returns updated widget value
 	* It is used to update widget data dynamically

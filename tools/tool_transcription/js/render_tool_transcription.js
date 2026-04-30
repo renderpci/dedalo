@@ -853,7 +853,12 @@ const render_automatic_transcription = function (options) {
 
 						button_automatic_transcription.classList.remove('disable')
 						const msg = self.get_tool_label('transcription_completed') || 'Transcription completed.';
-						status_container.innerHTML = `<span class="success_text">${msg}</span>`;
+						// SEC-031: build success label via DOM; defence-in-depth on i18n label.
+						status_container.replaceChildren()
+						const success_span = document.createElement('span')
+						success_span.className = 'success_text'
+						success_span.textContent = msg
+						status_container.appendChild(success_span)
 
 						// set value and implicit save action in component_text_area
 						self.transcription_component.set_value(

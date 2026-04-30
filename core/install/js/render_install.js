@@ -2,6 +2,12 @@
 /*global get_label, page_globals, SHOW_DEBUG*/
 /*eslint no-undef: "error"*/
 
+// SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = api_response.msg`
+// sites have been converted to `textContent` so that any reflection of attacker-controlled
+// input (DB host, password validator, hierarchy import errors, etc.) cannot trigger
+// pre-auth XSS. Counter tickers and reset-to-empty assignments were also converted for
+// consistency.
+
 
 
 // imports
@@ -328,7 +334,7 @@ const render_help_block = function(self) {
 			parent			: install_info_node
 		})
 		link_install.target	= '_blank'
-		// link_install.rel	= 'noopener noreferrer'
+		link_install.rel	= 'noopener noreferrer' // SEC-033
 
 	// installation config
 		const install_config_node = ui.create_dom_element({
@@ -352,6 +358,7 @@ const render_help_block = function(self) {
 			parent			: install_config_node
 		})
 		link_configuration.target	= '_blank'
+		link_configuration.rel		= 'noopener noreferrer' // SEC-033
 
 
 	return fragment
@@ -651,7 +658,7 @@ const render_config_options = function(self) {
 
 						let counter = 5;
 						const interval = setInterval(() => {
-							to_update_status.innerHTML = 'Initializing in ' + counter
+							to_update_status.textContent = 'Initializing in ' + counter
 							counter--;
 							if (counter < 0 ) {
 								spinner.remove()
@@ -762,7 +769,7 @@ const render_install_db_block = function(self) {
 			// reset messages
 				install_db_status.classList.remove('ok')
 				install_db_status.classList.remove('error')
-				install_db_status.innerHTML = ''
+				install_db_status.textContent = ''
 
 			// add spinner
 				const spinner = ui.create_dom_element({
@@ -791,7 +798,7 @@ const render_install_db_block = function(self) {
 					console.log('DBB installed:', api_response);
 
 					install_db_status.classList.add('ok')
-					install_db_status.innerHTML = api_response.msg
+					install_db_status.textContent = api_response.msg
 
 					// show set_root_password_block
 					self.node.content_data.set_root_password_block.classList.remove('hide')
@@ -805,7 +812,7 @@ const render_install_db_block = function(self) {
 					console.error(api_response.msg);
 
 					install_db_status.classList.add('error')
-					install_db_status.innerHTML = api_response.msg
+					install_db_status.textContent = api_response.msg
 				}
 
 			// unlock button
@@ -907,7 +914,7 @@ const render_set_root_password_block = function(self) {
 			// message reset
 				set_pw_status.classList.remove('ok')
 				set_pw_status.classList.remove('error')
-				set_pw_status.innerHTML = ''
+				set_pw_status.textContent = ''
 
 			if (validated_obj.result===false) {
 				// decorate input_node as valid (green)
@@ -915,7 +922,7 @@ const render_set_root_password_block = function(self) {
 				input_node.classList.add('invalid')
 				// message
 				set_pw_status.classList.add('error')
-				set_pw_status.innerHTML = validated_obj.msg
+				set_pw_status.textContent = validated_obj.msg
 				// button lock
 				change_root_pw_button.classList.add('loading')
 			}else{
@@ -1006,7 +1013,7 @@ const render_set_root_password_block = function(self) {
 			// reset messages
 				set_pw_status.classList.remove('ok')
 				set_pw_status.classList.remove('error')
-				set_pw_status.innerHTML = ''
+				set_pw_status.textContent = ''
 
 			// validate again first password input
 				const validated_obj = component_password.prototype.validate_password_format(
@@ -1067,7 +1074,7 @@ const render_set_root_password_block = function(self) {
 					console.log('api_response:', api_response.msg)
 
 					set_pw_status.classList.add('ok')
-					set_pw_status.innerHTML = api_response.msg
+					set_pw_status.textContent = api_response.msg
 
 					change_root_pw_button.remove();
 
@@ -1081,7 +1088,7 @@ const render_set_root_password_block = function(self) {
 					console.error(api_response.msg);
 
 					set_pw_status.classList.add('error')
-					set_pw_status.innerHTML = api_response.msg
+					set_pw_status.textContent = api_response.msg
 				}
 
 			// unlock button
@@ -1151,7 +1158,7 @@ const render_login_block = async function(self) {
 
 						// login_status
 							login_status.classList.add('error')
-							login_status.innerHTML = api_response.msg || 'API response login fails'
+							login_status.textContent = api_response.msg || 'API response login fails'
 
 						// debug
 							console.warn('api_response:', api_response);
@@ -1375,7 +1382,7 @@ export const render_hierarchies_import_block = function(options) {
 					console.error(api_response.msg);
 
 					import_hierarchies_status.classList.add('error')
-					import_hierarchies_status.innerHTML = api_response.msg
+					import_hierarchies_status.textContent = api_response.msg
 
 				}else{
 
@@ -1385,14 +1392,14 @@ export const render_hierarchies_import_block = function(options) {
 						// some import file fail case
 
 						import_hierarchies_status.classList.add('error')
-						import_hierarchies_status.innerHTML = false_check.msg
+						import_hierarchies_status.textContent = false_check.msg
 
 					}else{
 
 						// all is OK case
 
 						import_hierarchies_status.classList.add('ok')
-						import_hierarchies_status.innerHTML = api_response.msg
+						import_hierarchies_status.textContent = api_response.msg
 
 						import_hierarchies_button.remove()
 
@@ -1478,7 +1485,7 @@ const render_install_finish_block = function(self) {
 					console.error("install_finish api_response:", api_response);
 
 					install_finish_status.classList.add('error')
-					install_finish_status.innerHTML = api_response.msg
+					install_finish_status.textContent = api_response.msg
 
 					spinner.remove()
 
@@ -1489,11 +1496,11 @@ const render_install_finish_block = function(self) {
 					console.log("install_finish api_response:", api_response);
 
 					install_finish_status.classList.add('ok')
-					install_finish_status.innerHTML = api_response.msg + ' Setting up!'
+					install_finish_status.textContent = api_response.msg + ' Setting up!'
 
 					let counter = 5;
 					const interval = setInterval(() => {
-						install_finish_status.innerHTML = 'Initializing in ' + counter
+						install_finish_status.textContent = 'Initializing in ' + counter
 						counter--;
 						if (counter < 0 ) {
 							spinner.remove()

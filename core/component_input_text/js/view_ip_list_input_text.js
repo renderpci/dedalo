@@ -126,6 +126,7 @@ export const render_link = function (href, label) {
 		inner_html		: label
 	})
 	link_node.target = '_blank'
+	link_node.rel    = 'noopener noreferrer' // SEC-033
 
 
 	return link_node

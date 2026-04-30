@@ -136,6 +136,12 @@ export const tr = {
 	* Convert Dédalo tags like index, tc, etc. to images
 	* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
 	* This function equivalent exists in server side in class TR
+	*
+	* SEC-028: capture groups (label `[^-]{0,22}`, data `(.*?)`) can carry `"`, `<`, `>`, `&`
+	* and other attribute-breaking characters from CKEditor content or direct API writes.
+	* Previously interpolated raw via template strings, allowing stored XSS through attribute
+	* injection (e.g. `[index-n-1-x" onerror="alert(1)" x-data:foo:data]`).
+	* All capture groups are now HTML-attribute-escaped before interpolation.
 	* @param string text
 	* @return string text
 	*/
@@ -147,53 +153,96 @@ export const tr = {
 
 		const tag_url = '../../core/component_text_area/tag/?id=';
 
-		// INDEX IN
-			const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data
-			text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="34" height="15" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+		// SEC-028: escape attribute-context interpolation.
+		const esc = (s) => {
+			if (s === undefined || s === null) return ''
+			return String(s)
+				.replace(/&/g, '&amp;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+		}
+
+		// INDEX IN. captures: 2=type, 3=state, 4=tag_id, 6=label, 7=data
+			const pattern_indexIn = tr.get_mark_pattern('indexIn');
+			text = text.replace(pattern_indexIn, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="34" height="15" class="index" data-type="indexIn" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// INDEX OUT
 			const pattern_indexOut = tr.get_mark_pattern('indexOut');
-			text = text.replace(pattern_indexOut, `<img id="[/\$2-$3-$4-$6]" src="${tag_url}[/\$2-$3-$4-$6]" width="34" height="15" class="index" data-type="indexOut" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_indexOut, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[/${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="34" height="15" class="index" data-type="indexOut" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// REFERENCE IN
 			const pattern_referenceIn = tr.get_mark_pattern('referenceIn');
-			text = text.replace(pattern_referenceIn, `<reference id="reference_$4" class="reference" data-type="reference" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_referenceIn, (_m, _g1, _g2, g3, g4, _g5, g6, g7) => {
+				return `<reference id="reference_${esc(g4)}" class="reference" data-type="reference" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// REFERENCE OUT
 			const pattern_referenceOut = tr.get_mark_pattern('referenceOut');
 			text = text.replace(pattern_referenceOut, "</reference>");
 
-		// TC. [TC_00:00:25.091_TC]
+		// TC. [TC_00:00:25.091_TC] — captures: 1=full_tag, 2=tc_value (digits/colons only)
 			const pattern_tc = tr.get_mark_pattern('tc');
-			text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}$1" width="82" height="15" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
+			text = text.replace(pattern_tc, (_m, g1, g2) => {
+				return `<img id="${esc(g1)}" src="${tag_url}${esc(g1)}" width="82" height="15" class="tc" data-type="tc" data-tag_id="${esc(g1)}" data-state="n" data-label="${esc(g2)}" data-data="${esc(g2)}">`
+			});
 
-		// SVG
+		// SVG. captures: 2=type, 3=state, 4=tag_id, 6=label, 7=data
 			const pattern_svg = tr.get_mark_pattern('svg');
-			text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" height="15" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_svg, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${esc(g7)}" height="15" class="svg" data-type="svg" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// DRAW
 			const pattern_draw = tr.get_mark_pattern('draw');
-			text = text.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" height="15" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_draw, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" height="15" class="draw" data-type="draw" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// GEO
 			const pattern_geo = tr.get_mark_pattern('geo');
-			text = text.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="38" height="15" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_geo, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="38" height="15" class="geo" data-type="geo" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
-		// PAGE
+		// PAGE. captures: 2=type, 3=state, 4=tag_id, 5=outer optional, 6=label, 7=data
 			const pattern_page = tr.get_mark_pattern('page');
-			text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" width="38" height="15" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
+			text = text.replace(pattern_page, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="38" height="15" class="page" data-type="page" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
-		// PERSON
+		// PERSON. pattern: /(\[(person)-([a-z])-([0-9]{0,6})-([^-]{0,22})-data:(.*?):data\])/
+		// captures: 1=full, 2=type, 3=state, 4=tag_id, 5=label, 6=data
 			const pattern_person = tr.get_mark_pattern('person');
-			text = text.replace(pattern_person, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" width="72" height="15" class="person" data-type="person" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$6">`);
+			text = text.replace(pattern_person, (_m, _g1, g2, g3, g4, g5, g6) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g5)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="72" height="15" class="person" data-type="person" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g5)}" data-data="${esc(g6)}">`
+			});
 
 		// NOTE
 			const pattern_note = tr.get_mark_pattern('note');
-			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="22" height="15" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_note, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="22" height="15" class="note" data-type="note" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		// LANG
 			const pattern_lang = tr.get_mark_pattern('lang');
-			text = text.replace(pattern_lang, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="50" height="15" class="lang" data-type="lang" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_lang, (_m, _g1, g2, g3, g4, _g5, g6, g7) => {
+				const id = `[${esc(g2)}-${esc(g3)}-${esc(g4)}-${esc(g6)}]`
+				return `<img id="${id}" src="${tag_url}${id}" width="50" height="15" class="lang" data-type="lang" data-tag_id="${esc(g4)}" data-state="${esc(g3)}" data-label="${esc(g6)}" data-data="${esc(g7)}">`
+			});
 
 		return text
 	}//end add_tag_img_on_the_fly

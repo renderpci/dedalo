@@ -10,6 +10,33 @@
 
 
 /**
+* APPEND_TEXT_WITH_BREAKS
+* SEC-029: safe alternative to insertAdjacentHTML for messages that may contain
+* attacker-controlled fragments (component labels, api_response.msg, error messages).
+* Splits the input on `<br>` literals (the only HTML token the previous code relied on)
+* and emits text nodes + <br> elements so that any other HTML/script payload is rendered
+* as text rather than parsed.
+* @param HTMLElement target
+* @param string text
+* @param string position 'afterbegin' | 'beforeend'
+*/
+function append_text_with_breaks(target, text, position = 'beforeend') {
+	const frag = document.createDocumentFragment()
+	const parts = String(text ?? '').split(/<br\s*\/?>/i)
+	parts.forEach((part, i) => {
+		if (i > 0) frag.appendChild(document.createElement('br'))
+		if (part.length) frag.appendChild(document.createTextNode(part))
+	})
+	if (position === 'afterbegin') {
+		target.insertBefore(frag, target.firstChild)
+	} else {
+		target.appendChild(frag)
+	}
+}
+
+
+
+/**
 * RENDER_NODE_INFO
 * Renders a node with the information sent by the server when the components save, if all go ok it will be green with the msg from server if no it will be red.
 * @param options object
@@ -63,8 +90,7 @@ export function render_node_info(options) {
 
 		case 'warning' : {
 			node_info.classList.add('warning')
-			const text = msg
-			node_info.insertAdjacentHTML('afterbegin', text)
+			append_text_with_breaks(node_info, msg, 'afterbegin')
 			// remove node on timeout
 			if (remove_time) {
 				fade_away(node_info, remove_time || 30000)
@@ -74,8 +100,7 @@ export function render_node_info(options) {
 
 		case 'error' : {
 			node_info.classList.add('error')
-			const text = msg
-			node_info.insertAdjacentHTML('afterbegin', text)
+			append_text_with_breaks(node_info, msg, 'afterbegin')
 			// remove node on timeout
 			if (remove_time) {
 				fade_away(node_info, remove_time || 3000)
@@ -85,8 +110,7 @@ export function render_node_info(options) {
 
 		case 'success' : {
 			node_info.classList.add('ok')
-			const text = msg
-			node_info.insertAdjacentHTML('afterbegin', text)
+			append_text_with_breaks(node_info, msg, 'afterbegin')
 			// remove node on timeout
 			if (remove_time) {
 				fade_away(node_info, remove_time || 3000)
@@ -105,7 +129,7 @@ export function render_node_info(options) {
 
 					node_info.classList.add('error')
 					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
-					node_info.insertAdjacentHTML('afterbegin', text)
+					append_text_with_breaks(node_info, text, 'afterbegin')
 					// error msg
 						const ar_msg = []
 						if (api_response.error) {
@@ -118,7 +142,7 @@ export function render_node_info(options) {
 							ar_msg.push(api_response.msg)
 						}
 						if (ar_msg.length>0) {
-							node_info.insertAdjacentHTML('beforeend', '<br>' + ar_msg.join('<br>') )
+							append_text_with_breaks(node_info, '<br>' + ar_msg.join('<br>'), 'beforeend')
 						}
 				}else{
 
@@ -126,7 +150,7 @@ export function render_node_info(options) {
 
 					node_info.classList.add('ok')
 					const text = `${instance.label || instance.model} ${get_label.saved || 'Saved'}`
-					node_info.insertAdjacentHTML('afterbegin', text)
+					append_text_with_breaks(node_info, text, 'afterbegin')
 
 					// remove node on timeout
 					fade_away(node_info, 10000)
@@ -137,7 +161,7 @@ export function render_node_info(options) {
 
 				node_info.classList.add('warning')
 				const text = `${msg} <br>${instance.label}`
-				node_info.insertAdjacentHTML('afterbegin', text)
+				append_text_with_breaks(node_info, text, 'afterbegin')
 
 				// remove node on timeout
 				fade_away(node_info, 30000)

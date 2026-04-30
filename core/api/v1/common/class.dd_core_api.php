@@ -8,6 +8,32 @@ final class dd_core_api {
 
 
 
+	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable; it
+	* must also be added here. Internal helpers (get_page_globals,
+	* get_js_plain_vars, get_lang_labels) are intentionally absent because they
+	* take non-rqo arguments and are invoked from PHP code only.
+	*/
+	public const API_ACTIONS = [
+		'start',
+		'read',
+		'read_raw',
+		'create',
+		'duplicate',
+		'delete',
+		'save',
+		'count',
+		'get_element_context',
+		'get_section_elements_context',
+		'get_indexation_grid',
+		'get_environment',
+		'get_ontology_info',
+		'test'
+	];
+
+
+
 	// Version. Important!
 		public static $version = "1.0.0";  // 05-06-2019
 
@@ -935,16 +961,30 @@ final class dd_core_api {
 		// section_record
 		// section_record duplicate current. Returns the section_id created
 
-		// permissions check. Ensure user can at least READ the source record
+		// permissions check. Duplication produces a NEW record, so we require WRITE
+			// (>=2) on the section. Do NOT relax this to >=1: a user with read-only
+			// access must not be able to spawn new records by duplicating existing
+			// ones. (Audit ref: §5.2.)
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
 			if ($permissions < 2) {
 				$response->errors[] = 'insufficient permissions';
-				$response->msg      = 'Error. You don\'t have enough permissions to read the source record ('.$section_tipo.'). permissions:'.to_string($permissions);
+				$response->msg      = 'Error. You don\'t have enough permissions to write to the section ('.$section_tipo.'). permissions:'.to_string($permissions);
 				debug_log(__METHOD__
 					. " $response->msg "
 					, logger::ERROR
 				);
 				return $response;
+			}
+
+		// SEC-024 (§9.4): per-record gate. Duplicate reads the source record by
+		// section_id; without this check a user with section-write but outside
+		// the source's project scope could clone records they cannot see.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope(
+					$section_tipo,
+					(int)$section_id,
+					__METHOD__
+				);
 			}
 
 			$section_record	= section_record::get_instance( $section_tipo, (int)$section_id );
@@ -1463,6 +1503,13 @@ final class dd_core_api {
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
 			$simple			= $rqo->simple ?? false; // simple context response
 
+		// SEC: read permission required to inspect element context.
+			// Tools have their own membership check (`get_user_tools`) below;
+			// for section/area/component branches we gate by section_tipo here.
+			if (!empty($section_tipo) && !str_starts_with((string)$model, 'tool_')) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
+
 		// build element
 			switch (true) {
 				case $model==='section':
@@ -1718,6 +1765,64 @@ final class dd_core_api {
 				? section::build_sqo_id($tipo)
 				: 'undefined'
 			); // cache key sqo_id;
+
+		// SEC: pre-hoc read permission check.
+			// Was previously a POST-hoc check at the bottom of this method that wiped
+			// $result->data after the search had already run, leaving $result->context
+			// (full schema) leaked and a timing oracle on row count. The gate now runs
+			// before any DB or ontology work. The 'menu' model is exempt (matches the
+			// previous behaviour) because menus are discoverable scaffolding.
+			//
+			// Service / reflective wrappers (model starts with 'service_', e.g.
+			// `service_time_machine`) are also exempt at THIS level because their
+			// `source->section_tipo` is the bookkeeping section (e.g. `dd15`), not
+			// the real read target. Their access is governed instead by the per-
+			// `sqo->section_tipo[]` gate immediately below — same model the `count`
+			// action uses (see dd_core_api::count).
+			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
+			if (
+				!empty($section_tipo)
+				&& !empty($tipo)
+				&& $model !== 'menu'
+				&& !$is_service_model
+				&& common::get_permissions($section_tipo, $tipo) < 1
+			) {
+				debug_log(__METHOD__
+					. ' Denied read: insufficient permissions' . PHP_EOL
+					. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' tipo: ' . to_string($tipo) . PHP_EOL
+					. ' model: ' . to_string($model)
+					, logger::ERROR
+				);
+				$response->msg		= 'Error. Insufficient permissions to read ('.$section_tipo.' / '.$tipo.')';
+				$response->errors[]	= 'permissions_denied';
+				return $response;
+			}
+
+		// SEC: per-sqo target section gate. Mirrors `dd_core_api::count` so that
+			// service / reflective models are still gated against the sections
+			// they actually read. For non-service models this is redundant with
+			// the source gate above, but cheap (cached `common::get_permissions`).
+			if (!empty($rqo->sqo->section_tipo) && is_array($rqo->sqo->section_tipo)) {
+				foreach ($rqo->sqo->section_tipo as $sqo_section_tipo) {
+					if (empty($sqo_section_tipo)) {
+						continue;
+					}
+					if (common::get_permissions($sqo_section_tipo, $sqo_section_tipo) < 1) {
+						debug_log(__METHOD__
+							. ' Denied read: insufficient permissions on sqo target' . PHP_EOL
+							. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+							. ' sqo->section_tipo: ' . to_string($sqo_section_tipo) . PHP_EOL
+							. ' model: ' . to_string($model)
+							, logger::ERROR
+						);
+						$response->msg		= 'Error. Insufficient permissions to read ('.$sqo_section_tipo.')';
+						$response->errors[]	= 'permissions_denied';
+						return $response;
+					}
+				}
+			}
 
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
@@ -2129,9 +2234,26 @@ final class dd_core_api {
 			$result->context	= $context;
 			$result->data		= $data;
 
-		// permissions check. Prevent mistaken data resolutions
-			$permissions = common::get_permissions($section_tipo, $tipo);
-			if (!empty($result->data) && $permissions<1 && isset($element) && $element->get_model()!=='menu') {
+		// permissions check. Prevent mistaken data resolutions.
+			// Service / reflective models (e.g. `service_time_machine`) carry a
+			// bookkeeping `source->section_tipo` (`dd15`) that does NOT
+			// correspond to the data being read; their authorisation is enforced
+			// by the per-`sqo->section_tipo[]` gate at the top of this method.
+			// Apply the exemption based on the source `$model` (the original
+			// $ddo_source->model, which is "service_time_machine") rather than
+			// $element->get_model(): for action='search' the element is a
+			// `sections` instance whose model is 'sections', not the service
+			// label. Same check the pre-hoc gate uses.
+			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
+			$permissions	= common::get_permissions($section_tipo, $tipo);
+			if (
+				!empty($result->data)
+				&& $permissions < 1
+				&& isset($element)
+				&& $element->get_model() !== 'menu'
+				&& $model !== 'menu'
+				&& !$is_service_model
+			) {
 
 				$result->data = [];
 
@@ -2365,6 +2487,9 @@ final class dd_core_api {
 
 				return $response;
 			}
+
+		// SEC: read permission required to build the indexation grid
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
@@ -2813,6 +2938,11 @@ final class dd_core_api {
 		$section_id				= get_section_id_from_tipo($tipo);
 		$tld					= get_tld_from_tipo($tipo);
 		$target_section_tipo	= ontology::map_tld_to_target_section_tipo($tld);
+
+		// SEC: read permission required on the resolved target section
+			if (!empty($target_section_tipo)) {
+				security::assert_section_permission($target_section_tipo, 1, __METHOD__);
+			}
 
 		$response->result = (object)[
 			'section_tipo'	=> $target_section_tipo,

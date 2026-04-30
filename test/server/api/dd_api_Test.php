@@ -1422,6 +1422,9 @@ final class dd_api_Test extends BaseTestCase {
 	*/
 	public function test_get_element_context() : void {
 
+		// SEC: gated by `security::assert_section_permission` since SEC-09 fix.
+			$this->user_login();
+
 		// component_input_text
 			$rqo = json_handler::decode('
 				{
@@ -1551,6 +1554,9 @@ final class dd_api_Test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_indexation_grid() : void {
+
+		// SEC: gated by `security::assert_section_permission` since SEC-09 fix.
+			$this->user_login();
 
 		$rqo = json_handler::decode('
 			{

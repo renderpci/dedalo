@@ -11,6 +11,20 @@ class update_code {
 
 
 	/**
+	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	* `check_remote_server`, `update_incremental`, `update_clean` are internal
+	* helpers invoked from `update_code` itself and must NOT be remotely
+	* dispatchable. `get_value` is invoked through `get_widget_value`
+	* (hard-coded method) and therefore not listed here.
+	*/
+	public const API_ACTIONS = [
+		'update_code',
+		'build_version_from_git_master'
+	];
+
+
+
+	/**
 	* CHECK_REMOTE_SERVER
 	* Exec a curl request with given data to check current server status
 	* @param object $server
@@ -328,13 +342,16 @@ class update_code {
 				}
 
 			// remove temp used files and folders
-				$command_rm_dir		= "rm -R -f $source";
+				// SEC-042 defence-in-depth: $source / $target_file are built from
+				// `DEDALO_SOURCE_VERSION_LOCAL_DIR` (server constant) plus literals;
+				// shell-quote anyway so future callers cannot regress.
+				$command_rm_dir		= 'rm -R -f '.escapeshellarg($source);
 				$output_rm_dir		= shell_exec($command_rm_dir);
 				$result->remove_dir	= [
 					"command_rm_dir: " . $command_rm_dir,
 					"output_rm_dir: "  . $output_rm_dir
 				];
-				$command_rm_file 	= "rm $target_file";
+				$command_rm_file 	= 'rm '.escapeshellarg($target_file);
 				$output_rm_file		= shell_exec($command_rm_file);
 				$result->remove_file= [
 					"command_rm_file: " . $command_rm_file,

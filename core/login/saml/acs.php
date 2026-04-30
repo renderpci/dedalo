@@ -23,33 +23,21 @@ $start_time=start_time();
 			$samlResponse	= new OneLogin\Saml2\Response($samlSettings, $_POST['SAMLResponse']);
 			if ($samlResponse->isValid()) {
 
-				$make_login = true;
-				if ($make_login!==true) {
-
-					// Debug verification only
-						echo 'You are: ' . $samlResponse->getNameId() . '<br>';
-						$attributes = $samlResponse->getAttributes();
-						if (!empty($attributes)) {
-							echo 'You have the following attributes:<br>';
-							echo '<table><thead><th>Name</th><th>Values</th></thead><tbody>';
-							foreach ($attributes as $attributeName => $attributeValues) {
-								echo '<tr><td>' . htmlentities($attributeName) . '</td><td><ul>';
-								foreach ($attributeValues as $attributeValue) {
-									echo '<li>' . htmlentities($attributeValue) . '</li>';
-								}
-								echo '</ul></td></tr>';
-							}
-							echo '</tbody></table>';
-						}
-				}else{
-
-					// Login into Dédalo. Credentials are all correct, enter as registered logged user
+				// SEC-014: removed the dead `$make_login = true;` toggle and its debug-only echo
+				// branch. That branch dumped raw SAML attributes to the response and existed only
+				// to be flipped by a developer; keeping it in production code is a foot-gun.
+				// Login into Dédalo. Credentials are all correct, enter as registered logged user.
 
 						// Code. Is mapped from SAML response attribute name defined in config like 'code' => 'urn:oid:1.3.4.1.47.1.5.1.8'
 							$attributes		= $samlResponse->getAttributes();
 							$code_attr_name	= SAML_CONFIG['code'];
 							$code			= $attributes[$code_attr_name];
-							$client_ip		= get_client_ip();
+							// SEC-017: prefer the trusted IP resolver for logging consistency with
+							// Login_SAML's allowlist check. The legacy get_client_ip() is fine for
+							// logs but not for any security decision.
+							$client_ip		= function_exists('get_client_ip_trusted')
+								? get_client_ip_trusted()
+								: get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
 
 						// Login_SAML
@@ -77,9 +65,13 @@ $start_time=start_time();
 								);
 							}
 
-							header("Location: ".DEDALO_ROOT_WEB);
+						// SEC-014: redirect target. Honour RelayState only when it is a
+						// same-origin path under DEDALO_ROOT_WEB; never trust absolute or
+						// protocol-relative URLs supplied by the IdP / browser, otherwise
+						// the SAML ACS becomes an open redirect.
+							$redirect_target = saml_safe_redirect_target($_POST['RelayState'] ?? null);
+							header("Location: ".$redirect_target);
 							exit();
-				}
 
 			}else{
 				// Response is received, but validation process failed

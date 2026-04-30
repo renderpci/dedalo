@@ -582,8 +582,11 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		// make sure source is in list mode to allow lang fallback
 		source.mode = 'list'
 		// config. set config options like read_only to allow custom server behaviors
+		// NOTE: server no longer trusts source.config.read_only as a permission shortcut
+		// (was a privilege bypass). Users without direct read on the autocomplete target
+		// section will now be denied. The flag is preserved here for forward-compat with
+		// a future server-side autocomplete dispatcher that sets security::$read_only_scope.
 		source.config = {
-			// set the read_only to true, it will used to assign permissions to at least 1 in the target section and components.
 			read_only : true
 		}
 

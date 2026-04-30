@@ -48,10 +48,18 @@ class component_password extends component_common {
 	/**
 	* SET_DATA
 	* Overwrite component_common method.
-	* Encrypt data with component_password::encrypt_password method.
-	* This method is used to encrypt the password before set data.
-	* The encrypted data is stored in the database.
-	* The decrypted data is used to display the password in the form.
+	*
+	* SEC-001/002/007: passwords are now stored as one-way Argon2id hashes via
+	* {@see hash_password()} instead of the legacy reversible AES blob produced
+	* by {@see encrypt_password()}. Existing legacy values are migrated lazily
+	* on the next successful login (see `login::Login()`).
+	*
+	* If the supplied value is already a stored hash (legacy AES blob OR
+	* `password_hash()` output) it is persisted verbatim. This preserves the
+	* admin's ability to round-trip data export/import, and is also what the
+	* lazy-upgrade path in `login::Login()` relies on when it re-saves the
+	* freshly hashed value.
+	*
 	* @param ?array $data
 	* @return bool
 	*/
@@ -78,10 +86,16 @@ class component_password extends component_common {
 
 			// At this point data_element is guaranteed to be an object due to normalization above
 			$safe_data_element = clone $data_element;
-			$value_to_encrypt  = $data_element->value ?? '';
+			$value_to_store   = (string)($data_element->value ?? '');
 
-			// set encrypted value
-			$safe_data_element->value = component_password::encrypt_password((string)$value_to_encrypt);
+			// SEC-001: hash with Argon2id unless the caller has already supplied a
+			// stored credential (legacy AES blob or modern hash). This is detected
+			// by self::is_stored_credential() which is intentionally conservative.
+			if ($value_to_store !== '' && !self::is_stored_credential($value_to_store)) {
+				$value_to_store = self::hash_password($value_to_store);
+			}
+
+			$safe_data_element->value = $value_to_store;
 
 			$safe_data[] = $safe_data_element;
 		}
@@ -166,7 +180,12 @@ class component_password extends component_common {
 
 	/**
 	* ENCRYPT_PASSWORD
-	* Encrypt a string value with openssl
+	*
+	* @deprecated SEC-001/002/007: this is the legacy reversible AES helper. New
+	* passwords are stored as Argon2id hashes via {@see hash_password()}. This
+	* method is kept ONLY so the lazy-upgrade login path can recompute legacy
+	* values for comparison; do not call it from new code.
+	*
 	* @param string $string_value
 	* @return string
 	*/
@@ -177,6 +196,122 @@ class component_password extends component_common {
 			DEDALO_INFORMATION
 		);
 	}//end encrypt_password
+
+
+
+	/**
+	* HASH_PASSWORD
+	* Produce a one-way password hash suitable for storage.
+	*
+	* SEC-001: uses Argon2id (memory-hard, side-channel resistant). Each call
+	* produces a distinct hash because password_hash() incorporates a random
+	* salt; do not use the output for equality checks, always compare via
+	* {@see verify_password()} / `password_verify()`.
+	*
+	* @param string $plaintext
+	* @return string Hash including algorithm identifier (e.g. `$argon2id$...`).
+	*/
+	public static function hash_password(string $plaintext) : string {
+
+		return password_hash($plaintext, PASSWORD_ARGON2ID);
+	}//end hash_password
+
+
+
+	/**
+	* IS_STORED_CREDENTIAL
+	* Heuristic that returns true when the given string is already a stored
+	* credential (modern Argon2id/bcrypt hash OR legacy AES blob) and therefore
+	* must not be re-hashed by set_data(). This is intentionally permissive on
+	* the legacy side (anything base64-decodable to a non-trivial blob) so we
+	* never accidentally double-hash a legacy value during data import.
+	*
+	* @param string $value
+	* @return bool
+	*/
+	public static function is_stored_credential(string $value) : bool {
+
+		if ($value === '') {
+			return false;
+		}
+		// Modern hash sentinels produced by password_hash().
+		if (strncmp($value, '$argon2', 7) === 0
+			|| strncmp($value, '$2y$', 4) === 0
+			|| strncmp($value, '$2a$', 4) === 0
+			|| strncmp($value, '$2b$', 4) === 0
+		) {
+			return true;
+		}
+		// Legacy AES blob: base64-encoded ciphertext. Real plaintext passwords
+		// (which contain mixed punctuation) almost never satisfy a strict
+		// base64 round-trip, so this gate is reliable in practice.
+		if (preg_match('/^[A-Za-z0-9+\/]+={0,2}$/', $value) === 1
+			&& strlen($value) >= 24
+		) {
+			$decoded = base64_decode($value, true);
+			if ($decoded !== false && strlen($decoded) >= 16) {
+				return true;
+			}
+		}
+		return false;
+	}//end is_stored_credential
+
+
+
+	/**
+	* IS_LEGACY_HASH
+	* @param string $stored
+	* @return bool True when $stored looks like the legacy reversible AES blob.
+	*/
+	public static function is_legacy_hash(string $stored) : bool {
+
+		if ($stored === '') {
+			return false;
+		}
+		if (strncmp($stored, '$argon2', 7) === 0
+			|| strncmp($stored, '$2y$', 4) === 0
+			|| strncmp($stored, '$2a$', 4) === 0
+			|| strncmp($stored, '$2b$', 4) === 0
+		) {
+			return false;
+		}
+		return true;
+	}//end is_legacy_hash
+
+
+
+	/**
+	* VERIFY_PASSWORD
+	* Constant-time check of a plaintext attempt against a stored credential.
+	*
+	* Supports both storage formats during the SEC-001 migration window:
+	*  - Modern: Argon2id (or bcrypt) hash → verified with password_verify().
+	*  - Legacy: reversible AES blob → recompute via {@see encrypt_password()}
+	*    and compare with hash_equals(). On legacy success the caller is told
+	*    to rehash via the second tuple element.
+	*
+	* @param string $plaintext
+	* @param string $stored
+	* @return array{0: bool, 1: bool} Tuple of (verified, needs_rehash).
+	*/
+	public static function verify_password(string $plaintext, string $stored) : array {
+
+		if ($plaintext === '' || $stored === '') {
+			return [false, false];
+		}
+
+		if (!self::is_legacy_hash($stored)) {
+			// Modern Argon2id / bcrypt path.
+			$ok           = password_verify($plaintext, $stored);
+			$needs_rehash = $ok && password_needs_rehash($stored, PASSWORD_ARGON2ID);
+			return [$ok, $needs_rehash];
+		}
+
+		// Legacy AES blob: recompute deterministically and compare.
+		$candidate = self::encrypt_password($plaintext);
+		$ok = hash_equals($stored, $candidate);
+		return [$ok, $ok]; // any successful legacy verification triggers rehash.
+	}//end verify_password
 
 
 

@@ -64,6 +64,193 @@ class login extends common {
 
 
 	/**
+	* SEC-019: brute-force / credential-stuffing throttling.
+	*
+	* Failed login attempts are persisted to a small JSON file under
+	* DEDALO_CACHE_MANAGER['files_path']. The state is keyed by a sha1 of
+	* (username|ip) so an attacker cannot lock another user out from a
+	* completely different IP. Tunables (with safe defaults):
+	*
+	*   DEDALO_LOGIN_MAX_ATTEMPTS   (int,  default 10)  - failures before lockout
+	*   DEDALO_LOGIN_ATTEMPT_WINDOW (int,  default 900) - sliding window seconds
+	*   DEDALO_LOGIN_LOCKOUT_SECONDS(int,  default 900) - cooldown after lockout
+	*/
+
+	/**
+	* GET_LOGIN_THROTTLE_FILE
+	* Returns the absolute path to the throttle state file for the given key,
+	* or null if cache infrastructure is not available.
+	* @param string $key
+	* @return string|null
+	*/
+	private static function get_login_throttle_file(string $key) : ?string {
+
+		if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+			return null;
+		}
+		$base_path = DEDALO_CACHE_MANAGER['files_path'];
+		if (!is_dir($base_path)) {
+			return null;
+		}
+		$dir = rtrim($base_path, '/') . '/dd_login_attempts';
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0700, true);
+		}
+		if (!is_dir($dir) || !is_writable($dir)) {
+			return null;
+		}
+		return $dir . '/' . sha1($key) . '.json';
+	}//end get_login_throttle_file
+
+
+
+	/**
+	* CHECK_LOGIN_THROTTLE
+	* Returns null when the caller is allowed to attempt authentication.
+	* Returns a ready-to-return response object when the caller is locked out.
+	* @param string $key
+	* @return object|null
+	*/
+	private static function check_login_throttle(string $key) : ?object {
+
+		// Skip during unit tests to avoid leaking state across runs.
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return null;
+		}
+
+		$file = self::get_login_throttle_file($key);
+		if ($file === null || !file_exists($file)) {
+			return null;
+		}
+
+		$max     = defined('DEDALO_LOGIN_MAX_ATTEMPTS')    ? (int)DEDALO_LOGIN_MAX_ATTEMPTS    : 10;
+		$lockout = defined('DEDALO_LOGIN_LOCKOUT_SECONDS') ? (int)DEDALO_LOGIN_LOCKOUT_SECONDS : 900;
+		$window  = defined('DEDALO_LOGIN_ATTEMPT_WINDOW')  ? (int)DEDALO_LOGIN_ATTEMPT_WINDOW  : 900;
+
+		$raw     = @file_get_contents($file);
+		$state   = $raw ? json_decode($raw, true) : null;
+		if (!is_array($state) || !isset($state['attempts']) || !is_array($state['attempts'])) {
+			return null;
+		}
+
+		$now = time();
+		// Drop attempts older than the window.
+		$attempts = array_values(array_filter(
+			$state['attempts'],
+			static fn($ts) => is_numeric($ts) && ((int)$ts > ($now - $window))
+		));
+
+		if (count($attempts) < $max) {
+			return null;
+		}
+
+		// Locked: latest attempt + lockout still in the future.
+		$latest = (int)max($attempts);
+		if (($latest + $lockout) <= $now) {
+			return null;
+		}
+
+		$retry_after = max(1, ($latest + $lockout) - $now);
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Too many failed login attempts. Please retry in ' . $retry_after . ' seconds.';
+			$response->errors	= ['login_locked'];
+			$response->retry_after = $retry_after;
+		return $response;
+	}//end check_login_throttle
+
+
+
+	/**
+	* RECORD_FAILED_LOGIN_ATTEMPT
+	* Append a failed-attempt timestamp for the given key.
+	* @param string $key
+	* @return void
+	*/
+	private static function record_failed_login_attempt(string $key) : void {
+
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return;
+		}
+
+		$file = self::get_login_throttle_file($key);
+		if ($file === null) {
+			return;
+		}
+
+		$window = defined('DEDALO_LOGIN_ATTEMPT_WINDOW') ? (int)DEDALO_LOGIN_ATTEMPT_WINDOW : 900;
+		$now    = time();
+
+		$fp = @fopen($file, 'c+');
+		if ($fp === false) {
+			return;
+		}
+		try {
+			if (@flock($fp, LOCK_EX)) {
+				$raw   = stream_get_contents($fp);
+				$state = $raw ? json_decode($raw, true) : null;
+				$attempts = (is_array($state) && isset($state['attempts']) && is_array($state['attempts']))
+					? $state['attempts']
+					: [];
+				// Prune older entries and append the new one.
+				$attempts = array_values(array_filter(
+					$attempts,
+					static fn($ts) => is_numeric($ts) && ((int)$ts > ($now - $window))
+				));
+				$attempts[] = $now;
+				$payload = json_encode([
+					'attempts'   => $attempts,
+					'last_seen'  => $now
+				], JSON_UNESCAPED_SLASHES);
+				ftruncate($fp, 0);
+				rewind($fp);
+				fwrite($fp, $payload);
+				fflush($fp);
+				flock($fp, LOCK_UN);
+			}
+		} finally {
+			fclose($fp);
+		}
+	}//end record_failed_login_attempt
+
+
+
+	/**
+	* CLEAR_FAILED_LOGIN_ATTEMPTS
+	* Remove the throttle state file for the given key on successful auth.
+	* @param string $key
+	* @return void
+	*/
+	private static function clear_failed_login_attempts(string $key) : void {
+
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return;
+		}
+		$file = self::get_login_throttle_file($key);
+		if ($file !== null && file_exists($file)) {
+			@unlink($file);
+		}
+	}//end clear_failed_login_attempts
+
+
+
+	/**
+	* BUILD_LOGIN_THROTTLE_KEY
+	* Build a throttle key from a label + raw identifier (username, SAML code...)
+	* + the trusted client IP.
+	* @param string $namespace
+	* @param string $identifier
+	* @return string
+	*/
+	private static function build_login_throttle_key(string $namespace, string $identifier) : string {
+
+		$ip = function_exists('get_client_ip_trusted') ? get_client_ip_trusted() : '';
+		return $namespace . '|' . strtolower($identifier) . '|' . $ip;
+	}//end build_login_throttle_key
+
+
+
+	/**
 	* LOGIN
 	* Execute user login action by validating credentials against database
 	*
@@ -133,6 +320,16 @@ class login extends common {
 				return $response;
 			}
 
+		// SEC-019: brute-force throttle. Refuse the attempt entirely if this
+		// (username, IP) tuple is currently locked out. The check happens after
+		// the cheap input-format validations above so malformed payloads do not
+		// inflate the failure counter.
+			$throttle_key  = self::build_login_throttle_key('login', $username);
+			$throttle_lock = self::check_login_throttle($throttle_key);
+			if ($throttle_lock !== null) {
+				return $throttle_lock;
+			}
+
 		// search username
 			$ar_section_id	= login::get_users_with_name( $username );
 			$ar_result		= $ar_section_id;
@@ -161,6 +358,8 @@ class login extends common {
 					'LOG IN',
 					$activity_data
 				);
+				// SEC-019: record this failed attempt against the (username, IP) key.
+				self::record_failed_login_attempt($throttle_key);
 				// delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
@@ -193,6 +392,8 @@ class login extends common {
 					'LOG IN',
 					$activity_data
 				);
+				// SEC-019: ambiguous user is a server-side problem, not a credential
+				// guess; do not feed the brute-force counter here.
 				# delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
@@ -212,7 +413,6 @@ class login extends common {
 			$user_id = $section_id = (int)reset($ar_result);
 
 			# Search password
-			$password_encrypted	= component_password::encrypt_password($password);
 			$component_password	= component_common::get_instance(
 				'component_password',
 				DEDALO_USER_PASSWORD_TIPO,
@@ -232,6 +432,8 @@ class login extends common {
 
 			// password length check
 				if( empty($password_data) || strlen($password_data)<8 ) {
+					// SEC-019: treat empty/short stored password as a failed credential check.
+					self::record_failed_login_attempt($throttle_key);
 					$response->msg = 'Error: Wrong password [2]';
 					$response->errors[] = 'Wrong password [2]';
 					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
@@ -244,8 +446,13 @@ class login extends common {
 					return $response;
 				}
 
-			// password match check (constant-time comparison to prevent timing attacks)
-				if( !hash_equals($password_encrypted, $password_data) ) {
+			// password match check
+			// SEC-001/002/007: verify_password() handles both the modern Argon2id
+			// hash and the legacy reversible AES blob. When a legacy match succeeds
+			// we rehash the password with Argon2id and persist it - the user keeps
+			// their existing password, the storage upgrades silently in place.
+				[$password_ok, $password_needs_rehash] = component_password::verify_password($password, $password_data);
+				if (!$password_ok) {
 
 					#
 					# STOP : PASSWORD IS WRONG
@@ -260,6 +467,8 @@ class login extends common {
 						'LOG IN',
 						$activity_data
 					);
+					// SEC-019: a wrong password is the canonical brute-force signal.
+					self::record_failed_login_attempt($throttle_key);
 					# delay failed output by 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
 						sleep(2);
@@ -274,7 +483,37 @@ class login extends common {
 						, logger::WARNING
 					);
 					return $response;
-				}//end if( $password_encrypted!==$password_data )
+				}//end if (!$password_ok)
+
+			// SEC-001 lazy upgrade: if the stored value is the legacy AES blob (or
+			// an outdated parameter set) rehash with Argon2id and persist. Best-effort
+			// only; we never block a successful login on a storage upgrade failure.
+				if ($password_needs_rehash === true && $username !== 'root') {
+					try {
+						$upgrade_component = component_common::get_instance(
+							'component_password',
+							DEDALO_USER_PASSWORD_TIPO,
+							$section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_USERS_TIPO,
+							false
+						);
+						if ($upgrade_component instanceof component_password) {
+							$upgrade_component->set_data([(object)[ 'value' => $password ]]);
+							$upgrade_component->Save();
+							debug_log(__METHOD__
+								. ' SEC-001 lazy upgrade: rehashed password for user_id=' . $section_id
+								, logger::WARNING
+							);
+						}
+					} catch (Throwable $e) {
+						debug_log(__METHOD__
+							. ' SEC-001 lazy upgrade FAILED for user_id=' . $section_id . ': ' . $e->getMessage()
+							, logger::ERROR
+						);
+					}
+				}
 
 		// active account check
 			$active_account = login::active_account_check( $section_id );
@@ -335,6 +574,11 @@ class login extends common {
 
 			}//end if(!security::is_global_admin($user_id))
 
+
+		// SEC-019: credentials are confirmed valid (password matched, account active,
+		// profile/projects checks passed); reset the throttle counter for this key so
+		// a long-running attacker pattern does not penalise the legitimate user.
+			self::clear_failed_login_attempts($throttle_key);
 
 		// Login (all is ok) - init login sequence when all is ok
 			$full_username				= login::get_full_username($user_id);
@@ -405,13 +649,26 @@ class login extends common {
 				: null;
 
 		// IP validation
+		// SEC-017: use the trusted IP resolver so that an attacker cannot satisfy
+		// the SAML idp_ip allowlist by injecting a forged X-Forwarded-For header.
+		// Strict comparison prevents loose-typing surprises if SAML_CONFIG['idp_ip']
+		// happens to contain non-string entries.
 			if (defined('SAML_CONFIG') && !empty(SAML_CONFIG['idp_ip'])) {
-				$client_ip = get_client_ip();
-				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
+				$client_ip = get_client_ip_trusted();
+				if ($client_ip === '' || !in_array($client_ip, SAML_CONFIG['idp_ip'], true)) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
 					$response->errors[] = 'Invalid IP';
 					return $response;
 				}
+			}
+
+		// SEC-019: brute-force throttle for the SAML code path. Keyed by SAML
+		// code + trusted client IP so that an attacker poking arbitrary codes
+		// from one IP gets locked out without affecting other users.
+			$throttle_key  = self::build_login_throttle_key('saml', is_string($code) ? $code : '');
+			$throttle_lock = self::check_login_throttle($throttle_key);
+			if ($throttle_lock !== null) {
+				return $throttle_lock;
 			}
 
 		# Search code (DNI, etc.)
@@ -462,6 +719,8 @@ class login extends common {
 								)
 							);
 
+							// SEC-019: inactive account on a valid SAML code is not a credential
+							// guess; do not feed the brute-force counter here.
 							# delay failed output by 2 seconds to prevent brute force attacks
 							if (DEVELOPMENT_SERVER!==true) {
 								sleep(2);
@@ -494,6 +753,10 @@ class login extends common {
 								}
 
 						}//end if(!security::is_global_admin($section_id))
+
+					// SEC-019: SAML code resolved to an active, authorised account; clear
+					// the throttle counter for this code+IP key.
+						self::clear_failed_login_attempts($throttle_key);
 
 					// LOGIN (ALL IS OK) - INIT LOGIN SEQUENCE WHEN ALL IS OK
 
@@ -542,6 +805,9 @@ class login extends common {
 							)
 						);
 
+					// SEC-019: an unknown SAML code is the canonical brute-force signal
+					// for this path; record it.
+					self::record_failed_login_attempt($throttle_key);
 					# delay failed output after 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
 						sleep(2);
@@ -859,6 +1125,20 @@ class login extends common {
 					}
 			}
 
+		// SEC-004: regenerate session ID on successful authentication to prevent session fixation.
+		// Must run BEFORE writing any auth-related data to $_SESSION so the previous (anonymous /
+		// possibly attacker-planted) session id cannot be replayed.
+			if (session_status() === PHP_SESSION_ACTIVE) {
+				try {
+					session_regenerate_id(true);
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__
+						. ' session_regenerate_id failed: ' . $e->getMessage()
+						, logger::WARNING
+					);
+				}
+			}
+
 		// is_global_admin (before set user session vars)
 			$is_global_admin = (bool)security::is_global_admin($user_id);
 			$_SESSION['dedalo']['auth']['is_global_admin'] = $is_global_admin;
@@ -1001,7 +1281,16 @@ class login extends common {
 			$response->result_options->user_id		= $user_id;
 
 		// add cookie dedalo_logged (used to check some features in same domain web)
-			setcookie('dedalo_logged', 'true', time() + (86400 * 1), '/');
+		// SEC-013: add Secure/SameSite flags. HttpOnly is intentionally false because
+		// the same-domain web reads this signal from JavaScript.
+			$dedalo_logged_secure = (defined('DEDALO_PROTOCOL') && DEDALO_PROTOCOL === 'https://');
+			setcookie('dedalo_logged', 'true', [
+				'expires'  => time() + 86400,
+				'path'     => '/',
+				'secure'   => $dedalo_logged_secure,
+				'httponly' => false,
+				'samesite' => 'Lax'
+			]);
 
 		// log : Prepare and save login action
 			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
@@ -1405,7 +1694,15 @@ class login extends common {
 			);
 
 		// remove cookie dedalo_logged (used to check some features in same domain web)
-			setcookie('dedalo_logged', 'false', 1, '/');
+		// SEC-013: keep flag parity with the set path so the browser actually overwrites the value.
+			$dedalo_logged_secure = (defined('DEDALO_PROTOCOL') && DEDALO_PROTOCOL === 'https://');
+			setcookie('dedalo_logged', 'false', [
+				'expires'  => 1,
+				'path'     => '/',
+				'secure'   => $dedalo_logged_secure,
+				'httponly' => false,
+				'samesite' => 'Lax'
+			]);
 
 		// delete session
 			unset($_SESSION['dedalo']);

@@ -1022,9 +1022,13 @@ class update {
 
 		$str_values = json_encode($values);
 
-		$SQL_update = 'INSERT INTO "matrix_updates" ("data") VALUES (\''.$str_values.'\');';
-
-		self::SQL_update($SQL_update);
+		// Use parameter binding (security: json_encode does not escape single quotes,
+		// so concatenation into a SQL literal would be vulnerable if any callable
+		// passes a $version_to_update containing a single quote).
+		matrix_db_manager::exec_search(
+			'INSERT INTO "matrix_updates" ("data") VALUES ($1)',
+			[$str_values]
+		);
 		debug_log(__METHOD__
 			." Updated table 'matrix_updates' with values: ". PHP_EOL
 			. json_encode($str_values, JSON_PRETTY_PRINT)

@@ -69,22 +69,6 @@ class search_tm extends search {
 
 
 	/**
-	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* Custom default order for time machine
-	* @return void
-	*/
-	public function build_sql_filter_by_locators_order() : void {
-
-		$string_query = 'id DESC';
-
-		if (!in_array($string_query, $this->sql_obj->order)) {
-			$this->sql_obj->order[] = $string_query;
-		}
-	}//end build_sql_filter_by_locators_order
-
-
-
-	/**
 	* BUILD_SQL_QUERY_SELECT
 	* select_object sample:
 	* {

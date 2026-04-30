@@ -61,7 +61,8 @@ core/extras/*
 !core/extras/muvaet
 
 # vendor (composer)
-vendor/*
+vendor/
+lib/vendor/
 #composer.json
 composer.lock
 composer.phar
@@ -169,4 +170,4 @@ cline_mcp_settings.json
 /code
 diff_*.txt
 /lib/acc
-vendor/composer/installed.php
+security-audit

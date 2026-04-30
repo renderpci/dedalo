@@ -975,6 +975,7 @@ class search {
 		$this->build_main_where();
 		$this->build_sql_filter();
 		$this->build_sql_filter_by_locators();
+		$this->build_sql_projects_filter();
 		$this->build_filter_by_user_records();
 
 		// column_id to count. default is 'section_id', but in time machine must be 'id' because 'section_id' is not unique

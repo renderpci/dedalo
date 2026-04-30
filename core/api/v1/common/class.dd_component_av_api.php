@@ -11,6 +11,20 @@ final class dd_component_av_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable;
+	* it must also be added here.
+	*/
+	public const API_ACTIONS = [
+		'download_fragment',
+		'get_media_streams',
+		'create_posterframe',
+		'delete_posterframe'
+	];
+
+
+
+	/**
 	* DOWNLOAD_FRAGMENT
 	* Creates a fragment from given av file with TC in:out
 	*
@@ -49,6 +63,9 @@ final class dd_component_av_api {
 			$tc_in_secs		= $options->tc_in_secs;
 			$tc_out_secs	= $options->tc_out_secs;
 			$watermark		= $options->watermark;
+
+		// SEC: read permission required to download a media fragment
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// response
 			$response = new stdClass();
@@ -138,6 +155,9 @@ final class dd_component_av_api {
 
 		// options
 			$options = $rqo->options;
+
+		// SEC: read permission required to read media stream metadata
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo,true);
@@ -273,6 +293,9 @@ final class dd_component_av_api {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 
+		// SEC: write permission required to create a posterframe
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
+
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo,true);
 			$component	= component_common::get_instance(
@@ -326,6 +349,9 @@ final class dd_component_av_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// SEC: write permission required to delete a posterframe
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo,true);

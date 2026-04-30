@@ -18,6 +18,16 @@ class tool_lang_multi extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'automatic_translation'
+	];
+
+
+
+	/**
 	* AUTOMATIC_TRANSLATION
 	* Alias of tool_lang mthod
 	* Exec a translation request against the translator service given (babel, google, etc.)

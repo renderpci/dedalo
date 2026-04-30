@@ -9,6 +9,19 @@ final class dd_ts_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'get_node_data',
+		'get_children_data',
+		'add_child',
+		'update_parent_data',
+		'save_order'
+	];
+
+
+
+	/**
 	* GET_NODE_DATA
 	* Get JSON data of of current element
 	* @param object $rqo
@@ -36,6 +49,11 @@ final class dd_ts_api {
 			$area_model				= $source->area_model ?? 'area_thesaurus';
 			$options				= $rqo->options ?? new stdClass();
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
+
+		// SEC: read permission required to view thesaurus node data
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
 
 		// ts_object_options. thesaurus_view_mode
 			$ts_object_options = new stdClass();
@@ -136,6 +154,11 @@ final class dd_ts_api {
 			$options				= $rqo->options ?? new stdClass();
 			$pagination				= $options->pagination ?? null;
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
+
+		// SEC: read permission required to view thesaurus children data
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
 
 		// ts_object_options. thesaurus_view_mode
 			$ts_object_options = new stdClass();

@@ -11,6 +11,17 @@ final class dd_component_portal_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable;
+	* it must also be added here.
+	*/
+	public const API_ACTIONS = [
+		'delete_locator'
+	];
+
+
+
+	/**
 	* DELETE_LOCATOR
 	* Remove the coincident locators from component data and save the result
 	* This method is used by tool_indexation to remove tags from component_portal related to transcription
@@ -53,6 +64,8 @@ final class dd_component_portal_api {
 			$locator		= $options->locator; // object e.g. {tag_id:"2",type:"dd96"}
 			$ar_properties	= $options->ar_properties ?? []; // array properties to compare e.g. ['tag_id','type']
 
+		// SEC: write permission required to delete data from the component
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// tags_index. component. Remove locators with the tag_id given
 			$model_name	= ontology_node::get_model_by_tipo($tipo,true);

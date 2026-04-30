@@ -3160,6 +3160,26 @@ abstract class component_common extends common {
 								: 1;
 						break;
 
+					// SEC-024 (§9.4 follow-up): TM bookkeeping components.
+					// When the component lives in the time-machine bookkeeping
+					// section (`dd15`) and is being rendered in tm mode, no
+					// real user has direct schema permissions on `dd15` (it is
+					// not project-assigned). Granting read here is safe because:
+					//   1. Reaching this point requires the caller to have
+					//      already passed the per-record permission gate on
+					//      the *origin* section (see sections_json.php tm path).
+					//   2. The TM rows are constrained by `filter_by_locators`
+					//      to the specific (section_tipo, section_id) the user
+					//      is already viewing — no cross-record exposure.
+					//   3. Write/revert flows go through `tool_time_machine`
+					//      which has its own per-record gate (see
+					//      tool_time_machine::apply_value /
+					//      bulk_revert_process).
+					case ($this->mode==='tm'
+						&& $this->section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO):
+						$this->permissions = 1; // read-only schema render
+						break;
+
 					// IRI dataframe case. Allow users access to component_iri dataframe (is generic).
 					case ($this->tipo==='dd560'):
 						$this->permissions = 2;

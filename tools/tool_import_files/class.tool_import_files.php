@@ -27,6 +27,31 @@ class tool_import_files extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. Internal helpers with positional or
+	* non-rqo signatures (e.g. set_media_file, get_media_file_date,
+	* set_components_data) are intentionally absent.
+	*/
+	public const API_ACTIONS = [
+		'file_processor',
+		'import_files',
+		'get_media_section_match_from_souce',
+		'get_media_section_match'
+	];
+
+	/**
+	* SEC-024 / §9.1b: explicit CLI allowlist for `process_runner.php`.
+	* Only `import_files` runs with `background_running:true` from JS
+	* (see `tools/tool_import_files/js/tool_import_files.js`).
+	* @see core/base/process_runner.php
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'import_files'
+	];
+
+
+
+	/**
 	 * GET_FILE_DATA
 	 * Extract file information using regex to parse filename patterns.
 	 * Analyzes filename components to identify section IDs, target fields, and file metadata.
@@ -401,6 +426,11 @@ class tool_import_files extends tool_common {
 			$custom_target_quality		= $options->custom_target_quality ?? null;
 			$components_temp_data		= $options->components_temp_data ?? null;
 
+		// SEC-024 (§9.2): WRITE gate on the destination section.
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 2, __METHOD__);
+			}
+
 		# FILE_PROCESSOR
 		# Global var button properties JSON data array
 		# Optional additional file script processor defined in button import properties
@@ -534,6 +564,15 @@ class tool_import_files extends tool_common {
 				$response->errors[] = 'Empty files data';
 				return $response;
 			}
+
+		// SEC-024 (§9.2): WRITE gate. import_files materialises uploaded
+		// content into the target section. Caller must have write (>=2) on
+		// (section_tipo, tipo).
+			if (empty($section_tipo) || empty($tipo)) {
+				$response->msg = 'Error. Missing section_tipo or tipo';
+				return $response;
+			}
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
 
 		// import_mode: section|section_resource|default
 		// Note that the tool buttons are conditional upon import mode.

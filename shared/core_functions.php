@@ -1506,7 +1506,11 @@ function safe_xss(mixed $value) : mixed {
 
 	if (!empty($value) && is_string($value)) {
 
-		if ($decode_json=json_decode($value)) {
+		// SEC-022: rely on json_last_error rather than truthiness so that valid-but-falsy
+		// JSON values ("null", "false", "0", "\"\"") are still treated as JSON and sanitized
+		// recursively, instead of being double-escaped as plain strings.
+		$decode_json = json_decode($value);
+		if (json_last_error() === JSON_ERROR_NONE && (is_object($decode_json) || is_array($decode_json))) {
 			// If var is a stringify JSON, sanitize the decoded content recursively
 			$decode_json = safe_xss_recursive($decode_json);
 			$value = json_encode($decode_json, JSON_UNESCAPED_UNICODE);
@@ -1733,21 +1737,12 @@ function session_start_manager(array $options) : bool {
 
 
 
-/**
-* SAFE_TABLE
-* Remove extra malicious code
-* @param string $table
-* @return string|bool $table
-*/
-function safe_table(string $table) : string|bool {
-
-	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
-	if ( empty($output_array) || empty($output_array[0]) ) {
-		return false;
-	}
-
-	return $table;
-}//end safe_table
+// SEC-045: removed `safe_table()` (was at this location). Zero callers in
+// production / CLI / tests (verified by repo-wide grep). The function name
+// suggested SQLi protection but the regex `^[a-zA-Z_]+$` rejected legitimate
+// table names containing digits and was never relied on. Use
+// `pg_escape_identifier($conn, $table)` (see `core/db/class.DBi.php`) when a
+// table identifier needs to be safely interpolated.
 
 
 
@@ -2456,7 +2451,14 @@ function get_file_extension(string $name, bool $lowercase=true) : string {
 
 /**
 * GET_CLIENT_IP
-* Cascade client IP resolution from server vars
+* Cascade client IP resolution from server vars.
+*
+* SEC-017: this function trusts client-controllable headers
+* (HTTP_CLIENT_IP, HTTP_X_FORWARDED_FOR, HTTP_FORWARDED, ...). It is acceptable
+* for *informational* uses such as logging the apparent client IP, but it MUST
+* NOT be used to make security decisions (allowlisting, rate-limiting, audit
+* trust). Use {@see get_client_ip_trusted()} for those.
+*
 * @return string $ip_address
 */
 function get_client_ip() : string {
@@ -2486,6 +2488,117 @@ function get_client_ip() : string {
 
 	return $ip_address;
 }//end get_client_ip
+
+
+
+/**
+* GET_CLIENT_IP_TRUSTED
+* Returns the connecting peer's IP address, suitable for security decisions.
+*
+* By default the function returns $_SERVER['REMOTE_ADDR'] verbatim. Forwarded
+* headers (X-Forwarded-For, Forwarded, X-Real-IP) are honoured ONLY when the
+* immediate peer's REMOTE_ADDR matches one of the addresses listed in the
+* DEDALO_TRUSTED_PROXIES configuration constant. This prevents an arbitrary
+* client from spoofing its source IP by injecting an X-Forwarded-For header.
+*
+* DEDALO_TRUSTED_PROXIES, when defined, must be an array of literal IP addresses
+* (CIDR notation is not supported here). Example:
+*     define('DEDALO_TRUSTED_PROXIES', ['127.0.0.1', '10.0.0.5']);
+*
+* @return string IP address or empty string if it cannot be determined.
+*/
+function get_client_ip_trusted() : string {
+
+	$remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+	if ($remote_addr === '') {
+		return '';
+	}
+
+	$trusted = (defined('DEDALO_TRUSTED_PROXIES') && is_array(DEDALO_TRUSTED_PROXIES))
+		? DEDALO_TRUSTED_PROXIES
+		: [];
+
+	// If the immediate peer is not a trusted proxy, ignore forwarded headers.
+	if (!in_array($remote_addr, $trusted, true)) {
+		return $remote_addr;
+	}
+
+	// Trusted proxy path: walk X-Forwarded-For from right to left, returning
+	// the first address that is itself NOT a trusted proxy. That is the
+	// originating client per RFC 7239.
+	$forwarded_for = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+	if ($forwarded_for !== '') {
+		$candidates = array_map('trim', explode(',', $forwarded_for));
+		for ($i = count($candidates) - 1; $i >= 0; $i--) {
+			$candidate = $candidates[$i];
+			if ($candidate !== '' && !in_array($candidate, $trusted, true)) {
+				return $candidate;
+			}
+		}
+	}
+
+	return $remote_addr;
+}//end get_client_ip_trusted
+
+
+
+/**
+* SAML_SAFE_REDIRECT_TARGET
+* SEC-014: turn a SAML RelayState (or any other user-controllable redirect
+* target) into a URL that is guaranteed to live under DEDALO_ROOT_WEB.
+*
+* Rejected inputs (all fall back to DEDALO_ROOT_WEB):
+*  - non-string / empty values
+*  - absolute URLs (`http://...`, `https://...`, `javascript:...`, ...)
+*  - protocol-relative URLs (`//evil.example/...`)
+*  - backslash-prefixed values (Windows-style `\\evil`)
+*  - URLs whose final form does not start with DEDALO_ROOT_WEB
+*
+* Accepted inputs:
+*  - relative paths (`/foo/bar`, `foo/bar`) under the same origin
+*  - already-DEDALO_ROOT_WEB-prefixed absolute paths
+*
+* @param mixed $relay_state
+* @return string Safe absolute path/URL to redirect to.
+*/
+function saml_safe_redirect_target(mixed $relay_state) : string {
+
+	$fallback = defined('DEDALO_ROOT_WEB') ? (string)DEDALO_ROOT_WEB : '/';
+
+	if (!is_string($relay_state) || $relay_state === '') {
+		return $fallback;
+	}
+
+	$candidate = trim($relay_state);
+	if ($candidate === '') {
+		return $fallback;
+	}
+
+	// Block obviously hostile prefixes before any further parsing.
+	if (str_starts_with($candidate, '//')
+		|| str_starts_with($candidate, '\\')
+		|| preg_match('/^[a-z][a-z0-9+.-]*:/i', $candidate) === 1
+	) {
+		// Absolute or protocol-relative; only allow if it is an exact
+		// DEDALO_ROOT_WEB-prefixed URL (e.g. fully-qualified URLs the IdP
+		// might echo back to us).
+		if (str_starts_with($candidate, $fallback)) {
+			return $candidate;
+		}
+		return $fallback;
+	}
+
+	// Path-only candidate. Normalise leading slash and ensure it stays under
+	// the configured web root.
+	$path = $candidate[0] === '/' ? $candidate : ('/' . $candidate);
+	$root = rtrim($fallback, '/');
+	if ($root === '' || str_starts_with($path, $root . '/') || $path === $root) {
+		return $path;
+	}
+	// $root has a non-trivial prefix and $path doesn't include it; prepend.
+	return $root . $path;
+}//end saml_safe_redirect_target
+
 
 
 

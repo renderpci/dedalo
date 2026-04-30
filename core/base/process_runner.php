@@ -126,9 +126,45 @@
 		die('Invalid method');
 	}
 
+	// SEC: opt-in per-class allowlist (mirrors SEC-024 / dd_manager::API_ACTIONS).
+	// When the dispatched class declares a BACKGROUND_RUNNABLE class constant
+	// the method MUST appear in it; otherwise we fall back to the historical
+	// "any public-static method on the class is callable" rule. The opt-in
+	// form is strongly preferred for new classes because process_runner is a
+	// second API surface that bypasses dd_manager's own allowlist.
+	if (defined($output_class_name . '::BACKGROUND_RUNNABLE')) {
+		$bg_runnable = constant($output_class_name . '::BACKGROUND_RUNNABLE');
+		if (!is_array($bg_runnable) || !in_array($output_method_name, $bg_runnable, true)) {
+			debug_log(__METHOD__
+				. " Error. Method not in BACKGROUND_RUNNABLE allowlist: "
+				. $output_class_name . '::' . $output_method_name
+				, logger::ERROR
+			);
+			die('Method not allowed for background execution');
+		}
+	}
+
 	// exec output
 	$output_params	= (object)json_decode( json_encode($output_params) );
-	$output_result	= $output_class_name::$output_method_name($output_params);
+	try {
+		$output_result	= $output_class_name::$output_method_name($output_params);
+	} catch (permission_exception $e) {
+		// SEC: the dispatched method tripped a security::assert_* gate.
+		// Convert to a uniform response shape so the parent (SSE / poll) gets
+		// valid JSON and not a fatal-error trace on its stdout pipe.
+		debug_log(__METHOD__
+			. ' permission_exception in CLI: ' . $e->getMessage() . PHP_EOL
+			. ' context: ' . $e->api_context . PHP_EOL
+			. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+			. ' class: ' . $output_class_name . '::' . $output_method_name
+			, logger::ERROR
+		);
+		$output_result = (object)[
+			'result' => false,
+			'msg'    => 'Error. ' . $e->getMessage(),
+			'errors' => ['permissions_denied'],
+		];
+	}
 
 
 // log write notification

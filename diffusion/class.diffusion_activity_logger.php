@@ -39,6 +39,10 @@ class diffusion_activity_logger {
 		if ($user_id) {
 			$component_tipo = 'dd1762';
 			$model			= ontology_node::get_model_by_tipo($component_tipo);
+			if(empty($model)) {
+				debug_log("Model not found for component tipo: {$component_tipo}");
+				return false;
+			}
 			$column_name	= section_record_data::get_column_name($model);
 
 			if ($column_name) {

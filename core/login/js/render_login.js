@@ -447,6 +447,7 @@ const get_content_data = function(self) {
 			parent			: powered_by
 		})
 		link.target = '_blank'
+		link.rel    = 'noopener noreferrer' // SEC-033
 
 	// messages_container
 	const messages_container = ui.create_dom_element({

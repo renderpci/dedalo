@@ -9,6 +9,36 @@ final class dd_utils_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable;
+	* it must also be added here.
+	*/
+	public const API_ACTIONS = [
+		'get_login_context',
+		'get_install_context',
+		'get_system_info',
+		'convert_search_object_to_sql_query',
+		'change_lang',
+		'login',
+		'quit',
+		'install',
+		'upload',
+		'join_chunked_files_uploaded',
+		'list_uploaded_files',
+		'delete_uploaded_file',
+		'update_lock_components_state',
+		'get_dedalo_files',
+		'get_process_status',
+		'get_process_status_poll',
+		'stop_process',
+		'get_server_ready_status',
+		'get_ontology_update_info',
+		'get_code_update_info'
+	];
+
+
+
+	/**
 	* GET_LOGIN_CONTEXT
 	* This function is not used in normal login behavior (login is called directly in start API).
 	* It could be called when the instance of the login has been build with autoload in true.
@@ -588,6 +618,27 @@ final class dd_utils_api {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. '.label::get_label('error_on_upload_file');
+
+		// SEC: when the upload targets a specific tipo, require write permission
+			// on its section. If $tipo is empty (generic scratch / tool_upload
+			// case) we fall back to the historical "logged-only + per-user
+			// path scoping" behaviour because the file is unbound until the
+			// component save flow consumes it (which is itself permission-gated).
+			if (!empty($tipo) && safe_tipo($tipo)===true) {
+				$target_section_tipo = ontology::map_tld_to_target_section_tipo(
+					get_tld_from_tipo($tipo)
+				);
+				if (!empty($target_section_tipo)) {
+					try {
+						security::assert_section_permission($target_section_tipo, 2, __METHOD__);
+					} catch (permission_exception $e) {
+						$response->msg .= ' permissions_denied';
+						$response->errors = $response->errors ?? [];
+						$response->errors[] = 'permissions_denied';
+						return $response;
+					}
+				}
+			}
 
 		// check for upload issues
 		try {
@@ -1250,6 +1301,13 @@ final class dd_utils_api {
 				? 'Debug user'
 				: (logged_user_full_username() ?? 'Unknown');
 
+		// SEC: read permission on the section is required to participate in
+			// its lock-components state. Prevents fabricating focus/blur events
+			// on records the user has no access to.
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
+
 		// event_element
 			$event_element = new stdClass();
 				$event_element->section_id		= $section_id;
@@ -1408,6 +1466,24 @@ final class dd_utils_api {
 				die('Authentication error: please login');
 			}
 
+		// SEC: ownership check. The pid/pfile must belong to the logged user
+			// (or the logged user must be superuser). Prevents reading other
+			// users' background process output by guessing/leaking pid.
+			if (!empty($pid) && !empty($pfile)) {
+				$logged_user_id	= logged_user_id();
+				$is_superuser	= ((int)$logged_user_id === DEDALO_SUPERUSER);
+				$entry			= processes::get_process_item((int)$pid, (string)$pfile);
+				if ($entry === null || (!$is_superuser && (int)($entry->user_id ?? 0) !== (int)$logged_user_id)) {
+					debug_log(__METHOD__
+						. ' Denied process status read: process not owned by logged user' . PHP_EOL
+						. ' pid: ' . to_string($pid) . PHP_EOL
+						. ' logged_user_id: ' . to_string($logged_user_id)
+						, logger::ERROR
+					);
+					die('Authentication error: process not owned by current user');
+				}
+			}
+
 		// header print as event stream
 			header("Content-Type: text/event-stream");
 			header("Cache-Control: no-cache, must-revalidate");
@@ -1540,6 +1616,121 @@ final class dd_utils_api {
 
 		die();
 	}//end get_process_status
+
+
+
+	/**
+	* GET_PROCESS_STATUS_POLL
+	* One-shot polling version of get_process_status.
+	* Reads the process file once and returns a standard JSON response.
+	* Unlike the SSE version (`get_process_status`), this method does NOT use
+	* streaming, die(), or blocking loops — making it compatible with both
+	* PHP-FPM and RoadRunner worker contexts.
+	*
+	* The client calls this endpoint repeatedly via setInterval to monitor
+	* process progress with the same functional result as SSE at 1s update_rate.
+	*
+	* @param object $rqo
+	* {
+	*   options: {
+	*     pid:   int    Process ID
+	*     pfile: string Process output file name
+	*   }
+	* }
+	* @return object $response
+	* {
+	*   result:     bool
+	*   pid:        int
+	*   pfile:      string
+	*   is_running: bool
+	*   data:       object  { msg, counter, total, ... }
+	*   time:       string  Current server time
+	*   errors:     array
+	* }
+	*/
+	public static function get_process_status_poll(object $rqo) : object {
+
+		// session unlock
+			session_write_close();
+
+		// response
+			$response = new stdClass();
+				$response->result		= false;
+				$response->msg			= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors		= [];
+
+		// only logged users can access process status
+			if (login::is_logged()!==true) {
+				$response->msg = 'Authentication error: please login';
+				$response->errors[] = 'Not logged';
+				return $response;
+			}
+
+		// options
+			$pfile	= $rqo->options->pfile ?? null;
+			$pid	= $rqo->options->pid ?? null;
+
+		// mandatory vars
+			if (empty($pfile) || empty($pid)) {
+				$response->msg = 'Error: pfile and pid are mandatory';
+				$response->errors[] = 'Missing pfile or pid';
+				return $response;
+			}
+
+		// SEC: ownership check. Same as get_process_status (SSE variant).
+			$logged_user_id	= logged_user_id();
+			$is_superuser	= ((int)$logged_user_id === DEDALO_SUPERUSER);
+			$entry			= processes::get_process_item((int)$pid, (string)$pfile);
+			if ($entry === null || (!$is_superuser && (int)($entry->user_id ?? 0) !== (int)$logged_user_id)) {
+				debug_log(__METHOD__
+					. ' Denied process status poll: process not owned by logged user' . PHP_EOL
+					. ' pid: ' . to_string($pid) . PHP_EOL
+					. ' logged_user_id: ' . to_string($logged_user_id)
+					, logger::ERROR
+				);
+				$response->msg		= 'Authentication error: process not owned by current user';
+				$response->errors[]	= 'process not owned by current user';
+				return $response;
+			}
+
+		// process
+			$process = new process();
+				$process->setPid($pid);
+				$process->setFile(process::get_process_path() .'/'. $pfile);
+
+		// read process info (one shot)
+			$is_running	= $process->status(); // bool
+			$array_data	= $process->read(); // array
+
+			// decode last line
+			$value = isset($array_data[0])
+				? (json_decode($array_data[0]) ?? $array_data[0])
+				: '';
+
+			$data = is_object($value)
+				? $value
+				: (object)['msg' => $value];
+
+		// clean up finished process
+			if ($is_running===false) {
+				processes::delete_process_item(
+					$pid,
+					logged_user_id()
+				);
+			}
+
+		// response
+			$response->result		= true;
+			$response->pid			= $pid;
+			$response->pfile		= $pfile;
+			$response->is_running	= $is_running;
+			$response->data			= $data;
+			$response->time			= date("Y-m-d H:i:s");
+			$response->errors		= [];
+
+
+		return $response;
+	}//end get_process_status_poll
 
 
 

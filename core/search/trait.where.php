@@ -161,6 +161,19 @@ trait where {
 		$total		= count($ar_value);
 		$operator	= strtoupper( substr($op, 1) );
 
+		// Allowlist of valid logical operators (security: $op is the user-supplied
+		// JSON key from sqo->filter, e.g. '$AND', '$OR'; without this gate any
+		// string would be concatenated into the WHERE clause as raw SQL).
+		$valid_logical_operators = ['AND','OR','NOT','NAND','NOR'];
+		if (!in_array($operator, $valid_logical_operators, true)) {
+			debug_log(__METHOD__
+				." Invalid logical operator received from filter key. Filter ignored." . PHP_EOL
+				.' op: ' . to_string($op)
+				, logger::ERROR
+			);
+			return '';
+		}
+
 		foreach ($ar_value as $key => $search_object) {
 
 			if( $search_object===false ) {

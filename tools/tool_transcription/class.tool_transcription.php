@@ -35,6 +35,27 @@
  */
 class tool_transcription extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		// SEC-024 (§9.2): get_text_from_pdf removed — it accepts an arbitrary
+		// `path_pdf` filesystem path with no authorisation check. It is used
+		// internally by the transcription pipeline; callers should go through
+		// `tool_pdf_extractor::get_pdf_data` which enforces a per-component
+		// permission gate.
+		'automatic_transcription',
+		'create_transcribable_audio_file',
+		'delete_transcribable_audio_file',
+		'check_server_transcriber_status',
+		'build_subtitles_file'
+	];
+
+
+
 	/**
 	 * GET_TEXT_FROM_PDF
 	 * Extract text from PDF file with page numbering and UTF-8 validation
@@ -192,6 +213,24 @@ class tool_transcription extends tool_common {
 	 * @subpackage Media
 	 */
 	public static function automatic_transcription( object $options ) : object {
+
+		// SEC-024 (§9.2): WRITE gate. Result is written into transcription_ddo.
+			$transcription_ddo = $options->transcription_ddo ?? null;
+			if (is_object($transcription_ddo) && !empty($transcription_ddo->section_tipo)) {
+				security::assert_section_permission(
+					$transcription_ddo->section_tipo,
+					2,
+					__METHOD__
+				);
+				// SEC-024 (§9.4): per-record gate.
+				if (!empty($transcription_ddo->section_id)) {
+					security::assert_record_in_user_scope(
+						$transcription_ddo->section_tipo,
+						(int)$transcription_ddo->section_id,
+						__METHOD__
+					);
+				}
+			}
 
 		$response = new stdClass();
 			$response->result = false;
@@ -360,6 +399,20 @@ class tool_transcription extends tool_common {
 	 */
 	public static function create_transcribable_audio_file( object $options ) : object {
 
+		// SEC-024 (§9.2): WRITE gate on the source media component.
+			$media_ddo = $options->media_ddo ?? null;
+			if (is_object($media_ddo) && !empty($media_ddo->section_tipo)) {
+				security::assert_section_permission($media_ddo->section_tipo, 2, __METHOD__);
+				// SEC-024 (§9.4): per-record gate.
+				if (!empty($media_ddo->section_id)) {
+					security::assert_record_in_user_scope(
+						$media_ddo->section_tipo,
+						(int)$media_ddo->section_id,
+						__METHOD__
+					);
+				}
+			}
+
 		$response = new stdClass();
 			$response->result = false;
 			$response->msg = 'Error. Request failed ['.__FUNCTION__.']';
@@ -447,6 +500,20 @@ class tool_transcription extends tool_common {
 	 * @subpackage Media
 	 */
 	public static function delete_transcribable_audio_file( object $options ) : object {
+
+		// SEC-024 (§9.2): WRITE gate on the media component.
+			$media_ddo = $options->media_ddo ?? null;
+			if (is_object($media_ddo) && !empty($media_ddo->section_tipo)) {
+				security::assert_section_permission($media_ddo->section_tipo, 2, __METHOD__);
+				// SEC-024 (§9.4): per-record gate.
+				if (!empty($media_ddo->section_id)) {
+					security::assert_record_in_user_scope(
+						$media_ddo->section_tipo,
+						(int)$media_ddo->section_id,
+						__METHOD__
+					);
+				}
+			}
 
 		$response = new stdClass();
 			$response->result = false;
@@ -539,6 +606,21 @@ class tool_transcription extends tool_common {
 	 * @subpackage Media
 	 */
 	public static function check_server_transcriber_status( object $options ) : object {
+
+		// SEC-024 (§9.2): READ gate. Status polling for the user's own job; we
+		// still gate by media_ddo section to prevent cross-user PID polling.
+			$media_ddo = $options->media_ddo ?? null;
+			if (is_object($media_ddo) && !empty($media_ddo->section_tipo)) {
+				security::assert_section_permission($media_ddo->section_tipo, 1, __METHOD__);
+				// SEC-024 (§9.4): per-record gate.
+				if (!empty($media_ddo->section_id)) {
+					security::assert_record_in_user_scope(
+						$media_ddo->section_tipo,
+						(int)$media_ddo->section_id,
+						__METHOD__
+					);
+				}
+			}
 
 		$response = new stdClass();
 			$response->result = false;
@@ -669,6 +751,27 @@ class tool_transcription extends tool_common {
 	 * @subpackage Media
 	 */
 	public static function build_subtitles_file( object $options ) : object {
+
+		// SEC-024 (§9.2): WRITE gate on the (section_tipo, component_tipo).
+			$bs_section_tipo = $options->section_tipo ?? null;
+			$bs_component_tipo = $options->component_tipo ?? null;
+			$bs_section_id = $options->section_id ?? null;
+			if (!empty($bs_section_tipo) && !empty($bs_component_tipo)) {
+				security::assert_tipo_permission(
+					$bs_section_tipo,
+					$bs_component_tipo,
+					2,
+					__METHOD__
+				);
+				// SEC-024 (§9.4): per-record gate.
+				if (!empty($bs_section_id)) {
+					security::assert_record_in_user_scope(
+						$bs_section_tipo,
+						(int)$bs_section_id,
+						__METHOD__
+					);
+				}
+			}
 
 		$response = new stdClass();
 			$response->result = false;

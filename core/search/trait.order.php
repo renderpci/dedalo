@@ -83,20 +83,67 @@ trait order {
 				$ar_order = [];
 				foreach ($this->sqo->order as $order_obj) {
 
-					$direction		= strtoupper($order_obj->direction);
+					// direction. Allowlist (security: $order_obj->direction is user-supplied;
+					// without this gate any string would be concatenated into ORDER BY as raw SQL).
+					$raw_direction = strtoupper(trim((string)($order_obj->direction ?? 'ASC')));
+					$direction = in_array($raw_direction, ['ASC','DESC'], true)
+						? $raw_direction
+						: 'ASC';
+
 					$path			= $order_obj->path;
 					$end_path		= end($path);
 					$component_tipo	= $end_path->component_tipo;
 					$column			= $end_path->column ?? null; // special optional full definition column (e.g. date)
+					$column_sql		= $end_path->column_sql ?? null;
 
-					if( isset($column) ) {
+					// component_tipo validation (security: $component_tipo is user-supplied and
+					// flows into select/order aliases). It must either be a direct column
+					// (e.g. 'id', 'section_id') or a real component tipo (`^[a-z]+[0-9]+$`).
+					$is_direct_column = in_array($component_tipo, search::$ar_direct_columns, true);
+					if (!$is_direct_column && self::trim_tipo((string)$component_tipo) === null) {
+						debug_log(__METHOD__
+							." Ignored order entry with invalid component_tipo " . PHP_EOL
+							.' component_tipo: ' . to_string($component_tipo)
+							, logger::ERROR
+						);
+						continue;
+					}
 
-						// column case. Special optional full definition column (e.g. date)
+					if( isset($column_sql) ) {
+
+						// SEC-036 follow-up: trusted server-built SQL fragment. Skip the
+						// strict identifier regex because the value legitimately contains
+						// jsonb-path/operators/parens. Only set this from server-side
+						// builders that have already validated their interpolated tipos
+						// and integer-cast their ids; HTTP API SQO must NOT carry this
+						// field.
+						$alias = $component_tipo . '_order';
+						$select_sentence = (string)$column_sql . ' as ' . $alias;
+						$this->sql_obj->select[] = $select_sentence;
+						$order_sentence = $alias . ' ' . $direction;
+
+					}else if( isset($column) ) {
+
+						// column case. Special optional full definition column (e.g. date, section_id).
+						//
+						// Security: $column is read straight from the user-supplied SQO path object
+						// (`$end_path->column`), so it MUST be a strict simple SQL identifier. The previous
+						// denylist tolerated SELECT/parens-wrapped sub-queries (e.g. "(SELECT pg_sleep(5))")
+						// which do not contain UNION/DROP/etc keywords. Allowlist-only fixes that.
+						$column_str = (string)$column;
+						if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column_str)) {
+							debug_log(__METHOD__
+								." Ignored order entry with non-identifier column name " . PHP_EOL
+								.' column: ' . to_string($column)
+								, logger::ERROR
+							);
+							continue;
+						}
 
 						$alias = $component_tipo . '_order';
 
 						// Add to select columns
-						$select_sentence = $column . ' as ' . $alias; // add alias name;
+						$select_sentence = $column_str . ' as ' . $alias; // add alias name;
 						$this->sql_obj->select[] = $select_sentence;
 
 						// Order sentence
@@ -197,33 +244,6 @@ trait order {
 			$this->sql_obj->order_default[] = $sentence;
 		}
 	}//end build_sql_query_order_default
-
-
-
-	/**
-	* BUILD_SQL_FILTER_BY_LOCATORS_ORDER
-	* @return void
-	*/
-	public function build_sql_filter_by_locators_order() : void {
-
-		if ( empty($this->sqo->filter_by_locators) ) {
-			return;
-		}
-
-		$ar_values = [];
-		foreach ($this->sqo->filter_by_locators as $key => $current_locator) {
-
-			$value  = '(\''.$current_locator->section_tipo.'\'';
-			$value .= ','.$current_locator->section_id;
-			$value .= ','.($key+1).')';
-
-			$ar_values[] = $value;
-		}
-
-		$string_query = 'LEFT JOIN (VALUES ' . implode(',', $ar_values) . ') as x(ordering_section, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section ORDER BY x.ordering ASC';
-
-		$this->sql_obj->join[] = $string_query;
-	}//end build_sql_filter_by_locators_order
 
 
 
