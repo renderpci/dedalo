@@ -3637,8 +3637,13 @@ abstract class component_common extends common {
 				}
 				*/
 
-				// Append the new value to the data array
-				$data[] = $changed_data->value;
+				// For monovalue components, replace the existing value instead of appending
+				if(in_array($this->model, self::$components_monovalue)) {
+					$data = [$changed_data->value];
+				} else {
+					// Append the new value to the data array
+					$data[] = $changed_data->value;
+				}
 
 				// Persist the updated data in the current language
 				$this->set_data_lang( $data, $lang );
