@@ -626,6 +626,29 @@ class security {
 
 
 
+	/**
+	* ASSERT_COMPONENT_PERMISSION
+	* Throws if the component's resolved permission level is below required.
+	* Use when an instantiated component is already at hand.
+	* @param component_common $component
+	* @param int $required_level
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_component_permission(
+		component_common $component,
+		int $required_level
+	) : void {
+		$perm = $component->get_component_permissions();
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on component {$component->get_tipo()} (required: $required_level, have: $perm)"
+			);
+		}
+	}//end assert_component_permission
+
+
+
 
 
 }//end class security
