@@ -47,7 +47,8 @@ final class dd_manager {
 		'get_install_context',
 		'get_server_ready_status',
 		'get_ontology_update_info',
-		'get_code_update_info'
+		'get_code_update_info',
+		'get_diffusion_info'
 	];
 
 
