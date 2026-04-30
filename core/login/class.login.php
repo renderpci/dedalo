@@ -446,8 +446,13 @@ class login extends common {
 					return $response;
 				}
 
-			// password match check (constant-time comparison to prevent timing attacks)
-				if( !hash_equals($password_encrypted, $password_data) ) {
+			// password match check
+			// SEC-001/002/007: verify_password() handles both the modern Argon2id
+			// hash and the legacy reversible AES blob. When a legacy match succeeds
+			// we rehash the password with Argon2id and persist it - the user keeps
+			// their existing password, the storage upgrades silently in place.
+				[$password_ok, $password_needs_rehash] = component_password::verify_password($password, $password_data);
+				if (!$password_ok) {
 
 					#
 					# STOP : PASSWORD IS WRONG
@@ -478,7 +483,37 @@ class login extends common {
 						, logger::WARNING
 					);
 					return $response;
-				}//end if( $password_encrypted!==$password_data )
+				}//end if (!$password_ok)
+
+			// SEC-001 lazy upgrade: if the stored value is the legacy AES blob (or
+			// an outdated parameter set) rehash with Argon2id and persist. Best-effort
+			// only; we never block a successful login on a storage upgrade failure.
+				if ($password_needs_rehash === true && $username !== 'root') {
+					try {
+						$upgrade_component = component_common::get_instance(
+							'component_password',
+							DEDALO_USER_PASSWORD_TIPO,
+							$section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							DEDALO_SECTION_USERS_TIPO,
+							false
+						);
+						if ($upgrade_component instanceof component_password) {
+							$upgrade_component->set_data([(object)[ 'value' => $password ]]);
+							$upgrade_component->Save();
+							debug_log(__METHOD__
+								. ' SEC-001 lazy upgrade: rehashed password for user_id=' . $section_id
+								, logger::WARNING
+							);
+						}
+					} catch (Throwable $e) {
+						debug_log(__METHOD__
+							. ' SEC-001 lazy upgrade FAILED for user_id=' . $section_id . ': ' . $e->getMessage()
+							, logger::ERROR
+						);
+					}
+				}
 
 		// active account check
 			$active_account = login::active_account_check( $section_id );
