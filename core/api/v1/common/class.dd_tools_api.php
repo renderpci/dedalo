@@ -9,6 +9,16 @@ final class dd_tools_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'user_tools',
+		'tool_request'
+	];
+
+
+
+	/**
 	* USER_TOOLS
 	* Get user authorized tools filtered by custom list (optional)
 	* @param object $rqo
