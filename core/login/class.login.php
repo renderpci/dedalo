@@ -1263,7 +1263,16 @@ class login extends common {
 			$response->result_options->user_id		= $user_id;
 
 		// add cookie dedalo_logged (used to check some features in same domain web)
-			setcookie('dedalo_logged', 'true', time() + (86400 * 1), '/');
+		// SEC-013: add Secure/SameSite flags. HttpOnly is intentionally false because
+		// the same-domain web reads this signal from JavaScript.
+			$dedalo_logged_secure = (defined('DEDALO_PROTOCOL') && DEDALO_PROTOCOL === 'https://');
+			setcookie('dedalo_logged', 'true', [
+				'expires'  => time() + 86400,
+				'path'     => '/',
+				'secure'   => $dedalo_logged_secure,
+				'httponly' => false,
+				'samesite' => 'Lax'
+			]);
 
 		// log : Prepare and save login action
 			$browser = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
@@ -1667,7 +1676,15 @@ class login extends common {
 			);
 
 		// remove cookie dedalo_logged (used to check some features in same domain web)
-			setcookie('dedalo_logged', 'false', 1, '/');
+		// SEC-013: keep flag parity with the set path so the browser actually overwrites the value.
+			$dedalo_logged_secure = (defined('DEDALO_PROTOCOL') && DEDALO_PROTOCOL === 'https://');
+			setcookie('dedalo_logged', 'false', [
+				'expires'  => 1,
+				'path'     => '/',
+				'secure'   => $dedalo_logged_secure,
+				'httponly' => false,
+				'samesite' => 'Lax'
+			]);
 
 		// delete session
 			unset($_SESSION['dedalo']);
