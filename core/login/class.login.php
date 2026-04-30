@@ -161,6 +161,60 @@ class login extends common {
 
 
 
+	/**
+	* RECORD_FAILED_LOGIN_ATTEMPT
+	* Append a failed-attempt timestamp for the given key.
+	* @param string $key
+	* @return void
+	*/
+	private static function record_failed_login_attempt(string $key) : void {
+
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return;
+		}
+
+		$file = self::get_login_throttle_file($key);
+		if ($file === null) {
+			return;
+		}
+
+		$window = defined('DEDALO_LOGIN_ATTEMPT_WINDOW') ? (int)DEDALO_LOGIN_ATTEMPT_WINDOW : 900;
+		$now    = time();
+
+		$fp = @fopen($file, 'c+');
+		if ($fp === false) {
+			return;
+		}
+		try {
+			if (@flock($fp, LOCK_EX)) {
+				$raw   = stream_get_contents($fp);
+				$state = $raw ? json_decode($raw, true) : null;
+				$attempts = (is_array($state) && isset($state['attempts']) && is_array($state['attempts']))
+					? $state['attempts']
+					: [];
+				// Prune older entries and append the new one.
+				$attempts = array_values(array_filter(
+					$attempts,
+					static fn($ts) => is_numeric($ts) && ((int)$ts > ($now - $window))
+				));
+				$attempts[] = $now;
+				$payload = json_encode([
+					'attempts'   => $attempts,
+					'last_seen'  => $now
+				], JSON_UNESCAPED_SLASHES);
+				ftruncate($fp, 0);
+				rewind($fp);
+				fwrite($fp, $payload);
+				fflush($fp);
+				flock($fp, LOCK_UN);
+			}
+		} finally {
+			fclose($fp);
+		}
+	}//end record_failed_login_attempt
+
+
+
 
 	/**
 	* LOGIN
