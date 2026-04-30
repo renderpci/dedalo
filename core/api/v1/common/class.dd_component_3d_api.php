@@ -11,6 +11,16 @@ final class dd_component_3d_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'move_file_to_dir',
+		'delete_posterframe'
+	];
+
+
+
+	/**
 	* MOVE_FILE_TO_DIR
 	* Move a file from one location to another
 	* Usually used to move posterframe image
