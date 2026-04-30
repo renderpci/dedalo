@@ -2451,7 +2451,14 @@ function get_file_extension(string $name, bool $lowercase=true) : string {
 
 /**
 * GET_CLIENT_IP
-* Cascade client IP resolution from server vars
+* Cascade client IP resolution from server vars.
+*
+* SEC-017: this function trusts client-controllable headers
+* (HTTP_CLIENT_IP, HTTP_X_FORWARDED_FOR, HTTP_FORWARDED, ...). It is acceptable
+* for *informational* uses such as logging the apparent client IP, but it MUST
+* NOT be used to make security decisions (allowlisting, rate-limiting, audit
+* trust). Use {@see get_client_ip_trusted()} for those.
+*
 * @return string $ip_address
 */
 function get_client_ip() : string {
