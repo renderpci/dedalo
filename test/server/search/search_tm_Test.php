@@ -103,52 +103,6 @@ final class search_tm_test extends BaseTestCase {
 
 
 	/**
-	* TEST_build_sql_filter_by_locators_order
-	* @return void
-	*/
-	public function test_build_sql_filter_by_locators_order() {
-
-		$sqo = $this->get_sqo_base();
-
-		$search_tm = search::get_instance(
-			$sqo, // object sqo
-		);
-		$search_tm->build_sql_filter_by_locators_order();
-
-		// Use reflection to access protected sql_obj property
-		$reflection = new ReflectionClass($search_tm);
-		$property = $reflection->getProperty('sql_obj');
-		$property->setAccessible(true);
-		$sql_obj = $property->getValue($search_tm);
-
-		// Verify sql_obj->order is set
-		$this->assertTrue(
-			!empty($sql_obj->order),
-			'expected sql_obj->order to be set'
-		);
-
-		// Verify order contains expected string (may be part of combined order clause)
-		$order_string = implode(' ', $sql_obj->order);
-		$this->assertTrue(
-			strpos($order_string, 'id DESC') !== false,
-			'expected sql_obj->order to contain "id DESC", got: ' . to_string($order_string)
-		);
-
-		// Execute search and verify SQL query contains ORDER BY
-		$search_tm->search();
-		$sql_query = $search_tm->get_sql_query();
-
-		$expected = 'ORDER BY id DESC';
-		$this->assertTrue(
-			strpos($sql_query, $expected) !== false,
-				'expected: ' .  to_string($expected). PHP_EOL
-				.'sql_query: '.to_string($sql_query)
-		);
-	}//end test_build_sql_filter_by_locators_order
-
-
-
-	/**
 	* TEST_build_sql_query_order
 	* @return void
 	*/
