@@ -35,6 +35,24 @@ class tool_ontology extends tool_common {
 
 
 	/**
+	* ASSERT_DEVELOPER
+	* SEC-024 (§9.2): tool_ontology mutates dd_ontology rows that drive the
+	* runtime data model. Only superusers / developers can invoke its API
+	* methods, mirroring the access rules that already protect maintenance.
+	*/
+	private static function assert_developer() : void {
+		$user_id = logged_user_id();
+		if (security::is_developer((int)$user_id) !== true) {
+			throw new permission_exception(
+				'tool_ontology requires developer privileges',
+				__CLASS__
+			);
+		}
+	}//end assert_developer
+
+
+
+	/**
 	 * SET_RECORDS_IN_DD_ONTOLOGY
 	 * Parse ontology section records and update dd_ontology table definitions
 	 *
@@ -53,6 +71,9 @@ class tool_ontology extends tool_common {
 	 * @subpackage Ontology
 	 */
 	public static function set_records_in_dd_ontology(object $options) : object {
+
+		// SEC-024 (§9.2): developer-only gate.
+			self::assert_developer();
 
 		$response = new stdClass();
 			$response->result	= false;
