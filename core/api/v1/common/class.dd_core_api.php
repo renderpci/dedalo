@@ -961,11 +961,14 @@ final class dd_core_api {
 		// section_record
 		// section_record duplicate current. Returns the section_id created
 
-		// permissions check. Ensure user can at least READ the source record
+		// permissions check. Duplication produces a NEW record, so we require WRITE
+			// (>=2) on the section. Do NOT relax this to >=1: a user with read-only
+			// access must not be able to spawn new records by duplicating existing
+			// ones. (Audit ref: §5.2.)
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
 			if ($permissions < 2) {
 				$response->errors[] = 'insufficient permissions';
-				$response->msg      = 'Error. You don\'t have enough permissions to read the source record ('.$section_tipo.'). permissions:'.to_string($permissions);
+				$response->msg      = 'Error. You don\'t have enough permissions to write to the section ('.$section_tipo.'). permissions:'.to_string($permissions);
 				debug_log(__METHOD__
 					. " $response->msg "
 					, logger::ERROR
