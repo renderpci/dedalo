@@ -122,8 +122,8 @@ export async function check_auth(cookie_header?: string | null): Promise<boolean
 
 		const data = await response.json() as any;
 
-		// get_environment returns login_data with is_logged state
-		return data?.result?.login_data?.is_logged === true;
+		// get_environment returns page_globals with is_logged state
+		return data?.result?.page_globals?.is_logged === true;
 
 	} catch {
 		return false;
