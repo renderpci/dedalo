@@ -81,11 +81,23 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$rejected_sections = [];
 
 			foreach ($sections_data as $current_record) {
+				// SEC-024 (§9.4 follow-up): in TM mode the section_record
+				// produced by `tm_record::get_section_record()` is synthesised
+				// in the bookkeeping section `dd15`, NOT in the section the
+				// TM entry actually describes (e.g. `numisdata3`). The
+				// per-record permission check below would therefore use
+				// `common::get_permissions('dd15','dd15')` and reject every
+				// row for any non-superuser caller — leaving the response
+				// with empty `context` and `data`. Capture the origin
+				// section_tipo *before* the conversion so we can resolve
+				// permissions against the real underlying section.
+				$tm_origin_section_tipo = null;
 				// when the caller is a Time Machine section
 				// $current_record is a Time Machine Record then we need to convert it into a Section Record
 				if( $mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ){
 					$tm_record = tm_record::get_instance( (int)$current_record->id );
 					$tm_record->set_data( $current_record );
+					$tm_origin_section_tipo = $current_record->section_tipo ?? null;
 					// OVERWRITE! section_id and section_tipo to convert it into a regular section record
 					$current_record = $tm_record->get_section_record();
 				}
@@ -98,7 +110,16 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$section_record->set_data( $current_record );
 
 					// Section Record Permissions
-					$section_record_permissions = $section_record->get_permissions();
+					if (!empty($tm_origin_section_tipo)) {
+						// TM row: gate by the origin section schema
+						// permissions, not by the dd15 bookkeeping perms.
+						$section_record_permissions = common::get_permissions(
+							$tm_origin_section_tipo,
+							$tm_origin_section_tipo
+						);
+					} else {
+						$section_record_permissions = $section_record->get_permissions();
+					}
 					if ($section_record_permissions < 1) {
 						continue; // skip this section and its records
 					}
