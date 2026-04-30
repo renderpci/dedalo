@@ -388,5 +388,52 @@ class processes {
 
 
 
+	/**
+	 * GET_PROCESS_ITEM
+	 * Looks up a tracked process by pid (and optional pfile match) and returns
+	 * its registry entry, including the owning user_id. Used by callers that
+	 * need to verify ownership of a process before reading its output.
+	 *
+	 * @param int $pid
+	 * @param string|null $pfile Optional pfile to additionally match
+	 * @return object|null Process entry or null if not found
+	 */
+	public static function get_process_item( int $pid, ?string $pfile = null ) : ?object {
+
+		if ($pid <= 0) {
+			return null;
+		}
+
+		$id		= self::RECORD_ID;
+		$table	= self::PROCESSES_TABLE;
+
+		$sql_query	= 'SELECT data FROM "'.$table.'" WHERE id = $1';
+		$res		= matrix_db_manager::exec_search($sql_query, [$id]);
+		$num_rows	= $res===false ? 0 : pg_num_rows($res);
+		if ($num_rows<1) {
+			return null;
+		}
+
+		$row		= pg_fetch_result($res, 0, 0);
+		$json_data	= json_decode($row);
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($json_data)) {
+			return null;
+		}
+
+		foreach ($json_data as $entry) {
+			if (!is_object($entry) || ($entry->pid ?? null) !== $pid) {
+				continue;
+			}
+			if ($pfile !== null && ($entry->pfile ?? null) !== $pfile) {
+				continue;
+			}
+			return $entry;
+		}
+
+		return null;
+	}//end get_process_item
+
+
+
 }//end class processes
 
