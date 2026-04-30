@@ -104,14 +104,36 @@ while ($request = $psr7Worker->waitRequest()) {
         $_REQUEST = array_merge($_GET, is_array($_POST) ? $_POST : []);
 
         // Function to apply CORS headers to a response
+        // SEC-003: only echo the Origin if it matches the configured DEDALO_CORS allowlist;
+        // never reflect arbitrary origins together with Allow-Credentials: true.
         $applyCors = function(Psr7\Response $res, $req) {
-            $origin = $req->getHeaderLine('Origin') ?: '*';
-            return $res
-                ->withHeader('Access-Control-Allow-Origin', $origin)
-                ->withHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
-                ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Content-Range, Authorization, X-Requested-With')
-                ->withHeader('Access-Control-Allow-Credentials', 'true')
-                ->withHeader('Access-Control-Max-Age', '86400');
+            $origin = $req->getHeaderLine('Origin');
+            $allowed_origins = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_origins']))
+                ? (array)DEDALO_CORS['allowed_origins']
+                : [];
+            $allowed_methods = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_methods']))
+                ? implode(', ', (array)DEDALO_CORS['allowed_methods'])
+                : 'GET, POST, OPTIONS, PUT, DELETE';
+            $allowed_headers = (defined('DEDALO_CORS') && isset(DEDALO_CORS['allowed_headers']))
+                ? implode(', ', (array)DEDALO_CORS['allowed_headers'])
+                : 'Content-Type, Content-Range, Authorization, X-Requested-With';
+            $max_age = (defined('DEDALO_CORS') && isset(DEDALO_CORS['max_age']))
+                ? (string)DEDALO_CORS['max_age']
+                : '86400';
+
+            $res = $res
+                ->withHeader('Access-Control-Allow-Methods', $allowed_methods)
+                ->withHeader('Access-Control-Allow-Headers', $allowed_headers)
+                ->withHeader('Access-Control-Max-Age', $max_age)
+                ->withHeader('Vary', 'Origin');
+
+            if ($origin !== '' && in_array($origin, $allowed_origins, true)) {
+                $res = $res
+                    ->withHeader('Access-Control-Allow-Origin', $origin)
+                    ->withHeader('Access-Control-Allow-Credentials', 'true');
+            }
+
+            return $res;
         };
 
         // Handle OPTIONS (Preflight)
