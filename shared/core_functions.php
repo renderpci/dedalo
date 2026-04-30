@@ -2487,6 +2487,64 @@ function get_client_ip() : string {
 	return $ip_address;
 }//end get_client_ip
 
+/**
+* SAML_SAFE_REDIRECT_TARGET
+* SEC-014: turn a SAML RelayState (or any other user-controllable redirect
+* target) into a URL that is guaranteed to live under DEDALO_ROOT_WEB.
+*
+* Rejected inputs (all fall back to DEDALO_ROOT_WEB):
+*  - non-string / empty values
+*  - absolute URLs (`http://...`, `https://...`, `javascript:...`, ...)
+*  - protocol-relative URLs (`//evil.example/...`)
+*  - backslash-prefixed values (Windows-style `\\evil`)
+*  - URLs whose final form does not start with DEDALO_ROOT_WEB
+*
+* Accepted inputs:
+*  - relative paths (`/foo/bar`, `foo/bar`) under the same origin
+*  - already-DEDALO_ROOT_WEB-prefixed absolute paths
+*
+* @param mixed $relay_state
+* @return string Safe absolute path/URL to redirect to.
+*/
+function saml_safe_redirect_target(mixed $relay_state) : string {
+
+	$fallback = defined('DEDALO_ROOT_WEB') ? (string)DEDALO_ROOT_WEB : '/';
+
+	if (!is_string($relay_state) || $relay_state === '') {
+		return $fallback;
+	}
+
+	$candidate = trim($relay_state);
+	if ($candidate === '') {
+		return $fallback;
+	}
+
+	// Block obviously hostile prefixes before any further parsing.
+	if (str_starts_with($candidate, '//')
+		|| str_starts_with($candidate, '\\')
+		|| preg_match('/^[a-z][a-z0-9+.-]*:/i', $candidate) === 1
+	) {
+		// Absolute or protocol-relative; only allow if it is an exact
+		// DEDALO_ROOT_WEB-prefixed URL (e.g. fully-qualified URLs the IdP
+		// might echo back to us).
+		if (str_starts_with($candidate, $fallback)) {
+			return $candidate;
+		}
+		return $fallback;
+	}
+
+	// Path-only candidate. Normalise leading slash and ensure it stays under
+	// the configured web root.
+	$path = $candidate[0] === '/' ? $candidate : ('/' . $candidate);
+	$root = rtrim($fallback, '/');
+	if ($root === '' || str_starts_with($path, $root . '/') || $path === $root) {
+		return $path;
+	}
+	// $root has a non-trivial prefix and $path doesn't include it; prepend.
+	return $root . $path;
+}//end saml_safe_redirect_target
+
+
 
 
 /**
