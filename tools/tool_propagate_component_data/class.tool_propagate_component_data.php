@@ -129,6 +129,19 @@ class tool_propagate_component_data extends tool_common {
 					throw new Exception("Invalid action '$action'. Must be 'replace', 'delete', or 'add'");
 				}
 
+			// SEC-024 (§9.2): permission gate. Propagation is a bulk WRITE that
+			// modifies every record matched by the sqo. The caller must have
+			// write (>=2) on the (section_tipo, component_tipo) pair. Without
+			// this check any logged user with access to the propagate tool
+			// could overwrite/delete arbitrary component data across the
+			// section.
+				security::assert_tipo_permission(
+					$section_tipo,
+					$component_tipo,
+					2,
+					__METHOD__
+				);
+
 			// short vars
 				$model = ontology_node::get_model_by_tipo($component_tipo, true);
 				if (empty($model)) {
@@ -338,6 +351,11 @@ class tool_propagate_component_data extends tool_common {
 				$response->counter = $counter;
 				$response->memory = dd_memory_usage();
 
+		} catch (permission_exception $e) {
+			// SEC-024 (§9.2): let `dd_manager` translate this into the uniform
+			// permissions_denied JSON response rather than masking it as a
+			// generic error.
+			throw $e;
 		} catch (Exception $e) {
 			$response->result = false;
 			$response->msg = 'Error. ' . $e->getMessage();
