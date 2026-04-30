@@ -324,16 +324,17 @@ const render_file_info = function(self, item) {
 				}
 
 				// section_label reset
-				section_label.innerHTML = ''
+				section_label.textContent = ''
 
 				// validate
 				const valid_section_tipo = validate_tipo(item.section_tipo)
 				if (!valid_section_tipo) {
 					section_warn.classList.remove('hide')
 					if (!item.section_tipo || !item.section_tipo.length) {
-						section_warn.innerHTML = `The section tipo seems to be empty. Please, fill in the target section_tipo`
+						// SEC-031: textContent prevents HTML injection from filename-derived section_tipo.
+						section_warn.textContent = `The section tipo seems to be empty. Please, fill in the target section_tipo`
 					}else{
-						section_warn.innerHTML = `Auto-detected file name section tipo "${item.section_tipo}" seems to be invalid.`
+						section_warn.textContent = `Auto-detected file name section tipo "${item.section_tipo}" seems to be invalid.`
 					}
 					setTimeout(function(){
 						input_section_tipo.focus()
@@ -350,8 +351,8 @@ const render_file_info = function(self, item) {
 						}
 						columns_maper.appendChild(columns_list)
 
-						// section_label
-						section_label.innerHTML = item.section_label || ''
+						// section_label (SEC-031: textContent)
+						section_label.textContent = item.section_label || ''
 
 						bulk_process_label.value = self.context.label
 						bulk_process_label.dispatchEvent(new Event('input'));
@@ -460,7 +461,8 @@ const render_file_info = function(self, item) {
 				parent			: fragment
 			})
 			button_preview.classList.add('error')
-			button_preview.innerHTML += '. ERROR: BAD JSON FORMAT'
+			// SEC-031: appendChild text node to avoid re-parsing existing button content as HTML.
+			button_preview.appendChild(document.createTextNode('. ERROR: BAD JSON FORMAT'))
 
 		}else{
 
@@ -894,12 +896,12 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 			// process_file remove info loading
 			if (!response.result) {
-				// error case
-				process_file_info.innerHTML = response.msg || 'Error on processing file!'
+				// error case (SEC-031)
+				process_file_info.textContent = response.msg || 'Error on processing file!'
 
 			}else{
-				// OK case
-				process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+				// OK case (SEC-031)
+				process_file_info.textContent = response.msg || 'Processing file done successfully.'
 
 				// self update (forces update list of files)
 					self.refresh()
