@@ -570,4 +570,32 @@ class security {
 
 
 
+	/**
+	* ASSERT_SECTION_PERMISSION
+	* Throws a permission_exception if the logged user has insufficient
+	* permission on $section_tipo. Use as a one-line gate at the top of
+	* API methods that operate on a section.
+	* @param string $section_tipo
+	* @param int $required_level 1=read, 2=write, 3=admin
+	* @param string $context Optional caller context for logs.
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_section_permission(
+		string $section_tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		$perm = common::get_permissions($section_tipo, $section_tipo);
+		if ($perm < $required_level) {
+			throw new permission_exception(
+				"Insufficient permissions on section $section_tipo (required: $required_level, have: $perm)",
+				$context
+			);
+		}
+	}//end assert_section_permission
+
+
+
+
 }//end class security

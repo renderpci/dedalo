@@ -1492,6 +1492,13 @@ final class dd_core_api {
 			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
 			$simple			= $rqo->simple ?? false; // simple context response
 
+		// SEC: read permission required to inspect element context.
+			// Tools have their own membership check (`get_user_tools`) below;
+			// for section/area/component branches we gate by section_tipo here.
+			if (!empty($section_tipo) && !str_starts_with((string)$model, 'tool_')) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
+
 		// build element
 			switch (true) {
 				case $model==='section':
@@ -2395,6 +2402,9 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// SEC: read permission required to build the indexation grid
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
+
 		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
 			$index_grid			= $indexation_grid->build_indexation_grid($sqo);
@@ -2842,6 +2852,11 @@ final class dd_core_api {
 		$section_id				= get_section_id_from_tipo($tipo);
 		$tld					= get_tld_from_tipo($tipo);
 		$target_section_tipo	= ontology::map_tld_to_target_section_tipo($tld);
+
+		// SEC: read permission required on the resolved target section
+			if (!empty($target_section_tipo)) {
+				security::assert_section_permission($target_section_tipo, 1, __METHOD__);
+			}
 
 		$response->result = (object)[
 			'section_tipo'	=> $target_section_tipo,
