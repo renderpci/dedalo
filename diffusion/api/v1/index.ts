@@ -799,6 +799,14 @@ const server = Bun.serve({
 		try {
 			switch (action) {
 				case 'diffuse': {
+					const is_auth = await check_auth(cookie_header);
+					if (!is_auth) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+
 					const diffusion_type = (body.options as any)?.type ?? 'sql';
 
 					switch (diffusion_type) {
