@@ -1733,21 +1733,12 @@ function session_start_manager(array $options) : bool {
 
 
 
-/**
-* SAFE_TABLE
-* Remove extra malicious code
-* @param string $table
-* @return string|bool $table
-*/
-function safe_table(string $table) : string|bool {
-
-	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
-	if ( empty($output_array) || empty($output_array[0]) ) {
-		return false;
-	}
-
-	return $table;
-}//end safe_table
+// SEC-045: removed `safe_table()` (was at this location). Zero callers in
+// production / CLI / tests (verified by repo-wide grep). The function name
+// suggested SQLi protection but the regex `^[a-zA-Z_]+$` rejected legitimate
+// table names containing digits and was never relied on. Use
+// `pg_escape_identifier($conn, $table)` (see `core/db/class.DBi.php`) when a
+// table identifier needs to be safely interpolated.
 
 
 
