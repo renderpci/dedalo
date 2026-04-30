@@ -155,8 +155,12 @@ class install extends common {
 	public static function get_config() : object {
 
 		$db_install_name	= install::$db_install_name;
-		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.DEDALO_HOSTNAME_CONN) : 'localhost';
-		$port_line			= (!empty(DEDALO_DB_PORT_CONN)) ? ('-p '.DEDALO_DB_PORT_CONN) : '';
+		// SEC-041: shell-quote host/port values. The values originate from
+		// `config/config.php` constants (deployer-controlled, filesystem-only)
+		// so this is defence-in-depth, not an HTTP-reachable taint fix. Quoting
+		// the *value* portion only — the `-h`/`-p` flag stays unquoted.
+		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN)) : 'localhost';
+		$port_line			= (!empty(DEDALO_DB_PORT_CONN)) ? ('-p '.escapeshellarg((string)DEDALO_DB_PORT_CONN)) : '';
 		$to_preserve_tld	= [
 			'dd',			// Dedalo core
 			'rsc',			// Dédalo resources
@@ -696,7 +700,10 @@ class install extends common {
 			}
 
 		// terminal gunzip command. From 'dedalo4_install.pgsql.gz' to 'dedalo4_install.pgsql'
-			$command = 'gunzip --keep --force -v '.$target_file_path_compress.';'; // -k (keep original file) -f (force overwrite without prompt)
+			// SEC-041 defence-in-depth: $target_file_path_compress is server-built
+			// from DEDALO_ROOT_PATH + a fixed name; quoted anyway in case a future
+			// caller passes a path with whitespace.
+			$command = 'gunzip --keep --force -v '.escapeshellarg($target_file_path_compress).';'; // -k (keep original file) -f (force overwrite without prompt)
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
@@ -707,7 +714,10 @@ class install extends common {
 			}
 
 		// terminal command psql copy data from file 'dedalo4_install.pgsql'
-			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$uncompressed_file.'"';
+			// SEC-041: shell-quote all interpolated values. Constants come from
+			// `config/config.php` (deployer-controlled, not HTTP-reachable);
+			// `$config->host_line`/`port_line` are pre-quoted in `get_config()`.
+			$command = DB_BIN_PATH.'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($uncompressed_file);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 
@@ -762,7 +772,8 @@ class install extends common {
 			}
 
 		// delete uncompressed_file ('dedalo4_install.pgsql')
-			$command  = 'rm '.$uncompressed_file.';';
+			// SEC-041 defence-in-depth.
+			$command  = 'rm '.escapeshellarg($uncompressed_file).';';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
@@ -1797,7 +1808,11 @@ class install extends common {
 			}
 
 		// terminal command psql delete previous records
-			$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM "'.$matrix_table.'"; ALTER SEQUENCE IF EXISTS '.$matrix_table.'_id_seq RESTART WITH 1 ;";';
+			// SEC-041: shell-quote DB / user / matrix_table constants.
+			// `$matrix_table` originates from a server-iterated list (not user
+			// input); quoted defence-in-depth. The `\"<table>\"` SQL identifier
+			// quoting inside the -c argument is preserved.
+			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors -c "DELETE FROM \"'.$matrix_table.'\"; ALTER SEQUENCE IF EXISTS '.$matrix_table.'_id_seq RESTART WITH 1 ;";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
@@ -1805,7 +1820,8 @@ class install extends common {
 			}
 
 		// terminal command psql execute sql query from .sql file
-			$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$sql_file_path.'"';
+			// SEC-041 defence-in-depth.
+			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($sql_file_path);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
@@ -1814,7 +1830,8 @@ class install extends common {
 
 		// update sequence value
 			$query = 'SELECT setval(\'matrix_hierarchy_main_id_seq\', (SELECT MAX(id) FROM "matrix_hierarchy_main")+1)';
-			$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+			// SEC-041 defence-in-depth: $query is a hard-coded SQL string.
+			$command = DB_BIN_PATH.'psql -d '.escapeshellarg($config->db_install_name).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
 				.'-c "'.$query.';";';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
@@ -1864,9 +1881,10 @@ class install extends common {
 			}
 
 		// terminal command pg_dump
-			$command  = DB_BIN_PATH . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.DEDALO_USERNAME_CONN.' -F p -b -v --no-owner --no-privileges --role='.DEDALO_USERNAME_CONN.' '.$db_install_name; //.' > '.$target_file_path.'.psql';
+			// SEC-041 defence-in-depth: shell-quote user, role, db name, output path.
+			$command  = DB_BIN_PATH . 'pg_dump '.$config->host_line.' '.$config->port_line.' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' -F p -b -v --no-owner --no-privileges --role='.escapeshellarg(DEDALO_USERNAME_CONN).' '.escapeshellarg($db_install_name); //.' > '.$target_file_path.'.psql';
 			// $command .= ' | zip '.$target_file_path_compress.' -foo'; // redirects output to zip compressed file
-			$command .=' | gzip > '.$target_file_path_compress;
+			$command .=' | gzip > '.escapeshellarg($target_file_path_compress);
 
 			debug_log(__METHOD__." Executing terminal DB command ".to_string($command), logger::WARNING);
 			if ($exec) {
@@ -1927,7 +1945,8 @@ class install extends common {
 				// update sequence value
 				$matrix_table = 'matrix_hierarchy_main';
 				$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
-				$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+				// SEC-041 defence-in-depth.
+				$command = DB_BIN_PATH.'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors '
 					.'-c "'.$query.';";';
 				debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 				$command_res = shell_exec($command);
@@ -2649,8 +2668,9 @@ class install extends common {
 			// terminal command pg_dump
 			$config		= self::get_config();
 			$sql_file	= DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
-			$command	= DB_BIN_PATH . 'pg_dump -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line
-						  .' -U '.DEDALO_USERNAME_CONN.' -t dd_ontology_recovery | gzip > '.$sql_file;
+			// SEC-041 defence-in-depth.
+			$command	= DB_BIN_PATH . 'pg_dump -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line
+						  .' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' -t dd_ontology_recovery | gzip > '.escapeshellarg($sql_file);
 
 			debug_log(__METHOD__
 				." Executing terminal DB command " . PHP_EOL
@@ -2722,8 +2742,9 @@ class install extends common {
 			}
 
 		// command
-			$command = 'gunzip -c ' . $sql_file . ' | '
-					  . DB_BIN_PATH . 'psql -d '.DEDALO_DATABASE_CONN.' '.$config->host_line.' '.$config->port_line. ' -U '.DEDALO_USERNAME_CONN;
+			// SEC-041 defence-in-depth.
+			$command = 'gunzip -c ' . escapeshellarg($sql_file) . ' | '
+					  . DB_BIN_PATH . 'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' '.$config->host_line.' '.$config->port_line. ' -U '.escapeshellarg(DEDALO_USERNAME_CONN);
 
 			debug_log(__METHOD__
 				." Executing terminal DB command " . PHP_EOL
