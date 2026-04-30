@@ -11,6 +11,20 @@ class update_code {
 
 
 	/**
+	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	* `check_remote_server`, `update_incremental`, `update_clean` are internal
+	* helpers invoked from `update_code` itself and must NOT be remotely
+	* dispatchable. `get_value` is invoked through `get_widget_value`
+	* (hard-coded method) and therefore not listed here.
+	*/
+	public const API_ACTIONS = [
+		'update_code',
+		'build_version_from_git_master'
+	];
+
+
+
+	/**
 	* CHECK_REMOTE_SERVER
 	* Exec a curl request with given data to check current server status
 	* @param object $server

@@ -8,6 +8,19 @@ class make_backup {
 
 
 	/**
+	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	* `get_value` is invoked through `get_widget_value` (hard-coded method) and
+	* therefore not listed here.
+	*/
+	public const API_ACTIONS = [
+		'make_psql_backup',
+		'make_mysql_backup',
+		'get_dedalo_backup_files'
+	];
+
+
+
+	/**
 	* GET_VALUE
 	* Returns updated widget value
 	* It is used to update widget data dynamically

@@ -8,6 +8,18 @@ class export_hierarchy {
 
 
 	/**
+	* SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	* `get_value` is invoked through `get_widget_value` (hard-coded method) and
+	* therefore not listed here.
+	*/
+	public const API_ACTIONS = [
+		'export_hierarchy',
+		'sync_hierarchy_active_status'
+	];
+
+
+
+	/**
 	* GET_VALUE
 	* Returns updated widget value
 	* It is used to update widget data dynamically
