@@ -8,6 +8,22 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
 
+// SEC-031: helper to render API messages safely. Splits on `<br>` literals and emits
+// text nodes so api_response.msg / errors / ar_msg cannot inject HTML/script when
+// they include user-supplied filenames, ontology codes, or backend error fragments.
+const _render_msg_lines = (target, lines) => {
+	target.replaceChildren()
+	const arr = Array.isArray(lines) ? lines : [String(lines ?? '')]
+	arr.forEach((line, i) => {
+		if (i > 0) target.appendChild(document.createElement('br'))
+		const parts = String(line ?? '').split(/<br\s*\/?>/i)
+		parts.forEach((part, j) => {
+			if (j > 0) target.appendChild(document.createElement('br'))
+			if (part.length) target.appendChild(document.createTextNode(part))
+		})
+	})
+}
+
 
 
 /**
@@ -121,7 +137,7 @@ const get_content_data = async function(self) {
 						if (set===true) {
 
 							content_data.classList.add('loading')
-							messages_container.innerHTML = ''
+							messages_container.replaceChildren()
 
 							// spinner
 							spinner = ui.create_dom_element({
@@ -149,26 +165,24 @@ const get_content_data = async function(self) {
 						return
 					}
 
-				// user messages
-					messages_container.innerHTML = api_response.msg
-						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-						: 'Unknown error'
+				// user messages (SEC-031)
+					_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
 
-				// process errors
-					process_error_container.innerHTML = ''
+				// process errors (SEC-031)
 					if (api_response.errors?.length) {
-						process_error_container.innerHTML = api_response.errors.join('<br>')
+						_render_msg_lines(process_error_container, api_response.errors)
 						process_error_container.classList.remove('hidden')
 					}else{
+						process_error_container.replaceChildren()
 						process_error_container.classList.add('hidden')
 					}
 
-				// process messages
-					process_messages_container.innerHTML = ''
+				// process messages (SEC-031)
 					if (api_response.ar_msg?.length) {
-						process_messages_container.innerHTML = api_response.ar_msg.join('<br>')
+						_render_msg_lines(process_messages_container, api_response.ar_msg)
 						process_messages_container.classList.remove('hidden')
 					}else{
+						process_messages_container.replaceChildren()
 						process_messages_container.classList.add('hidden')
 					}
 
@@ -209,7 +223,7 @@ const get_content_data = async function(self) {
 						if (set===true) {
 
 							content_data.classList.add('loading')
-							messages_container.innerHTML = ''
+							messages_container.replaceChildren()
 
 							// spinner
 							spinner = ui.create_dom_element({
@@ -237,26 +251,24 @@ const get_content_data = async function(self) {
 						return
 					}
 
-				// user messages
-					messages_container.innerHTML = api_response.msg
-						? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
-						: 'Unknown error'
+				// user messages (SEC-031)
+					_render_msg_lines(messages_container, api_response.msg ?? 'Unknown error')
 
-				// process errors
-					process_error_container.innerHTML = ''
+				// process errors (SEC-031)
 					if (api_response.errors?.length) {
-						process_error_container.innerHTML = api_response.errors.join('<br>')
+						_render_msg_lines(process_error_container, api_response.errors)
 						process_error_container.classList.remove('hidden')
 					}else{
+						process_error_container.replaceChildren()
 						process_error_container.classList.add('hidden')
 					}
 
-				// process messages
-					process_messages_container.innerHTML = ''
+				// process messages (SEC-031)
 					if (api_response.ar_msg?.length) {
-						process_messages_container.innerHTML = api_response.ar_msg.join('<br>')
+						_render_msg_lines(process_messages_container, api_response.ar_msg)
 						process_messages_container.classList.remove('hidden')
 					}else{
+						process_messages_container.replaceChildren()
 						process_messages_container.classList.add('hidden')
 					}
 
