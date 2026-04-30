@@ -309,59 +309,6 @@ abstract class backup {
 
 
 	/**
-	* CONSOLIDATE_SEQUENCE
-	* Set sequence value as last table id row
-	* @return array $ar_response
-	*/
-	public static function consolidate_sequence(string $table) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
-
-		$msg='';
-
-		# SEQUENCE UPDATE (to the last table id)
-		$strQuery	= 'SELECT id FROM "'.$table.'" ORDER BY "id" DESC LIMIT 1';	// get last id
-		$result		= pg_query(DBi::_getConnection(), $strQuery);
-		if ($result===false) {
-			$response->result	= false;
-			$response->msg		= 'Error on consolidate sequence: failed to query last id from table: '.$table;
-			debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
-			return $response;
-		}
-		$row = pg_fetch_row($result);
-		if ($row===false) {
-			$response->result	= false;
-			$response->msg		= 'Error on consolidate sequence: no rows found in table: '.$table;
-			debug_log(__METHOD__ . ' No rows found in table: ' . $table, logger::ERROR);
-			return $response;
-		}
-		$last_id	= (int)$row[0];
-		#$strQuery = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH '.$last_id.';';	// get last id
-		$sequence_name	= $table.'_id_seq';
-		$strQuery		= "SELECT setval('$sequence_name', $last_id, true);";
-
-		$result   = pg_query(DBi::_getConnection(), $strQuery);
-			if ($result) {
-				$msg .= "<br>Consolidated {$sequence_name} in $table";
-				if(SHOW_DEBUG===true) {
-					$msg .= " with value $last_id <br> -> [$strQuery]";
-				}
-				$response->result	= true;
-				$response->msg		= $msg;
-			}else{
-				$response->result	= false;
-				$response->msg		= 'Error on consolidate sequence: '.$sequence_name.' - table: '.$table;
-				debug_log(__METHOD__ . ' Query failed: ' . $strQuery, logger::ERROR);
-			}
-
-		return (object)$response;
-	}//end consolidate_sequence
-
-
-
-	/**
 	* CHECK_REMOTE_SERVER
 	* Exec a curl request wit given data to check current server status
 	* @return object $response
