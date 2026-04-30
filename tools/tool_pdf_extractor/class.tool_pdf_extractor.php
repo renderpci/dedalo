@@ -109,6 +109,10 @@ class tool_pdf_extractor extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): READ gate. get_pdf_data extracts text from a PDF
+		// component file; require read on (section_tipo, component_tipo).
+			security::assert_tipo_permission($section_tipo, $component_tipo, 1, __METHOD__);
+
 		try {
 			// component_pdf. Create the component to get the file path
 				$model = ontology_node::get_model_by_tipo($component_tipo, true);
