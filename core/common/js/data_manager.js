@@ -263,6 +263,33 @@ data_manager.request = async function(options) {
 		// Parse API JSON response handling errors
 		const json_response = await (await handle_errors(fetch_response)).json();
 
+		// SEC-008: refresh the cached CSRF token from every response so the
+		// next call carries the latest one (the server may rotate it on auth
+		// state changes such as login or logout).
+		if (json_response && typeof json_response.csrf_token === 'string' && json_response.csrf_token.length > 0) {
+			if (typeof window !== 'undefined' && window.page_globals) {
+				window.page_globals.csrf_token = json_response.csrf_token;
+			}
+		}
+
+		// SEC-008: transparent retry on CSRF rejection. This handles the bootstrap
+		// race where a non-exempt action fires before the SPA has obtained a
+		// token from `start` (e.g. parallel menu/read calls during page build,
+		// or the post-login full page reload that resets page_globals). The
+		// rejection response already carries a fresh token (captured above), so
+		// we just resend the original request exactly once. The `_csrf_retried`
+		// flag on options prevents infinite loops if the server still refuses.
+		if (
+			json_response
+			&& json_response.result === false
+			&& Array.isArray(json_response.errors)
+			&& json_response.errors.includes('csrf_failed')
+			&& !options._csrf_retried
+		) {
+			console.warn('CSRF token mismatch; retrying once with fresh token.');
+			return self.request({ ...options, _csrf_retried: true });
+		}
+
 		if(SHOW_DEBUG) {
 			console.log(`_*_Time to request: ${(performance.now() - request_start_time).toFixed(2)}ms`);
 			console.log(`_*_Time to download data: ${(performance.now() - data_start_time).toFixed(2)}ms`);
@@ -697,6 +724,13 @@ data_manager.request_stream = async function(options) {
 	// always force the request as a stream
 	body.is_stream = true
 
+	// SEC-008: SSE stream must also carry the per-session CSRF token.
+	if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+		if (!headers['X-Dedalo-Csrf-Token']) {
+			headers['X-Dedalo-Csrf-Token'] = window.page_globals.csrf_token
+		}
+	}
+
 	return new Promise(function(resolve){
 
 		fetch(
@@ -748,6 +782,16 @@ data_manager.request_fetch_stream = async function(options) {
 		'Accept'		: 'application/x-ndjson, application/json'
 	}
 	const body			= options.body
+
+	// SEC-008: streaming fetch must also carry the per-session CSRF token.
+	// Mirror the logic in data_manager.request: take the cached token from
+	// page_globals (refreshed on every API response) and inject the
+	// X-Dedalo-Csrf-Token header unless the caller already set it.
+	if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+		if (!headers['X-Dedalo-Csrf-Token']) {
+			headers['X-Dedalo-Csrf-Token'] = window.page_globals.csrf_token
+		}
+	}
 
 	const response = await fetch(url, {
 		method	: method,
