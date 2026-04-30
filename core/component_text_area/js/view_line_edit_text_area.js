@@ -175,7 +175,7 @@ const get_content_value = (i, current_value, self) => {
 			// toolbar. create the toolbar base
 				const toolbar = ['bold','italic','underline','|','undo','redo','|', 'button_save']
 				// toolbar add custum_buttons
-					if(self.context.toolbar_buttons){
+					if(self.context?.toolbar_buttons){
 						toolbar.push(...self.context.toolbar_buttons)
 					}
 
@@ -257,11 +257,11 @@ const get_content_value = (i, current_value, self) => {
 					init_current_service_text_editor()
 					.then(function(service_editor) {
 						value_container.classList.remove('loading')
-						if (self.context.view === 'html_text') {
-							service_editor.editor.focus()
+						if (self.context?.view === 'html_text') {
+							service_editor.editor?.focus()
 						}else{
 							// trigger service_editor click action (show toolbar and focus it)
-							service_editor.click(e)
+							service_editor?.click?.(e)
 						}
 					})
 					.catch(function(error) {

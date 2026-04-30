@@ -223,7 +223,7 @@ const get_content_value = (i, current_value, self) => {
 			// toolbar. create the toolbar base
 				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','|']
 				// toolbar add custum_buttons
-					if(self.context.toolbar_buttons){
+					if(self.context?.toolbar_buttons){
 						toolbar.push(...self.context.toolbar_buttons)
 					}
 				// toolbar add standard buttons
@@ -247,7 +247,7 @@ const get_content_value = (i, current_value, self) => {
 					fallback_value		: get_fallback_value_clean(),
 					key					: i,
 					editor_config		: editor_config,
-					editor_class		: self.context.view==='html_text'
+					editor_class		: self.context?.view==='html_text'
 						? 'InlineEditor'
 						: 'ddEditor' // ddEditor | InlineEditor
 				})
@@ -338,11 +338,11 @@ const get_content_value = (i, current_value, self) => {
 					init_current_service_text_editor()
 					.then(function(service_editor) {
 						value_container.classList.remove('loading')
-						if (self.context.view === 'html_text') {
-							service_editor.editor.focus()
+						if (self.context?.view === 'html_text') {
+							service_editor.editor?.focus()
 						}else{
 							// trigger service_editor click action (show toolbar and focus it)
-							service_editor.click(e)
+							service_editor?.click?.(e)
 						}
 					})
 					.catch(function(error) {
