@@ -146,45 +146,36 @@ const get_content_value = (i, datalist_item, self) => {
 			name			: self.id
 		})
 		input_label.prepend(input)
-		input.addEventListener('change', function() {
-
-			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					id		: entries[0]?.id || null,
-					value	: datalist_value
-				})
-
-			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-			// publish search. Event to update the DOM elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end change
-		content_value.addEventListener('click', function(e) {
+		// change event
+		const on_change_handler = () => {
+			// change handler (unified)
+			self.change_handler({
+				value	: datalist_value,
+				action	: 'update'
+			})
+		}
+		input.addEventListener('change', on_change_handler)
+		// click event
+		const on_click_handler = (e) => {
 			e.stopPropagation();
 			// de-select option
 			if (e.altKey===true) {
 
 				// remove checked state
-					input.checked = false
+				input.checked = false
 
 				if (self.data.entries.length===0) {
 					return true
 				}
 
-				// changed_data
-					const changed_data_item = Object.freeze({
-						action	: 'remove',
-						id		: entries[0]?.id || null,
-						value	: null
-					})
-
-				// update the instance data (previous to save)
-					self.update_data_value(changed_data_item)
-				// publish search. Event to update the DOM elements of the instance
-					event_manager.publish('change_search_element', self)
+				// change handler (unified)
+				self.change_handler({
+					value	: null,
+					action	: 'remove'
+				})
 			}
-		})//end click
+		}
+		content_value.addEventListener('click', on_click_handler)
 
 	// checked option set on match
 		for (let j = 0; j < entries_length; j++) {

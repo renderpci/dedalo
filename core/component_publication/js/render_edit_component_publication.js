@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {event_manager} from '../../common/js/event_manager.js'
 	import {view_default_edit_publication} from './view_default_edit_publication.js'
 	import {view_line_edit_publication} from './view_line_edit_publication.js'
 
@@ -129,22 +128,16 @@ const get_content_value = (i, current_value, self) => {
 		input.addEventListener('change', function() {
 
 			const checked		= input.checked
+			const datalist		= self.data?.datalist || []
 			const changed_value	= (checked===true)
-				? self.data.datalist.filter(item => item.section_id==1)[0].value
-				: self.data.datalist.filter(item => item.section_id==2)[0].value
+				? datalist.filter(item => item.section_id==1)[0]?.value
+				: datalist.filter(item => item.section_id==2)[0]?.value
 
-			const changed_data = [Object.freeze({
+			// change handler (unified)
+			self.change_handler({
+				value	: changed_value,
 				action	: 'update',
-				id		: self.data.entries[i].id,
-				value	: changed_value
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then(()=>{
-			// publish the publication locator value. (ex: used to change state of notes tag)
-				event_manager.publish('change_publication_value_'+self.id_base, changed_value)
+				index	: i
 			})
 		})
 		// set checked from current value
