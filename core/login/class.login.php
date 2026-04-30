@@ -215,6 +215,40 @@ class login extends common {
 
 
 
+	/**
+	* CLEAR_FAILED_LOGIN_ATTEMPTS
+	* Remove the throttle state file for the given key on successful auth.
+	* @param string $key
+	* @return void
+	*/
+	private static function clear_failed_login_attempts(string $key) : void {
+
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return;
+		}
+		$file = self::get_login_throttle_file($key);
+		if ($file !== null && file_exists($file)) {
+			@unlink($file);
+		}
+	}//end clear_failed_login_attempts
+
+
+
+	/**
+	* BUILD_LOGIN_THROTTLE_KEY
+	* Build a throttle key from a label + raw identifier (username, SAML code...)
+	* + the trusted client IP.
+	* @param string $namespace
+	* @param string $identifier
+	* @return string
+	*/
+	private static function build_login_throttle_key(string $namespace, string $identifier) : string {
+
+		$ip = function_exists('get_client_ip_trusted') ? get_client_ip_trusted() : '';
+		return $namespace . '|' . strtolower($identifier) . '|' . $ip;
+	}//end build_login_throttle_key
+
+
 
 	/**
 	* LOGIN
