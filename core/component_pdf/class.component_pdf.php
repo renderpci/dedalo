@@ -668,7 +668,11 @@ class component_pdf extends component_media_common implements component_media_in
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
 		$text_filename 	= substr($source_file, 0, -4) . $file_extension;
 
-		$command = $engine ." -enc UTF-8". "$engine_config $source_file $text_filename";
+		// Security: defence-in-depth. $source_file / $text_filename are derived
+		// from the component's stored media path (server-built), but we still
+		// shell-quote them so any future caller that introduces user-controlled
+		// paths cannot inject commands. $engine_config is constant.
+		$command = $engine ." -enc UTF-8". "$engine_config " . escapeshellarg($source_file) . " " . escapeshellarg($text_filename);
 
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
