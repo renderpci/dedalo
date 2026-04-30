@@ -124,7 +124,7 @@ const render_content_data = async function(self, ar_section_record) {
 			const fake_input_value = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
-				class_name		: 'input_value noevents',
+				class_name		: 'input_value',
 				parent			: fragment
 			})
 			fake_input_value.setAttribute('readonly', true);
@@ -133,23 +133,34 @@ const render_content_data = async function(self, ar_section_record) {
 			}
 			// click event
 			const click_handler = async (e) => {
+				e.stopPropagation()
 				e.preventDefault()
 
-				if (self.active===true) {
-					return
-				}
+				// Hide immediately so the autocomplete appears in place without a gap
+				fake_input_value.classList.add('input_disable')
 
-				// Draw placeholder 'Loading.. ' text while service is loading
-				fake_input_value.placeholder = get_label.loading || 'Loading..'
+				// Show skeleton input instantly while the real service loads.
+				// Uses the same CSS classes as the real autocomplete wrapper/input
+				// so it occupies the exact same position with no visual gap.
+				const skeleton_wrapper = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'wrapper_service_autocomplete search active',
+					parent			: self.node
+				})
+				const skeleton_input = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'text',
+					class_name		: 'autocomplete_input',
+					parent			: skeleton_wrapper
+				})
+				skeleton_input.setAttribute('placeholder', (get_label.find || 'Find') + '...')
+				skeleton_input.setAttribute('readonly', true)
 
 				// Fire service autocomplete load and activation
 				await activate_autocomplete(self, self.node)
 
-				// Hide fake_input_value on finish render service autocomplete
-				fake_input_value.classList.add('input_disable')
-
-				// Reset placeholder text
-				fake_input_value.placeholder = ''
+				// Remove skeleton once real autocomplete is in the DOM
+				skeleton_wrapper.remove()
 			}
 			fake_input_value.addEventListener('click', click_handler)
 			// deactivate_component event

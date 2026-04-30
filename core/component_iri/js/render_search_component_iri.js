@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -86,11 +87,19 @@ const get_content_data = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= entries.length>0 ? entries : ['']
-		const entries_length	= inputs_value.length
+		const inputs_value	 = entries.length>0 ? entries : [{value : ''}]
+		const entries_length = inputs_value.length
 		for (let i = 0; i < entries_length; i++) {
-			const content_value = get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
+			// if the value is not a object, create a object with the value
+			// This happen when the value is from a preset saved as q value
+			const data_item = typeof inputs_value[i] === 'object'
+				? inputs_value[i]
+				: {value : inputs_value[i]}
+
+			const input_element_node = get_content_value(i, data_item, self)
+			content_data.appendChild(input_element_node)
+			// set the pointer
+			content_data[i] = input_element_node
 		}
 
 
@@ -103,7 +112,7 @@ const get_content_data = function(self) {
 * GET_CONTENT_VALUE
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+const get_content_value = (i, data_item, self) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -116,28 +125,33 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value,
+			value			: data_item.value || '',
 			parent			: content_value
 		})
-		input.addEventListener('change', function(){
+		// change event
+		const change_handler = (e) => {
+
+			const data_item_to_save = clone(data_item)
 
 			// parsed_value
-				const parsed_value = (input.value.length>0) ? input.value : null
+			data_item_to_save.value = (input.value.length>0)
+				? input.value
+				: null
 
 			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					id		: self.data.entries?.[i]?.id || null,
-					value	: parsed_value
-				})
+			const changed_data_item = Object.freeze({
+				action	: (data_item_to_save.value === null) ? 'remove' : 'update',
+				id		: (self.data?.entries?.[i]?.id) || null,
+				value	: (data_item_to_save.value === null) ? null : data_item_to_save
+			})
 
 			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
+			self.update_data_value(changed_data_item)
+
 			// publish search. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+			event_manager.publish('change_search_element', self)
+		}
+		input.addEventListener('change', change_handler)
 
 
 	return content_value

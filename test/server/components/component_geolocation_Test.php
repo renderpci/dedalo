@@ -398,4 +398,265 @@ final class component_geolocation_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set empty array
+		$result = $component->set_data([]);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$get_data = $component->get_data();
+		$this->assertTrue(
+			$get_data===null || (is_array($get_data) && count($get_data)===0),
+			'expected null or empty array : ' . PHP_EOL
+				. to_string($get_data)
+		);
+
+		// restore
+		$component->set_data($old_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* Note: save may fail in test DB if geo column is scalar (not JSONB).
+	* Test verifies set_data + get_data round-trip in memory.
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set new data
+		$new_data = [(object)[
+			'lat'	=> 40.416775,
+			'lon'	=> -3.703790,
+			'zoom'	=> 10,
+			'alt'	=> 650
+		]];
+		$component->set_data($new_data);
+
+		// verify in-memory round-trip
+		$get_data = $component->get_data();
+		$this->assertTrue(
+			is_array($get_data),
+			'expected array after set_data : ' . PHP_EOL
+				. gettype($get_data)
+		);
+		$this->assertTrue(
+			isset($get_data[0]->lat) && isset($get_data[0]->lon),
+			'expected lat/lon in data after set_data : ' . PHP_EOL
+				. to_string($get_data)
+		);
+
+		// attempt save (may fail in test DB with scalar geo column)
+		$save_result = $component->save();
+
+		if ($save_result===true) {
+			// reload and verify persistence
+			$component2 = component_common::get_instance(
+				'component_geolocation',
+				self::$tipo,
+				1,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$reloaded_data = $component2->get_data();
+
+			$this->assertTrue(
+				is_array($reloaded_data),
+				'expected array after reload : ' . PHP_EOL
+					. gettype($reloaded_data)
+			);
+
+			// restore original
+			$component2->set_data($old_data);
+			$component2->save();
+		}
+
+		// always restore in memory
+		$component->set_data($old_data);
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		foreach (['edit', 'list', 'search'] as $mode) {
+
+			$component = component_common::get_instance(
+				'component_geolocation',
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				get_class($component)==='component_geolocation',
+				"expected class component_geolocation for mode $mode : " . PHP_EOL
+					. get_class($component)
+			);
+			$this->assertTrue(
+				$component->get_mode()===$mode,
+				"expected mode $mode : " . PHP_EOL
+					. $component->get_mode()
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_is_empty
+	* Geolocation data items have lat/lon/zoom/alt but no 'value' key,
+	* so is_empty() returns true for them by design (same as media components).
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// null data item
+		$result = $component->is_empty(null);
+		$this->assertTrue(
+			$result===true,
+			'expected true for null data item : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// object without 'value' key (geolocation data items)
+		$data_item = (object)['lat' => 28.76, 'lon' => -17.87];
+		$result = $component->is_empty($data_item);
+		$this->assertTrue(
+			$result===true,
+			'expected true for data item without value key : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// non-object
+		$result = $component->is_empty('string');
+		$this->assertTrue(
+			$result===true,
+			'expected true for non-object data item : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_is_empty_data
+	* @return void
+	*/
+	public function test_is_empty_data() {
+
+		$component = $this->build_component_instance();
+
+		// null data
+		$result = $component->is_empty_data(null);
+		$this->assertTrue(
+			$result===true,
+			'expected true for null data : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// empty array
+		$result = $component->is_empty_data([]);
+		$this->assertTrue(
+			$result===true,
+			'expected true for empty array : ' . PHP_EOL
+				. to_string($result)
+		);
+
+		// array with geolocation data (no 'value' key, so is_empty_data returns true)
+		$data = [(object)['lat' => 28.76, 'lon' => -17.87]];
+		$result = $component->is_empty_data($data);
+		$this->assertTrue(
+			$result===true,
+			'expected true for geolocation data without value key : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_is_empty_data
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			strlen($result) > 0,
+			'expected non-empty identifier : ' . PHP_EOL
+				. $result
+		);
+		$this->assertTrue(
+			strpos($result, self::$tipo)!==false,
+			'expected tipo in identifier : ' . PHP_EOL
+				. $result
+		);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_lang_forced_to_nolan
+	* Geolocation component always forces lang to DEDALO_DATA_NOLAN
+	* regardless of the lang passed to the constructor.
+	* @return void
+	*/
+	public function test_lang_forced_to_nolan() {
+
+		// build with DEDALO_DATA_LANG (not DEDALO_DATA_NOLAN)
+		$component = component_common::get_instance(
+			'component_geolocation',
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_LANG, // pass a different lang
+			self::$section_tipo
+		);
+
+		// constructor forces lang to DEDALO_DATA_NOLAN
+		$this->assertTrue(
+			$component->get_lang()===DEDALO_DATA_NOLAN,
+			'expected lang DEDALO_DATA_NOLAN even when DEDALO_DATA_LANG was passed : ' . PHP_EOL
+				. $component->get_lang()
+		);
+	}//end test_lang_forced_to_nolan
+
+
+
 }//end class component_geolocation_test

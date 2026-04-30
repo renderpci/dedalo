@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {set_before_unload} from '../../common/js/events.js'
-	import {array_equals} from '../../common/js/utils/index.js'
 
 
 
@@ -228,65 +227,17 @@ const get_content_value = (i, datalist_item, self) => {
 			parent			: content_value
 		})
 		// change event
-			input_node.addEventListener('change', function() {
+			const input_change_handler = function() {
+				self.change_handler({
+					value		: this.value,
+					tipo		: datalist_item.tipo,
+					input_node	: input_node
+				})
+			}
+			input_node.addEventListener('change', input_change_handler)
 
-				const section_tipo	= datalist_item.tipo
-				const value			= this.value.length>0
-					? {
-						tipo 	: datalist_item.tipo,
-						value 	: self.validate_value(this.value.split(','))
-					  }
-					: null;
-
-				// key_found. search section tipo key if exists. Remember: data array keys are different that inputs keys
-					const current_entries	= self.data.entries || []
-					const entries_length	= current_entries.length
-					let entry_id			= null
-					for (let j = 0; j < entries_length; j++) {
-						if(current_entries[j].tipo===section_tipo) {
-							entry_id = current_entries[j].id;
-							break;
-						}
-					}
-
-
-			// change_value
-				const changed_data = [Object.freeze({
-					action	: (value===null) ? 'remove' : 'update',
-					id		: entry_id,
-					value	: value
-				})]
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					.then(()=>{
-						// update safe value in input text
-						if (value) {
-							input_node.value = value.value.join(",")
-						}
-					})
-			})//end change
 		// keyup event
-			input_node.addEventListener('keyup', function(e) {
-				// page unload event
-					// if (e.key!=='Enter') {
-					// 	const value_key			= value.findIndex(el => el.tipo===datalist_item.tipo);
-					// 	const original_value	= self.db_data.value[value_key]
-					// 	const new_value			= this.value.length>0
-					// 		? {
-					// 			tipo 	: datalist_item.tipo,
-					// 			value 	: self.validate_value(this.value.split(','))
-					// 		  }
-					// 		: null;
-
-					// 	const is_equal = original_value && original_value.value && new_value && new_value.value
-					// 		? array_equals(original_value.value, new_value.value)
-					// 		: false
-					// 	// set_before_unload (bool)
-					// 	set_before_unload(!is_equal)
-					// }
-
+			const input_keyup_handler = function(e) {
 				// Enter key force to dispatchEvent change
 					if (e.key==='Enter') {
 						input_node.dispatchEvent(new Event('change'))
@@ -296,7 +247,8 @@ const get_content_value = (i, datalist_item, self) => {
 				// set as changed to prevent accidentally loose unsaved data
 				// Note that because this component have a validator, only change event will be used to save values
 					set_before_unload(true)
-			})//end keyup
+			}
+			input_node.addEventListener('keyup', input_keyup_handler)
 
 
 	return content_value

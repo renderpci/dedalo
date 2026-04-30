@@ -74,6 +74,76 @@ export const component_json = function(){
 
 
 /**
+* PARSE_EDITOR_CONTENT
+* Extracts JSON value from JSONEditor content format {json, text}
+* @param object content - Editor content {json: unknown} | {text: string}
+* @return mixed|null - Parsed JSON value or null
+*/
+export const parse_editor_content = function(content) {
+
+	const json_value = content.json !== undefined
+		? content.json
+		: content.text === ''
+			? null
+			: JSON.parse(content.text)
+
+	return json_value
+}//end parse_editor_content
+
+
+
+/**
+* BUILD_CHANGED_DATA_ITEM
+* Builds a frozen changed_data_item object for component_json.
+* Used by edit views (via handle_json_change) and search view (directly).
+* @param mixed value - The parsed JSON value
+* @param int|null id - Entry id from data
+* @return object changed_data_item
+*/
+export const build_changed_data_item = function(value, id=null) {
+
+	const changed_data_item = Object.freeze({
+		action	: 'update',
+		id		: id,
+		value	: { value : value }
+	})
+
+	return changed_data_item
+}//end build_changed_data_item
+
+
+
+/**
+* HANDLE_JSON_CHANGE
+* Common change handler for component_json across edit views.
+* Parses the editor content, builds changed_data_item, and sets changed_data.
+* Note: Does NOT auto-save. Use save_sequence for explicit save.
+* @param object self - Component instance
+* @param object content - Editor content {json, text}
+* @param int key - Entry index
+* @return bool - Result from set_changed_data
+*/
+export const handle_json_change = function(self, content, key=0) {
+
+	// parse editor content to JSON value
+		const json_value = parse_editor_content(content)
+
+	// deep clone to make immutable
+		const immutable_value = JSON.parse(JSON.stringify(json_value))
+
+	// resolve id dynamically from self.data
+		const id = self.data.entries?.[key]?.id || null
+
+	// build changed_data_item
+		const changed_data_item = build_changed_data_item(immutable_value, id)
+
+	// fix instance changed_data
+		return self.set_changed_data(changed_data_item)
+}//end handle_json_change
+
+
+
+/**
 * SET_VALUE
 * Overwrites component_common method
 * @param mixed value
@@ -84,12 +154,11 @@ component_json.prototype.set_value = async function(value, key=0) {
 
 	const self = this
 
-	// change data
-		const changed_data_item = Object.freeze({
-			action	: 'update',
-			id		: self.data.entries?.[key]?.id || null,
-			value	: { value : value }
-		})
+	// resolve id dynamically from self.data
+		const id = self.data.entries?.[key]?.id || null
+
+	// build changed_data_item
+		const changed_data_item = build_changed_data_item(value, id)
 
 	// fix instance changed_data
 		const changed = self.set_changed_data(changed_data_item)
@@ -113,7 +182,6 @@ component_json.prototype.save_sequence = async function(editor) {
 		const data		= self.data || {}
 		const entries	= data.entries || []
 
-
 	// check if the editor validate the current value
 		const validate = editor.validate()
 
@@ -121,16 +189,9 @@ component_json.prototype.save_sequence = async function(editor) {
 			return false;
 		}
 
-	// get the current value
+	// get the current value and parse it using shared function
 		const current_value = editor.get();
-
-	// current_value could be a text or a json { json: unknown } | { text: string }
-	// and the text could be empty, check it before assign it as json value.
-		const json_value = current_value.json !== undefined
-			? current_value.json
-			: current_value.text===''
-				? null
-				: JSON.parse( current_value.text )
+		const json_value = parse_editor_content(current_value)
 
 	// check data has really changed. If not, stop save
 		const db_value 	= typeof entries[0]!=="undefined" ? entries[0] : null
@@ -141,16 +202,12 @@ component_json.prototype.save_sequence = async function(editor) {
 		}
 
 	// changed_data
-		const changed_data = [Object.freeze({
-			action	: 'update',
-			id		: entries[0]?.id || null,
-			value	: { value : json_value }
-		})]
+		const changed_data = [build_changed_data_item(json_value, entries[0]?.id || null)]
 
 	// save_response
 		const save_response = await self.change_value({
-			changed_data	: changed_data,
-			refresh			: false
+			changed_data : changed_data,
+			refresh		 : false
 		})
 
 

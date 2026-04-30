@@ -128,39 +128,13 @@ export const get_content_value = (i, current_value, self) =>{
 			parent			: content_value
 		})
 
-	// unified change handler
+	// unified change handler - delegates to component method
 		const fn_coord_change = (e) => {
 			const node = e.target
 			const name = node.dataset.name
 			const val  = (node.value.length > 0) ? parseFloat(node.value) : null
 
-			// ensure current_value[i] exists
-			self.current_value[i] = self.current_value[i] || {}
-			self.current_value[i][name] = val
-
-			// mark as changed
-			self.is_data_changed = true
-
-			// map updates
-			if (self.map) {
-				const lat = self.current_value[i].lat
-				const lon = self.current_value[i].lon
-				const zoom = self.current_value[i].zoom
-
-				if (name === 'lat' || name === 'lon') {
-					if (!isNaN(lat) && !isNaN(lon)) {
-						self.map.panTo(new L.LatLng(lat, lon))
-					}
-				} else if (name === 'zoom') {
-					if (!isNaN(zoom)) {
-						self.map.setZoom(zoom)
-					}
-				}
-			}
-
-			if (SHOW_DEBUG === true) {
-				console.log(`changed ${name} value to:`, val);
-			}
+			self.handle_coord_change(i, name, val)
 		}
 
 		// latitude
@@ -443,11 +417,7 @@ const get_buttons = (self) => {
 			function fn_save(e) {
 				e.stopPropagation()
 
-				const changed_data_item = Object.freeze({
-					action		: 'update',
-					id			: self.current_value[0]?.id || null,
-					value		: self.current_value[0]
-				})
+				const changed_data_item = self.build_changed_data_item(0)
 
 				self.change_value({
 					changed_data	: [changed_data_item],

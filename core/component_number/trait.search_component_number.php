@@ -38,18 +38,18 @@ trait search_component_number {
     * Extracts and normalizes the search query value (q) from the input object.
     */
     protected static function extract_normalized_number_q(object $query_object) : string|false {
-        
-        $q_raw = isset($query_object->q) && is_array($query_object->q) 
-            ? reset($query_object->q) 
+
+        $q_raw = isset($query_object->q) && is_array($query_object->q)
+            ? reset($query_object->q)
             : ($query_object->q ?? null);
 
         if ($q_raw === null && empty($query_object->q_operator)) {
             return false;
         }
 
-        // Remove the id property from q_raw if exists
-        if (is_object($q_raw) && isset($q_raw->id)) {
-            unset($q_raw->id);
+        // Extract scalar value from q_raw object
+        if (is_object($q_raw)) {
+            $q_raw = $q_raw->value ?? $q_raw;
         }
 
         $q = is_string($q_raw) ? $q_raw : to_string($q_raw);
@@ -63,7 +63,7 @@ trait search_component_number {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_number_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -71,7 +71,7 @@ trait search_component_number {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo;
-        
+
         $ctx = new stdClass();
         $ctx->component_tipo = $component_tipo;
         $ctx->column         = section_record_data::get_column_name(get_called_class());
@@ -80,7 +80,7 @@ trait search_component_number {
         $ctx->q_operator     = $query_object->q_operator ?? null;
         $ctx->between_sep    = '...';
         $ctx->q_only_op      = 'only_operator';
-        
+
         // Set defaults on query_object
         $query_object->type     = 'number';
         $query_object->unaccent = false;

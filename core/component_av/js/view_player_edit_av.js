@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {when_in_viewport} from '../../common/js/events.js'
 
 
 
@@ -116,20 +117,24 @@ export const get_content_data_player = function(options) {
 					? tc_in + '&' + tc_out
 					: null
 
-			// source node
-				const source	= document.createElement('source')
-				source.type		= 'video/mp4'
-				source.src		= (self.fragment)
-					? video_url + '?' + fragment_url
-					: video_url
-
 			// video node
 				const video		= document.createElement('video')
 				video.poster	= posterframe_url
+				video.preload	= 'none' // prevent video data loading until user interaction
 				video.controls	= true
 				video.classList.add('posterframe')
 				video.setAttribute('tabindex', 0)
-				video.appendChild(source)
+
+			// observer. Set video source only when it is in viewport (to save network traffic)
+				when_in_viewport(
+					video, // node to observe
+					() => { // callback
+						video.preload = 'metadata' // load only metadata (duration, dimensions) not full video
+						video.src = (self.fragment)
+							? video_url + '?' + fragment_url
+							: video_url
+					}
+				)
 
 			// permissions
 			// set read only permissions, remove the contextmenu and nodownload

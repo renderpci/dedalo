@@ -482,6 +482,74 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 
 
 /**
+* BUILD_CHANGED_DATA_ITEM
+* Creates a frozen changed_data_item for the given key
+* Centralizes the pattern used across views and component methods
+* @param int key
+* @return object changed_data_item
+*/
+component_geolocation.prototype.build_changed_data_item = function(key) {
+
+	const self = this
+
+	const changed_data_item = Object.freeze({
+		action	: 'update',
+		id		: self.current_value[key]?.id || null,
+		value	: self.current_value[key]
+	})
+
+	return changed_data_item
+}//end build_changed_data_item
+
+
+
+/**
+* HANDLE_COORD_CHANGE
+* Unified handler for coordinate input changes (lat, lon, zoom, alt)
+* Updates current_value, marks data as changed, and syncs map position
+* @param int key - index of the value entry
+* @param string name - field name ('lat'|'lon'|'zoom'|'alt')
+* @param number|null val - new value
+* @return bool true
+*/
+component_geolocation.prototype.handle_coord_change = function(key, name, val) {
+
+	const self = this
+
+	// ensure current_value[key] exists
+	self.current_value[key] = self.current_value[key] || {}
+	self.current_value[key][name] = val
+
+	// mark as changed
+	self.is_data_changed = true
+
+	// map updates
+	if (self.map) {
+		const lat	= self.current_value[key].lat
+		const lon	= self.current_value[key].lon
+		const zoom	= self.current_value[key].zoom
+
+		if (name === 'lat' || name === 'lon') {
+			if (!isNaN(lat) && !isNaN(lon)) {
+				self.map.panTo(new L.LatLng(lat, lon))
+			}
+		} else if (name === 'zoom') {
+			if (!isNaN(zoom)) {
+				self.map.setZoom(zoom)
+			}
+		}
+	}
+
+	if (SHOW_DEBUG === true) {
+		console.log(`changed ${name} value to:`, val);
+	}
+
+	return true
+}//end handle_coord_change
+
+
+
+/**
 * REFRESH_MAP
 * @param object map
 * @return bool true
@@ -1100,14 +1168,8 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 
 	// track changes in self.data.changed_data
-		// changed_data
-			const changed_data_item = Object.freeze({
-				action		: 'update',
-				id			: self.current_value[key]?.id || null,
-				value		: self.current_value[key]
-			})
-		// fix instance changed_data
-			self.set_changed_data(changed_data_item)
+		const changed_data_item = self.build_changed_data_item(key)
+		self.set_changed_data(changed_data_item)
 
 
 	return true
@@ -1197,11 +1259,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
 		self.map.setZoom(self.current_value[key].zoom);
 		// modify his own data with the new values
-		const changed_data = [Object.freeze({
-			action		: 'update',
-			id			: self.current_value[key]?.id || null, // geolocation doesn't has multiple 
-			value		: self.current_value[key]
-		})]
+		const changed_data = [self.build_changed_data_item(key)]
 		self.change_value({
 			changed_data	: changed_data,
 			refresh			: false
@@ -1251,11 +1309,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
-				const recover_changed_data = [Object.freeze({
-					action		: 'update',
-					id			: self.current_value[key]?.id || null,
-					value		: self.current_value[key]
-				})]
+				const recover_changed_data = [self.build_changed_data_item(key)]
 				self.change_value({
 					changed_data	: recover_changed_data,
 					refresh			: false
@@ -1288,11 +1342,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 				self.current_value[key].lib_data = self.ar_layer_loaded
 
-				const changed_data = [Object.freeze({
-					action		: 'update',
-					id			: self.current_value[key]?.id || null,
-					value		: self.current_value[key]
-				})]
+				const changed_data = [self.build_changed_data_item(key)]
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: false

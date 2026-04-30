@@ -7,22 +7,16 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
-	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
 		render_column_id,
 		render_column_component_info,
 		render_column_remove,
 		get_buttons,
-		activate_autocomplete,
+		add_wrapper_events,
 		build_header,
 		render_references
 	} from './render_edit_component_portal.js'
-	import {
-		on_dragover,
-		on_dragleave,
-		on_drop, // used to reorder inside the same portal
-	} from './drag_and_drop.js'
 
 
 
@@ -120,32 +114,8 @@ view_default_edit_portal.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
-		wrapper.addEventListener('dragover',function(e){
-			on_dragover(this, e, {
-				caller	: self
-			})
-		})
-		wrapper.addEventListener('dragleave',function(e){
-			on_dragleave(this, e)
-		})
-		wrapper.addEventListener('drop',function(e){
-			on_drop( this, e, {
-				caller	: self
-			})
-		})
-
-	// service autocomplete
-		const click_handler = (e) => {
-			e.stopPropagation()
-			dd_request_idle_callback(
-				() => {
-					if (self.active) {
-						activate_autocomplete(self, wrapper)
-					}
-				}
-			)
-		}
-		wrapper.addEventListener('click', click_handler)
+	// service autocomplete + drag/drop
+		add_wrapper_events(self, wrapper, {drag_drop: true})
 
 
 	return wrapper

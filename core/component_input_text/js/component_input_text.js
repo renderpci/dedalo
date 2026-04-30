@@ -101,12 +101,10 @@ component_input_text.prototype.init = async function(options) {
 
 /**
 * FIND_EQUAL
-* Check the value of the input_text with the all values in the database
+* Check if the given value already exists in the database for the same section tipo.
+* Excludes the current record (self.section_id) from the search.
 * @param string value
-* @return int|null
-* result:
-* 	true : unique value, it not has any record inside the section.
-* 	false: the value has almost 1 record inside the database, but it is not unique.
+* @return int|null section_id of the matching record, or null if no duplicate found
 */
 component_input_text.prototype.find_equal = async function(value) {
 
@@ -125,14 +123,14 @@ component_input_text.prototype.find_equal = async function(value) {
 			filter					: {
 				$and : [
 					{
-						q			: value,
+						q			: {value : value},
 						q_operator	: '=',
 						q_split		: false,
 						path		: [
 							{
 								component_tipo	: self.tipo,
 								model			: self.model,
-								name			: self.label,
+								name			: self.label || '',
 								section_tipo	: self.section_tipo
 							}
 						]
@@ -175,14 +173,24 @@ component_input_text.prototype.find_equal = async function(value) {
 			}
 		})
 
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn('---> find_equal api_response', api_response);
+		}
+
+	// check api_response
+		if (!api_response || !api_response.result) {
+			console.error('Error on find_equal: invalid api_response', api_response);
+			return null
+		}
+
 	// data
 		const data = api_response.result.data || []
 
 	// record data results from search
 		const record = data.find(item => item.tipo===self.tipo)
-		if (record && record.value) {
-			const section_id = record.value[0]?.section_id || null
-
+		if (record) {
+			const section_id = record.entries[0].section_id || null
 			return section_id
 		}
 

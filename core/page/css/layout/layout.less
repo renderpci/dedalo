@@ -16,7 +16,7 @@
 	}
 // hilite static
 	.hilite_element {
-		will-change: transform; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
+		will-change: background-color; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
 		transition: background-color 600ms linear;
 		background-color: @color_hilite ;
 		.label {
@@ -47,7 +47,7 @@
 		padding: 0.25em;
 		border: none;
 		outline: 1px solid @color_grey_13;
-		transition: all .5s ease, padding 0s;
+		transition: outline-color .5s ease, outline-offset .5s ease, box-shadow .5s ease, opacity .5s ease;
 		opacity: 0.75;
 		vertical-align: bottom;
 
@@ -63,26 +63,18 @@
 	}//end .dd_input
 
 // placeholder common style
-	input::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+	input::-webkit-input-placeholder { /* Chrome/Safari/Edge */
 	  font-style: italic;
 	  opacity: 0.95;
 	}
-	input::-moz-placeholder { /* Firefox 19+ */
-	  font-style: italic;
-	  opacity: 0.95;
-	}
-	input:-ms-input-placeholder { /* IE 10+ */
-	  font-style: italic;
-	  opacity: 0.95;
-	}
-	input:-moz-placeholder { /* Firefox 18- */
+	input::placeholder {
 	  font-style: italic;
 	  opacity: 0.95;
 	}
 
 // area common definitions
 	.wrapper_area {
-		display: table;
+		display: block;
 		width: 100%;
 		padding: 1rem;
 
@@ -792,7 +784,7 @@
 
 		select {
 			-webkit-appearance: none;
-			-moz-appearance: none;
+			appearance: none;
 			text-indent: 1px;
 			text-overflow: '';
 		}

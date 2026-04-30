@@ -170,7 +170,17 @@ export const permissions	= 2
 		// test_save		: false
 	})
 
-// component_info -widgets- (WORKING HERE)
+// component_info
+	elements.push({
+		model			: 'component_info',
+		tipo			: 'test212',
+		section_tipo	: section_tipo,
+		section_id		: section_id,
+		mode			: mode,
+		lang			: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
+		new_value		: fn.random_info_value,
+		test_save		: false
+	})
 
 // component_input_text
 	elements.push({
@@ -359,7 +369,7 @@ export const permissions	= 2
 		section_id			: section_id,
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
-		new_value			: (_arguments) => {		
+		new_value			: (_arguments) => {
 			const locator = fn.random_locator(_arguments)
 			locator.type_rel = 'dd620'
 			return locator

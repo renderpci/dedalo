@@ -7,6 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {build_changed_data_item} from './component_json.js'
 
 
 
@@ -74,14 +75,16 @@ const get_content_data = function(self) {
 			class_name		: 'q_operator',
 			parent			: content_data
 		})
-		input_q_operator.addEventListener('change', function() {
+		// change event
+		const change_handler = function() {
 			// value
 				const value = (this.value.length>0) ? this.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})
+		}
+		input_q_operator.addEventListener('change', change_handler)
 
 	// values (inputs)
 		const inputs_value	= value || []
@@ -125,25 +128,23 @@ const get_content_value = (i, current_value, self) => {
 			value			: text_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', function() {
+		// change event
+		const change_handler = function() {
 
 			// safe_value
 				const safe_value = (this.value.length>0) ? this.value : null
 
 			// changed_data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					id		: self.data.entries?.[i]?.id || null,
-					value	: { value : safe_value }
-				})
+				const id = self.data.entries?.[i]?.id || null
+				const changed_data_item = build_changed_data_item(safe_value, id)
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
+
 			// publish search. Event to update the dom elements of the instance
 				event_manager.publish('change_search_element', self)
-		})//end event change
+		}
+		input.addEventListener('change', change_handler)
 
 
 	return content_value

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {handle_password_change} from './component_password.js'
 
 
 
@@ -110,45 +111,23 @@ const get_content_value = function(i, self) {
 			parent			: content_value
 		})
 		input.autocomplete = 'new-password'
-		
-		// change event		
-		const change_handler = (e) => {
+
+		// change event
+		const change_handler = async (e) => {
 			e.preventDefault()
 
-			// user confirm. Prevents Safari auto-fill save
-				// if (!confirm(get_label.sure + " [edit password]")) {
-				// 	return false
-				// }
-
-			// validated. Test password is acceptable string
-				const validation_obj	= self.validate_password_format(input.value)
-				const validated			= validation_obj.result
-				ui.component.error(!validated, input)
-				if (!validated) {
-					return false
-				}
-
-			// save value
-				const to_save_value = (input.value.length>0) 
-					? {value : input.value}
-					: null
-				const changed_data = [Object.freeze({
-					action	: 'update',
-					id		: self.data.entries[0]?.id || null,
-					value	: to_save_value
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
+			// common change handler (validate, build changed_data_item, set_changed_data, change_value)
+			// read id dynamically from self.data (not from stale closure)
+				const current_id = self.data.entries?.[0]?.id ?? null
+				await handle_password_change(self, input.value, input, current_id)
 		}
 		input.addEventListener('change', change_handler)
-		
+
 		// click event. Capture event propagation
 		input.addEventListener('click', (e) => {
 			e.stopPropagation()
 		})
-	
+
 		// mousedown event. Capture event propagation
 		input.addEventListener('mousedown', (e) => {
 			e.stopPropagation()

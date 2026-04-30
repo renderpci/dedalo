@@ -23,7 +23,7 @@
 			background-color: @color_grey_13;
 			border-radius: 23px;
 			vertical-align: text-bottom;
-			transition: all 0.3s linear;
+			transition: background-color 0.3s linear;
 
 			&:before {
 				content: '';
@@ -34,7 +34,7 @@
 				background-color: @color_white;
 				border-radius: 11px;
 				transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
-				transition: all 0.25s linear;
+				transition: transform 0.25s linear;
 			}
 
 			&:after {
@@ -46,14 +46,14 @@
 				background-color: @color_white;
 				border-radius: 11px;
 				box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
+				transform-origin: left center;
 				transform: translate3d(2px, 2px, 0);
-				transition: all 0.2s ease-in-out;
+				transition: transform 0.2s ease-in-out;
 			}
 		}
 
 		&:active i::after {
-			transform: translate3d(2px, 2px, 0);
-			width: 28px;
+			transform: translate3d(2px, 2px, 0) scaleX(1.273);
 		}
 
 		&:active input:checked + i::after {

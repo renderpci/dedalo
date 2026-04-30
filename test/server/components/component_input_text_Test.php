@@ -201,7 +201,7 @@ final class component_input_text_test extends BaseTestCase {
 				. to_string($component->get_data_lang($lang)) . PHP_EOL
 				. to_string([])
 		);
-		
+
 		// 2 - Set sample data in current lang
 		$lang_data = array_values(array_filter($sample_data, function($item) use ($lang) {
 			return $item->lang===$lang;
@@ -330,7 +330,7 @@ final class component_input_text_test extends BaseTestCase {
 			'expected cell_type text : ' . PHP_EOL
 				. to_string($result->cell_type)
 		);
-		
+
 		// value
 		$items = array_filter($sample_data, function($el){
 			return $el->lang === 'lg-spa';
@@ -338,7 +338,7 @@ final class component_input_text_test extends BaseTestCase {
 		$values = array_map(function($el){
 			return $el->value;
 		}, $items);
-		$value_plain = implode(' | ', $values);		
+		$value_plain = implode(' | ', $values);
 		$this->assertTrue(
 			$result->value === [$value_plain],
 			'expected value do not match:' . PHP_EOL
@@ -353,7 +353,7 @@ final class component_input_text_test extends BaseTestCase {
 		$values = array_map(function($el){
 			return $el->value;
 		}, $items);
-		$value_plain = implode(' | ', $values);	
+		$value_plain = implode(' | ', $values);
 		$this->assertTrue(
 			$result->fallback_value === [$value_plain],
 			'expected fallback_value do not match:' . PHP_EOL
@@ -433,7 +433,7 @@ final class component_input_text_test extends BaseTestCase {
 		// 3 - Malformed JSON case
 		$import_value = '["Hello"';
 		$response     = $component->conform_import_data($import_value, $column_name);
-		
+
 		$this->assertTrue(
 			$response->result === null,
 			'expected result to be null for malformed JSON, got: ' . to_string($response->result)
@@ -561,7 +561,7 @@ final class component_input_text_test extends BaseTestCase {
 	}//end test_set_permissions
 
 
-	
+
 	/**
 	* TEST_LOAD_STRUCTURE_DATA
 	* @return void
@@ -1342,6 +1342,97 @@ final class component_input_text_test extends BaseTestCase {
 			'expected component_text_area in result'
 		);
 	}
+
+
+
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set empty array
+		$result = $component->set_data([]);
+		$this->assertTrue($result);
+		$this->assertNull($component->get_data());
+
+		// restore
+		$component->set_data($old_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set and save
+		$new_value = 'TestReloadValue';
+		$component->set_data([$new_value]);
+		$save_result = $component->Save();
+		$this->assertNotFalse($save_result, 'Save failed');
+
+		// reload from DB
+		$reloaded = component_common::get_instance(
+			self::$model, self::$tipo, 1, 'edit', DEDALO_DATA_NOLAN, self::$section_tipo
+		);
+		$reloaded_data = $reloaded->get_data();
+		$this->assertIsArray($reloaded_data);
+		$this->assertEquals(
+			$new_value,
+			$reloaded_data[0]->value
+		);
+
+		// restore
+		$component->set_data($old_data);
+		$component->Save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		// get_identifier returns tipo_section_tipo_section_id
+		$expected = self::$tipo . '_' . self::$section_tipo . '_1';
+		$this->assertEquals($expected, $result);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				self::$model, self::$tipo, 1, $mode, DEDALO_DATA_NOLAN, self::$section_tipo
+			);
+			$this->assertEquals($mode, $component->mode, "mode expected {$mode}");
+			$this->assertInstanceOf(component_input_text::class, $component, "instance expected component_input_text for mode {$mode}");
+		}
+	}//end test_component_instance_modes
 
 
 

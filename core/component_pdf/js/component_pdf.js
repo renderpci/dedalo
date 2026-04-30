@@ -68,6 +68,54 @@ export const component_pdf = function(){
 
 
 /**
+* CHANGE_HANDLER
+* Unified handler for component data changes across all views.
+* Handles lib_data updates (offset, etc.) using change_value.
+* @param object options
+* {
+*	key		: string,	// lib_data property name (e.g. 'offset')
+*	value	: mixed,	// new value for the property
+*	index	: int		// data entry index (default 0)
+* }
+* @return void
+*/
+component_pdf.prototype.change_handler = function(options) {
+
+	const self = this
+
+	// options
+	const key		= options.key
+	const value		= options.value
+	const index		= options.index ?? 0
+
+	// current_value
+	const current_value = self.data.entries?.[index]
+	if (!current_value) {
+		console.warn('! Ignored change_handler: missing entry at index', index)
+		return
+	}
+
+	// update lib_data
+	current_value.lib_data = current_value.lib_data || {}
+	current_value.lib_data[key] = value
+
+	// changed_data
+	const changed_data = [Object.freeze({
+		action	: 'update',
+		id		: current_value.id || null,
+		value	: current_value
+	})]
+
+	// change_value
+	self.change_value({
+		changed_data	: changed_data,
+		refresh			: false
+	})
+}//end change_handler
+
+
+
+/**
 * BUILD
 * @param bool autoload = false
 * @return bool

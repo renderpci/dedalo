@@ -991,4 +991,238 @@ final class component_av_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_GET_DATA
+	* @return void
+	*/
+	public function test_get_data() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_SET_DATA
+	* @return void
+	*/
+	public function test_set_data() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		// set new data
+			$new_data = random_av_data();
+			$component->set_data($new_data);
+
+			$result = $component->get_data();
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'expected type array after set_data : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// restore original data
+			$component->set_data($original_data);
+	}//end test_set_data
+
+
+
+	/**
+	* TEST_SET_DATA_EMPTY
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		// set empty data
+			$component->set_data([]);
+
+			$result = $component->get_data();
+
+			// get_data returns ?array — null or empty array for empty state
+			$this->assertTrue(
+				$result===null || (gettype($result)==='array' && empty($result)),
+				'expected null or empty array after set_data empty : ' . PHP_EOL
+					. to_string($result)
+			);
+
+		// restore original data
+			$component->set_data($original_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_SAVE_AND_RELOAD
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		// set new data and save
+			$new_data = random_av_data();
+			$component->set_data($new_data);
+			$component->Save();
+
+		// reload component
+			$component2 = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$result = $component2->get_data();
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'expected type array after save and reload : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// restore original data
+			$component2->set_data($original_data);
+			$component2->Save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_COMPONENT_INSTANCE_MODES
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		// edit mode
+			$component_edit = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$this->assertTrue(
+				$component_edit->mode==='edit',
+				'expected mode edit : ' . to_string($component_edit->mode)
+			);
+
+		// list mode
+			$component_list = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				'list',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$this->assertTrue(
+				$component_list->mode==='list',
+				'expected mode list : ' . to_string($component_list->mode)
+			);
+
+		// search mode
+			$component_search = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				'search',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$this->assertTrue(
+				$component_search->mode==='search',
+				'expected mode search : ' . to_string($component_search->mode)
+			);
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_IS_EMPTY
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// is_empty_data: array-level check
+			$data = $component->get_data();
+			$result = $component->is_empty_data($data);
+			$this->assertTrue(
+				gettype($result)==='boolean',
+				'expected type boolean from is_empty_data : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// is_empty with data_item: media components have files_info not value,
+		// so is_empty($data_item) returns true for them by design
+			$data = $component->get_data();
+			if (isset($data) && !empty($data)) {
+				$data_item = $data[0] ?? null;
+				if ($data_item !== null) {
+					$result_item = $component->is_empty($data_item);
+					$this->assertTrue(
+						gettype($result_item)==='boolean',
+						'expected type boolean from is_empty with data_item : ' . PHP_EOL
+							. gettype($result_item)
+					);
+				}
+			}
+
+		// is_empty with null
+			$result_null = $component->is_empty(null);
+			$this->assertTrue(
+				$result_null===true,
+				'expected true from is_empty(null)'
+			);
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_GET_IDENTIFIER
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			!empty($result),
+			'expected non-empty identifier'
+		);
+	}//end test_get_identifier
+
+
+
 }//end class component_av_test

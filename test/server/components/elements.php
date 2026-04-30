@@ -120,6 +120,15 @@ function get_elements() : array {
 			'new_value'		=> 'ar_random_string',
 		],
 		(object)[
+			'model'			=> 'component_info',
+			'tipo'			=> 'test212',
+			'section_tipo'	=> $section_tipo,
+			'section_id'	=> $section_id,
+			'mode'			=> $mode,
+			'lang'			=> $lang,
+			'test_save'		=> false
+		],
+		(object)[
 			'model'			=> 'component_inverse',
 			'tipo'			=> 'test68',
 			'section_tipo'	=> $section_tipo,

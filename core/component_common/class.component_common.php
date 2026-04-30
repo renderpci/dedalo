@@ -3624,7 +3624,7 @@ abstract class component_common extends common {
 		$data = $this->model === 'component_dataframe'
 			? $this->get_data_unfiltrered() ?? []
 			: $this->get_data_lang() ?? [];
-	
+
 
 		switch ($changed_data->action) {
 
@@ -3657,8 +3657,13 @@ abstract class component_common extends common {
 				}
 				*/
 
-				// Append the new value to the data array
-				$data[] = $changed_data->value;
+				// For monovalue components, replace the existing value instead of appending
+				if(in_array($this->model, self::$components_monovalue)) {
+					$data = [$changed_data->value];
+				} else {
+					// Append the new value to the data array
+					$data[] = $changed_data->value;
+				}
 
 				// Persist the updated data in the current language
 				$this->set_data_lang( $data, $lang );
@@ -3806,7 +3811,7 @@ abstract class component_common extends common {
 						// Remove the dataframe record before main component save
 						// This ensures Time Machine has correct state
 						$this->remove_dataframe_data( $locator );
-					
+
 					}
 				}
 
@@ -3815,7 +3820,7 @@ abstract class component_common extends common {
 
 				// Persist the modified data in the current language
 				$this->set_data_lang($data, $lang);
-				
+
 				break;
 
 			// SET_DATA ACTION

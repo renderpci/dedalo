@@ -377,4 +377,177 @@ final class component_email_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+		$original_data = $component->get_data();
+
+		// set empty array
+		$result = $component->set_data([]);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$data = $component->get_data();
+		$this->assertTrue(
+			is_null($data),
+			'expected null data after set_data empty array : ' . to_string($data)
+		);
+
+		// restore original data
+		$component->set_data($original_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+		$original_data = $component->get_data();
+
+		// set new data and save
+		$email = 'save_reload@test.org';
+		$new_data = [(object)['value'=>$email, 'lang'=>DEDALO_DATA_NOLAN]];
+		$component->set_data($new_data);
+
+		$save_result = $component->save();
+
+		$this->assertTrue(
+			$save_result===true,
+			'expected true on save'
+		);
+
+		// reload component from DB
+		$component2 = component_common::get_instance(
+			self::$model,
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+
+		$reloaded_data = $component2->get_data();
+
+		$this->assertTrue(
+			is_array($reloaded_data),
+			'expected array data after reload'
+		);
+		$this->assertTrue(
+			$reloaded_data[0]->value===$email,
+			'expected email value match after reload : ' . to_string($reloaded_data[0]->value)
+		);
+
+		// restore original data
+		$component2->set_data($original_data);
+		$component2->save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit','list','search'];
+
+		foreach ($modes as $current_mode) {
+
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				$current_mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				get_class($component)==='component_email',
+				'expected class component_email for mode: ' . $current_mode
+			);
+			$this->assertTrue(
+				$component->mode===$current_mode,
+				'expected mode ' . $current_mode . ' : ' . to_string($component->mode)
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_is_empty
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+		$original_data = $component->get_data();
+
+		// test with empty data (null)
+		$component->set_data(null);
+		$is_empty_data = $component->is_empty_data($component->get_data());
+
+		$this->assertTrue(
+			$is_empty_data===true,
+			'expected is_empty_data true for null data'
+		);
+
+		// test with data item (single item)
+		$component->set_data([(object)['value'=>'test@empty.org']]);
+		$data = $component->get_data();
+
+		$this->assertTrue(
+			$component->is_empty($data[0])===false,
+			'expected is_empty false for data item with value'
+		);
+
+		// restore original data
+		$component->set_data($original_data);
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			strpos($result, self::$tipo)!==false,
+			'expected tipo in identifier : ' . to_string($result)
+		);
+	}//end test_get_identifier
+
+
+
 }//end class component_email_test

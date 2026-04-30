@@ -126,14 +126,43 @@ const get_content_value = function(i, value, self) {
 
 	// svg item
 		if (file_info) {
+			// image container for smooth fade-in
+			const image_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'image_container',
+				parent			: content_value
+			})
+			// start invisible for smooth fade-in on load
+			image_container.style.opacity	= '0'
+			image_container.style.transition	= 'opacity 0.3s ease-in'
+
 			// image
 			const image = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: 'image svg_element',
-				src				: url,
-				parent			: content_value
+				parent			: image_container
 			})
 			image.setAttribute('tabindex', 0)
+
+			// lazy load: defer setting image src until container is near viewport
+			const load_svg = () => {
+				image.src = url
+			}
+			// use IntersectionObserver to load only when visible (with margin to preload slightly)
+			const observer = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					observer.disconnect()
+					load_svg()
+				}
+			}, { rootMargin: '200px' })
+			observer.observe(image_container)
+
+			// load handler: smooth appearance fade-in
+			const load_handler = () => {
+				image_container.style.opacity = '1'
+			}
+			image.addEventListener('load', load_handler)
+
 		}else{
 
 			// image fallback
@@ -143,26 +172,26 @@ const get_content_value = function(i, value, self) {
 				class_name		: 'image svg_element fallback_image clickable',
 				parent			: content_value
 			})
-			// load event . image background color
-				// image_node.addEventListener('load', set_bg_color, false)
-				// function set_bg_color() {
-				// 	this.removeEventListener('load', set_bg_color, false)
-				// 	ui.set_background_image(this, content_value)
-				// }
 
-			image_node.src = image_url
+			// lazy load for fallback
+			const observer = new IntersectionObserver((entries) => {
+				if (entries[0].isIntersecting) {
+					observer.disconnect()
+					image_node.src = image_url
+				}
+			}, { rootMargin: '200px' })
+			observer.observe(content_value)
 
-			// click
-			image_node.addEventListener('mousedown', function(e) {
+			// click handler
+			const click_handler = (e) => {
 				e.stopPropagation()
-
 				const tool_upload = self.tools.find(el => el.model==='tool_upload')
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			})
+				open_tool({
+					tool_context	: tool_upload,
+					caller			: self
+				})
+			}
+			image_node.addEventListener('mousedown', click_handler)
 		}
 
 

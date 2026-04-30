@@ -130,25 +130,16 @@ const get_content_value = (i, current_value, self) => {
 			id 				: 'color_picker',
 			name 			: 'color_picker',
 			class_name		: 'color_picker',
-			value			: current_value || default_color,
+			value			: current_value?.value || default_color,
 			parent			: color_picker_container
 		})
 		color_picker.addEventListener("change", function(e){
 			input.value = e.target.value;
-
+			// dispatch change on text input to trigger change_handler (save)
+			input.dispatchEvent(new Event('change'))
 		});
 		color_picker.addEventListener('input', function(e){
 			input.value = e.target.value;
-
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: 0,
-					value	: e.target.value || ''
-				})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
 		});
 		content_value.appendChild(color_picker_container)
 
@@ -182,8 +173,11 @@ const get_content_value = (i, current_value, self) => {
 
 		// change event
 			input.addEventListener('change', function(e) {
-				change_handler(e, i, self)
-				color_picker.value = e.target.value;
+				change_handler(e, i, self, {
+					post_process: (e, key, self) => {
+						color_picker.value = e.target.value;
+					}
+				})
 			})
 
 

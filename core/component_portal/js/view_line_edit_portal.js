@@ -12,18 +12,11 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {
 		render_column_component_info,
-		activate_autocomplete,
+		add_wrapper_events,
+		add_section_record_drag_and_drop,
 		get_buttons,
 		render_references,
 	} from './render_edit_component_portal.js'
-
-	import {
-		on_dragstart_mosaic,
-		on_dragover,
-		on_dragleave,
-		// on_dragend,
-		on_drop, // used to reorder inside the same portal
-	} from './drag_and_drop.js'
 
 
 
@@ -90,17 +83,7 @@ view_line_edit_portal.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// service autocomplete
-		const click_handler = (e) => {
-			e.stopPropagation()
-			dd_request_idle_callback(
-				() => {
-					if (self.active) {
-						activate_autocomplete(self, wrapper)
-					}
-				}
-			)
-		}
-		wrapper.addEventListener('click', click_handler)
+		add_wrapper_events(self, wrapper)
 
 	// change_mode
 		const dblclick_handler = (e) => {
@@ -182,7 +165,7 @@ const get_content_data = async function(self, ar_section_record) {
 					// permissions control
 					// with read only permissions, remove drag and drop
 					if(self.permissions >= 2){
-						drag_and_drop({
+						add_section_record_drag_and_drop({
 							section_record_node	: section_record_node,
 							paginated_key		: i,
 							total_records		: self.total,
@@ -193,7 +176,6 @@ const get_content_data = async function(self, ar_section_record) {
 						// mouseenter event
 						const mouseenter_handler = (e) => {
 							e.stopPropagation()
-							// const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
 							// event_manager.publish(event_id, this)
 							section_record_node.classList.add('mosaic_over')
 						}
@@ -448,33 +430,6 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 	return button_remove
 }//end render_column_remove
-
-
-
-/**
-* DRAG_AND_DROP
-* Set section_record_node ready to drag and drop
-* Mosaic use his own node to be draggable and droppable
-* also it uses the drag node of default behavior (dependent of section_id node)
-* but doesn't use the drop node (dependent of section_id node)
-* @param object options
-* @return bool
-*/
-const drag_and_drop = function(options) {
-
-	// options
-		const node	= options.section_record_node
-
-	// set properties/events
-		node.draggable = true
-		node.classList.add('draggable')
-		node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
-		node.addEventListener('dragover',function(e){on_dragover(this, e, options)})
-		node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-		node.addEventListener('drop',function(e){on_drop(this, e, options)})
-
-	return true
-}//end drag_and_drop
 
 
 

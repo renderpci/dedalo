@@ -204,6 +204,7 @@ const get_content_value = (i, current_value, self) => {
 								}
 						}, true)
 
+					video.preload = 'metadata' // load only metadata (duration, dimensions) not full video
 					video.src = video_url
 					video.classList.remove('hide')
 				}
@@ -285,15 +286,11 @@ const build_video_node = (posterframe_url) => {
 		if (posterframe_url) {
 			video.poster = posterframe_url
 		}
+		video.preload	= 'none' // prevent video data loading until user interaction
 		video.controls	= true
 		video.classList.add('posterframe')
 		video.setAttribute('tabindex', 0)
 		video.setAttribute('height', 392)
-
-	// source tag
-		const source	= document.createElement('source')
-		source.type		= 'video/mp4'
-		video.appendChild(source)
 
 
 	return video

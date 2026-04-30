@@ -107,7 +107,7 @@ export const get_content_data = function(self) {
 * @param object self
 * @return HTMLElement content_value
 */
-const get_content_value = (i, current_value, self) => {
+export const get_content_value = (i, current_value, self, options={}) => {
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -165,7 +165,8 @@ const get_content_value = (i, current_value, self) => {
 		input.addEventListener('input', input_check_value_handler)
 
 	// button remove
-		if (i>0) {
+		const show_remove_button = options.show_remove_button !== false
+		if (i>0 && show_remove_button) {
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				title			: get_label.delete || 'Delete',
@@ -236,7 +237,8 @@ export const get_buttons = (self) => {
 				title			: get_label.new || 'New',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('mouseup', function(e) {
+
+			const add_handler = async function(e) {
 				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
@@ -244,19 +246,21 @@ export const get_buttons = (self) => {
 					id		: null,
 					value	: {value: null}
 				})]
-				self.change_value({
+
+				await self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
 				})
-				.then(()=>{
-					const input_node = self.node.content_data[key]
-						? self.node.content_data[key].querySelector('input')
-						: null
-					if (input_node) {
-						input_node.focus()
-					}
-				})
-			})
+
+				const new_key = self.data.entries.length - 1
+				const input_node = self.node.content_data[new_key]
+					? self.node.content_data[new_key].querySelector('input')
+					: null
+				if (input_node) {
+					input_node.focus()
+				}
+			}
+			button_add_input.addEventListener('mouseup', add_handler)
 		}
 
 	// buttons tools

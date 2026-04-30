@@ -136,7 +136,18 @@ const get_content_value = function(i, value, self) {
 		}
 
 	// file_info
-		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
+		let file_info = files_info.find(el => el.quality===quality && el.file_exist===true)
+
+	// when the default quality file doesn't exist, fallback to the first available quality
+	// this keeps the image and the quality selector consistent
+		if (!file_info && files_info.length > 0) {
+			const available_file = files_info.find(el => el.file_exist===true)
+			if (available_file) {
+				self.quality = available_file.quality
+				// re-resolve file_info with the updated quality
+				file_info = available_file
+			}
+		}
 
 	// render image node
 		self.image_container = render_image_node(self, file_info, content_value)
@@ -287,8 +298,9 @@ const render_image_external = function(file_url) {
 * Creates an object of type 'image/svg+xml' with svg file and image
 * cropped by the svg
 * @param object self
-* @param object file_info
-* @return HTMLElement object_node
+* @param object|null file_info
+* @param HTMLElement content_value
+* @return HTMLElement image_container
 */
 const render_image_node = function(self, file_info, content_value) {
 
@@ -304,39 +316,19 @@ const render_image_node = function(self, file_info, content_value) {
 				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 				: page_globals.fallback_image
 
-	// image. (!) Only to get background color and apply to li node
+	// image_container
 		const image_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'image_container work_area'
 		})
-
-		// des
-			// const bg_reference_image_url = url // || page_globals.fallback_image
-			// const image = ui.create_dom_element({
-			// 	element_type	: 'img',
-			// 	class_name 		: 'img',
-			// 	// parent 			: image_container
-			// })
-			// // image background color
-			// 	image.addEventListener('load', set_bg_color, false)
-			// 	function set_bg_color() {
-			// 		this.removeEventListener('load', set_bg_color, false)
-			// 		// ui.set_background_image(this, content_value)
-			// 		image.classList.remove('hide')
-			// 	}
-			// // error
-			// 	image.addEventListener('error', function(){
-			// 		// console.warn('Error on load image:', bg_reference_image_url, image);
-			// 		svg_fallback(object_node)
-			// 	}, false)
-			// image.src = bg_reference_image_url
-			// image_container.image = image
+		// start invisible for smooth fade-in on load
+		image_container.style.opacity	= '0'
+		image_container.style.transition	= 'opacity 0.3s ease-in'
 
 	// fallback to default svg file
 		const svg_fallback = (object_node) => {
-			// fallback to default svg file
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
-			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
+			const base_svg_url_default	= page_globals.fallback_image.substring(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
 			object_node.data			= base_svg_url_default
 
 			if (self.permissions>1) {
@@ -367,80 +359,68 @@ const render_image_node = function(self, file_info, content_value) {
 		})
 		object_node.type	= "image/svg+xml"
 		object_node.url		= url // image URL
-		// set data or fallback
-		if (data.base_svg_url) {
-
-			// svg file already exists
-			object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
-
-		}else{
-			// fallback to default svg file
-			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
-			svg_fallback(object_node)
-		}
 		// set pointers
 		image_container.object_node	= object_node
 
-		// auto-change url the first time
+	// lazy load: defer setting object_node.data until the container is near the viewport
+		const load_svg = () => {
+			if (data.base_svg_url) {
+				// svg file already exists
+				object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
+			}else{
+				svg_fallback(object_node)
+			}
+		}
+		// use IntersectionObserver to load only when visible (with margin to preload slightly)
+		const observer = new IntersectionObserver((entries) => {
+			if (entries[0].isIntersecting) {
+				observer.disconnect()
+				load_svg()
+			}
+		}, { rootMargin: '200px' })
+		observer.observe(image_container)
+
+	// load handler: update image quality and apply cache-busting
 		const load_handler = async () => {
 			if (quality!==self.context.features?.default_quality) {
-				await image_quality_change_handler(url)
+				await self.image_quality_change_handler(url)
 			}
 
 			// dynamic_url . prevents to cache files inside svg object
-			const image = object_node.contentDocument.querySelector('image')
-			if (image) {
-				const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
-				image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
+			const svg_doc = object_node.contentDocument
+			if (svg_doc) {
+				const image = svg_doc.querySelector('image')
+				if (image) {
+					const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
+					image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
+				}
 			}
 
+			// smooth appearance: fade in instead of instant show
 			content_value.classList.remove('hide')
+			image_container.style.opacity = '1'
 		}
 		object_node.addEventListener('load', load_handler)
 
-	// change event
-		const image_quality_change_handler = async (url) => {
-
-			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
-			self.img_src = url
-
-			// svg document inside the object_node tag
-			const svg_doc = object_node.contentDocument;
-			// Get one of the svg items by ID;
-			const image_node = svg_doc
-				? await svg_doc.querySelector('image')
-				: null
-
-			// self.img_src = image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
-			if (image_node) {
-
-				// add spinner when new image is loading
-				content_value.classList.add('loading')
-				image_node.addEventListener('load', function(){
-					content_value.classList.remove('loading')
-				})
-
-				// no load case (example: original tiff files)
-				image_node.addEventListener('error', function(){
-					content_value.classList.remove('loading')
-				})
-
-				// update t var from image URL
-				const beats	= url.split('?')
-
-				// force to refresh image from svg
-				// await fetch(beats[0], { cache: 'reload' })
-
-				// new_url
-				const new_url = beats[0] + '?t=' + (new Date()).getTime()
-
-				// set the new source to the image node into the svg
-				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
+	// error handler: fallback when SVG fails to load
+		object_node.addEventListener('error', () => {
+			if (self.permissions>1 && !content_value.classList.contains('clickable')) {
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
+				if (tool_upload) {
+					const click_handler = (e) => {
+						e.stopPropagation();
+						open_tool({
+							tool_context	: tool_upload,
+							caller			: self
+						})
+					}
+					content_value.addEventListener('click', click_handler)
+					content_value.classList.add('clickable')
+				}
 			}
-		}
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id, image_quality_change_handler)
-		)
+			content_value.classList.remove('hide')
+			image_container.style.opacity = '1'
+		})
 
 
 	return image_container

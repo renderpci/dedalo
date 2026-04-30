@@ -146,16 +146,47 @@ class section_record {
 	*/
 	protected function save_event() : void {
 
-		// Invalidate request config cache file.
-		// This is used to invalidate the request config cache file
-		// when the section_record_save event is triggered.
-		// This only affects current user cache.
-		if($this->section_tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO){
-			$cache_file_name = 'cache_active_request_config.php';
-			dd_cache::delete_cache_files([
-				$cache_file_name
-			]);
+		// Invalidate cache files
+		switch ($this->section_tipo) {
+			case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO : // dd1244
+				// Invalidate request config cache file.
+				// This is used to invalidate the request config cache file
+				// when the section_record_save event is triggered.
+				// This only affects current user cache.
+				$cache_file_name = 'cache_active_request_config.php';
+				dd_cache::delete_cache_files([
+					$cache_file_name
+				]);
+				break;
+
+			case DEDALO_REGISTER_TOOLS_SECTION_TIPO : // dd1324
+				// This affects all users cache.
+				// Invalidate registered tools cache file. E.g. 'cache_tools_config_list_dd1324.php'
+				$cache_file1 = tools_register::get_config_list_cache_name(DEDALO_REGISTER_TOOLS_SECTION_TIPO);
+				// Invalidate all resolved registered tools cache file. E.g. 'cache_tools_all_registered_tools.php'
+				$cache_file2 = tool_common::get_all_registered_tools_cache_name();
+				dd_cache::delete_cache_files(
+					[$cache_file1, $cache_file2],
+					''
+				);
+				break;
+
+			case DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO : // dd996
+				// This affects all users cache.
+				// Invalidate tools config cache file. E.g. 'cache_tools_config_list_dd996.php'
+				$cache_file_name = tools_register::get_config_list_cache_name(DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO);
+				dd_cache::delete_cache_files(
+					[$cache_file_name],
+					''
+				);
+				break;
+
+			default:
+				// Nothing to do here
+				break;
 		}
+
+
 	}//end save_event
 
 

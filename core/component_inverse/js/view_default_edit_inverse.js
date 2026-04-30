@@ -125,7 +125,7 @@ const get_content_value = (i, current_value, self) => {
 
 
 /**
-* get_buttons
+* GET_BUTTONS
 * Alias of build_buttons_container from ui
 */
 const get_buttons = (self) => {

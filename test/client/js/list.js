@@ -23,16 +23,34 @@ export const list_of_test = [
 	'test_diffusion',
 	'test_ts_object',
 	'test_ts_object_extended',
-	'test_component_common_changed_data',
-	// components full test
+	'test_component_common_changed_data'
+]
+
+// list. Definition of test to do. Every test has a file as 'test_key_instances' + '.js'
+export const livecycle_detail = [
+	'test_component_3d',
+	'test_component_av',
 	'test_component_check_box',
+	'test_component_date',
+	'test_component_email',
 	'test_component_filter',
+	'test_component_filter_records',
 	'test_component_geolocation',
+	'test_component_image',
+	'test_component_input_text',
+	'test_component_info',
+	'test_component_inverse',
+	'test_component_iri',
+	'test_component_json',
+	'test_component_number',
+	'test_component_password',
+	'test_component_pdf',
+	'test_component_portal',
+	'test_component_publication',
 	'test_component_radio_button',
 	'test_component_select',
 	'test_component_select_lang',
-	'test_component_date',
-	'test_component_3d',
+	'test_component_svg',
 ]
 
 // group_stats: track pass/fail/pending per group
@@ -198,8 +216,9 @@ if (typeof content !== 'undefined') {
 		return section
 	}
 
-	create_group_section('generic tests', 'generic', list_of_test, 'generic')
-	create_group_section('component tests', 'component', elements, 'component')
+	create_group_section('generic', 'generic', list_of_test, 'generic')
+	create_group_section('lifecycle', 'generic', livecycle_detail, 'generic')
+	create_group_section('components', 'component', elements, 'component')
 
 	update_global_stats()
 

@@ -115,7 +115,6 @@ const get_content_value = (i, current_value, self) => {
 		const mode					= self.mode
 		const title					= current_value.title || ''
 		const iri					= current_value.iri || ''
-		const with_lang_versions	= self.context.properties.with_lang_versions || false
 		const transliterate_value	= self.data?.transliterate_value?.[i] || null
 
 	// content_value
@@ -274,7 +273,7 @@ const get_content_value = (i, current_value, self) => {
 							ui.component.activate(self, false)
 						}
 					}
-					input_iri.addEventListener('mousedown', click_handler)
+					input_iri.addEventListener('click', click_handler)
 				// mousedown event
 					const mousedown_handler = (e) => {
 						e.stopPropagation()
@@ -316,8 +315,8 @@ const get_content_value = (i, current_value, self) => {
 						parent			: content_value
 					})
 					input_iri_active.checked = dataframe_data
-					input_iri_active.addEventListener('change', fn_chnage)
-					async function fn_chnage(e){
+					// change event
+					const change_active_handler = (e) => {
 
 						// add style modified to wrapper node
 							if (!self.node.classList.contains('modified')) {
@@ -327,14 +326,8 @@ const get_content_value = (i, current_value, self) => {
 						// checked set for dataframe
 							current_value.dataframe = input_iri_active.checked
 
-						// set_changed_data
-							const changed_data_item = Object.freeze({
-								action	: 'update',
-								id		: current_value.id || null,
-								value	: current_value
-							})
-							// fix instance changed_data
-							await self.set_changed_data(changed_data_item)
+						// update_value(self, i, current_value)
+							self.change_handler(i, current_value)
 
 						// force to save on every change
 							const changed_data = self.data.changed_data || []
@@ -342,7 +335,8 @@ const get_content_value = (i, current_value, self) => {
 								changed_data	: changed_data,
 								refresh			: false
 							})
-					}//end change event
+					}//end change_active_handler
+					input_iri_active.addEventListener('change', change_active_handler)
 				}
 				const active_check_class = (use_active_check) ? 'active_check' : ''
 
@@ -353,6 +347,7 @@ const get_content_value = (i, current_value, self) => {
 					class_name		: 'button remove hidden_button '+ active_check_class,
 					parent			: content_value
 				})
+				// mousedown event
 				const button_remove_mousedown_handler = async (e) => {
 					e.stopPropagation()
 					e.preventDefault()
@@ -403,11 +398,6 @@ const get_content_value = (i, current_value, self) => {
 							refresh			: true
 						})
 
-						if (typeof current_value === 'undefined') {
-							console.error('current_value is not defined')
-							return
-						}
-
 						// remove dataframe
 						// delete_dataframe_record
 						await delete_dataframe({
@@ -451,11 +441,12 @@ const get_content_value = (i, current_value, self) => {
 					class_name		: 'button link hidden_button '+ active_check_class,
 					parent			: content_value
 				})
-				button_link.addEventListener('mousedown', function(e) {
+				// mousedown event
+				const button_link_mousedown_handler = (e) => {
 					e.stopPropagation()
 					e.preventDefault()
 
-				// open a new window
+					// open a new window
 					const url				= input_iri.value
 					const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 					// Ensure no reverse tabnabbing
@@ -463,7 +454,8 @@ const get_content_value = (i, current_value, self) => {
 						current_window.opener = null;
 						current_window.focus()
 					}
-				})
+				}//end button_link_mousedown_handler
+				button_link.addEventListener('mousedown', button_link_mousedown_handler)
 
 			// transliterate value object. Add only if has iri value.
 				if(transliterate_value?.iri) {
@@ -634,7 +626,8 @@ export const get_buttons = (self) => {
 				title			: get_label.new || 'New',
 				parent			: fragment
 			})
-			const button_add_input_click_habdler = (e) => {
+			// click event
+			const button_add_input_click_handler = (e) => {
 				e.stopPropagation()
 
 				// check existing key in transliterate_value
@@ -663,7 +656,7 @@ export const get_buttons = (self) => {
 					})
 				})
 			}
-			button_add_input.addEventListener('click', button_add_input_click_habdler)
+			button_add_input.addEventListener('click', button_add_input_click_handler)
 		}
 
 	// buttons tools

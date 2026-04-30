@@ -53,7 +53,7 @@ class tool_common {
 
 	/**
 	* __CONSTRUCT
-	* @param string|int $section_id
+	* @param string|int|null $section_id
 	* @param string $section_tipo
 	* @return void
 	*/
@@ -118,7 +118,12 @@ class tool_common {
 		// tool name. Fixed on construct
 			$name = $this->name;
 
-			$tool_object = tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
+			// tool_object
+			// If is already resolved, get from cached file 'development_cache_tools_all_registered_tools.php'
+			// else, fallback to 'tools_register::create_simple_tool_object' creation.
+			$registered_tools = self::get_all_registered_tools();
+			$tool_object = $registered_tools[$name] ?? tools_register::create_simple_tool_object( $this->section_tipo, $this->section_id );
+
 			// sample tool object
 				// {
 				//   "name": "tool_transcription",
@@ -274,19 +279,15 @@ class tool_common {
 
 		// config. Add if exists config data for current tool
 			$ar_config		= tools_register::get_all_config_tool_client();
-			$config_data	= array_find($ar_config, function($el) use($name) {
-				return $el->name===$name;
-			});
+			$config_data	= $ar_config[$name] ?? null;
 			// fallback to default config
-			if(!is_object($config_data) || empty($config_data->config)){
+			if(!is_array($config_data) || empty($config_data['config'])){
 				$ar_config		= tools_register::get_all_default_config_tool_client();
-				$config_data	= array_find($ar_config, function($el) use($name) {
-					return $el->name===$name;
-				});
+				$config_data	= $ar_config[$name] ?? null;
 			}
 			// config
-			$config = is_object($config_data)
-				? $config_data->config
+			$config = is_array($config_data)
+				? $config_data['config']
 				: null;
 
 		// lang
@@ -456,7 +457,7 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
-	* Alias of $this->get_structure_context method fro compatibility.
+	* Alias of $this->get_structure_context method for compatibility.
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
 	* @return dd_object $full_ddo
@@ -473,27 +474,46 @@ class tool_common {
 
 
 	/**
+	* GET_ALL_REGISTERED_TOOLS_CACHE_NAME
+	* Returns the filename used for file-based caching.
+	* @return string The cache filename
+	*/
+	public static function get_all_registered_tools_cache_name() : string {
+		return DEDALO_ENTITY . '_cache_tools_all_registered_tools.php';
+	}
+
+
+
+	/**
 	* GET_ALL_REGISTERED_TOOLS
 	*
 	* Retrieves the full list of tools registered in the database.
 	* This method constructs a simplified tool object for each registered tool,
 	* including its name, label, and client configuration.
 	*
-	* @return array List of simple_tool_objects
+	* @return array $registered_tools - List of simple_tool_objects
 	*/
 	public static function get_all_registered_tools() : array {
 
 		$registered_tools = [];
 
 		// cache
-		// Currently, it is not necessary to use the cache because the main caller
-		// (get_user_tools) is already catching the result.
 		// Enabled for performance in hydrate_tools_info and user_tools lookups.
 		$use_cache = true;
 		if ($use_cache===true) {
 			// static cache
 			if (isset(self::$all_registered_tools_cache)) {
 				return self::$all_registered_tools_cache;
+			}
+			// file cache
+			$all_registered_tools = dd_cache::cache_from_file((object)[
+				'file_name'	=> self::get_all_registered_tools_cache_name(),
+				'prefix' => ''
+			]);
+			if (!empty($all_registered_tools)) {
+				// store in static cache for subsequent calls in this request
+				self::$all_registered_tools_cache = $all_registered_tools;
+				return $all_registered_tools;
 			}
 		}
 
@@ -515,18 +535,14 @@ class tool_common {
 				$current_simple_tool_object = tools_register::create_simple_tool_object($record->section_tipo, $record->section_id);
 
 				// append config
-				$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
-					return $el->name===$current_simple_tool_object->name;
-				});
+				$current_config	= $ar_config[$current_simple_tool_object->name] ?? null;
 
-				if(!is_object($current_config)){
-					$ar_config		= tools_register::get_all_default_config_tool_client();
-					$current_config	= array_find($ar_config, function($el) use($current_simple_tool_object) {
-						return is_object($el) && is_object($current_simple_tool_object) && $el->name===$current_simple_tool_object->name;
-					});
+				if(!is_array($current_config)){
+					$default_config	= tools_register::get_all_default_config_tool_client();
+					$current_config	= $default_config[$current_simple_tool_object->name] ?? null;
 				}
 
-				if(!is_object($current_config)){
+				if(!is_array($current_config)){
 					debug_log(__METHOD__
 						. " Ignored bad config " . PHP_EOL
 						. to_string($current_config)
@@ -535,12 +551,12 @@ class tool_common {
 					continue;
 				}
 
-				$current_simple_tool_object->config = is_object($current_config)
-					? $current_config->config
+				$current_simple_tool_object->config = is_array($current_config)
+					? $current_config['config']
 					: null;
 
 				// append tool object
-				$registered_tools[] = $current_simple_tool_object;
+				$registered_tools[$current_simple_tool_object->name] = $current_simple_tool_object;
 			}//end foreach ($db_result as $record)
 		}
 
@@ -548,6 +564,12 @@ class tool_common {
 		if ($use_cache===true) {
 			// static
 			self::$all_registered_tools_cache = $registered_tools;
+			// file cache
+			dd_cache::cache_to_file((object)[
+				'file_name' => self::get_all_registered_tools_cache_name(),
+				'prefix' => '',
+				'data' => $registered_tools
+			]);
 		}
 
 
@@ -560,13 +582,15 @@ class tool_common {
 	* GET_ACTIVE_TOOLS
 	* Search all active tools in registered tools section
 	* @param bool $use_cache = true
-	* @return db_result $db_result
+	* @return db_result|false $db_result
 	*/
 	public static function get_active_tools( bool $use_cache=true ) : db_result|false {
 
 		// cache
-			if ($use_cache===true && isset(self::$active_tools_cache)) {
-				return self::$active_tools_cache;
+			if ($use_cache===true) {
+				if(isset(self::$active_tools_cache)) {
+					return self::$active_tools_cache;
+				}
 			}
 
 		// get all active and registered tools
@@ -605,7 +629,7 @@ class tool_common {
 
 		// search
 			$search	= search::get_instance($sqo);
-			$db_result	= $search->search();
+			$db_result = $search->search();
 
 		// cache
 			if ($use_cache===true) {
@@ -625,7 +649,7 @@ class tool_common {
 	* Used in update code to get the tool list from the master
 	* @return array $tool_names
 	*/
-	public static function get_active_tool_names() {
+	public static function get_active_tool_names() : array {
 
 		$active_tools = tool_common::get_active_tools();
 
@@ -669,9 +693,9 @@ class tool_common {
 	* GET_CONFIG
 	* Get given tool config if isset
 	* @param string $tool_name
-	* @return object|null $config
+	* @return array|null $config
 	*/
-	public static function get_config(string $tool_name) : ?object {
+	public static function get_config(string $tool_name) : ?array {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -686,22 +710,18 @@ class tool_common {
 			}
 
 		// get all tools config sections
-			$ar_config = tools_register::get_all_config_tool();
+			$ar_config = tools_register::get_all_config();
 
 		// select current from all tool config
-			$config = array_find($ar_config, function($el) use($tool_name) {
-				return $el->name===$tool_name;
-			});
+			$config = $ar_config[$tool_name] ?? null;
 
-			if(!is_object($config)){
+			if(!is_array($config)){
 				// get all tools config sections
 				$ar_config = tools_register::get_all_default_config();
-				$config = array_find($ar_config, function($el) use($tool_name) {
-					return $el->name===$tool_name;
-				});
+				$config = $ar_config[$tool_name] ?? null;
 
 				// no config is found at all
-				if(!is_object($config)){
+				if(!is_array($config)){
 					//cache
 					self::$cache_config_tool[$tool_name] = null;
 
@@ -894,50 +914,49 @@ class tool_common {
 		// Working here... (!)
 		throw new Exception("Error Processing Request", 1);
 
+		// $response = new stdClass();
+		// 	$response->result	= false;
+		// 	$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		// // options
+		// 	$tipo				= $options->tipo ?? null;
+		// 	$section_id			= $options->section_id ?? null;
+		// 	$section_tipo		= $options->section_tipo ?? null;
+		// 	$method				= $options->method ?? null;
+		// 	$method_arguments	= $options->method_arguments ?? null;
 
-		// options
-			$tipo				= $options->tipo ?? null;
-			$section_id			= $options->section_id ?? null;
-			$section_tipo		= $options->section_tipo ?? null;
-			$method				= $options->method ?? null;
-			$method_arguments	= $options->method_arguments ?? null;
+		// // component
+		// 	$model		= ontology_node::get_model_by_tipo($tipo,true);
+		// 	$component	= component_common::get_instance(
+		// 		$model,
+		// 		$tipo,
+		// 		$section_id,
+		// 		'list',
+		// 		DEDALO_DATA_NOLAN,
+		// 		$section_tipo
+		// 	);
+		// 	if (!empty($method) && method_exists($component, $method)) {
 
-		// component
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo
-			);
-			if (!empty($method) && method_exists($component, $method)) {
+		// 		// call component
+		// 			$call_result = $component->{$method}($method_arguments);
 
-				// call component
-					$call_result = $component->{$method}($method_arguments);
+		// 		// response
+		// 			$response->result = isset($call_result->result)
+		// 				? $call_result->result
+		// 				: $call_result;
+		// 			$response->msg = isset($call_result->msg)
+		// 				? $call_result->msg
+		// 				: 'Request done ['.__FUNCTION__.']';
 
-				// response
-					$response->result = isset($call_result->result)
-						? $call_result->result
-						: $call_result;
-					$response->msg = isset($call_result->msg)
-						? $call_result->msg
-						: 'Request done ['.__FUNCTION__.']';
+		// 	}else{
 
-			}else{
-
-				// response error
-					$response->result	= false;
-					$response->msg		.= '. Method does not exists: '.$method .' in '.$model;
-			}
+		// 		// response error
+		// 			$response->result	= false;
+		// 			$response->msg		.= '. Method does not exists: '.$method .' in '.$model;
+		// 	}
 
 
-		return $response;
+		// return $response;
 	}//end call_component_method
 
 
@@ -1112,11 +1131,11 @@ class tool_common {
 	* 	tipo: string as 'dd47'
 	* 	section_tipo: string as 'rsc167'
 	* }
-	* @param object|null $tool_config = null
+	* @param array|null $tool_config = null
 	* 	Normally, is get from tools cache file, else will be calculated
 	* @return object|null $tool_config
 	*/
-	public static function get_tool_configuration( object $options, ?object $tool_config=null ) : ?object {
+	public static function get_tool_configuration( object $options, ?array $tool_config=null ) : ?object {
 
 		$tool_name		= $options->tool_name;
 		$tipo			= $options->tipo;
@@ -1127,13 +1146,13 @@ class tool_common {
 		$tool_configuration = $tool_config ?? tool_common::get_config($tool_name);
 
 		// check if has a properties and tool_config definition
-		if( isset($tool_configuration->config)
-			&& isset($tool_configuration->config->properties)
-			&& isset($tool_configuration->config->properties->tool_config) ){
+		if( isset($tool_configuration['config'])
+			&& isset($tool_configuration['config']->properties)
+			&& isset($tool_configuration['config']->properties->tool_config) ){
 			// tool config is an array with specific object for tipo and section_tipo
 			// (that need to match with the button_import definition and his section)
 			// find the definition that match with current section
-			$ar_tool_config = $tool_configuration->config->properties->tool_config ?? [];
+			$ar_tool_config = $tool_configuration['config']->properties->tool_config ?? [];
 
 			$tool_config = array_find($ar_tool_config, function($item) use($section_tipo, $tipo) {
 				return $item->section_tipo === $section_tipo && $item->tipo === $tipo;

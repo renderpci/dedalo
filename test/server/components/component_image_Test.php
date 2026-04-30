@@ -193,7 +193,7 @@ final class component_image_test extends BaseTestCase {
 	*/
 	public function test_get_modified_uploaded_file() {
 
-		$component = $this->build_component_instance();		
+		$component = $this->build_component_instance();
 
 		$sample_data = $this->get_sample_data(self::$model);
 		$component->set_data($sample_data);
@@ -830,9 +830,416 @@ final class component_image_test extends BaseTestCase {
 
 
 
-	/* @todo
-		Add rest of methods
-		*/
+	/**
+	* TEST_get_data
+	* @return void
+	*/
+	public function test_get_data() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_set_data
+	* @return void
+	*/
+	public function test_set_data() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
+
+		$result = $component->get_data();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// restore original data
+		$component->set_data($original_data);
+	}//end test_set_data
+
+
+
+	/**
+	* TEST_set_data_empty
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		$component->set_data([]);
+
+		$result = $component->get_data();
+
+		$this->assertTrue(
+			$result===null || $result===[],
+			'expected null or empty array : ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		// restore original data
+		$component->set_data($original_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		// backup original data
+			$original_data = $component->get_data();
+
+		$sample_data = $this->get_sample_data(self::$model);
+		$component->set_data($sample_data);
+
+		$saved = $component->save();
+
+		$this->assertTrue(
+			$saved===true,
+			'expected save true : ' . PHP_EOL
+				. json_encode($saved)
+		);
+
+		// reload
+		$component2 = component_common::get_instance(
+			self::$model,
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+
+		$reloaded_data = $component2->get_data();
+
+		$this->assertTrue(
+			gettype($reloaded_data)==='array',
+			'expected type array after reload : ' . PHP_EOL
+				. gettype($reloaded_data)
+		);
+
+		// restore original data
+		$component->set_data($original_data);
+		$component->save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_is_empty
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// is_empty_data: array-level check
+			$result = $component->is_empty_data(
+				$component->get_data()
+			);
+			$this->assertTrue(
+				gettype($result)==='boolean',
+				'expected type boolean : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// is_empty with single data_item (media components have files_info not value)
+			$data = $component->get_data();
+			if (!empty($data) && isset($data[0])) {
+				$result = $component->is_empty($data[0]);
+				// media component data items have files_info not value, so is_empty returns true by design
+				$this->assertTrue(
+					gettype($result)==='boolean',
+					'expected type boolean for is_empty(item) : ' . PHP_EOL
+						. gettype($result)
+				);
+			}
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$lang			= DEDALO_DATA_NOLAN;
+
+		// edit mode
+			$component_edit = component_common::get_instance(
+				$model, $tipo, $section_id, 'edit', $lang, $section_tipo
+			);
+			$this->assertTrue(
+				$component_edit->mode==='edit',
+				'expected mode edit'
+			);
+
+		// list mode
+			$component_list = component_common::get_instance(
+				$model, $tipo, $section_id, 'list', $lang, $section_tipo
+			);
+			$this->assertTrue(
+				$component_list->mode==='list',
+				'expected mode list'
+			);
+
+		// search mode
+			$component_search = component_common::get_instance(
+				$model, $tipo, $section_id, 'search', $lang, $section_tipo
+			);
+			$this->assertTrue(
+				$component_search->mode==='search',
+				'expected mode search'
+			);
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_quality_file_exist_all_qualities
+	* @return void
+	*/
+	public function test_quality_file_exist_all_qualities() {
+
+		$component = $this->build_component_instance();
+
+		$ar_quality = $component->get_ar_quality();
+
+		foreach ($ar_quality as $quality) {
+			$result = $component->quality_file_exist($quality);
+
+			$this->assertTrue(
+				gettype($result)==='boolean',
+				'expected type boolean for quality ' . $quality . ' : ' . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_quality_file_exist_all_qualities
+
+
+
+	/**
+	* TEST_get_media_filepath_all_qualities
+	* @return void
+	*/
+	public function test_get_media_filepath_all_qualities() {
+
+		$component = $this->build_component_instance();
+
+		$ar_quality = $component->get_ar_quality();
+
+		foreach ($ar_quality as $quality) {
+			$result = $component->get_media_filepath($quality);
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string for quality ' . $quality . ' : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				strpos($result, $quality)!==false,
+				'expected contains quality ' . $quality . ' : ' . PHP_EOL
+					. $result
+			);
+		}
+	}//end test_get_media_filepath_all_qualities
+
+
+
+	/**
+	* TEST_get_url_all_qualities
+	* @return void
+	*/
+	public function test_get_url_all_qualities() {
+
+		$component = $this->build_component_instance();
+
+		$ar_quality = $component->get_ar_quality();
+
+		foreach ($ar_quality as $quality) {
+			$result = $component->get_url($quality, false, false, false);
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string for quality ' . $quality . ' : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				strpos($result, $quality)!==false,
+				'expected contains quality ' . $quality . ' : ' . PHP_EOL
+					. $result
+			);
+		}
+	}//end test_get_url_all_qualities
+
+
+
+	/**
+	* TEST_delete_normalized_files
+	* @return void
+	*/
+	public function test_delete_normalized_files() {
+
+		$component = $this->build_component_instance();
+
+		$original_quality	= $component->get_original_quality();
+		$default_quality	= $component->get_default_quality();
+
+		// backup files before deletion
+			$ar_quality = [$original_quality, $default_quality];
+			$backup_files = [];
+			foreach ($ar_quality as $quality) {
+				$filepath = $component->get_media_filepath($quality);
+				if (file_exists($filepath)) {
+					$backup_files[$quality] = $filepath . '.bak_test';
+					copy($filepath, $backup_files[$quality]);
+				}
+			}
+
+		$result = $component->delete_normalized_files($ar_quality);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		// restore backup files
+			foreach ($backup_files as $quality => $backup_path) {
+				$original_path = $component->get_media_filepath($quality);
+				if (file_exists($backup_path)) {
+					rename($backup_path, $original_path);
+				}
+			}
+
+		// regenerate to restore deleted files
+			$component->regenerate_component();
+	}//end test_delete_normalized_files
+
+
+
+	/**
+	* TEST_build_version
+	* @return void
+	*/
+	public function test_build_version() {
+
+		$component = $this->build_component_instance();
+
+		$default_quality = $component->get_default_quality();
+
+		$result = $component->build_version($default_quality, false, false);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property'
+		);
+	}//end test_build_version
+
+
+
+	/**
+	* TEST_process_uploaded_file_empty_data
+	* @return void
+	*/
+	public function test_process_uploaded_file_empty_data() {
+
+		$component = $this->build_component_instance();
+
+		// null file_data: handled by empty check, returns result=false
+			$result = $component->process_uploaded_file(null);
+			$this->assertTrue(
+				$result->result===false,
+				'expected result false for null file_data'
+			);
+
+		// incomplete file_data (missing full_file_path): TypeError on file_exists(null)
+			$file_data = (object)[
+				'original_file_name'	=> 'test.jpg',
+				'full_file_name'		=> 'test.jpg'
+				// missing full_file_path
+			];
+			$exception_caught = false;
+			try {
+				$result = $component->process_uploaded_file($file_data);
+			} catch (TypeError $e) {
+				$exception_caught = true;
+			}
+			$this->assertTrue(
+				$exception_caught,
+				'expected TypeError for incomplete file_data (missing full_file_path)'
+			);
+
+		// non-existent file path
+			$file_data = (object)[
+				'original_file_name'	=> 'test.jpg',
+				'full_file_name'		=> 'test.jpg',
+				'full_file_path'		=> '/non/existent/path/test.jpg'
+			];
+			$result = $component->process_uploaded_file($file_data);
+			$this->assertTrue(
+				$result->result===false,
+				'expected result false for non-existent file path'
+			);
+	}//end test_process_uploaded_file_empty_data
 
 
 
@@ -905,7 +1312,7 @@ final class component_image_test extends BaseTestCase {
 		$component->properties = (object)['image_id' => self::$tipo];
 		// This will call get_instance for test99 on the same section_id
 		// If test99 is the same component it might work if it has data
-		
+
 		$result = $component->get_id();
 		$this->assertTrue(is_string($result));
 	}//end test_get_id_extended

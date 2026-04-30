@@ -9,6 +9,7 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_password} from '../../component_password/js/render_edit_component_password.js'
 	import {render_list_component_password} from '../../component_password/js/render_list_component_password.js'
+	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -78,6 +79,84 @@ export const component_password = function(){
 *		msg		: "Password is invalid! Please mix lowercase / uppercase chars and numbers"
 *	}
 */
+/**
+* BUILD_CHANGED_DATA_ITEM
+* Builds a frozen changed_data_item object for password value changes.
+* Used by edit views (via handle_password_change) and search view.
+* @param string|null value
+*	The password value from input
+* @param int|null id
+*	Entry id from data
+* @return object {changed_data_item, value}
+*/
+export const build_changed_data_item = function(value, id=null) {
+
+	// normalize value: null when empty, object with value key otherwise
+		const parsed_value = (value !== null && value.length > 0)
+			? {value: value}
+			: null
+
+	// build changed_data_item
+		const changed_data_item = Object.freeze({
+			action	: (parsed_value !== null) ? 'update' : 'remove',
+			id		: id,
+			value	: parsed_value
+		})
+
+	return {
+		changed_data_item	: changed_data_item,
+		parsed_value		: parsed_value
+	}
+}//end build_changed_data_item
+
+
+
+/**
+* HANDLE_PASSWORD_CHANGE
+* Common change handler for component_password across all edit views.
+* Validates the password format, builds changed_data_item, sets changed_data,
+* and saves via change_value. Returns parsed_value for view-specific hooks.
+* @param object self - Component instance
+* @param string input_value - The input element value
+* @param HTMLElement input - The input DOM element (for error display)
+* @param int|null id - Entry id from data
+* @return object|null parsed_value - The parsed value or null
+*/
+export const handle_password_change = async function(self, input_value, input, id=null) {
+
+	// resolve id from current data if not provided
+	// (when component was initially empty, the closure id is null,
+	// but after first save the entry gets an id from the API)
+		if (id === null) {
+			id = self.data.entries?.[0]?.id ?? null
+		}
+
+	// validated. Test password is acceptable string
+		const validation_obj	= self.validate_password_format(input_value)
+		const validated		= validation_obj.result
+		ui.component.error(!validated, input)
+		if (!validated) {
+			return null
+		}
+
+	// build changed_data_item (validate + freeze)
+		const {changed_data_item, parsed_value} = build_changed_data_item(input_value, id)
+
+	// fix instance changed_data
+		self.set_changed_data(changed_data_item)
+
+	// force to save on every change
+		await self.change_value({
+			changed_data	: [changed_data_item],
+			refresh			: false,
+			remove_dialog	: false
+		})
+
+	return parsed_value
+}//end handle_password_change
+
+
+
 component_password.prototype.validate_password_format = function (pw, options) {
 
 	// empty case

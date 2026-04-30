@@ -81,4 +81,32 @@
 		}
 	}//end .view_default
 
+	&.search {
+
+		.inputs_container {
+
+			>li {
+				padding-top: 0.25rem;
+				padding-bottom: 0.25rem;
+
+				>span {
+					padding-right: 0.5rem;
+
+					&.tipo {
+
+						&:after {
+							content: ':';
+							margin-left: 0.5rem;
+						}
+					}
+				}
+
+				>.input_value {
+					width: 100%;
+					margin-top: 0.33rem;
+				}
+			}
+		}
+	}
+
 }//end .component_filter_records

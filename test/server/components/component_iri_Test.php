@@ -427,4 +427,214 @@ final class component_iri_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_is_empty
+	* Generic check if given value is or not empty
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// null case
+		$result = $component->is_empty(null);
+		$this->assertTrue($result, 'expected true for null');
+
+		// non-object case (string)
+		$result = $component->is_empty('https://dedalo.dev');
+		$this->assertTrue($result, 'expected true for non-object');
+
+		// non-object case (integer)
+		$result = $component->is_empty(42);
+		$this->assertTrue($result, 'expected true for non-object integer');
+
+		// object with empty iri and title
+		$empty_obj = (object)[
+			'iri'	=> '',
+			'title'	=> ''
+		];
+		$result = $component->is_empty($empty_obj);
+		$this->assertTrue($result, 'expected true for object with empty iri and title');
+
+		// object with non-empty iri
+		$obj_with_iri = (object)[
+			'iri'	=> 'https://dedalo.dev',
+			'title'	=> ''
+		];
+		$result = $component->is_empty($obj_with_iri);
+		$this->assertFalse($result, 'expected false for object with non-empty iri');
+
+		// object with non-empty title
+		$obj_with_title = (object)[
+			'iri'	=> '',
+			'title'	=> 'Dédalo'
+		];
+		$result = $component->is_empty($obj_with_title);
+		$this->assertFalse($result, 'expected false for object with non-empty title');
+
+		// object with iri = '0' (falsy but not empty)
+		$obj_zero_iri = (object)[
+			'iri'	=> '0',
+			'title'	=> ''
+		];
+		$result = $component->is_empty($obj_zero_iri);
+		$this->assertFalse($result, 'expected false for iri="0"');
+
+		// object with other properties only (no iri/title)
+		$obj_other = (object)[
+			'id'	=> 1,
+			'lang'	=> 'lg-eng'
+		];
+		$result = $component->is_empty($obj_other);
+		$this->assertTrue($result, 'expected true for object without iri/title');
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_set_data_empty
+	* Verify set_data with null produces null get_data
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// set empty data
+		$result = $component->set_data(null);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$component->get_data()===null,
+			'expected null after set_data(null) : ' . PHP_EOL
+				. to_string($component->get_data())
+		);
+
+		// restore data
+		$component->set_data($old_data);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_save_and_reload
+	* Verify data persistence across save/reload cycle
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// create new data
+		$dd_iri = new dd_iri();
+			$dd_iri->set_iri('https://dedalo.dev/test_save');
+			$dd_iri->set_id(99);
+			$dd_iri->set_title('Test save title');
+		$new_data = [$dd_iri];
+
+		// set and save
+		$component->set_data($new_data);
+		$save_result = $component->save();
+
+		$this->assertTrue(
+			gettype($save_result)==='boolean' || gettype($save_result)==='integer' || gettype($save_result)==='NULL',
+			'expected type boolean|integer|null : ' . PHP_EOL
+				. gettype($save_result)
+		);
+
+		// reload component
+		$component2 = component_common::get_instance(
+			self::$model,
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+
+		$reloaded_data = $component2->get_data();
+
+		$this->assertTrue(
+			gettype($reloaded_data)==='array',
+			'expected type array after reload : ' . PHP_EOL
+				. gettype($reloaded_data)
+		);
+
+		// restore original data
+		$component2->set_data($old_data);
+		$component2->save();
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_component_instance_modes
+	* Verify component can be instantiated in edit, list, search modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+
+			$this->user_login();
+
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				get_class($component)==='component_iri',
+				"expected class component_iri for mode $mode"
+			);
+
+			$this->assertTrue(
+				$component->mode===$mode,
+				"expected mode $mode : " . $component->mode
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			strpos($result, self::$tipo)!==false,
+			'expected tipo in identifier : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_get_identifier
+
+
+
 }//end class component_iri_test

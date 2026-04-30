@@ -1302,7 +1302,7 @@ class component_iri extends component_common {
 			$db_result = $search->search();
 
 			$record = $db_result
-				? ($db_result->fetch_one() ?? null)
+				? ($db_result->fetch_one() ?: null)
 				: null;
 
 			return $record;

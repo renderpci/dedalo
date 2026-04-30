@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
+	import {handle_json_change} from './component_json.js'
 
 
 
@@ -98,6 +99,59 @@ const get_content_data = function(self) {
 
 
 
+// Module-level cache for JSONEditor to avoid repeated dynamic import overhead
+let editor_module_cache = null;
+let editor_module_loading = false;
+let css_injected = false;
+
+
+/**
+* PRELOAD_EDITOR_MODULE
+* Starts loading the JSONEditor module on idle time, before the component
+* scrolls into view. This eliminates the perceived delay when the user
+* scrolls to a component_json instance.
+* @return void
+*/
+const preload_editor_module = () => {
+
+	if (editor_module_cache || editor_module_loading) return;
+
+	editor_module_loading = true;
+	import('../../../lib/jsoneditor/dist/standalone.js')
+		.then(module => {
+			if (module && typeof module.createJSONEditor === 'function') {
+				editor_module_cache = module;
+			}
+			editor_module_loading = false;
+		})
+		.catch(() => {
+			editor_module_loading = false;
+		});
+};//end preload_editor_module
+
+
+/**
+* INJECT_EDITOR_CSS
+* One-time CodeMirror 6 CSS injection via a dummy editor instance.
+* Only executed once across all component_json instances to avoid
+* redundant editor creation/destruction overhead.
+* @param object module - The cached JSONEditor module
+* @return void
+*/
+const inject_editor_css = (module) => {
+
+	if (css_injected) return;
+
+	const dummy_node = document.createElement('div');
+	try {
+		const dummy_editor = module.createJSONEditor({ target: dummy_node, props: { mode: 'text', content: { text: '' } } });
+		dummy_editor.destroy();
+	} catch (e) {}
+
+	css_injected = true;
+};//end inject_editor_css
+
+
 /**
 * GET_CONTENT_VALUE
 * Render JSON editor for current value
@@ -123,39 +177,24 @@ const get_content_value = (key, current_value, self) => {
 			content_value.dataset.editor_loading = 'true';
 
 			try {
-				// Validate target element is ready
-				if (!content_value.isConnected) {
-					await new Promise(resolve => {
-						const wait_frame = () => {
-							if (content_value.isConnected) {
-								resolve();
-							} else {
-								requestAnimationFrame(wait_frame);
-							}
-						};
-						requestAnimationFrame(wait_frame);
-					});
-				}
-
-				// Load JSONEditor module
-				const module = await import('../../../lib/jsoneditor/dist/standalone.js');
+				// Use cached module or load on demand
+				const module = editor_module_cache || await import('../../../lib/jsoneditor/dist/standalone.js');
 				if (!module || typeof module.createJSONEditor !== 'function') {
 					throw new Error('createJSONEditor not found in module');
 				}
+				// Cache for subsequent instances
+				if (!editor_module_cache) {
+					editor_module_cache = module;
+				}
 
-				// 1. Pre-boot dummy instance to synchronously force CodeMirror 6 <style> injections into the DOM.
-				// This prevents text metrics caching bugs caused by CodeMirror measuring its dimensions before the browser fully parses the new CSS.
-				const dummy_node = document.createElement('div');
-				try {
-					const dummy_editor = module.createJSONEditor({ target: dummy_node, props: { mode: 'text', content: { text: '' } } });
-					dummy_editor.destroy();
-				} catch (e) {}
+				// One-time CSS injection (skipped if already done by a previous instance)
+				inject_editor_css(module);
 
-				// // 2. Wait for Web Fonts and CSS OM to flush, while bypassing any active Dédalo modal transition animations.
+				// Wait for fonts and one paint frame to ensure CSS OM is settled
 				if (document.fonts && typeof document.fonts.ready !== 'undefined') {
 					await document.fonts.ready;
 				}
-				await new Promise(resolve => setTimeout(resolve, 10));
+				await new Promise(resolve => requestAnimationFrame(resolve));
 
 				// Abort if the modal was closed while we were waiting
 				if (!content_value.isConnected) return;
@@ -181,18 +220,7 @@ const get_content_value = (key, current_value, self) => {
 							mode		: 'text',
 							onChange	: (updatedContent, previousContent, { contentErrors, patchResult }) => {
 								if (typeof contentErrors === 'undefined') {
-									try {
-										const json_value = updatedContent.json !== undefined
-											? updatedContent.json
-											: updatedContent.text === ''
-												? null
-												: JSON.parse(updatedContent.text);
-
-										const inmutable_value = JSON.parse(JSON.stringify(json_value));
-										self.set_value(inmutable_value, key);
-									} catch (parse_err) {
-										console.error('JSON parse error in onChange:', parse_err);
-									}
+									handle_json_change(self, updatedContent, key)
 								}
 							}
 						}
@@ -236,6 +264,9 @@ const get_content_value = (key, current_value, self) => {
 				content_value.style.color = 'red';
 			}
 		}//end load_editor
+
+	// Preload editor module on idle (before viewport entry) to reduce perceived latency
+		dd_request_idle_callback(preload_editor_module);
 
 	// observe in viewport
 		when_in_viewport(content_value, load_editor);
