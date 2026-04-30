@@ -11,6 +11,16 @@ final class dd_component_text_area_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	*/
+	public const API_ACTIONS = [
+		'delete_tag',
+		'get_tags_info'
+	];
+
+
+
+	/**
 	* DELETE_TAG
 	* Delete given tag in all langs of component_text_area
 	* Usually used to delete indexation tags from tool_indexation
@@ -52,6 +62,9 @@ final class dd_component_text_area_api {
 			$options	= $rqo->options;
 			$tag_id		= $options->tag_id; // string e.g. '2'
 			$type		= $options->type; // string e.g. 'index'
+
+		// SEC: write permission required to delete tags from the component
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// component_text_area. Remove tag in all langs
 			$model_name				= ontology_node::get_model_by_tipo($tipo,true);
@@ -124,6 +137,9 @@ final class dd_component_text_area_api {
 		// options
 			$options	= $rqo->options;
 			$ar_types	= $options->ar_type; // string e.g. 'index'
+
+		// SEC: read permission required to view tag info
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// component_text_area. Remove tag in all langs
 			$model_name				= ontology_node::get_model_by_tipo($tipo, true);
