@@ -656,6 +656,7 @@ const render_iri_column = function(current_data) {
 				parent			: td_node
 			})
 			node.target = '_blank'
+			node.rel    = 'noopener noreferrer' // SEC-033
 
 			// space
 			if (i < data_length-1) {
