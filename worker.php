@@ -7,11 +7,12 @@ use Spiral\RoadRunner;
 use Nyholm\Psr7;
 
 define('DEDALO_RR_WORKER', true);
+define('DEDALO_RR_DEBUG', false);
 
 // Setup autoloading from lib/vendor
-$autoload = __DIR__ . '/lib/vendor/autoload.php';
+$autoload = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload)) {
-    die("Autoload file not found at $autoload. Please run composer install in lib/.");
+    die("Autoload file not found at $autoload. Please run composer install.");
 }
 require $autoload;
 
@@ -48,16 +49,18 @@ if (!defined('PERSISTENT_CONNECTION')) {
 
 // Suppress deprecation warnings (e.g. from protobuf) and ensure clean output
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
-// ini_set('display_errors', '0');
+ini_set('display_errors', '0');
 
 // Prepare Dédalo environment
 // Note: We don't want to load everything in every loop if possible,
 // but Dédalo's architecture might require some includes to be present.
-
+$requests = 0;
 while ($request = $psr7Worker->waitRequest()) {
     try {
         // 1. Reset Global State
-        metrics::reset();
+        if (class_exists('metrics')) {
+            metrics::reset();
+        }
         $GLOBALS['DEDALO_RAW_BODY'] = null;
 
         // // Clear static class caches to prevent cross-request pollution
@@ -111,17 +114,47 @@ while ($request = $psr7Worker->waitRequest()) {
             $_SERVER['HTTP_HOST'] = $host_header;
         }
 
-        // Fix $_FILES (simple placeholder for now)
+        // Fix $_FILES from PSR-7
         $_FILES = [];
         $uploadedFiles = $request->getUploadedFiles();
         if (!empty($uploadedFiles)) {
-             $_FILES = ['worker_files' => $uploadedFiles];
+             // Function to recursively normalize PSR-7 uploaded files to PHP-like $_FILES array
+             $normalizeFiles = function($files) use (&$normalizeFiles) {
+                 $normalized = [];
+                 foreach ($files as $key => $value) {
+                     if ($value instanceof \Psr\Http\Message\UploadedFileInterface) {
+                         // Extract path if available (for move_uploaded_file compatibility check)
+                         $tmp_name = '';
+                         try {
+                            $stream = $value->getStream();
+                            $tmp_name = $stream->getMetadata('uri') ?? '';
+                         } catch (\Throwable $e) {}
+
+                         $normalized[$key] = [
+                             'name'      => $value->getClientFilename(),
+                             'type'      => $value->getClientMediaType(),
+                             'tmp_name'  => $tmp_name,
+                             'error'     => $value->getError(),
+                             'size'      => $value->getSize(),
+                             'psr7'      => $value // Store original object for moveTo() support
+                         ];
+                     } elseif (is_array($value)) {
+                         $normalized[$key] = $normalizeFiles($value);
+                     }
+                 }
+                 return $normalized;
+             };
+             $_FILES = $normalizeFiles($uploadedFiles);
         }
 
         // For Dédalo API, the body is often raw JSON
         // We set it to null if empty to let index.php fallback naturally or hit its own empty checks
+        // We avoid passing the raw body if it's multipart/form-data to prevent unnecessary JSON parsing attempts
+        $content_type = $request->getHeaderLine('Content-Type');
+        $is_multipart = stripos($content_type, 'multipart/form-data') !== false;
+
         $body = (string)$request->getBody();
-        $GLOBALS['DEDALO_RAW_BODY'] = ($body !== '') ? $body : null;
+        $GLOBALS['DEDALO_RAW_BODY'] = ($body !== '' && !$is_multipart) ? $body : null;
 
         // 3. Capture Output
         ob_start();
@@ -131,7 +164,8 @@ while ($request = $psr7Worker->waitRequest()) {
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_write_close();
             }
-            $_SESSION = [];
+            // $_SESSION = [];
+            // Don't clear $_SESSION - let the session handler load data from KV storage
 
             // Detect session ID from cookies BEFORE starting manager
             // Dédalo session name format: 'dedalo_'.DEDALO_MAJOR_VERSION .'_'. DEDALO_ENTITY . (isset($_SERVER['HTTPS']) ? '_ssl' : '')
@@ -152,17 +186,23 @@ while ($request = $psr7Worker->waitRequest()) {
                 session_id($_COOKIE[$dedalo_session_name]);
             }
 
-            // Initialize RoadRunner KV Session Handler
-            if ($kvFactory) {
+            // Setup Session Handler dynamically using global definitions
+            $save_handler = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'redis';
+            $save_path    = defined('DEDALO_SESSION_SAVE_PATH') ? DEDALO_SESSION_SAVE_PATH : 'tcp://127.0.0.1:6379';
+
+            // Support legacy RoadRunner KV if explicitly configured in config
+            if ($save_handler === 'roadrunner' && $kvFactory) {
                 try {
                     $storage = $kvFactory->select('dedalo_sessions');
 
                     // Load and Register Custom Session Handler
                     require_once APP_ROOT . '/core/roadrunner/class.roadrunner_session_handler.php';
-                    $save_handler = new \Dedalo\RoadRunner\RoadRunnerSessionHandler($storage, intval(8 * 3600));
-                    session_set_save_handler($save_handler, true);
+                    $rr_handler = new \Dedalo\RoadRunner\RoadRunnerSessionHandler($storage, intval(8 * 3600));
+                    session_set_save_handler($rr_handler, true);
 
-                    error_log("RR Worker: RoadRunner KV Session Handler registered (BoltDB)");
+                    if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) {
+                        error_log("RR Worker: RoadRunner KV Session Handler registered (BoltDB)");
+                    }
                 } catch (\Throwable $e) {
                     error_log("RR Worker ERROR: Failed to initialize KV Session Handler: " . $e->getMessage());
                 }
@@ -170,9 +210,9 @@ while ($request = $psr7Worker->waitRequest()) {
 
             // session_start_manager options (derived from Dédalo constants)
             session_start_manager([
-                'save_handler'          => ($kvFactory) ? 'roadrunner' : DEDALO_SESSION_HANDLER,
+                'save_handler'          => $save_handler,
                 'timeout_seconds'       => intval(8 * 3600), // Default 8h
-                'save_path'             => DEDALO_SESSIONS_PATH,
+                'save_path'             => $save_path,
                 'session_name'          => $dedalo_session_name,
                 'cookie_secure'         => (DEDALO_PROTOCOL === 'https://'),
                 'cookie_samesite'       => (DEVELOPMENT_SERVER === true) ? 'Lax' : 'Strict',
@@ -180,9 +220,13 @@ while ($request = $psr7Worker->waitRequest()) {
             ]);
 
             if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) error_log("RR Worker: Session started. ID: " . session_id());
+            if (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) error_log("RR Worker: Session data after start: " . json_encode($_SESSION));
 
             // Execute Dédalo API entry point
-            require APP_ROOT . '/core/api/v1/json/index.php';
+            // We use a closure to prevent variable leakage between requests in RoadRunner persistent process
+            (function() {
+                require APP_ROOT . '/core/api/v1/json/index.php';
+            })();
 
             // Still close session if active
             if (session_status() === PHP_SESSION_ACTIVE) {
@@ -194,7 +238,7 @@ while ($request = $psr7Worker->waitRequest()) {
                 echo json_encode([
                     'result' => false,
                     'msg' => "Dédalo Catch Error: " . $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
+                    'trace' => (defined('DEDALO_RR_DEBUG') && DEDALO_RR_DEBUG) ? $e->getTraceAsString() : 'Hidden in production'
                 ]);
             }
 
@@ -207,12 +251,11 @@ while ($request = $psr7Worker->waitRequest()) {
         $output = ob_get_clean() ?: "";
         $output = trim($output);
 
-        // Sanity check: If we have multiple JSON objects (e.g. from a double echo),
-        // try to take only the first one or log it.
-        $pos = strpos($output, '}{');
-        if ($pos !== false) {
-            error_log("RR Worker WARNING: Multiple JSON objects detected in output. Truncating to first one.");
-            $output = substr($output, 0, $pos + 1);
+        // Sanity check: Detect potential multiple JSON objects (e.g. from a double echo).
+        // WARNING: Simple string matching '}{' can corrupt valid JSON. We log it instead of truncating.
+        if (strpos($output, '}{') !== false) {
+            error_log("RR Worker WARNING: Potential multiple JSON objects detected in output. Fix at source.");
+            // We intentionally do not truncate here to prevent corrupting valid data containing '}{'.
         }
 
         // Capture headers set via PHP's header() function
@@ -290,5 +333,11 @@ while ($request = $psr7Worker->waitRequest()) {
 
     } catch (\Throwable $e) {
         $worker->error((string)$e);
+    }
+
+    // Restart worker every 5000 requests to prevent memory leaks
+    $requests++;
+    if ($requests > 5000) {
+        exit(0); // let RoadRunner restart worker
     }
 }
