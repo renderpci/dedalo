@@ -82,16 +82,13 @@ class security {
 			}
 
 		// read_only case. For speed and accessibility, return fixed value 1 here
-			// Some services like 'service_autocomplete' or 'search' use read only mode fro speed
-			// Autocomplete status inheritance
-			// Used to identify if the search has been fired by autocompletes(portal searches) or not (list)
-			// autocompletes need has access to target sections and components.
-			// When the action is search by autocompletes, the permissions need to be at least 1 (read).
-			// Note: take account that the project filter was applied in the search
-			// so, here the data is the result of the search to be processed by section
-			// to get the component data.
-			$read_only = dd_core_api::$rqo->source->config->read_only ?? false;
-			if ($read_only) {
+			// Some services like 'service_autocomplete' or 'search' use read only mode for speed
+			// (autocompletes need access to target sections and components to resolve labels).
+			// SECURITY: this flag MUST come from server-side code (security::$read_only_scope),
+			// never from the user-supplied rqo. A previous version trusted
+			// dd_core_api::$rqo->source->config->read_only, which let any logged user
+			// gain read access to almost every section by setting that flag.
+			if (self::$read_only_scope===true) {
 				// exclude some sections for security
 				$exclude_sections = [
 					DEDALO_SECTION_USERS_TIPO,
