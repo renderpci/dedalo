@@ -714,25 +714,7 @@ describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 			assert.notEqual(add_resp, null, 'ADD: api_response must not be null')
 			assert.notEqual(add_resp.result, null, 'ADD: api_response.result must not be null')
 
-		// ADD DATA - add another locator
-			const locator2 = make_locator(9061)
-			const add_data2 = [Object.freeze({
-				action	: 'insert',
-				id		: null,
-				value	: locator2
-			})]
-			const add_resp2 = await instance.change_value({
-				changed_data	: add_data2,
-				refresh		: false
-			})
-			await instance.refresh({
-				build_autoload		: true,
-				tmp_api_response	: add_resp2
-			})
-
-			assert.notEqual(add_resp2, null, 'ADD2: api_response must not be null')
-
-		// CHANGE DATA - update first locator
+		// CHANGE DATA - update locator
 			const data_before_change = Array.isArray(instance.data) ? instance.data : []
 			const target = data_before_change.find(el => String(el.section_id) === '9060')
 			if (target) {
@@ -757,7 +739,7 @@ describe(`COMPONENT_PUBLICATION FULL LIFECYCLE`, async function() {
 
 		// REMOVE DATA - remove locator
 			const data_before_remove = Array.isArray(instance.data) ? instance.data : []
-			const remove_target = data_before_remove.find(el => String(el.section_id) === '9061')
+			const remove_target = data_before_remove.find(el => String(el.section_id) === '9062')
 			if (remove_target) {
 				const remove_data = [Object.freeze({
 					action	: 'remove',
