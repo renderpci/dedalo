@@ -649,9 +649,13 @@ class login extends common {
 				: null;
 
 		// IP validation
+		// SEC-017: use the trusted IP resolver so that an attacker cannot satisfy
+		// the SAML idp_ip allowlist by injecting a forged X-Forwarded-For header.
+		// Strict comparison prevents loose-typing surprises if SAML_CONFIG['idp_ip']
+		// happens to contain non-string entries.
 			if (defined('SAML_CONFIG') && !empty(SAML_CONFIG['idp_ip'])) {
-				$client_ip = get_client_ip();
-				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
+				$client_ip = get_client_ip_trusted();
+				if ($client_ip === '' || !in_array($client_ip, SAML_CONFIG['idp_ip'], true)) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
 					$response->errors[] = 'Invalid IP';
 					return $response;
