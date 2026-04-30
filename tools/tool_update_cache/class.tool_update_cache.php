@@ -125,6 +125,18 @@ class tool_update_cache extends tool_common {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): WRITE gate. update_cache regenerates and persists
+		// component data across the section. Caller must have write (>=2) on
+		// the section_tipo plus on every component_tipo in
+		// components_selection.
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
+			foreach ($components_selection as $sel) {
+				$comp_tipo = $sel->tipo ?? null;
+				if (!empty($comp_tipo)) {
+					security::assert_tipo_permission($section_tipo, $comp_tipo, 2, __METHOD__);
+				}
+			}
+
 		// Validate required constants
 			if (!defined('DEDALO_BULK_PROCESS_SECTION_TIPO') || !defined('DEDALO_BULK_PROCESS_LABEL_TIPO')) {
 				$response->msg .= ' Required bulk process constants are not defined!';
