@@ -194,20 +194,20 @@ const get_value_element = (i, data, self) => {
 
 				// set the new value
 				if(new_data){
-					node.node_value.innerHTML = new_data.value +'%'
+					node.node_value.textContent = new_data.value +'%'
 					if(node.type==='detail'){
 						const datalist_item = (new_data.locator)
 							? self.datalist.find(item => item.value.section_tipo === new_data.locator.section_tipo
 													&& item.value.section_id === new_data.locator.section_id)
 							: {label: ''}
 
-						node.node_label_list.innerHTML = datalist_item.label
+						node.node_label_list.textContent = datalist_item.label
 					}
 
 				}else{
-					node.node_value.innerHTML = '0%'
+					node.node_value.textContent = '0%'
 					if(node.type==='detail'){
-						node.node_label_list.innerHTML = ''
+						node.node_label_list.textContent = ''
 					}
 				}// end if(new_data){
 			}// end for (let o = node_length - 1; o >= 0; o--)
@@ -244,7 +244,7 @@ const get_value_tooltip = (output_item, data, self) => {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'output_label',
-			inner_html		: get_label[output_item.label] || output_item.id,
+			inner_text		: get_label[output_item.label] || output_item.id,
 			parent			: container
 		})
 
@@ -277,7 +277,7 @@ const get_value_tooltip = (output_item, data, self) => {
 			const situation_total_value = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
-				inner_html		: situation_total.value.value+'%',
+				inner_text		: situation_total.value.value+'%',
 				parent			: situation_total_node
 			})
 
