@@ -60,7 +60,7 @@ class component_section_id extends component_common {
 	public function set_data( ?array $data ) : bool {
 
 		return true;
-	}//end get_data
+	}//end set_data
 
 
 
