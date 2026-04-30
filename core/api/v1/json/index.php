@@ -272,6 +272,12 @@ try {
 	// Final fallback error handling
 	dd_error::captureException($e);
 
+	// SEC-016: always log full trace server-side; never expose `$e->getTrace()` (contains
+	// argument arrays which may include passwords / tokens) nor the original `$rqo`
+	// (login/save_password/etc. carry credentials in `source`). Even with SHOW_DEBUG, a
+	// trace string + message is sufficient for developers and avoids leaking arguments.
+	error_log('Dedalo API EXCEPTION: ' . $e->getMessage() . PHP_EOL . $e->getTraceAsString());
+
 	$response = new stdClass();
 	$response->result	= false;
 	$response->msg		= (SHOW_DEBUG === true)
@@ -281,8 +287,10 @@ try {
 	if (SHOW_DEBUG === true) {
 		$response->debug = (object)[
 			'exception' => $e->getMessage(),
-			'trace'		=> $e->getTrace(),
-			'rqo'		=> $rqo
+			'trace'		=> $e->getTraceAsString(),
+			'file'		=> $e->getFile(),
+			'line'		=> $e->getLine()
+			// SEC-016: $rqo intentionally omitted; may contain credentials.
 		];
 	}
 
