@@ -9,6 +9,36 @@ final class dd_utils_api {
 
 
 	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable;
+	* it must also be added here.
+	*/
+	public const API_ACTIONS = [
+		'get_login_context',
+		'get_install_context',
+		'get_system_info',
+		'convert_search_object_to_sql_query',
+		'change_lang',
+		'login',
+		'quit',
+		'install',
+		'upload',
+		'join_chunked_files_uploaded',
+		'list_uploaded_files',
+		'delete_uploaded_file',
+		'update_lock_components_state',
+		'get_dedalo_files',
+		'get_process_status',
+		'get_process_status_poll',
+		'stop_process',
+		'get_server_ready_status',
+		'get_ontology_update_info',
+		'get_code_update_info'
+	];
+
+
+
+	/**
 	* GET_LOGIN_CONTEXT
 	* This function is not used in normal login behavior (login is called directly in start API).
 	* It could be called when the instance of the login has been build with autoload in true.
