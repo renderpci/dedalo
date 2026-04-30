@@ -20,7 +20,13 @@ const t0 = performance.now()
 				// API response errors
 				api_errors : [],
 				// API response last message
-				request_message : null
+				request_message : null,
+				// SEC-008: CSRF token captured from API responses; injected into
+				// the X-Dedalo-Csrf-Token header by data_manager.request on every
+				// non-bootstrap call. Initialised to null so the very first
+				// `start` request goes out without a header (the server exempts
+				// `start` from CSRF enforcement).
+				csrf_token : null
 			}
 			window.get_label = {}
 			window.SHOW_DEBUG = false
