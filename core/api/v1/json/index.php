@@ -51,12 +51,22 @@ if (!defined('DEDALO_ROOT_PATH')) {
 
 
 // Allow CORS setting from config.php
+// SEC-012: Access-Control-Allow-Origin must be a single origin or '*' per spec.
+// Only echo the request Origin when it matches DEDALO_CORS['allowed_origins'];
+// never combine '*' with Allow-Credentials: true.
 if (defined('DEDALO_CORS')) {
-	header('Access-Control-Allow-Origin: '  . implode(',', DEDALO_CORS['allowed_origins']) );
-	header('Access-Control-Allow-Methods: ' . implode(',', DEDALO_CORS['allowed_methods']) );
-	header('Access-Control-Allow-Headers: ' . implode(',', DEDALO_CORS['allowed_headers']) );
-	header('Access-Control-Max-Age: ' 		. DEDALO_CORS['max_age'] );
-	header('Access-Control-Allow-Credentials: true');
+	$cors_allowed_origins = isset(DEDALO_CORS['allowed_origins']) ? (array)DEDALO_CORS['allowed_origins'] : [];
+	$cors_request_origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+	header('Access-Control-Allow-Methods: ' . implode(', ', (array)(DEDALO_CORS['allowed_methods'] ?? [])) );
+	header('Access-Control-Allow-Headers: ' . implode(', ', (array)(DEDALO_CORS['allowed_headers'] ?? [])) );
+	header('Access-Control-Max-Age: '       . (string)(DEDALO_CORS['max_age'] ?? 86400) );
+	header('Vary: Origin');
+
+	if ($cors_request_origin !== '' && in_array($cors_request_origin, $cors_allowed_origins, true)) {
+		header('Access-Control-Allow-Origin: ' . $cors_request_origin);
+		header('Access-Control-Allow-Credentials: true');
+	}
 }
 
 
