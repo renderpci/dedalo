@@ -649,6 +649,31 @@ class security {
 
 
 
+	/**
+	* ASSERT_SECTION_ARRAY_PERMISSION
+	* Throws on the first $section_tipo in the array that fails the gate.
+	* Use for SQO arrays like sqo.section_tipo[].
+	* @param array $ar_section_tipo
+	* @param int $required_level
+	* @param string $context
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_section_array_permission(
+		array $ar_section_tipo,
+		int $required_level,
+		string $context = ''
+	) : void {
+		foreach ($ar_section_tipo as $st) {
+			if (!is_string($st)) {
+				continue;
+			}
+			self::assert_section_permission($st, $required_level, $context);
+		}
+	}//end assert_section_array_permission
+
+
+
 
 
 }//end class security
