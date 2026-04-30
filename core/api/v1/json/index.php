@@ -127,6 +127,12 @@ if (!empty($_FILES)) {
 		// Prevents potential proxy problems.
 	} else if (isset($_REQUEST['rqo'])) {
 		$rqo = json_handler::decode($_REQUEST['rqo']);
+		// SEC-010: bring this branch in line with the php://input and $_REQUEST fallbacks,
+		// which already sanitize via safe_xss / safe_xss_recursive. Without this, payloads
+		// passed through the legacy `rqo` form/query parameter reach dd_manager unsanitized.
+		if (is_object($rqo) || is_array($rqo)) {
+			$rqo = safe_xss_recursive($rqo);
+		}
 	} else {
 		$rqo = (object)[
 			'source' => (object)[]
