@@ -85,6 +85,29 @@ final class dd_area_maintenance_api {
 				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
 				return $response;
 			}
+
+		// SEC-044: dispatch allowlist. When the target class declares
+		// API_ACTIONS, the requested method MUST appear in it. Mirrors the
+		// dd_manager / dd_tools_api gate (§9.1, §9.2) so an authenticated
+		// area_maintenance user cannot invoke arbitrary public-static methods
+		// (e.g. internal helpers like `get_file_constants`) that were never
+		// designed as remote API actions. Back-compat: classes without
+		// API_ACTIONS keep the legacy any-static behaviour.
+			if (defined($class_name . '::API_ACTIONS')) {
+				$allowed_actions = constant($class_name . '::API_ACTIONS');
+				if (!in_array($class_method, $allowed_actions, true)) {
+					$response->errors[] = 'method not in API_ACTIONS allowlist';
+					$response->msg = 'Error. Method \''.$class_method.'\' is not in '.$class_name.'::API_ACTIONS';
+					debug_log(__METHOD__
+						. ' Denied class_request: method not in allowlist' . PHP_EOL
+						. ' class_name: ' . $class_name . PHP_EOL
+						. ' class_method: ' . $class_method
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
+
 			try {
 
 				// background_running / direct cases
