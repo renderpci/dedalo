@@ -320,6 +320,16 @@ class login extends common {
 				return $response;
 			}
 
+		// SEC-019: brute-force throttle. Refuse the attempt entirely if this
+		// (username, IP) tuple is currently locked out. The check happens after
+		// the cheap input-format validations above so malformed payloads do not
+		// inflate the failure counter.
+			$throttle_key  = self::build_login_throttle_key('login', $username);
+			$throttle_lock = self::check_login_throttle($throttle_key);
+			if ($throttle_lock !== null) {
+				return $throttle_lock;
+			}
+
 		// search username
 			$ar_section_id	= login::get_users_with_name( $username );
 			$ar_result		= $ar_section_id;
@@ -348,6 +358,8 @@ class login extends common {
 					'LOG IN',
 					$activity_data
 				);
+				// SEC-019: record this failed attempt against the (username, IP) key.
+				self::record_failed_login_attempt($throttle_key);
 				// delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
@@ -380,6 +392,8 @@ class login extends common {
 					'LOG IN',
 					$activity_data
 				);
+				// SEC-019: ambiguous user is a server-side problem, not a credential
+				// guess; do not feed the brute-force counter here.
 				# delay failed output after 2 seconds to prevent brute force attacks
 				if (DEVELOPMENT_SERVER!==true) {
 					sleep(2);
@@ -399,7 +413,6 @@ class login extends common {
 			$user_id = $section_id = (int)reset($ar_result);
 
 			# Search password
-			$password_encrypted	= component_password::encrypt_password($password);
 			$component_password	= component_common::get_instance(
 				'component_password',
 				DEDALO_USER_PASSWORD_TIPO,
@@ -419,6 +432,8 @@ class login extends common {
 
 			// password length check
 				if( empty($password_data) || strlen($password_data)<8 ) {
+					// SEC-019: treat empty/short stored password as a failed credential check.
+					self::record_failed_login_attempt($throttle_key);
 					$response->msg = 'Error: Wrong password [2]';
 					$response->errors[] = 'Wrong password [2]';
 					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
@@ -447,6 +462,8 @@ class login extends common {
 						'LOG IN',
 						$activity_data
 					);
+					// SEC-019: a wrong password is the canonical brute-force signal.
+					self::record_failed_login_attempt($throttle_key);
 					# delay failed output by 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
 						sleep(2);
@@ -522,6 +539,11 @@ class login extends common {
 
 			}//end if(!security::is_global_admin($user_id))
 
+
+		// SEC-019: credentials are confirmed valid (password matched, account active,
+		// profile/projects checks passed); reset the throttle counter for this key so
+		// a long-running attacker pattern does not penalise the legitimate user.
+			self::clear_failed_login_attempts($throttle_key);
 
 		// Login (all is ok) - init login sequence when all is ok
 			$full_username				= login::get_full_username($user_id);
@@ -601,6 +623,15 @@ class login extends common {
 				}
 			}
 
+		// SEC-019: brute-force throttle for the SAML code path. Keyed by SAML
+		// code + trusted client IP so that an attacker poking arbitrary codes
+		// from one IP gets locked out without affecting other users.
+			$throttle_key  = self::build_login_throttle_key('saml', is_string($code) ? $code : '');
+			$throttle_lock = self::check_login_throttle($throttle_key);
+			if ($throttle_lock !== null) {
+				return $throttle_lock;
+			}
+
 		# Search code (DNI, etc.)
 			$ar_section_id	= login::get_users_with_code( $code );
 			$ar_result		= $ar_section_id;
@@ -649,6 +680,8 @@ class login extends common {
 								)
 							);
 
+							// SEC-019: inactive account on a valid SAML code is not a credential
+							// guess; do not feed the brute-force counter here.
 							# delay failed output by 2 seconds to prevent brute force attacks
 							if (DEVELOPMENT_SERVER!==true) {
 								sleep(2);
@@ -681,6 +714,10 @@ class login extends common {
 								}
 
 						}//end if(!security::is_global_admin($section_id))
+
+					// SEC-019: SAML code resolved to an active, authorised account; clear
+					// the throttle counter for this code+IP key.
+						self::clear_failed_login_attempts($throttle_key);
 
 					// LOGIN (ALL IS OK) - INIT LOGIN SEQUENCE WHEN ALL IS OK
 
@@ -729,6 +766,9 @@ class login extends common {
 							)
 						);
 
+					// SEC-019: an unknown SAML code is the canonical brute-force signal
+					// for this path; record it.
+					self::record_failed_login_attempt($throttle_key);
 					# delay failed output after 2 seconds to prevent brute force attacks
 					if (DEVELOPMENT_SERVER!==true) {
 						sleep(2);
