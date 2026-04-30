@@ -1,14 +1,82 @@
 # Protect files and directories from prying eyes.
+# SEC-011: previous FilesMatch used a broken character class
+# `[^config_client\.js|make_backup\.js]` and missed common sensitive files
+# (.env, .git, lockfiles). Replaced with explicit, well-tested patterns.
 
-# Directories are final path only, not between.
-<FilesMatch "(\.(inc|sh|txt|tpl|backup|test|composer\.(json|lock))$|^#.*#$|\.php(~|\.sw[op]|\.orig\.save)$|deleted|backup|vendor|config)[^config_client\.js|make_backup\.js]">
+# Block sensitive file extensions and editor temp files.
+<FilesMatch "(?i)\.(inc|sh|txt|tpl|backup|test|sql|sql\.gz|sqlite|db|log|bak|old|orig|swp|swo|env|env\.example|lock|heapsnapshot|network-request)$">
 	<IfModule mod_authz_core.c>
 		Require all denied
 	</IfModule>
 	<IfModule !mod_authz_core.c>
 		Order allow,deny
+		Deny from all
 	</IfModule>
 </FilesMatch>
+
+# Block PHP editor backup variants and emacs autosaves.
+<FilesMatch "(\.php(~|\.sw[op]|\.orig|\.save|\.bak)$|^#.*#$|^\..*\.swp$)">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from all
+	</IfModule>
+</FilesMatch>
+
+# Block specific filenames (composer/bun/git/CI metadata).
+<FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|bun\.lock|bun\.lockb|tsconfig\.json|\.gitignore|\.gitattributes|\.editorconfig|\.jshintrc|\.htaccess|\.htpasswd|cliff\.toml|phpstan\.neon\.dist|phpstan-bootstrap\.php|stub\.php|worker\.php|status\.md|AGENTS\.md|Updates\.md)$">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from all
+	</IfModule>
+</FilesMatch>
+
+# SEC-026 (§9.3): block direct HTTP access to `*_json.php` templates.
+# These files are pure server-side INCLUDE targets used by `common::get_json()`
+# (and a few peers like `relation_list::get_json()`). They expect to run inside
+# the calling object's scope and use `$this` from the very first line; reaching
+# them via HTTP produces a fatal error that:
+#   * leaks file paths through the error message,
+#   * skips the `dd_manager` CSRF + auth + opt-in `API_ACTIONS` allowlist
+#     entirely, and
+#   * exposes them as a future foothold if any maintainer ever adds a
+#     side-effect (DB write, file IO) before the `$this` reference.
+# No JS or HTML in the codebase fetches these files directly (verified), so a
+# blanket deny is safe. nginx deployments must replicate this rule in their
+# server config (e.g. `location ~ _json\.php$ { deny all; }`).
+<FilesMatch "(?i)_json\.php$">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from all
+	</IfModule>
+</FilesMatch>
+
+# Block any dotfile (.env, .git, .DS_Store, etc.) at any path depth.
+<FilesMatch "^\.">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from all
+	</IfModule>
+</FilesMatch>
+
+# Block sensitive directories from being served.
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	# Allow browser-based client tests; block rest of test tree
+	RewriteRule ^test/client(/|$) - [L]
+	RewriteRule (^|/)(\.git|\.github|\.windsurf|\.agent|\.VSCodeCounter|node_modules|vendor|config|test|dev|install/db|backup|backups|deleted)(/|$) - [F,L,NC]
+</IfModule>
 
 # Browser caching FileETag control
 # <FilesMatch ".+\.(js|css)$">
@@ -45,7 +113,22 @@ Options -Indexes
 	DirectoryIndex index.html index.php
 </IfModule>
 
-# Various header fixes.
+# SEC-015: baseline security response headers.
+# CSP is intentionally omitted here; it requires per-app tuning and should be
+# rolled out separately once the resource graph is mapped.
+<IfModule mod_headers.c>
+	Header always set X-Content-Type-Options "nosniff"
+	Header always set X-Frame-Options "SAMEORIGIN"
+	Header always set Referrer-Policy "strict-origin-when-cross-origin"
+	Header always set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+	# HSTS: only meaningful over HTTPS; harmless when the site is HTTP because
+	# browsers ignore it on plain HTTP, but enable behind TLS termination.
+	Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+	# Strip the Proxy request header (CVE-2016-5385 / httpoxy).
+	RequestHeader unset Proxy
+</IfModule>
+
+# Legacy header section preserved (commented) for reference.
 # <IfModule mod_headers.c>
 	# Disable content sniffing, since it's an attack vector.
 	# Header always set X-Content-Type-Options nosniff
