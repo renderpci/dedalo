@@ -188,14 +188,16 @@ class component_portal extends component_relation_common {
 					$section_tipo
 				);
 
-				$data = $component_filter->get_data(); 
+				$data = $component_filter->get_data();
 				//Remove 'from_component_tipo' and 'type' properties
 				$component_filter_data = [];
-				foreach ($data as $item) {
-					$filter_locator = new locator();
-					$filter_locator->set_section_tipo($section_tipo);
-					$filter_locator->set_section_id($section_id);
-					$component_filter_data[] = $filter_locator;
+				if (!empty($data) && is_array($data)) {
+					foreach ($data as $item) {
+						$filter_locator = new locator();
+						$filter_locator->set_section_tipo($section_tipo);
+						$filter_locator->set_section_id($section_id);
+						$component_filter_data[] = $filter_locator;
+					}
 				}
 			}
 		}
