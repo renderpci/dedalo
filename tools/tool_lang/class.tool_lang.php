@@ -28,6 +28,16 @@ class tool_lang extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'automatic_translation'
+	];
+
+
+
+	/**
 	* AUTOMATIC_TRANSLATION
 	* Execute automatic translation of component data using configured translator service
 	*
@@ -76,6 +86,24 @@ class tool_lang extends tool_common {
 			$section_id		= $options->section_id		?? null;
 			$section_tipo	= $options->section_tipo	?? null;
 			$translator		= $options->translator		?? null;
+
+		// SEC-024 (§9.2): WRITE gate. automatic_translation reads source-lang
+		// data and writes target-lang data on the same (section_tipo,
+		// component_tipo) pair.
+			if (empty($component_tipo) || empty($section_tipo)) {
+				$response->msg		= 'Error. Missing required parameters: component_tipo, section_tipo';
+				$response->errors[]	= 'invalid_request';
+				return $response;
+			}
+			security::assert_tipo_permission($section_tipo, $component_tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope(
+					$section_tipo,
+					(int)$section_id,
+					__METHOD__
+				);
+			}
 
 		// config
 			// get all tools config sections

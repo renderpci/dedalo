@@ -19,6 +19,16 @@ class tool_image_rotation extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'apply_rotation'
+	];
+
+
+
+	/**
 	 * APPLY_ROTATION
 	 * Render the image file using the user selected rotation and crop parameters.
 	 * Processes all available quality levels of an image component, applying rotation
@@ -57,6 +67,20 @@ class tool_image_rotation extends tool_common {
 			$alpha				= $options->alpha ?? null;
 			$rotation_mode		= $options->rotation_mode ?? 'default';
 			$crop_area 			= $options->crop_area ?? null;
+
+		// SEC-024 (§9.2): permission gate. Apply_rotation mutates the on-disk
+		// derived files of an image component. Caller must have write (>=2) on
+		// (section_tipo, tipo).
+			if (empty($tipo) || empty($section_tipo)) {
+				$response->msg		= 'Error. Missing required parameters: tipo, section_tipo';
+				$response->errors[]	= 'invalid_request';
+				return $response;
+			}
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+			}
 
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo, true);

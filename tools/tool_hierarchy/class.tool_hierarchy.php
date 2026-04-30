@@ -22,6 +22,16 @@ class tool_hierarchy extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'generate_virtual_section'
+	];
+
+
+
+	/**
 	 * GENERATE_VIRTUAL_SECTION
 	 * Generates a new virtual section from a real section with hierarchy support
 	 *
@@ -72,6 +82,11 @@ class tool_hierarchy extends tool_common {
 				);
 				return $response;
 			}
+
+		// SEC-024 (§9.2): WRITE gate. generate_virtual_section creates a new
+		// virtual section + thesaurus general terms. This is a structural
+		// privilege; require write (>=2) on the source section_tipo.
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// check if is necessary to delete the previous ontology terms before added new ones
 			if($force_to_create===true){

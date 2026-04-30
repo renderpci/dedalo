@@ -21,6 +21,16 @@ class tool_upload extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'process_uploaded_file'
+	];
+
+
+
+	/**
 	 * PROCESS_UPLOADED_FILE
 	 * This method is called after the file is already uploaded to temporary directory.
 	 * Moves the temp file to the final directory and launches the component process method

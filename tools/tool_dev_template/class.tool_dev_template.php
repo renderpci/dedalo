@@ -3,8 +3,45 @@
 * CLASS TOOL_DEV_TEMPLATE
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
 *
+* SECURITY NOTE (SEC-024)
+* When you copy this file as the starting point of a new tool you MUST add
+* the appropriate per-method security gates before shipping it:
+*
+*   1. Layer 1 (schema) — call `security::assert_section_permission(...)` or
+*      `security::assert_tipo_permission(...)` with the correct required
+*      level (1 = read, 2 = write, 3 = admin) at the very top of every
+*      method declared in `API_ACTIONS`.
+*
+*   2. Layer 2 (per-record) — when the method receives a caller-supplied
+*      `section_id` and acts on that single record (i.e. it does NOT run
+*      through a sqo executor that would apply `filter_by_projects`
+*      automatically), also call
+*      `security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__)`
+*      so the caller cannot target records outside their project scope.
+*
+*   3. If the method is developer-only (mutates ontology / dd_* tables /
+*      filesystem outside any section), gate with `security::is_developer()`
+*      and throw `permission_exception` instead — see the helpers used by
+*      `tool_ontology` / `tool_ontology_parser`.
+*
+* The two methods below are intentionally *unsafe* placeholders. They are
+* listed in API_ACTIONS so the dispatch surface works for development, but
+* they are not gated. Do NOT enable this tool on a production instance.
 */
 class tool_dev_template extends tool_common {
+
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. This is a template tool — keep its API
+	* surface minimal and documented. See class header for the security
+	* gates you must add when forking this template.
+	*/
+	public const API_ACTIONS = [
+		'my_custom_static_fake_method',
+		'handle_upload_file'
+	];
 
 
 

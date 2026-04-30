@@ -17,6 +17,36 @@ class tool_update_cache extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. Adding a new public-static method does
+	* NOT make it remotely callable; it must also be added here.
+	* `process_chunk` is intentionally absent because it expects positional
+	* args, not an rqo object.
+	*/
+	public const API_ACTIONS = [
+		'update_cache',
+		'get_component_list'
+	];
+
+	/**
+	* SEC-024 / §9.1b: explicit CLI allowlist for `process_runner.php`.
+	* Only `update_cache` is invoked with `background_running:true` from the
+	* JS side (see `tools/tool_update_cache/js/tool_update_cache.js`).
+	* `get_component_list` is a synchronous lookup helper and must not be
+	* dispatched through the background runner.
+	* @see core/base/process_runner.php
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'update_cache'
+	];
+
+
+
+
+
+
+
+	/**
 	 * @var int Number of records processed in current operation
 	 */
 	public static int $n_records = 0;

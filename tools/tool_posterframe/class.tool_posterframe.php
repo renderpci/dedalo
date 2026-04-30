@@ -29,6 +29,19 @@
  */
 class tool_posterframe extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'create_identifying_image',
+		'get_ar_identifying_image'
+	];
+
+
+
 	/**
 	 * CREATE_IDENTIFYING_IMAGE
 	 * Extract posterframe from audiovisual file and create identifying image in portal

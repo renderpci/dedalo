@@ -25,6 +25,22 @@ class tool_media_versions extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'get_files_info',
+		'delete_quality',
+		'build_version',
+		'conform_headers',
+		'rotate',
+		'sync_files',
+		'delete_version'
+	];
+
+
+
+	/**
 	 * GET_FILES_INFO
 	 * Get file info for every quality like 'datalist' do
 	 *

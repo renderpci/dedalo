@@ -9,6 +9,17 @@ class tool_time_machine extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'apply_value',
+		'bulk_revert_process'
+	];
+
+
+
+	/**
 	* APPLY_VALUE
 	* Set user selected value from time machine to current element data
 	* @param object $request_options

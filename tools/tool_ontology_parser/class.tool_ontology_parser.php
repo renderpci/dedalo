@@ -21,6 +21,20 @@
  */
 class tool_ontology_parser extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. Privileged: developer-only tool.
+	*/
+	public const API_ACTIONS = [
+		'get_ontologies',
+		'export_ontologies',
+		'regenerate_ontologies'
+	];
+
+
+
 	/**
 	 * GET_ONTOLOGIES
 	 * Retrieve all main ontology records and extract metadata

@@ -28,6 +28,31 @@
  */
 class tool_propagate_component_data extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'propagate_component_data'
+	];
+
+	/**
+	* SEC-024 / §9.1b: explicit allowlist of methods callable from CLI via
+	* `process_runner.php` (spawned by `exec_::request_cli` when the API
+	* caller passes `background_running:true`). Without this constant
+	* `process_runner` falls back to "any public-static method on the class
+	* is callable", which would expose any `tool_common`-inherited helper.
+	* @see core/base/process_runner.php
+	* @see tools/tool_propagate_component_data/js/tool_propagate_component_data.js
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'propagate_component_data'
+	];
+
+
+
 	/**
 	 * PROPAGATE_COMPONENT_DATA
 	 * Propagate component data changes across multiple section records

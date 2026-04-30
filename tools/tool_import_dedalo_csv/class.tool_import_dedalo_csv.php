@@ -18,6 +18,34 @@ class tool_import_dedalo_csv extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. Internal helpers (import_dedalo_csv_file,
+	* verify_csv_map, get_files_path) are intentionally absent.
+	*/
+	public const API_ACTIONS = [
+		'get_csv_files',
+		'delete_csv_file',
+		'import_files',
+		'process_uploaded_file',
+		'get_section_components_list'
+	];
+
+	/**
+	* SEC-024 / §9.1b: explicit CLI allowlist for `process_runner.php`.
+	* Only `import_files` runs with `background_running:true` from JS
+	* (see `tools/tool_import_dedalo_csv/js/tool_import_dedalo_csv.js`).
+	* The other actions (`get_csv_files`, `delete_csv_file`,
+	* `get_section_components_list`, `process_uploaded_file`) are
+	* interactive helpers and must not reach the background runner.
+	* @see core/base/process_runner.php
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'import_files'
+	];
+
+
+
+	/**
 	* GET_FILES_PATH
 	* Default CSV upload directory for current logged user
 	* @return string $files_path
@@ -327,6 +355,15 @@ class tool_import_dedalo_csv extends tool_common {
 			$files				= $options->files ?? [];
 			$time_machine_save	= $options->time_machine_save ?? null;
 			$dir				= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
+
+		// SEC-024 (§9.2): WRITE gate per file. Each file targets a different
+		// section_tipo. Caller must have write (>=2) on every requested target.
+			foreach ((array)$files as $current_file_obj) {
+				$st = $current_file_obj->section_tipo ?? null;
+				if (!empty($st)) {
+					security::assert_section_permission($st, 2, __METHOD__);
+				}
+			}
 
 		// process information
 			$process_info = new stdClass();
@@ -1265,6 +1302,12 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// options
 			$section_tipo = $options->section_tipo;
+
+		// SEC-024 (§9.2): READ gate.
+			if (empty($section_tipo)) {
+				return (object)['result'=>false,'msg'=>'Error. Missing section_tipo'];
+			}
+			security::assert_section_permission($section_tipo, 1, __METHOD__);
 
 		// response
 			$response = new stdClass();

@@ -35,6 +35,27 @@
  */
 class tool_transcription extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		// SEC-024 (§9.2): get_text_from_pdf removed — it accepts an arbitrary
+		// `path_pdf` filesystem path with no authorisation check. It is used
+		// internally by the transcription pipeline; callers should go through
+		// `tool_pdf_extractor::get_pdf_data` which enforces a per-component
+		// permission gate.
+		'automatic_transcription',
+		'create_transcribable_audio_file',
+		'delete_transcribable_audio_file',
+		'check_server_transcriber_status',
+		'build_subtitles_file'
+	];
+
+
+
 	/**
 	 * GET_TEXT_FROM_PDF
 	 * Extract text from PDF file with page numbering and UTF-8 validation

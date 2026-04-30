@@ -14,6 +14,16 @@ class tool_tr_print extends tool_common {
 
 
 
+	/**
+	* SEC-024 (§9.2): No remotely callable methods. The static helpers
+	* (build_pseudo_vtt, clean_vtt_text, format_text_for_tool) are internal
+	* utilities with non-rqo signatures and must not be exposed via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [];
+
+
+
 	protected $component_obj;
 
 

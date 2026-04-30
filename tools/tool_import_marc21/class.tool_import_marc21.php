@@ -36,6 +36,18 @@ class tool_import_marc21 extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. Internal helpers (get_value, get_field,
+	* get_section_id_from_code, get_section_id_from_collections_container_title)
+	* are intentionally absent — they take non-rqo positional arguments.
+	*/
+	public const API_ACTIONS = [
+		'import_files'
+	];
+
+
+
+	/**
 	 * IMPORT_FILES
 	 * Orchestrates MARC21 file import workflow with complete record processing.
 	 * Reads MARC21 files from temporary storage, parses records, and populates
@@ -71,6 +83,15 @@ class tool_import_marc21 extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// SEC-024 (§9.2): WRITE gate. MARC21 import creates / overwrites
+		// records on the target section.
+			$section_tipo = $options->section_tipo ?? null;
+			if (empty($section_tipo)) {
+				$response->msg = 'Error. Missing section_tipo';
+				return $response;
+			}
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// Load configuration and prepare context
 			$import_context = self::prepare_import_context($options);

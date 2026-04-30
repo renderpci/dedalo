@@ -8,6 +8,13 @@ class tool_subtitles extends tool_common {
 
 
 
+	/**
+	* SEC-024 (§9.2): UI-only tool. No remotely callable methods.
+	*/
+	public const API_ACTIONS = [];
+
+
+
 	# media component (actually component_image, component_av, component_pdf)
 	// protected $component_obj;
 

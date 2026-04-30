@@ -25,6 +25,18 @@
  */
 class tool_tc extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'change_all_timecodes'
+	];
+
+
+
 	/**
 	 * CHANGE_ALL_TIMECODES
 	 * Apply offset adjustment to all timecode tags in component data

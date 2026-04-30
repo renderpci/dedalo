@@ -23,6 +23,18 @@
  */
 class tool_pdf_extractor extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`.
+	*/
+	public const API_ACTIONS = [
+		'get_pdf_data'
+	];
+
+
+
 	/**
 	 * GET_PDF_DATA
 	 * Extract text content from a PDF file using configured daemon processor

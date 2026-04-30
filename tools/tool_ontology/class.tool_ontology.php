@@ -20,6 +20,20 @@
  */
 class tool_ontology extends tool_common {
 
+
+
+	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. tool_ontology is privileged: only
+	* developers / global admins should reach it; the dispatch surface is
+	* restricted to the single ontology-write entrypoint.
+	*/
+	public const API_ACTIONS = [
+		'set_records_in_dd_ontology'
+	];
+
+
+
 	/**
 	 * SET_RECORDS_IN_DD_ONTOLOGY
 	 * Parse ontology section records and update dd_ontology table definitions

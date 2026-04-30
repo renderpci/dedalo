@@ -40,6 +40,17 @@ class tool_import_zotero extends tool_common {
 
 
 	/**
+	* SEC-024 (§9.2): explicit allowlist of methods callable via
+	* `dd_tools_api::tool_request`. The other public-static methods are
+	* internal helpers with non-rqo signatures.
+	*/
+	public const API_ACTIONS = [
+		'import_files'
+	];
+
+
+
+	/**
 	* IMPORT_FILES
 	* Processes uploaded Zotero JSON files and imports data into Dédalo
 	*
@@ -82,6 +93,14 @@ class tool_import_zotero extends tool_common {
 			$components_temp_data		= $options->components_temp_data ?? [];
 			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
 			$key_dir					= $options->key_dir ?? null;
+
+		// SEC-024 (§9.2): WRITE gate. Zotero import creates / overwrites
+		// records in the target section_tipo.
+			if (empty($section_tipo)) {
+				$response->msg = 'Error. Missing section_tipo';
+				return $response;
+			}
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 			// main components to use Dédalo
 			$main = $config->config->main ?? [];
