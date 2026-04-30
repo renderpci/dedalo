@@ -1506,7 +1506,11 @@ function safe_xss(mixed $value) : mixed {
 
 	if (!empty($value) && is_string($value)) {
 
-		if ($decode_json=json_decode($value)) {
+		// SEC-022: rely on json_last_error rather than truthiness so that valid-but-falsy
+		// JSON values ("null", "false", "0", "\"\"") are still treated as JSON and sanitized
+		// recursively, instead of being double-escaped as plain strings.
+		$decode_json = json_decode($value);
+		if (json_last_error() === JSON_ERROR_NONE && (is_object($decode_json) || is_array($decode_json))) {
 			// If var is a stringify JSON, sanitize the decoded content recursively
 			$decode_json = safe_xss_recursive($decode_json);
 			$value = json_encode($decode_json, JSON_UNESCAPED_UNICODE);
