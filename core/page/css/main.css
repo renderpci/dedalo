@@ -557,7 +557,6 @@ code {
   color: #999999;
   font-size: 1.3rem;
   display: block;
-  padding: 1rem;
   background-color: #2c313a;
   font-weight: 200;
   font-family: 'Menlo', monospace;
@@ -577,9 +576,6 @@ pre {
   opacity: 0.4;
   pointer-events: none !important;
   -webkit-user-select: none !important;
-  -khtml-user-select: none !important;
-  -moz-user-select: none !important;
-  -o-user-select: none !important;
   user-select: none !important;
   animation-play-state: paused;
   cursor: wait;
@@ -674,16 +670,11 @@ pre {
 }
 .unselectable,
 .text_unselectable {
-  -khtml-user-select: none !important;
-  -moz-user-select: none !important;
-  -o-user-select: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;
 }
 .noevents {
-  -khtml-user-select: none !important;
-  -moz-user-select: none !important;
-  -o-user-select: none !important;
+  pointer-events: none;
   -webkit-user-select: none !important;
   user-select: none !important;
 }
@@ -800,17 +791,8 @@ pre {
   --speed: 1s;
   animation: anim_fade_out var(--speed);
   -webkit-animation: anim_fade_out var(--speed);
-  -moz-animation: anim_fade_out var(--speed);
 }
 @keyframes anim_fade_out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-@-moz-keyframes anim_fade_out {
   from {
     opacity: 1;
   }
@@ -830,23 +812,13 @@ pre {
   --speed: 1s;
   animation: anim_fade_in var(--speed);
   -webkit-animation: anim_fade_in var(--speed);
-  -moz-animation: anim_fade_in var(--speed);
 }
 .fade-in-fast {
   --speed: 0.25s;
   animation: anim_fade_in var(--speed);
   -webkit-animation: anim_fade_in var(--speed);
-  -moz-animation: anim_fade_in var(--speed);
 }
 @keyframes anim_fade_in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@-moz-keyframes anim_fade_in {
   from {
     opacity: 0;
   }
@@ -925,8 +897,7 @@ select,
   margin-right: 0.5em;
   border: none;
   outline: 1px solid #f0f0f0;
-  will-change: auto;
-  transition: all 0.5s ease, padding 0s;
+  transition: outline-color 0.5s ease, outline-offset 0.5s ease, box-shadow 0.5s ease, padding 0s;
   opacity: 0.75;
   padding: 0px;
   padding-left: 0.5em;
@@ -1127,8 +1098,6 @@ li .reset_input select {
   vertical-align: middle;
   word-wrap: break-word;
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
   background-color: transparent;
   border: 1px solid transparent;
@@ -1172,26 +1141,29 @@ li .reset_input select {
   position: absolute;
   left: 0px;
   top: 1px;
-  width: 0px;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left;
   opacity: 0;
   z-index: 4;
+  will-change: transform, opacity;
   animation: success_animation_line 0.6s ease-out;
 }
 @keyframes success_animation_line {
   0% {
-    width: 1%;
+    transform: scaleX(0.01);
     opacity: 0.5;
   }
   22% {
-    width: 100%;
+    transform: scaleX(1);
     opacity: 1;
   }
   60% {
-    width: 100%;
+    transform: scaleX(1);
     opacity: 1;
   }
   100% {
-    width: 100%;
+    transform: scaleX(1);
     opacity: 0;
   }
 }
@@ -1288,7 +1260,7 @@ li .reset_input select {
   visibility: visible;
 }
 .tooltip_toggle > .tooltip {
-  transition: all 0.5s ease;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
   position: absolute;
   top: calc(100% + 1em);
   right: 1em;
@@ -1461,8 +1433,6 @@ button {
   text-align: center;
   cursor: pointer;
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
   user-select: none;
   background-color: transparent;
   border: 1px solid transparent;
@@ -4103,7 +4073,7 @@ button.button_spinner.success::before {
 * Included from main.less file
 */
 .hilite_element {
-  will-change: transform;
+  will-change: background-color;
   transition: background-color 600ms linear;
   background-color: #fce8d2;
 }
@@ -4131,7 +4101,7 @@ button.button_spinner.success::before {
   padding: 0.25em;
   border: none;
   outline: 1px solid #e6e6e6;
-  transition: all 0.5s ease, padding 0s;
+  transition: outline-color 0.5s ease, outline-offset 0.5s ease, box-shadow 0.5s ease, opacity 0.5s ease;
   opacity: 0.75;
   vertical-align: bottom;
 }
@@ -4147,22 +4117,11 @@ button.button_spinner.success::before {
   z-index: 1;
 }
 input::-webkit-input-placeholder {
-  /* Chrome/Opera/Safari */
+  /* Chrome/Safari/Edge */
   font-style: italic;
   opacity: 0.95;
 }
-input::-moz-placeholder {
-  /* Firefox 19+ */
-  font-style: italic;
-  opacity: 0.95;
-}
-input:-ms-input-placeholder {
-  /* IE 10+ */
-  font-style: italic;
-  opacity: 0.95;
-}
-input:-moz-placeholder {
-  /* Firefox 18- */
+input::placeholder {
   font-style: italic;
   opacity: 0.95;
 }
@@ -4786,7 +4745,7 @@ dd-modal .footer.distribute {
 }
 .disabled_component select {
   -webkit-appearance: none;
-  -moz-appearance: none;
+  appearance: none;
   text-indent: 1px;
   text-overflow: '';
 }
@@ -15493,7 +15452,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: #e6e6e6;
   border-radius: 23px;
   vertical-align: text-bottom;
-  transition: all 0.3s linear;
+  transition: background-color 0.3s linear;
 }
 .component_publication .switcher_publication > i:before {
   content: '';
@@ -15504,7 +15463,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: #ffffff;
   border-radius: 11px;
   transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
-  transition: all 0.25s linear;
+  transition: transform 0.25s linear;
 }
 .component_publication .switcher_publication > i:after {
   content: '';
@@ -15515,12 +15474,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   background-color: #ffffff;
   border-radius: 11px;
   box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
+  transform-origin: left center;
   transform: translate3d(2px, 2px, 0);
-  transition: all 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out;
 }
 .component_publication .switcher_publication:active i::after {
-  transform: translate3d(2px, 2px, 0);
-  width: 28px;
+  transform: translate3d(2px, 2px, 0) scaleX(1.273);
 }
 .component_publication .switcher_publication:active input:checked + i::after {
   transform: translate3d(16px, 2px, 0);

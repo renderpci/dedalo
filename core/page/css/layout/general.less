@@ -78,7 +78,6 @@
 		color: @color_grey_8;
 		font-size: 1.3rem;
 		display: block;
-		padding: 1rem;
 		background-color: @color_grey_2;
 		font-weight: 200;
 		font-family: 'Menlo', monospace;
@@ -102,9 +101,6 @@
 		opacity: 0.4;
 		pointer-events: none !important;
 		-webkit-user-select: none !important;
-		-khtml-user-select: none !important;
-		-moz-user-select: none !important;
-		-o-user-select: none !important;
 		user-select: none !important;
 		animation-play-state: paused;
 		cursor: wait;
@@ -228,19 +224,14 @@
 	}
 
 	.unselectable, .text_unselectable {
-		-khtml-user-select	: none !important;
-		-moz-user-select	: none !important;
-		-o-user-select		: none !important;
-		-webkit-user-select	: none !important;
-		user-select			: none !important;
+		-webkit-user-select: none !important;
+		user-select: none !important;
 	}
 
 	.noevents {
-		-khtml-user-select	: none !important;
-		-moz-user-select	: none !important;
-		-o-user-select		: none !important;
-		-webkit-user-select	: none !important;
-		user-select			: none !important;
+		pointer-events: none;
+		-webkit-user-select: none !important;
+		user-select: none !important;
 	}
 
 	// lock
@@ -261,7 +252,7 @@
 	}
 
 	.no_margin {
-		margin: 0px !important;;
+		margin: 0px !important;
 	}
 
 	.no_visible {
@@ -373,14 +364,9 @@
 		--speed: 1s;
 		animation: anim_fade_out var(--speed);
 		-webkit-animation: anim_fade_out var(--speed);
-		-moz-animation: anim_fade_out var(--speed);
 	}
 	// Animate opacity
 	@keyframes anim_fade_out {
-		from { opacity: 1 }
-		to { opacity: 0 }
-	}
-	@-moz-keyframes anim_fade_out {
 		from { opacity: 1 }
 		to { opacity: 0 }
 	}
@@ -394,20 +380,14 @@
 		--speed: 1s;
 		animation: anim_fade_in var(--speed);
 		-webkit-animation: anim_fade_in var(--speed);
-		-moz-animation: anim_fade_in var(--speed);
 	}
 	.fade-in-fast {
 		--speed: 0.25s;
 		animation: anim_fade_in var(--speed);
 		-webkit-animation: anim_fade_in var(--speed);
-		-moz-animation: anim_fade_in var(--speed);
 	}
 	// Animate opacity
 	@keyframes anim_fade_in {
-		from { opacity: 0 }
-		to { opacity: 1 }
-	}
-	@-moz-keyframes anim_fade_in {
 		from { opacity: 0 }
 		to { opacity: 1 }
 	}
@@ -492,8 +472,7 @@
 		margin-right: 0.5em;
 		border: none;
 		outline: 1px solid @color_grey_14;
-		will-change: auto; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
-		transition: all 0.5s ease, padding 0s;
+		transition: outline-color 0.5s ease, outline-offset 0.5s ease, box-shadow 0.5s ease, padding 0s;
 		opacity: 0.75;
 		padding: 0px;
 		padding-left: 0.5em;
@@ -618,8 +597,6 @@
 		vertical-align: middle;
 		word-wrap: break-word;
 		-webkit-user-select: none;
-		-moz-user-select: none;
-		-ms-user-select: none;
 		user-select: none;
 		background-color: transparent;
 		border: 1px solid transparent;
@@ -806,7 +783,7 @@
 		}
 
 		>.tooltip {
-			transition: all 0.5s ease;
+			transition: opacity 0.5s ease, visibility 0.5s ease;
 			position: absolute;
 			top: calc(100% + 1em);
 			right: 1em;
