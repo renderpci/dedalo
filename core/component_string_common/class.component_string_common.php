@@ -96,7 +96,27 @@ class component_string_common extends component_common {
 	/**
 	 * SANITIZE_TEXT
 	 * Sanitize text to be used as html content.
-	 * Remove posible malicious <script> or <noscript> tags
+	 *
+	 * SEC-034: hardened denylist for stored-XSS defence-in-depth on textarea content.
+	 * CKEditor sanitises on the input side, but server-side acceptance must not trust
+	 * the client. The previous implementation only stripped <script>/<noscript> and
+	 * left <img onerror>, <svg onload>, <iframe>, <object>, javascript: URLs and
+	 * inline event handlers intact. This function now also:
+	 *   - removes dangerous container/embed tags (iframe, object, embed, frame,
+	 *     frameset, base, link, meta, form, applet, marquee)
+	 *   - strips inline event-handler attributes (`on*=...`) on any tag
+	 *   - neutralises `javascript:`, `vbscript:`, `data:text/html` URLs in
+	 *     href/src/xlink:href/action/formaction/poster attributes
+	 *   - strips <style> blocks (CKEditor never emits inline <style>; keeping it
+	 *     would allow `expression()` and `@import url(javascript:...)` on legacy UAs)
+	 *
+	 * Legitimate Dédalo textarea content uses <p>, <br>, <strong>, <em>, <img>
+	 * (for rendered tags like indexIn/tc/svg), <reference>, <apertium-notrans>;
+	 * none of these are affected.
+	 *
+	 * Note: this is denylist hardening, not a complete allowlist sanitiser.
+	 * A future task should migrate to a DOMDocument-based allowlist.
+	 *
 	 * @param string $value
 	 * @return string $value
 	 */
@@ -106,10 +126,49 @@ class component_string_common extends component_common {
 		$value = stripslashes($value);
 
 		// Remove script tags
-		$value = preg_replace('/<script\b[^<]*>.*?<\/script>/is', '', $value);
+		$value = preg_replace('/<script\b[^<]*>.*?<\/script>/is', '', $value) ?? $value;
 
 		// Also remove noscript tags which might contain scripts
-    	$value = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $value);
+		$value = preg_replace('/<noscript\b[^>]*>.*?<\/noscript>/is', '', $value) ?? $value;
+
+		// SEC-034: remove dangerous tags entirely (with content).
+		$dangerous_tags_with_content = ['iframe', 'object', 'embed', 'frame', 'frameset', 'applet', 'marquee', 'style', 'form'];
+		foreach ($dangerous_tags_with_content as $tag) {
+			$value = preg_replace('/<'.$tag.'\b[^>]*>.*?<\/'.$tag.'>/is', '', $value) ?? $value;
+			// Also self-closing / unmatched opening
+			$value = preg_replace('/<\/?'.$tag.'\b[^>]*>/is', '', $value) ?? $value;
+		}
+
+		// SEC-034: void/standalone dangerous tags.
+		$dangerous_void_tags = ['base', 'link', 'meta'];
+		foreach ($dangerous_void_tags as $tag) {
+			$value = preg_replace('/<'.$tag.'\b[^>]*\/?>/is', '', $value) ?? $value;
+		}
+
+		// SEC-034: strip inline event handlers (onload, onclick, onerror, onmouseover, ...).
+		// Match `on<name>=` either quoted or unquoted, on any tag.
+		$value = preg_replace('/\s+on[a-z]+\s*=\s*"[^"]*"/is', '', $value) ?? $value;
+		$value = preg_replace("/\s+on[a-z]+\s*=\s*'[^']*'/is", '', $value) ?? $value;
+		$value = preg_replace('/\s+on[a-z]+\s*=\s*[^\s>]+/is', '', $value) ?? $value;
+
+		// SEC-034: neutralise javascript:/vbscript:/data:text/html URLs in dangerous attributes.
+		$url_attrs = ['href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'background'];
+		$bad_schemes = '(?:javascript|vbscript|livescript|mocha|data\s*:\s*text\s*\/\s*html)';
+		foreach ($url_attrs as $attr) {
+			// Quoted variants (only the leading scheme is matched; whitespace and
+			// HTML entities between characters are tolerated to defeat trivial bypasses).
+			$value = preg_replace(
+				'/('.$attr.'\s*=\s*["\'])\s*'.$bad_schemes.'\s*:[^"\']*(["\'])/is',
+				'$1#blocked$2',
+				$value
+			) ?? $value;
+			// Unquoted variant.
+			$value = preg_replace(
+				'/('.$attr.'\s*=\s*)'.$bad_schemes.'\s*:[^\s>]*/is',
+				'$1#blocked',
+				$value
+			) ?? $value;
+		}
 
 
 		return trim($value);
