@@ -45,6 +45,7 @@ export const livecycle_detail = [
 	'test_component_number',
 	'test_component_password',
 	'test_component_pdf',
+	'test_component_portal',
 	'test_component_radio_button',
 	'test_component_select',
 	'test_component_select_lang',
