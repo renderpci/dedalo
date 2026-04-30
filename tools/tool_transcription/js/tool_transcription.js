@@ -380,7 +380,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					if (!response?.result) {
 						const msg = response?.msg || 'Error converting audio'
 						console.error(msg);
-						nodes.status_container.innerHTML = `<div class="error">${msg}</div>`;
+						// SEC-031: build error node via DOM, msg may include attacker-controlled file/path
+						nodes.status_container.replaceChildren()
+						const err_div = document.createElement('div')
+						err_div.className = 'error'
+						err_div.textContent = msg
+						nodes.status_container.appendChild(err_div)
 						nodes.button_automatic_transcription.classList.remove('disable');
 						return false;
 					}
@@ -390,7 +395,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 					if (json_langs.length<1) {
 						const msg = 'Error. Expected array of json_langs but empty result is obtained'
 						console.error(msg + ' :', json_langs);
-						nodes.status_container.innerHTML = `<div class="error">${msg}</div>`;
+						// SEC-031: same as above
+						nodes.status_container.replaceChildren()
+						const err_div = document.createElement('div')
+						err_div.className = 'error'
+						err_div.textContent = msg
+						nodes.status_container.appendChild(err_div)
 					}
 					const lang_obj	= json_langs.find(item => item.dd_lang===source_lang)
 					const lang		= lang_obj
@@ -428,19 +438,21 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 									? ''
 									: ' : 00%'
 							const procesing = `${label}${loaded}`;
-							nodes.status_container.innerHTML = procesing;
+							// SEC-031: label is i18n; status text only.
+							nodes.status_container.textContent = procesing;
 
 							break;
 						// on new chunk start empty the status_container, new phrase will be processed
 						case 'on_chunk_start':
-							nodes.status_container.innerHTML = '';
+							nodes.status_container.textContent = '';
 							nodes.status_container.classList.remove('loading_status')
 
 							break;
 						//every time that a word is processed and ready it is set at end of the phrase
 						case 'callback_function':
 							nodes.status_container.classList.remove('loading_status')
-							nodes.status_container.innerHTML = data;
+							// SEC-031: worker output may contain HTML chars from speech recognition.
+							nodes.status_container.textContent = data;
 
 							break;
 						// final data as returned as array of objects with a dd_format parameter.
@@ -466,7 +478,12 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 				}
 				transcribe_worker.onerror = function(e) {
 					console.error('Worker error [transcribe]:', e);
-					nodes.status_container.innerHTML = `<div class="error">Worker error [transcribe]</div>`;
+					// SEC-031: static error label; built via DOM for consistency.
+					nodes.status_container.replaceChildren()
+					const err_div = document.createElement('div')
+					err_div.className = 'error'
+					err_div.textContent = 'Worker error [transcribe]'
+					nodes.status_container.appendChild(err_div)
 				}
 
 				// Process the audio file to be sent to Worker
