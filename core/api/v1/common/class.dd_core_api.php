@@ -8,6 +8,32 @@ final class dd_core_api {
 
 
 
+	/**
+	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable; it
+	* must also be added here. Internal helpers (get_page_globals,
+	* get_js_plain_vars, get_lang_labels) are intentionally absent because they
+	* take non-rqo arguments and are invoked from PHP code only.
+	*/
+	public const API_ACTIONS = [
+		'start',
+		'read',
+		'read_raw',
+		'create',
+		'duplicate',
+		'delete',
+		'save',
+		'count',
+		'get_element_context',
+		'get_section_elements_context',
+		'get_indexation_grid',
+		'get_environment',
+		'get_ontology_info',
+		'test'
+	];
+
+
+
 	// Version. Important!
 		public static $version = "1.0.0";  // 05-06-2019
 
