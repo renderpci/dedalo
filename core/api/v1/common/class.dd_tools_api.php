@@ -141,6 +141,25 @@ final class dd_tools_api {
 				return $response;
 			}
 
+		// per-user authorization check
+			// SECURITY: a tool name in the global registry is not enough. The logged user
+			// must also be authorized for the tool through their profile. A previous
+			// version of this method only checked the global whitelist, letting any logged
+			// user invoke any method on any registered tool (e.g. tool_user_admin).
+			$logged_user_id		= logged_user_id();
+			$user_tools			= tool_common::get_user_tools($logged_user_id);
+			$user_tool_names	= array_map(fn($tool) => $tool->name, $user_tools);
+			if (!in_array($tool_name, $user_tool_names, true)) {
+				$response->errors[] = 'Tool not authorized for current user: ' . $tool_name;
+				debug_log(__METHOD__
+					. ' Error: Tool not authorized for current user.' . PHP_EOL
+					. ' tool_name: ' . $tool_name . PHP_EOL
+					. ' user_id: ' . to_string($logged_user_id)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// load tool class file
 			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name .'.php';
 			if (!file_exists($class_file)) {
