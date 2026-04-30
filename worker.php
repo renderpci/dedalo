@@ -228,13 +228,20 @@ while ($request = $psr7Worker->waitRequest()) {
                 session_write_close();
             }
         } catch (\Throwable $e) {
-            // If an exception occurs, write it to the buffer
+            // If an exception occurs, write it to the buffer.
+            // SEC-016: never expose stack traces unless SHOW_DEBUG is true; always log them server-side.
+            error_log('RR Worker EXCEPTION: ' . $e->getMessage() . PHP_EOL . $e->getTraceAsString());
             if (ob_get_level() > 0) {
-                echo json_encode([
+                $error_payload = [
                     'result' => false,
-                    'msg' => "Dédalo Catch Error: " . $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
+                    'msg'    => (defined('SHOW_DEBUG') && SHOW_DEBUG === true)
+                        ? 'Dédalo Catch Error: ' . $e->getMessage()
+                        : 'Internal server error. Contact your admin.'
+                ];
+                if (defined('SHOW_DEBUG') && SHOW_DEBUG === true) {
+                    $error_payload['trace'] = $e->getTraceAsString();
+                }
+                echo json_encode($error_payload);
             }
 
             // Still close session if active
