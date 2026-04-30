@@ -228,6 +228,27 @@ final class dd_area_maintenance_api {
 				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
 				return $response;
 			}
+
+		// SEC-044: same dispatch allowlist as class_request. Without it, a
+		// user with maintenance-area write could invoke arbitrary public
+		// static methods on the widget class (e.g. internal helpers,
+		// lifecycle hooks). Back-compat: widgets without API_ACTIONS keep
+		// the legacy any-static behaviour pending the per-widget rollout.
+			if (defined($class_name . '::API_ACTIONS')) {
+				$allowed_actions = constant($class_name . '::API_ACTIONS');
+				if (!in_array($class_method, $allowed_actions, true)) {
+					$response->errors[] = 'method not in API_ACTIONS allowlist';
+					$response->msg = 'Error. Method \''.$class_method.'\' is not in '.$class_name.'::API_ACTIONS';
+					debug_log(__METHOD__
+						. ' Denied widget_request: method not in allowlist' . PHP_EOL
+						. ' class_name: ' . $class_name . PHP_EOL
+						. ' class_method: ' . $class_method
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
+
 			try {
 
 				// background_running / direct cases
