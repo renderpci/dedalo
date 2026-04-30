@@ -8,6 +8,17 @@ class babel_transcriber {
 
 
 
+	/**
+	* SEC: explicit allowlist of methods that may be invoked through
+	* `process_runner.php` (CLI) via `exec_::request_cli`.
+	* @see core/base/process_runner.php
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'check_background_transcriber_status'
+	];
+
+
+
 	protected $url; // string babel engine uri
 	protected $key; // string
 	protected $lang; // string dedalo lang
