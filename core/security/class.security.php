@@ -701,6 +701,135 @@ class security {
 
 
 
+	/**
+	* USER_CAN_ACCESS_RECORD
+	* SEC-024 (§9.4): per-record visibility gate (`filter_by_projects` layer).
+	*
+	* Mirrors the logic that `search::build_sql_projects_filter` applies to
+	* every search query, but evaluated against a single (section_tipo,
+	* section_id). Returns true when the record falls inside the caller's
+	* `component_filter_master` scope (i.e. the user would see it through a
+	* normal list/search). Global admins and DEDALO_SUPERUSER bypass.
+	*
+	* This is layer 2 of Dédalo's two-tier ACL:
+	*   - layer 1 → `assert_*_permission` (schema-level, type-based)
+	*   - layer 2 → this helper (per-record, project-based)
+	*
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param int|null $user_id Defaults to logged_user_id().
+	* @return bool
+	*/
+	public static function user_can_access_record(
+		string $section_tipo,
+		int $section_id,
+		?int $user_id = null
+	) : bool {
+
+		if ($section_id < 1 || empty($section_tipo)) {
+			return false;
+		}
+
+		$user_id = $user_id ?? logged_user_id();
+		if (empty($user_id)) {
+			return false;
+		}
+
+		// superuser bypass
+			if ((int)$user_id === DEDALO_SUPERUSER) {
+				return true;
+			}
+
+		// global admin bypass — same exemption used by build_sql_projects_filter
+			if (self::is_global_admin((int)$user_id) === true) {
+				return true;
+			}
+
+		// sections that are exempt from filter_by_projects (mirrors switch in
+		// search::build_sql_projects_filter)
+			if ($section_tipo === DEDALO_SECTION_PROFILES_TIPO
+				|| $section_tipo === DEDALO_FILTER_SECTION_TIPO_DEFAULT
+			) {
+				return true;
+			}
+
+		// users section: a user can see their own user record plus users
+		// whose component_filter intersects their projects. The cheap path
+		// is "did the caller create this record?"; we fall through to the
+		// project-relation check otherwise.
+			if ($section_tipo === DEDALO_SECTION_USERS_TIPO) {
+				if ((int)$section_id === (int)$user_id) {
+					return true;
+				}
+				// fall through to default check
+			}
+
+		// default: load the section's component_filter and intersect with
+		// the user's project set.
+			$ar_component_filter = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo,
+				['component_filter'],
+				true,  // from_cache
+				true,  // resolve_virtual
+				true,  // recursive
+				true   // search_exact
+			);
+			$component_filter_tipo = $ar_component_filter[0] ?? null;
+			if (empty($component_filter_tipo)) {
+				// section has no component_filter → not subject to per-record
+				// project gating (legacy / config sections).
+				return true;
+			}
+
+		// user projects (cached by filter::get_user_projects)
+			$user_projects = filter::get_user_projects((int)$user_id);
+			if (empty($user_projects)) {
+				return false;
+			}
+			$user_project_keys = [];
+			foreach ($user_projects as $loc) {
+				$user_project_keys[$loc->section_tipo.'_'.$loc->section_id] = true;
+			}
+
+		// load the record's component_filter data
+			$model = ontology_node::get_model_by_tipo($component_filter_tipo, true);
+			if (empty($model)) {
+				return false;
+			}
+			$component = component_common::get_instance(
+				$model,
+				$component_filter_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			if ($component === null) {
+				return false;
+			}
+			$record_filter_data = $component->get_data();
+			if (empty($record_filter_data)) {
+				// record exists but has no project assignment → not visible to
+				// non-admin users (matches the behaviour of the SQL filter).
+				return false;
+			}
+
+			foreach ($record_filter_data as $loc) {
+				if (!is_object($loc)) {
+					continue;
+				}
+				$key = ($loc->section_tipo ?? '') .'_'. ($loc->section_id ?? '');
+				if (isset($user_project_keys[$key])) {
+					return true;
+				}
+			}
+
+		return false;
+	}//end user_can_access_record
+
+
+
+
 
 
 }//end class security
