@@ -59,6 +59,9 @@ final class dd_component_3d_api {
 			$file_data	= $options->file_data;
 			$target_dir	= $options->target_dir;
 
+		// SEC: write permission required to bind an uploaded file to a component
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
@@ -168,6 +171,9 @@ final class dd_component_3d_api {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 				$response->errors   = [];
+
+		// SEC: write permission required to delete a posterframe
+			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 		// component
 			$model		= ontology_node::get_model_by_tipo($tipo,true);
