@@ -104,6 +104,63 @@ class login extends common {
 
 
 
+	/**
+	* CHECK_LOGIN_THROTTLE
+	* Returns null when the caller is allowed to attempt authentication.
+	* Returns a ready-to-return response object when the caller is locked out.
+	* @param string $key
+	* @return object|null
+	*/
+	private static function check_login_throttle(string $key) : ?object {
+
+		// Skip during unit tests to avoid leaking state across runs.
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+			return null;
+		}
+
+		$file = self::get_login_throttle_file($key);
+		if ($file === null || !file_exists($file)) {
+			return null;
+		}
+
+		$max     = defined('DEDALO_LOGIN_MAX_ATTEMPTS')    ? (int)DEDALO_LOGIN_MAX_ATTEMPTS    : 10;
+		$lockout = defined('DEDALO_LOGIN_LOCKOUT_SECONDS') ? (int)DEDALO_LOGIN_LOCKOUT_SECONDS : 900;
+		$window  = defined('DEDALO_LOGIN_ATTEMPT_WINDOW')  ? (int)DEDALO_LOGIN_ATTEMPT_WINDOW  : 900;
+
+		$raw     = @file_get_contents($file);
+		$state   = $raw ? json_decode($raw, true) : null;
+		if (!is_array($state) || !isset($state['attempts']) || !is_array($state['attempts'])) {
+			return null;
+		}
+
+		$now = time();
+		// Drop attempts older than the window.
+		$attempts = array_values(array_filter(
+			$state['attempts'],
+			static fn($ts) => is_numeric($ts) && ((int)$ts > ($now - $window))
+		));
+
+		if (count($attempts) < $max) {
+			return null;
+		}
+
+		// Locked: latest attempt + lockout still in the future.
+		$latest = (int)max($attempts);
+		if (($latest + $lockout) <= $now) {
+			return null;
+		}
+
+		$retry_after = max(1, ($latest + $lockout) - $now);
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Too many failed login attempts. Please retry in ' . $retry_after . ' seconds.';
+			$response->errors	= ['login_locked'];
+			$response->retry_after = $retry_after;
+		return $response;
+	}//end check_login_throttle
+
+
+
 
 	/**
 	* LOGIN
