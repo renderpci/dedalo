@@ -1271,6 +1271,13 @@ final class dd_utils_api {
 				? 'Debug user'
 				: (logged_user_full_username() ?? 'Unknown');
 
+		// SEC: read permission on the section is required to participate in
+			// its lock-components state. Prevents fabricating focus/blur events
+			// on records the user has no access to.
+			if (!empty($section_tipo)) {
+				security::assert_section_permission($section_tipo, 1, __METHOD__);
+			}
+
 		// event_element
 			$event_element = new stdClass();
 				$event_element->section_id		= $section_id;
