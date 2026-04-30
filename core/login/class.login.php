@@ -64,6 +64,48 @@ class login extends common {
 
 
 	/**
+	* SEC-019: brute-force / credential-stuffing throttling.
+	*
+	* Failed login attempts are persisted to a small JSON file under
+	* DEDALO_CACHE_MANAGER['files_path']. The state is keyed by a sha1 of
+	* (username|ip) so an attacker cannot lock another user out from a
+	* completely different IP. Tunables (with safe defaults):
+	*
+	*   DEDALO_LOGIN_MAX_ATTEMPTS   (int,  default 10)  - failures before lockout
+	*   DEDALO_LOGIN_ATTEMPT_WINDOW (int,  default 900) - sliding window seconds
+	*   DEDALO_LOGIN_LOCKOUT_SECONDS(int,  default 900) - cooldown after lockout
+	*/
+
+	/**
+	* GET_LOGIN_THROTTLE_FILE
+	* Returns the absolute path to the throttle state file for the given key,
+	* or null if cache infrastructure is not available.
+	* @param string $key
+	* @return string|null
+	*/
+	private static function get_login_throttle_file(string $key) : ?string {
+
+		if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+			return null;
+		}
+		$base_path = DEDALO_CACHE_MANAGER['files_path'];
+		if (!is_dir($base_path)) {
+			return null;
+		}
+		$dir = rtrim($base_path, '/') . '/dd_login_attempts';
+		if (!is_dir($dir)) {
+			@mkdir($dir, 0700, true);
+		}
+		if (!is_dir($dir) || !is_writable($dir)) {
+			return null;
+		}
+		return $dir . '/' . sha1($key) . '.json';
+	}//end get_login_throttle_file
+
+
+
+
+	/**
 	* LOGIN
 	* Execute user login action by validating credentials against database
 	*
