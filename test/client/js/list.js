@@ -50,6 +50,7 @@ export const livecycle_detail = [
 	'test_component_radio_button',
 	'test_component_select',
 	'test_component_select_lang',
+	'test_component_svg',
 ]
 
 // group_stats: track pass/fail/pending per group
