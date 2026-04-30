@@ -877,16 +877,25 @@ export const activate_autocomplete = async function(self, wrapper) {
 
 			// when service wrapper is rendered, move inside the wrapper
 			// and activate it by style with opacity fade
-			requestAnimationFrame(()=>{
+			// in search mode skip rAF+setTimeout (no fade needed, transition:none)
+			if (self.mode === 'search') {
 				self.node.appendChild(service_node)
-				setTimeout(function(){
-					service_node.classList.add('active')
-					// focus
-					if (self.autocomplete.search_input) {
-						self.autocomplete.search_input.focus({preventScroll:true});
-					}
-				}, 1)
-			})
+				service_node.classList.add('active')
+				if (self.autocomplete.search_input) {
+					self.autocomplete.search_input.focus({preventScroll:true});
+				}
+			} else {
+				requestAnimationFrame(()=>{
+					self.node.appendChild(service_node)
+					setTimeout(function(){
+						service_node.classList.add('active')
+						// focus
+						if (self.autocomplete.search_input) {
+							self.autocomplete.search_input.focus({preventScroll:true});
+						}
+					}, 1)
+				})
+			}
 
 			self.autocomplete_active = true
 
