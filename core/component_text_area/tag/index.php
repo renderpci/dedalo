@@ -24,7 +24,11 @@ function tag_safe_xss(string $value) : string {
 
 	if (!empty($value)) {
 
-		if ($decode_json=json_decode($value)) {
+		// SEC-027: rely on json_last_error rather than truthiness so that valid-but-falsy
+		// JSON values ("null", "false", "0", "\"\"") are still treated as plain strings
+		// and sanitized instead of bypassing the filter.
+		$decode_json = json_decode($value);
+		if (json_last_error() === JSON_ERROR_NONE && (is_object($decode_json) || is_array($decode_json))) {
 			// If var is a stringify JSON, not verify string now
 		}else{
 			$value = strip_tags($value,'<br><strong><em>');
