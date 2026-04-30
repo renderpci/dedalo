@@ -189,6 +189,27 @@ final class dd_tools_api {
 				return $response;
 			}
 
+		// SEC-024 (§9.2): opt-in per-tool method allowlist. When the tool class
+			// declares an API_ACTIONS class constant the method MUST appear in it;
+			// otherwise the historical "any public-static method" rule is preserved.
+			// The opt-in form is strongly preferred for new tools because
+			// `tool_request` is a generic dispatch surface that bypasses
+			// `dd_manager`'s own allowlist.
+			if (defined($tool_name . '::API_ACTIONS')) {
+				$tool_actions = constant($tool_name . '::API_ACTIONS');
+				if (!is_array($tool_actions) || !in_array($tool_method, $tool_actions, true)) {
+					debug_log(__METHOD__
+						. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
+						. ' tool_name: ' . $tool_name . PHP_EOL
+						. ' tool_method: ' . $tool_method
+						, logger::ERROR
+					);
+					$response->msg = 'Error. tool method not allowed: ' . $tool_method;
+					$response->errors[] = 'unauthorized_method';
+					return $response;
+				}
+			}
+
 		// background_running / direct cases
 			switch (true) {
 				case ($background_running===true):
