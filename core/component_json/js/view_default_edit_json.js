@@ -231,7 +231,9 @@ const get_content_value = (key, current_value, self) => {
 				content_value.dataset.editor_loading = 'false';
 				console.error('component_json: load_editor failed:', error);
 				// Show error in UI
-				content_value.innerHTML = `<div class="error" style="padding:1rem;color:red;">Error loading JSON editor: ${error.message}</div>`;
+				content_value.textContent = `Error loading JSON editor: ${error.message}`;
+				content_value.style.padding = '1rem';
+				content_value.style.color = 'red';
 			}
 		}//end load_editor
 
@@ -268,7 +270,7 @@ const get_content_value_read = (key, current_value, self) => {
 		ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'value',
-			inner_html		: parsed_value,
+			inner_text		: parsed_value,
 			parent			: content_value
 		})
 
