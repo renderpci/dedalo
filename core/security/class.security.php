@@ -829,6 +829,32 @@ class security {
 
 
 
+	/**
+	* ASSERT_RECORD_IN_USER_SCOPE
+	* SEC-024 (§9.4): throwing variant of `user_can_access_record`. Use this
+	* next to `assert_*_permission` whenever a tool method receives a
+	* caller-supplied `section_id` and is about to mutate or read it
+	* outside of a sqo (which already applies the project filter).
+	*
+	* @param string $section_tipo
+	* @param int $section_id
+	* @param string $context Caller name for the exception (typically __METHOD__).
+	* @throws permission_exception
+	* @return void
+	*/
+	public static function assert_record_in_user_scope(
+		string $section_tipo,
+		int $section_id,
+		string $context = ''
+	) : void {
+		if (self::user_can_access_record($section_tipo, $section_id) === true) {
+			return;
+		}
+		throw new permission_exception(
+			'Record outside user scope (filter_by_projects)',
+			$context
+		);
+	}//end assert_record_in_user_scope
 
 
 
