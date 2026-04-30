@@ -2487,6 +2487,59 @@ function get_client_ip() : string {
 	return $ip_address;
 }//end get_client_ip
 
+
+
+/**
+* GET_CLIENT_IP_TRUSTED
+* Returns the connecting peer's IP address, suitable for security decisions.
+*
+* By default the function returns $_SERVER['REMOTE_ADDR'] verbatim. Forwarded
+* headers (X-Forwarded-For, Forwarded, X-Real-IP) are honoured ONLY when the
+* immediate peer's REMOTE_ADDR matches one of the addresses listed in the
+* DEDALO_TRUSTED_PROXIES configuration constant. This prevents an arbitrary
+* client from spoofing its source IP by injecting an X-Forwarded-For header.
+*
+* DEDALO_TRUSTED_PROXIES, when defined, must be an array of literal IP addresses
+* (CIDR notation is not supported here). Example:
+*     define('DEDALO_TRUSTED_PROXIES', ['127.0.0.1', '10.0.0.5']);
+*
+* @return string IP address or empty string if it cannot be determined.
+*/
+function get_client_ip_trusted() : string {
+
+	$remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+	if ($remote_addr === '') {
+		return '';
+	}
+
+	$trusted = (defined('DEDALO_TRUSTED_PROXIES') && is_array(DEDALO_TRUSTED_PROXIES))
+		? DEDALO_TRUSTED_PROXIES
+		: [];
+
+	// If the immediate peer is not a trusted proxy, ignore forwarded headers.
+	if (!in_array($remote_addr, $trusted, true)) {
+		return $remote_addr;
+	}
+
+	// Trusted proxy path: walk X-Forwarded-For from right to left, returning
+	// the first address that is itself NOT a trusted proxy. That is the
+	// originating client per RFC 7239.
+	$forwarded_for = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+	if ($forwarded_for !== '') {
+		$candidates = array_map('trim', explode(',', $forwarded_for));
+		for ($i = count($candidates) - 1; $i >= 0; $i--) {
+			$candidate = $candidates[$i];
+			if ($candidate !== '' && !in_array($candidate, $trusted, true)) {
+				return $candidate;
+			}
+		}
+	}
+
+	return $remote_addr;
+}//end get_client_ip_trusted
+
+
+
 /**
 * SAML_SAFE_REDIRECT_TARGET
 * SEC-014: turn a SAML RelayState (or any other user-controllable redirect
