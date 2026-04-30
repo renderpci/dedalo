@@ -25,12 +25,46 @@ class download {
 
 
 	/**
+	* IS_CODE_SERVER
+	* SEC-006: only servers explicitly configured as code servers may expose the
+	* download endpoints. Without this guard, any deployment that happens to
+	* point DEDALO_CODE_FILES_DIR at an unintended directory would leak its
+	* contents publicly.
+	* @return bool
+	*/
+	private static function is_code_server() : bool {
+
+		return defined('IS_A_CODE_SERVER') && IS_A_CODE_SERVER === true;
+	}//end is_code_server
+
+
+
+	/**
+	* DENY_NOT_CODE_SERVER
+	* @return void
+	*/
+	private static function deny_not_code_server() : void {
+
+		http_response_code(404);
+		echo 'Not found';
+	}//end deny_not_code_server
+
+
+
+	/**
 	* LATTEST_CODE_VERSION
 	* Scan all Dédalo code directories recursively getting the zip files
 	* and downloading the last file sorted by name as '6.6.4_dedalo.zip'
 	* @return void
 	*/
 	public function lattest_code_version() : void {
+
+		// SEC-006: refuse to expose code archives unless the deployment is explicitly
+		// declared as a code server.
+		if (!self::is_code_server()) {
+			self::deny_not_code_server();
+			return;
+		}
 
 		// starting point folder
 		$start_directory = DEDALO_CODE_FILES_DIR;
@@ -112,6 +146,13 @@ class download {
 	*/
 	public function list_code_versions() : void {
 
+		// SEC-006: refuse to expose code archives unless the deployment is explicitly
+		// declared as a code server.
+		if (!self::is_code_server()) {
+			self::deny_not_code_server();
+			return;
+		}
+
 		// starting point folder
 		$start_directory = DEDALO_CODE_FILES_DIR;
 
@@ -161,9 +202,27 @@ class download {
 
 				foreach ($valid_files as $file_name => $file_path) {
 
-					$safe_path = str_replace(DEDALO_ROOT_PATH, DEDALO_ROOT_WEB, $file_path);
+					// SEC-021: build the public URL with a strict prefix check rather than a
+					// global str_replace, which can corrupt paths if DEDALO_ROOT_PATH is empty
+					// or appears multiple times in $file_path. Prefer DEDALO_CODE_FILES_URL
+					// when defined; otherwise fall back to a verified relative path.
+					$real_file_path = realpath($file_path);
+					$real_root_path = realpath(DEDALO_ROOT_PATH);
+					if ($real_file_path === false || $real_root_path === false) {
+						continue;
+					}
+					if (strpos($real_file_path, $real_root_path . DIRECTORY_SEPARATOR) !== 0) {
+						// Refuse to advertise a file that lives outside the document root.
+						error_log(__METHOD__ . ' Skipping out-of-root file: ' . $real_file_path);
+						continue;
+					}
+					$relative = substr($real_file_path, strlen($real_root_path));
+					$relative = str_replace(DIRECTORY_SEPARATOR, '/', $relative);
+					$safe_path = rtrim(DEDALO_ROOT_WEB, '/') . $relative;
 
-					echo '<br><a href="' . $safe_path . '" target="_blank">' . basename($file_name) . '</a>';
+					// SEC-033: rel=noopener noreferrer on target=_blank.
+					echo '<br><a href="' . htmlspecialchars($safe_path, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener noreferrer">'
+						. htmlspecialchars(basename($file_name), ENT_QUOTES, 'UTF-8') . '</a>';
 				}
 
 			} else {
@@ -192,6 +251,21 @@ class download {
 	* @return void
 	*/
 	private function download_file( string $file_path, string $file_name ) : void {
+
+		// SEC-021: ensure the file we are about to stream is contained inside the
+		// configured DEDALO_CODE_FILES_DIR; defence in depth against any caller that
+		// reaches this method with a tainted path.
+		$real_file_path = realpath($file_path);
+		$real_root_dir  = realpath(DEDALO_CODE_FILES_DIR);
+		if ($real_file_path === false
+			|| $real_root_dir === false
+			|| strpos($real_file_path, $real_root_dir . DIRECTORY_SEPARATOR) !== 0
+		) {
+			error_log(__METHOD__ . ' Refusing to stream out-of-root file: ' . $file_path);
+			http_response_code(404);
+			echo 'Not found';
+			return;
+		}
 
 		// Check if the file exists and is readable
 		if (file_exists($file_path) && is_readable($file_path)) {
