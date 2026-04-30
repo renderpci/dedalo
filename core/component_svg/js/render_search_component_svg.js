@@ -97,7 +97,7 @@ const get_content_value = (i, data_item, self) => {
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value'
-		})	
+		})
 
 	// input field
 		const input = ui.create_dom_element({
@@ -108,10 +108,9 @@ const get_content_value = (i, data_item, self) => {
 			parent			: content_value
 		})
 		const change_handler = (e) => {
-			const data_item_to_save = clone(data_item)
-						
+
 			// parsed_value
-			data_item_to_save.value = (input.value.length>0)
+			const parsed_value = (input.value.length>0)
 				? input.value
 				: null
 
@@ -119,7 +118,7 @@ const get_content_value = (i, data_item, self) => {
 			const changed_data_item = Object.freeze({
 				action	: 'update',
 				id		: self.data.entries?.[i]?.id || null,
-				value	: data_item_to_save
+				value	: parsed_value
 			})
 
 			// update the instance data (previous to save)
@@ -128,7 +127,7 @@ const get_content_value = (i, data_item, self) => {
 			// publish search. Event to update the DOM elements of the instance
 			event_manager.publish('change_search_element', self)
 		}
-		input.addEventListener('change', change_handler)		
+		input.addEventListener('change', change_handler)
 
 
 	return content_value
