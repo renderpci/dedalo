@@ -36,6 +36,23 @@ class tool_ontology_parser extends tool_common {
 
 
 	/**
+	* ASSERT_DEVELOPER
+	* SEC-024 (§9.2): tool_ontology_parser exports/regenerates ontology
+	* definitions. Only superusers / developers can invoke its API methods.
+	*/
+	private static function assert_developer() : void {
+		$user_id = logged_user_id();
+		if (security::is_developer((int)$user_id) !== true) {
+			throw new permission_exception(
+				'tool_ontology_parser requires developer privileges',
+				__CLASS__
+			);
+		}
+	}//end assert_developer
+
+
+
+	/**
 	 * GET_ONTOLOGIES
 	 * Retrieve all main ontology records and extract metadata
 	 *
@@ -55,6 +72,9 @@ class tool_ontology_parser extends tool_common {
 	 * @subpackage Ontology
 	 */
 	public static function get_ontologies() : object {
+
+		// SEC-024 (§9.2): developer-only gate.
+			self::assert_developer();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -202,6 +222,9 @@ class tool_ontology_parser extends tool_common {
 	 */
 	public static function export_ontologies(object $options) : object {
 
+		// SEC-024 (§9.2): developer-only gate.
+			self::assert_developer();
+
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
 
@@ -303,6 +326,9 @@ class tool_ontology_parser extends tool_common {
 	 * @subpackage Ontology
 	 */
 	public static function regenerate_ontologies(object $options) : object {
+
+		// SEC-024 (§9.2): developer-only gate.
+			self::assert_developer();
 
 		// options
 			$selected_ontologies = $options->selected_ontologies ?? [];
