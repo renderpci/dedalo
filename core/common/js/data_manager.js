@@ -125,6 +125,17 @@ data_manager.request = async function(options) {
 	// vars from options applying defaults
 	const { url, method, mode, cache, credentials, headers, redirect, referrer, body, use_worker, retries, base_delay, timeout } = merged_options;
 
+	// SEC-008: attach the CSRF token captured from the previous API response
+	// (or `null` on the very first call). The server requires the
+	// X-Dedalo-Csrf-Token header for every action that is not in its bootstrap
+	// allowlist. Headers is a plain object on the merged options so we can
+	// extend it in place; do not overwrite a token already set by a caller.
+	if (typeof window !== 'undefined' && window.page_globals && window.page_globals.csrf_token) {
+		if (!headers['X-Dedalo-Csrf-Token']) {
+			headers['X-Dedalo-Csrf-Token'] = window.page_globals.csrf_token;
+		}
+	}
+
 	// cache_handler
 	const cache_handler = options.cache_handler || null
 	if (cache_handler?.handler==='localdb') {
