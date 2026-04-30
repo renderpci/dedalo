@@ -33,7 +33,18 @@ session_write_close();
 	if (defined('STRUCTURE_SERVER_CODE_OTHERS') && is_array(STRUCTURE_SERVER_CODE_OTHERS)) {
 		$valid_codes = array_merge($valid_codes, STRUCTURE_SERVER_CODE_OTHERS);
 	}
-	if (!in_array($code, $valid_codes)) {
+	// SEC-020: constant-time comparison to mitigate timing side-channels.
+	// hash_equals requires both arguments to be strings of equal length; coerce safely.
+	$code_match = false;
+	if (is_string($code)) {
+		foreach ($valid_codes as $valid_code) {
+			if (is_string($valid_code) && hash_equals($valid_code, $code)) {
+				$code_match = true;
+				// no break: keep iteration constant for additional resistance
+			}
+		}
+	}
+	if ($code_match !== true) {
 		debug_log(__METHOD__
 			. " INVALID CODE ! " . PHP_EOL
 			. json_encode($code, JSON_PRETTY_PRINT)
