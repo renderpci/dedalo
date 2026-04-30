@@ -102,6 +102,21 @@ class tool_upload extends tool_common {
 				$response->errors[] = 'Missing required parameter: section_tipo';
 				return $response;
 			}
+			if (empty($tipo)) {
+				$response->msg .= 'Missing required parameter: tipo';
+				debug_log(__METHOD__ . " {$response->msg}", logger::ERROR);
+				$response->errors[] = 'Missing required parameter: tipo';
+				return $response;
+			}
+
+		// SEC-024 (§9.2): WRITE gate. process_uploaded_file moves the staged
+		// upload onto the destination component and triggers post-processing.
+		// Caller must have write (>=2) on (section_tipo, tipo).
+			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
+		// SEC-024 (§9.4): per-record gate.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
+			}
 
 		// manage uploaded file
 			switch ($caller_type) {
