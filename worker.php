@@ -60,22 +60,39 @@ while ($request = $psr7Worker->waitRequest()) {
         metrics::reset();
         $GLOBALS['DEDALO_RAW_BODY'] = null;
 
-        // // Clear static class caches to prevent cross-request pollution
-        // if (class_exists('common')) {
-        //     common::clear();
-        // }
-        // if (class_exists('section')) {
-        //     section::clear();
-        // }
-        // if (class_exists('component_common')) {
-        //     component_common::clear();
-        // }
-        // if (class_exists('section_record_instances_cache')) {
-        //     section_record_instances_cache::clear();
-        // }
-        // if (class_exists('component_instances_cache')) {
-        //     component_instances_cache::clear();
-        // }
+        // SEC-023: clear static class caches between requests. Without this, a long-running
+        // RoadRunner worker leaks per-user data across requests:
+        //   - section::$ar_section_instances and section_record/component instance caches
+        //     hold materialised section/component objects whose permission state was decided
+        //     for the previous user. A subsequent request from a different user could
+        //     receive cached data that bypasses fresh permission re-checks.
+        //   - common::$structure_context_cache / matrix_table_from_tipo are structure-only
+        //     and lower-risk, but clearing keeps lifetime bounded.
+        //   - object_cache holds DB-derived objects with no inherent per-user scoping.
+        // Each clear() call is a no-op when the class wasn't loaded yet for this request.
+        if (class_exists('common')) {
+            common::clear();
+        }
+        if (class_exists('section')) {
+            section::clear();
+        }
+        if (class_exists('hierarchy')) {
+            hierarchy::clear();
+        }
+        if (class_exists('component_common')) {
+            component_common::clear();
+        }
+        if (class_exists('ontology')) {
+            ontology::clear();
+        }
+        if (class_exists('section_record_instances_cache')) {
+            section_record_instances_cache::clear();
+        }
+        if (class_exists('component_instances_cache')) {
+            component_instances_cache::clear();
+        }
+        // SEC-023: error sentinel must not bleed into next request's debug payload.
+        unset($_ENV['DEDALO_LAST_ERROR']);
 
         // 2. Hydrate PHP Globals from PSR-7 Request
         $_SERVER = $request->getServerParams();
