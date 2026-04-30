@@ -976,6 +976,17 @@ final class dd_core_api {
 				return $response;
 			}
 
+		// SEC-024 (§9.4): per-record gate. Duplicate reads the source record by
+		// section_id; without this check a user with section-write but outside
+		// the source's project scope could clone records they cannot see.
+			if (!empty($section_id)) {
+				security::assert_record_in_user_scope(
+					$section_tipo,
+					(int)$section_id,
+					__METHOD__
+				);
+			}
+
 			$section_record	= section_record::get_instance( $section_tipo, (int)$section_id );
 			$section_id	= $section_record->duplicate();
 
