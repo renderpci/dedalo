@@ -1766,6 +1766,64 @@ final class dd_core_api {
 				: 'undefined'
 			); // cache key sqo_id;
 
+		// SEC: pre-hoc read permission check.
+			// Was previously a POST-hoc check at the bottom of this method that wiped
+			// $result->data after the search had already run, leaving $result->context
+			// (full schema) leaked and a timing oracle on row count. The gate now runs
+			// before any DB or ontology work. The 'menu' model is exempt (matches the
+			// previous behaviour) because menus are discoverable scaffolding.
+			//
+			// Service / reflective wrappers (model starts with 'service_', e.g.
+			// `service_time_machine`) are also exempt at THIS level because their
+			// `source->section_tipo` is the bookkeeping section (e.g. `dd15`), not
+			// the real read target. Their access is governed instead by the per-
+			// `sqo->section_tipo[]` gate immediately below — same model the `count`
+			// action uses (see dd_core_api::count).
+			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
+			if (
+				!empty($section_tipo)
+				&& !empty($tipo)
+				&& $model !== 'menu'
+				&& !$is_service_model
+				&& common::get_permissions($section_tipo, $tipo) < 1
+			) {
+				debug_log(__METHOD__
+					. ' Denied read: insufficient permissions' . PHP_EOL
+					. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' tipo: ' . to_string($tipo) . PHP_EOL
+					. ' model: ' . to_string($model)
+					, logger::ERROR
+				);
+				$response->msg		= 'Error. Insufficient permissions to read ('.$section_tipo.' / '.$tipo.')';
+				$response->errors[]	= 'permissions_denied';
+				return $response;
+			}
+
+		// SEC: per-sqo target section gate. Mirrors `dd_core_api::count` so that
+			// service / reflective models are still gated against the sections
+			// they actually read. For non-service models this is redundant with
+			// the source gate above, but cheap (cached `common::get_permissions`).
+			if (!empty($rqo->sqo->section_tipo) && is_array($rqo->sqo->section_tipo)) {
+				foreach ($rqo->sqo->section_tipo as $sqo_section_tipo) {
+					if (empty($sqo_section_tipo)) {
+						continue;
+					}
+					if (common::get_permissions($sqo_section_tipo, $sqo_section_tipo) < 1) {
+						debug_log(__METHOD__
+							. ' Denied read: insufficient permissions on sqo target' . PHP_EOL
+							. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
+							. ' sqo->section_tipo: ' . to_string($sqo_section_tipo) . PHP_EOL
+							. ' model: ' . to_string($model)
+							, logger::ERROR
+						);
+						$response->msg		= 'Error. Insufficient permissions to read ('.$sqo_section_tipo.')';
+						$response->errors[]	= 'permissions_denied';
+						return $response;
+					}
+				}
+			}
+
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
 			$sqo_id			= $session_key; // cache key sqo_id
