@@ -859,3 +859,24 @@ class security {
 
 
 }//end class security
+
+
+
+/**
+* CLASS PERMISSION_EXCEPTION
+* Thrown by security::assert_* helpers when the logged user has
+* insufficient permission for the requested action.
+* dd_manager catches this and converts it to a uniform error response.
+* Defined in this file (rather than its own dir) so it is loaded
+* together with the security class via the autoloader.
+*/
+final class permission_exception extends Exception {
+
+	public string $api_context;
+
+	public function __construct(string $message, string $context = '') {
+		parent::__construct($message);
+		$this->api_context = $context;
+	}
+
+}//end class permission_exception
