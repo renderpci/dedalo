@@ -10,6 +10,37 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* SEC-024 / §9.1b: explicit allowlist of methods callable from CLI via
+	* `process_runner.php` (spawned by `exec_::request_cli` when the
+	* `dd_area_maintenance_api::class_request` caller passes
+	* `background_running:true`). Without this constant `process_runner`
+	* falls back to "any public-static method on the class is callable",
+	* exposing every helper on this class to background invocation.
+	*
+	* Only widgets that pass `background_running:true` from JS are listed
+	* (verified by grepping `background_running\s*:\s*true` under
+	* `core/area_maintenance/widgets/`). Synchronous-only widget actions
+	* (e.g. `update_ontology`, `set_maintenance_mode`, `register_tools`)
+	* are intentionally absent — they execute inside the request thread
+	* and never reach `process_runner`.
+	*
+	* @see core/base/process_runner.php
+	* @see core/api/v1/common/class.dd_area_maintenance_api.php
+	*/
+	public const BACKGROUND_RUNNABLE = [
+		'build_install_version',
+		'update_data_version',
+		'long_process_stream',
+		'move_tld',
+		'move_to_portal',
+		'move_to_table',
+		'move_lang',
+		'move_locator'
+	];
+
+
+
+	/**
 	 * GET_AR_WIDGETS
 	 * Definition of all visible widgets in the area
 	 * Every widget has the client side code in JavaScript
