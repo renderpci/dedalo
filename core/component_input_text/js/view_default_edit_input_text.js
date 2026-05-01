@@ -196,7 +196,8 @@ const get_content_value = (i, current_value, self) => {
 			})
 			button_remove.addEventListener('click', function(e) {
 				e.stopPropagation()
-				remove_handler(input, i, self)
+				const id = current_value.id || null;
+				remove_handler(input, id, self)
 			})
 		}//end if(i>0)
 
