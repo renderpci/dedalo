@@ -3658,21 +3658,21 @@ abstract class component_common extends common {
 				*/
 
 				// For monovalue components, replace the existing value instead of appending
-				if(in_array($this->model, self::$components_monovalue)) {
-					$data = [$changed_data->value];
+				if(in_array($this->model, self::$components_monovalue ?? [])) {
+					$data_lang = [$changed_data->value];
 				} else {
 					// Append the new value to the data array
-					$data[] = $changed_data->value;
+					$data_lang[] = $changed_data->value;
 				}
 
 				// Persist the updated data in the current language
-				$this->set_data_lang( $data, $lang );
+				$this->set_data_lang( $data_lang, $lang );
 
 				// Set observable data for event notifications to other components
 				// component_relation_related needs expanded references, others use plain data
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
-					: $data;
+					: $data_lang;
 				break;
 
 			// UPDATE ACTION
@@ -3685,44 +3685,44 @@ abstract class component_common extends common {
 				$id = $changed_data->id ?? null;
 
 				if ($id !== null) {
-				// Search for the entry with matching id in the data array
-				$found = false;
-				foreach ($data as $data_key => $data_item) {
-					if (is_object($data_item) && isset($data_item->id) && $data_item->id == $id) {
-						// Found: replace the entire value at this array position
-						$data[$data_key] = $changed_data->value;
-						// Ensure the id is preserved in the new value object
-						if (is_object($data[$data_key]) && !isset($data[$data_key]->id)) {
-							$data[$data_key]->id = $id;
+					// Search for the entry with matching id in the data array
+					$found = false;
+					foreach ($data_lang as $data_key => $data_item) {
+						if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+							// Found: replace the entire value at this array position
+							$data_lang[$data_key] = $changed_data->value;
+							// Ensure the id is preserved in the new value object
+							if (is_object($data_lang[$data_key]) && !isset($data_lang[$data_key]->id)) {
+								$data_lang[$data_key]->id = $id;
+							}
+							$found = true;
+							break;
 						}
-						$found = true;
-						break;
 					}
-				}
-				if (!$found) {
-					// Entry not found - log warning and add as new entry instead of failing
+					if (!$found) {
+						// Entry not found - log warning and add as new entry instead of failing
+						debug_log(__METHOD__
+							." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
+							, logger::WARNING
+						);
+						$data_lang[] = $changed_data->value;
+					}
+				} else {
+					// No id provided - cannot target a specific entry, add as new
 					debug_log(__METHOD__
-						." Warning on update: could not find item with id: $id. Adding as new entry.". PHP_EOL
+						." Warning on update: no id provided. Adding as new entry.". PHP_EOL
 						, logger::WARNING
 					);
-					$data[] = $changed_data->value;
+					$data_lang[] = $changed_data->value;
 				}
-			} else {
-				// No id provided - cannot target a specific entry, add as new
-				debug_log(__METHOD__
-					." Warning on update: no id provided. Adding as new entry.". PHP_EOL
-					, logger::WARNING
-				);
-				$data[] = $changed_data->value;
-			}
 
 				// Persist the updated data in the current language
-				$this->set_data_lang( $data, $lang );
+				$this->set_data_lang( $data_lang, $lang );
 
 				// Set observable data for event notifications to other components
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
-					: $data;
+					: $data_lang;
 				break;
 
 			// REMOVE ACTION
@@ -3732,13 +3732,24 @@ abstract class component_common extends common {
 			// The id-based approach ensures correct removal regardless of array ordering or pagination.
 			case 'remove':
 
+				// Retrieve the current data array for the component
+				// component_dataframe uses unfiltered data (includes virtual entries)
+				// Other components use language-specific data
+				$data = $this->model === 'component_dataframe'
+					? $this->get_data_unfiltered() ?? []
+					: $this->get_data_lang() ?? [];
+
+
 				$id = $changed_data->id ?? null;
 
-				// Special case: id === null means "remove all entries"
+				// Special case: id === null means "remove all entries in all languages"
 				if ($id === null) {
-					// Clear all data by setting an empty array
-					$value = [];
-					$this->set_data($value);
+					// Clear all data for the all languages
+					$this->set_data([]);
+					// Set observable data for event notifications
+					$this->observable_data = (get_called_class() === 'component_relation_related')
+						? $this->get_data_with_references()
+						: [];
 					break;
 				}
 
@@ -3748,7 +3759,7 @@ abstract class component_common extends common {
 				$found = false;
 				$new_data = [];
 				foreach ($data as $data_item) {
-					if ($data_item->id !== $id) {
+					if (!is_object($data_item) || !isset($data_item->id) || $data_item->id !== $id) {
 						// Keep this entry - add to new array
 						$new_data[] = $data_item;
 					}else{
@@ -3781,7 +3792,7 @@ abstract class component_common extends common {
 				if( !empty($dataframe_ddo) && $id !== null ){
 
 					// Find the locator for the entry being removed
-					$locator = array_find($data, fn($locator) => $locator->id === $id);
+					$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
 					if( !empty($locator) ){
 						// Literal components (text_area, date, etc.) store values directly, not locators.
 						// For these, build a virtual locator using the entry id as section_id.
@@ -3810,7 +3821,9 @@ abstract class component_common extends common {
 
 						// Remove the dataframe record before main component save
 						// This ensures Time Machine has correct state
-						$this->remove_dataframe_data( $locator );
+						if ($locator !== null) {
+							$this->remove_dataframe_data( $locator );
+						}
 
 					}
 				}
@@ -3819,7 +3832,7 @@ abstract class component_common extends common {
 				$data = $new_data;
 
 				// Persist the modified data in the current language
-				$this->set_data_lang($data, $lang);
+				$this->set_data($data);
 
 				break;
 
@@ -3857,63 +3870,86 @@ abstract class component_common extends common {
 			case 'sort_data':
 
 				// Extract sort parameters
-					$value		= $changed_data->value;
+				$value		= $changed_data->value;
+				if (is_object($value)) {
 					unset($value->paginated_key);
-					$source_key	= $changed_data->source_key;
-					$target_key	= $changed_data->target_key;
+				}
+				$source_key	= $changed_data->source_key;
+				$target_key	= $changed_data->target_key;
 
 				// Get the current data array for reordering
-					$data = $this->get_data_lang($lang);
+				$data_lang = $this->get_data_lang($lang);
 
 				// Validate that the source entry exists and matches the provided value
-					if (!isset($data[$source_key])) {
-						debug_log(__METHOD__
-							.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
-							, logger::ERROR
-						);
-						return false;
-					}elseif(!locator::compare_locators(
-							$data[$source_key],
-							$value,
-							['section_id','section_tipo','from_component_tipo','tag_id'])
-						) {
-						debug_log(__METHOD__
-							.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
-							.' key value: '. to_string($source_key) .PHP_EOL
-							.' given value: '. to_string($value) .PHP_EOL
-							.' DB value (data[source_key]): '. to_string($data[$source_key]) .PHP_EOL
-							.' data value: '. to_string($data)
-							, logger::ERROR
-						);
-						return false;
-					}
+				if (!isset($data_lang[$source_key])) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source value key ['.$source_key.'] do not exists! '
+						, logger::ERROR
+					);
+					return false;
+				}
+				if (!is_object($data_lang[$source_key]) || !is_object($value)) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source or value is not an object' .PHP_EOL
+						.' source_key: '. to_string($source_key) .PHP_EOL
+						.' given value: '. to_string($value) .PHP_EOL
+						.' DB value (data[source_key]): '. to_string($data_lang[$source_key])
+						, logger::ERROR
+					);
+					return false;
+				}
+				if(!locator::compare_locators(
+						$data_lang[$source_key],
+						$value,
+						['section_id','section_tipo','from_component_tipo','tag_id'])
+					) {
+					debug_log(__METHOD__
+						.' Error on sort_data. Source value if different from DB value:' .PHP_EOL
+						.' key value: '. to_string($source_key) .PHP_EOL
+						.' given value: '. to_string($value) .PHP_EOL
+						.' DB value (data[source_key]): '. to_string($data_lang[$source_key]) .PHP_EOL
+						.' data value: '. to_string($data_lang)
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// No-op: source and target are the same, nothing to reorder
+				if ($source_key === $target_key) {
+					break;
+				}
 
 				// Rebuild the array with the entry moved to its new position
 				// The entry at source_key is skipped, then inserted at target_key
-					$new_data = [];
+				$new_data = [];
 
-					foreach ($data as $key => $current_value) {
-						if ($key===$source_key) {
-							// Skip the source entry - it will be inserted at target position
-							continue;
-						}
-						if($key===$target_key && $target_key < $source_key){
-							// Moving up: insert value before current entry
-							$new_data[] = $value;
-							$new_data[] = $current_value;
-							continue;
-						}else if($key===$target_key && $target_key > $source_key){
-							// Moving down: insert value after current entry
-							$new_data[] = $current_value;
-							$new_data[] = $value;
-							continue;
-						}
-
+				foreach ($data_lang as $key => $current_value) {
+					if ($key===$source_key) {
+						// Skip the source entry - it will be inserted at target position
+						continue;
+					}
+					if($key===$target_key && $target_key < $source_key){
+						// Moving up: insert value before current entry
+						$new_data[] = $value;
 						$new_data[] = $current_value;
+						continue;
+					}else if($key===$target_key && $target_key > $source_key){
+						// Moving down: insert value after current entry
+						$new_data[] = $current_value;
+						$new_data[] = $value;
+						continue;
 					}
 
+					$new_data[] = $current_value;
+				}
+
 				// Persist the reordered data
-					$this->set_data_lang($new_data, $lang);
+				$this->set_data_lang($new_data, $lang);
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $new_data;
 				break;
 
 			// ADD_NEW_ELEMENT ACTION
@@ -3937,17 +3973,22 @@ abstract class component_common extends common {
 				}
 
 				// Delegate to add_new_element method which handles section creation and linking
-					$response = $this->add_new_element((object)[
-						'target_section_tipo' => $target_section_tipo
-					]);
-					if ($response->result!==true) {
-						debug_log(__METHOD__
-							." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL
-							.to_string($response)
-							, logger::ERROR
-						);
-						return false;
-					}
+				$response = $this->add_new_element((object)[
+					'target_section_tipo' => $target_section_tipo
+				]);
+				if ($response->result!==true) {
+					debug_log(__METHOD__
+						." Error on add_new_element (section_tipo:'$target_section_tipo'). Response:".PHP_EOL
+						.to_string($response)
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $this->get_data_lang($lang);
 				break;
 
 			// FORCE_SAVE ACTION
