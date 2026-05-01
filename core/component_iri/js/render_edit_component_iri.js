@@ -662,22 +662,24 @@ export const get_buttons = (self) => {
 					key		: current_key,
 					value	: {value:null}
 				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true,
-					build_autoload	: build_autoload
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: true,
+				build_autoload	: build_autoload
+			})
+			.then(()=>{
+				dd_request_idle_callback(()=>{
+					const new_key = self.data.entries ? self.data.entries.length - 1 : current_key
+					const input_node = self.node.content_data[new_key]
+						? self.node.content_data[new_key].querySelector('input.url')
+						: null
+					if (input_node) {
+						input_node.focus()
+					}
 				})
-				.then(()=>{
-					dd_request_idle_callback(()=>{
-						const new_key = self.data.entries ? self.data.entries.length - 1 : current_key
-						const input_node = self.node.content_data[new_key]
-							? self.node.content_data[new_key].querySelector('input.url')
-							: null
-						}
-					})
-				})
-			}
-			button_add_input.addEventListener('click', button_add_input_click_handler)
+			})
+		}
+		button_add_input.addEventListener('click', button_add_input_click_handler)
 		}
 
 	// buttons tools
