@@ -1169,6 +1169,9 @@ abstract class component_common extends common {
 	* GET_ID_FROM_KEY
 	* Check every data language of the component and get the id of the data key in the array
 	* If the key of the data has not id return null to set new id of the counter.
+	* Data format is a flat array: [{id, lang, value}, ...]
+	* Groups entries by lang, checks the given key position in each language,
+	* and returns the first valid id found across languages (excluding skip_langs).
 	* @param int $key
 	* @param array $skip_langs use to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
 	* @return int|null $id
@@ -1180,59 +1183,52 @@ abstract class component_common extends common {
 			return null;
 		}
 
-		foreach ((array)$all_data as $lang => $value) {
+		// Group flat data by lang to access entries by key position
+		$grouped = [];
+		foreach ($all_data as $item) {
+			if (!is_object($item)) {
+				continue;
+			}
+			$item_lang = $item->lang ?? null;
+			if ($item_lang === null) {
+				continue;
+			}
+			if (in_array($item_lang, $skip_langs)) {
+				continue;
+			}
+			$grouped[$item_lang][] = $item;
+		}
 
-			// Skip the language if it's in the exclusion list.
-			// check if the data is a language to skip
-			// when the component check if the id has been used by other languages
-			// it needs to remove its own language data to avoid false positives.
-			// Explain: removing data will remove its dataframe.
-			// But other languages can use it (same id = same dataframe)
-			// In those cases the data to be deleted needs to be removed of the check.
-			// and return only if the id exist in other languages.
-			if( in_array( $lang, $skip_langs) ){
+		foreach ($grouped as $lang => $lang_entries) {
+			if (!array_key_exists($key, $lang_entries)) {
 				continue;
 			}
 
-			// Ensure $value is a structured array and the specific $key exists in it.
-			if (!is_array($value) || !array_key_exists($key, $value)) {
-				continue;
-			}
+			$valid_data = $lang_entries[$key];
 
-			$valid_data = $value[$key];
-
-			// The 'id' must be contained within an object with an 'id' property.
 			if (is_object($valid_data) && property_exists($valid_data, 'id')) {
 
 				$id = $valid_data->id ?? null;
 
-				// Strict check: We expect a non-empty, non-zero id that can be an integer.
-				// is_numeric covers integer strings and actual integers.
 				if (is_numeric($id) && (int)$id > 0) {
-					// Return the id as an integer.
 					return (int)$id;
 				}
 
-				// If an object with an 'id' property was found, but the id value itself is
-				// invalid (null, 0, or non-numeric), log the error.
 				$log_message = (null !== $id)
 					? ' data with invalid id value: ' . var_export($id, true)
 					: ' data without id';
-				// Log detailed information about the missing/invalid id.
 				debug_log(__METHOD__
 					. $log_message . PHP_EOL
 					. ' section_id: '. $this->section_id . PHP_EOL
 					. ' section_tipo: '. $this->section_tipo . PHP_EOL
 					. ' tipo: '. $this->tipo . PHP_EOL
 					. ' lang: '. $lang . PHP_EOL
-					. ' value: ' . to_string($value)
+					. ' value: ' . to_string($valid_data)
 					, logger::ERROR
 				);
 			}
 		}
 
-
-		// If the loop completes without finding a valid ID in any language, return null.
 		return null;
 	}//end get_id_from_key
 
@@ -1241,28 +1237,22 @@ abstract class component_common extends common {
 	/**
 	* GET_KEY_FROM_ID
 	* Check if the given ID exists in the specified data language.
+	* Data format is a flat array: [{id, lang, value}, ...]
+	* Filters by lang and returns the array key of the entry with matching id.
 	* @param int $id
-	* @param string $lang Used to remove specific languages of the check, used in remove data to avoid to check its own language (the data that will be removed)
+	* @param string $lang Language to search within
 	* @return int|null $key
 	*/
 	public function get_key_from_id( int $id, string $lang ) : ?int {
 
-		// All langs array data from component
-		$all_data = $this->get_data();
-		if ( empty($all_data) || !is_object($all_data) ) {
+		// Get language-specific data from flat array
+		$lang_data = $this->get_data_lang($lang);
+		if (empty($lang_data)) {
 			return null;
 		}
-
-		// Check if the requested language exists
-		if ( !isset($all_data->{$lang}) || !is_array($all_data->{$lang}) ) {
-			return null;
-		}
-
-		$lang_data = $all_data->{$lang};
 
 		foreach ($lang_data as $key => $current_value) {
 
-			// // Skip non-objects. Validate current_value is an object with id property
 			if (!is_object($current_value)) {
 				debug_log(__METHOD__
 					. ' malformed data (non-object)' . PHP_EOL
@@ -1278,7 +1268,6 @@ abstract class component_common extends common {
 
 			$valid_id = $current_value->id ?? null;
 
-			// Check the current value of the 'id' property and notify if it is malformed.
 			if( empty($valid_id) ){
 				debug_log(__METHOD__
 					. " malformed data (missing id)" . PHP_EOL
@@ -3635,27 +3624,21 @@ abstract class component_common extends common {
 			// or when creating the first entry in single-value components.
 			case 'insert':
 
-				// Legacy code for component_iri id synchronization across languages (deprecated)
-				// Kept as reference for the id synchronization logic that was previously handled here
-				/*
-				if( get_called_class() === 'component_iri'){
-					// get the id of the key in other languages
-					$id = $this->get_id_from_key( $changed_data->key );
-					// if other lang has an id set it
-					if( !empty($id) ){
-						// Check if the data is an object because as insert action could be null data
-						if( !is_object($changed_data->value) ){
-							// create new object
-							$changed_data->value = new dd_iri();
-								$changed_data->value->set_iri( null );
-								$changed_data->value->set_id( $id );
-						}else{
-							// set the id to the data
-							$changed_data->value->id = $id;
-						}
+				// Translatable literal components id synchronization across languages
+				// When inserting a new entry with a key position (from another language),
+				// resolve the id from other languages at the same key position.
+				// This ensures entries share the same id across all languages.
+				if ($this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations())
+					&& property_exists($changed_data, 'key')
+					&& $changed_data->key !== null
+					&& is_object($changed_data->value)) {
+
+					$resolved_id = $this->get_id_from_key((int)$changed_data->key, [$lang]);
+					if ($resolved_id !== null) {
+						$changed_data->value->id = $resolved_id;
 					}
 				}
-				*/
 
 				// For monovalue components, replace the existing value instead of appending
 				if(in_array($this->model, self::$components_monovalue ?? [])) {
@@ -3679,10 +3662,30 @@ abstract class component_common extends common {
 			// Updates an existing data entry identified by its unique id.
 			// The id is used to locate the entry in the data array, regardless of its position.
 			// If the id is not found or is null, the value is appended as a new entry.
+			// For translatable literal components, when id is null but key is provided,
+			// the id is resolved from other languages at the same key position.
 			case 'update':
 
 				// Extract the id from the change request
 				$id = $changed_data->id ?? null;
+
+				// Translatable literal components id resolution across languages
+				// When id is null and key is provided, resolve the id from other languages
+				if ($id === null
+					&& $this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations())
+					&& property_exists($changed_data, 'key')
+					&& $changed_data->key !== null) {
+
+					$resolved_id = $this->get_id_from_key((int)$changed_data->key, [$lang]);
+					if ($resolved_id !== null) {
+						$id = $resolved_id;
+						$changed_data->id = $resolved_id;
+						if (is_object($changed_data->value) && !isset($changed_data->value->id)) {
+							$changed_data->value->id = $resolved_id;
+						}
+					}
+				}
 
 				if ($id !== null) {
 					// Search for the entry with matching id in the data array
@@ -3728,17 +3731,10 @@ abstract class component_common extends common {
 			// REMOVE ACTION
 			// Removes one or all entries from the component data array.
 			// - id !== null: Removes the single entry with matching id
+			//   For translatable literal components, removes across ALL languages
 			// - id === null: Removes ALL entries (clear the entire data array)
 			// The id-based approach ensures correct removal regardless of array ordering or pagination.
 			case 'remove':
-
-				// Retrieve the current data array for the component
-				// component_dataframe uses unfiltered data (includes virtual entries)
-				// Other components use language-specific data
-				$data = $this->model === 'component_dataframe'
-					? $this->get_data_unfiltered() ?? []
-					: $this->get_data_lang() ?? [];
-
 
 				$id = $changed_data->id ?? null;
 
@@ -3753,22 +3749,70 @@ abstract class component_common extends common {
 					break;
 				}
 
-				// Standard case: remove single entry by id
+				// Translatable literal components: remove entry across all languages
+				// When a user deletes an entry in one language, the same entry id
+				// must be removed from all other languages to keep data in sync.
+				$is_translatable_literal = $this->supports_translation === true
+					&& !in_array(get_called_class(), component_relation_common::get_components_with_relations());
+
+				if ($is_translatable_literal) {
+					// Use get_data() (all languages) instead of get_data_lang() (single language)
+					$all_data = $this->get_data() ?? [];
+					$found = false;
+					$new_data = [];
+					foreach ($all_data as $data_item) {
+						if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+							$found = true;
+							continue;
+						}
+						$new_data[] = $data_item;
+					}
+
+					if ($found === false) {
+						debug_log(__METHOD__
+							." Error on remove: could not find item with id: $id". PHP_EOL
+							.' (translatable literal component - searched all languages)'
+							, logger::ERROR
+						);
+						return false;
+					}
+
+					// Set observable data BEFORE modification for event notifications
+					$this->observable_data = $all_data;
+
+					// DATAFRAME DELETION for translatable literal components
+					$dataframe_ddo = $this->get_dataframe_ddo();
+					if (!empty($dataframe_ddo)) {
+						// Build a virtual locator for dataframe deletion
+						$locator = new locator();
+						$locator->set_section_tipo($this->section_tipo);
+						$locator->set_section_id($id);
+						$this->remove_dataframe_data($locator);
+					}
+
+					$this->set_data($new_data);
+					break;
+				}
+
+				// Standard case (non-translatable): remove single entry from current language data
+				// Retrieve the current data array for the component
+				// component_dataframe uses unfiltered data (includes virtual entries)
+				// Other components use language-specific data
+				$data = $this->model === 'component_dataframe'
+					? $this->get_data_unfiltered() ?? []
+					: $this->get_data_lang() ?? [];
+
 				// Build a new array excluding the entry with the target id
-				// This approach avoids array_splice and maintains clean array indices
 				$found = false;
 				$new_data = [];
 				foreach ($data as $data_item) {
 					if (!is_object($data_item) || !isset($data_item->id) || $data_item->id !== $id) {
-						// Keep this entry - add to new array
 						$new_data[] = $data_item;
 					}else{
-						// Found the target entry - skip it (effectively removing it)
 						$found = true;
 					}
 				}
 
-				// Error: the requested id was not found in the data
 				if ($found === false) {
 					debug_log(__METHOD__
 						." Error on remove: could not find item with id: $id". PHP_EOL
@@ -3779,48 +3823,33 @@ abstract class component_common extends common {
 				}
 
 				// Set observable data BEFORE modification for event notifications
-				// Other components may need to know about the removal with the old references
 				$this->observable_data = ( get_called_class()==='component_relation_related' )
 					? $this->get_data_with_references()
 					: $data;
 
 				// DATAFRAME DELETION
-				// If the component has an associated dataframe (virtual sections), delete the
-				// dataframe record when removing a main component entry.
-				// This is only done for single-entry removals (id !== null), not for "remove all".
 				$dataframe_ddo = $this->get_dataframe_ddo();
 				if( !empty($dataframe_ddo) && $id !== null ){
 
-					// Find the locator for the entry being removed
 					$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
 					if( !empty($locator) ){
-						// Literal components (text_area, date, etc.) store values directly, not locators.
-						// For these, build a virtual locator using the entry id as section_id.
 						$remove_relation_components = component_relation_common::get_components_with_relations();
 						if( !in_array(get_called_class(), $remove_relation_components) && isset($locator->id) ){
 
-							// Build virtual locator from the literal item id
-								$current_section_id = $locator->id;
+							$current_section_id = $locator->id;
 
-							// Create a proper locator object for dataframe deletion
-								$locator = new locator();
-									$locator->set_section_tipo($this->section_tipo);
-									$locator->set_section_id($current_section_id);
+							$locator = new locator();
+								$locator->set_section_tipo($this->section_tipo);
+								$locator->set_section_id($current_section_id);
 
 							if( $lang!==DEDALO_DATA_NOLAN ){
-								// Non-nolan languages should not delete the dataframe if nolan still uses it.
-								// Check if the id exists in nolan data before proceeding.
 								$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
-
 								if( $id_exists_in_nolan !== null ){
-									// Prevent dataframe deletion - nolan still references this id
 									$locator = null;
 								}
 							}
 						}
 
-						// Remove the dataframe record before main component save
-						// This ensures Time Machine has correct state
 						if ($locator !== null) {
 							$this->remove_dataframe_data( $locator );
 						}
@@ -3828,7 +3857,6 @@ abstract class component_common extends common {
 					}
 				}
 
-				// Apply the new data array (without the removed entry) to the component
 				$data = $new_data;
 
 				// Persist the modified data in the current language
