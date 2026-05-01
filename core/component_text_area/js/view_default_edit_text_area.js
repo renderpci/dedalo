@@ -150,14 +150,21 @@ const get_content_value = (i, current_value, self) => {
 		const fallback				= get_fallback_value(entries, ar_fallback_value)
 		const dirty_fallback_value	= fallback[i]
 
-	// clean fallback of any tag
-		const fallback_fragment = document.createDocumentFragment();
-		const fb_content_value = ui.create_dom_element({
-			element_type	: 'div',
-			inner_html		: dirty_fallback_value,
-			parent			: fallback_fragment
-		})
-		const fallback_value = fallback_fragment.firstChild.innerText;
+	// clean fallback of any tag (deferred until needed)
+		let fallback_value = null
+		const get_fallback_value_clean = () => {
+			if (fallback_value !== null) {
+				return fallback_value
+			}
+			const fallback_fragment = document.createDocumentFragment()
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: dirty_fallback_value,
+				parent			: fallback_fragment
+			})
+			fallback_value = fallback_fragment.firstChild.innerText
+			return fallback_value
+		}
 
 	// value_string is a raw html without parse into nodes (txt format)
 		const value_string = current_value?.value
@@ -189,7 +196,7 @@ const get_content_value = (i, current_value, self) => {
 			? ui.create_dom_element({
 				element_type	: 'p',
 				class_name		: 'placeholder ck-placeholder',
-				inner_html		: fallback_value,
+				inner_html		: get_fallback_value_clean(),
 				parent			: value_container
 			  })
 			: null
@@ -216,7 +223,7 @@ const get_content_value = (i, current_value, self) => {
 			// toolbar. create the toolbar base
 				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','|']
 				// toolbar add custum_buttons
-					if(self.context.toolbar_buttons){
+					if(self.context?.toolbar_buttons){
 						toolbar.push(...self.context.toolbar_buttons)
 					}
 				// toolbar add standard buttons
@@ -237,10 +244,10 @@ const get_content_value = (i, current_value, self) => {
 					caller				: self,
 					value_container		: value_container,
 					toolbar_container	: toolbar_container,
-					fallback_value		: fallback_value,
+					fallback_value		: get_fallback_value_clean(),
 					key					: i,
 					editor_config		: editor_config,
-					editor_class		: self.context.view==='html_text'
+					editor_class		: self.context?.view==='html_text'
 						? 'InlineEditor'
 						: 'ddEditor' // ddEditor | InlineEditor
 				})
@@ -307,7 +314,13 @@ const get_content_value = (i, current_value, self) => {
 				dd_request_idle_callback(
 					() => {
 						init_current_service_text_editor()
-						value_container.classList.remove('loading')
+						.then(() => {
+							value_container.classList.remove('loading')
+						})
+						.catch((error) => {
+							value_container.classList.remove('loading')
+							console.error('[get_content_value] Error auto-initializing text editor:', error)
+						})
 					}
 				)
 
@@ -324,13 +337,17 @@ const get_content_value = (i, current_value, self) => {
 					// init editor on user click
 					init_current_service_text_editor()
 					.then(function(service_editor) {
-						if (self.context.view === 'html_text') {
-							service_editor.editor.focus()
-							// service_editor.value_container.classList.remove('loading')
+						value_container.classList.remove('loading')
+						if (self.context?.view === 'html_text') {
+							service_editor.editor?.focus()
 						}else{
 							// trigger service_editor click action (show toolbar and focus it)
-							service_editor.click(e)
+							service_editor?.click?.(e)
 						}
+					})
+					.catch(function(error) {
+						value_container.classList.remove('loading')
+						console.error('[get_content_value] Error initializing text editor on click:', error)
 					})
 					// once only. Remove event to prevent duplicates
 					content_value.removeEventListener('mousedown', click_handler)
@@ -1028,17 +1045,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	// changeData
 		custom_events.changeData = (evt, options) => {
-
-			const ar_changes	= options
-			const changes_len	= ar_changes.length
-			for (let i = changes_len - 1; i >= 0; i--) {
-				const change = ar_changes[i]
-				// create the event name as:
-				// editor_tag_geo_change_
-				// editor_tag_indexIn_change_
-				const event_name = 'editor_tag_'+ change.type + '_change_' + self.id_base
-				event_manager.publish(event_name, change)
-			}
+			self.change_data_handler(options)
 		}//end changeData event
 
 
@@ -1493,7 +1500,6 @@ const render_langs_list = function(self, text_editor, i) {
 
 	// short vars
 		const ar_project_langs = page_globals.dedalo_projects_default_langs
-			// console.log(`(!ar_project_langs) ${self.tipo}:`, ar_project_langs);
 
 	// header
 		const header = ui.create_dom_element({

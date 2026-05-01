@@ -1399,7 +1399,7 @@ final class component_text_area_test extends BaseTestCase {
 		$edit_value = $component->get_fallback_edit_value($options);
 
 		$value_to_test = $edit_value[0]->value;
-		dump($value_to_test, ' value to test ');
+		// dump($value_to_test, ' value to test ');
 		// 1 check type array
 		$this->assertTrue(
 			gettype($edit_value)==='array',
@@ -1942,6 +1942,189 @@ final class component_text_area_test extends BaseTestCase {
 		// Adjust expectation to lg-spa based on code reading of lang::get_code_from_locator default behavior
 		$this->assertEquals('lg-spa', $original_lang, "Expected original lang 'lg-spa' from locator 17344");
 	}//end test_get_original_lang
+
+
+	/**
+	* TEST_GET_DATA
+	* @return void
+	*/
+	public function test_get_data() {
+
+		$component = $this->build_component_instance();
+
+		// 1 empty data returns null
+		$data = $component->get_data();
+		$this->assertTrue(
+			$data===null || gettype($data)==='array',
+			'expected null or array, got: '.gettype($data)
+		);
+
+		// 2 set data and retrieve
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'Test data';
+			$item_value->lang = self::$lang;
+
+		$component->set_data([$item_value]);
+		$data = $component->get_data();
+
+		$this->assertTrue(
+			gettype($data)==='array',
+			'expected array after set_data, got: '.gettype($data)
+		);
+		$this->assertTrue(
+			$data[0]->value==='Test data',
+			'expected "Test data", got: '.$data[0]->value
+		);
+	}//end test_get_data
+
+
+
+	/**
+	* TEST_SET_DATA_EMPTY
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		// 1 set null data
+		$component->set_data(null);
+		$data = $component->get_data();
+		$this->assertTrue(
+			$data===null,
+			'expected null after set_data(null), got: '.gettype($data)
+		);
+
+		// 2 set empty array
+		$component->set_data([]);
+		$data = $component->get_data();
+		$this->assertTrue(
+			$data===null || (gettype($data)==='array' && count($data)===0),
+			'expected null or empty array after set_data([]), got: '.to_string($data)
+		);
+
+		// 3 set array with null item
+		$component->set_data([null]);
+		$data = $component->get_data();
+		$this->assertTrue(
+			$data===null,
+			'expected null after set_data([null]), got: '.gettype($data)
+		);
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_SAVE_AND_RELOAD
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		// Backup original data
+		$original_data = $component->get_data();
+
+		// Set new data
+		$item_value = new stdClass();
+			$item_value->id = 1;
+			$item_value->value = 'Save and reload test content';
+			$item_value->lang = self::$lang;
+
+		$component->set_data([$item_value]);
+
+		// Save
+		$result = $component->save();
+		$this->assertTrue(
+			$result===true,
+			'expected save to return true, got: '.to_string($result)
+		);
+
+		// Reload component instance
+		$reloaded = component_common::get_instance(
+			self::$model,
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+		$reloaded_data = $reloaded->get_data();
+
+		$this->assertTrue(
+			gettype($reloaded_data)==='array',
+			'expected array after reload, got: '.gettype($reloaded_data)
+		);
+		$this->assertTrue(
+			!empty($reloaded_data),
+			'expected non-empty data after reload'
+		);
+
+		// Restore original data
+		if ($original_data!==null) {
+			$component->set_data($original_data);
+			$component->save();
+		}
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_COMPONENT_INSTANCE_MODES
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				$component->get_mode()===$mode,
+				'expected mode '.$mode.', got: '.$component->get_mode()
+			);
+			$this->assertTrue(
+				$component->get_model()===self::$model,
+				'expected model '.self::$model.', got: '.$component->get_model()
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_GET_IDENTIFIER
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$identifier = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($identifier)==='string',
+			'expected string identifier, got: '.gettype($identifier)
+		);
+		$this->assertTrue(
+			strlen($identifier)>0,
+			'expected non-empty identifier'
+		);
+		$this->assertTrue(
+			str_contains($identifier, self::$tipo),
+			'expected identifier to contain tipo '.self::$tipo
+		);
+	}//end test_get_identifier
+
 
 
 	/**

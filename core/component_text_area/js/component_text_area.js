@@ -772,6 +772,33 @@ component_text_area.prototype.update_changed_data = function (options) {
 
 
 
+/**
+* CHANGE_DATA_HANDLER
+* Unified changeData event handler for text editor changes across views.
+* Iterates over editor changes and publishes tag-specific events.
+* @param array options - Array of change objects from editor
+* @return void
+*/
+component_text_area.prototype.change_data_handler = function(options) {
+
+	const self = this
+
+	// validate options is an array
+	if (!Array.isArray(options)) {
+		console.error('[component_text_area.change_data_handler] Invalid options parameter. Expected array, got:', typeof options)
+		return
+	}
+
+	const ar_changes	= options
+	const changes_len	= ar_changes.length
+	for (let i = changes_len - 1; i >= 0; i--) {
+		const change = ar_changes[i]
+		const event_name = 'editor_tag_'+ change.type + '_change_' + self.id_base
+		event_manager.publish(event_name, change)
+	}
+}//end change_data_handler
+
+
 
 /**
 * UNWRAP_ELEMENT

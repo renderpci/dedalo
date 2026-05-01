@@ -66,7 +66,7 @@ trait search_component_section_id {
 			: ($query_object->q ?? null);
 
 		// if q is a locator, get the section_id as int
-		if (is_object($q_raw) ){
+		if (is_object($q_raw)) {
 
 			// if q_raw has value property, use it
 			if(isset($q_raw->value)) {

@@ -48,7 +48,7 @@ final class component_section_id_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_DATa
+	* TEST_GET_DATA
 	* @return void
 	*/
 	public function test_get_data() {

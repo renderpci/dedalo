@@ -16,14 +16,14 @@ export const list_of_test = [
 	'test_components_data_changes',
 	'test_components_activate',
 	'test_components_render',
-	'test_component_text_area',
 	'test_no_logged_error',
 	'test_unknown_error',
 	'test_page',
 	'test_diffusion',
 	'test_ts_object',
 	'test_ts_object_extended',
-	'test_component_common_changed_data'
+	'test_component_common_changed_data',
+	'test_additional_text_area'
 ]
 
 // list. Definition of test to do. Every test has a file as 'test_key_instances' + '.js'
@@ -51,6 +51,7 @@ export const livecycle_detail = [
 	'test_component_select',
 	'test_component_select_lang',
 	'test_component_svg',
+	'test_component_text_area',
 ]
 
 // group_stats: track pass/fail/pending per group
