@@ -637,4 +637,139 @@ final class component_iri_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_get_id_from_key_with_flat_array
+	* Verify get_id_from_key works with the flat array data format
+	* @return void
+	*/
+	public function test_get_id_from_key_with_flat_array() {
+		$component = $this->build_component_instance();
+		$component->set_lang('lg-eng');
+		$sample_data = [
+			(object)['id'=>1,'lang'=>'lg-eng','iri'=>'https://hello.org','title'=>'Hello'],
+			(object)['id'=>2,'lang'=>'lg-eng','iri'=>'https://world.org','title'=>'World'],
+			(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola'],
+			(object)['id'=>2,'lang'=>'lg-spa','iri'=>'https://mundo.org','title'=>'Mundo'],
+		];
+		$component->set_data($sample_data);
+		unset($component->data_resolved);
+		$this->assertEquals(1, $component->get_id_from_key(0));
+		$this->assertEquals(2, $component->get_id_from_key(1));
+		$this->assertNull($component->get_id_from_key(2));
+		$this->assertEquals(1, $component->get_id_from_key(0,['lg-eng']));
+		$this->assertNull($component->get_id_from_key(0,['lg-eng','lg-spa']));
+		$component->set_data([]);
+		unset($component->data_resolved);
+		$this->assertNull($component->get_id_from_key(0));
+	}//end test_get_id_from_key_with_flat_array
+
+	/**
+	* TEST_get_key_from_id_with_flat_array
+	* Verify get_key_from_id works with the flat array data format
+	* @return void
+	*/
+	public function test_get_key_from_id_with_flat_array() {
+		$component = $this->build_component_instance();
+		$component->set_lang('lg-eng');
+		$sample_data = [
+			(object)['id'=>1,'lang'=>'lg-eng','iri'=>'https://hello.org','title'=>'Hello'],
+			(object)['id'=>2,'lang'=>'lg-eng','iri'=>'https://world.org','title'=>'World'],
+			(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola'],
+			(object)['id'=>2,'lang'=>'lg-spa','iri'=>'https://mundo.org','title'=>'Mundo'],
+		];
+		$component->set_data($sample_data);
+		unset($component->data_resolved);
+		$this->assertEquals(0, $component->get_key_from_id(1,'lg-eng'));
+		$this->assertEquals(1, $component->get_key_from_id(2,'lg-eng'));
+		$this->assertEquals(0, $component->get_key_from_id(1,'lg-spa'));
+		$this->assertNull($component->get_key_from_id(999,'lg-eng'));
+		$this->assertNull($component->get_key_from_id(1,'lg-fra'));
+	}//end test_get_key_from_id_with_flat_array
+
+	/**
+	* TEST_update_data_value_insert_with_key_resolves_id
+	* Verify that insert action with key resolves id from other languages
+	* @return void
+	*/
+	public function test_update_data_value_insert_with_key_resolves_id() {
+		$this->user_login();
+		$component = component_common::get_instance('component_iri','test140',1,'edit','lg-eng','test3',false);
+		$component->set_data([(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola']]);
+		unset($component->data_resolved);
+		$changed_data = (object)['action'=>'insert','id'=>null,'key'=>0,'value'=>(object)['iri'=>'https://hello.org','title'=>'Hello','lang'=>'lg-eng']];
+		$component->set_lang('lg-eng');
+		$this->assertTrue($component->update_data_value($changed_data));
+		unset($component->data_resolved);
+		$eng = array_values(array_filter($component->get_data(), fn($e)=>$e->lang==='lg-eng'));
+		$this->assertCount(1,$eng);
+		$this->assertEquals(1,$eng[0]->id);
+		$component->set_data(null);
+	}//end test_update_data_value_insert_with_key_resolves_id
+
+	/**
+	* TEST_update_data_value_update_with_null_id_resolves_from_key
+	* Verify that update action with null id resolves it from key position
+	* @return void
+	*/
+	public function test_update_data_value_update_with_null_id_resolves_from_key() {
+		$this->user_login();
+		$component = component_common::get_instance('component_iri','test140',1,'edit','lg-eng','test3',false);
+		$component->set_data([
+			(object)['id'=>1,'lang'=>'lg-eng','iri'=>'https://hello.org','title'=>'Hello'],
+			(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola'],
+		]);
+		$changed_data = (object)['action'=>'update','id'=>null,'key'=>0,'value'=>(object)['iri'=>'https://updated.org','title'=>'Hello Updated','lang'=>'lg-eng']];
+		$component->set_lang('lg-eng');
+		$this->assertTrue($component->update_data_value($changed_data));
+		unset($component->data_resolved);
+		$eng = array_values(array_filter($component->get_data(), fn($e)=>$e->lang==='lg-eng'));
+		$this->assertCount(1,$eng);
+		$this->assertEquals('https://updated.org',$eng[0]->iri);
+		$this->assertEquals(1,$eng[0]->id);
+		$component->set_data(null);
+	}//end test_update_data_value_update_with_null_id_resolves_from_key
+
+	/**
+	* TEST_update_data_value_remove_across_all_languages
+	* Verify that remove action deletes the entry across ALL languages
+	* @return void
+	*/
+	public function test_update_data_value_remove_across_all_languages() {
+		$this->user_login();
+		$component = component_common::get_instance('component_iri','test140',1,'edit','lg-eng','test3',false);
+		$component->set_data([
+			(object)['id'=>1,'lang'=>'lg-eng','iri'=>'https://hello.org','title'=>'Hello'],
+			(object)['id'=>2,'lang'=>'lg-eng','iri'=>'https://world.org','title'=>'World'],
+			(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola'],
+			(object)['id'=>2,'lang'=>'lg-spa','iri'=>'https://mundo.org','title'=>'Mundo'],
+		]);
+		$changed_data = (object)['action'=>'remove','id'=>1,'value'=>null];
+		$component->set_lang('lg-eng');
+		$this->assertTrue($component->update_data_value($changed_data));
+		unset($component->data_resolved);
+		$all = $component->get_data();
+		foreach($all as $entry){ $this->assertNotEquals(1,$entry->id); }
+		$this->assertCount(2,$all);
+		$component->set_data(null);
+	}//end test_update_data_value_remove_across_all_languages
+
+	/**
+	* TEST_update_data_value_remove_null_id_clears_all
+	* Verify that remove with null id clears ALL entries
+	* @return void
+	*/
+	public function test_update_data_value_remove_null_id_clears_all() {
+		$this->user_login();
+		$component = component_common::get_instance('component_iri','test140',1,'edit','lg-eng','test3',false);
+		$component->set_data([
+			(object)['id'=>1,'lang'=>'lg-eng','iri'=>'https://hello.org','title'=>'Hello'],
+			(object)['id'=>1,'lang'=>'lg-spa','iri'=>'https://hola.org','title'=>'Hola'],
+		]);
+		$changed_data = (object)['action'=>'remove','id'=>null,'value'=>null];
+		$this->assertTrue($component->update_data_value($changed_data));
+		unset($component->data_resolved);
+		$this->assertEmpty($component->get_data());
+		$component->set_data(null);
+	}//end test_update_data_value_remove_null_id_clears_all
+
 }//end class component_iri_test
