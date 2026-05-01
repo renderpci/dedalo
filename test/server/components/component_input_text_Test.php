@@ -1436,4 +1436,303 @@ final class component_input_text_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_get_id_from_key_with_flat_array
+	* Verify get_id_from_key works with the flat array data format
+	* @return void
+	*/
+	public function test_get_id_from_key_with_flat_array() {
+
+		$component = $this->build_component_instance();
+		$component->set_lang('lg-eng');
+
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-eng', 'value' => 'Hello'],
+			(object)['id' => 2, 'lang' => 'lg-eng', 'value' => 'World'],
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+			(object)['id' => 2, 'lang' => 'lg-spa', 'value' => 'Mundo'],
+		];
+		$component->set_data($sample_data);
+		unset($component->data_resolved);
+
+		// Key 0 should find id=1 (first entry in lg-eng or lg-spa)
+		$result = $component->get_id_from_key(0);
+		$this->assertEquals(1, $result, 'get_id_from_key(0) should return 1');
+
+		// Key 1 should find id=2
+		$result = $component->get_id_from_key(1);
+		$this->assertEquals(2, $result, 'get_id_from_key(1) should return 2');
+
+		// Key 2 should return null (no entry at that position)
+		$result = $component->get_id_from_key(2);
+		$this->assertNull($result, 'get_id_from_key(2) should return null');
+
+		// Skip lg-eng: should find id from lg-spa at key 0
+		$result = $component->get_id_from_key(0, ['lg-eng']);
+		$this->assertEquals(1, $result, 'get_id_from_key(0, [lg-eng]) should return 1 from lg-spa');
+
+		// Skip all languages: should return null
+		$result = $component->get_id_from_key(0, ['lg-eng', 'lg-spa']);
+		$this->assertNull($result, 'get_id_from_key with all langs skipped should return null');
+
+		// Empty data
+		$component->set_data([]);
+		unset($component->data_resolved);
+		$result = $component->get_id_from_key(0);
+		$this->assertNull($result, 'get_id_from_key on empty data should return null');
+	}//end test_get_id_from_key_with_flat_array
+
+
+
+	/**
+	* TEST_get_key_from_id_with_flat_array
+	* Verify get_key_from_id works with the flat array data format
+	* @return void
+	*/
+	public function test_get_key_from_id_with_flat_array() {
+
+		$component = $this->build_component_instance();
+		$component->set_lang('lg-eng');
+
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-eng', 'value' => 'Hello'],
+			(object)['id' => 2, 'lang' => 'lg-eng', 'value' => 'World'],
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+			(object)['id' => 2, 'lang' => 'lg-spa', 'value' => 'Mundo'],
+		];
+		$component->set_data($sample_data);
+		unset($component->data_resolved);
+
+		// Find key of id=1 in lg-eng
+		$result = $component->get_key_from_id(1, 'lg-eng');
+		$this->assertEquals(0, $result, 'get_key_from_id(1, lg-eng) should return 0');
+
+		// Find key of id=2 in lg-eng
+		$result = $component->get_key_from_id(2, 'lg-eng');
+		$this->assertEquals(1, $result, 'get_key_from_id(2, lg-eng) should return 1');
+
+		// Find key of id=1 in lg-spa
+		$result = $component->get_key_from_id(1, 'lg-spa');
+		$this->assertEquals(0, $result, 'get_key_from_id(1, lg-spa) should return 0');
+
+		// Non-existent id
+		$result = $component->get_key_from_id(999, 'lg-eng');
+		$this->assertNull($result, 'get_key_from_id(999, lg-eng) should return null');
+
+		// Non-existent lang
+		$result = $component->get_key_from_id(1, 'lg-fra');
+		$this->assertNull($result, 'get_key_from_id(1, lg-fra) should return null');
+	}//end test_get_key_from_id_with_flat_array
+
+
+
+	/**
+	* TEST_update_data_value_insert_with_key_resolves_id
+	* Verify that insert action with key resolves id from other languages
+	* @return void
+	*/
+	public function test_update_data_value_insert_with_key_resolves_id() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			'lg-eng',
+			'test3',
+			false
+		);
+
+		// Set up multi-language data where lg-spa already has id=1 at key 0
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+		];
+		$component->set_data($sample_data);
+		unset($component->data_resolved);
+
+		// Insert a new entry at key=0 in lg-eng with null id — should resolve id=1 from lg-spa
+		$changed_data = (object)[
+			'action' => 'insert',
+			'id'     => null,
+			'key'    => 0,
+			'value'  => (object)['value' => 'Hello', 'lang' => 'lg-eng']
+		];
+		$component->set_lang('lg-eng');
+		$result = $component->update_data_value($changed_data);
+		$this->assertTrue($result, 'insert with key should succeed');
+
+		unset($component->data_resolved);
+		$all_data = $component->get_data();
+
+		// Find the lg-eng entry
+		$eng_entries = array_filter($all_data, fn($e) => $e->lang === 'lg-eng');
+		$this->assertCount(1, $eng_entries, 'Should have 1 lg-eng entry');
+		$eng_entry = reset($eng_entries);
+		$this->assertEquals(1, $eng_entry->id, 'Inserted entry should have id=1 resolved from lg-spa');
+
+		// Restore
+		$component->set_data(null);
+	}//end test_update_data_value_insert_with_key_resolves_id
+
+
+
+	/**
+	* TEST_update_data_value_update_with_null_id_resolves_from_key
+	* Verify that update action with null id resolves it from key position
+	* @return void
+	*/
+	public function test_update_data_value_update_with_null_id_resolves_from_key() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			'lg-eng',
+			'test3',
+			false
+		);
+
+		// Set up multi-language data
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-eng', 'value' => 'Hello'],
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+		];
+		$component->set_data($sample_data);
+
+		// Update with null id but key=0 — should resolve id=1
+		$changed_data = (object)[
+			'action' => 'update',
+			'id'     => null,
+			'key'    => 0,
+			'value'  => (object)['value' => 'Hello Updated', 'lang' => 'lg-eng']
+		];
+		$component->set_lang('lg-eng');
+		$result = $component->update_data_value($changed_data);
+		$this->assertTrue($result, 'update with key should succeed');
+
+		unset($component->data_resolved);
+		$all_data = $component->get_data();
+
+		// Find the lg-eng entry — should be updated
+		$eng_entries = array_filter($all_data, fn($e) => $e->lang === 'lg-eng');
+		$this->assertCount(1, $eng_entries, 'Should have 1 lg-eng entry');
+		$eng_entry = reset($eng_entries);
+		$this->assertEquals('Hello Updated', $eng_entry->value, 'lg-eng entry should be updated');
+		$this->assertEquals(1, $eng_entry->id, 'lg-eng entry should keep id=1');
+
+		// Restore
+		$component->set_data(null);
+	}//end test_update_data_value_update_with_null_id_resolves_from_key
+
+
+
+	/**
+	* TEST_update_data_value_remove_across_all_languages
+	* Verify that remove action deletes the entry across ALL languages
+	* @return void
+	*/
+	public function test_update_data_value_remove_across_all_languages() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			'lg-eng',
+			'test3',
+			false
+		);
+
+		// Set up multi-language data with shared ids
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-eng', 'value' => 'Hello'],
+			(object)['id' => 2, 'lang' => 'lg-eng', 'value' => 'World'],
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+			(object)['id' => 2, 'lang' => 'lg-spa', 'value' => 'Mundo'],
+		];
+		$component->set_data($sample_data);
+
+		// Remove id=1 — should delete from ALL languages
+		$changed_data = (object)[
+			'action' => 'remove',
+			'id'     => 1,
+			'value'  => null
+		];
+		$component->set_lang('lg-eng');
+		$result = $component->update_data_value($changed_data);
+		$this->assertTrue($result, 'remove with id should succeed');
+
+		unset($component->data_resolved);
+		$all_data = $component->get_data();
+
+		// All entries with id=1 should be gone
+		foreach ($all_data as $entry) {
+			$this->assertNotEquals(1, $entry->id, 'Entry with id=1 should be removed from all languages');
+		}
+
+		// Only id=2 entries should remain
+		$this->assertCount(2, $all_data, 'Should have 2 entries remaining (one per language)');
+
+		$eng_entries = array_filter($all_data, fn($e) => $e->lang === 'lg-eng');
+		$spa_entries = array_filter($all_data, fn($e) => $e->lang === 'lg-spa');
+		$this->assertCount(1, $eng_entries, 'Should have 1 lg-eng entry remaining');
+		$this->assertCount(1, $spa_entries, 'Should have 1 lg-spa entry remaining');
+
+		// Restore
+		$component->set_data(null);
+	}//end test_update_data_value_remove_across_all_languages
+
+
+
+	/**
+	* TEST_update_data_value_remove_null_id_clears_all
+	* Verify that remove with null id clears ALL entries
+	* @return void
+	*/
+	public function test_update_data_value_remove_null_id_clears_all() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			'lg-eng',
+			'test3',
+			false
+		);
+
+		$sample_data = [
+			(object)['id' => 1, 'lang' => 'lg-eng', 'value' => 'Hello'],
+			(object)['id' => 1, 'lang' => 'lg-spa', 'value' => 'Hola'],
+		];
+		$component->set_data($sample_data);
+
+		// Remove with null id — should clear everything
+		$changed_data = (object)[
+			'action' => 'remove',
+			'id'     => null,
+			'value'  => null
+		];
+		$result = $component->update_data_value($changed_data);
+		$this->assertTrue($result, 'remove with null id should succeed');
+
+		unset($component->data_resolved);
+		$all_data = $component->get_data();
+		$this->assertEmpty($all_data, 'All data should be cleared');
+
+		// Restore
+		$component->set_data(null);
+	}//end test_update_data_value_remove_null_id_clears_all
+
+
+
 }//end class component_input_text_test
