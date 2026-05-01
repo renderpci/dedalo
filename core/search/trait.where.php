@@ -287,7 +287,7 @@ trait where {
 			}
 
 			$t_name		= implode('_', $ar_key_join);
-			$t_relation	= 'rel'.$key;
+			$t_relation	= 'rel_' . $t_name;
 
 			// if (!isset($this->ar_sql_joins[$t_name])) {
 
@@ -305,7 +305,7 @@ trait where {
 
 				// join table by setion_tipo and section_id matches
 				$sql_join .= PHP_EOL . "LEFT JOIN {$matrix_table} AS {$t_name} ON" . PHP_EOL;
-				$sql_join .= " {$t_name}.section_id = ({$t_relation}->>'section_id')::bigint";
+				$sql_join .= " {$t_name}.section_id = NULLIF(({$t_relation}->>'section_id'), '')::bigint";
 				$sql_join .= " AND {$t_name}.section_tipo = ({$t_relation}->>'section_tipo')::text";
 
 				$this->sql_obj->join[] = $sql_join;
