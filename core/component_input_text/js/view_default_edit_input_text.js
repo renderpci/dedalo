@@ -197,7 +197,7 @@ const get_content_value = (i, current_value, self) => {
 			button_remove.addEventListener('click', function(e) {
 				e.stopPropagation()
 				const id = current_value.id || null;
-				remove_handler(input, id, self)
+				remove_handler(input, id, i, self)
 			})
 		}//end if(i>0)
 
@@ -300,9 +300,12 @@ const get_buttons = (self) => {
 						return
 					}
 
+				const key = self.data?.entries?.length || 0
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					id		: null,
+					key		: key,
 					value	: {
 						value: null,
 						lang: self.lang
@@ -313,8 +316,9 @@ const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					const input_node = self.node.content_data[key]
-						? self.node.content_data[key].querySelector('input')
+					const new_key = self.data?.entries?.length ? self.data.entries.length - 1 : key
+					const input_node = self.node.content_data[new_key]
+						? self.node.content_data[new_key].querySelector('input')
 						: null
 					if (input_node) {
 						input_node.focus()

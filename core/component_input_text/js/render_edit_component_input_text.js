@@ -113,6 +113,7 @@ export const change_handler = function(e, key, self, options={}) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			id		: entries[key]?.id || null,
+			key		: key,
 			value	: item_value
 		})
 
@@ -150,28 +151,120 @@ export const change_handler = function(e, key, self, options={}) {
 /**
 * REMOVE_HANDLER
 * Handle button remove actions
+* For translatable components, shows a modal warning that the entry
+* will be deleted across all languages.
 * @param DOM  node input
 * @param int id
+* @param int key - array index of the entry in data_lang
 * @param object self
 * @return promise response
 */
-export const remove_handler = function(input, id, self) {
+export const remove_handler = function(input, id, key, self) {
 
 	// force possible input change before remove
 		document.activeElement.blur()
 
 	// value
 		const current_value = input.value ? input.value : null
-		if (current_value) {
-			if (!confirm(get_label.sure)) {
-				return
-			}
+
+	// translatable components: show modal warning that deletion affects all languages
+		const is_translatable = self.context?.translatable === true
+
+	if (is_translatable) {
+
+		// header
+			const header = ui.create_dom_element({
+				element_type	: 'div',
+				class_name	: 'header'
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name	: 'label',
+				inner_html	: (get_label.delete || 'Delete'),
+				parent		: header
+			})
+
+		// body
+			const body = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content delete_entry'
+			})
+			ui.create_dom_element({
+				element_type	: 'p',
+				inner_html		: (get_label.sure_delete_entry_all_langs || 'This entry will be deleted from all languages.'),
+				parent			: body
+			})
+
+		// footer
+			const footer = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'content footer'
+			})
+			// button delete
+				const button_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name	: 'danger remove',
+					text_content	: (get_label.delete || 'Delete'),
+					parent			: footer
+				})
+				button_delete.addEventListener('click', function(e) {
+					e.stopPropagation()
+					// proceed with deletion
+					modal.on_close()
+					_do_remove(input, id, key, self, current_value)
+				})
+			// button cancel
+				const button_cancel = ui.create_dom_element({
+					element_type	: 'button',
+					class_name	: 'warning',
+					text_content	: (get_label.cancel || 'Cancel'),
+					parent			: footer
+				})
+				button_cancel.addEventListener('click', function(e) {
+					e.stopPropagation()
+					modal.on_close()
+				})
+
+		// modal
+			const modal = ui.attach_to_modal({
+				header	: header,
+				body	: body,
+				footer	: footer,
+				size	: 'small'
+			})
+
+		return
+	}
+
+	// non-translatable: simple confirm dialog
+	if (current_value) {
+		if (!confirm(get_label.sure)) {
+			return
 		}
+	}
+
+	_do_remove(input, id, key, self, current_value)
+}//end remove_handler
+
+
+
+/**
+* _DO_REMOVE
+* Executes the actual remove operation after confirmation
+* @param DOM  node input
+* @param int id
+* @param int key
+* @param object self
+* @param string|null current_value
+* @return promise response
+*/
+const _do_remove = function(input, id, key, self, current_value) {
 
 	// changed_data
 		const changed_data = [Object.freeze({
 			action	: 'remove',
 			id		: id,
+			key		: key,
 			value	: null
 		})]
 
@@ -198,7 +291,7 @@ export const remove_handler = function(input, id, self) {
 
 
 	return response
-}//end remove_handler
+}//end _do_remove
 
 
 
