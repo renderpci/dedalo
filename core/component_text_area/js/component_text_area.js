@@ -471,6 +471,7 @@ component_text_area.prototype.set_value = function(key, string_value) {
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		id		: entries[key]?.id || null,
+		key		: key,
 		value	: item_value
 	})]
 	return self.change_value({
@@ -508,6 +509,7 @@ component_text_area.prototype.save_value = async function(key, string_value) {
 	const changed_data = [Object.freeze({
 		action	: 'update',
 		id		: entries[key]?.id || null,
+		key		: key,
 		value	: item_value
 	})]
 	const js_promise = self.change_value({
@@ -759,6 +761,7 @@ component_text_area.prototype.update_changed_data = function (options) {
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			id		: entries[key]?.id || null,
+			key		: key,
 			value	: item_value
 		})
 
