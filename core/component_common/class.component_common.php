@@ -3621,8 +3621,8 @@ abstract class component_common extends common {
 		// Retrieve the current data array for the component
 		// component_dataframe uses unfiltered data (includes virtual entries)
 		// Other components use language-specific data
-		$data = $this->model === 'component_dataframe'
-			? $this->get_data_unfiltrered() ?? []
+		$data_lang = $this->model === 'component_dataframe'
+			? $this->get_data_unfiltered() ?? []
 			: $this->get_data_lang() ?? [];
 
 

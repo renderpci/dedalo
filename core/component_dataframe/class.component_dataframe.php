@@ -59,7 +59,7 @@ class component_dataframe extends component_portal {
 
 
 
-	public function get_data_unfiltrered() {
+	public function get_data_unfiltered() {
 		return parent::get_data();
 	}
 
