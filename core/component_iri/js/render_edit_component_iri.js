@@ -352,6 +352,75 @@ const get_content_value = (i, current_value, self) => {
 					e.stopPropagation()
 					e.preventDefault()
 
+				// Translatable components: show modal warning that deletion affects all languages
+					const is_translatable = self.context?.translatable === true
+
+				if (is_translatable) {
+
+					// header
+						const header = ui.create_dom_element({
+							element_type	: 'div',
+							class_name	: 'header'
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name	: 'label',
+							inner_html	: (get_label.delete || 'Delete'),
+							parent		: header
+						})
+
+					// body
+						const body = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'content delete_entry'
+						})
+						ui.create_dom_element({
+							element_type	: 'p',
+							inner_html		: (get_label.sure_delete_entry_all_langs || 'This entry will be deleted from all languages.'),
+							parent			: body
+						})
+
+					// footer
+						const footer = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'content footer'
+						})
+						// button delete
+							const button_delete = ui.create_dom_element({
+								element_type	: 'button',
+								class_name	: 'danger remove',
+								text_content	: (get_label.delete || 'Delete'),
+								parent			: footer
+							})
+							button_delete.addEventListener('click', function(evt) {
+								evt.stopPropagation()
+								modal.on_close()
+								_do_remove_iri_entry(self, current_value, i, button_remove)
+							})
+						// button cancel
+							const button_cancel = ui.create_dom_element({
+								element_type	: 'button',
+								class_name	: 'warning',
+								text_content	: (get_label.cancel || 'Cancel'),
+								parent			: footer
+							})
+							button_cancel.addEventListener('click', function(evt) {
+								evt.stopPropagation()
+								modal.on_close()
+							})
+
+					// modal
+						const modal = ui.attach_to_modal({
+							header	: header,
+							body	: body,
+							footer	: footer,
+							size	: 'small'
+						})
+
+					return
+				}
+
+				// non-translatable: simple confirm
 					if (!confirm(get_label.sure || 'Sure?')) {
 						return
 					}
@@ -380,57 +449,7 @@ const get_content_value = (i, current_value, self) => {
 						}
 					}
 
-					try {
-						// force possible input change before remove
-						if (document.activeElement) {
-							document.activeElement.blur()
-						}
-
-						// Save value
-						const changed_data = [Object.freeze({
-							action	: 'remove',
-							id		: current_value.id,
-							value	: null
-						})]
-						await self.change_value({
-							changed_data	: changed_data,
-							label			: button_remove.previousElementSibling?.value || '',
-							refresh			: true
-						})
-
-						// remove dataframe
-						// delete_dataframe_record
-						await delete_dataframe({
-							self				: self,
-							section_id			: self.section_id,
-							section_tipo		: self.section_tipo,
-							section_id_key		: current_value.id,
-							section_tipo_key	: self.section_tipo,
-							paginated_key		: false,
-							row_key				: false
-						})
-
-						// Refresh caller instances (tool_lang_multi case)
-						if (self.caller?.ar_instances) {
-							const components = self.caller.ar_instances.filter(el =>
-								el.model===self.model && el.data?.entries
-							)
-
-							if(SHOW_DEBUG===true) {
-								console.log('Refreshing tool components. Total:', components.length - 1);
-							}
-
-							for (const component of components) {
-								if (component.id !== self.id) {
-									await component.refresh() // await the refresh if it's async
-								}
-							}
-						}
-					} catch (error) {
-						console.error('Error in remove operation:', error)
-						// You might want to show a user-friendly error message here
-						alert('An error occurred while removing the item. Please try again.')
-					}
+					_do_remove_iri_entry(self, current_value, i, button_remove)
 				}
 				button_remove.addEventListener('mousedown', button_remove_mousedown_handler)
 
@@ -640,6 +659,7 @@ export const get_buttons = (self) => {
 				const changed_data = [Object.freeze({
 					action	: 'insert',
 					id		: null,
+					key		: current_key,
 					value	: {value:null}
 				})]
 				self.change_value({
@@ -649,9 +669,10 @@ export const get_buttons = (self) => {
 				})
 				.then(()=>{
 					dd_request_idle_callback(()=>{
-						const input_node = self.node.content_data[changed_data[0].key].querySelector('input.url')
-						if (input_node) {
-							input_node.focus()
+						const new_key = self.data.entries ? self.data.entries.length - 1 : current_key
+						const input_node = self.node.content_data[new_key]
+							? self.node.content_data[new_key].querySelector('input.url')
+							: null
 						}
 					})
 				})
@@ -678,6 +699,72 @@ export const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* _DO_REMOVE_IRI_ENTRY
+* Executes the actual remove operation for an iri entry after confirmation
+* @param object self
+* @param object current_value
+* @param int i - array key
+* @param HTMLElement button_remove
+* @return void
+*/
+const _do_remove_iri_entry = async function(self, current_value, i, button_remove) {
+
+	try {
+		// force possible input change before remove
+		if (document.activeElement) {
+			document.activeElement.blur()
+		}
+
+		// Save value
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			id		: current_value.id,
+			key		: i,
+			value	: null
+		})]
+		await self.change_value({
+			changed_data	: changed_data,
+			label			: button_remove?.previousElementSibling?.value || '',
+			refresh			: true
+		})
+
+		// remove dataframe
+		// delete_dataframe_record
+		await delete_dataframe({
+			self				: self,
+			section_id			: self.section_id,
+			section_tipo		: self.section_tipo,
+			section_id_key		: current_value.id,
+			section_tipo_key	: self.section_tipo,
+			paginated_key		: false,
+			row_key				: false
+		})
+
+		// Refresh caller instances (tool_lang_multi case)
+		if (self.caller?.ar_instances) {
+			const components = self.caller.ar_instances.filter(el =>
+				el.model===self.model && el.data?.entries
+			)
+
+			if(SHOW_DEBUG===true) {
+				console.log('Refreshing tool components. Total:', components.length - 1);
+			}
+
+			for (const component of components) {
+				if (component.id !== self.id) {
+					await component.refresh() // await the refresh if it's async
+				}
+			}
+		}
+	} catch (error) {
+		console.error('Error in remove operation:', error)
+		alert('An error occurred while removing the item. Please try again.')
+	}
+}//end _do_remove_iri_entry
 
 
 
