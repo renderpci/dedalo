@@ -197,6 +197,7 @@
     "latitude": "Latitude",
     "build_subtitles": "Criar legendas",
     "sure": "Tem certeza?",
+    "sure_delete_entry_all_langs": "Esta entrada será excluída de todos os idiomas.",
     "weight": "Peso",
     "items": "Elementos",
     "average": "Média",

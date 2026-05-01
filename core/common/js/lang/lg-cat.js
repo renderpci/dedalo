@@ -197,6 +197,7 @@
     "latitude": "Latitud",
     "build_subtitles": "Crear subtítols",
     "sure": "Segur?",
+    "sure_delete_entry_all_langs": "Aquesta entrada s'eliminarà de tots els idiomes.",
     "weight": "Pes",
     "items": "Ítems",
     "average": "Mitjana",

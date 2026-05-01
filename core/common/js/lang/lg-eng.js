@@ -197,6 +197,7 @@
     "latitude": "Latitude",
     "build_subtitles": "Build subtitles",
     "sure": "Are you sure?",
+    "sure_delete_entry_all_langs": "This entry will be deleted from all languages.",
     "weight": "Weight",
     "items": "Items",
     "average": "Average",

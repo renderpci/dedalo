@@ -197,6 +197,7 @@
     "latitude": "Latitude",
     "build_subtitles": "Créer des sous-titres ",
     "sure": "Êtes-vous sûr ?",
+    "sure_delete_entry_all_langs": "Cette entrée sera supprimée de toutes les langues.",
     "weight": "Poids",
     "items": "Éléments",
     "average": "Moyenne ",
