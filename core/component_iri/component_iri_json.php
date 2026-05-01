@@ -129,9 +129,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 				$item->transliterate_value = $this->get_data_lang( $tranliterable_lang );
 			}
 
-		// full data in all langs
-			$item->dato_full = $this->get_data();
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				metrics::add_metric('data_total_time', $start_time);

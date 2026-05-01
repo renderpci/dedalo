@@ -352,104 +352,71 @@ const get_content_value = (i, current_value, self) => {
 					e.stopPropagation()
 					e.preventDefault()
 
-				// Translatable components: show modal warning that deletion affects all languages
-					const is_translatable = self.context?.translatable === true
-
-				if (is_translatable) {
-
-					// header
-						const header = ui.create_dom_element({
-							element_type	: 'div',
-							class_name	: 'header'
-						})
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name	: 'label',
-							inner_html	: (get_label.delete || 'Delete'),
-							parent		: header
-						})
-
-					// body
-						const body = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'content delete_entry'
-						})
-						ui.create_dom_element({
-							element_type	: 'p',
-							inner_html		: (get_label.sure_delete_entry_all_langs || 'This entry will be deleted from all languages.'),
-							parent			: body
-						})
-
-					// footer
-						const footer = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'content footer'
-						})
-						// button delete
-							const button_delete = ui.create_dom_element({
-								element_type	: 'button',
-								class_name	: 'danger remove',
-								text_content	: (get_label.delete || 'Delete'),
-								parent			: footer
-							})
-							button_delete.addEventListener('click', function(evt) {
-								evt.stopPropagation()
-								modal.on_close()
-								_do_remove_iri_entry(self, current_value, i, button_remove)
-							})
-						// button cancel
-							const button_cancel = ui.create_dom_element({
-								element_type	: 'button',
-								class_name	: 'warning',
-								text_content	: (get_label.cancel || 'Cancel'),
-								parent			: footer
-							})
-							button_cancel.addEventListener('click', function(evt) {
-								evt.stopPropagation()
-								modal.on_close()
-							})
-
-					// modal
-						const modal = ui.attach_to_modal({
-							header	: header,
-							body	: body,
-							footer	: footer,
-							size	: 'small'
-						})
-
-					return
-				}
-
-				// non-translatable: simple confirm
-					if (!confirm(get_label.sure || 'Sure?')) {
-						return
+				// force possible input change before remove
+					if (document.activeElement) {
+						document.activeElement.blur()
 					}
 
-					// Check if current value already exists in another lang
-					if (self.lang==='lg-nolan') {
-						const dato_full = self.data?.dato_full || {};
-						const existing_key_langs = []
-						for (const current_lang in dato_full) {
-							const lang_values = dato_full[current_lang] || []
-							// Add existing values in lang different from actual
-							if (lang_values[i] && current_lang!==self.lang) {
-								const current_iri = lang_values[i].iri || 'Empty value'
-								const string = `${current_iri} [${current_lang}]`
-								existing_key_langs.push(string)
-							}
-						}
-						if (existing_key_langs.length > 0) {
-							const msg = (get_label.value_already_exits_in_other_langs || `Value already exists in another langs`) + ':'
-								+ '\n\n' + existing_key_langs.join('\n')
-								+ '\n\n' + (get_label.all_this_values_will_be_removed || 'All this values will be removed too') + '.'
-								+ '\n\n' + (get_label.sure || 'Sure?')
-							if (!confirm(msg)) {
-								return
-							}
-						}
-					}
+				// Show modal warning that deletion affects all languages
+				// header
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						class_name	: 'header'
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name	: 'label',
+						inner_html	: (get_label.delete || 'Delete'),
+						parent		: header
+					})
 
-					_do_remove_iri_entry(self, current_value, i, button_remove)
+				// body
+					const body = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'content delete_entry'
+					})
+					ui.create_dom_element({
+						element_type	: 'p',
+						inner_html		: (get_label.sure_delete_entry_all_langs || 'This entry will be deleted from all languages.'),
+						parent			: body
+					})
+
+				// footer
+					const footer = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'content footer'
+					})
+					// button delete
+						const button_delete = ui.create_dom_element({
+							element_type	: 'button',
+							class_name	: 'danger remove',
+							text_content	: (get_label.delete || 'Delete'),
+							parent			: footer
+						})
+						button_delete.addEventListener('click', function(evt) {
+							evt.stopPropagation()
+							modal.on_close()
+							_do_remove_iri_entry(self, current_value, i, button_remove)
+						})
+					// button cancel
+						const button_cancel = ui.create_dom_element({
+							element_type	: 'button',
+							class_name	: 'warning',
+							text_content	: (get_label.cancel || 'Cancel'),
+							parent			: footer
+						})
+						button_cancel.addEventListener('click', function(evt) {
+							evt.stopPropagation()
+							modal.on_close()
+						})
+
+				// modal
+					const modal = ui.attach_to_modal({
+						header	: header,
+						body	: body,
+						footer	: footer,
+						size	: 'small'
+					})
 				}
 				button_remove.addEventListener('mousedown', button_remove_mousedown_handler)
 
