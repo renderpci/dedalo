@@ -2317,11 +2317,13 @@ function process_node($node, $level) {
 								if($final_method_cp === 'get_diffusion_dato') {
 									$new_props = new stdClass();
 									$model_cp = ontology_node::get_legacy_model_by_tipo($final_target);
+									$output_v5 = $final_args->output ?? null;
+
 									$new_props->process = get_diffusion_dato(
 										$model_cp,
 										null,
 										$final_args,
-										null,
+										$output_v5,
 										$ddo_map_cp
 									);
 
