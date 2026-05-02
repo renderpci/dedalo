@@ -148,7 +148,7 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			if(!empty($ddo_map)){
 				$process->ddo_map = $ddo_map;
 			}
-			$process->output_sample = ["lat"=> 41.3851, "long"=> 2.1734];
+			$process->output_sample = (object)["lat"=> 41.3851, "long"=> 2.1734];
 			break;
 
 		case 'component_info':
