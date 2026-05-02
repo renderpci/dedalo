@@ -5,7 +5,7 @@
 
 import type { parser_options, data_item } from '../types';
 import { langs_config } from '../diffusion_processor';
-import { merge as apply_merge } from './parser_helper';
+
 
 
 interface locator {
@@ -310,7 +310,6 @@ export function parents(data: data_item[] | null, options: parser_options): data
 	const langs     = langs_config.langs;
 
 	const result: data_item[] = [];
-	let   max_depth = 0;
 
 	for (const item of data) {
 		const parents_map = (item as any).meta;
@@ -414,36 +413,42 @@ export function parents(data: data_item[] | null, options: parser_options): data
 			}
 		}
 
-		// Emit one data_item per chain node, with:
-		//   tipo       = '__parent_N__' (positional depth-level column)
-		//   section_id = composite key (groups all depth-level nodes of the same locator)
-		//   value      = the extracted string at this depth level
-		// merge() will group by section_id and fill column slots by tipo, producing
-		// "" for any missing depth level and preserving position order.
+		// Each locator's parent chain is self-contained — variable-length chains
+		// should NOT be padded to a fixed column width. Join values within each
+		// chain with fields_separator, then join chains with records_separator.
 		for (const [lang, chain_entries] of Object.entries(lang_nodes)) {
-			for (const { chain, section_composite } of chain_entries) {
-				for (let i = 0; i < chain.length; i++) {
-					result.push({
-						...item,
-						tipo:       `__parent_${i}__`,
-						lang:       lang === '__nolan__' ? null : lang,
-						value:      chain[i],
-						section_id: section_composite,
-					});
-				}
-				max_depth = Math.max(max_depth, chain.length);
+			if (chain_entries.length === 0) continue;
+
+			const ref_item = lang === '__nolan__'
+				? item
+				: (data as data_item[]).find(d => d.lang === lang) || item;
+
+			const chain_strings: string[] = chain_entries
+				.map(({ chain }) => chain.join(fields_separator))
+				.filter(s => s.length > 0);
+
+			if (chain_strings.length === 0) continue;
+
+			let final_value: any;
+			if (merge_style === 'unique') {
+				final_value = [...new Set(chain_entries.flatMap(({ chain }) => chain))];
+			} else if (merge_style === 'flat') {
+				final_value = chain_strings;
+			} else {
+				// 'string' (default for term) and undefined fallback
+				final_value = chain_strings.join(records_separator);
 			}
+
+			result.push({
+				...ref_item,
+				lang:  lang === '__nolan__' ? null : lang,
+				value: final_value,
+			});
 		}
 	}
 
 	if (result.length === 0) return null;
-
-	// Synthesize positional columns from the maximum chain depth observed.
-	// '__parent_0__' = self/first node, '__parent_1__' = first parent, etc.
-	const columns = Array.from({ length: max_depth }, (_, i) => ({ tipo: `__parent_${i}__`, model: '' }));
-
-	// Delegate merge to parser_helper::merge with synthesized columns.
-	return apply_merge(result, { merge: merge_style, fields_separator, records_separator, columns });
+	return result;
 }
 
 
