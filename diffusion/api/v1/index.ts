@@ -26,6 +26,8 @@ import {
 	subscribe_to_process,
 	unsubscribe_from_process,
 	get_all_processes,
+	cancel_process,
+	is_process_cancelled,
 }                                     from './lib/progress_store';
 import { merge_rdf_parts, create_zip } from './lib/rdf_file_utils';
 import { writeFileSync }              from 'fs';
@@ -113,6 +115,12 @@ async function run_background_diffusion(
 		// 2. MAIN CHUNK LOOP
 		for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
 			const chunk_offset = chunk_idx * chunk_size;
+
+			// Check if the process has been cancelled between chunks
+			if (is_process_cancelled(process_id)) {
+				console.log(`[diffuse] Process ${process_id} cancelled at chunk ${chunk_idx + 1}/${chunk_count}`);
+				break;
+			}
 
 			// Inject limit/offset pagination into the SQO criteria
 			const chunk_rqo: rqo = use_chunks
@@ -379,6 +387,12 @@ async function run_background_rdf_diffusion(
 		// 2. MAIN CHUNK LOOP
 		for (let chunk_idx = 0; chunk_idx < chunk_count; chunk_idx++) {
 			const chunk_offset = chunk_idx * chunk_size;
+
+			// Check if the process has been cancelled between chunks
+			if (is_process_cancelled(process_id)) {
+				console.log(`[rdf_diffuse] Process ${process_id} cancelled at chunk ${chunk_idx + 1}/${chunk_count}`);
+				break;
+			}
 
 			const chunk_rqo: rqo = use_chunks
 				? {
@@ -874,6 +888,29 @@ const server = Bun.serve({
 					}
 					const logs = get_all_processes();
 					return Response.json({ result: true, processes: logs });
+				}
+				case 'cancel_process': {
+					const is_auth_cancel = await check_auth(cookie_header);
+					if (!is_auth_cancel) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const process_id = (body as any).process_id;
+					if (!process_id || typeof process_id !== 'string') {
+						return Response.json(
+							{ result: false, msg: 'Missing or invalid process_id', errors: ['invalid_process_id'] },
+							{ status: 400 }
+						);
+					}
+					const cancelled = cancel_process(process_id);
+					return Response.json({
+						result: cancelled,
+						msg: cancelled
+							? `Process ${process_id} cancelled`
+							: `Process ${process_id} not found or not running`,
+					});
 				}
 				case 'get_diffusion_status': {
 					const is_auth_status = await check_auth(cookie_header);
