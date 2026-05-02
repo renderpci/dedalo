@@ -64,37 +64,107 @@ export function join_items_to_string(data: data_item[] | null, options: parser_o
 /**
  * TEXT_FORMAT
  * Generic text pattern processor.
- * Applies a pattern template to zipped id-keyed values.
  *
- * Always emits one data_item per zip row where value is a single-element
- * string array: `{value: ["<replaced string>"]}`.  This uniform shape lets
- * downstream merge steps (explicit or the executor's auto-completion) handle
- * the output consistently regardless of how many placeholders the pattern has.
+ * Applies a pattern template (e.g. "${a}, ${b} / ${c}") to data items keyed by
+ * their `id` property.  The processor works in three phases:
+ *
+ * 1. **Lang grouping** — Items are first grouped by their `lang` property so
+ *    that each language receives its own independent formatting pass.  This
+ *    preserves per-language values (e.g. lg-spa having four entries while
+ *    lg-eng has only one) and prevents cross-language contamination.
+ *
+ * 2. **Value zipping** — Within each lang group, values are collected into an
+ *    `id_map` keyed by the item `id`.  When multiple items share the same id
+ *    they are appended to the same array.  The processor then iterates over
+ *    the longest array (max_len) and builds one result per zip-row:
+ *    - Single-element arrays are repeated across all rows (broadcast).
+ *    - Multi-element arrays are consumed positionally (row 0 gets index 0, etc.).
+ *
+ * 3. **Pattern replacement** — For each zip-row the placeholder names from the
+ *    pattern are resolved to their positional values and passed to the
+ *    `replace()` helper, which handles empty/null cleanup.
+ *
+ * ---
+ *
+ * **Standard mode** (default, `group_by_section_id` absent or false):
+ * All items within a lang group are zipped together regardless of their
+ * `section_id`.  This produces one output data_item per zip-row.  Downstream
+ * merge steps (explicit or the executor's auto-completion) are responsible
+ * for joining multiple rows into a final string.
+ *
+ * **Section-grouped mode** (`group_by_section_id: true`):
+ * After lang grouping, items are further sub-grouped by `section_id`.  The
+ * value zipping and pattern replacement happen independently within each
+ * section.  Section-level results are then joined using `fields_separator`
+ * (between multiple zip-rows of the same section) and `records_separator`
+ * (between different sections).  This produces exactly one output data_item
+ * per lang with all section content already collapsed into a single string.
+ *
+ * This mode is useful when a single field references multiple ontology
+ * records (e.g. iconography with several section_ids) and you need each
+ * record's values formatted as a coherent group rather than a flat list.
+ *
+ * ---
  *
  * @param data    - Array of data items with `id` and `value`
- * @param options - { pattern: string }
+ * @param options - Configuration object:
+ *   - pattern: string — Template with ${id} placeholders (required).
+ *   - group_by_section_id: boolean — When true, sub-group by section_id
+ *     before zipping.  Section results are joined with records_separator.
+ *   - fields_separator: string — Separator between multiple zip-rows within
+ *     the same section (default: ", ").  Only used with group_by_section_id.
+ *   - records_separator: string — Separator between different sections
+ *     (default: " | ").  Only used with group_by_section_id.
  * @returns data_item[] where each value is string[], or null
  *
  * @example
- *   // Multi-field zip
- *   text_format([{id:'a',value:['Ana','Ger']},{id:'b',value:['Hero','Del']}], {pattern:'${a} ${b}'})
+ *   // Standard mode — multi-field zip
+ *   text_format(
+ *     [{id:'a',value:['Ana','Ger']},{id:'b',value:['Hero','Del']}],
+ *     {pattern:'${a} ${b}'}
+ *   )
  *   // → [{value:['Ana Hero']}, {value:['Ger Del']}]
  *
- *   // Single-field with literal prefix
+ *   // Standard mode — single-field with literal prefix
  *   text_format([{id:'a',value:'spa'}], {pattern:'lg-${a}'})
  *   // → [{value:['lg-spa']}]
+ *
+ *   // Section-grouped mode — two sections with one field
+ *   text_format(
+ *     [
+ *       {id:'a',value:'Cabeza', section_id:'1'},
+ *       {id:'a',value:'izquierda', section_id:'1'},
+ *       {id:'a',value:'Diadema', section_id:'1125'}
+ *     ],
+ *     {pattern:'${a}', group_by_section_id:true, fields_separator:', ', records_separator:' | '}
+ *   )
+ *   // → [{value:['Cabeza, izquierda | Diadema']}]
  */
 export function text_format(data: data_item[] | null, options: parser_options): any {
 
+	// Early return for empty input
 	if (!data || data.length === 0) return null;
 
+	// Extract pattern; fall back to default_join when no pattern is defined
 	const pattern = options.pattern;
 	if (!pattern) {
-		// No pattern defined — fall back to default_join
 		return default_join(data, options);
 	}
 
-	// Extract placeholder names from pattern to determine order
+	// Section-grouping mode: when true, items are sub-grouped by section_id
+	// before the zip pass so each section produces an independent formatted
+	// string.  Sections are then joined with records_separator.
+	const group_by_section_id = options.group_by_section_id === true;
+
+	// Separators used only in section-grouped mode:
+	//   fields_separator  — joins multiple zip-rows within the same section
+	//   records_separator — joins different sections together
+	const fields_separator  = (options.fields_separator as string)  ?? ', ';
+	const records_separator = (options.records_separator as string) ?? ' | ';
+
+	// Extract unique placeholder names from the pattern in order of appearance.
+	// These names correspond to the `id` property of data items and determine
+	// which values are collected and in what order they are substituted.
 	const placeholder_regex = /\$\{([a-zA-Z0-9_]+)\}/g;
 	const placeholder_names: string[] = [];
 	let match: RegExpExecArray | null;
@@ -104,11 +174,8 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 		}
 	}
 
-	// ---------------------------------------------------------------
-	// Group input items by lang so each language gets its own zip pass.
-	// This preserves per-language values (e.g. lg-spa having two values
-	// while lg-eng has one) and tags output rows with the correct lang.
-	// ---------------------------------------------------------------
+	// Phase 1: Group items by lang so each language gets its own zip pass.
+	// Items without a lang are placed in the '__nolan__' bucket (language-agnostic).
 	const lang_groups = new Map<string, data_item[]>();
 	for (const item of data) {
 		const lang_key = item.lang ?? '__nolan__';
@@ -118,53 +185,134 @@ export function text_format(data: data_item[] | null, options: parser_options): 
 
 	const all_results: any[] = [];
 
+	// Phase 2 & 3: Process each language group independently
 	for (const [lang_key, lang_items] of lang_groups) {
 
-		// Build values array in placeholder order per language group
-		const id_map = new Map<string, any[]>();
-		let max_len = 1;
-
-		for (const item of lang_items) {
-			if (item.id) {
-				const val = item.value;
-				let new_vals: any[] = [];
-
-				if (Array.isArray(val)) {
-					new_vals = val.map(v => v !== null && v !== undefined ? stringify_value(v) : null);
-				} else {
-					new_vals = [val !== null && val !== undefined ? stringify_value(val) : null];
+		if (group_by_section_id) {
+			// Sub-group items by section_id, preserving insertion order.
+			// This ensures that when a field references multiple ontology records
+			// (each with a distinct section_id), each record is formatted as a
+			// coherent group rather than being mixed with other records.
+			const section_groups = new Map<string, data_item[]>();
+			const section_order: string[] = [];
+			for (const item of lang_items) {
+				const skey = (item.section_id != null) ? String(item.section_id) : '__no_section__';
+				if (!section_groups.has(skey)) {
+					section_groups.set(skey, []);
+					section_order.push(skey);
 				}
-
-				if (id_map.has(item.id)) {
-					id_map.get(item.id)!.push(...new_vals);
-				} else {
-					id_map.set(item.id, new_vals);
-				}
-				max_len = Math.max(max_len, id_map.get(item.id)!.length);
+				section_groups.get(skey)!.push(item);
 			}
-		}
 
-		// One result per zip row. Always apply pattern replacement and wrap the
-		// result string in a single-element array so the shape is uniform regardless
-		// of placeholder count. Downstream merge (explicit or auto) handles joining.
-		for (let i = 0; i < max_len; i++) {
-			const values = placeholder_names.map(name => {
-				const mapped = id_map.get(name);
-				if (!mapped) return null;
-				// Repeat single-element values; otherwise zip positionally
-				return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
-			});
+			// Process each section independently and collect its formatted string
+			const section_strings: string[] = [];
+			for (const skey of section_order) {
+				const section_items = section_groups.get(skey)!;
 
-			const result_str = replace(pattern, values);
-			if (result_str) {
+				// Build id_map: collect all values per placeholder id within this section
+				const id_map = new Map<string, any[]>();
+				let max_len = 1;
+				for (const item of section_items) {
+					if (item.id) {
+						const val = item.value;
+						// Normalize values to string arrays for consistent zip behavior
+						const new_vals = Array.isArray(val)
+							? val.map(v => v !== null && v !== undefined ? stringify_value(v) : null)
+							: [val !== null && val !== undefined ? stringify_value(val) : null];
+
+						if (id_map.has(item.id)) {
+							id_map.get(item.id)!.push(...new_vals);
+						} else {
+							id_map.set(item.id, new_vals);
+						}
+						max_len = Math.max(max_len, id_map.get(item.id)!.length);
+					}
+				}
+
+				// Zip pass: build one formatted string per row, then join with fields_separator
+				const section_parts: string[] = [];
+				for (let i = 0; i < max_len; i++) {
+					const values = placeholder_names.map(name => {
+						const mapped = id_map.get(name);
+						if (!mapped) return null;
+						// Single-element values are broadcast across all rows;
+						// multi-element values are consumed positionally
+						return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
+					});
+
+					const result_str = replace(pattern, values);
+					if (result_str) section_parts.push(result_str);
+				}
+
+				// Join all zip-rows of this section with fields_separator
+				if (section_parts.length > 0) {
+					section_strings.push(section_parts.join(fields_separator));
+				}
+			}
+
+			// Join all sections with records_separator → one output item per lang
+			if (section_strings.length > 0) {
 				all_results.push({
 					id:    null,
-					value: [result_str],
+					value: [section_strings.join(records_separator)],
 					tipo:  lang_items[0].tipo,
 					lang:  lang_key === '__nolan__' ? null : lang_key,
 					section_id:   lang_items[0].section_id,
 					section_tipo: lang_items[0].section_tipo,
 				});
+			}
+
+		} else {
+			// Standard mode: all items in the lang group are zipped together
+			// regardless of section_id.  Produces one output per zip-row.
+
+			// Build id_map: collect all values per placeholder id across the entire lang group
+			const id_map = new Map<string, any[]>();
+			let max_len = 1;
+
+			for (const item of lang_items) {
+				if (item.id) {
+					const val = item.value;
+					let new_vals: any[] = [];
+
+					if (Array.isArray(val)) {
+						new_vals = val.map(v => v !== null && v !== undefined ? stringify_value(v) : null);
+					} else {
+						new_vals = [val !== null && val !== undefined ? stringify_value(val) : null];
+					}
+
+					if (id_map.has(item.id)) {
+						id_map.get(item.id)!.push(...new_vals);
+					} else {
+						id_map.set(item.id, new_vals);
+					}
+					max_len = Math.max(max_len, id_map.get(item.id)!.length);
+				}
+			}
+
+			// One result per zip row. Always apply pattern replacement and wrap the
+			// result string in a single-element array so the shape is uniform regardless
+			// of placeholder count. Downstream merge (explicit or auto) handles joining.
+			for (let i = 0; i < max_len; i++) {
+				const values = placeholder_names.map(name => {
+					const mapped = id_map.get(name);
+					if (!mapped) return null;
+					// Single-element values are broadcast across all rows;
+					// multi-element values are consumed positionally
+					return mapped.length === 1 ? mapped[0] : (mapped[i] ?? null);
+				});
+
+				const result_str = replace(pattern, values);
+				if (result_str) {
+					all_results.push({
+						id:    null,
+						value: [result_str],
+						tipo:  lang_items[0].tipo,
+						lang:  lang_key === '__nolan__' ? null : lang_key,
+						section_id:   lang_items[0].section_id,
+						section_tipo: lang_items[0].section_tipo,
+					});
+				}
 			}
 		}
 	}
