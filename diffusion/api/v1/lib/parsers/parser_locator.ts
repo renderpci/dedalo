@@ -23,12 +23,40 @@ interface locator {
  *
  * @param data    - Array of data items
  * @param options - Parser options
+ * @param options.split - When true, emits one data_item per extracted section_id
+ *                        with a unique synthetic section_id, enabling downstream
+ *                        merge(unique) to deduplicate individual values instead of
+ *                        comma-joined arrays.
  * @returns Array of data items with section_id as value
  */
 export function get_section_id(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 	const result: data_item[] = [];
+
+	const split = (options?.split as boolean) ?? false;
+
+	if (split) {
+		let split_idx = 0;
+		for (const item of data) {
+			const val = item.value;
+			const locators = Array.isArray(val) ? val : [val];
+			for (const locator of locators) {
+				if (typeof locator === 'object' && locator !== null && 'section_id' in locator) {
+					const current_section_id = (locator as any).section_id;
+					if (current_section_id !== undefined && current_section_id !== null) {
+						result.push({
+							...item,
+							value: current_section_id,
+							// @ts-ignore
+							section_id: '__split__' + split_idx++
+						});
+					}
+				}
+			}
+		}
+		return result.length > 0 ? result : null;
+	}
 
 	for (const item of data) {
 		const val = item.value;
@@ -59,12 +87,39 @@ export function get_section_id(data: data_item[] | null, options: parser_options
  *
  * @param data    - Array of data items
  * @param options - Parser options
+ * @param options.split - When true, emits one data_item per extracted section_tipo
+ *                        with a unique synthetic section_id, enabling downstream
+ *                        merge(unique) to deduplicate individual values.
  * @returns Array of data items with section_tipo as value
  */
 export function get_section_tipo(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 	const result: data_item[] = [];
+
+	const split = (options?.split as boolean) ?? false;
+
+	if (split) {
+		let split_idx = 0;
+		for (const item of data) {
+			const val = item.value;
+			const locators = Array.isArray(val) ? val : [val];
+			for (const locator of locators) {
+				if (typeof locator === 'object' && locator !== null && 'section_tipo' in locator) {
+					const current_section_tipo = (locator as any).section_tipo;
+					if (current_section_tipo !== undefined && current_section_tipo !== null) {
+						result.push({
+							...item,
+							value: current_section_tipo,
+							// @ts-ignore
+							section_id: '__split__' + split_idx++
+						});
+					}
+				}
+			}
+		}
+		return result.length > 0 ? result : null;
+	}
 
 	for (const item of data) {
 		const val = item.value;
@@ -141,12 +196,39 @@ export function map_section_tipo_to_name(data: data_item[] | null, options: pars
  *
  * @param data    - Array of data items
  * @param options - Parser options
+ * @param options.split - When true, emits one data_item per extracted term_id
+ *                        with a unique synthetic section_id, enabling downstream
+ *                        merge(unique) to deduplicate individual values.
  * @returns Array of data items with term_id(s) as value (array of strings)
  */
 export function get_term_id(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 	const result: data_item[] = [];
+
+	const split = (options?.split as boolean) ?? false;
+
+	if (split) {
+		let split_idx = 0;
+		for (const item of data) {
+			const val = item.value;
+			const locators = Array.isArray(val) ? val : [val];
+			for (const loc of locators) {
+				if (typeof loc === 'object' && loc !== null && 'section_tipo' in loc && 'section_id' in loc) {
+					const tid = term_id_from_locator(loc as locator);
+					if (tid !== null) {
+						result.push({
+							...item,
+							value: tid,
+							// @ts-ignore
+							section_id: '__split__' + split_idx++
+						});
+					}
+				}
+			}
+		}
+		return result.length > 0 ? result : null;
+	}
 
 	for (const item of data) {
 		const val = item.value;
