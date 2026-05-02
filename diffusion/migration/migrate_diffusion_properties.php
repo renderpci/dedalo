@@ -2238,7 +2238,8 @@ function process_node($node, $level) {
 								$final_args = null;
 								$is_publicable_cp = $props->process_dato_arguments->is_publicable ?? null;
 								$check_general_merge = $args_node->output ?? null;
-								
+								$final_target_component_properties = null;
+
 								while($args_node) {
 									$method = $args_node->component_method ?? null;
 									$target = trim($args_node->target_component_tipo ?? "");
@@ -2251,6 +2252,10 @@ function process_node($node, $level) {
 									
 									if(isset($args_node->split_string_value)) {
 										$output_options_cp->records_separator = $args_node->split_string_value;
+									}
+
+									if(isset($args_node->target_component_properties)) {
+										$final_target_component_properties= $args_node->target_component_properties;
 									}
 									
 									$ca = $args_node->custom_arguments[0] ?? null;
@@ -2479,7 +2484,8 @@ function process_node($node, $level) {
 										$output,
 										null,
 										(empty((array)$output_options_cp) ? null : $output_options_cp),
-										$ddo_map_cp
+										$ddo_map_cp,
+										$final_target_component_properties
 									);									
 								}
 								
