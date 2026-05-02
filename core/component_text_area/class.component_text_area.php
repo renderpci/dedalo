@@ -1432,9 +1432,7 @@ class component_text_area extends component_string_common {
 	public function get_geojson_data() : array {
 
 		// geolocation_data
-			$ar_elements = $this->build_geolocation_data(
-				true
-			);
+			$ar_elements = $this->build_geolocation_data();
 
 		// fallback optional
 			if ( empty($ar_elements) ) {
@@ -1487,10 +1485,9 @@ class component_text_area extends component_string_common {
 	* BUILD_GEOLOCATION_DATA
 	* This method is v6 rebuilt to mimic v5 version. Note that now, georef data is no longer stored
 	* into the tag HTML dataset, but is moved to related component_geolocation
-	* @param bool $geojson = false
 	* @return array $ar_elements
 	*/
-	public function build_geolocation_data(bool $geojson=false) : array {
+	public function build_geolocation_data() : array {
 
 		$ar_elements = [];
 
@@ -1540,30 +1537,9 @@ class component_text_area extends component_string_common {
 			// Therefore, the data in component_geolocation will be used
 			foreach ($lib_data as $layer) {
 
-				if ($geojson===true) {
+				$layer_data = $layer->layer_data ?? null;
+				$layer_id	= $layer->layer_id ?? null;
 
-					// full GEOJSON case
-
-					$layer_data = $layer->layer_data ?? null;
-
-				}else{
-
-					// simple coordinates case (default)
-
-					// layer data filtered
-					$layer_data = [];
-					if ($layer->layer_data && $layer->layer_data->features) {
-						foreach ($layer->layer_data->features as $feature) {
-							if (isset($feature->geometry)) {
-								$layer_data[] = (object)[
-									'type' => $feature->geometry->type,
-									'lon' => $feature->geometry->coordinates[0] ?? null,
-									'lat' => $feature->geometry->coordinates[1] ?? null
-								];
-							}
-						}
-					}
-				}
 				// create a new value for the layer
 				$current_value = (object)[
 					'layer_id'		=> $layer->layer_id,
