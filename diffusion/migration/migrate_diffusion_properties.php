@@ -3875,6 +3875,85 @@ function process_node($node, $level) {
 
 							break;
 						
+						case 'component_geolocation':
+
+							$is_empty_geolocation = function($props) {
+								if (empty($props)) return true;
+								$v5_props = is_object($props) ? clone($props) : (object)$props;
+								unset($v5_props->source);
+								unset($v5_props->varchar);
+								unset($v5_props->info);
+								unset($v5_props->is_publicable);
+								unset($v5_props->ts_map);
+								return empty((array)$v5_props);
+							};
+
+							// 0 empty propiedades: default V6 behavior — delegate to get_diffusion_value() trait
+							// The trait builds letter-id ddo_map from related components + parser_text::text_format
+							if($is_empty_geolocation($props)) {
+
+								$ddo_map_geolocation = [
+									(object)[
+										'tipo'         => $rel_info['tipo'],
+										'section_tipo' => 'self'
+									]
+								];
+
+								$new_props = new stdClass(); $new_props->process = get_diffusion_value(
+									$rel_info['tipo'],
+									'component_geolocation',
+									null,
+									null,
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri empty props -> get_diffusion_value (letter-id ddo_map)\n";
+								break;
+							}
+
+							// 1 "data_to_be_used" = "dato"
+							$data_to_be_used_geo = $props->data_to_be_used ?? null;
+							if($data_to_be_used_geo && $data_to_be_used_geo === 'dato') {
+
+								$new_props = new stdClass(); $new_props->process = get_dato(
+									'component_geolocation',
+									null,
+									null,
+									null,
+									null
+								);
+
+								// "is_publicable" = true
+								if(isset($props->is_publicable) && $props->is_publicable === true){
+									$new_props->is_publishable = $props->is_publicable;
+								}
+
+								// "varchar" = 256
+								if(isset($props->varchar)){
+									$new_props->varchar = $props->varchar;
+								}
+
+								echo "{$indent}- [$tipo] $model_name\n";
+								echo "{$indent}  [RULE APPLIED] iri data_to_be_used=dato -> get_dato()\n";
+								break;
+							}
+							
+
+							break;
 						case 'component_date':
 
 							$is_empty_cd = function($props) {
@@ -4053,9 +4132,9 @@ function process_node($node, $level) {
 								break;
 							}
 
-							// 1 proces datao with geojson
+							// 1 proces data with geojson
 							$process_dato = $props->process_dato ?? null;
-							if($process_dato && $process_dato === "diffusion_sql::build_geolocation_data_geojson") {
+							if($process_dato && ($process_dato === "diffusion_sql::build_geolocation_data_geojson" || $process_dato === "diffusion_sql::build_geolocation_data")) {
 
 								// Specific for geojson
 								$parser_process = (object)[
@@ -4074,7 +4153,7 @@ function process_node($node, $level) {
 							}
 
 
-							// 2 proces datao with geojson
+							// 2 proces data with images
 							$process_dato_arguments = $props->process_dato_arguments ?? null;
 							$component_method = $process_dato_arguments->component_method ?? null;
 							if($component_method && $component_method === "get_diffusion_value_with_images") {
