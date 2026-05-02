@@ -1745,10 +1745,19 @@ final class dd_utils_api {
 			session_write_close();
 
 		// options
-			$pid		= $rqo->options->pid;
+			$pid		= $rqo->options->pid ?? null;
 			$user_id	= $rqo->options->user_id ?? logged_user_id();
 
-		$response = processes::stop($pid, $user_id);
+		// validate pid
+			if ($pid === null) {
+				$response = new stdClass();
+				$response->result = false;
+				$response->msg = 'Invalid PID: process does not have an associated system process';
+				$response->errors = ['invalid pid: null'];
+				return $response;
+			}
+
+		$response = processes::stop((int)$pid, $user_id);
 
 
 		return $response;
