@@ -75,6 +75,25 @@ function get_diffusion_dato($model, $custom_arguments, $process_dato_arguments, 
 				],
 				"output_format" => "json"
 			];
+
+			$merge_option = 'pipe';
+			if ($output === 'merged') {
+				$merge_option = null;
+			} else if ($output === 'merged_group') {
+				$merge_option = 'flat';
+			} else if ($output === 'merged_unique') {
+				$merge_option = 'unique';
+			}
+
+			if ($merge_option !== null) {
+				$parser_process->parser[] = (object)[
+					'fn' => 'parser_helper::merge',
+					'options' => (object)[
+						'merge' => $merge_option
+					]
+				];
+			}
+
 			if($ddo_map){
 				$parser_process->ddo_map = $ddo_map;
 			}
