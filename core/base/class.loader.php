@@ -78,6 +78,8 @@ include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
 include DEDALO_CORE_PATH . '/component_common/class.lock_components.php';
 include DEDALO_CORE_PATH . '/component_media_common/class.component_media_common.php';
 include DEDALO_CORE_PATH . '/component_relation_common/class.component_relation_common.php';
+// Security
+include DEDALO_CORE_PATH . '/security/class.security.php';
 // Search
 include DEDALO_CORE_PATH . '/search/class.search.php';
 include DEDALO_CORE_PATH . '/search/class.search_tm.php';
