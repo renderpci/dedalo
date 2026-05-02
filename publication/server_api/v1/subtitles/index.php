@@ -55,8 +55,13 @@
 		$tc_out		= isset($_GET['tc_out']) ? (int)$safe_xss($_GET['tc_out']) : false;
 
 	// Load class
-		$skip_api_web_user_code_verification = true;
-		// include(dirname(dirname(__FILE__)) .'/config_api/server_config_api.php');
+		// SEC-058: subtitles endpoint must require the shared `code` like every
+		// other publication endpoint. The previous `$skip_api_web_user_code_verification = true`
+		// gave anonymous read access to transcribed text, defeating the
+		// publication model and leaking restricted segments. Clients (HTML
+		// `<track>` elements or player JS) must append `?code=...&...` when
+		// building the subtitle URL — `TEXT_SUBTITLES_URL_BASE` is composed
+		// with the other params in the caller.
 		include dirname(dirname(__FILE__)) .'/config_api/server_config_api.php';
 		// include_once(dirname(dirname(dirname(dirname(dirname(__FILE__))))).'/tools/tool_subtitles/class.subtitles.php');
 		// include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/shared/class.subtitles.php';
