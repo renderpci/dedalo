@@ -4321,9 +4321,7 @@ function process_node($node, $level) {
 							}
 
 							break;
-						
-							default:
-							break;
+
 						case 'component_relation_children':
 
 							$is_empty_rc = function($props) {
