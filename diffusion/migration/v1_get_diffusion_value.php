@@ -2,7 +2,7 @@
 
 use PhpParser\Node\Stmt\Switch_;
 
-function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arguments, $output, $data_to_be_used, $option_obj, $ddo_map){
+function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arguments, $output, $data_to_be_used, $option_obj, $ddo_map, $target_component_properties=null){
 
 	$process = new stdClass();
 
@@ -625,8 +625,11 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 			//empty options
 			if(empty($option_obj)) {
 
-				$fields_separator =', ';
-				$records_separator =' - ';
+				$option_obj = $target_component_properties->option_obj ?? null;
+
+				$fields_separator = $option_obj->separator_fields ?? ', ';
+				$records_separator = $option_obj->divisor ?? $option_obj->separator_rows  ?? ' - ';
+				$group_by_section_id = $option_obj->group_by_section_id ?? null ;
 
 				$ontology_node = ontology_node::get_instance($tipo);
 				$properties = $ontology_node->get_properties();
@@ -669,16 +672,21 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 						}
 					}
 				}
+
+				$parser_options = new stdClass();									
+					$parser_options->pattern = implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? []));
+					$parser_options->records_separator = $records_separator;
+					$parser_options->fields_separator = $fields_separator;
+
+				if($group_by_section_id){
+					$parser_options->group_by_section_id = $group_by_section_id;
+				}
 				
 				$parser_process = (object)[					
 					'parser' => [
 						(object)[
 							'fn' => 'parser_text::text_format',
-							'options' => (object)[
-								'pattern' => implode($fields_separator, array_map(fn($l) => '${' . $l . '}', $letter_ids ?? [])),
-								'records_separator' => $records_separator,
-								'fields_separator' => $fields_separator
-							]
+							'options' => $parser_options
 						]
 					],
 					"output_format" => "string"
