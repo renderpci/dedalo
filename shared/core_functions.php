@@ -429,8 +429,15 @@ function curl_request(object $options) : object {
 		$returntransfer	= $options->returntransfer ?? true;
 		$followlocation	= $options->followlocation ?? true;
 		$header			= $options->header ?? true;
-		$ssl_verifypeer	= $options->ssl_verifypeer ?? false;
-		$ssl_verifyhost	= $options->ssl_verifyhost ?? false;
+		// SEC-073: TLS verification now defaults to ON. Callers may opt out
+		// explicitly by passing ssl_verifypeer=false / ssl_verifyhost=0, but
+		// the default posture must protect against MITM on every outbound
+		// HTTPS call. CURLOPT_SSL_VERIFYHOST accepts int (0 or 2); we accept
+		// bool inputs for back-compat and coerce to 2 when truthy.
+		$ssl_verifypeer	= $options->ssl_verifypeer ?? true;
+		$ssl_verifyhost	= $options->ssl_verifyhost ?? 2;
+		if ($ssl_verifyhost === true)  { $ssl_verifyhost = 2; }
+		if ($ssl_verifyhost === false) { $ssl_verifyhost = 0; }
 		$timeout		= isset($options->timeout) ? (int)$options->timeout : 5; // seconds
 		$proxy			= $options->proxy ?? false;
 		$httpheader		= $options->httpheader ?? null; // array('Content-Type:application/json')
