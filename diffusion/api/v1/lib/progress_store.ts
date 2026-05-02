@@ -183,6 +183,47 @@ export function delete_process(process_id: string): void {
 
 
 /**
+ * CANCEL_PROCESS
+ * Marks a running process as cancelled.
+ * The background loop checks this flag between chunks and stops early.
+ * @param process_id - The process ID
+ * @returns true if the process was found and cancelled, false otherwise
+ */
+export function cancel_process(process_id: string): boolean {
+
+	const entry = store.get(process_id);
+	if (!entry) return false;
+
+	if (!entry.is_running) return false;
+
+	entry.is_running = false;
+	entry.data.msg = 'Process cancelled by user';
+	entry.total_time = format_elapsed(Date.now() - entry.started_at);
+	entry.errors = [...(entry.errors || []), 'Process cancelled by user'];
+
+	notify_listeners(process_id, entry);
+
+	return true;
+}
+
+
+
+/**
+ * IS_PROCESS_CANCELLED
+ * Checks whether a process has been marked as cancelled.
+ * Used by the background loop to decide whether to continue.
+ * @param process_id - The process ID
+ * @returns true if the process is no longer running (cancelled or finished)
+ */
+export function is_process_cancelled(process_id: string): boolean {
+	const entry = store.get(process_id);
+	if (!entry) return true;
+	return !entry.is_running;
+}
+
+
+
+/**
  * SUBSCRIBE_TO_PROCESS
  * Register a callback fired immediately on every state change.
  * The callback receives a shallow snapshot of progress_data.
