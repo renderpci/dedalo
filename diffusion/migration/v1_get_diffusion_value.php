@@ -1578,6 +1578,45 @@ function get_diffusion_value($tipo, $model, $custom_arguments, $process_dato_arg
 							$process->output_sample = 'MIB';
 							break;
 						}
+
+						if($model_target === 'relation_list'){
+
+							$target_component_properties = $process_dato_arguments->target_component_properties ?? null;
+							$target_pda = $target_component_properties->process_dato_arguments ?? null;
+
+							if ($target_pda && isset($target_pda->filter_section)) {
+								$second_entry->section_filter = $target_pda->filter_section;
+							}
+
+							$parsers = [];
+
+							$target_format = $target_pda->format ?? null;
+							if ($target_format === 'section_id') {
+								$parsers[] = (object)[
+									'fn' => 'parser_locator::get_section_id',
+									'options' => (object)[
+										'split' => true
+									]
+								];
+							}
+
+							$remove_duplicates = $target_pda->remove_duplicates ?? false;
+							if ($remove_duplicates) {
+								$parsers[] = (object)[
+									'fn' => 'parser_helper::merge',
+									'options' => (object)[
+										'merge' => 'unique'
+									]
+								];
+							}
+
+							$process->parser = $parsers;
+							$process->ddo_map = $ddo_map;
+							$process->output_format = 'json';
+
+							break;
+						}
+						// any other component
 						$process = get_diffusion_value(
 							$target_component_tipo,
 							$model_target,
