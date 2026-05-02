@@ -22,11 +22,13 @@ const AUTH_TIMEOUT_MS    = 5_000;   // 5 seconds for auth check calls
  *
  * @param request_rqo   - The RQO from the client
  * @param cookie_header  - Raw Cookie header from the browser request (forwarded as-is)
+ * @param csrf_token     - CSRF token from the browser request (forwarded as header)
  * @returns The parsed PHP API response
  */
 export async function call_dd_diffusion_api(
 	request_rqo:   rqo,
-	cookie_header?: string
+	cookie_header?: string,
+	csrf_token?:    string
 ): Promise<php_api_response> {
 
 	// Inject dd_api for the PHP router
@@ -43,6 +45,11 @@ export async function call_dd_diffusion_api(
 	// Forward the browser's Cookie header for PHP session authentication
 	if (cookie_header) {
 		headers['Cookie'] = cookie_header;
+	}
+
+	// Forward the CSRF token for PHP session CSRF validation
+	if (csrf_token) {
+		headers['X-Dedalo-Csrf-Token'] = csrf_token;
 	}
 
 	try {

@@ -19,3 +19,16 @@
 export function extract_cookie_header(request: Request): string | null {
 	return request.headers.get('Cookie') ?? null;
 }
+
+
+
+/**
+ * EXTRACT_CSRF_TOKEN_HEADER
+ * Extracts the X-Dedalo-Csrf-Token header from an incoming request for forwarding.
+ *
+ * @param request - The incoming HTTP request
+ * @returns CSRF token string or null
+ */
+export function extract_csrf_token(request: Request): string | null {
+	return request.headers.get('X-Dedalo-Csrf-Token') ?? null;
+}
