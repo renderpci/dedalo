@@ -434,6 +434,7 @@ export const render_stream = function(options) {
 		const id					= options.id
 		const pid					= options.pid
 		const pfile					= options.pfile
+		const on_stop				= options.on_stop
 		const display_json			= options.display_json ?? (SHOW_DEBUG===true)
 		const delete_local_db_data	= options.delete_local_db_data ?? true
 
@@ -473,14 +474,20 @@ export const render_stream = function(options) {
 		})
 
 	// button_stop_process
+	// Shown when a PID exists (PHP process) or an on_stop callback is provided (Bun/diffusion).
+		const has_stop_capability = pid || on_stop
 		const button_stop_process = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'gear button_stop_process',
+			class_name		: 'gear button_stop_process' + (has_stop_capability ? '' : ' hide'),
 			inner_html		: 'Stop',
 			parent			: process_status_node
 		})
 		button_stop_process.addEventListener('click', function(e) {
 			e.stopPropagation()
+			if (typeof on_stop === 'function') {
+				on_stop()
+				return
+			}
 			data_manager.request({
 				body : {
 					dd_api		: 'dd_utils_api',
@@ -561,7 +568,9 @@ export const render_stream = function(options) {
 
 						ui.update_node_content(info_node.msg_node, msg)
 
-						button_stop_process.classList.remove('hide')
+						if (has_stop_capability) {
+							button_stop_process.classList.remove('hide')
+						}
 
 					}else{
 

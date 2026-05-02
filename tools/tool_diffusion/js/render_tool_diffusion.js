@@ -727,7 +727,25 @@ const publish_content = async (self, options) => {
 	// render base nodes for stream display
 		const render_response = render_stream({
 			container	: response_message,
-			id			: process_id
+			id			: process_id,
+			on_stop		: () => {
+				data_manager.request({
+					url : typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+					body : {
+						dd_api		: 'dd_diffusion_api',
+						action		: 'cancel_process',
+						process_id	: process_id
+					}
+				})
+				.then(function(response){
+					if(SHOW_DEBUG===true) {
+						console.log('cancel_process API response:', response);
+					}
+					if (response.errors && response.errors.length) {
+						alert("Errors: " + response.errors.join('<br>') );
+					}
+				})
+			}
 		})
 
 	// average process time for record
@@ -885,7 +903,25 @@ const update_process_status = (options) => {
 		// the stream reader events
 		const render_response = render_stream({
 			container	: container,
-			id			: process_id
+			id			: process_id,
+			on_stop		: () => {
+				data_manager.request({
+					url : typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+					body : {
+						dd_api		: 'dd_diffusion_api',
+						action		: 'cancel_process',
+						process_id	: process_id
+					}
+				})
+				.then(function(response){
+					if(SHOW_DEBUG===true) {
+						console.log('cancel_process API response:', response);
+					}
+					if (response.errors && response.errors.length) {
+						alert("Errors: " + response.errors.join('<br>') );
+					}
+				})
+			}
 		})
 
 		// average process time for record
