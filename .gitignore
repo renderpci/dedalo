@@ -171,3 +171,4 @@ cline_mcp_settings.json
 diff_*.txt
 /lib/acc
 security-audit
+.rr.yaml
