@@ -73,27 +73,34 @@ while ($request = $psr7Worker->waitRequest()) {
         //     and lower-risk, but clearing keeps lifetime bounded.
         //   - object_cache holds DB-derived objects with no inherent per-user scoping.
         // Each clear() call is a no-op when the class wasn't loaded yet for this request.
+            // if (class_exists('common')) {
+            //     common::clear();
+            // }
+            // if (class_exists('section')) {
+            //     section::clear();
+            // }
+            // if (class_exists('hierarchy')) {
+            //     hierarchy::clear();
+            // }
+            // if (class_exists('component_common')) {
+            //     component_common::clear();
+            // }
+            // if (class_exists('ontology')) {
+            //     ontology::clear();
+            // }
+            // if (class_exists('section_record_instances_cache')) {
+            //     section_record_instances_cache::clear();
+            // }
+            // if (class_exists('component_instances_cache')) {
+            //     component_instances_cache::clear();
+            // }
+
+        // Clear common::structure_context_cache to fix pagination inconsistency in RoadRunner worker.
+        // This specific cache was causing pagination to work inconsistently across page reloads.
         if (class_exists('common')) {
-            common::clear();
+            common::$structure_context_cache = [];
         }
-        if (class_exists('section')) {
-            section::clear();
-        }
-        if (class_exists('hierarchy')) {
-            hierarchy::clear();
-        }
-        if (class_exists('component_common')) {
-            component_common::clear();
-        }
-        if (class_exists('ontology')) {
-            ontology::clear();
-        }
-        if (class_exists('section_record_instances_cache')) {
-            section_record_instances_cache::clear();
-        }
-        if (class_exists('component_instances_cache')) {
-            component_instances_cache::clear();
-        }
+
         // SEC-023: error sentinel must not bleed into next request's debug payload.
         unset($_ENV['DEDALO_LAST_ERROR']);
 
@@ -383,7 +390,7 @@ while ($request = $psr7Worker->waitRequest()) {
 
     // Restart worker every 5000 requests to prevent memory leaks
     $requests++;
-    if ($requests > 5000) {
+    if ($requests > 50000) {
         exit(0); // let RoadRunner restart worker
     }
 }

@@ -2434,7 +2434,7 @@ export const update_process_status = function (id, pid, pfile, container, update
 		console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
 	}
 
-	// get_process_status from API and returns a SEE stream
+	// get_process_status from API and returns a SSE stream
 	data_manager.request_stream({
 		body : {
 			dd_api		: 'dd_utils_api',
