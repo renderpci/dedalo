@@ -16,7 +16,7 @@ import { check_bun_health, enrich_diffusion_info_with_readiness } from './lib/st
 import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
-import { extract_cookie_header }      from './lib/session';
+import { extract_cookie_header, extract_csrf_token } from './lib/session';
 import {
 	create_process,
 	update_progress,
@@ -90,6 +90,7 @@ async function run_background_diffusion(
 	process_id: string,
 	request_rqo: rqo,
 	cookie_header: string | null,
+	csrf_token: string | null,
 	start_time: number,
 	estimated_total: number
 ): Promise<void> {
@@ -136,7 +137,7 @@ async function run_background_diffusion(
 			// 3. CALL PHP API (BRIDGING BACKEND)
 			// Forwards the paginated request to PHP. PHP builds the runtime ontology
 			// objects, resolves components, and returns agnostic, unparsed record trees.
-			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
+			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined, csrf_token ?? undefined);
 
 			if (!php_response.result) {
 				const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
@@ -259,7 +260,7 @@ async function run_background_diffusion(
  * Main diffusion endpoint — returns a streaming response.
  * Starts background processing and streams polled progress in real-time.
  */
-function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): Response {
+function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null, csrf_token: string | null): Response {
 
 	const start_time = Date.now();
 	const options     = request_rqo.options ?? {};
@@ -270,7 +271,7 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null): 
 	create_process(estimated_total, process_id);
 
 	// 1. Kick off the background process independently
-	run_background_diffusion(process_id, request_rqo, cookie_header, start_time, estimated_total)
+	run_background_diffusion(process_id, request_rqo, cookie_header, csrf_token, start_time, estimated_total)
 		.catch(console.error);
 
 	// 2. Stream progress updates back to the client via push-notify
@@ -349,6 +350,7 @@ async function run_background_rdf_diffusion(
 	process_id:     string,
 	request_rqo:    rqo,
 	cookie_header:  string | null,
+	csrf_token:     string | null,
 	start_time:     number,
 	estimated_total: number,
 	diffusion_type: 'rdf' | 'xml'
@@ -398,7 +400,7 @@ async function run_background_rdf_diffusion(
 			});
 
 			// 3. CALL PHP
-			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined);
+			const php_response = await call_dd_diffusion_api(chunk_rqo, cookie_header ?? undefined, csrf_token ?? undefined);
 
 			if (!php_response.result) {
 				const err_msg = `PHP API error (chunk ${chunk_idx + 1}): ${php_response.msg}`;
@@ -539,6 +541,7 @@ async function run_background_rdf_diffusion(
 function handle_diffuse_rdf_stream(
 	request_rqo:    rqo,
 	cookie_header:  string | null,
+	csrf_token:     string | null,
 	diffusion_type: 'rdf' | 'xml'
 ): Response {
 
@@ -551,7 +554,7 @@ function handle_diffuse_rdf_stream(
 	create_process(estimated_total, process_id);
 
 	run_background_rdf_diffusion(
-		process_id, request_rqo, cookie_header, start_time, estimated_total, diffusion_type
+		process_id, request_rqo, cookie_header, csrf_token, start_time, estimated_total, diffusion_type
 	).catch(console.error);
 
 	const stream = new ReadableStream({
@@ -696,11 +699,12 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
  * Bun analyzes each diffusion_element type from the PHP result and adds
  * connection_status to every section_diffusion_node before returning.
  */
-async function handle_get_diffusion_info(request_rqo: rqo, cookie_header: string | null): Promise<object> {
+async function handle_get_diffusion_info(request_rqo: rqo, cookie_header: string | null, csrf_token: string | null): Promise<object> {
 
 	const php_response = await call_dd_diffusion_api(
 		{ ...request_rqo, action: 'get_diffusion_info' },
-		cookie_header ?? undefined
+		cookie_header ?? undefined,
+		csrf_token ?? undefined
 	);
 
 	if (!php_response.result || typeof php_response.result !== 'object') {
@@ -722,11 +726,12 @@ async function handle_get_diffusion_info(request_rqo: rqo, cookie_header: string
  * HANDLE_VALIDATE
  * Pass-through validation to PHP API.
  */
-async function handle_validate(request_rqo: rqo, cookie_header: string | null): Promise<object> {
+async function handle_validate(request_rqo: rqo, cookie_header: string | null, csrf_token: string | null): Promise<object> {
 
 	const php_response = await call_dd_diffusion_api(
 		{ ...request_rqo, action: 'validate' },
-		cookie_header ?? undefined
+		cookie_header ?? undefined,
+		csrf_token ?? undefined
 	);
 
 	return php_response;
@@ -738,11 +743,12 @@ async function handle_validate(request_rqo: rqo, cookie_header: string | null): 
  * HANDLE_GET_ONTOLOGY_MAP
  * Pass-through to PHP API.
  */
-async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string | null): Promise<object> {
+async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string | null, csrf_token: string | null): Promise<object> {
 
 	const php_response = await call_dd_diffusion_api(
 		{ ...request_rqo, action: 'get_ontology_map' },
-		cookie_header ?? undefined
+		cookie_header ?? undefined,
+		csrf_token ?? undefined
 	);
 
 	return php_response;
@@ -793,6 +799,9 @@ const server = Bun.serve({
 		// Extract Cookie header for passthrough to PHP API
 		const cookie_header = extract_cookie_header(request);
 
+		// Extract CSRF token for passthrough to PHP API
+		const csrf_token = extract_csrf_token(request);
+
 		// Route by action
 		const action = body.action;
 
@@ -818,6 +827,7 @@ const server = Bun.serve({
 							return handle_diffuse_rdf_stream(
 								body,
 								cookie_header,
+								csrf_token,
 								diffusion_type as 'rdf' | 'xml'
 							);
 						}
@@ -826,13 +836,13 @@ const server = Bun.serve({
 							// TODO: Implement Socrata-specific handling
 							// For now, fall through to streaming SQL behavior
 							console.warn(`[diffuse] Socrata type not yet fully implemented, using streaming fallback`);
-							return handle_diffuse_stream(body, cookie_header);
+							return handle_diffuse_stream(body, cookie_header, csrf_token);
 						}
 
 						case 'sql':
 						default: {
 							// Streaming SSE for progress tracking with database insertion
-							return handle_diffuse_stream(body, cookie_header);
+							return handle_diffuse_stream(body, cookie_header, csrf_token);
 						}
 					}
 				}
@@ -847,11 +857,11 @@ const server = Bun.serve({
 					return handle_get_process_status(body as any);
 				}
 				case 'validate': {
-					const result = await handle_validate(body, cookie_header);
+					const result = await handle_validate(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				case 'get_ontology_map': {
-					const result = await handle_get_ontology_map(body, cookie_header);
+					const result = await handle_get_ontology_map(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				case 'list_processes': {
@@ -877,7 +887,7 @@ const server = Bun.serve({
 					return Response.json({ result: health.result, msg: health.msg, data: health });
 				}
 				case 'get_diffusion_info': {
-					const result = await handle_get_diffusion_info(body, cookie_header);
+					const result = await handle_get_diffusion_info(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				default:
