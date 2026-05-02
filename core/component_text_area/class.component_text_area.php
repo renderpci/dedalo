@@ -1533,6 +1533,27 @@ class component_text_area extends component_string_common {
 				return [];
 			}
 
+		// extract text from raw text_area data per geo tag layer_id
+			$text_map = [];
+			$data		= $this->get_data();
+			$raw_text	= $data[0]->value ?? '';
+			if (!empty($raw_text)) {
+				$pattern_geo = TR::get_mark_pattern('geo', false);
+				// Capture group 4 = layer_id (numeric id from geo tag)
+				// Append ([^<]*) to capture text after the tag
+				$pattern_geo_text = '/' . $pattern_geo . '([^<]*)/u';
+				if (preg_match_all($pattern_geo_text, $raw_text, $matches, PREG_SET_ORDER)) {
+					foreach ($matches as $match) {
+						$layer_id	= (int) $match[4];
+						$text		= end($match) ?? '';
+						$text		= str_replace('&nbsp;', ' ', $text);
+						$text		= strip_tags($text);
+						$text		= trim($text);
+						$text_map[$layer_id] = $text;
+					}
+				}
+			}
+
 			// (!) Currently, consistency between component_text_area and component_geolocation cannot be guaranteed.
 			// Therefore, the data in component_geolocation will be used
 			foreach ($lib_data as $layer) {
@@ -1542,8 +1563,8 @@ class component_text_area extends component_string_common {
 
 				// create a new value for the layer
 				$current_value = (object)[
-					'layer_id'		=> $layer->layer_id,
-					'text'			=> '', // only to maintain v5 diffusion format
+					'layer_id'		=> $layer_id,
+					'text'			=> $text_map[$layer_id] ?? '',
 					'layer_data'	=> $layer_data
 				];
 
@@ -1552,8 +1573,6 @@ class component_text_area extends component_string_common {
 			}
 
 		// compare result
-			$data		= $this->get_data();
-			$raw_text	= $data[0]->value ?? '';
 			// split by pattern
 			$pattern_geo_full	= TR::get_mark_pattern('geo_full', true);
 			$ar_geo_tag			= preg_split($pattern_geo_full, $raw_text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
