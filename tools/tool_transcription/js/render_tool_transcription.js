@@ -695,7 +695,8 @@ const get_server_status = function (options) {
 					server_process_id,
 					'status'
 				)
-				nodes.status_container.innerHTML = self.get_tool_label('inactive') || 'Inactive'
+				// SEC-XSS-006: status labels are plain text
+			nodes.status_container.textContent = self.get_tool_label('inactive') || 'Inactive'
 				nodes.status_container.classList.remove('processing');
 				nodes.button_automatic_transcription.classList.remove('disable');
 				break;
@@ -706,7 +707,7 @@ const get_server_status = function (options) {
 					check_current_server_status()
 				}, 4000)
 
-				nodes.status_container.innerHTML = self.get_tool_label('processing') || 'Processing'
+				nodes.status_container.textContent = self.get_tool_label('processing') || 'Processing'
 				nodes.status_container.classList.add('processing');
 				nodes.button_automatic_transcription.classList.add('disable');
 				nodes.button_automatic_transcription.active = false
@@ -720,7 +721,7 @@ const get_server_status = function (options) {
 					server_process_id,
 					'status'
 				)
-				nodes.status_container.innerHTML = self.get_tool_label('finished') || 'Process done'
+				nodes.status_container.textContent = self.get_tool_label('finished') || 'Process done'
 				nodes.status_container.classList.remove('processing');
 				nodes.button_automatic_transcription.classList.remove('disable');
 
@@ -802,7 +803,8 @@ const render_automatic_transcription = function (options) {
 			const lang = self.transcription_component.lang
 
 			// update the lang_info value
-			lang_info.innerHTML = get_current_lang_info(lang)
+			// SEC-XSS-006: lang_info is plain text like "Greek | lg-ell | el"
+			lang_info.textContent = get_current_lang_info(lang)
 
 			// options to be sent to engine
 			const automatic_transcription_options = {
@@ -1068,10 +1070,10 @@ const render_automatic_transcription = function (options) {
 				parent			: configuration_container
 			})
 			// first value
-			lang_info.innerHTML = get_current_lang_info(self.transcription_component.lang)
+			lang_info.textContent = get_current_lang_info(self.transcription_component.lang)
 			// event component_text_area render on refresh (fired on change lang selector value)
 			const update_lang_info = () => {
-				lang_info.innerHTML = get_current_lang_info(self.transcription_component.lang)
+				lang_info.textContent = get_current_lang_info(self.transcription_component.lang)
 			}
 			event_manager.subscribe(`render_${self.transcription_component.id}`, update_lang_info);
 
