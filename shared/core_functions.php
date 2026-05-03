@@ -2714,6 +2714,113 @@ function saml_safe_redirect_target(mixed $relay_state) : string {
 
 
 
+/**
+* SAML_ASSERTION_REGISTER_OR_REJECT
+* SEC-078: SAML assertion replay protection.
+*
+* `OneLogin\Saml2\Response::isValid()` only verifies signature + the
+* `NotOnOrAfter` validity window. Inside that window the very same signed
+* SAMLResponse XML can be POSTed to `/core/login/saml/acs.php` repeatedly,
+* which would log the user in over and over (fixation/escalation when
+* combined with a stolen RelayState). The SAML core spec explicitly
+* mandates one-time-use of each assertion ID, so we maintain a small
+* on-disk cache of consumed assertion IDs and refuse any duplicate seen
+* before the assertion's `NotOnOrAfter` expiry.
+*
+* Storage: one zero-byte file per assertion under
+*   `DEDALO_SESSIONS_PATH/saml_seen/<sha256(assertion_id)>.lock`
+* The `fopen('xb')` create-or-fail open is the atomic primitive — only the
+* first request through the door succeeds; concurrent replays observe
+* `false` and are rejected. We also opportunistically prune entries older
+* than the longest possible NotOnOrAfter window (1 hour cap) to keep the
+* directory bounded under steady traffic.
+*
+* @param object $samlResponse OneLogin\Saml2\Response (or compatible).
+* @return bool true when the assertion is fresh and now consumed,
+*              false when it was seen before (caller MUST reject the
+*              login attempt) or when the cache cannot be reached.
+*/
+function saml_assertion_register_or_reject(object $samlResponse) : bool {
+
+	// Pull assertion id + NotOnOrAfter from the response. Both are
+	// available on `OneLogin\Saml2\Response` since v3.x; we guard with
+	// method_exists() to remain compatible with older or stubbed shims.
+	$assertion_id = method_exists($samlResponse, 'getAssertionId')
+		? (string)$samlResponse->getAssertionId()
+		: '';
+	if ($assertion_id === '') {
+		// Without a stable id we cannot deduplicate; fail closed.
+		debug_log(__FUNCTION__
+			. ' SEC-078 assertion has no Id; rejecting to prevent replay.'
+			, logger::ERROR
+		);
+		return false;
+	}
+
+	$expiry = method_exists($samlResponse, 'getAssertionNotOnOrAfter')
+		? (int)$samlResponse->getAssertionNotOnOrAfter()
+		: 0;
+	if ($expiry <= 0) {
+		// Cap to 5 minutes (typical SAML default) when the library does
+		// not expose the value — better than caching forever.
+		$expiry = time() + 300;
+	}
+	// Hard cap so a hostile IdP cannot push the cache TTL out forever.
+	$max_expiry = time() + 3600;
+	if ($expiry > $max_expiry) {
+		$expiry = $max_expiry;
+	}
+
+	// Cache directory under DEDALO_SESSIONS_PATH (already gitignored,
+	// already writable by the PHP process).
+	$base = defined('DEDALO_SESSIONS_PATH')
+		? rtrim((string)DEDALO_SESSIONS_PATH, '/')
+		: sys_get_temp_dir() . '/dedalo_sessions';
+	$dir = $base . '/saml_seen';
+	if (!is_dir($dir)) {
+		// Recursive mkdir; ignore the race where another worker created it.
+		@mkdir($dir, 0700, true);
+		if (!is_dir($dir)) {
+			debug_log(__FUNCTION__
+				. ' SEC-078 cannot create replay cache dir: ' . $dir
+				, logger::ERROR
+			);
+			return false;
+		}
+	}
+
+	// Sanitised filename. SHA-256 over the assertion id removes any
+	// path-traversal risk should the IdP send unusual characters.
+	$file = $dir . '/' . hash('sha256', $assertion_id) . '.lock';
+
+	// Opportunistic GC of stale entries (1-in-50 odds per request to keep
+	// the cost amortised).
+	if (mt_rand(1, 50) === 1) {
+		$cutoff = time() - 3600;
+		foreach ((array)glob($dir . '/*.lock') as $stale) {
+			if (@filemtime($stale) < $cutoff) {
+				@unlink($stale);
+			}
+		}
+	}
+
+	// Atomic create-or-fail. PHP's `xb` mode maps to O_CREAT|O_EXCL.
+	$fh = @fopen($file, 'xb');
+	if ($fh === false) {
+		// Already exists — replay.
+		return false;
+	}
+	@fwrite($fh, (string)$expiry);
+	@fclose($fh);
+	// Set mtime to the assertion expiry so the GC sweep above can reason
+	// about freshness without parsing file contents.
+	@touch($file, $expiry);
+
+	return true;
+}//end saml_assertion_register_or_reject
+
+
+
 
 /**
 * GET_COOKIE_PROPERTIES
