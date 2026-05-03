@@ -326,11 +326,12 @@ const render_health_list = function (self) {
 				check_server_health()
 				.then(function(result){
 
-					name_node.innerHTML = `API health call ${i+1}`
+					// SEC-XSS-010: all values are plain text; textContent avoids HTML parsing.
+					name_node.textContent = `API health call ${i+1}`
 
 					const total_time = performance.now() - start_time;
 
-					value_node.innerHTML = JSON.stringify(result, null, 2)
+					value_node.textContent = JSON.stringify(result, null, 2)
 
 					// icon success / failed
 					if (result) {
@@ -349,7 +350,7 @@ const render_health_list = function (self) {
 						failed_list.push('Health API check ', i+1)
 					}
 
-					info_column.innerHTML = `The API health endpoint (${api_health_url}) check takes ${total_time.toFixed(2)}ms.`
+					info_column.textContent = `The API health endpoint (${api_health_url}) check takes ${total_time.toFixed(2)}ms.`
 					if (total_time > 150) {
 						info_column.classList.add('warning')
 					}
@@ -360,11 +361,12 @@ const render_health_list = function (self) {
 				get_environment()
 				.then(function(response){
 
-					name_node.innerHTML = 'API environment call'
+					// SEC-XSS-010
+					name_node.textContent = 'API environment call'
 
 					const total_time = performance.now() - start_time;
 
-					value_node.innerHTML = JSON.stringify(response.result!==false, null, 2)
+					value_node.textContent = JSON.stringify(response.result!==false, null, 2)
 
 					// icon success / failed
 					if (response.result!==false) {
@@ -383,7 +385,7 @@ const render_health_list = function (self) {
 						failed_list.push('Environment API check ', i+1)
 					}
 
-					info_column.innerHTML = `The API environment check takes ${total_time.toFixed(2)}ms.`
+					info_column.textContent = `The API environment check takes ${total_time.toFixed(2)}ms.`
 					if (total_time > 300) {
 						info_column.classList.add('warning')
 					}
