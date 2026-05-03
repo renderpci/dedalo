@@ -1844,11 +1844,41 @@ abstract class diffusion  {
 		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
 		$properties		= $ontology_node->get_properties();
 		$parser			= $properties->diffusion->parser ?? null;
+		// SEC-051: `$parser` comes from ontology properties which are
+		// writable by admin/developer users. Concatenating the value onto
+		// DEDALO_ROOT_PATH without realpath containment would let a
+		// privileged user point parsers at arbitrary files (e.g. a hostile
+		// `.php` uploaded elsewhere). Confine each include to the known
+		// roots where legitimate parsers live.
+		$allowed_roots = array_filter([
+			defined('DEDALO_CORE_PATH')      ? realpath(DEDALO_CORE_PATH)      : null,
+			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : null,
+			defined('DEDALO_TOOLS_PATH')     ? realpath(DEDALO_TOOLS_PATH)     : null,
+		]);
 		if ($parser) {
 			foreach ((array)$parser as $file_path) {
 				try {
 					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
-					include_once $full_path;
+					$real = realpath($full_path);
+					$inside = false;
+					if ($real !== false) {
+						foreach ($allowed_roots as $root) {
+							if (strncmp($real, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) === 0) {
+								$inside = true;
+								break;
+							}
+						}
+					}
+					if (!$inside) {
+						debug_log(__METHOD__
+							. ' SEC-051 refused parser outside allowed roots.' . PHP_EOL
+							. ' file_path: ' . to_string($file_path) . PHP_EOL
+							. ' full_path: ' . to_string($full_path)
+							, logger::ERROR
+						);
+						continue;
+					}
+					include_once $real;
 				} catch (Exception $e) {
 					debug_log(__METHOD__
 						. ' Ignored parser class file. File do not exists' . PHP_EOL
