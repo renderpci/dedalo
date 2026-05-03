@@ -2367,6 +2367,19 @@ class component_media_common extends component_common {
 	*/
 	public function get_media_path_dir(string $quality) : string {
 
+		// SEC-065: `$quality` is interpolated into a filesystem path; an unchecked
+		// value (e.g. "../..") would escape the media root. We restrict $quality
+		// to the same strict identifier grammar we use for key_dir (alphanumeric,
+		// underscore, hyphen, dot) and fall back to the original quality on
+		// mismatch. No caller legitimately needs path separators in $quality.
+		if (preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
+			debug_log(__METHOD__
+				. ' SEC-065: rejecting unsafe quality: ' . to_string($quality)
+				, logger::ERROR
+			);
+			$quality = (string)$this->get_original_quality();
+		}
+
 		if(isset($this->external_source)) {
 
 			$external_parts		= pathinfo($this->external_source);
