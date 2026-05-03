@@ -392,11 +392,34 @@ class area_maintenance extends area_common {
 	*/
 	public static function get_file_constants(string $file) : array {
 
-		if (!file_exists($file)) {
+		// SEC-069: realpath containment. Every current caller passes a path
+		// built from DEDALO_CONFIG_PATH, but this method is public-static and
+		// could be reached by a future API_ACTIONS entry or by dispatcher
+		// refactor. Resolve the argument and confine it to the known roots.
+		$real = realpath($file);
+		if ($real === false) {
+			return [];
+		}
+		$allowed_roots = array_filter([
+			defined('DEDALO_CONFIG_PATH') ? realpath(DEDALO_CONFIG_PATH) : null,
+			defined('DEDALO_CORE_PATH')   ? realpath(DEDALO_CORE_PATH)   : null,
+		]);
+		$inside = false;
+		foreach ($allowed_roots as $root) {
+			if (strncmp($real, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) === 0) {
+				$inside = true;
+				break;
+			}
+		}
+		if (!$inside) {
+			debug_log(__METHOD__
+				. ' Refused to read file outside allowed roots: '. to_string($file)
+				, logger::ERROR
+			);
 			return [];
 		}
 
-		$input_lines = file_get_contents($file);
+		$input_lines = file_get_contents($real);
 		if(empty($input_lines)) {
 			return [];
 		}
@@ -1083,6 +1106,38 @@ class area_maintenance extends area_common {
 	* @return array
 	*/
 	public static function get_definitions_files( string $directory ) : array {
+
+		// SEC-069: defence-in-depth. All callers pass literal strings from
+		// this fixed set; reject anything else so a future code path that
+		// forwards user input cannot escape the transform_definition_files
+		// root via `..` segments or absolute paths.
+		$allowed_dirs = [
+			'move_tld',
+			'move_locator',
+			'move_to_portal',
+			'move_to_table',
+			'move_lang'
+		];
+		if (!in_array($directory, $allowed_dirs, true)) {
+			debug_log(__METHOD__
+				. ' Refused unknown directory: ' . to_string($directory)
+				, logger::ERROR
+			);
+			return [];
+		}
+
+		// Realpath confinement against the transform_definition_files root.
+		$root      = DEDALO_CORE_PATH . '/base/transform_definition_files';
+		$real_root = realpath($root);
+		$real_dir  = realpath($root . '/' . $directory);
+		if ($real_root === false || $real_dir === false
+			|| strncmp($real_dir, $real_root . DIRECTORY_SEPARATOR, strlen($real_root) + 1) !== 0) {
+			debug_log(__METHOD__
+				. ' Refused path outside transform_definition_files root: ' . to_string($directory)
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		$files_list = get_dir_files(
 			DEDALO_CORE_PATH . '/base/transform_definition_files/'.$directory,
