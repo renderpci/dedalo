@@ -5323,7 +5323,8 @@ function get_ddo_map($current_tipo) {
 			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
 		// config key
-			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+			// SEC-082: AES-256-GCM (authenticated) replacement for legacy CBC.
+			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_v2(DEDALO_SALT_STRING);
 
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = 'default';
