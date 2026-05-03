@@ -1003,6 +1003,36 @@ function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 	}
 }//end dedalo_decrypt_openssl
 
+
+
+/**
+* DEDALO_DERIVE_KEY_V2
+* SEC-093: HKDF-SHA256 key derivation for the v2 encryption helpers.
+*
+* Combines the runtime master string with `DEDALO_INFO_KEY` as the HKDF
+* salt so two installs that share the master but have different
+* `DEDALO_INFO_KEY` values produce non-interchangeable ciphertexts.
+* Falls back to a single SHA-256 mix when `hash_hkdf()` is unavailable
+* (PHP < 7.1.2). The `info` parameter pins the derived key to the v2
+* AES-256-GCM scheme, so future schemes can derive distinct keys from
+* the same secret without collisions.
+*
+* @param string $master
+* @return string 32-byte raw key.
+*/
+function dedalo_derive_key_v2(string $master) : string {
+
+	$salt = (defined('DEDALO_INFO_KEY') ? (string)DEDALO_INFO_KEY : '');
+	$info = 'dedalo:v2:aes256gcm';
+	if (function_exists('hash_hkdf')) {
+		return hash_hkdf('sha256', $master, 32, $info, $salt);
+	}
+	// Best-effort fallback: salt || info || master through SHA-256.
+	return substr(hash('sha256', $salt . '|' . $info . '|' . $master, true), 0, 32);
+}//end dedalo_derive_key_v2
+
+
+
 /**
 * DEDALO_DECRYPT_AUTO
 * SEC-082: read-side multiplexer for stored ciphertexts.
