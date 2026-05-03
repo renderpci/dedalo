@@ -69,7 +69,11 @@
 	// dedalo_av_posterframe_extension. Posterframe extension like 'jpg'
 	define('DEDALO_AV_POSTERFRAME_EXTENSION',				'jpg');
 	// show_debug. Enable debug messages on the API (like Dédalo do). Production is false
-	define('SHOW_DEBUG',									true); // set false
+	// SEC-059: default must be false — the publication API is reached by
+	// unauthenticated (shared-code only) clients. Debug output echoes query
+	// fragments and internal state that reveal the schema and validator
+	// behaviour to attackers.
+	define('SHOW_DEBUG',									false);
 	// dedalo_section_resources_av_tipo. Video components resources tipo (needed for web_data fragments calculation)
 	define('DEDALO_SECTION_RESOURCES_AV_TIPO',				'rsc167');
 	// dedalo_component_resources_av_tipo. av media component tipo (used to locate indexations in data)
