@@ -592,14 +592,62 @@ class calculation extends widget_common {
 			'options'				=> $process->options ?? new stdClass()
 		];
 
+		// SEC-052: `$process` is sourced from the ontology (admin/developer
+		// writable). Without confinement a hostile ontology entry could
+		// `include_once` any PHP file on disk and invoke any global
+		// function. Confine the include to DEDALO_WIDGETS_PATH and require
+		// `$fn` to be a bare identifier resolved from the included file
+		// (no builtins, no namespaced calls, no variable/class-method syntax).
+			$widgets_root = realpath(DEDALO_WIDGETS_PATH);
+			$real_file    = realpath($file);
+			if ($widgets_root === false || $real_file === false
+				|| strncmp($real_file, $widgets_root . DIRECTORY_SEPARATOR, strlen($widgets_root) + 1) !== 0) {
+				debug_log(__METHOD__
+					. ' SEC-052 refused calculation file outside DEDALO_WIDGETS_PATH.' . PHP_EOL
+					. ' file: ' . to_string($file)
+					, logger::ERROR
+				);
+				return null;
+			}
+			if (!is_string($fn) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/', $fn)) {
+				debug_log(__METHOD__
+					. ' SEC-052 refused calculation fn (not a bare identifier): ' . to_string($fn)
+					, logger::ERROR
+				);
+				return null;
+			}
+
 		switch ($process->engine) {
 			case 'php':
 			default:
 
 				// require load the file with the functions in the path
-					include_once($file);
+					include_once($real_file);
 				// execute the function in the $file (as summarize in formulas.php)
 					if(!function_exists($fn)){
+						return null;
+					}
+					// SEC-052: after include, confirm the function was
+					// actually declared in the ontology-pointed file (not
+					// some pre-existing global) by comparing its reflected
+					// source with the confined widgets root.
+					try {
+						$fn_ref = new ReflectionFunction($fn);
+						$fn_file = $fn_ref->getFileName();
+						if ($fn_file === false
+							|| strncmp($fn_file, $widgets_root . DIRECTORY_SEPARATOR, strlen($widgets_root) + 1) !== 0) {
+							debug_log(__METHOD__
+								. ' SEC-052 refused calculation fn defined outside DEDALO_WIDGETS_PATH.' . PHP_EOL
+								. ' fn: ' . to_string($fn) . ' fn_file: ' . to_string($fn_file)
+								, logger::ERROR
+							);
+							return null;
+						}
+					} catch (Throwable $e) {
+						debug_log(__METHOD__
+							. ' SEC-052 ReflectionFunction failed: ' . $e->getMessage()
+							, logger::ERROR
+						);
 						return null;
 					}
 					$result = $fn($arg);
