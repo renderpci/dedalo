@@ -182,10 +182,14 @@ class web_data {
 		switch ($name) {
 
 			case 'table':
+				// SEC-055: previous regex `^[a-zA-Z|_|,]{2,}.*$` had an
+				// unanchored `.*` tail that accepted `audiovisual; DROP TABLE x`.
+				// Restrict to a strict comma-separated identifier list: each
+				// token must start with a letter/underscore and contain only
+				// alphanumeric + underscore.
 				$value = is_array($value) ? implode(',', $value) : $value;
-				preg_match('/^[a-zA-Z|_|,]{2,}.*$/i', $value, $output_array);
-				if (empty($output_array[0])) {
-					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+				if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*$/', (string)$value) !== 1) {
+					debug_log(__METHOD__." SEC-055: test $name not passed! ".to_string($value), logger::ERROR);
 					return false;
 				}
 				break;
