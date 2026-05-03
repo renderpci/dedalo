@@ -921,7 +921,20 @@ function get_last_modified_file( string $path, array $allowed_extensions, ?calla
 
 /**
 * DEDALO_ENCRYPT_OPENSSL
-* Encrypt given value
+* Encrypt given value (LEGACY — AES-256-CBC, deterministic, unauthenticated).
+*
+* SEC-082: This function is kept ONLY because:
+*   1. {@see component_password::encrypt_password()} uses it to recompute the
+*      legacy reversible blob during the lazy-rehash window (deterministic
+*      compare; switching algorithm would invalidate every legacy hash).
+*   2. Legacy ciphertexts produced before SEC-082 may still exist in storage
+*      and need to be decryptable through {@see dedalo_decrypt_auto()}.
+*
+* All NEW encrypt-at-rest writes MUST use {@see dedalo_encrypt_v2()} instead.
+* The CBC mode + statically-derived IV + `md5(md5($key))` KDF are not safe for
+* general-purpose encryption (no authentication, no per-message nonce).
+*
+* @deprecated since SEC-082. Use dedalo_encrypt_v2().
 * @param string $string_value
 * @param string $key = DEDALO_INFORMATION
 * @return string $output
