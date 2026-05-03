@@ -36,8 +36,12 @@
 		if (empty($code)) {
 			echo json_encode("Error. Empty user code");
 			die();
-		}elseif ($code!==API_WEB_USER_CODE) {
-			echo json_encode("Error. Invalid user code '$code' " . API_ENTITY);
+		}elseif (!hash_equals((string)API_WEB_USER_CODE, (string)$code)) {
+			// SEC-060: constant-time compare to prevent timing-oracle
+			// discovery of the shared code. Do not echo the submitted value
+			// back — it would let an attacker confirm their injection reached
+			// the decision site, and logs are enough for debugging.
+			echo json_encode("Error. Invalid user code");
 			die();
 		}
 	}
