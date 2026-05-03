@@ -1695,6 +1695,97 @@ function sanitize_key_dir(string $key_dir) : string {
 
 
 /**
+* IS_SAFE_REMOTE_URL
+* SEC-072 / SEC-074 / SEC-075 / SEC-076
+* Central SSRF-confinement helper. Returns true only when $url:
+*   - parses as an absolute http:// or https:// URL,
+*   - resolves (via gethostbynamel / inet_pton) to at least one public IPv4/IPv6
+*     address — never loopback, link-local, private, multicast, or reserved,
+*   - uses a standard web port (80 / 443 / 8080 / 8443) unless the caller opts
+*     in to custom ports via $options->allow_custom_ports = true.
+*
+* DNS is resolved once and the list of IPs is returned via $options->resolved_ips
+* by reference if supplied, so the caller can pin cURL to the resolved IP and
+* avoid TOCTOU re-resolution (`CURLOPT_RESOLVE`).
+*
+* @param string $url   Candidate URL (user-supplied or ontology-supplied).
+* @param object|null $options
+*   - allow_custom_ports: bool (default false)
+*   - allowed_hosts:      array<string> exact hostname allowlist (optional)
+*   - resolved_ips:       &string[] out-param populated with resolved IPs
+* @return bool
+*/
+function is_safe_remote_url(string $url, ?object $options=null) : bool {
+
+	if ($url === '') return false;
+
+	$parts = parse_url($url);
+	if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+		return false;
+	}
+
+	// scheme allowlist
+	$scheme = strtolower($parts['scheme']);
+	if ($scheme !== 'http' && $scheme !== 'https') {
+		return false;
+	}
+
+	// host allowlist (optional)
+	$host = strtolower($parts['host']);
+	$allowed_hosts = $options->allowed_hosts ?? null;
+	if (is_array($allowed_hosts) && !in_array($host, $allowed_hosts, true)) {
+		return false;
+	}
+
+	// port allowlist
+	$port = isset($parts['port']) ? (int)$parts['port'] : ($scheme === 'https' ? 443 : 80);
+	$allow_custom_ports = (bool)($options->allow_custom_ports ?? false);
+	$default_allowed_ports = [80, 443, 8080, 8443];
+	if (!$allow_custom_ports && !in_array($port, $default_allowed_ports, true)) {
+		return false;
+	}
+
+	// DNS resolve and vet every address. If the hostname is an IP literal we
+	// still validate it through the same range checks.
+	$ip_literal = filter_var($host, FILTER_VALIDATE_IP);
+	if ($ip_literal !== false) {
+		$ips = [$host];
+	} else {
+		$ips = gethostbynamel($host);
+		if ($ips === false || empty($ips)) {
+			// Try IPv6
+			$v6 = @dns_get_record($host, DNS_AAAA);
+			if (!empty($v6)) {
+				$ips = array_column($v6, 'ipv6');
+			} else {
+				return false;
+			}
+		}
+	}
+
+	foreach ($ips as $ip) {
+		// Reject anything that isn't a public unicast address.
+		if (filter_var(
+				$ip,
+				FILTER_VALIDATE_IP,
+				FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+			) === false
+		) {
+			return false;
+		}
+	}
+
+	// expose resolved IPs to caller for CURLOPT_RESOLVE pinning (TOCTOU fix)
+	if ($options !== null) {
+		$options->resolved_ips = $ips;
+	}
+
+	return true;
+}//end is_safe_remote_url
+
+
+
+/**
 * SESSION_START_MANAGER
 * Starts a session with a specific timeout, path, GC probability...
 * @param array $options
