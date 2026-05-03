@@ -75,7 +75,26 @@
 	RewriteEngine On
 	# Allow browser-based client tests; block rest of test tree
 	RewriteRule ^test/client(/|$) - [L]
-	RewriteRule (^|/)(\.git|\.github|\.windsurf|\.agent|\.VSCodeCounter|node_modules|vendor|config|test|dev|install/db|backup|backups|deleted)(/|$) - [F,L,NC]
+	# SEC-089: added `code` to the denylist — the core/page code tree holds
+	# source used by IS_A_CODE_SERVER deployments and should not be fetchable
+	# from regular Dédalo installs. Code servers that need to expose it should
+	# remove `code` from this list in a deployment-specific override.
+	RewriteRule (^|/)(\.git|\.github|\.windsurf|\.agent|\.VSCodeCounter|node_modules|vendor|config|test|dev|install/db|install/http_modules|backup|backups|deleted|code)(/|$) - [F,L,NC]
+</IfModule>
+
+# SEC-088: block direct PHP / script execution under media, upload and tmp
+# directories. Any file uploaded by a user lives under /media or /upload — if
+# Apache's AddHandler matches `.php` there, a disguised-extension upload (or
+# an upload whose server-side rewrite writes a `.php` artefact) would execute
+# in the site origin. The rewrite rule below returns 403 for any attempt to
+# fetch a script-extension file inside those roots. We intentionally DO NOT
+# use a global `<FilesMatch>` + `SetHandler none` here because that would
+# disable PHP for the whole site; the correct per-directory override lives
+# in `media/.htaccess` / `upload/.htaccess` / `tmp/.htaccess` when the
+# deployer creates those paths.
+<IfModule mod_rewrite.c>
+	RewriteEngine On
+	RewriteRule (^|/)(media|upload|tmp)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ - [F,L,NC]
 </IfModule>
 
 # Browser caching FileETag control
