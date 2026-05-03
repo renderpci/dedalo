@@ -52,8 +52,31 @@ class tool_import_dedalo_csv extends tool_common {
 	*/
 	public static function get_files_path() : string {
 
-		$files_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH .'/'. logged_user_id();
+		$base_dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+		if (!is_dir($base_dir)) {
+			mkdir($base_dir, 0775, true);
+		}
 
+		// Directory protection
+		$htaccess_file = $base_dir . '/.htaccess';
+		if (!file_exists($htaccess_file)) {
+			$htaccess_content = "# Protect files and directories from prying eyes\nRequire all denied\n";
+			file_put_contents($htaccess_file, $htaccess_content);
+		}
+		
+		// NGINX protection equivalent
+		$nginx_file = $base_dir . '/.nginx.conf';
+		if (!file_exists($nginx_file)) {
+			$nginx_content = "# NGINX protection\ndeny all;\n";
+			file_put_contents($nginx_file, $nginx_content);
+		}
+		
+		$index_file = $base_dir . '/index.html';
+		if (!file_exists($index_file)) {
+			file_put_contents($index_file, "<html><head><title>Forbidden</title></head><body><h1>Forbidden</h1></body></html>");
+		}
+
+		$files_path = $base_dir .'/'. logged_user_id();
 
 		return $files_path;
 	}//end get_files_path
@@ -302,10 +325,27 @@ class tool_import_dedalo_csv extends tool_common {
 					return $response;
 				}
 
-				if( unlink($file_full_path) ) {
+				// create deleted folder
+				$deleted_dir = $dir . '/deleted';
+				if (!file_exists($deleted_dir)) {
+					if (!mkdir($deleted_dir, 0775, true)) {
+						$response->msg = 'Error. Unable to create deleted folder';
+						$response->errors[] = 'unable to create deleted folder';
+						return $response;
+					}
+				}
+
+				$date = date('Y-m-d_H-i-s');
+				$pathinfo = pathinfo($file_name);
+				$filename = $pathinfo['filename'];
+				$extension = isset($pathinfo['extension']) ? '.' . $pathinfo['extension'] : '';
+				
+				$deleted_file_path = $deleted_dir . '/' . $filename . '_deleted_' . $date . $extension;
+
+				if( rename($file_full_path, $deleted_file_path) ) {
 
 					$response->result 	= true;
-					$response->msg 		= 'OK. Request file '.$file_name.' is deleted';
+					$response->msg 		= 'OK. Request file '.$file_name.' is moved to deleted folder';
 					debug_log(__METHOD__
 						." response->msg: $response->msg"
 						, logger::DEBUG

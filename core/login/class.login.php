@@ -1381,8 +1381,8 @@ class login extends common {
 				$htaccess_text  = '';
 
 				$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import)$">'.PHP_EOL;
-				$htaccess_text .= 'Require all granted'.PHP_EOL;
+				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import|csv)$">'.PHP_EOL;
+				$htaccess_text .= 'Require all denied'.PHP_EOL;
 				$htaccess_text .= '</FilesMatch>'.PHP_EOL;
 
 				$htaccess_text .= '# Protect media files with realm'.PHP_EOL;

@@ -378,6 +378,12 @@ final class dd_manager {
 						$response->msg		= 'Error. ' . $e->getMessage();
 						$response->errors	= ['permissions_denied'];
 				}
+
+				// SEC: do not attempt to decorate Generators (PHP 8.2+ forbids dynamic properties on them)
+				if ($response instanceof \Generator) {
+					return $response;
+				}
+
 				$response->action	= $action;
 			}
 

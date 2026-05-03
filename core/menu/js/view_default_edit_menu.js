@@ -477,6 +477,17 @@ const render_debug_info_bar = (self) => {
 		}
 		environment_link.addEventListener('click', environment_click_handler)
 
+	// Worker
+		if(typeof DEDALO_RR_WORKER !== 'undefined' && DEDALO_RR_WORKER===true) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'rr_worker',
+				title			: 'RR Worker',
+				text_content	: 'RR',
+				parent			: debug_info_bar
+			})
+		}
+
 	// ip_server
 		ui.create_dom_element({
 			element_type	: 'div',

@@ -79,7 +79,7 @@ class export_hierarchy {
 
 
 	/**
-	* SYNC_HIERARCHY_ACTIVE_STATUS
+	* sync_hierarchy_active_status
 	* Execs hierarchy::sync_hierarchy_active_status
 	* @return object $response
 	*/
