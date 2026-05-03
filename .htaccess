@@ -132,6 +132,12 @@ Options -Indexes
 	DirectoryIndex index.html index.php
 </IfModule>
 
+# Ensure JavaScript files are served with correct MIME type for module scripts
+<IfModule mime_module>
+	AddType application/javascript .js
+	AddType text/javascript .mjs
+</IfModule>
+
 # SEC-015: baseline security response headers.
 # SEC-XSS-CSP (§7.x): Content-Security-Policy rolled out in Report-Only mode
 # first. Deployers should collect reports for a release cycle, then flip the
