@@ -2825,12 +2825,25 @@ function get_backtrace_sequence() : array  {
 
 /**
 * CHECK_URL
-* Exec a PHP header request to verify if URL is reachable
-* Only 200 code in response is interpreted as reachable
+* Exec a PHP HEAD request to verify if URL is reachable. Returns true only
+* on HTTP 200.
+*
+* SEC-077: this helper has no production callers (verified via grep). It is
+* a SSRF-prone primitive (`get_headers()` honours `php://`, `file://`,
+* etc. via the default stream context) and bypasses all the hardening in
+* {@see curl_request()}. We apply the {@see is_safe_remote_url()} gate
+* defensively so any future revival is automatically constrained to
+* http/https targets resolving to public addresses.
+*
+* @deprecated since SEC-077. Prefer curl_request() with is_safe_remote_url().
 * @param string $url
 * @return bool
 */
 function check_url( string $url ) : bool {
+
+	if (!is_safe_remote_url($url)) {
+		return false;
+	}
 
 	try {
 
