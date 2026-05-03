@@ -1,0 +1,22 @@
+# SEC-091: empty file replaced with the same deny rule we use for the other
+# transcriber / translator helper dirs. These scripts are never served as HTTP
+# — they are included by the PHP API path.
+Require all denied
+
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>
+
+Options None
+Options +FollowSymLinks
+
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php5.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>
