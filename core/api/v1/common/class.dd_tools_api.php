@@ -189,6 +189,62 @@ final class dd_tools_api {
 				return $response;
 			}
 
+		// SEC-084: reflect-validate the method signature. `tool_request` is a
+			// generic dispatch surface — without an explicit signature contract,
+			// passing `$options` (an arbitrary user-shaped object) to a method
+			// that expects something else can either trigger a TypeError that
+			// leaks the parameter list in the response, or — worse — match a
+			// method that takes a flexible / variadic / no-typehint argument
+			// and run with attacker-shaped state. The Dédalo tool convention
+			// is that any public static API method takes either a single
+			// `object $rqo` or no parameter at all. We refuse anything else.
+			try {
+				$params = $reflection->getParameters();
+				$param_count = count($params);
+				if ($param_count > 1) {
+					$signature_ok = false;
+				} else if ($param_count === 0) {
+					// no-arg methods are allowed (e.g. status / info hooks)
+					$signature_ok = true;
+				} else {
+					$param = $params[0];
+					$param_type = $param->getType();
+					if ($param_type instanceof ReflectionNamedType) {
+						$type_name = $param_type->getName();
+						// Accept `object` (Dédalo standard) or any class name —
+						// PHP's stdClass is ubiquitous across the codebase. We
+						// reject scalar (string/int/array) param types because
+						// $fn_arguments is always an object.
+						$signature_ok = ($type_name === 'object' || $type_name === 'stdClass'
+							|| (class_exists($type_name) && (new ReflectionClass($type_name))->isInstance($fn_arguments)));
+					} else if ($param_type === null) {
+						// Untyped parameter — historical Dédalo tools. Allowed
+						// for back-compat; logged so we can rotate the tool
+						// surface to typed signatures over time.
+						debug_log(__METHOD__
+							. ' SEC-084 tool method has untyped parameter (back-compat allowed).' . PHP_EOL
+							. ' tool_name: ' . $tool_name . PHP_EOL
+							. ' tool_method: ' . $tool_method
+							, logger::WARNING
+						);
+						$signature_ok = true;
+					}
+				}
+			} catch (Throwable $e) {
+				$signature_ok = false;
+			}
+			if (!$signature_ok) {
+				$response->msg = 'Error. tool method signature mismatch: '.$tool_method;
+				$response->errors[] = 'signature_mismatch';
+				debug_log(__METHOD__
+					. ' SEC-084 tool method signature does not match (object $rqo) contract.' . PHP_EOL
+					. ' tool_name: ' . $tool_name . PHP_EOL
+					. ' tool_method: ' . $tool_method
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// SEC-024 (§9.2): opt-in per-tool method allowlist. When the tool class
 			// declares an API_ACTIONS class constant the method MUST appear in it;
 			// otherwise the historical "any public-static method" rule is preserved.
