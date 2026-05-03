@@ -395,19 +395,336 @@ final class component_relation_children_test extends BaseTestCase {
 
 		$locators = [$locator1, $locator2];
 
-		$result = component_relation_children::sort_children($section_tipo, $locators);
-
-		$this->assertTrue(
-			is_array($result),
-			'Expected array from sort_children, got: ' . gettype($result)
+		$result = component_relation_children::sort_children(
+			$section_tipo,
+			$locators,
+			$section_tipo, // parent_section_tipo
+			1 // parent_section_id
 		);
 
-		foreach ($result as $item) {
-			$this->assertIsObject($item, 'Each item in changed array should be an object');
-			$this->assertObjectHasProperty('value', $item);
-			$this->assertObjectHasProperty('locator', $item);
+		$this->assertTrue(
+			is_array($result) || $result===false,
+			'Expected array|false from sort_children, got: ' . gettype($result)
+		);
+
+		if (is_array($result)) {
+			foreach ($result as $item) {
+				$this->assertIsObject($item, 'Each item in changed array should be an object');
+				$this->assertObjectHasProperty('value', $item);
+				$this->assertObjectHasProperty('locator', $item);
+			}
 		}
 	}//end test_sort_children
+
+
+
+	/**
+	* TEST_SET_DATA_EMPTY
+	* Test set_data with empty array (should be normalized to null).
+	* @return void
+	*/
+	public function test_set_data_empty() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// empty array case
+		$result = $component->set_data([]);
+		$this->assertTrue(
+			$result===true,
+			'set_data with empty array should return true'
+		);
+
+		$updated_data = $component->get_data();
+		$this->assertTrue(
+			$updated_data===null,
+			'empty array should result in null data'
+		);
+
+		// restore
+		if (!empty($old_data)) {
+			$component->set_data($old_data);
+		} else {
+			$component->set_data(null);
+		}
+	}//end test_set_data_empty
+
+
+
+	/**
+	* TEST_SAVE_AND_RELOAD
+	* Verify that save returns true (read-only component) and data remains accessible after save.
+	* @return void
+	*/
+	public function test_save_and_reload() {
+
+		$component = $this->build_component_instance();
+
+		$data_before = $component->get_data();
+
+		$saved = $component->save();
+		$this->assertTrue(
+			$saved===true,
+			'save should return true for read-only component'
+		);
+
+		// reload component
+		$component2 = component_common::get_instance(
+			self::$model,
+			self::$tipo,
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			self::$section_tipo
+		);
+		$data_after = $component2->get_data();
+
+		// data should be unchanged (this component doesn't store data)
+		$this->assertTrue(
+			json_encode($data_before)===json_encode($data_after),
+			'data should be unchanged after save (read-only component)'
+		);
+	}//end test_save_and_reload
+
+
+
+	/**
+	* TEST_COMPONENT_INSTANCE_MODES
+	* Test component instantiation in edit, list, and search modes.
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				get_class($component)==='component_relation_children',
+				"instance in $mode mode should be component_relation_children"
+			);
+
+			$this->assertTrue(
+				$component->mode===$mode,
+				"component mode should be $mode"
+			);
+
+			// search mode uses parent get_data (stored data)
+			// edit/list mode uses resolved children
+			$data = $component->get_data();
+			$this->assertTrue(
+				is_array($data) || is_null($data),
+				"get_data in $mode mode should return array|null"
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_IS_EMPTY
+	* Relation component data items are locators without 'value' key,
+	* so is_empty() returns true for them by design.
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// null case
+		$result = $component->is_empty(null);
+		$this->assertTrue(
+			$result===true,
+			'is_empty(null) should return true'
+		);
+
+		// locator object without value key (relation data items)
+		$locator = json_decode('{
+			"section_tipo": "test3",
+			"section_id": "2",
+			"from_component_tipo": "test201",
+			"type": "dd48"
+		}');
+		$result = $component->is_empty($locator);
+		$this->assertTrue(
+			$result===true,
+			'is_empty(locator without value key) should return true by design'
+		);
+
+		// non-object case
+		$result = $component->is_empty('string_value');
+		$this->assertTrue(
+			$result===true,
+			'is_empty(non-object) should return true'
+		);
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_IS_EMPTY_DATA
+	* Array-level emptiness check.
+	* @return void
+	*/
+	public function test_is_empty_data() {
+
+		$component = $this->build_component_instance();
+
+		// null case
+		$result = $component->is_empty_data(null);
+		$this->assertTrue(
+			$result===true,
+			'is_empty_data(null) should return true'
+		);
+
+		// empty array case
+		$result = $component->is_empty_data([]);
+		$this->assertTrue(
+			$result===true,
+			'is_empty_data([]) should return true'
+		);
+
+		// array with locator (no value key) — is_empty_data iterates is_empty on each item
+		$locator = json_decode('{
+			"section_tipo": "test3",
+			"section_id": "2",
+			"from_component_tipo": "test201",
+			"type": "dd48"
+		}');
+		$result = $component->is_empty_data([$locator]);
+		$this->assertTrue(
+			$result===true,
+			'is_empty_data with locator items (no value key) should return true by design'
+		);
+	}//end test_is_empty_data
+
+
+
+	/**
+	* TEST_GET_IDENTIFIER
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$identifier = $component->get_identifier();
+
+		$this->assertTrue(
+			is_string($identifier),
+			'get_identifier should return string'
+		);
+
+		$this->assertTrue(
+			!empty($identifier),
+			'get_identifier should return non-empty string'
+		);
+
+		// format: tipo_section_tipo_section_id
+		$expected_parts = [self::$tipo, self::$section_tipo, '1'];
+		foreach ($expected_parts as $part) {
+			$this->assertTrue(
+				strpos($identifier, (string)$part) !== false,
+				"identifier should contain '$part'"
+			);
+		}
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_ADD_CHILD
+	* Test add_child method (alias of update_parent with 'add' action).
+	* @return void
+	*/
+	public function test_add_child() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// add_child requires parent_section_tipo and parent_section_id
+		// it delegates to update_parent which resolves parent_tipo automatically
+		$result = $component->add_child(
+			self::$section_tipo, // parent_section_tipo
+			2 // parent_section_id
+		);
+
+		$this->assertTrue(
+			is_bool($result),
+			'add_child should return boolean, got: ' . gettype($result)
+		);
+
+		// restore
+		if (!empty($old_data)) {
+			$component->set_data($old_data);
+		} else {
+			$component->set_data(null);
+		}
+	}//end test_add_child
+
+
+
+	/**
+	* TEST_REMOVE_CHILD
+	* Test remove_child method (alias of update_parent with 'remove' action).
+	* @return void
+	*/
+	public function test_remove_child() {
+
+		$component = $this->build_component_instance();
+
+		$old_data = $component->get_data();
+
+		// remove_child requires parent_section_tipo and parent_section_id
+		$result = $component->remove_child(
+			self::$section_tipo, // parent_section_tipo
+			2 // parent_section_id
+		);
+
+		$this->assertTrue(
+			is_bool($result),
+			'remove_child should return boolean, got: ' . gettype($result)
+		);
+
+		// restore
+		if (!empty($old_data)) {
+			$component->set_data($old_data);
+		} else {
+			$component->set_data(null);
+		}
+	}//end test_remove_child
+
+
+
+	/**
+	* TEST_SEARCH_OPERATORS_INFO
+	* component_relation_children overrides search_operators_info to return empty array.
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->search_operators_info();
+
+		$this->assertIsArray($result, 'search_operators_info should return array');
+		$this->assertTrue(
+			empty($result),
+			'search_operators_info should return empty array (overridden in class)'
+		);
+	}//end test_search_operators_info
+
+
 
 }//end class component_relation_children_test
 

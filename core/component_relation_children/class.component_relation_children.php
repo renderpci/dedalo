@@ -123,6 +123,10 @@ class component_relation_children extends component_relation_common {
 				$offset
 			);
 
+		// set total (count all children)
+			$data = $this->get_data();
+			$this->pagination->total = is_array($data) ? count($data) : 0;
+
 
 		return $data_paginated;
 	}//end get_data_paginated
@@ -682,8 +686,8 @@ class component_relation_children extends component_relation_common {
 	* @return array|false $changed
 	* @see dd_ts_api::save_order
 	*/
-	public static function sort_children( 
-		string $section_tipo, 
+	public static function sort_children(
+		string $section_tipo,
 		array $locators,
 		string $parent_section_tipo,
 		int $parent_section_id

@@ -37,30 +37,31 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 		$data_value = $this->get_data_lang();
 
+		// data item
+		$value = ( !empty($data_value) && $this->mode==='search' )
+			? $data_value // Search case: use data_resolved
+			: ( !empty($data_value) ? $this->get_data_paginated() : [] );
+
+		$section_id	= $this->get_parent();
+
+		$limit	= $this->pagination->limit;
+		$offset	= $this->pagination->offset;
+
+		// data item
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $tipo;
+				$item->parent_section_id	= $section_id;
+				// fix pagination vars
+					$pagination = new stdClass();
+						$pagination->total	= !empty($data_value) ? count($data_value) : 0;
+						$pagination->limit	= $limit;
+						$pagination->offset	= $offset;
+				$item->pagination = $pagination;
+
+			$data[] = $item;
+
+
 		if (!empty($data_value)) {
-
-			// value
-			$value = $this->mode==='search' 
-				? $data_value // Search case: use data_resolved
-				: $this->get_data_paginated();
-
-			$section_id	= $this->get_parent();
-
-			$limit	= $this->pagination->limit;
-			$offset	= $this->pagination->offset;
-
-			// data item
-				$item = $this->get_data_item($value);
-					$item->parent_tipo			= $tipo;
-					$item->parent_section_id	= $section_id;
-					// fix pagination vars
-						$pagination = new stdClass();
-							$pagination->total	= count($data_value);
-							$pagination->limit	= $limit;
-							$pagination->offset	= $offset;
-					$item->pagination = $pagination;
-
-				$data[] = $item;
 
 			// subdatum
 				$subdatum = $this->get_subdatum($tipo, $value);
