@@ -21,7 +21,9 @@ function force_login($user_id) : void {
     $_SESSION['dedalo']['auth']['username']        = $username;
     $_SESSION['dedalo']['auth']['full_username']   = $full_username;
     $_SESSION['dedalo']['auth']['is_logged']       = 1;
-    $_SESSION['dedalo']['auth']['salt_secure']     = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+    // SEC-082: AES-256-GCM (authenticated) replacement for legacy CBC. Marker
+    // is checked for non-emptiness only; algorithm swap is safe.
+    $_SESSION['dedalo']['auth']['salt_secure']     = dedalo_encrypt_v2(DEDALO_SALT_STRING);
     $_SESSION['dedalo']['auth']['login_type']      = 'default';
 
     if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
