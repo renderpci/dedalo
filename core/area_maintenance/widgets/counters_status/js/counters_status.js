@@ -126,7 +126,8 @@ counters_status.prototype.modify_counter = async function(options) {
 
 			// success
 
-			body_response.innerHTML = api_response.msg
+			// SEC-XSS-011: api_response.msg may contain DB / counter text; textContent avoids HTML parsing.
+			body_response.textContent = api_response.msg
 
 			// update datalist value
 			self.value.datalist = api_response.datalist
@@ -146,7 +147,8 @@ counters_status.prototype.modify_counter = async function(options) {
 		}else{
 			// error
 
-			body_response.innerHTML = api_response.msg || 'Unknown error'
+			// SEC-XSS-011
+			body_response.textContent = api_response.msg || 'Unknown error'
 
 			alert('Error! \n' + (api_response.msg || 'Unknown error'))
 		}
