@@ -191,9 +191,49 @@ class web_data {
 				break;
 
 			case 'db_name':
-				preg_match('/^[a-zA-Z0-9|_]{2,}$/i', $value, $output_array);
-				if (empty($output_array[0])) {
-					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+				// SEC-057: $db_name is user-controlled via JSON/GET input. The
+				// syntactic check alone let callers pivot to any database the
+				// `read_only_user` account could reach. Layer an explicit
+				// allowlist on top when the deployer configures
+				// `API_ALLOWED_DATABASES` (array or CSV). Entries in
+				// `API_WEB_USER_CODE_MULTIPLE` count as well (legacy multi-db
+				// deployments).
+				if (preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', (string)$value) !== 1) {
+					debug_log(__METHOD__." SEC-057: test $name not passed! ".to_string($value), logger::ERROR);
+					return false;
+				}
+				$allowed_dbs = [];
+				if (defined('API_ALLOWED_DATABASES')) {
+					$cfg = constant('API_ALLOWED_DATABASES');
+					if (is_array($cfg)) {
+						$allowed_dbs = $cfg;
+					} else if (is_string($cfg) && $cfg !== '') {
+						$allowed_dbs = array_map('trim', explode(',', $cfg));
+					}
+				}
+				if (empty($allowed_dbs) && defined('API_WEB_USER_CODE_MULTIPLE')) {
+					$multi = constant('API_WEB_USER_CODE_MULTIPLE');
+					if (is_array($multi)) {
+						foreach ($multi as $row) {
+							if (is_object($row) && !empty($row->db_name)) {
+								$allowed_dbs[] = (string)$row->db_name;
+							} else if (is_array($row) && !empty($row['db_name'])) {
+								$allowed_dbs[] = (string)$row['db_name'];
+							}
+						}
+					}
+				}
+				if (empty($allowed_dbs)) {
+					// fall back to the default configured web DB only
+					if (defined('MYSQL_WEB_DATABASE_CONN')) {
+						$allowed_dbs[] = (string)constant('MYSQL_WEB_DATABASE_CONN');
+					}
+					if (defined('MYSQL_DEDALO_DATABASE_CONN')) {
+						$allowed_dbs[] = (string)constant('MYSQL_DEDALO_DATABASE_CONN');
+					}
+				}
+				if (!in_array((string)$value, $allowed_dbs, true)) {
+					debug_log(__METHOD__." SEC-057: db_name outside allowlist: ".to_string($value), logger::ERROR);
 					return false;
 				}
 				break;
