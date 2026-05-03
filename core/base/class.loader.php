@@ -206,6 +206,19 @@ class class_loader {
 	*/
 	public static function loader(string $class_name) : bool {
 
+		// SEC-048: defence-in-depth class-name allowlist. Every call site that
+		// hands user input to the autoloader (dd_manager, dd_core_api,
+		// dd_area_maintenance_api, dd_tools_api) already validates its class
+		// names through `sanitize_key_dir()` or explicit allowlists. This
+		// second gate makes sure that *any* future accidental path which
+		// reaches `class_exists`/`new $var` with attacker input cannot
+		// require an out-of-tree file: the class name must match Dédalo's
+		// naming conventions and carry only safe characters.
+		if (preg_match('/^[A-Za-z_][A-Za-z0-9_]{0,127}$/', $class_name) !== 1) {
+			trigger_error(__METHOD__ . ' SEC-048 refused unsafe class name: ' . $class_name);
+			return false;
+		}
+
 		switch (true) {
 
 			// tools
@@ -223,6 +236,36 @@ class class_loader {
 			default:
 				$file_path	= DEDALO_CORE_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
 				break;
+		}
+
+		// SEC-048: second rail — confirm the resolved path is still inside
+		// one of the known Dédalo code roots. This prevents a loader call
+		// for a name that happens to include `..` (already blocked by the
+		// regex above) from reaching outside the tree via DEDALO_* constants
+		// that a compromised config could point elsewhere.
+		$real_path = realpath($file_path);
+		$ok_roots  = array_filter([
+			defined('DEDALO_CORE_PATH')      ? realpath(DEDALO_CORE_PATH)      : false,
+			defined('DEDALO_TOOLS_PATH')     ? realpath(DEDALO_TOOLS_PATH)     : false,
+			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : false,
+			defined('DEDALO_SHARED_PATH')    ? realpath(DEDALO_SHARED_PATH)    : false,
+		]);
+		if ($real_path === false || empty($ok_roots)) {
+			// Fall through — `include` below will error out loudly. We do not
+			// hard-fail here because some unit-test bootstraps use virtual
+			// fixture paths that don't pass realpath.
+		} else {
+			$inside = false;
+			foreach ($ok_roots as $root) {
+				if (str_starts_with($real_path, $root . DIRECTORY_SEPARATOR) || $real_path === $root) {
+					$inside = true;
+					break;
+				}
+			}
+			if (!$inside) {
+				trigger_error(__METHOD__ . ' SEC-048 refused out-of-tree autoload path: ' . $file_path);
+				return false;
+			}
 		}
 
 		if ( !include($file_path) ) {
