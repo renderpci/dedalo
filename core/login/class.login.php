@@ -1154,7 +1154,12 @@ class login extends common {
 			$_SESSION['dedalo']['auth']['is_logged']		= 1;
 
 		// config key
-			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_openssl(DEDALO_SALT_STRING);
+			// SEC-082: switched from legacy AES-CBC (`dedalo_encrypt_openssl`) to
+			// authenticated AES-256-GCM (`dedalo_encrypt_v2`). The salt_secure
+			// session marker is only ever checked for non-emptiness (see
+			// `is_logged()` below), never decrypted, so flipping the algorithm
+			// is safe and does not require a migration on existing sessions.
+			$_SESSION['dedalo']['auth']['salt_secure'] = dedalo_encrypt_v2(DEDALO_SALT_STRING);
 
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = $login_type;
