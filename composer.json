@@ -10,7 +10,7 @@
         "sweetrdf/easyrdf": "*",
         "phpunit/phpunit": "^13.0",
         "onelogin/php-saml": "^4.2",
-        "linfo/linfo": "^4.0.9",
+        "linfo/linfo": "^4.0",
         "phpstan/phpstan": "^1.12"
     },
     "scripts": {
