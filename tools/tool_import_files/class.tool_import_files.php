@@ -444,10 +444,55 @@ class tool_import_files extends tool_common {
 			}
 
 			$script_file =  dirname(__FILE__).$file_processor_obj->script_file;
-			if(include_once($script_file)) {
+			// SEC-053: `$script_file` and `$function_name` come from ontology
+			// `file_processor_properties`, which an admin/developer can edit.
+			// Without containment a hostile processor definition could
+			// `include_once` any PHP file on disk (via `../../`) and call
+			// any global function. Confine the include under the tool
+			// directory and require `$function_name` to be a bare
+			// identifier whose declaration lives inside the same root.
+				$tool_root   = realpath(dirname(__FILE__));
+				$real_script = realpath($script_file);
+				$function_name = $file_processor_obj->function_name ?? '';
+				if ($tool_root === false || $real_script === false
+					|| strncmp($real_script, $tool_root . DIRECTORY_SEPARATOR, strlen($tool_root) + 1) !== 0) {
+					debug_log(__METHOD__
+						. ' SEC-053 refused script_file outside tool root.' . PHP_EOL
+						. ' script_file: ' . to_string($script_file)
+						, logger::ERROR
+					);
+					continue;
+				}
+				if (!is_string($function_name) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/', $function_name)) {
+					debug_log(__METHOD__
+						. ' SEC-053 refused function_name (not a bare identifier): ' . to_string($function_name)
+						, logger::ERROR
+					);
+					continue;
+				}
+			if(include_once($real_script)) {
 
-				$function_name 	  = $file_processor_obj->function_name;
 				if (is_callable($function_name)) {
+					try {
+						$fn_ref  = new ReflectionFunction($function_name);
+						$fn_file = $fn_ref->getFileName();
+						if ($fn_file === false
+							|| strncmp($fn_file, $tool_root . DIRECTORY_SEPARATOR, strlen($tool_root) + 1) !== 0) {
+							debug_log(__METHOD__
+								. ' SEC-053 refused function_name defined outside tool root.' . PHP_EOL
+								. ' function_name: ' . to_string($function_name)
+								. ' fn_file: ' . to_string($fn_file)
+								, logger::ERROR
+							);
+							continue;
+						}
+					} catch (Throwable $e) {
+						debug_log(__METHOD__
+							. ' SEC-053 ReflectionFunction failed: ' . $e->getMessage()
+							, logger::ERROR
+						);
+						continue;
+					}
 					$custom_arguments = $file_processor_obj->custom_arguments;
 					$standard_options = (object)[
 						'file_name'				=> $file_name,
