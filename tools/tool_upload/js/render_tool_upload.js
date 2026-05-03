@@ -159,7 +159,9 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		if (!response.result) {
 
 			// ERROR case
-			process_file_info.innerHTML = response.msg || 'Error on processing file!'
+			// SEC-XSS-005: server messages may contain file paths / error text
+			// with < > & characters. Use textContent to avoid parsing as HTML.
+			process_file_info.textContent = response.msg || 'Error on processing file!'
 			process_file_info.classList.add('failed')
 
 			if (api_response.errors?.length) {
@@ -170,7 +172,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		}
 
 	// response OK case
-		process_file_info.innerHTML = response.msg || 'Processing file done successfully.'
+		// SEC-XSS-005
+		process_file_info.textContent = response.msg || 'Processing file done successfully.'
 		process_file_info.classList.add('success')
 
 	// hide service_upload elements. To upload again, user must to reload the page
