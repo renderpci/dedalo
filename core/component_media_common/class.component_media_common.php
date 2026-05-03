@@ -713,25 +713,63 @@ class component_media_common extends component_common {
 			$tmp_dir		= $options->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
 			$tmp_name		= $options->tmp_name; // string like 'phpJIQq4e'
 			$quality 		= $options->quality ?? $this->get_quality() ?? $this->get_original_quality();
-			$source_file 	= $options->source_file ?? null;
 
-		// source_file
-			if (empty($tmp_dir) || !defined($tmp_dir)) {
-				$msg = 'constant is not defined! tmp_dir: '. json_encode($tmp_dir);
-				$response->msg .= $msg;
+		// SEC-063: reject user-supplied `source_file` outright. Historically the
+		// caller could pass any absolute path and the method would rename it to
+		// a component-controlled location, giving write access to arbitrary
+		// files on the host (any readable path → overwritten under /media).
+		// Every legitimate caller stages uploads through DEDALO_UPLOAD_TMP_DIR
+		// (via service_upload / dd_utils_api), so we rebuild the source path
+		// from a controlled allowlist and discard any caller override.
+			if (isset($options->source_file)) {
 				debug_log(__METHOD__
-					.' ' .$response->msg . PHP_EOL
-					. ' tmp_dir: ' . $tmp_dir
+					. ' SEC-063: caller-supplied source_file ignored: ' . (string)$options->source_file
+					, logger::WARNING
+				);
+			}
+
+		// SEC-063: restrict `tmp_dir` to a closed allowlist of constants that
+		// name a staging directory under our control. `defined($tmp_dir)` alone
+		// was not enough — any constant whose string happens to resolve to a
+		// filesystem path would satisfy it (DEDALO_ROOT_PATH, DEDALO_MEDIA_PATH,
+		// etc.), letting a caller rebase the source path arbitrarily.
+			$allowed_tmp_dir_constants = [
+				'DEDALO_UPLOAD_TMP_DIR', // primary staging dir (service_upload)
+			];
+			if (empty($tmp_dir)
+				|| !is_string($tmp_dir)
+				|| !in_array($tmp_dir, $allowed_tmp_dir_constants, true)
+				|| !defined($tmp_dir)
+			) {
+				$response->msg .= 'invalid tmp_dir: '. json_encode($tmp_dir);
+				debug_log(__METHOD__
+					.' SEC-063 tmp_dir rejected: ' . to_string($tmp_dir)
 					, logger::ERROR
 				);
 				$response->errors[] = 'invalid tmp_dir value';
 				return $response;
 			}
 
-			$user_id		= logged_user_id();
-			$source_file	= isset($source_file)
-				? $source_file
-				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
+		// SEC-063: strict-sanitise key_dir and tmp_name. key_dir is a
+		// caller-supplied folder name under the user's staging root; tmp_name
+		// is the basename chosen by the upload handler. Neither may contain
+		// path separators, traversal sequences, or null bytes.
+			$safe_key_dir	= sanitize_key_dir((string)$key_dir);
+			$safe_tmp_name	= sanitize_key_dir((string)$tmp_name);
+			if ($safe_key_dir === '' || $safe_tmp_name === '') {
+				$response->msg .= ' invalid key_dir or tmp_name';
+				debug_log(__METHOD__
+					.' SEC-063 rejected key_dir=' . to_string($key_dir)
+					.' tmp_name=' . to_string($tmp_name)
+					, logger::ERROR
+				);
+				$response->errors[] = 'invalid key_dir/tmp_name';
+				return $response;
+			}
+
+			$user_id		= (int)logged_user_id();
+			$staging_root	= (string)constant($tmp_dir) . '/' . $user_id . '/' . $safe_key_dir;
+			$source_file	= $staging_root . '/' . $safe_tmp_name;
 
 		// check source file
 			if (!file_exists($source_file)) {
@@ -742,6 +780,28 @@ class component_media_common extends component_common {
 					, logger::ERROR
 				);
 				$response->errors[] = 'source file not found';
+				return $response;
+			}
+
+		// SEC-063: realpath confinement — the resolved source must live
+		// inside the user's staging directory for the configured tmp_dir
+		// constant. This blocks symlink escapes where the staging dir itself
+		// has been replaced or contains a symlink to something else. We run
+		// this *after* file_exists so the more user-facing 'source file not
+		// found' error is returned for the common missing-upload case.
+			$real_source	= realpath($source_file);
+			$real_staging	= realpath($staging_root);
+			if ($real_source === false
+				|| $real_staging === false
+				|| !str_starts_with($real_source, $real_staging . DIRECTORY_SEPARATOR)
+			) {
+				$response->msg .= ' source file outside staging root';
+				debug_log(__METHOD__
+					.' SEC-063 staging-confinement failed. real_source=' . to_string($real_source)
+					.' real_staging=' . to_string($real_staging)
+					, logger::ERROR
+				);
+				$response->errors[] = 'source file outside staging root';
 				return $response;
 			}
 
