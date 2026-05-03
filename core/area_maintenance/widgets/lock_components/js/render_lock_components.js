@@ -210,7 +210,9 @@ const get_content_data_edit = async function(self) {
 					timeout : 3600 * 1000 // 1 hour waiting response
 				})
 
-				info_node.innerHTML = JSON.stringify({
+				// SEC-XSS-008: textContent prevents any HTML parsing of api_response.msg
+				// embedded inside the JSON string.
+				info_node.textContent = JSON.stringify({
 					action	: 'force_unlock_all_components',
 					result	: api_response.result,
 					msg		: api_response.msg
