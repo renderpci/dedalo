@@ -1588,11 +1588,60 @@ final class dd_core_api {
 				default:
 
 					// others
-
+					// SEC-049: the default branch instantiates `new $model($mode)`
+					// from a user-supplied `source.model`. Every legitimate
+					// request matches one of the prefix branches above; this
+					// default is only reached for a handful of ontology
+					// element types (e.g. `dd_*`). Refuse anything that does
+					// not look like a bare PHP class identifier, and require
+					// the class to already be declared AND to live under
+					// DEDALO_CORE_PATH so an attacker cannot instantiate a
+					// random class shipped by vendor/ or lib/.
+					if (!is_string($model) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/', (string)$model)) {
+						debug_log(__METHOD__
+							. ' SEC-049 refused model that is not a bare identifier: ' . to_string($model)
+							, logger::ERROR
+						);
+						$response->msg = 'Error. invalid model';
+						$response->errors[] = 'invalid model';
+						return $response;
+					}
+					if (!class_exists($model, true)) {
+						debug_log(__METHOD__
+							. ' SEC-049 refused model: class not declared: ' . to_string($model)
+							, logger::ERROR
+						);
+						$response->msg = 'Error. model not found: '.$model;
+						$response->errors[] = 'model not found';
+						return $response;
+					}
+					try {
+						$reflection = new ReflectionClass($model);
+						$file       = $reflection->getFileName();
+						$core_root  = defined('DEDALO_CORE_PATH') ? realpath(DEDALO_CORE_PATH) : false;
+						if ($file === false || $core_root === false
+							|| strncmp($file, $core_root . DIRECTORY_SEPARATOR, strlen($core_root) + 1) !== 0) {
+							debug_log(__METHOD__
+								. ' SEC-049 refused model: class source outside DEDALO_CORE_PATH. file=' . to_string($file)
+								. ' model=' . to_string($model)
+								, logger::ERROR
+							);
+							$response->msg = 'Error. model not allowed: '.$model;
+							$response->errors[] = 'model not allowed';
+							return $response;
+						}
+					} catch (Throwable $e) {
+						debug_log(__METHOD__
+							. ' SEC-049 reflection failed: ' . $e->getMessage()
+							, logger::ERROR
+						);
+						$response->msg = 'Error. model not allowed: '.$model;
+						$response->errors[] = 'model not allowed';
+						return $response;
+					}
 					try {
 						$element = new $model($mode);
 					} catch (Exception $e) {
-						// throw new Exception("Error Processing Request", 1);
 						debug_log(__METHOD__
 							." invalid element. exception msg: ".$e->getMessage()
 							, logger::ERROR
