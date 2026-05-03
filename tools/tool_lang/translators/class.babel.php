@@ -42,6 +42,20 @@ class babel {
 				'direction' => $direction
 			];
 
+		// SEC-076: SSRF defence-in-depth. $url is config-defined
+		// (DEDALO_TRANSLATOR_URL['babel']), but validating it here means a
+		// misconfiguration can't be weaponised to hit cloud-metadata or
+		// internal services. Allow non-standard ports (translation backends
+		// often listen on :8080 / :8443).
+			if (!is_safe_remote_url((string)$url, (object)['allow_custom_ports' => true])) {
+				debug_log(__METHOD__
+					.' SEC-076: refused unsafe babel URL: ' . to_string($url)
+					, logger::ERROR
+				);
+				$response->msg = 'Trigger Error: ['.__FUNCTION__.'] invalid translator URL';
+				return $response;
+			}
+
 		// curl request (core functions)
 			$curl_response = curl_request((object)[
 				'url'			=> $url,
