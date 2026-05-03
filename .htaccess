@@ -133,8 +133,28 @@ Options -Indexes
 </IfModule>
 
 # SEC-015: baseline security response headers.
-# CSP is intentionally omitted here; it requires per-app tuning and should be
-# rolled out separately once the resource graph is mapped.
+# SEC-XSS-CSP (§7.x): Content-Security-Policy rolled out in Report-Only mode
+# first. Deployers should collect reports for a release cycle, then flip the
+# `Content-Security-Policy-Report-Only` line to `Content-Security-Policy` to
+# enforce. Directives below reflect the audited resource graph:
+#   * `'unsafe-eval'` is mandatory because vendored libraries (pdfjs,
+#     jsoneditor, leaflet, d3, threejs, dropzone, vexflow) use `new Function`
+#     or `eval` internally. Removing it requires replacing those libs.
+#   * `'unsafe-inline'` on style-src is required because Dédalo sets inline
+#     `style=` attributes extensively via `setAttribute('style', ...)`
+#     (svgedit, component_pdf, tool_image_*). Nonce-based styles would need
+#     a full refactor.
+#   * `data:` and `blob:` are needed for dynamically generated images,
+#     media previews, and worker scripts (pdfjs worker, audio blobs).
+#   * `object-src 'none'` blocks Flash/plugin embeds.
+#   * `base-uri 'self'` + `form-action 'self'` prevent <base> hijacking and
+#     cross-origin form posts.
+#   * `frame-ancestors 'self'` mirrors the X-Frame-Options SAMEORIGIN policy
+#     (CSP supersedes X-Frame-Options on modern browsers).
+# NOTE: the `report-uri` directive is left off by default because no report
+# collector ships with Dédalo. Deployers that run a CSP report endpoint
+# should append `report-uri /csp-report` (or `report-to` with a Report-To
+# header) before enforcing.
 <IfModule mod_headers.c>
 	Header always set X-Content-Type-Options "nosniff"
 	Header always set X-Frame-Options "SAMEORIGIN"
@@ -145,6 +165,14 @@ Options -Indexes
 	Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
 	# Strip the Proxy request header (CVE-2016-5385 / httpoxy).
 	RequestHeader unset Proxy
+
+	# Content Security Policy (Report-Only — monitor first, enforce later).
+	Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+
+	# Enforcing version (uncomment after the Report-Only phase has shown no
+	# first-party violations in telemetry, and comment out the Report-Only
+	# line above):
+	# Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.
