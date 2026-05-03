@@ -1449,6 +1449,14 @@ final class dd_utils_api {
 	* @return die()
 	*/
 	public static function get_process_status(object $rqo) {
+
+		// Under RoadRunner the echo/flush/die() model breaks the worker protocol.
+		// Delegate to the generator version which yields SSE chunks and lets
+		// the worker loop stream them frame-by-frame via HttpWorker::respond().
+		if (defined('DEDALO_RR_WORKER')) {
+			return self::get_process_status_stream($rqo);
+		}
+
 		$start_time=start_time();
 
 		// max_execution_time
@@ -1731,6 +1739,189 @@ final class dd_utils_api {
 
 		return $response;
 	}//end get_process_status_poll
+
+
+
+	/**
+	* GET_PROCESS_STATUS_STREAM
+	* RoadRunner-compatible generator version of get_process_status.
+	*
+	* Produces the same SSE event stream but yields chunks instead of
+	* echoing + die(), allowing the RoadRunner worker to forward them
+	* frame-by-frame via HttpWorker::respondStream().
+	*
+	* @param object $rqo
+	* @return \Generator Yields SSE formatted strings "data:\n{json}\n\n"
+	*/
+	public static function get_process_status_stream(object $rqo) : \Generator {
+
+		$start_time = start_time();
+
+		// max_execution_time
+			ini_set('max_execution_time', 36000); // seconds (3600 * 10) = 10 hours
+
+		// session unlock
+			session_write_close();
+
+		// options
+			$pfile	= $rqo->options->pfile;
+			$pid	= $rqo->options->pid;
+
+		// only logged users can access SSE events
+			if(login::is_logged()!==true) {
+				yield json_handler::encode((object)[
+					'errors' => ['Authentication error: please login']
+				]);
+				return;
+			}
+
+		// SEC: ownership check
+			if (!empty($pid) && !empty($pfile)) {
+				$logged_user_id	= logged_user_id();
+				$is_superuser	= ((int)$logged_user_id === DEDALO_SUPERUSER);
+				$entry			= processes::get_process_item((int)$pid, (string)$pfile);
+				if ($entry === null || (!$is_superuser && (int)($entry->user_id ?? 0) !== (int)$logged_user_id)) {
+					debug_log(__METHOD__
+						. ' Denied process status read: process not owned by logged user' . PHP_EOL
+						. ' pid: ' . to_string($pid) . PHP_EOL
+						. ' logged_user_id: ' . to_string($logged_user_id)
+						, logger::ERROR
+					);
+					yield json_handler::encode((object)[
+						'errors' => ['Authentication error: process not owned by current user']
+					]);
+					return;
+				}
+			}
+
+		// header print as event stream
+			header("Content-Type: text/event-stream");
+			header("Cache-Control: no-cache, must-revalidate");
+			header('Connection: keep-alive');
+			header("Access-Control-Allow-Origin: *");
+			header('X-Accel-Buffering: no');
+
+		// mandatory vars
+			if (empty($pfile) || empty($pid)) {
+				$output = (object)[
+					'pid'			=> $pid,
+					'pfile'			=> $pfile,
+					'is_running'	=> false,
+					'data'			=> (object)[
+						'msg' => 'Error: pfile and pid are mandatory'
+					],
+					'time'			=> date("Y-m-d H:i:s"),
+					'errors'		=> ['Error: pfile and pid are mandatory']
+				];
+				yield json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+				return;
+			}
+
+		// process
+			$process = new process();
+				$process->setPid($pid);
+				$process->setFile(process::get_process_path() .'/'. $pfile);
+
+		// event loop
+			$update_rate = $rqo->update_rate ?? 1000;
+			// Safety net: max_execution_time is ignored under CLI SAPI (RoadRunner).
+			// Cap the loop to prevent a stuck process file from blocking a worker slot.
+			$max_iterations = (int)(36000 / max(1, $update_rate / 1000)); // ~10h equivalent
+			$iterations = 0;
+			try {
+				while (1) {
+
+					// max-iteration guard
+						if (++$iterations > $max_iterations) {
+							debug_log(__METHOD__
+								. ' Max iterations reached (' . $max_iterations . '). Breaking SSE loop.'
+								. ' pid: ' . $pid . ' pfile: ' . $pfile
+								, logger::WARNING
+							);
+							break;
+						}
+
+					// process info
+						$is_running	= $process->status();
+						$array_data	= $process->read();
+						$value = isset($array_data[0])
+							? (json_decode($array_data[0]) ?? $array_data[0])
+							: '';
+
+						$data = (!is_object($value))
+							? (object)[ 'msg' => $value ]
+							: $value;
+
+					// output
+						$output = (object)[
+							'pid'			=> $pid,
+							'pfile'			=> $pfile,
+							'is_running'	=> $is_running,
+							'data'			=> $data,
+							'time'			=> date("Y-m-d H:i:s"),
+							'total_time'	=> exec_time_unit_auto($start_time),
+							'update_rate'	=> $update_rate,
+							'errors'		=> []
+						];
+
+					// debug
+						if(SHOW_DEBUG===true) {
+							error_log('process loop: is_running: '.to_string($is_running) . ' - pid: ' .$pid. ' - pfile: ' .$pfile);
+						}
+
+					// encode
+						$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+						if (!is_string($a)) {
+							debug_log(__METHOD__
+								. " Error. output value is no correctly JSON encoded ! " . PHP_EOL
+								. to_string($a)
+								, logger::ERROR
+							);
+							$a = to_string($a);
+						}
+
+						// Apache HTTP 1.1 buffer fix — only relevant for PHP-FPM behind Apache.
+						// RR streams via its own binary protocol; padding just wastes bandwidth.
+						if (!defined('DEDALO_RR_WORKER') && ($_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1')==='HTTP/1.1') {
+							$len = strlen($a);
+							if ($len < 4096) {
+								$fill_length = 4096 - $len;
+								$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+								$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+							}
+						}
+
+					// SSE format
+						yield 'data:' . "\n" . $a . "\n\n";
+
+					// debug log
+						debug_log(__METHOD__
+							. ' ' . $a . PHP_EOL
+							, logger::DEBUG
+						);
+
+					// stop on finish
+						if ($is_running===false) {
+							processes::delete_process_item($pid, logged_user_id());
+							break;
+						}
+
+					// sleep before next iteration
+						$ms = $update_rate;
+						usleep($ms * 1000);
+				}//end while
+			} catch (\Spiral\RoadRunner\Http\Exception\StreamStoppedException $e) {
+				// Client disconnected; RoadRunner throws this into the generator.
+				// Clean up gracefully so the process entry is removed.
+				debug_log(__METHOD__
+					. ' Client disconnected (StreamStoppedException)'
+					. ' pid: ' . $pid . ' pfile: ' . $pfile
+					, logger::DEBUG
+				);
+			}
+
+		return;
+	}//end get_process_status_stream
 
 
 
