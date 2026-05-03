@@ -8,6 +8,16 @@
  * (These must be included in the calling context)
  */
 
+// SEC-046: disable the `phar://` stream wrapper. Dédalo does not read phar
+// archives at runtime; leaving the wrapper registered preserves the classic
+// phar-deserialisation gadget chain, where any user-reachable `file_exists()`
+// / `is_dir()` / `fopen()` / `md5_file()` etc. on an attacker-controlled path
+// will trigger arbitrary PHP object deserialisation of the phar metadata.
+// Unregistering here short-circuits the primitive at the lowest possible layer.
+if (in_array('phar', stream_get_wrappers(), true)) {
+	@stream_wrapper_unregister('phar');
+}
+
 
 
 /**
