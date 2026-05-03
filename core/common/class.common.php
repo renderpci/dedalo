@@ -1269,7 +1269,14 @@ abstract class common {
 				}
 
 		// properties
-			$properties = $this->get_properties() ?? new stdClass();
+			$properties_source = $this->get_properties();
+			if (is_object($properties_source)) {
+				// Clone to prevent accidental mutations of cached properties (SEC-023)
+				$properties = clone $properties_source;
+			} else {
+				$properties = new stdClass();
+			}
+
 			$remove_edit_css = false;
 			// set properties of the section_list node
 			// section and component_portal could has a section_list node with the list definition
@@ -1286,6 +1293,7 @@ abstract class common {
 				if(isset($ar_terms[0])) {
 					$ontology_node	= ontology_node::get_instance($ar_terms[0]);
 					$properties		= $ontology_node->get_properties() ?? new stdClass();
+					// Note: ontology_node->get_properties() already returns a deep clone
 				}else{
 					// in cases that section_list is not present (usually component_portal)
 					// remove the edit css, it happens because the main term, by default, defines the edit behavior in ontology
@@ -1303,7 +1311,7 @@ abstract class common {
 				: $css;
 
 			if (isset($properties->css)) {
-				// remove from properties object
+				// remove from local properties object (cloned above)
 				unset($properties->css);
 			}
 			// (!) new. Section overwrite css (virtual sections case)
