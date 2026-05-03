@@ -365,7 +365,8 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 		return new Promise(function(resolve){
 			nodes.status_container.classList.remove('hide')
 			nodes.status_container.classList.add('loading_status')
-			nodes.status_container.innerHTML = self.get_tool_label('processing_audio') || 'Processing audio...'
+			// SEC-XSS-007: i18n label is plain text; textContent avoids HTML parsing.
+			nodes.status_container.textContent = self.get_tool_label('processing_audio') || 'Processing audio...'
 			data_manager.request({
 				body : rqo,
 				retries : 1, // one try only
