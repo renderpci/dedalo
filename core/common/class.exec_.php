@@ -152,9 +152,9 @@ class exec_ {
 			// sh_data mandatory vars
 			$sh_data = [
 				'server' => [
-					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
-					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
-					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
+					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'] ?? 'localhost',
+					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'] ?? '/',
+					'SERVER_NAME'	=> $_SERVER['SERVER_NAME'] ?? $_SERVER['HTTP_HOST'] ?? 'development'
 				],
 				'session_id'		=> session_id(),
 				'error_log_path'	=> system::get_error_log_path(), // current PHP-FPM path to use the same error output
