@@ -151,6 +151,19 @@ class component_external extends component_common {
 						'lang'			=> $lang
 					]);
 
+				// SEC-075: SSRF confinement. Ontology-defined `api_url` drives
+				// this call. Even though admins own the ontology, the
+				// constructed `$url` must still point to a public endpoint to
+				// prevent cloud-metadata / internal-service reads.
+					if (!is_safe_remote_url($url)) {
+						debug_log(__METHOD__
+							.' SEC-075: refused unsafe external URL: ' . to_string($url)
+							, logger::ERROR
+						);
+						$_SESSION['dedalo']['config'][$entity.'_is_available'] = false;
+						return null;
+					}
+
 				// remote API request
 					$request_response = curl_request((object)[
 						'url'		=> $url, // string
