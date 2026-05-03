@@ -32,5 +32,12 @@
 			);
 		}
 	} catch (Exception $e) {
-		echo $e->getMessage();
+		// SEC-079: do not echo the raw library exception to the public
+		// metadata endpoint — it leaks internal settings paths and enables
+		// OAISIS-level enumeration of the SAML configuration. Log server-side
+		// and respond with a generic 500.
+		error_log(' SAML metadata error: ' . $e->getMessage());
+		http_response_code(500);
+		header('Content-Type: text/plain; charset=utf-8');
+		echo 'Error generating SP metadata';
 	}
