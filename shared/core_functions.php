@@ -962,11 +962,20 @@ function dedalo_encrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 
 /**
 * DEDALO_DECRYPT_OPENSSL
+* Legacy decrypt counterpart of {@see dedalo_encrypt_openssl()}.
+*
+* SEC-082: deserialisation of the recovered plaintext is now hardened with
+* `allowed_classes => false`. Dédalo never wraps arbitrary objects in
+* encrypted blobs; only scalars/arrays. Forbidding object deserialisation
+* removes the classic POP-gadget primitive that any padding-oracle / MITM
+* attacker could otherwise abuse against this legacy path.
+*
+* @deprecated since SEC-082. Use dedalo_decrypt_auto() in callers.
 * @param string $string_value
 * @param string $key = DEDALO_INFORMATION
-* @return string $output
+* @return mixed Decoded value, or empty string on failure (legacy contract).
 */
-function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) : string {
+function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) {
 
 	if (!function_exists('openssl_decrypt')) {
 		throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
@@ -980,7 +989,11 @@ function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 	$output = openssl_decrypt(base64_decode($string_value), $encrypt_method, md5(md5($key)), 0, $iv);
 
 	if ( $output!==false && is_serialized($output) ) {
-		return unserialize($output);
+		// SEC-082: refuse object deserialisation. Dédalo never round-trips
+		// objects through this primitive; only scalars / arrays / stdClass.
+		// allowed_classes:false neutralises gadget chains during the
+		// migration window without breaking real decrypt traffic.
+		return unserialize($output, ['allowed_classes' => false]);
 	}else{
 		debug_log(__METHOD__
 			." Current string is not correctly serialized !"
@@ -989,6 +1002,33 @@ function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 		return '';
 	}
 }//end dedalo_decrypt_openssl
+
+/**
+* DEDALO_DECRYPT_AUTO
+* SEC-082: read-side multiplexer for stored ciphertexts.
+*
+* Dispatches on the `v2:` prefix:
+*  - `v2:` payloads → {@see dedalo_decrypt_v2()} (authenticated path).
+*  - everything else → {@see dedalo_decrypt_openssl()} (legacy CBC).
+*
+* Use this in any code path that reads a value that may have been written
+* before SEC-082 rolled out. New writers should call
+* {@see dedalo_encrypt_v2()} directly.
+*
+* @param string $payload
+* @param string|null $key
+* @return mixed
+*/
+function dedalo_decrypt_auto(string $payload, ?string $key=null) {
+
+	if (strncmp($payload, 'v2:', 3) === 0) {
+		return dedalo_decrypt_v2($payload, $key);
+	}
+	return dedalo_decrypt_openssl(
+		$payload,
+		$key ?? (defined('DEDALO_INFORMATION') ? (string)DEDALO_INFORMATION : '')
+	);
+}//end dedalo_decrypt_auto
 
 
 
