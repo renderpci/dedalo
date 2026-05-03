@@ -208,38 +208,32 @@ class web_data {
 						return false;
 					}
 
-				// valid chars check
-					$ar_value = !is_array($value) ? explode(',', $value) : $value;
+				// SEC-061: previous ar_fields regex allowed `'` (single quote),
+				// which — combined with some comma-split paths — could be
+				// used to smuggle literal strings into the SELECT list. We
+				// remove `'` and `"` from the permitted set. CONCAT case
+				// still needs brackets but no string literals.
+				$ar_value = !is_array($value) ? explode(',', (string)$value) : $value;
 					foreach ($ar_value as $c_value) {
 
 						if($is_literal===true) {
-							// free search case
-							preg_match('/^[\w|,|\+| |`|\'|\(|\)|\*|\\\|"]+$/iu', $c_value, $output_array);
+							// free search case — literal strings allowed but still no quotes from the attacker
+							$ok = preg_match('/^[\w,\+ `\(\)\*\\\]+$/iu', (string)$c_value) === 1;
 
 						}else if (strpos($c_value, 'CONCAT')===0) {
-							// added |\"|\[|\] to allow CONCAT sentences (14-10-2021)
-							# preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/i', $c_value, $output_array);
-							// added '/u' to allow all unicode chars (ñ for example)
-							// changed '[a-zA-Z0-9|_' to the equivalent '\w'
-							preg_match('/^[\w|,|\+| |`|\'|\"|\[|\]|\(|\)|\*]+$/iu', $c_value, $output_array);
+							// CONCAT(...) — brackets allowed, no quotes
+							$ok = preg_match('/^[\w,\+ `\[\]\(\)\*]+$/iu', (string)$c_value) === 1;
 
 						}else{
-							# preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $c_value, $output_array);
-							// added '/u' to allow all unicode chars (ñ for example)
-							// changed '[a-zA-Z0-9|_' to the equivalent '\w'
-							preg_match('/^[\w|,|\+| |`|\'|\(|\)|\*]+$/iu', $c_value, $output_array);
+							// plain identifier / expression list
+							$ok = preg_match('/^[\w,\+ `\(\)\*]+$/iu', (string)$c_value) === 1;
 						}
 
-						if (empty($output_array[0])) {
-							debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+						if (!$ok) {
+							debug_log(__METHOD__." SEC-061: test $name not passed! ".to_string($c_value), logger::ERROR);
 							return false;
 						}
 					}
-					// old
-						// preg_match('/^[a-zA-Z0-9|_|,|\+| |`|\'|\(|\)|\*]+$/i', $plain_fields, $output_array);
-						// if (empty($output_array[0])) {
-						// 	return false;
-						// }
 				break;
 
 			case 'sql_fullselect':
