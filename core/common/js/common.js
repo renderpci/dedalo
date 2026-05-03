@@ -1115,7 +1115,9 @@ common.prototype.load_script = async function(src, content=null) {
 			element.setAttribute('defer', 'defer');
 
 			if(content) {
-				element.innerHTML = content
+				// SEC-XSS-004: textContent is the correct way to set script source;
+				// innerHTML triggers the HTML parser unnecessarily.
+				element.textContent = content
 			}
 
 			element.addEventListener('load', function(e) {

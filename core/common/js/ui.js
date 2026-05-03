@@ -1589,13 +1589,16 @@ export const ui = {
 			if(options.inner_html) {
 				element.insertAdjacentHTML('afterbegin', options.inner_html)
 			}else if (options.text_node) {
-				// Parse HTML text as object
+				// SEC-XSS-001: text_node is meant to be plain text, not HTML.
+				// The old path used insertAdjacentHTML which would parse and execute
+				// any HTML markup (including <script>) in what the caller intended
+				// as a text label. Both span and non-span branches now use textContent.
 				if (element_type==='span') {
 					element.textContent = options.text_node
 				}else{
 					const el = document.createElement('span')
 						  // Note that prepend a space to span to prevent Chrome bug on selection
-						  el.insertAdjacentHTML('afterbegin', " "+options.text_node)
+						  el.textContent = " " + options.text_node
 					element.appendChild(el)
 				}
 			}else if(options.text_content) {

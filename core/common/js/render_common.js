@@ -502,7 +502,7 @@ export const render_stream = function(options) {
 					console.log('stop_process API response:', response);
 				}
 				if (response.errors && response.errors.length) {
-					alert("Errors: " + response.errors.join('<br>') );
+					alert("Errors: " + response.errors.join('\n') );
 				}
 			})
 		})
@@ -560,13 +560,25 @@ export const render_stream = function(options) {
 					}
 
 					// msg
+					// SEC-XSS-002: server-provided messages may contain HTML
+					// metacharacters (file paths, exception text). Escape before
+					// DOM insertion so they render as text, not parsed markup.
+					const esc = (s) => {
+						if (s === null || s === undefined) return '';
+						return String(s)
+							.replace(/&/g, '&amp;')
+							.replace(/</g, '&lt;')
+							.replace(/>/g, '&gt;')
+							.replace(/"/g, '&quot;')
+							.replace(/'/g, '&#39;');
+					};
 					if(is_running===true) {
 
 						const msg = data.msg && data.msg.length>3
 							? data.msg
 							: 'Process running... please wait'
 
-						ui.update_node_content(info_node.msg_node, msg)
+						ui.update_node_content(info_node.msg_node, esc(msg))
 
 						if (has_stop_capability) {
 							button_stop_process.classList.remove('hide')
@@ -594,7 +606,7 @@ export const render_stream = function(options) {
 						  info_node.msg_node.classList.add('error');
 						}
 
-						ui.update_node_content(info_node.msg_node, msg_end.join('<br>'))
+						ui.update_node_content(info_node.msg_node, msg_end.map(esc).join('<br>'))
 
 						button_stop_process.classList.add('hide')
 					}

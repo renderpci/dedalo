@@ -348,9 +348,15 @@ export function printf(format) {
 */
 export function strip_tags(value) {
 
-	const aux_node = document.createElement("div")
-	aux_node.insertAdjacentHTML('afterbegin', value)
-	const text_clean = aux_node.textContent || aux_node.innerText || "";
+	// SEC-XSS-003: previously used insertAdjacentHTML on a detached <div>.
+	// That decodes HTML entities into the DOM before extracting textContent,
+	// which can create tags from entity-encoded input and, in edge cases,
+	// trigger side-effects during parsing. <template> innerHTML does NOT
+	// execute scripts or load subresources, so it is the safe way to strip
+	// tags while preserving text.
+	const template = document.createElement("template");
+	template.innerHTML = value;
+	const text_clean = template.content.textContent || "";
 
 	return text_clean;
 }//end strip_tags
