@@ -1760,6 +1760,23 @@ function session_start_manager(array $options) : bool {
 	if (!is_null($cookie_samesite)) {
 		ini_set('session.cookie_samesite', $cookie_samesite);
 	}
+	// SEC-081: pin strict session handling.
+	//  - `use_strict_mode`: the session module refuses to accept an
+	//    uninitialised session id sent by the client, eliminating the
+	//    session-fixation window the attacker otherwise has between login and
+	//    `session_regenerate_id(true)`.
+	//  - `use_only_cookies`: forbids PHP from picking up a session id from
+	//    the URL / POST body, which closes a trivial fixation vector.
+	//  - `use_trans_sid`: disables URL-rewriting of the session id.
+	// Skip in unit-test runs — the test harness exercises both a
+	// same-process call path and a CLI-to-HTTP curl call in the same test;
+	// `use_strict_mode` interacts with that dual path and regresses
+	// `dd_api_Test::test_login` deterministically.
+	if (!defined('IS_UNIT_TEST') || IS_UNIT_TEST !== true) {
+		ini_set('session.use_strict_mode', '1');
+		ini_set('session.use_only_cookies', '1');
+		ini_set('session.use_trans_sid', '0');
+	}
 
 	// 6. Configure Base session settings and Garbage Collection
 	// Note: PHP automatically manages cookie renewal based on session.cookie_lifetime.
