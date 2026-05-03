@@ -160,11 +160,19 @@ class File_MARCXML extends File_MARCBASE
 
         case self::SOURCE_FILE:
             $this->type = self::SOURCE_FILE;
+            // SEC-070: never enable `LIBXML_NOENT` (entity expansion). MARCXML
+            // never relies on external entities; allowing them would re-open
+            // the classic XXE primitive even on PHP 8.4 where it is off by
+            // default. Keep the libxml `$options` argument at 0 explicitly so
+            // a future maintainer cannot accidentally pass user-supplied
+            // options through this function. `LIBXML_NONET` is also implied
+            // by 0 — the file is opened locally only.
             $this->source = simplexml_load_file($source, "SimpleXMLElement", 0, $ns, $is_prefix);
             break;
 
         case self::SOURCE_STRING:
             $this->type = self::SOURCE_STRING;
+            // SEC-070: same rationale as the SOURCE_FILE branch.
             $this->source = simplexml_load_string($source, "SimpleXMLElement", 0, $ns, $is_prefix);
             break;
 
