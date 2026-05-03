@@ -1083,6 +1083,58 @@ final class dd_utils_api {
 					. ' extension: '. to_string($extension) .PHP_EOL
 					, logger::ERROR
 				);
+				// SEC-066: drop the assembled file when validation fails so a
+				// hostile payload cannot persist under the upload tree even
+				// if the operator never calls delete_uploaded_file().
+				if (file_exists($target_path)) {
+					@unlink($target_path);
+				}
+				return $response;
+			}
+
+		// SEC-066: content sniff at move-time. The non-chunked upload path
+		// runs `finfo` on the temp file and cross-checks the detected MIME
+		// against the extension. The chunked path historically skipped both
+		// because each chunk's MIME is `application/octet-stream` — but the
+		// final, ASSEMBLED file is what lands under the upload tree, and it
+		// MUST be re-validated. Without this an attacker can stream a PHP /
+		// SVG-with-script / HTML payload as `.jpg` chunks and have the
+		// joined artefact (still named `.jpg`) sit on disk for any downstream
+		// caller to pick up.
+			$assembled_finfo = new finfo(FILEINFO_MIME_TYPE);
+			$assembled_mime  = $assembled_finfo->file($target_path);
+			$mime_entry = null;
+			foreach ($known_mime_types as $current_mime) {
+				if ($current_mime['mime'] === $assembled_mime) {
+					$mime_entry = $current_mime;
+					break;
+				}
+			}
+			if ($mime_entry === null) {
+				$response->msg .= ' Error. Assembled file mime not in allowlist: ' . $assembled_mime;
+				debug_log(__METHOD__
+					. ' SEC-066 unknown assembled MIME on chunk join.' . PHP_EOL
+					. ' assembled_mime: ' . to_string($assembled_mime) . PHP_EOL
+					. ' target_path: ' . to_string($target_path)
+					, logger::ERROR
+				);
+				if (file_exists($target_path)) {
+					@unlink($target_path);
+				}
+				return $response;
+			}
+			if (!in_array($extension, $mime_entry['extension'], true)) {
+				$response->msg .= ' Error. Extension \'' . $extension
+					. '\' does not match assembled MIME \'' . $assembled_mime . '\'';
+				debug_log(__METHOD__
+					. ' SEC-066 extension/MIME mismatch on chunk join.' . PHP_EOL
+					. ' extension: ' . to_string($extension) . PHP_EOL
+					. ' assembled_mime: ' . to_string($assembled_mime)
+					, logger::ERROR
+				);
+				if (file_exists($target_path)) {
+					@unlink($target_path);
+				}
 				return $response;
 			}
 
