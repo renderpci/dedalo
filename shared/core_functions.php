@@ -487,6 +487,19 @@ function curl_request(object $options) : object {
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $ssl_verifypeer); // bool default false
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $ssl_verifyhost); // bool default false
 
+	// SEC-074: restrict both direct protocol and redirect-target protocol to
+	// http/https so an attacker cannot coerce a follow into file:// / gopher://
+	// / dict:// / ldap:// etc. Prefer the string API (libcurl >= 7.85) with a
+	// bitmask fallback for older versions.
+		$protocols_mask = (defined('CURLPROTO_HTTP') ? CURLPROTO_HTTP : 0) | (defined('CURLPROTO_HTTPS') ? CURLPROTO_HTTPS : 0);
+		if (defined('CURLOPT_PROTOCOLS_STR')) {
+			curl_setopt($ch, CURLOPT_PROTOCOLS_STR, 'http,https');
+			curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS_STR, 'http,https');
+		} elseif ($protocols_mask !== 0) {
+			curl_setopt($ch, CURLOPT_PROTOCOLS, $protocols_mask);
+			curl_setopt($ch, CURLOPT_REDIR_PROTOCOLS, $protocols_mask);
+		}
+
 	// A given cURL operation should only take XXX seconds max.
 		curl_setopt($ch, CURLOPT_TIMEOUT, $timeout); // int default 5
 
