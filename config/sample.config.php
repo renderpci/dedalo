@@ -142,6 +142,18 @@
 	include(DEDALO_CONFIG_PATH . '/config_core.php');
 	// config_db. Dédalo PostgreSQL and MariaDB config file
 	include(DEDALO_CONFIG_PATH . '/config_db.php');
+
+	// SEC-094: runtime guard — refuse to boot with sample-default secrets
+	// (`dedalo_six`, `mypassword`, `myusername`, `Dédalo install version`,
+	// `DEDALO_INFO_KEY = DEDALO_ENTITY`). By default the function only
+	// logs each violation via error_log; define
+	// `DEDALO_ENFORCE_SECRET_SENTINELS=true` in your config to turn the
+	// warning into a hard 503 at boot. See `shared/core_functions.php`
+	// for the sentinel list.
+	if (function_exists('dedalo_assert_secrets_initialised')) {
+		dedalo_assert_secrets_initialised();
+	}
+
 	// dd_tipos. List of main Dédalo resolved tipos
 	include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
 
