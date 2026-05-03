@@ -27,6 +27,15 @@
 * The two methods below are intentionally *unsafe* placeholders. They are
 * listed in API_ACTIONS so the dispatch surface works for development, but
 * they are not gated. Do NOT enable this tool on a production instance.
+*
+* SEC-083: each method now fails closed when `DEVELOPMENT_SERVER` is not
+* exactly `true`. This is the standard Dédalo production-vs-development
+* marker (defined in `config/sample.config.php`). The intent: even if a
+* production deployer accidentally registers `tool_dev_template` for a
+* user, calling either method on a production install returns a hard
+* refusal instead of running the unguarded body. Forks of this template
+* MUST replace the guard with their actual permission check before
+* enabling the tool.
 */
 class tool_dev_template extends tool_common {
 
@@ -57,6 +66,20 @@ class tool_dev_template extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// SEC-083: fail-closed on production. This template tool's body has no
+		// permission gate; running it on a production install would let any
+		// authorised tool user reach `component_common::get_instance()` for an
+		// arbitrary tipo/section_id without scope checks. The DEVELOPMENT_SERVER
+		// flag is the canonical Dédalo "this install is a dev box" sentinel.
+			if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER !== true) {
+				$response->msg = 'Error. tool_dev_template is a development-only template; refusing to run on production.';
+				debug_log(__METHOD__
+					. ' SEC-083 refused execution on production install.'
+					, logger::ERROR
+				);
+				return $response;
+			}
 
 		// options
 			$component_tipo	= $options->component_tipo ?? null;
@@ -136,16 +159,28 @@ class tool_dev_template extends tool_common {
 	*/
 	public static function handle_upload_file(object $options) : object {
 
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// SEC-083: fail-closed on production. Same rationale as
+		// my_custom_static_fake_method() above; this method composes a path
+		// from `$file_data->tmp_name` with no realpath confinement and runs
+		// `dump()` of the options object into the error log.
+			if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER !== true) {
+				$response->msg = 'Error. tool_dev_template is a development-only template; refusing to run on production.';
+				debug_log(__METHOD__
+					. ' SEC-083 refused execution on production install.'
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// options
 			$file_data = $options->file_data;
 
 		// @see PHP error log here
 			dump($options, ' options ++ '.to_string());
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
 
 		// move file
     		// re-build the real path based on file data
@@ -158,7 +193,6 @@ class tool_dev_template extends tool_common {
 		// response
 			$response->result	= true;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
-
 
 		return (object)$response;
 	}//end handle_upload_file
