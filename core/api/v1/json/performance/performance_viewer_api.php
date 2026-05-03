@@ -5,16 +5,61 @@ declare(strict_types=1);
  * PERFORMANCE VIEWER API
  * Backend API for the performance viewer dashboard
  * Reads and aggregates performance log data
+ *
+ * SEC-068: this endpoint previously ran anonymously with a wildcard CORS
+ * header, letting any internet origin scrape the timing and memory profile
+ * of the deployment. We now bootstrap the Dédalo stack (for session + logger)
+ * and gate on an authenticated dev/admin session before returning data.
  */
+
+// Bootstrap Dédalo so session + login helpers are available.
+if (!defined('DEDALO_ROOT_PATH')) {
+    // /core/api/v1/json/performance/performance_viewer_api.php → /
+    if (!@include dirname(__DIR__, 5) . '/config/config.php') {
+        http_response_code(500);
+        echo json_encode(['result' => false, 'msg' => 'Configuration not available']);
+        exit(0);
+    }
+}
+
+// SEC-068: require an authenticated session; only users with developer /
+// admin permissions may view the performance log.
+$is_authorised = false;
+if (function_exists('session_start_manager')) {
+    session_start_manager();
+}
+if (class_exists('login')) {
+    $logged = login::is_logged();
+    if ($logged === true) {
+        if (defined('DEDALO_USER_ID_DEVELOPER')
+            && isset($_SESSION['dedalo']['auth']['user_id'])
+            && (int)$_SESSION['dedalo']['auth']['user_id'] === (int)DEDALO_USER_ID_DEVELOPER
+        ) {
+            $is_authorised = true;
+        } else if (class_exists('common')
+            && method_exists('common', 'user_is_global_admin')
+            && common::user_is_global_admin() === true
+        ) {
+            $is_authorised = true;
+        }
+    }
+}
+if (!$is_authorised) {
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['result' => false, 'msg' => 'Unauthorized']);
+    exit(0);
+}
 
 // Load configuration
 if (file_exists(__DIR__ . '/performance_config.php')) {
     include_once __DIR__ . '/performance_config.php';
 }
 
-// Set JSON header
+// Set JSON header. SEC-068: removed the wildcard Access-Control-Allow-Origin.
+// Only authenticated same-origin requests need this endpoint; browsers already
+// send the session cookie implicitly for same-origin fetch calls.
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
 
 // Response object
 $response = new stdClass();
