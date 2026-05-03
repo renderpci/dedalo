@@ -2676,7 +2676,15 @@ function get_client_ip_trusted() : string {
 */
 function saml_safe_redirect_target(mixed $relay_state) : string {
 
+	// SEC-104: when `DEDALO_ROOT_WEB` is the empty string (root-mounted
+	// install) the original logic produced an empty fallback, which the
+	// browser would resolve relative to the current URL — i.e. silently
+	// stay on the ACS endpoint instead of leaving it. Coerce to '/' so
+	// the fallback is always an absolute, same-origin path.
 	$fallback = defined('DEDALO_ROOT_WEB') ? (string)DEDALO_ROOT_WEB : '/';
+	if ($fallback === '') {
+		$fallback = '/';
+	}
 
 	if (!is_string($relay_state) || $relay_state === '') {
 		return $fallback;
