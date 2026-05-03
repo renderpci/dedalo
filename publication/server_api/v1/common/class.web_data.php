@@ -249,9 +249,16 @@ class web_data {
 						return false;
 					}
 
-				preg_match_all("/=|delete|update|insert|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|user|having|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
-				if (!empty($output_array[0])) {
-					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+				// SEC-056: expand denylist with the bypass patterns omitted
+				// previously: BENCHMARK, LOAD_FILE / LOAD DATA, INTO OUTFILE,
+				// CREATE FUNCTION, PG_SLEEP, WAITFOR, CHAR(...), hex-literals,
+				// and SQL-comment markers (`/*`, `*/`, `#`).
+				if (preg_match(
+						"/=|\b(?:delete|update|insert|truncate|extractvalue|md5|dbms_pipe|union|where|user|having|delay|sleep|benchmark|load_file|load\s+data|create\s+function|xp_\w+|sp_\w+|pg_sleep|waitfor|into\s+outfile|information_schema|mysql)\b|set\s+names|\*{2,}|\-\-|\@\@|\/\*|\*\/|(^|[^a-z])#|\bchar\s*\(|0x[0-9a-f]{4,}|\bif\s*\(/i",
+						(string)$value
+					) === 1
+				) {
+					debug_log(__METHOD__." SEC-056: test $name not passed! ".to_string($value), logger::ERROR);
 					return false;
 				}
 				break;
@@ -263,9 +270,13 @@ class web_data {
 						return false;
 					}
 
-				preg_match_all("/select |delete|update|insert|includes|wlwmanifest|truncate|extractvalue|\*{2,}|MD5|DBMS_PIPE| union |set names|where|having|user|\-\-|delay|sleep|outfile|\@\@|information_schema| if | if\(|mysql/i", $value, $output_array);
-				if (!empty($output_array[0])) {
-					debug_log(__METHOD__." test $name not passed! ".to_string($output_array), logger::ERROR);
+				// SEC-056: see note under sql_fullselect.
+				if (preg_match(
+						"/\b(?:select|delete|update|insert|includes|wlwmanifest|truncate|extractvalue|md5|dbms_pipe|union|where|having|user|delay|sleep|benchmark|load_file|load\s+data|create\s+function|xp_\w+|sp_\w+|pg_sleep|waitfor|into\s+outfile|information_schema|mysql)\b|set\s+names|\*{2,}|\-\-|\@\@|\/\*|\*\/|(^|[^a-z])#|\bchar\s*\(|0x[0-9a-f]{4,}|\bif\s*\(/i",
+						(string)$value
+					) === 1
+				) {
+					debug_log(__METHOD__." SEC-056: test $name not passed! ".to_string($value), logger::ERROR);
 					return false;
 				}
 				break;
