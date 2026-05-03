@@ -1493,10 +1493,23 @@ function br2nl(string $string) : string {
 
 /**
 * GET_HTTP_RESPONSE_CODE
+* SEC-077: this helper has no production callers; it survives only because
+* of `test/server/shared/core_functions_Test.php`. It is a thin wrapper
+* around `get_headers()` which honours the userland stream context and
+* does not benefit from the {@see curl_request()} hardening (TLS verify,
+* protocol allowlist, SSRF gate). Any new caller MUST go through
+* {@see curl_request()} instead. We additionally apply the SSRF gate
+* here defensively so that even if the helper is reached with a
+* user-controlled URL it cannot probe loopback / private ranges.
+*
+* @deprecated since SEC-077. Prefer curl_request() with is_safe_remote_url().
 * @param string $url
-* @return int|false
+* @return int|null
 */
 function get_http_response_code(string $url): ?int {
+    if (!is_safe_remote_url($url)) {
+        return null;
+    }
     stream_context_set_default(['http' => ['method' => 'HEAD']]);
     $headers = @get_headers($url);
     if ($headers === false || !isset($headers[0])) {
