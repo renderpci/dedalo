@@ -209,6 +209,26 @@ final class dd_area_maintenance_api {
 				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
 			}
+			// SEC-069: realpath confinement — defence-in-depth on top of the
+			// `sanitize_key_dir` + widget-id whitelist above. Refuse to
+			// `require` any file whose canonical path escapes the widgets
+			// directory, even if the constants or symlinks have been
+			// tampered with at the filesystem level.
+			$widgets_root = realpath(DEDALO_CORE_PATH . '/area_maintenance/widgets');
+			$real_widget  = realpath($widget_class_file);
+			if ($widgets_root === false
+				|| $real_widget === false
+				|| !str_starts_with($real_widget, $widgets_root . DIRECTORY_SEPARATOR)
+			) {
+				$response->errors[] = 'Widget path confinement failed';
+				debug_log(__METHOD__
+					. ' SEC-069 widget path escapes widgets root.' . PHP_EOL
+					. ' widgets_root: ' . to_string($widgets_root) . PHP_EOL
+					. ' real_widget: ' . to_string($real_widget)
+					, logger::ERROR
+				);
+				return $response;
+			}
 			require_once $widget_class_file;
 
 		// check valid options
