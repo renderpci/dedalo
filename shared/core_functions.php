@@ -1032,6 +1032,80 @@ function dedalo_derive_key_v2(string $master) : string {
 }//end dedalo_derive_key_v2
 
 
+/**
+* DEDALO_ASSERT_SECRETS_INITIALISED
+* SEC-094: refuse to ship sample-default secrets to production.
+*
+* Walks the well-known config sentinels documented in `config/sample.config_db.php`,
+* `config/sample.config.php` and `publication/server_api/v1/config_api/sample.server_config_api.php`.
+* For every constant that still equals (or matches) the sample placeholder
+* the function emits a structured warning. When the optional opt-in
+* `DEDALO_ENFORCE_SECRET_SENTINELS=true` is defined, it dies on detection;
+* otherwise it merely logs so existing installs that left a default in
+* place are not silently locked out by an upgrade.
+*
+* The check is always skipped under `IS_UNIT_TEST` so the test fixtures —
+* which intentionally use placeholder values — keep running.
+*
+* @return string[] List of constants that match a sample sentinel.
+*/
+function dedalo_assert_secrets_initialised() : array {
+
+	if (defined('IS_UNIT_TEST') && IS_UNIT_TEST === true) {
+		return [];
+	}
+
+	// Map: constant_name => callable(string $value) : bool that returns true
+	// when the value still looks like the sample default.
+	$sentinels = [
+		'DEDALO_INFORMATION'			=> static fn(string $v) : bool => $v === 'Dédalo install version',
+		'DEDALO_USERNAME_CONN'			=> static fn(string $v) : bool => $v === 'myusername',
+		'DEDALO_PASSWORD_CONN'			=> static fn(string $v) : bool => $v === 'mypassword',
+		'DEDALO_SALT_STRING'			=> static fn(string $v) : bool => $v === 'dedalo_six',
+		// publication-side config (sample.server_config_api.php)
+		'API_WEB_USER_CODE'				=> static fn(string $v) : bool => preg_match('/^X{10,}$/', $v) === 1,
+		'MYSQL_DEDALO_PASSWORD_CONN'	=> static fn(string $v) : bool => preg_match('/^X+\.\.$/', $v) === 1,
+	];
+
+	$violations = [];
+	foreach ($sentinels as $constant_name => $is_default) {
+		if (!defined($constant_name)) {
+			continue;
+		}
+		$value = (string)constant($constant_name);
+		if ($is_default($value) === true) {
+			$violations[] = $constant_name;
+		}
+	}
+
+	if (empty($violations)) {
+		return [];
+	}
+
+	$msg = 'SEC-094: configuration secrets still match sample defaults: '
+		. implode(', ', $violations)
+		. '. Edit your config/*.php files and replace these with strong unique values.';
+
+	// Always log loudly so deployers see the warning regardless of debug
+	// settings (error_log goes through the SAPI logger and survives even
+	// when SHOW_DEBUG is false).
+	@error_log($msg);
+	if (function_exists('debug_log') && class_exists('logger')) {
+		debug_log(__FUNCTION__ . ' ' . $msg, logger::ERROR);
+	}
+
+	if (defined('DEDALO_ENFORCE_SECRET_SENTINELS') && DEDALO_ENFORCE_SECRET_SENTINELS === true) {
+		// Hard-stop only when the operator explicitly opts in. We do this
+		// after logging so the sysadmin has a record of what failed.
+		http_response_code(503);
+		header('Content-Type: text/plain; charset=utf-8');
+		die('Service unavailable: insecure default secrets detected (SEC-094). See server log.');
+	}
+
+	return $violations;
+}//end dedalo_assert_secrets_initialised
+
+
 
 /**
 * DEDALO_DECRYPT_AUTO
