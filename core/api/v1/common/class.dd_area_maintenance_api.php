@@ -331,7 +331,14 @@ final class dd_area_maintenance_api {
 
 		// source
 			$source			= $rqo->source;
-			$class_name		= $source->model;
+			// SEC-050: `$class_name` becomes both a filesystem segment
+			// (widget directory + class filename) and the dynamic target of
+			// `call_user_func`. Although dd_manager's API_ACTIONS gate blocks
+			// unauthenticated calls, the string itself was interpolated raw.
+			// Sanitise to a bare PHP identifier (same contract as every
+			// other widget directory under `area_maintenance/widgets/`)
+			// before use.
+			$class_name		= sanitize_key_dir((string)($source->model ?? ''));
 			$class_method	= 'get_value';
 
 		// response
@@ -340,8 +347,32 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
 				$response->errors	= [];
 
+		// SEC-050: explicit bare-identifier regex even after sanitize_key_dir,
+		// plus realpath confinement against the widgets root, so no symlink
+		// or future sanitiser bug can drag the include outside the tree.
+			if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/', $class_name)) {
+				$response->errors[] = 'Invalid widget name';
+				debug_log(__METHOD__
+					. ' SEC-050 refused invalid widget identifier: ' . to_string($source->model ?? null)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// include the widget class
 			$widget_class_file = DEDALO_CORE_PATH . '/area_maintenance/widgets/' . $class_name . '/class.' . $class_name . '.php';
+			$widgets_root = realpath(DEDALO_CORE_PATH . '/area_maintenance/widgets');
+			$real_file    = realpath($widget_class_file);
+			if ($widgets_root === false || $real_file === false
+				|| strncmp($real_file, $widgets_root . DIRECTORY_SEPARATOR, strlen($widgets_root) + 1) !== 0) {
+				$response->errors[] = 'Widget path confinement failed';
+				debug_log(__METHOD__
+					. ' SEC-050 widget file escapes widgets root. widget_class_file=' . to_string($widget_class_file)
+					. ' real_file=' . to_string($real_file)
+					, logger::ERROR
+				);
+				return $response;
+			}
 			if( !include_once $widget_class_file ) {
 				$response->errors[] = 'Widget class file is unavailable';
 				return $response;
