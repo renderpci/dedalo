@@ -1705,8 +1705,21 @@ class login extends common {
 			]);
 
 		// delete session
-			unset($_SESSION['dedalo']);
-			if (session_status() == PHP_SESSION_ACTIVE) {
+			// SEC-080: rotate the session id before destroying it. This
+			// ensures that any cached references to the old session id (e.g.
+			// long-running tabs, browser back/forward cache) cannot be used
+			// by a network-local attacker if the session store lags the
+			// destroy, and aligns with the rotation-on-login posture (SEC-004).
+			$_SESSION = [];
+			if (session_status() === PHP_SESSION_ACTIVE) {
+				try {
+					session_regenerate_id(true);
+				} catch (Throwable $e) {
+					debug_log(__METHOD__
+						. ' SEC-080 session_regenerate_id failed: ' . $e->getMessage()
+						, logger::WARNING
+					);
+				}
 				session_destroy();
 			}
 
