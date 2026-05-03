@@ -183,6 +183,21 @@ class tool_import_rdf extends tool_common {
 					? $uri.'.rdf'
 					: $uri;
 
+				// SEC-072: SSRF confinement. Before handing the URI to EasyRdf
+				// (which calls curl/file_get_contents internally), confirm it
+				// resolves to a public host. `is_safe_remote_url()` blocks
+				// loopback / RFC1918 / link-local / multicast / reserved, and
+				// restricts the scheme to http/https. Custom ports are allowed
+				// here because RDF vocabularies occasionally live on :8080.
+				$url_check_options = (object)['allow_custom_ports' => true];
+				if (!is_safe_remote_url($rdf_uri, $url_check_options)) {
+					debug_log(__METHOD__
+						. ' SEC-072: refused unsafe RDF URI: ' . to_string($rdf_uri)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				$base_uri = substr($rdf_uri, 0, strlen($rdf_uri)-4);
 
 				$rdf_graph = new \EasyRdf\Graph($rdf_uri);
