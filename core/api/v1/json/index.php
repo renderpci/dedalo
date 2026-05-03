@@ -245,6 +245,12 @@ try {
 	$dd_manager	= new dd_manager();
 	$response	= $dd_manager->manage_request($rqo);
 
+	// Generators are for SSE/streaming and should not reach the normal API entry point.
+	// If one does, it means the request was not correctly detected as a stream.
+	if ($response instanceof \Generator) {
+		throw new Exception("Unexpected Generator response in non-streaming API call");
+	}
+
 	// Performance checkpoint: after manager
 	if ($perf_active) {
 		$perf_monitor->checkpoint('after_dd_manager');
