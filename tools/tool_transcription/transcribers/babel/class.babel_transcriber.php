@@ -72,6 +72,15 @@ class babel_transcriber {
 				'method_name'	=> 'transcribe'
 			];
 
+		// SEC-076: SSRF defence-in-depth on transcriber URL.
+			if (!is_safe_remote_url((string)$this->url, (object)['allow_custom_ports' => true])) {
+				debug_log(__METHOD__
+					.' SEC-076: refused unsafe transcriber URL: ' . to_string($this->url)
+					, logger::ERROR
+				);
+				return (object)['result' => false, 'msg' => 'invalid transcriber URL'];
+			}
+
 		// curl request (core functions)
 			$request_response = curl_request((object)[
 				'url'			=> $this->url,
@@ -278,6 +287,15 @@ class babel_transcriber {
 				'pid'				=> $options->pid,
 				'delete_result'		=> $options->delete_result
 			];
+
+		// SEC-076: SSRF defence-in-depth on transcriber URL.
+			if (!is_safe_remote_url((string)$options->url, (object)['allow_custom_ports' => true])) {
+				debug_log(__METHOD__
+					.' SEC-076: refused unsafe transcriber URL: ' . to_string($options->url)
+					, logger::ERROR
+				);
+				return (object)['result' => false, 'msg' => 'invalid transcriber URL'];
+			}
 
 		// curl request (core functions)
 			$request_response = curl_request((object)[
