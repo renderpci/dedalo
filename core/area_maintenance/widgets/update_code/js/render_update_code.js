@@ -622,7 +622,8 @@ const render_info_modal = function( self, versions_info ) {
 						parent			: footer
 					})
 
-					response.innerHTML = 'Updating. Please wait'
+					// SEC-XSS-009: static text; textContent avoids unnecessary HTML parsing.
+					response.textContent = 'Updating. Please wait'
 
 					if (page_globals.dedalo_entity==='development') {
 						// message development
@@ -644,16 +645,26 @@ const render_info_modal = function( self, versions_info ) {
 
 					if (!api_response.result || api_response.errors?.length) {
 
-						response.innerHTML = api_response.errors.length
-							? api_response.errors.join('<br>')
-							: api_response.msg || 'Unknown error on API update_code'
+						// SEC-XSS-009: api_response.errors may contain shell/git output with
+						// HTML metacharacters. Build the DOM: each error becomes a text
+						// node separated by <br>, so content is never HTML-parsed.
+						response.replaceChildren()
+						if (api_response.errors.length) {
+							api_response.errors.forEach((err, idx) => {
+								if (idx > 0) response.appendChild(document.createElement('br'))
+								response.appendChild(document.createTextNode(String(err)))
+							})
+						} else {
+							response.textContent = api_response.msg || 'Unknown error on API update_code'
+						}
 
 						button_update.classList.remove('hide')
 						update_mode_container.classList.remove('hide')
 
 					}else{
 
-						response.innerHTML = api_response.msg || 'OK'
+						// SEC-XSS-009
+						response.textContent = api_response.msg || 'OK'
 
 						// force quit to clean browser cache
 						setTimeout(function(){
