@@ -283,15 +283,16 @@ const get_value_element = (i, data, values_container, self) => {
 		)
 		function fn_update_widget_value(changed_data) {
 
-			media_weight_value.innerHTML	= changed_data.find(item => item.widget_id==='media_weight')?.value ?? ''
-			max_weight_value.innerHTML		= changed_data.find(item => item.widget_id==='max_weight')?.value ?? ''
-			min_weight_value.innerHTML		= changed_data.find(item => item.widget_id==='min_weight')?.value ?? ''
-			total_weight_value.innerHTML	= changed_data.find(item => item.widget_id==='total_elements_weights')?.value ?? ''
+			// SEC-XSS-012: calculation outputs are numeric; textContent avoids HTML parsing.
+			media_weight_value.textContent	= changed_data.find(item => item.widget_id==='media_weight')?.value ?? ''
+			max_weight_value.textContent	= changed_data.find(item => item.widget_id==='max_weight')?.value ?? ''
+			min_weight_value.textContent	= changed_data.find(item => item.widget_id==='min_weight')?.value ?? ''
+			total_weight_value.textContent	= changed_data.find(item => item.widget_id==='total_elements_weights')?.value ?? ''
 
-			media_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='media_diameter')?.value ?? ''
-			max_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='max_diameter')?.value ?? ''
-			min_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='min_diameter')?.value ?? ''
-			total_diameter_value.innerHTML	= changed_data.find(item => item.widget_id==='total_elements_diameter')?.value ?? ''
+			media_diameter_value.textContent	= changed_data.find(item => item.widget_id==='media_diameter')?.value ?? ''
+			max_diameter_value.textContent	= changed_data.find(item => item.widget_id==='max_diameter')?.value ?? ''
+			min_diameter_value.textContent	= changed_data.find(item => item.widget_id==='min_diameter')?.value ?? ''
+			total_diameter_value.textContent	= changed_data.find(item => item.widget_id==='total_elements_diameter')?.value ?? ''
 
 			return true
 		}
