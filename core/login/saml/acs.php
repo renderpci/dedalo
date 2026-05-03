@@ -23,6 +23,26 @@ $start_time=start_time();
 			$samlResponse	= new OneLogin\Saml2\Response($samlSettings, $_POST['SAMLResponse']);
 			if ($samlResponse->isValid()) {
 
+				// SEC-078: replay-cache check. `isValid()` only verifies the
+				// signature and the NotOnOrAfter window; the same signed
+				// SAMLResponse XML can be POSTed multiple times by anyone who
+				// captured it (browser history, MITM with stolen TLS keys,
+				// proxy logs). The SAML core spec mandates one-time-use of
+				// each assertion. We enforce this by tracking the assertion
+				// ID in a per-deployment cache directory and rejecting any
+				// id we have already consumed within its validity window.
+				if (!saml_assertion_register_or_reject($samlResponse)) {
+					http_response_code(401);
+					header('Content-Type: text/plain; charset=utf-8');
+					echo 'SAML assertion rejected (replay).';
+					debug_log(__FILE__
+						. ' SEC-078 SAML assertion replay rejected. assertion_id='
+						. to_string(method_exists($samlResponse, 'getAssertionId') ? $samlResponse->getAssertionId() : '<unknown>')
+						, logger::ERROR
+					);
+					exit();
+				}
+
 				// SEC-014: removed the dead `$make_login = true;` toggle and its debug-only echo
 				// branch. That branch dumped raw SAML attributes to the response and existed only
 				// to be flipped by a developer; keeping it in production code is a foot-gun.
