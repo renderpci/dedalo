@@ -1032,6 +1032,120 @@ function dedalo_derive_key_v2(string $master) : string {
 }//end dedalo_derive_key_v2
 
 
+
+/**
+* DEDALO_ENCRYPT_V2
+* SEC-082 / SEC-093: authenticated encryption (AES-256-GCM).
+*
+* Output format: `v2:base64(nonce(12) || tag(16) || ciphertext)`.
+* The `v2:` prefix lets {@see dedalo_decrypt_auto()} dispatch between the
+* legacy CBC primitive and this scheme on the read path, so existing data
+* keeps decrypting while every new write is authenticated.
+*
+* Security properties:
+*  - confidentiality: AES-256-GCM with a 256-bit HKDF-derived key.
+*  - integrity:       16-byte GCM tag verified at decrypt; ciphertext
+*                     tampering returns `false`, never silent corruption.
+*  - non-determinism: 12-byte cryptographically-random nonce per message,
+*                     so identical plaintexts produce different ciphertexts.
+*  - safe deserialise: the inner serialize/unserialize round-trip is
+*                     restricted to `allowed_classes:false` on the read
+*                     path (see {@see dedalo_decrypt_v2()}).
+*
+* @param string $plaintext
+* @param string|null $key Optional override for DEDALO_INFORMATION.
+* @return string `v2:` prefixed ciphertext bundle.
+*/
+function dedalo_encrypt_v2(string $plaintext, ?string $key=null) : string {
+
+	if (!function_exists('openssl_encrypt')) {
+		throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	}
+
+	$master      = $key ?? (defined('DEDALO_INFORMATION') ? (string)DEDALO_INFORMATION : '');
+	$derived_key = dedalo_derive_key_v2($master);
+	$nonce       = random_bytes(12);
+	$tag         = '';
+
+	$cipher = openssl_encrypt(
+		serialize($plaintext),
+		'aes-256-gcm',
+		$derived_key,
+		OPENSSL_RAW_DATA,
+		$nonce,
+		$tag,
+		'',  // no AAD
+		16   // tag length
+	);
+	if ($cipher === false) {
+		throw new Exception("Error Processing Request: openssl_encrypt(aes-256-gcm) failed.", 1);
+	}
+
+	return 'v2:' . base64_encode($nonce . $tag . $cipher);
+}//end dedalo_encrypt_v2
+
+
+
+/**
+* DEDALO_DECRYPT_V2
+* SEC-082: GCM-authenticated decrypt counterpart of {@see dedalo_encrypt_v2()}.
+*
+* Returns the original scalar/array plaintext, or `false` when:
+*  - the payload is malformed,
+*  - the GCM tag fails (tampered ciphertext or wrong key),
+*  - the deserialised value is not a permitted shape.
+*
+* Never throws on an invalid ciphertext — the caller decides how to react
+* (e.g. fall back to legacy decrypt, or treat as auth failure).
+*
+* @param string $payload Must start with `v2:`.
+* @param string|null $key
+* @return mixed The decoded value, or `false` on failure.
+*/
+function dedalo_decrypt_v2(string $payload, ?string $key=null) {
+
+	if (strncmp($payload, 'v2:', 3) !== 0) {
+		return false;
+	}
+	if (!function_exists('openssl_decrypt')) {
+		return false;
+	}
+
+	$blob = base64_decode(substr($payload, 3), true);
+	if ($blob === false || strlen($blob) < 12 + 16 + 1) {
+		return false;
+	}
+
+	$nonce  = substr($blob, 0, 12);
+	$tag    = substr($blob, 12, 16);
+	$cipher = substr($blob, 28);
+
+	$master      = $key ?? (defined('DEDALO_INFORMATION') ? (string)DEDALO_INFORMATION : '');
+	$derived_key = dedalo_derive_key_v2($master);
+
+	$plain = openssl_decrypt(
+		$cipher,
+		'aes-256-gcm',
+		$derived_key,
+		OPENSSL_RAW_DATA,
+		$nonce,
+		$tag,
+		''
+	);
+	if ($plain === false) {
+		return false;
+	}
+	if (!is_serialized($plain)) {
+		return false;
+	}
+	// SEC-082: same hardening as the legacy decrypt — never let an attacker
+	// who can flip the master key (or who has produced a v2 blob through
+	// some other channel) instantiate arbitrary classes during deserialise.
+	return unserialize($plain, ['allowed_classes' => false]);
+}//end dedalo_decrypt_v2
+
+
+
 /**
 * DEDALO_ASSERT_SECRETS_INITIALISED
 * SEC-094: refuse to ship sample-default secrets to production.
