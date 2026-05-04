@@ -49,6 +49,7 @@ export const livecycle_detail = [
 	'test_component_publication',
 	'test_component_radio_button',
 	'test_component_relation_children',
+	'test_component_relation_index',
 	'test_component_select',
 	'test_component_select_lang',
 	'test_component_svg',
