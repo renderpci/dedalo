@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 // SEC-026 (§9.3): server-agnostic deny for direct HTTP access. This file is
 // included by common::get_json() inside the calling object scope; reaching
 // it through a URL means the web server config did not block the path.
