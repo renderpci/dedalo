@@ -2,6 +2,17 @@
 /**
 * CLASS COMPONENT_RELATION_MODEL
 *
+* Manages model-type relations between sections.
+* Extends component_relation_common to handle the specific relation_type
+* defined by DEDALO_RELATION_TYPE_MODEL_TIPO.
+*
+* Key features:
+* - Resolves target sections from ontology hierarchy or free mode
+* - Uses component_select as its client-side representation
+* - Supports sortable locator lists
+*
+* @package Dedalo
+* @subpackage Core
 */
 class component_relation_model extends component_relation_common {
 
@@ -10,18 +21,24 @@ class component_relation_model extends component_relation_common {
 	// relation_type defaults
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_MODEL_TIPO;
 	protected $default_relation_type_rel	= null;
-	public $ar_target_section_tipo;
+	public $ar_target_section_tipo			= null;
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Select source section/s
-	* Overrides component common method
-	* @return array $ar_target_section_tipo
+	* Resolves the target section tipo(s) for this relation component.
+	* Supports two modes via properties->target_mode:
+	*   - 'free': uses target_values defined directly in ontology properties
+	*   - default: calculates from hierarchy section's target model component,
+	*     with fallback to prefix-based calculation (prefix.'2')
+	*
+	* Overrides component_common method.
+	*
+	* @return array Array of target section tipo strings
 	*/
 	public function get_ar_target_section_tipo() : array {
 
@@ -82,8 +99,10 @@ class component_relation_model extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Returns whether the component's locator list is sortable.
+	* Override to return false when sorting is not applicable.
+	*
+	* @return bool Always true for component_relation_model
 	*/
 	public function get_sortable() : bool {
 
