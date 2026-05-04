@@ -1503,11 +1503,12 @@ abstract class component_common extends common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		// get text of the data
-			$data = $this->get_value();
+		// Resolve the complex grid value into a flat string
+			$grid_value = $this->get_grid_value();
+			$value = dd_grid_cell_object::resolve_value($grid_value);
 
 		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 1; // sizeof($data);
+			$row_count = 1; // sizeof($value);
 
 		// label
 			$label = $this->get_label();
@@ -1519,7 +1520,7 @@ abstract class component_common extends common {
 				$flat_value->set_cell_type('text');
 				$flat_value->set_ar_columns_obj([$column_obj]);
 				$flat_value->set_row_count($row_count);
-				$flat_value->set_value($data);
+				$flat_value->set_value($value);
 				$flat_value->set_model(get_called_class());
 
 
