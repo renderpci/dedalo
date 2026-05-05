@@ -1,0 +1,82 @@
+[
+	{
+		"main_section": "tch1",
+		"source_portal_tipo": "tch508",
+		"target_portal_tipo": "tch559",
+		"info": "Move the conservation recomendations components of objects, photographs and documents that are inside the Storage conditions section and link to new portal, tch1-tch508->rsc949 to tch1-tch559->rsc1500, remain the Storage condigtions data into the current section",
+		"components": [
+			{"source_tipo":"rsc953","target_tipo":"rsc953"},
+			{"source_tipo":"rsc954","target_tipo":"rsc954"},
+			{"source_tipo":"rsc955","target_tipo":"rsc955"},
+			{"source_tipo":"rsc956","target_tipo":"rsc956"},
+			{"source_tipo":"rsc957","target_tipo":"rsc957"},
+			{"source_tipo":"rsc971","target_tipo":"rsc971"},
+			{"source_tipo":"rsc958","target_tipo":"rsc958"},
+			{"source_tipo":"rsc959","target_tipo":"rsc959"},
+			{"source_tipo":"rsc960","target_tipo":"rsc960"},
+			{"source_tipo":"rsc961","target_tipo":"rsc961"}
+		],
+		"components_source_section":"rsc949",
+		"components_target_section":"rsc1500"
+	},
+	{
+		"main_section": "tch100",
+		"source_portal_tipo": "tch508",
+		"target_portal_tipo": "tch559",
+		"info": "Move the conservation recomendations components of objects, photographs and documents that are inside the Storage conditions section and link to new portal, tch1-tch508->rsc949 to tch1-tch559->rsc1500, remain the Storage condigtions data into the current section",
+		"components": [
+			{"source_tipo":"rsc953","target_tipo":"rsc953"},
+			{"source_tipo":"rsc954","target_tipo":"rsc954"},
+			{"source_tipo":"rsc955","target_tipo":"rsc955"},
+			{"source_tipo":"rsc956","target_tipo":"rsc956"},
+			{"source_tipo":"rsc957","target_tipo":"rsc957"},
+			{"source_tipo":"rsc971","target_tipo":"rsc971"},
+			{"source_tipo":"rsc958","target_tipo":"rsc958"},
+			{"source_tipo":"rsc959","target_tipo":"rsc959"},
+			{"source_tipo":"rsc960","target_tipo":"rsc960"},
+			{"source_tipo":"rsc961","target_tipo":"rsc961"}
+		],
+		"components_source_section":"rsc949",
+		"components_target_section":"rsc1500"
+	},
+	{
+		"main_section": "tch200",
+		"source_portal_tipo": "tch508",
+		"target_portal_tipo": "tch559",
+		"info": "Move the conservation recomendations components of objects, photographs and documents that are inside the Storage conditions section and link to new portal, tch1-tch508->rsc949 to tch1-tch559->rsc1500, remain the Storage condigtions data into the current section",
+		"components": [
+			{"source_tipo":"rsc953","target_tipo":"rsc953"},
+			{"source_tipo":"rsc954","target_tipo":"rsc954"},
+			{"source_tipo":"rsc955","target_tipo":"rsc955"},
+			{"source_tipo":"rsc956","target_tipo":"rsc956"},
+			{"source_tipo":"rsc957","target_tipo":"rsc957"},
+			{"source_tipo":"rsc971","target_tipo":"rsc971"},
+			{"source_tipo":"rsc958","target_tipo":"rsc958"},
+			{"source_tipo":"rsc959","target_tipo":"rsc959"},
+			{"source_tipo":"rsc960","target_tipo":"rsc960"},
+			{"source_tipo":"rsc961","target_tipo":"rsc961"}
+		],
+		"components_source_section":"rsc949",
+		"components_target_section":"rsc1500"
+	},
+	{
+		"main_section": "tch300",
+		"source_portal_tipo": "tch508",
+		"target_portal_tipo": "tch559",
+		"info": "Move the conservation recomendations components of objects, photographs and documents that are inside the Storage conditions section and link to new portal, tch1-tch508->rsc949 to tch1-tch559->rsc1500, remain the Storage condigtions data into the current section",
+		"components": [
+			{"source_tipo":"rsc953","target_tipo":"rsc953"},
+			{"source_tipo":"rsc954","target_tipo":"rsc954"},
+			{"source_tipo":"rsc955","target_tipo":"rsc955"},
+			{"source_tipo":"rsc956","target_tipo":"rsc956"},
+			{"source_tipo":"rsc957","target_tipo":"rsc957"},
+			{"source_tipo":"rsc971","target_tipo":"rsc971"},
+			{"source_tipo":"rsc958","target_tipo":"rsc958"},
+			{"source_tipo":"rsc959","target_tipo":"rsc959"},
+			{"source_tipo":"rsc960","target_tipo":"rsc960"},
+			{"source_tipo":"rsc961","target_tipo":"rsc961"}
+		],
+		"components_source_section":"rsc949",
+		"components_target_section":"rsc1500"
+	}
+]
