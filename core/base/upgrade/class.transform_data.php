@@ -3275,5 +3275,324 @@ class transform_data {
 
 
 
+	/**
+	* PORTAL_TO_PORTAL
+	* From a section with two portals, move data from one portal to other one.
+	* It can be used to move data from one portal to other one in the same section.
+	* The components inside one portal can be moved to second one portals.
+	* Remove the previous data in the main portal.
+	* @param array $json_files
+	* [
+	*	"rsc949_parameters_preventive_conservation_to_rsc1500.json", ..
+	* ]
+	* @return bool
+	*/
+	public static function portal_to_portal( array $json_files) : bool {
+
+		// disable activity log
+			logger_backend_activity::$enable_log = false;
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " portal_to_portal - json_files: " . json_encode($json_files) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/move_portal_to_portal/';
+		// get transform map from files
+			//  value: {
+			//		"rsc194": {
+			//			"old": "rsc194",
+			//			"new": "rsc197",
+			//			"type": "section",
+			//			"perform": [
+			//				"move_tld"
+			//			],
+			//			"info": "Old People section => New People under Study section"
+			//		}
+			//	}
+			$ar_transform_map = [];
+			foreach ($json_files as $current_json_file) {
+				$contents			= file_get_contents($path.$current_json_file);
+				$transform_map		= json_decode($contents);
+				foreach ($transform_map as $transform_object) {
+					$ar_transform_map[] = $transform_object;
+				}
+			}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
+		// iterate items
+		foreach ($ar_transform_map as $item) {
+
+			$main_section	= $item->main_section;	
+			$source_portal_tipo	= $item->source_portal_tipo;
+			$target_portal_tipo	= $item->target_portal_tipo;
+			$components		= $item->components;
+			$components_source_section = $item->components_source_section;
+			$components_target_section = $item->components_target_section;
+			
+			$all_section_records = section::get_resource_all_section_records_unfiltered( $main_section );
+
+			while ($row = pg_fetch_assoc($all_section_records)) {
+				$section_id	= $row['section_id'];
+
+				// create the source components
+				$to_save = false;
+
+				$main_relations			= [];
+				$main_components_obj	= new stdClass();
+
+				// source portal
+				// created to get his full data
+				$model	= RecordObj_dd::get_modelo_name_by_tipo($source_portal_tipo);
+				$source_portal = component_common::get_instance(
+					$model, // string model
+					$source_portal_tipo, // string tipo
+					$section_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					$main_section // string section_tipo
+				);
+
+				$source_data = $source_portal->get_dato_full();
+
+				if( empty($source_data) ){
+					continue;
+				}
+
+				// set that any component has data and need to be moved to the portal
+					$to_save = true;
+
+				foreach ($source_data  as $current_locator) {
+				
+					$source_section_tipo = $current_locator->section_tipo;
+					$source_section_id = $current_locator->section_id;
+
+					// get full data of the components
+						$new_relations		= [];
+						$new_components_obj	= new stdClass();
+
+					$new_section_to_save = false;
+					foreach ($components as $component_item) {
+
+						$source_tipo = $component_item->source_tipo;
+						$target_tipo = $component_item->target_tipo;
+
+						// source component
+						// created to get his full data
+						$model	= RecordObj_dd::get_modelo_name_by_tipo($source_tipo);
+						$lang	= RecordObj_dd::get_translatable( $source_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+						$source_component = component_common::get_instance(
+							$model, // string model
+							$source_tipo, // string tipo
+							$source_section_id, // string section_id
+							'list', // string mode
+							$lang, // string lang
+							$source_section_tipo // string section_tipo
+						);
+
+						$data_full = $source_component->get_dato_full();
+						if( empty($data_full) ){
+							continue;
+						}
+
+						$new_section_to_save = true;
+
+						//check if the component is a related component
+						$is_related = in_array( $model, component_relation_common::get_components_with_relations() );
+
+						if( $is_related===true ){
+							// related components
+							foreach ($data_full as $new_current_locator) {
+								$new_current_locator->from_component_tipo = $target_tipo;
+
+								$new_relations[] = $new_current_locator;
+							}
+						}else{
+							// literal components
+							$new_components_obj->$target_tipo = new stdClass();
+							$new_components_obj->$target_tipo->dato = $data_full;
+						}
+					}
+
+
+					if( $new_section_to_save===false ){
+						continue;
+					}
+					// Create new target section
+						// if any component has data, create new target section and set all moved component data into.
+						$new_section = section::get_instance(
+							null, // string|null section_id
+							$components_target_section // string section_tipo
+						);
+
+						// save section with the all component data
+						$save_options = new stdClass();
+							$save_options->main_components_obj	= $new_components_obj;
+							$save_options->main_relations		= $new_relations;
+
+						$new_section_id = $new_section->Save( $save_options );
+
+						// check the save was ok
+						if( empty($new_section_id) ){
+							debug_log(__METHOD__
+								. " Error saving the new section with the component_data " . PHP_EOL
+								. "item: ". to_string( $item ) . PHP_EOL
+								. "source_section_id: ". to_string( $section_id ) . PHP_EOL
+								, logger::ERROR
+							);
+
+							return false;
+						}
+				
+					// create the component_portal to give the locator created
+						$portal_model = RecordObj_dd::get_modelo_name_by_tipo( $target_portal_tipo );
+
+						$portal_component = component_common::get_instance(
+							$portal_model, // string model
+							$target_portal_tipo, // string tipo
+							$section_id, // string section_id
+							'list', // string mode
+							DEDALO_DATA_NOLAN, // string lang
+							$main_section // string section_tipo
+						);
+
+						$portal_locator = new locator();
+							$portal_locator->set_section_id( $new_section_id );
+							$portal_locator->set_section_tipo( $components_target_section );
+
+						$current_dato = $portal_component->get_dato();
+						$current_dato[] = $portal_locator;
+
+						$portal_component->set_dato($current_dato);
+						$portal_section_id = $portal_component->Save();
+
+						// check the save was ok
+						if( empty($portal_section_id) ){
+							debug_log(__METHOD__
+								. " Error saving the new portal with the component_data " . PHP_EOL
+								. "item: ". to_string( $item ) . PHP_EOL
+								. "source_section_id: ". to_string( $section_id ) . PHP_EOL
+								. "target_section_id: ". to_string( $new_section_id ) . PHP_EOL
+								, logger::ERROR
+							);
+
+							// remove the new section created
+							$new_section->delete( 'delete_record', false );
+							// set the counter to last valid section_id, to avoid empty section records
+							$matrix_table	= common::get_matrix_table_from_tipo( $components_target_section );
+							if (empty($matrix_table)) {
+								debug_log(__METHOD__
+									. ' Invalid matrix_table from tipo. Check your Ontology for configuration errors' . PHP_EOL
+									. ' components_target_section: ' . to_string($components_target_section)
+									, logger::ERROR
+								);
+								return false;
+							}
+							counter::consolidate_counter(
+								$components_target_section,
+								$matrix_table,
+								'matrix_counter'
+							);
+
+							return false;
+						}
+
+
+					// remove the old component data and
+					// change time machine data
+					// disable time machine
+					RecordObj_time_machine::$save_time_machine_version = false;
+
+					foreach ($components as $component_item) {
+
+						$source_tipo = $component_item->source_tipo;
+						$target_tipo = $component_item->target_tipo;
+
+						// remove the old component data in source section
+							// source component
+							// created to get his full data
+							$model	= RecordObj_dd::get_modelo_name_by_tipo($source_tipo);
+							$lang	= RecordObj_dd::get_translatable( $source_tipo ) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+							$source_component = component_common::get_instance(
+								$model, // string model
+								$source_tipo, // string tipo
+								$source_section_id, // string section_id
+								'list', // string mode
+								$lang, // string lang
+								$source_section_tipo // string section_tipo
+							);
+
+							// remove the old data
+							// the component data will be save later in the new section.
+							$source_component->set_dato( null );
+							$source_component->Save();
+
+						// change the time machine data to set the new tipo, section_id and section_tipo
+							$table 		= 'matrix_time_machine';
+							//select the old component time machine data
+							$strQuery	= "SELECT id FROM $table WHERE section_id = $1 AND section_tipo = $2 AND tipo = $3";
+							$result		= pg_query_params( DBi::_getConnection(), $strQuery, array($source_section_id, $source_section_tipo, $source_tipo) );
+
+							$n_rows = pg_num_rows($result);
+
+							// if the component has not data go next component, nothing to change
+							if ($n_rows<1){
+								continue;
+							}
+
+							while($row = pg_fetch_assoc($result)) {
+
+								$id		= $row['id'];
+								// update his time_machine with the new section
+								$strQuery	= "UPDATE $table SET tipo = $1, section_id = $2, section_tipo = $3 WHERE id = $4 ";
+								$change_result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $target_tipo, $new_section_id, $components_target_section, $id ));
+								if($change_result===false) {
+									$msg = "Failed to update time machine data ($table) - $id";
+									debug_log(__METHOD__
+										." ERROR: $msg " . PHP_EOL
+										. "source_section_id: ". to_string( $section_id ) . PHP_EOL
+										. "source_section_tipo: ". to_string( $source_section_tipo ) . PHP_EOL
+										. "source_tipo: ". to_string( $source_tipo ) . PHP_EOL
+										. "target_tipo: ". to_string( $target_tipo ) . PHP_EOL
+										. "new_section_id: ". to_string( $new_section_id ) . PHP_EOL
+										. "components_target_section: ". to_string( $components_target_section ) . PHP_EOL
+
+										, logger::ERROR
+									);
+
+									return false;
+								}
+							}
+					}
+
+					// active time machine
+					RecordObj_time_machine::$save_time_machine_version = true;
+
+				}
+			}
+		}//end foreach ($ar_transform_map as $item)
+
+
+		// re-enable activity log
+			logger_backend_activity::$enable_log = true;
+
+
+		return true;
+	}//end portal_to_portal
+
+
+
 
 }//end class transform_data

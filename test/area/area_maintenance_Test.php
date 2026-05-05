@@ -185,6 +185,7 @@ final class area_maintenance_test extends TestCase {
 			'move_locator',
 			'move_tld',
 			'move_to_portal',
+			'move_portal_to_portal',
 			'move_to_table',
 			'php_info',
 			'php_user',
