@@ -236,14 +236,16 @@
 				case isset($diffusion_properties->separator_fields):
 					$fields_separator = $diffusion_properties->separator_fields;
 					break;
-				// records_separator
-				case isset($diffusion_properties->separator_rows):
-					$records_separator = $diffusion_properties->separator_rows;
-					break;
 				default:
 					$fields_separator = $fields_separator_default;
 					break;
 			}
+
+		// records_separator (E.g. mdcat280) Added 05-05-2026
+			$records_separator = $option_obj->records_separator
+				?? $this->diffusion_properties->option_obj->records_separator
+				?? $diffusion_properties->separator_rows
+				?? ', ';
 
 		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> ')
 			$value = $this->get_valor($lang, 'array', $fields_separator, $records_separator ?? null);
