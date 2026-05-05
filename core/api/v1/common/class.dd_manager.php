@@ -49,6 +49,7 @@ final class dd_manager {
 		'get_ontology_update_info',
 		'get_code_update_info',
 		'get_diffusion_info',
+		'get_dedalo_files',
 		'read_raw'
 	];
 
