@@ -217,8 +217,6 @@
 
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' | ';
-		// fields_separator
-			// $fields_separator   = $this->get_fields_separator();
 			switch (true) {
 				case isset($option_obj->divisor):
 					$fields_separator = $option_obj->divisor;
@@ -236,14 +234,17 @@
 				case isset($diffusion_properties->separator_fields):
 					$fields_separator = $diffusion_properties->separator_fields;
 					break;
-				// records_separator
-				case isset($diffusion_properties->separator_rows):
-					$records_separator = $diffusion_properties->separator_rows;
-					break;
 				default:
 					$fields_separator = $fields_separator_default;
 					break;
 			}
+
+		// records_separator (E.g. mdcat280) Added 05-05-2026
+			$records_separator_default = ', ';
+			$records_separator = $option_obj->records_separator
+				?? $this->diffusion_properties->option_obj->records_separator
+				?? $diffusion_properties->separator_rows
+				?? $records_separator_default;
 
 		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> ')
 			$value = $this->get_valor($lang, 'array', $fields_separator, $records_separator ?? null);
@@ -289,7 +290,20 @@
 			}
 		}//end foreach ($value as $item)
 
-		$diffusion_value = implode($fields_separator, $diffusion_value_clean);
+		// (!) final_separator hack
+		// To avoid changing the current behaviour, only the final implode (records) could be changed by replacing 'fields_separator'
+		// with 'records_separator'. This is a v6 hack and does not attempt to solve the structural problem; it only provides a
+		// reasonable solution without changing the current legacy calculated values.
+		$final_separator = $fields_separator;
+		$isset_records_seaparator = $option_obj->records_separator
+			?? $this->diffusion_properties->option_obj->records_separator
+			?? $diffusion_properties->separator_rows
+			?? false;
+		if ($isset_records_seaparator) {
+			$final_separator = $records_separator;
+		}
+
+		$diffusion_value = implode($final_separator, $diffusion_value_clean);
 
 
 		return (string)$diffusion_value;

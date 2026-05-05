@@ -4529,13 +4529,57 @@ abstract class common {
 			];
 
 		// common section info
-			$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-				DEDALO_SECTION_INFO_SECTION_GROUP,
-				'component',
-				'children',
-				false // bool search_exact
-			);
-			$section_info_elements = array_merge([DEDALO_SECTION_INFO_SECTION_GROUP], $ar_elements);
+			$section_info_elements = [];
+			try {
+				$allow_section_info = false;
+				// 1 - Get user search extended
+				$user_id = logged_user_id();
+				$is_global_admin = security::is_global_admin($user_id);
+				if ($is_global_admin) {
+					// Global admin bypass other checks
+					$allow_section_info = true;
+				}else{
+					// Check component advanced value (Users section)
+					$component_advanced_search_tipo = 'dd732';
+					$component_advanced_search_model = RecordObj_dd::get_modelo_name_by_tipo($component_advanced_search_tipo, true);
+					$component_advanced_search = component_common::get_instance(
+						$component_advanced_search_model,
+						$component_advanced_search_tipo,
+						(int)$user_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						DEDALO_SECTION_USERS_TIPO
+					);
+					if ($component_advanced_search !== null) {
+						$component_advanced_search_dato = $component_advanced_search->get_dato();
+						$locator = $component_advanced_search_dato[0] ?? null;
+						if (is_object($locator)) {
+							$component_advanced_search_section_id = $locator->section_id ?? 0;
+							if ((int)$component_advanced_search_section_id === NUMERICAL_MATRIX_VALUE_YES) {
+								$allow_section_info = true;
+							}
+						}
+					}
+				}
+
+				if($allow_section_info) {
+					$ar_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+						DEDALO_SECTION_INFO_SECTION_GROUP,
+						'component',
+						'children',
+						false // bool search_exact
+					);
+					if (is_array($ar_elements)) {
+						$section_info_elements = array_merge([DEDALO_SECTION_INFO_SECTION_GROUP], $ar_elements);
+					}
+				}
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Error adding section info elements " . PHP_EOL
+					. ' options: ' . to_string($options)
+					, logger::ERROR
+				);
+			}
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
@@ -4621,21 +4665,9 @@ abstract class common {
 					}
 
 				// permissions (element: component, grouper)
-					$element_permisions = ($skip_permissions === true)
+					$element_permisions = ($skip_permissions === true || in_array($element_tipo, $section_info_elements))
 						? 1
 						: security::get_security_permissions($base_section_tipo, $element_tipo);
-
-					// section_info_elements
-						// check the section info components
-						// if the user are not global_admin, the components will not showed.
-						if( in_array($element_tipo, $section_info_elements) ){
-
-							$user_id			= logged_user_id();
-							$is_global_admin	= security::is_global_admin($user_id);
-							if( $is_global_admin === true ){
-								$element_permisions = 1;
-							}
-						}
 
 					// skip element if permissions are not enough
 					if ( $element_permisions<1 ) {
