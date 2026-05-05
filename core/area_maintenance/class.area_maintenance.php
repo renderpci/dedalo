@@ -139,10 +139,26 @@ class area_maintenance extends area_common {
 				$item->type		= 'widget';
 				$item->label	= 'Move to portal';
 				$item->value	= (object)[
-					'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
+					'body' => 'Move data (a group of components) from a section to another linked section(creating a new section with the group of the components) and link together with a portal in the main section (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
+							   example: Move the text components in section "Object" (tch1) to section "Use and function" (rsc1340) and link them with a portal in the Object section with the portal "Use and function" (tch443).<br>
+								Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
 							   Note: this can be a very long process because it has to go through all the records in all the tables.',
 					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+		
+		// move_portal_to_portal
+			$item = new stdClass();
+				$item->id		= 'move_portal_to_portal';
+				$item->type		= 'widget';
+				$item->label	= 'Move portal to portal';
+				$item->value	= (object)[
+					'body' => 'Move section data of one portal to other section and link the new section to other portal into the main section.<br>
+								Example: Move part of data the section "Storage condition" (rsc949) linked with portal "Storage condition" (tch508) in Object (tch1) to new section "Conservation recommendations" (tch559) and link with the portal "Conservation recommendations" (tch559) in the same section record in Objects (tch1).<br>
+								Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_portal_to_portal.<br>
+								Note: this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files( 'move_portal_to_portal' )
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -1645,6 +1661,67 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end move_to_portal
+
+
+
+	/**
+	* MOVE_PORTAL_TO_PORTAL
+	* Transform Dédalo data from all tables replacing tipos
+	* using selected JSON file map
+	* Is called from widget 'move_portal_to_portal' as process
+	* @param object $options
+	* {
+	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
+	* }
+	* @return object $response
+	*/
+	public static function move_portal_to_portal(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files( 'move_portal_to_portal' );
+
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
+			});
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
+				return $response;
+			}
+
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
+
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::portal_to_portal(
+				$ar_file_name
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. portal_to_portal failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_portal_to_portal
+
 
 
 
