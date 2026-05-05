@@ -33,7 +33,36 @@
 global $updates;
 $updates = new stdClass();
 
-$v=68; #####################################################################################
+$v=6810; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 8;
+	$updates->$v->version_minor			= 10;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 8;
+	$updates->$v->update_from_minor		= 9;
+
+	// 1 crsc949_parameters_preventive_conservation_to_rsc1500
+
+	$json_files =[
+		'rsc949_parameters_preventive_conservation_to_rsc1500.json'
+	];
+
+	$script_obj = new stdClass();
+		$script_obj->info			= "Move the preventive conservation parameters from Storage parameters to new section";
+		$script_obj->script_class	= "transform_data";
+		$script_obj->script_method	= "portal_to_portal";
+		$script_obj->script_vars	= [
+			$json_files
+		]; // Note that only ONE argument encoded is sent
+
+	$updates->$v->run_scripts[] = $script_obj;
+
+$v=689; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
