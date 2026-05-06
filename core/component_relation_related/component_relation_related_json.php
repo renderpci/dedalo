@@ -13,14 +13,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
-	$section_tipo	= $this->section_tipo;
-	$lang			= $this->lang;
 	$tipo			= $this->get_tipo();
-	$properties		= $this->get_properties() ?? new stdClass();
 
-
-
-// context
 
 
 // data
@@ -33,11 +27,11 @@ if (!isset($this)) { http_response_code(404); exit; }
 			true // bool add_request_config
 		);
 
-		// properties : show_interface set as false to prevent + button creation in client
-			$properties = $this->context->properties ?? new stdClass();
-			$properties->show_interface = $properties->show_interface ?? new stdClass();
-			$properties->show_interface->button_add = false;
-			$this->context->properties = $properties;
+		// properties update : show_interface set as false to prevent + button creation in client
+		$properties = $this->context->properties ?? new stdClass();
+		$properties->show_interface = $properties->show_interface ?? new stdClass();
+		$properties->show_interface->button_add = false;
+		$this->context->properties = $properties;
 
 		$context[] = $this->context;
 
@@ -46,58 +40,58 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 		$start_time=start_time();
 
-		// get the data into DDBB
-			$data_elements = $this->get_data();
-
-			$value		= $this->get_data_paginated();
+		// short vars
 			$section_id	= $this->get_section_id();
-			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset ?? 0;
+			$limit		= $this->pagination?->limit ?? null;
+			$offset		= $this->pagination?->offset ?? 0;
 
-		// data item
+		// value. Get the data into DDBB
+			$data_entries = $this->get_data() ?? [];
+			$value        = $this->get_data_paginated( $limit ) ?? [];
+
+		// data item. Main item representing this component instance.
+		// Must be available even when empty to allow adding references from client.
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $tipo;
 				$item->parent_section_id	= $section_id;
-
-		if (!empty($data_elements)) {
-
-			// pagination. Fix pagination vars
+				// fix pagination vars
 				$pagination = new stdClass();
-					$pagination->total	= count($data_elements);
+					$pagination->total	= count($data_entries);
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
 				$item->pagination = $pagination;
 
-			// data add
-				$data[] = $item;
+		// subdatum: resolve related sections context and data (labels, etc.)
+		// Merge subcontext (related components) and subdata (formatted values)
+		// In 'list'/'tm' modes, inject parent_tipo/section_id into each subdata item.
+			if (!empty($data_entries)) {
 
-			// subdatum
-				$subdatum = $this->get_subdatum($tipo, $value);
+				// subdatum
+					$subdatum = $this->get_subdatum($tipo, $value);
 
-			// subcontext add
-				$ar_subcontext	= $subdatum->context;
-				foreach ($ar_subcontext as $current_context) {
-					$context[] = $current_context;
-				}
-
-			// subdata add
-				$ar_subdata	= $subdatum->data;
-				if ($mode==='list' || $mode==='tm') {
-					foreach ($ar_subdata as $current_data) {
-						$current_data->parent_tipo			= $tipo;
-						$current_data->parent_section_id	= $section_id;
-						$data[] = $current_data;
+					// subcontext add
+					$ar_subcontext	= $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
 					}
-				}else{
-					foreach ($ar_subdata as $current_data) {
-						$data[] = $current_data;
+
+					// subdata add
+					$ar_subdata	= $subdatum->data;
+					if ($mode==='list' || $mode==='tm') {
+						foreach ($ar_subdata as $current_data) {
+							$current_data->parent_tipo			= $tipo;
+							$current_data->parent_section_id	= $section_id;
+							$data[] = $current_data;
+						}
+					}else{
+						foreach ($ar_subdata as $current_data) {
+							$data[] = $current_data;
+						}
 					}
-				}
-		}//end if (!empty($data_elements))
+			}//end if (!empty($data_entries))
 
-
-		// references
-			// get the references calculated by relations with other sections. Return array
+		// references: resolve bidirectional/multidirectional back-references
+		// (sections that point TO current term). Skipped in search mode.
 			if ($mode!=='search') {
 				$references = $this->get_calculated_references();
 				// references. Add to item if exists
@@ -114,7 +108,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 
 		$data[] = $item;
-	}//end if $options->get_data===true && $permissions>0
+	}//end if $permissions>0
 
 
 
