@@ -1,7 +1,28 @@
 <?php declare(strict_types=1);
 /**
-* COMPONENT_RELATION_PARENT
-* Class to manage parent relations between sections.
+* CLASS COMPONENT_RELATION_PARENT
+* Manages hierarchical parent relationships between sections in Dédalo.
+*
+* Establishes parent-child hierarchies where records can reference other records
+* as their parent, creating tree-like structures for organizing data.
+* The inverse view (children) is provided by component_relation_children.
+*
+* Key features:
+* - Parent reference storage using locator objects
+* - Duplicate prevention when adding parent relations
+* - Auto-reference protection (prevents a record from being its own parent)
+* - Automatic child ordering when adding parents
+* - Parent locator validation (type and from_component_tipo checks)
+*
+* Example hierarchy:
+* - Section A (parent) is referenced by Section B (child)
+* - Section B uses component_relation_parent pointing to Section A
+* - Section A uses component_relation_children to view Sections B, C, etc.
+*
+* Extends component_relation_common with DEDALO_RELATION_TYPE_PARENT_TIPO relation type.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_relation_parent extends component_relation_common {
 

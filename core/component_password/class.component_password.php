@@ -1,8 +1,29 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT PASSWORD
+* CLASS COMPONENT_PASSWORD
+* Manages password storage with secure hashing in Dédalo.
 *
-* data_column_name : 'string'
+* Stores user passwords using one-way Argon2id hashing for security.
+* Legacy AES-encrypted passwords are migrated to Argon2id on the next
+* successful login via lazy upgrade in login::Login().
+*
+* Key security features:
+* - Argon2id one-way hashing (non-reversible)
+* - Fake value display in grids and exports to prevent password exposure
+* - Lazy migration from legacy AES encryption
+* - Hash values persisted verbatim for export/import compatibility
+*
+* Display behavior:
+* - Grid views show fake_value: '****************'
+* - Diffusion exports return fake_value instead of actual hash
+* - Raw hash values never exposed in user-facing contexts
+*
+* Data is stored in the 'string' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_password extends component_common {
 

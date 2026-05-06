@@ -1,7 +1,28 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT SELECT
+* CLASS COMPONENT_SELECT
+* Manages single-select dropdown components for creating relationships in Dédalo.
 *
+* Provides a dropdown interface for selecting a single record from a target section,
+* creating a one-to-one or many-to-one relationship. Unlike component_portal which
+* shows a list with multiple selections, component_select uses a simple dropdown.
+*
+* Key features:
+* - Single selection only (dropdown behavior)
+* - Creates locator-based relationships to target sections
+* - Supports sorting by selected value
+* - Dropdown options populated from ar_list_of_values
+* - Duplicate prevention when setting values
+*
+* Common use cases:
+* - Selecting a single category, status, or type
+* - Choosing a parent record in hierarchical relationships
+* - Assigning a single owner or responsible entity
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_select extends component_relation_common {
 

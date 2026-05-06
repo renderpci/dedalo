@@ -1,9 +1,31 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT SECURITY ACCESS
-* Manages ontology elements access and permissions
+* CLASS COMPONENT_SECURITY_ACCESS
+* Manages ontology access control and permission management in Dédalo.
 *
-* data_column_name : 'misc'
+* Handles the security access tree for controlling user permissions across
+* ontology elements (areas, sections, components). Used primarily in the
+* User section to define what users can access and do within the system.
+*
+* Key features:
+* - Generates and caches ontology tree hierarchy for permission management
+* - Controls access levels (none, read, edit, admin) for ontology elements
+* - Provides datalist of areas, sections, and components for permission UI
+* - Caches tree structure per language for performance
+* - Supports permission inheritance through hierarchy
+*
+* Permission levels:
+* - 0: No access
+* - 1: Read-only
+* - 2: Read and edit
+* - 3: Admin (full control)
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_security_access extends component_common {
 

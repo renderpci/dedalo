@@ -1,7 +1,19 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_3D
+* Manages 3D media components in Dédalo.
 *
+* Handles 3D file operations including:
+* - Upload, download, and deletion of 3D model files
+* - Quality level management for different 3D file variants
+* - MIME type resolution for 3D formats (GLB, GLTF, OBJ, etc.)
+* - File path and URL generation for 3D assets
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_3d extends component_media_common implements component_media_interface {
 
@@ -680,6 +692,7 @@ class component_3d extends component_media_common implements component_media_int
 		// $media_attributes = ffmpeg::get_media_attributes($file_path);
 
 		// return $media_attributes;
+		return null;
 	}//end get_media_attributes
 
 

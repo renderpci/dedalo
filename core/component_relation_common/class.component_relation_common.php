@@ -1,12 +1,36 @@
 <?php declare(strict_types=1);
 include_once 'trait.search_component_relation_common.php';
 include_once 'trait.search_component_relation_common_tm.php';
-/*
+/**
 * CLASS COMPONENT_RELATION_COMMON
-* Used as common base from all components that works from section relations data, instead standard component data
-* like component_model, component_parent, etc..
+* Abstract base class for all relation components in Dédalo.
 *
-* data_column_name : 'relation'
+* Provides shared functionality for components that work with section relationship data
+* instead of standard component data. These components create links between records
+* across different sections using locator objects.
+*
+* Extended by relation components:
+* - component_check_box : Multi-select relationships
+* - component_filter, component_filter_master : Project-based access control
+* - component_portal : Record linking and navigation
+* - component_publication : Publication status management
+* - component_radio_button : Single-select relationships
+* - component_relation_children : Hierarchical child relationships
+* - component_relation_parent : Hierarchical parent relationships
+* - component_relation_related : Related records management
+*
+* Key capabilities:
+* - Locator-based relationship storage
+* - Relation type management (unidirectional, bidirectional, multidirectional)
+* - Target section validation
+* - Relation table persistence for efficient querying
+*
+* Data is stored in the 'relation' column of matrix tables.
+*
+* Uses traits for code organization: search_component_relation_common, search_component_relation_common_tm.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_relation_common extends component_common {
 
@@ -20,7 +44,6 @@ class component_relation_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-
 		/**
 		 * Whether to propagate component locators to the relation table on save.
 		 * Set to false to skip relation persistence (e.g., bulk imports in geonames).

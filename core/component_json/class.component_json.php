@@ -2,9 +2,27 @@
 include_once 'trait.search_component_json.php';
 /**
 * CLASS COMPONENT_JSON
-* Manages JSON data
+* Manages JSON data components in Dédalo.
 *
-* data_column_name : 'misc'
+* Stores and handles arbitrary JSON data structures, providing a flexible
+* container for complex data that doesn't fit standard component types.
+* Useful for storing configuration, metadata, or structured data from external sources.
+*
+* Key features:
+* - Stores arbitrary JSON objects and arrays
+* - File-based JSON upload with .json extension validation
+* - Language-neutral storage (DEDALO_DATA_NOLAN)
+* - Data version migration support
+* - Search integration via search_component_json trait
+*
+* Data format: Valid JSON objects or arrays stored as string values.
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common and uses search_component_json trait for JSON-specific queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_json extends component_common {
 

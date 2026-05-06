@@ -1,23 +1,29 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT TEXT AREA
-* Determine the logic of the text area component
+* CLASS COMPONENT_TEXT_AREA
+* Manages rich text content with embedded tags and annotations in Dédalo.
+*
+* Provides WYSIWYG text editing with support for semantic markup, internal
+* references, and multimedia integration. Handles complex text structures
+* used in oral history, transcription, and scholarly editing workflows.
 *
 * Key features:
-* - Manages HTML text content (WYSIWYG editors like CKEditor)
-* - Handles internal tags for:
-*   - Indexation (descriptors/thesaurus)
-*   - References (links to other records)
-*   - Persons (interviewed, informants, etc.)
-*   - Languages (lang tags)
-*   - Geolocation (deprecated embedded tags, now linked to component_geolocation)
-*   - Notes/Annotations
-*   - Multimedia (images/TimeCodes)
-* - Provides methods for sanitizing, repairing, and processing these tags
-* - Supports multi-language data with fallback mechanisms
-* - Inherits common string logic from component_string_common
+* - Rich HTML text editing via WYSIWYG editors (CKEditor)
+* - Semantic tag system for:
+*   - Indexation: Links to thesaurus descriptors
+*   - References: Links to other section records
+*   - Persons: Interviewees, informants, speakers
+*   - Languages: Multilingual content markup
+*   - Geolocation: Spatial references (deprecated, now uses component_geolocation)
+*   - Notes/Annotations: Inline comments and editorial notes
+*   - Multimedia: Embedded images and timecode references
+* - Tag sanitization, validation, and repair utilities
+* - Multi-language content with fallback to default language
+* - Time-based indexing for audiovisual transcription
 *
-* @package Dedalo
+* Extends component_string_common for text handling capabilities.
+*
+* @package Dédalo
 * @subpackage Core
 */
 class component_text_area extends component_string_common {

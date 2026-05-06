@@ -1,18 +1,48 @@
 <?php declare(strict_types=1);
-/*
+/**
 * CLASS COMPONENT_CHECK_BOX
+* Manages checkbox selection components in Dédalo.
 *
+* Provides multi-select checkbox functionality for relating records.
+* Used for creating many-to-many relationships between sections,
+* such as assigning tools to user profiles.
 *
+* Key features:
+* - Renders as checkboxes based on a list of values (ar_list_of_values)
+* - Stores selected values as locator objects in the database
+* - Supports sorting of selected items
+* - Special handling for security tools (tipo 'dd1353') with tool metadata
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_check_box extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for checkbox linking relationships.
+		 * Inherited from DEDALO_RELATION_TYPE_LINK constant.
+		 * Defines the type of relationship created when a checkbox is selected.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+		/**
+		 * Properties used to detect duplicate locators when adding new relationships.
+		 * Locators with identical values for all these properties are considered duplicates.
+		 * - section_tipo : Target section type identifier
+		 * - section_id : Target section record ID
+		 * - type : Relation type (typically link type)
+		 * - from_component_tipo : Source component tipo creating the relation
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 

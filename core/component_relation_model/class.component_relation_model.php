@@ -1,17 +1,26 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_MODEL
+* Manages model-type hierarchical relations between sections in Dédalo.
 *
-* Manages model-type relations between sections.
-* Extends component_relation_common to handle the specific relation_type
-* defined by DEDALO_RELATION_TYPE_MODEL_TIPO.
+* Handles relationships where records are linked through the ontology's hierarchical
+* model structure, allowing records to reference other records based on their
+* position in the hierarchy tree.
 *
 * Key features:
-* - Resolves target sections from ontology hierarchy or free mode
-* - Uses component_select as its client-side representation
-* - Supports sortable locator lists
+* - Resolves target sections from ontology hierarchy structure
+* - Supports 'free' mode for direct target_values configuration
+* - Uses component_select for client-side user interface
+* - Supports sortable locator lists for ordered relationships
+* - Prefix-based fallback calculation (prefix.'2') for hierarchy resolution
 *
-* @package Dedalo
+* Target resolution modes:
+* - Hierarchy mode: Calculates from hierarchy section's target model component
+* - Free mode: Uses target_values defined directly in ontology properties
+*
+* Extends component_relation_common with DEDALO_RELATION_TYPE_MODEL_TIPO relation type.
+*
+* @package Dédalo
 * @subpackage Core
 */
 class component_relation_model extends component_relation_common {

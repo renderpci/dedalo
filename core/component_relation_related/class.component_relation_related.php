@@ -1,12 +1,28 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_RELATED
+* Manages related-term relationships in thesaurus hierarchies in Dédalo.
 *
-* Manages related-term relations in thesaurus hierarchies.
-* Supports unidirectional, bidirectional and multidirectional relation types.
-* Extends component_relation_common to inherit locator-based data handling.
+* Handles associative relationships between thesaurus terms, supporting multiple
+* directionality types for flexible semantic linking. Used to connect terms
+* across different hierarchy branches or establish non-hierarchical associations.
 *
-* @package Dedalo
+* Directionality types:
+* - Unidirectional: One-way relationship (A → B, B does not reference A)
+* - Bidirectional: Two-way relationship (A ↔ B, both reference each other)
+* - Multidirectional: Multi-way relationship for complex semantic associations
+*
+* Key features:
+* - Locator-based relationship storage
+* - Recursive reference resolution for complex relationship trees
+* - Caching for computed reference trees to optimize performance
+* - Integration with thesaurus hierarchy navigation
+* - Supports both stored and calculated (derived) references
+*
+* Extends component_relation_common with DEDALO_RELATION_TYPE_RELATED_TIPO
+* and uses locator-based data handling.
+*
+* @package Dédalo
 * @subpackage Core
 */
 class component_relation_related extends component_relation_common {

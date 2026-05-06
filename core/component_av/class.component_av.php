@@ -1,7 +1,22 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_AV
+* Manages audio/video media components in Dédalo.
 *
+* Handles audio and video file operations including:
+* - Upload, download, and deletion of AV files
+* - Quality level management (original, modified, audio, thumb)
+* - FFmpeg-based transcoding and processing
+* - Poster frame generation for video previews
+* - Subtitle management (VTT, SRT)
+* - TC (timecode) processing and subtitle generation
+* - Video stream handling and alternative format generation
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_av extends component_media_common implements component_media_interface {
 

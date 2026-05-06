@@ -1,8 +1,23 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INPUT_TEXT
-* Manage specific component input text logic
-* Common components properties and method are inherited of component_string_common class that are inherited from component_common class
+* Manages single-line text input components in Dédalo.
+*
+* Provides a simple text field for short string values with support for:
+* - Multi-language content with fallback to default language
+* - Grid display with configurable record separators
+* - Data resolution for list views and exports
+* - Type-ahead/autocomplete integration via search
+*
+* Stores text data as simple string values. For rich text or multi-line content,
+* use component_text_area instead.
+*
+* Data format: Objects with 'value' property containing the text string.
+*
+* Extends component_string_common for string-based component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_input_text extends component_string_common {
 

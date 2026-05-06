@@ -2,30 +2,45 @@
 include_once 'trait.search_component_relation_index.php';
 /**
 * CLASS COMPONENT_RELATION_INDEX
+* Manages indexation references and inverse relations in Dédalo.
 *
-* Manage indexation references data (Reverse Relations)
+* Core Concept and Purpose:
+* - Inverse Relations: Identifies other sections/records that reference the current
+*   record ("who points to me"). Used to display records linking TO the current section.
+* - External Nature: Primarily calculated/dynamic. Resolves inverse locators rather than
+*   relying solely on stored values.
+* - Search Optimization: Values are saved to database to enable "Easy Search" without
+*   recalculating the entire relationship graph.
+* - Relation Type: Uses DEDALO_RELATION_TYPE_INDEX_TIPO (dd96) for reverse relations.
 *
-* 1. Core Concept and Purpose
-*    - Inverse Relations: Its main job is to identify other sections/records in the system that reference the current record ("who points to me").
-*    - EXTERNAL Nature: This component is primarily calculated/dynamic. It resolves calling data (inverse locators) rather than relying solely on stored values.
-*    - Search Optimization: While calculated dynamically, values are saved to the database to allow for "Easy Search" (indexing relations) without recalculating the entire graph.
-*    - Used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO - dd96) to the current section.
+* Key Functionalities:
+* - Data Retrieval (get_data): Finds "Inverse Locators" using search_related.
+*   Asks "Find all records that relation-link to ME" with caching for performance.
+* - Context Resolution (get_related_section_context): Displays data from OTHER calling
+*   sections (e.g., list "Paintings" that cite this "Artist"). Groups by section_tipo,
+*   initializes samples for request_config, and merges into unified "Related List".
+* - Searching (resolve_query_object_sql):
+*   * `*` (Not Empty): Finds records cited by others
+*   * `!*` (Empty): Finds orphan records (not cited by anyone)
 *
-* 2. Key Functionalities
-*    - Data Retrieval (get_data): Finds "Inverse Locators" using `search_related`. It asks "Find all records that relation-link to ME".
-*      Includes caching mechanisms to avoid expensive lookups during repetitive processes like publication.
-*    - Context Resolution (get_related_section_context):
-*      This serves to display data from *other* calling sections (e.g., showing a list of "Paintings" that cite this "Artist").
-*      It groups calling records by `section_tipo`, initializes sample instances to fetch their `request_config`, and merges these into the component's context.
-*      This allows a unified "Related List" of heterogeneous records.
-*    - Searching (resolve_query_object_sql):
-*      o `*` (Not Empty): Finds records that *are cited* by others.
-*      o `!*` (Empty): Finds records that are *orphans* (not cited by anyone).
+* Data Model:
+* Array of locator objects representing incoming links:
+* ```
+* [{
+*   "type": "dd96",
+*   "section_tipo": "...",
+*   "section_id": "...",
+*   "component_tipo": "...",
+*   "tag_id": "..."
+* }]
+* ```
 *
-* 3. Data Model
-*    The data is a list of `locator` objects representing incoming links:
-*    [{ "type": "dd96", "section_tipo": "...", "section_id": "...", "component_tipo": "...", "tag_id": "..." }]
- */
+* Extends component_relation_common and uses search_component_relation_index trait
+* for inverse relation queries.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class component_relation_index extends component_relation_common {
 
 

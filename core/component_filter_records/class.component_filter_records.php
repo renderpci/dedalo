@@ -1,9 +1,26 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_FILTER_RECORDS
-* Manages the filter records component that is loacated into the User section (dd128) to set
-* the specific records that the user can access to.
-* data_column_name : 'misc'
+* Manages record-level access control for specific section records in Dédalo.
+*
+* Used exclusively in the User section (dd128) to grant access to individual records
+* across different sections, providing finer-grained control than project-based filtering.
+*
+* Unlike component_filter (project-based), this component allows specifying exactly
+* which records a user can access regardless of their project assignments.
+*
+* Key features:
+* - Lists authorized sections the user has permission to access
+* - Provides section labels from ontology for user interface display
+* - Filters by permission level (value >= 2 required for access)
+* - Sorted alphabetically by section label
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_filter_records extends component_common {
 

@@ -1,14 +1,26 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INVERSE
-* It is used to manage inverse relations
-* (references to current section)
-* E.g. component 'rsc555' (Catalogue) in section 'rsc550' (Restoration Intervention)
-* Display the section_id of the sections that call to this section from the catalogue.
-* The data is a calculation of the inverse locators of sections that call to this section.
-* This component do not store data in DB, data is always calculated on the fly using 'get_inverse_references' method.
+* Manages inverse relationship references in Dédalo.
 *
-* data_column_name : 'misc'
+* Displays which sections reference the current record via portal or relationship fields,
+* showing the "backlinks" or "inverse relations" without storing duplicate data.
+*
+* Example: In a "Restoration Intervention" section (rsc550), shows all "Catalogue" records
+* (rsc555) that reference this intervention, without storing that list in the database.
+*
+* Key characteristics:
+* - No database storage (use_db_data = false)
+* - Data calculated on-the-fly via section->get_inverse_references()
+* - Shows which records reference the current record from other sections
+* - Prevents data duplication by computing relationships dynamically
+*
+* Data is stored in the 'misc' column of matrix tables (for configuration only).
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_inverse extends component_common {
 

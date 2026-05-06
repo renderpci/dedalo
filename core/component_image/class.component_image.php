@@ -1,7 +1,21 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT IMAGE
-* Manages image media components
+* CLASS COMPONENT_IMAGE
+* Manages image media components in Dédalo.
+*
+* Handles image file operations including:
+* - Upload, download, and deletion of image files
+* - Quality conversions and format transformations
+* - Image manipulation (rotate, crop)
+* - Alternative format generation (webp, avif, etc.)
+* - SVG representation management for editor overlays
+* - Pixel-to-centimeter calculations for print sizing
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_image extends component_media_common implements component_media_interface {
 
@@ -10,12 +24,33 @@ class component_image extends component_media_common implements component_media_
 	/**
 	* CLASS VARS
 	*/
-		// id . file name formatted as 'tipo'-'order_id' like dd732-1
+		/**
+		 * Public URL to the image file.
+		 * Formatted as 'tipo'-'order_id' (e.g., 'dd732-1').
+		 * Null when no image is associated with the component.
+		 * @var ?string $image_url
+		 */
 		public ?string $image_url = null;
-		// external_source
-		// public $external_source;
-		// Default image dimensions (as showed in section edit)
+
+		/**
+		 * External source identifier for images not stored in Dédalo.
+		 * References images hosted on external systems or services.
+		 * @var ?string $external_source
+		 */
+		public ?string $external_source = null;
+
+		/**
+		 * Default image display width in pixels (section edit mode).
+		 * Standard thumbnail/preview width for image components.
+		 * @var int $width
+		 */
 		public int $width = 539;
+
+		/**
+		 * Default image display height in pixels (section edit mode).
+		 * Standard thumbnail/preview height for image components.
+		 * @var int $height
+		 */
 		public int $height = 404;
 
 

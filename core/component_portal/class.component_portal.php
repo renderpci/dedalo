@@ -1,20 +1,61 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_PORTAL
-* Integrates former component_autocomplete
+* Manages portal components for creating relationships between sections in Dédalo.
+*
+* Portals enable linking records from one section to another, displaying related
+* data in a list format with options to add, remove, and navigate to linked records.
+* Evolved from and integrates the former component_autocomplete functionality.
+*
+* Key features:
+* - Links records across different sections (many-to-many relationships)
+* - Displays related records in a sortable list view
+* - Supports autocomplete for finding and linking records
+* - Configurable target sections via ontology properties
+* - External mode for calculated/inverse relationships
+* - Link and unlink operations with duplicate detection
+*
+* Data is stored as locator objects in the database, referencing target section records.
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_portal extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for portal linking relationships.
+		 * Inherited from DEDALO_RELATION_TYPE_LINK constant.
+		 * Defines the type of relationship created when records are linked through the portal.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+		/**
+		 * Properties used to detect duplicate locators when adding new relationships.
+		 * Locators with identical values for all these properties are considered duplicates.
+		 * - section_tipo : Target section type identifier
+		 * - section_id : Target section record ID
+		 * - type : Relation type (typically link type)
+		 * - from_component_tipo : Source component tipo creating the relation
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
-	// ar_target_section_tipo
-	protected array $ar_target_section_tipo = []; // Used to fix section tipo (get the section from relation terms, section can be real or virtual.
+		/**
+		 * Array of target section tipos for this portal.
+		 * Used to determine valid sections for linking records.
+		 * Populated from relation terms; supports both real and virtual sections.
+		 * Empty array indicates all sections are valid targets (no restriction).
+		 * @var array $ar_target_section_tipo
+		 */
+		protected array $ar_target_section_tipo = [];
 
 
 

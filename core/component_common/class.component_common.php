@@ -2,9 +2,27 @@
 include_once 'trait.search_component_common.php';
 include_once 'trait.dataframe_common.php';
 /**
-* COMPONENT_COMMON
-* Common methods of all components
+* CLASS COMPONENT_COMMON
+* Abstract base class for all Dédalo components.
 *
+* Provides the foundational functionality shared by all component types:
+* - Component lifecycle (instantiation, data loading, saving)
+* - Data resolution and caching mechanisms
+* - Dataframe support for contextual metadata (roles, uncertainty, temporal frames)
+* - Diffusion properties for publishing/export configuration
+* - Integration with tools and search capabilities
+* - Time Machine versioning for audit trails
+*
+* Extended by all specific component implementations:
+* - Data components: component_input_text, component_text_area, component_number, etc.
+* - Relation components: component_check_box, component_radio_button, etc.
+* - Media components: component_image, component_av, component_pdf, etc.
+* - Special components: component_section, component_security, etc.
+*
+* Uses traits for code organization: search_component_common, dataframe_common.
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class component_common extends common {
 

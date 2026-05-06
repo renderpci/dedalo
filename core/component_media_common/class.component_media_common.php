@@ -59,10 +59,26 @@ interface component_media_interface {
 
 /**
 * CLASS COMPONENT_MEDIA_COMMON
-* Used as common base from all components that works with media
-* like component_3d, component_av, component_image, component_pdf, component_svg
+* Abstract base class for all media components in Dédalo.
 *
-* data_column_name : 'media'
+* Provides shared functionality for components that work with media files:
+* - Quality management (original, modified, thumbnails)
+* - File path and URL generation
+* - Media file upload, download, and deletion
+* - Alternative format generation
+* - File information retrieval (size, dimensions, etc.)
+*
+* Extended by:
+* - component_3d : 3D model files
+* - component_av : Audio/video files
+* - component_image : Image files
+* - component_pdf : PDF documents
+* - component_svg : SVG graphics
+*
+* Data is stored in the 'media' column of the matrix tables.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_media_common extends component_common {
 

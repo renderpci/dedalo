@@ -2,47 +2,51 @@
 include_once 'trait.search_component_date.php';
 include_once 'trait.search_component_date_tm.php';
 /**
-* CLASS COMPONENT DATE
-* data_column_name : 'date'
-* used to manage dates, component_date use a object to represent dates, ISO dates as '2012-11-07 17:33:49' will be transform to object format as:
-* {
-*	"year": 2012,
-*	"month": 11,
-*	"day": 07,
-*	"hour": 17,
-*	"minute": 33,
-*	"second": 49
-* }
-* Dates' data are objects enclosed with start and/or end container
-* [{
-*	"start" : {
-*		"year": 2012,
-*		"month": 11,
-*		"day": 07,
-*		"hour": 17,
-*		"minute": 33,
-*		"second": 49
-* 		},
-*	"end" : {
-*		"year": 2012,
-*		"month": 12,
-*		"day": 08,
-*		"hour": 22,
-*		"minute": 15,
-*		"second": 35
-*		}
-* }]
-* The component has 4 different modes:
-* 	date: with start date only
-* 	range: with start date and end date
-* 	period: with year, moth, day, hour, minute, second, millisecond
-* 	time: with hour, minute, second, millisecond
+* CLASS COMPONENT_DATE
+* Manages date and time values in Dédalo.
 *
-* Export value use a
+* Data is stored in the 'date' column as structured objects representing
+* ISO format dates. Single dates and date ranges are supported with start
+* and/or end date containers.
+*
+* Date object format:
+* ```
+* {
+*   "year": 2012,
+*   "month": 11,
+*   "day": 7,
+*   "hour": 17,
+*   "minute": 33,
+*   "second": 49
+* }
+* ```
+*
+* Date range format (with start/end containers):
+* ```
+* [{
+*   "start": {
+*     "year": 2012, "month": 11, "day": 7,
+*     "hour": 17, "minute": 33, "second": 49
+*   },
+*   "end": {
+*     "year": 2012, "month": 12, "day": 8,
+*     "hour": 22, "minute": 15, "second": 35
+*   }
+* }]
+* ```
+*
+* Component modes:
+* - date: Single date (year, month, day)
+* - range: Date range with start and end dates
+* - period: Full period (year to millisecond)
+* - time: Time only (hour, minute, second, millisecond)
+*
+* Extends component_common and uses search traits for date-specific queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_date extends component_common {
-
-
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_date;
@@ -659,10 +663,10 @@ class component_date extends component_common {
 
 	/**
 	* GET_STATS_VALUE_WITH_VALOR_ARGUMENTS
-	* @return string $label
+	* @return string|int $label
 	* @deprecated Do not use this method (diffusion v6 ?)
 	*/
-	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) : string {
+	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) : string|int {
 
 		$value_decoded = json_decode($value);
 		if (!empty($value_decoded)) {
@@ -724,7 +728,7 @@ class component_date extends component_common {
 	* @param string $section_tipo
 	* @return array $path
 	*/
-	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+	public function get_order_path( string $component_tipo, string $section_tipo ) : array {
 
 		// self path
 		$path = parent::get_order_path($component_tipo, $section_tipo);
@@ -797,7 +801,7 @@ class component_date extends component_common {
 	* rsc85_dmy // component tipo and the date format
 	* @return object $response
 	*/
-	public function conform_import_data(string $import_value, string $column_name) : object {
+	public function conform_import_data( string $import_value, string $column_name ) : object {
 
 		// Response
 		$response = new stdClass();

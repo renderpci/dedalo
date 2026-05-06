@@ -1,11 +1,25 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
-* Manages specific component info logic
-* Common component properties and methods are inherited from the component_common class
-* that are inherited from the common class.
+* Manages information display components that aggregate widget data in Dédalo.
 *
-* data_column_name : 'misc'
+* Serves as a container for multiple widgets, each computing and displaying specific
+* information about the current record or related data. Unlike standard components
+* that store data in the database, component_info generates data dynamically from widgets.
+*
+* Key features:
+* - Aggregates data from multiple configured widgets
+* - Widgets compute their own data dynamically (use_db_data = false)
+* - Supports language-specific widget rendering via widget_lang
+* - Display mode control for different contexts (edit, list, etc.)
+* - No direct database storage; data is generated on-demand
+*
+* Data is stored in the 'misc' column of matrix tables (when needed for widget configuration).
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_info extends component_common {
 

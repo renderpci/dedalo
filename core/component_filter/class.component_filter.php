@@ -1,16 +1,36 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT FILTER
-* Manages the filter component
+* CLASS COMPONENT_FILTER
+* Manages project-based access control (filter) components in Dédalo.
+*
+* Assigns records to projects and controls which users can access them.
+* All new section records are automatically assigned to at least one project
+* based on the creating user's project permissions.
+*
+* Key features:
+* - Project assignment for section records
+* - User-project relationship management via component_filter_master
+* - Security enforcement preventing unauthorized project removal
+* - Admin override for global access control
+* - Checkbox-based project selection interface
+*
+* When saving, non-admin users cannot remove projects they don't have access to,
+* preventing security issues with record visibility.
+*
 * Note: when a section record is created, it will be assigned to at least one project by default.
 * 1 - Get the section_id of the user
 * 2 - With the user:
-* 	1 - Get the user section_id
-* 	2 - With the user section_id build the component_filter_master
-* 	3 - Check the admin user with component-security-administrator (value 1)
-* 	4 - If the user is not admin, get the data of the component_filter_master and his tipo for get the label
-* 	5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
-* 	6 - Save the array of the projects for this section inside the user projects (in the user section)
+*   1 - Get the user section_id
+*   2 - With the user section_id build the component_filter_master
+*   3 - Check the admin user with component-security-administrator (value 1)
+*   4 - If the user is not admin, get the data of the component_filter_master and his tipo for get the label
+*   5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
+*   6 - Save the array of the projects for this section inside the user projects (in the user section)
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_filter extends component_relation_common {
 

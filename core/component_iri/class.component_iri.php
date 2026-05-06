@@ -3,18 +3,33 @@ include_once 'trait.search_component_iri.php';
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
-* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://dedalo.dev
+* Manages Internationalized Resource Identifier (IRI) components in Dédalo.
 *
-*[
-*	{
-*		"id": 1,
-*		"iri": "https://dedalo.dev",
-*		"title": "Dédalo web site",
-*		"id": 1
-*	}
-*]
+* Stores and displays web URLs and URIs with optional title labels.
+* Supports Unicode characters in URLs (IRI standard), unlike plain ASCII URIs.
 *
-* data_column_name : 'iri'
+* Data format:
+* ```
+* [{
+*   "id": 1,
+*   "iri": "https://dedalo.dev",
+*   "title": "Dédalo web site"
+* }]
+* ```
+*
+* Key features:
+* - Stores URLs with multilingual title labels
+* - Supports Unicode characters in IRIs (RFC 3987)
+* - Language version support for localized titles
+* - Dataframe integration for contextual metadata
+* - Clickable link rendering in list and edit modes
+*
+* Data is stored in the 'iri' column of matrix tables.
+*
+* Extends component_common and uses search_component_iri trait for IRI-specific queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_iri extends component_common {
 

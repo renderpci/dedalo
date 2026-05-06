@@ -1,11 +1,35 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_EXTERNAL
-* Manage specific component logic
-* Common components properties and method are inherited of component_common class that are inherited from common class
-* Mainly used in external APIs that manage data such as ZENON
+* Manages components that retrieve and display data from external APIs.
 *
-* data_column_name : 'misc'
+* Fetches remote data from external sources (e.g., ZENON, library catalogs,
+* museum databases) and integrates it into Dédalo sections. Data is not stored
+* locally but fetched on-demand from configured API endpoints.
+*
+* Key features:
+* - Configurable API integration via section properties
+* - Response mapping to transform external data formats
+* - Caching mechanism for remote data to reduce API calls
+* - Automatic entity availability checking with session-based fallback
+*
+* Configuration via section_properties->api_config:
+* ```
+* {
+*   "api_config": {
+*     "entity": "zenon",
+*     "api_url": "https://api.example.com/v1/record",
+*     "response_map": [...]
+*   }
+* }
+* ```
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_external extends component_common {
 
