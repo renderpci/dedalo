@@ -684,7 +684,7 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_grid_flat_value
+	* TEST_GET_GRID_FLAT_VALUE
 	* @return void
 	*/
 	public function test_get_grid_flat_value() {

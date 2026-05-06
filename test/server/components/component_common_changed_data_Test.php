@@ -7,13 +7,13 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 /**
  * TEST CHANGED_DATA ID-BASED FLOW
- * 
+ *
  * Verifies that the `update_data_value()` method in `component_common`
  * correctly handles `changed_data` objects with `id` property instead of `key`.
- * 
+ *
  * Tests the full JS→API→PHP data flow where JS components send
  * `{action, id, value}` objects and PHP processes them correctly.
- * 
+ *
  * @package Dedalo
  * @subpackage Test
  */

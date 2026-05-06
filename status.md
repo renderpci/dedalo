@@ -43,3 +43,18 @@ Information regarding project tasks and migration progress. NOT for agents.
 27. **style**: Area maintenace restyling (dashboard as Enterprise)
 28. **style**: Restyling menu? and dark mode.
 29. Tool propagation: Do not load the current selected component data like v6
+
+30 - Unify change handler
+@component
+Unify component change handler across views
+
+31 - Components test:
+@check-component.md
+@component
+
+-- NO ---
+Create/Update a complete test of the component, including:
+- Server side (PHP) live cycle (create, add data, change data, remove data, destroy)
+- Client side (Javascript) live cycle (init, build, render, destroy, add data, change data, remove data) in all modes and views
+
+31 - Tool import: uploaded csv files -> on delete from tool ui, delete the file moving to a 'deleted' folder like media do.

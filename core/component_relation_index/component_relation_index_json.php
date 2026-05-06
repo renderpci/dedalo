@@ -13,8 +13,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
-	$section_tipo	= $this->section_tipo;
-	$lang			= $this->lang;
+	$section_tipo	= $this->get_section_tipo();
+	$lang			= $this->get_lang();
 	$tipo			= $this->get_tipo();
 	$properties		= $this->get_properties() ?? new stdClass();
 

@@ -14,10 +14,10 @@ final class component_relation_related_test extends BaseTestCase {
 
 	/**
 	* BUILD_COMPONENT_INSTANCE
-	* @return
+	* @return component_relation_related
 	*/
-	private function build_component_instance() {
-		  
+	private function build_component_instance() : component_relation_related {
+
 		$this->user_login();
 
 		$model			= self::$model;
@@ -157,7 +157,7 @@ final class component_relation_related_test extends BaseTestCase {
 			$locator->set_section_id(3);
 			$locator->set_from_component_tipo(self::$tipo);
 			$locator->set_type(DEDALO_RELATION_TYPE_RELATED_TIPO);
-		
+
 		$component->add_locator_to_data($locator);
 		// add another locator
 		$locator->set_section_id(4);

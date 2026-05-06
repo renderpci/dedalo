@@ -14,6 +14,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
 	$lang			= $this->get_lang();
+	$section_tipo = $this->get_section_tipo();
 
 
 

@@ -88,7 +88,7 @@ final class component_section_id_test extends BaseTestCase {
 		// check data
 		$this->assertEquals(
 			$old_data, $test_data,
-			'expected old data : ' . PHP_EOL 
+			'expected old data : ' . PHP_EOL
 			. to_string($test_data)
 		);
 
@@ -129,13 +129,14 @@ final class component_section_id_test extends BaseTestCase {
 
 		$this->assertTrue(
 			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
+			'expected type object. Obtained type : ' . PHP_EOL
 				. gettype($result)
 		);
 		$this->assertTrue(
-			$result->value===1,
-			'expected type object : ' . PHP_EOL
-				. to_string($result->value)
+			$result->value===[1],
+			'expected value array [1]. Obtained : ' . PHP_EOL
+				. to_string($result->value) . PHP_EOL
+				. 'result: ' . to_string($result)
 		);
 	}//end test_get_grid_value
 

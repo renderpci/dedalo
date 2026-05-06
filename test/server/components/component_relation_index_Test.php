@@ -262,7 +262,7 @@ final class component_relation_index_test extends BaseTestCase {
 			}
 		');
 
-		$result = component_relation_index::get_referended_locators_with_cache(
+		$result = component_relation_index::get_referenced_locators_with_cache(
 			$locator_base,
 			DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . self::$section_tipo . '_' . 1 // cache_key
 		);

@@ -6,6 +6,8 @@
 */
 class matrix_activity_diffusion_db_manager extends matrix_db_manager {
 
+
+
 	// Allowed matrix tables
 	public static array $tables = [
 		'matrix_activity_diffusion' => true

@@ -154,10 +154,16 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_REFERENCES_RECURSIVE
-	* Resolve references (related terms that point to current locator)
-	*  	DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
-	* 	DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
-	* @return array $ar_references
+	* Resolve references (related terms that point to current locator).
+	* Used for bidirectional and multidirectional relation types.
+	* Recursively resolves references to build the full graph of related terms.
+	*
+	* @param string $tipo - The component tipo
+	* @param object $locator - The locator to resolve references for
+	* @param string $type_rel - Relation type (DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO or DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
+	* @param bool $recursion - Whether this is a recursive call (false on first call to reset cache)
+	* @param string $lang - The language for data resolution
+	* @return array $ar_references - Array of resolved reference locators
 	*/
 	public static function get_references_recursive(
 		string $tipo,
@@ -248,15 +254,11 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_REFERENCES
-	* Get bidirectional / multi-directional references to current term
-	* @param string|null $type_rel = null
-	* @return array $ar_result
-	* array of objects as
-	* [{
-	* 	section_tipo: 'rsc1568';
-	*	section_id: 15269;
-	*	from_component_tipo: rsc85741
-	* }]
+	* Get bidirectional / multi-directional references to current term.
+	* Searches the database for locators that reference the current section.
+	*
+	* @param string|null $type_rel - Optional type_rel filter to narrow the search
+	* @return array $ar_result - Array of locator objects [{section_tipo, section_id, from_component_tipo}]
 	*/
 	public function get_references( ?string $type_rel=null ) : array {
 
@@ -277,7 +279,7 @@ class component_relation_related extends component_relation_common {
 			$base_path->section_tipo	= $this->section_tipo;
 			$base_path->component_tipo	= $this->tipo;
 
-		$path = array($base_path);
+		$path = [$base_path];
 
 		// Component path
 		$component_path = ['relations'];
@@ -322,11 +324,11 @@ class component_relation_related extends component_relation_common {
 	}//end get_references
 
 
-
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is false. Override when component is sortable
+	* Override parent to enable sorting for this component.
+	*
+	* @return bool - Always true for component_relation_related
 	*/
 	public function get_sortable() : bool {
 
@@ -337,10 +339,12 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_ORDER_PATH
-	* Calculate full path of current element to use in columns order path (context)
-	* @param string $component_tipo
-	* @param string $section_tipo
-	* @return array $path
+	* Calculate full path of current element to use in columns order path (context).
+	* Includes the component itself and the thesaurus term component for sorting.
+	*
+	* @param string $component_tipo - The component tipo
+	* @param string $section_tipo - The section tipo
+	* @return array $path - Array of path objects for column ordering
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
