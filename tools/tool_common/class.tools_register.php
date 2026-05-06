@@ -11,23 +11,104 @@ class tools_register {
 
 
 	/**
-	 * TIPO and Section constants for tool registration
-	 */
-	public static $section_registered_tools_tipo	= DEDALO_REGISTER_TOOLS_SECTION_TIPO; // 'dd1324'; // Tools register section
-	public static $tipo_tool_name					= 'dd1326'; // tool name like 'tool_transcription'
-	public static $tipo_tool_label					= 'dd799';
-	public static $tipo_ontology					= 'dd1334';
-	public static $tipo_version						= 'dd1327';
-	public static $tipo_developer					= 'dd1644';
-	public static $tipo_description					= 'dd612';
-	public static $tipo_dedalo_version_minimal		= 'dd1328';
-	public static $section_tools_config_tipo		= DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO; // 'dd996'; // Tools configuration
-	public static $tipo_affected_models				= 'dd1330';
-	public static $tipo_properties					= 'dd1335';
-	public static $tipo_always_active				= 'dd1601';
-	public static $tools_configuration				= 'dd999'; // tools Configuration component_json
-	public static $tools_default_configuration		= 'dd1633'; // tools default Configuration component_json
-	public static $tipo_active						= 'dd1354'; // component_radio_button
+	* CLASS VARS - Tool registration ontology tipos
+	*/
+		/**
+		 * Section tipo for the 'Registered Tools' section (dd1324).
+		 * Stores parsed tool metadata, re-created on each import from management area.
+		 * @var string $section_registered_tools_tipo
+		 */
+		public static string $section_registered_tools_tipo = DEDALO_REGISTER_TOOLS_SECTION_TIPO;
+
+		/**
+		 * Component tipo for tool name identifier. E.g. 'tool_transcription'.
+		 * @var string $tipo_tool_name
+		 */
+		public static string $tipo_tool_name = 'dd1326';
+
+		/**
+		 * Component tipo for tool label display name.
+		 * @var string $tipo_tool_label
+		 */
+		public static string $tipo_tool_label = 'dd799';
+
+		/**
+		 * Component tipo for tool ontology definition reference.
+		 * @var string $tipo_ontology
+		 */
+		public static string $tipo_ontology = 'dd1334';
+
+		/**
+		 * Component tipo for tool version number.
+		 * @var string $tipo_version
+		 */
+		public static string $tipo_version = 'dd1327';
+
+		/**
+		 * Component tipo for tool developer/author name.
+		 * @var string $tipo_developer
+		 */
+		public static string $tipo_developer = 'dd1644';
+
+		/**
+		 * Component tipo for tool description text.
+		 * @var string $tipo_description
+		 */
+		public static string $tipo_description = 'dd612';
+
+		/**
+		 * Component tipo for minimum required Dédalo version.
+		 * @var string $tipo_dedalo_version_minimal
+		 */
+		public static string $tipo_dedalo_version_minimal = 'dd1328';
+
+		/**
+		 * Section tipo for 'Tools Configuration' section (dd996).
+		 * Stores custom local configuration for each tool.
+		 * @var string $section_tools_config_tipo
+		 */
+		public static string $section_tools_config_tipo = DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO;
+
+		/**
+		 * Component tipo for affected models list.
+		 * Defines which component/section models the tool applies to.
+		 * @var string $tipo_affected_models
+		 */
+		public static string $tipo_affected_models = 'dd1330';
+
+		/**
+		 * Component tipo for tool properties configuration (component_json).
+		 * @var string $tipo_properties
+		 */
+		public static string $tipo_properties = 'dd1335';
+
+		/**
+		 * Component tipo for 'always active' flag.
+		 * Controls whether tool is available without explicit activation.
+		 * @var string $tipo_always_active
+		 */
+		public static string $tipo_always_active = 'dd1601';
+
+		/**
+		 * Component tipo for tools configuration JSON (dd999).
+		 * Runtime configuration storage for tool behavior.
+		 * @var string $tools_configuration
+		 */
+		public static string $tools_configuration = 'dd999';
+
+		/**
+		 * Component tipo for tools default configuration JSON (dd1633).
+		 * Factory default settings for tool initialization.
+		 * @var string $tools_default_configuration
+		 */
+		public static string $tools_default_configuration = 'dd1633';
+
+		/**
+		 * Component tipo for tool active status (component_radio_button, dd1354).
+		 * Boolean flag to enable/disable the tool in the system.
+		 * @var string $tipo_active
+		 */
+		public static string $tipo_active = 'dd1354';
 
 
 	/**
@@ -613,7 +694,7 @@ class tools_register {
 	 * @param int   $counter   Reference to global tool counter.
 	 * @return array The updated ontology structure.
 	 */
-	public static function renumerate_term_id(array $ontology, &$counter) : array {
+	public static function renumerate_term_id(array $ontology, int &$counter) : array {
 
 		if (empty($ontology)) {
 			return $ontology;

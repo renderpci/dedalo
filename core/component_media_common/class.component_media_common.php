@@ -74,28 +74,71 @@ class component_media_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
-		// string quality
-		public $quality;
-		// string additional_path. An optional file path to files to conform path as /media/images/my_initial_media_path/<1.5MB/..
-		public $additional_path;
-		// string initial_media_path
-		public $initial_media_path;
-		// string target_filename
-		public $target_filename;
-		// string target_dir
-		public $target_dir;
-		// string folder. From config element definitions like: DEDALO_PDF_FOLDER
-		public $folder;
-		// string id. Usually is a flat locator like 'dd522_dd128_1'
-		public $id;
-		// string extension. like 'mp4'
-		public $extension;
-		// external_source
-		public $external_source;
-		// Property to enable or disable the get and set data in different languages
-		protected $supports_translation = false;
 
+		/**
+		 * Media quality variant for this component instance. Examples: 'original', '1.5MB'.
+		 * Determines which transcoding or resolution level is active for the media.
+		 * @var ?string $quality
+		 */
+		public ?string $quality = null;
 
+		/**
+		 * Optional subdirectory path appended to the media storage location.
+		 * Used to organize files into sub-folders within the media directory.
+		 * Example: /media/images/my_initial_media_path/<1.5MB/../
+		 * @var ?string $additional_path
+		 */
+		public ?string $additional_path = null;
+
+		/**
+		 * Base directory path for media files of this component type.
+		 * Defined in configuration and combined with tipo, section_id, and quality to form the full path.
+		 * @var ?string $initial_media_path
+		 */
+		public ?string $initial_media_path = null;
+
+		/**
+		 * Target filename for uploaded or processed media files.
+		 * Generated from locator components to ensure unique, deterministic file naming.
+		 * @var ?string $target_filename
+		 */
+		public ?string $target_filename = null;
+
+		/**
+		 * Target directory path for media file operations (upload, transcoding, deletion).
+		 * Full filesystem path combining folder, initial_media_path, and additional_path.
+		 * @var ?string $target_dir
+		 */
+		public ?string $target_dir = null;
+
+		/**
+		 * Media folder name from configuration constants. Examples: DEDALO_IMAGE_FOLDER, DEDALO_PDF_FOLDER.
+		 * Defines the root media type directory for this component (images, av, pdf, etc.).
+		 * @var ?string $folder
+		 */
+		public ?string $folder = null;
+
+		/**
+		 * Unique identifier for this media instance, typically a flattened locator.
+		 * Format: {component_tipo}_{section_tipo}_{section_id}. Example: 'dd522_dd128_1'.
+		 * Used for file naming and URL generation.
+		 * @var ?string $id
+		 */
+		public ?string $id = null;
+
+		/**
+		 * File extension for the media file. Examples: 'mp4', 'jpg', 'pdf', 'svg'.
+		 * Determines the file format and may trigger format-specific processing.
+		 * @var ?string $extension
+		 */
+		public ?string $extension = null;
+
+		/**
+		 * External source URL for media not stored locally in Dédalo.
+		 * When set, the component references an external resource rather than internal files.
+		 * @var ?string $external_source
+		 */
+		public ?string $external_source = null;
 
 	// Unified data sample:
 		// [{
@@ -2432,7 +2475,7 @@ class component_media_common extends component_common {
 		// to the same strict identifier grammar we use for key_dir (alphanumeric,
 		// underscore, hyphen, dot) and fall back to the original quality on
 		// mismatch. No caller legitimately needs path separators in $quality.
-		if (preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
+		if (preg_match('/^[A-Za-z0-9_\-\.\<]+$/', $quality) !== 1) {
 			debug_log(__METHOD__
 				. ' SEC-065: rejecting unsafe quality: ' . to_string($quality)
 				, logger::ERROR

@@ -19,54 +19,79 @@ class component_relation_common extends component_common {
 
 	/**
 	* CLASS VARS
-	* @var
 	*/
-		# relation_type (set in constructor).
-		# Defines type used in section relation locators to set own locator type
-		# protected $relation_type;
 
-		# Overwrite __construct var lang passed in this component
-		// protected $lang = DEDALO_DATA_NOLAN;
+		/**
+		 * Whether to propagate component locators to the relation table on save.
+		 * Set to false to skip relation persistence (e.g., bulk imports in geonames).
+		 * @var bool $save_to_database_relations
+		 */
+		public bool $save_to_database_relations = true;
 
-		# save_to_database_relations
-		# On false, avoid propagate to table relation current component locators at save
-		# @see class geonames::import_data
-		public $save_to_database_relations = true;
+		/**
+		 * Relation type tipo defining the locator type for section relations.
+		 * Set in constructor from ontology properties. Determines inverse resolution behavior.
+		 * Example: DEDALO_RELATION_TYPE_RELATED_TIPO.
+		 * @var ?string $relation_type
+		 */
+		protected ?string $relation_type = null;
 
-		# relation_type . Determines inverse resolutions and locator format
-		# DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
-		protected $relation_type ; // Set on construct from properties
+		/**
+		 * Directionality of the relation (unidirectional, bidirectional, multidirectional).
+		 * Stored inside each locator of the component data. Set in constructor from properties.
+		 * Examples: DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (default), BIDIRECTIONAL_TIPO, MULTIDIRECTIONAL_TIPO.
+		 * @var ?string $relation_type_rel
+		 */
+		protected ?string $relation_type_rel = null;
 
-		# type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component data
-		# DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
-		# DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
-		# DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
-		# protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-		protected $relation_type_rel ; // Set on construct from properties
+		/**
+		 * Array of target section tipos this relation component can link to.
+		 * Defines which sections are valid for portal/autocomplete selection.
+		 * @var array $ar_target_section_tipo
+		 */
+		protected array $ar_target_section_tipo = [];
 
-		// array|null ar_target_section_tipo
-		protected $ar_target_section_tipo;
+		/**
+		 * Whether to divide sub-columns in list view for multi-value relation display.
+		 * When true, each related item gets its own sub-column in tabular layouts.
+		 * @var bool $sub_columns_division
+		 */
+		protected bool $sub_columns_division = false;
 
-		// sub_columns_division
-		protected $sub_columns_division;
+		/**
+		 * Default relation type fallback when no specific type is configured.
+		 * Used in constructor to initialize $relation_type when properties lack an explicit value.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = null;
 
-		// default_relation_type
-		protected $default_relation_type;
-		// default_relation_type_rel
-		protected $default_relation_type_rel;
+		/**
+		 * Default relation directionality fallback when no specific direction is configured.
+		 * Used in constructor to initialize $relation_type_rel when properties lack an explicit value.
+		 * @var ?string $default_relation_type_rel
+		 */
+		protected ?string $default_relation_type_rel = null;
 
-	// Property to enable or disable the get and set data in different languages
+		/**
+		 * Default output format mapping for diffusion endpoints.
+		 * Overrides parent component_common format. Relations export as JSON in SQL contexts.
+		 * @var array $diffusion_output_format
+		 */
+		public static array $diffusion_output_format = ['sql' => 'json'];
 
-		protected $supports_translation = false;
+		/**
+		 * Auxiliary lookup map for fast existence checks of locators in component data.
+		 * Prevents duplicate relations by indexing existing locators before add operations.
+		 * @var array $locator_lookup_map
+		 */
+		protected array $locator_lookup_map = [];
 
-		// Default format for diffusion outputs based on diffusion endpoint
-		public static $diffusion_output_format = ['sql' => 'json'];
-
-		// locator_lookup_map. Auxiliar map to check if a locator already exists in the component data
-		protected $locator_lookup_map;
-
-		// cache
-		static $hierarchy_sections_from_types_cache;
+		/**
+		 * Static cache for hierarchy section tipos resolved from type codes.
+		 * Avoids repeated ontology traversal when resolving hierarchy types.
+		 * @var array $hierarchy_sections_from_types_cache
+		 */
+		public static array $hierarchy_sections_from_types_cache = [];
 
 
 
@@ -433,11 +458,11 @@ class component_relation_common extends component_common {
 
 				// if the component it's a relation component, set the sub_columns_division to true, it will be test in the next loop
 				if (in_array($component_model, $components_with_relations)) {
-					$current_component->sub_columns_divison = true;
+					$current_component->sub_columns_division = true;
 				}
 				//if the component it's a relation component check if the component has sub_columns_division (it could have been set by the previous loop)
 				// if true, add the locator position to the column_path
-				if(isset($this->sub_columns_divison) && $this->sub_columns_divison===true && $current_key>0){
+				if(isset($this->sub_columns_division) && $this->sub_columns_division===true && $current_key>0){
 					$current_path = $current_path.'|'.$current_key;
 				}
 				// create the new column obj id getting the previous id and add the new path
@@ -461,7 +486,7 @@ class component_relation_common extends component_common {
 			}//end foreach ($ddo_direct_children as $ddo)
 
 			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
-			if(isset($this->sub_columns_divison) && $this->sub_columns_divison || $this->section_id === null){
+			if(isset($this->sub_columns_division) && $this->sub_columns_division || $this->section_id === null){
 				$ar_cells = [...$ar_cells, ...$ar_columns];
 			}else{
 				//create the row of the portal for the main locator only

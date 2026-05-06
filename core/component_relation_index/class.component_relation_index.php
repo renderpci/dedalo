@@ -33,22 +33,45 @@ class component_relation_index extends component_relation_common {
 	// traits. Files added to current class file to split the large code.
 	use search_component_relation_index;
 
-	// cache
-	public static $referended_locators_cache;
 
 
 	/**
-	* @var
+	* CLASS VARS
 	*/
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
-	protected $default_relation_type_rel	= null;
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties			= ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
+		/**
+		 * Static cache for referenced locators to avoid expensive lookups.
+		 * Stores inverse locator results during repetitive processes like publication.
+		 * @var array $referended_locators_cache
+		 */
+		public static array $referended_locators_cache = [];
 
-	// default_target_section, when is not set in properties it will set as all related sections than call.
-	protected $default_target_section		= ['all'];
-	public $target_section;
+		/**
+		 * Default relation type for indexation (DEDALO_RELATION_TYPE_INDEX_TIPO - dd96).
+		 * Defines the ontology tipo used for reverse relation identification.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
+
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
+
+		/**
+		 * Default target section when not explicitly set in properties.
+		 * Value ['all'] means all related sections that reference the current record.
+		 * @var array $default_target_section
+		 */
+		protected array $default_target_section = ['all'];
+
+		/**
+		 * Target sections for filtering indexation references.
+		 * Array of section tipos to limit which referencing sections are displayed.
+		 * @var array $target_section
+		 */
+		public array $target_section = [];
 
 
 
@@ -73,7 +96,7 @@ class component_relation_index extends component_relation_common {
 
 		// referenced locators. Get calculated inverse locators for all matrix tables
 			// $ar_inverse_locators = search_related::get_referenced_locators($reference_locator);
-			$ar_inverse_locators = component_relation_index::get_referended_locators_with_cache(
+			$ar_inverse_locators = component_relation_index::get_referenced_locators_with_cache(
 				$filter_locator,
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
@@ -565,7 +588,7 @@ class component_relation_index extends component_relation_common {
 
 		// referenced_locators
 			// $referenced_locators = search_related::get_referenced_locators($locator);
-			$referenced_locators = component_relation_index::get_referended_locators_with_cache(
+			$referenced_locators = component_relation_index::get_referenced_locators_with_cache(
 				$locator,
 				$type . '_' . $section_tipo // cache_key
 			);
@@ -593,7 +616,7 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_REFERENDED_LOCATORS_WITH_CACHE
+	* GET_REFERENCED_LOCATORS_WITH_CACHE
 	* Get inverse locators using cache
 	* Note that, in publication process, many languages are resolved for every record and the result
 	* for all of them is the same. Use this cache-able function to prevent calculate inverse locators
@@ -602,7 +625,7 @@ class component_relation_index extends component_relation_common {
 	* @param string $cache_key
 	* @return array $referenced_locators
 	*/
-	public static function get_referended_locators_with_cache( object $locator, string $cache_key ) : array {
+	public static function get_referenced_locators_with_cache( object $locator, string $cache_key ) : array {
 
 		// cache
 
@@ -624,11 +647,7 @@ class component_relation_index extends component_relation_common {
 
 
 		return $referenced_locators;
-	}//end get_referended_locators_with_cache
-
-
-
-
+	}//end get_referenced_locators_with_cache
 
 
 
@@ -643,11 +662,16 @@ class component_relation_index extends component_relation_common {
 	private function get_target_section() : array {
 
 		// target section
-			$target_section	= isset($this->target_section)
+			$target_section	= !empty($this->target_section)
 				? $this->target_section
 				: (isset( $this->properties->source->request_config )
 					? $this->get_ar_target_section_tipo()
 					: $this->default_target_section);
+
+		// Ensure target_section is not empty to avoid search errors
+			if (empty($target_section)) {
+				$target_section = $this->default_target_section;
+			}
 
 		return $target_section;
 	}//end get_target_section

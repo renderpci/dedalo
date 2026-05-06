@@ -7,9 +7,16 @@ class component_select_lang extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
-	protected $default_relation_type_rel	= null;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for language selection (DEDALO_RELATION_TYPE_LINK).
+		 * Defines the ontology tipo used for linking to language records.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
+
 
 
 	/**

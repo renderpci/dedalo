@@ -14,10 +14,30 @@ class ontology_utils {
 
 
 
-	// cache
-	public static $ar_tipo_by_model_name_cache;
-	public static $active_tlds_cache;
-	public static $active_tlds_cache_file_name = 'cache_active_tlds.php';
+	/**
+	* CLASS VARS
+	*/
+
+		/**
+		 * Static cache mapping model names to their matching tipo arrays.
+		 * Avoids repeated ontology searches for the same model lookups.
+		 * @var array $ar_tipo_by_model_name_cache
+		 */
+		public static array $ar_tipo_by_model_name_cache = [];
+
+		/**
+		 * Static cache for active TLDs (Top Level Domains) in the ontology.
+		 * Null until loaded, then populated with the list of currently active namespaces.
+		 * @var ?array $active_tlds_cache
+		 */
+		public static ?array $active_tlds_cache = null;
+
+		/**
+		 * Filename for the cached active TLDs file on disk.
+		 * Used to persist active TLD lookups across requests for performance.
+		 * @var string $active_tlds_cache_file_name
+		 */
+		public static string $active_tlds_cache_file_name = 'cache_active_tlds.php';
 
 
 

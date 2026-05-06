@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 
 /*
@@ -7,6 +7,8 @@
 *
 */
 class get_archive_states extends widget_common {
+
+
 
 	/**
 	* GET_DATA
@@ -213,5 +215,7 @@ class get_archive_states extends widget_common {
 
 		return $data;
 	}//end get_data
+
+
 
 }//end get_archive_states

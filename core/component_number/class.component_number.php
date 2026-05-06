@@ -25,12 +25,10 @@ class component_number extends component_common {
 	use search_component_number;
 	use search_component_number_tm;
 
+
+
 	// decimal separator
-
-	public $decimal = '.';
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public string $decimal = '.';
 
 
 

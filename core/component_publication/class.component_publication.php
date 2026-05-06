@@ -11,11 +11,10 @@ class component_publication extends component_relation_common {
 
 
 	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
-	protected $default_relation_type_rel	= null;
+	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 

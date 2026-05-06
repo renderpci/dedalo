@@ -10,10 +10,7 @@ class component_password extends component_common {
 
 	// string . Fake value to show in grid
 
-	public $fake_value = '****************';
-
-	// bool . Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public string $fake_value = '****************';
 
 
 

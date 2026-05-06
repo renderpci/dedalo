@@ -24,8 +24,15 @@ class component_text_area extends component_string_common {
 
 
 
-	// arguments
-	public $arguments;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Optional arguments object for component processing configuration.
+		 * Used to pass additional parameters for tag processing or display modes.
+		 * @var ?object $arguments
+		 */
+		public ?object $arguments = null;
 
 
 

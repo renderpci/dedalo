@@ -51,12 +51,9 @@ class component_date extends component_common {
 
 
 	// American data format
-	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
+	public static array $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 	// default date mode
-	public static $default_date_mode = 'date';
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public static string $default_date_mode = 'date';
 
 
 

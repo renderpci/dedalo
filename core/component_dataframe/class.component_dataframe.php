@@ -11,7 +11,7 @@ class component_dataframe extends component_portal {
 
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
+	public array $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
 
 
 

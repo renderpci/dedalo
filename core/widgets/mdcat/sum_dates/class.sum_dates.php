@@ -1,12 +1,12 @@
-<?php
-
-
+<?php declare(strict_types=1);
 /*
 * CLASS SUM_DATES
 *
 *
 */
 class sum_dates extends widget_common {
+
+
 
 	/**
 	* GET_DATA
@@ -459,7 +459,6 @@ class sum_dates extends widget_common {
 
 		return $data_parsed;
 	}//end get_data_parsed
-
 
 
 

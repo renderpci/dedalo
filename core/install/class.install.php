@@ -9,10 +9,21 @@ class install extends common {
 
 	/**
 	* CLASS VARS
-	* @var
 	*/
-		protected $id;
-		public static $db_install_name	= 'dedalo6_install';
+
+		/**
+		 * Unique identifier for the install instance.
+		 * Set during construction, typically null for install operations.
+		 * @var string|int|null $id
+		 */
+		protected string|int|null $id = null;
+
+		/**
+		 * Database name used for initial installation and setup.
+		 * Contains the default database for creating Dédalo tables and ontology.
+		 * @var string $db_install_name
+		 */
+		public static string $db_install_name = 'dedalo7_install';
 
 
 

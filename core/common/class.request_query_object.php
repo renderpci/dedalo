@@ -203,51 +203,119 @@ class request_query_object extends stdClass {
 
 
 	/**
-	* VARS
+	* CLASS VARS
 	*/
-		// mandatory
-			// string dd_api. name of the API manager ()
-			public $dd_api;
-			public $action;
-			public $source;
-			public $api_engine;
+		/**
+		 * API manager identifier for handling this request.
+		 * Specifies which API endpoint/manager processes the request. Example: 'dd_core_api'.
+		 * @var ?string $dd_api
+		 */
+		public ?string $dd_api = null;
 
-		// optional (disabled to prevent null values)
-			// string id
-				// public $id;
-			// object sqo
-				// public $sqo;
-			// object show
-				// public $show;
-			// object search
-				// public $search;
-			// object choose
-				// public $choose;
-			// object data
-				// public $data;
-			// bool prevent_lock
-				// public $prevent_lock;
-			// bool pretty_print
-				// public pretty_print
-			// object options
-				// public $options;
+		/**
+		 * Action to be performed by the API.
+		 * Defines the operation type (e.g., 'read', 'save', 'delete', 'search').
+		 * @var ?string $action
+		 */
+		public ?string $action = null;
 
-		// direct_keys
-			public static $direct_keys = [
-				'id',
-				'api_engine',
-				'dd_api',
-				'action',
-				'source',
-				'sqo',
-				'show',
-				'search',
-				'choose',
-				'data',
-				'prevent_lock',
-				'options',
-				'pretty_print'
-			];
+		/**
+		 * Source object identifying the requesting context.
+		 * Contains section_tipo, section_id, tipo, and mode of the calling element.
+		 * @var ?object $source
+		 */
+		public ?object $source = null;
+
+		/**
+		 * API engine identifier for data retrieval. Default 'dedalo'.
+		 * Specifies the backend engine (e.g., 'dedalo', 'zenon', 'external').
+		 * @var ?string $api_engine
+		 */
+		public ?string $api_engine = 'dedalo';
+
+		/**
+		 * Request identifier combining context and parameters.
+		 * Unique identifier for this specific request instance.
+		 * @var string|int|null $id
+		 */
+		public string|int|null $id = null;
+
+		/**
+		 * Search Query Object for filtering and pagination.
+		 * Contains SQO defining search criteria, limits, offsets, and sorting.
+		 * @var ?object $sqo
+		 */
+		public ?object $sqo = null;
+
+		/**
+		 * Display configuration for show mode rendering.
+		 * Defines which fields/components to display in the response.
+		 * @var ?object $show
+		 */
+		public ?object $show = null;
+
+		/**
+		 * Search interface configuration for UI search panel.
+		 * Defines search fields, operators, and UI options.
+		 * @var ?object $search
+		 */
+		public ?object $search = null;
+
+		/**
+		 * Choose mode configuration for record selection.
+		 * Defines selectable elements when user is choosing from records.
+		 * @var ?object $choose
+		 */
+		public ?object $choose = null;
+
+		/**
+		 * Request payload data object.
+		 * Contains the actual data being sent (for save, update operations).
+		 * @var ?object $data
+		 */
+		public ?object $data = null;
+
+		/**
+		 * Whether to prevent PHP session locking.
+		 * When true, the session is closed avoiding to write (use with caution).
+		 * @var ?bool $prevent_lock
+		 */
+		public ?bool $prevent_lock = null;
+
+		/**
+		 * Whether to pretty-print JSON response output.
+		 * When true, formats JSON with indentation for debugging readability.
+		 * @var ?bool $pretty_print
+		 */
+		public ?bool $pretty_print = null;
+
+		/**
+		 * Additional request options object.
+		 * Contains extra parameters and flags for specialized request handling.
+		 * @var ?object $options
+		 */
+		public ?object $options = null;
+
+		/**
+		 * List of property keys that are directly accessible.
+		 * Used for validation and serialization of RQO properties.
+		 * @var array $direct_keys
+		 */
+		public static array $direct_keys = [
+			'id',
+			'api_engine',
+			'dd_api',
+			'action',
+			'source',
+			'sqo',
+			'show',
+			'search',
+			'choose',
+			'data',
+			'prevent_lock',
+			'options',
+			'pretty_print'
+		];
 
 
 
@@ -282,7 +350,7 @@ class request_query_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_dd_api(string $value) {
+	public function set_dd_api(string $value) : void {
 
 		$this->dd_api = $value;
 	}//end set_dd_api
@@ -294,7 +362,7 @@ class request_query_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_action(string $value) {
+	public function set_action(string $value) : void {
 
 		$this->action = $value;
 	}//end set_action
@@ -306,7 +374,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_source(object $value) {
+	public function set_source(object $value) : void {
 
 		$this->source = $value;
 	}//end set_source
@@ -318,7 +386,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_sqo(object $value) {
+	public function set_sqo(object $value) : void {
 
 		$this->sqo = $value;
 	}//end set_sqo
@@ -330,7 +398,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_show(object $value) {
+	public function set_show(object $value) : void {
 
 		$this->show = $value;
 	}//end set_show
@@ -342,7 +410,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_search(object $value) {
+	public function set_search(object $value) : void {
 
 		$this->search = $value;
 	}//end set_search
@@ -354,7 +422,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_choose(object $value) {
+	public function set_choose(object $value) : void {
 
 		$this->choose = $value;
 	}//end set_choose
@@ -366,7 +434,7 @@ class request_query_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_options(object $value) {
+	public function set_options(object $value) : void {
 
 		$this->options = $value;
 	}//end set_options

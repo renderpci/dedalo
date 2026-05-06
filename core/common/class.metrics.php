@@ -7,59 +7,59 @@ final class metrics {
 
 
 	// permissions. Time to calculate user permissions
-	public static $security_permissions_table_time = 0;
-	public static $security_permissions_table_count = 0;
-	public static $security_permissions_total_time = 0;
-	public static $security_permissions_total_calls = 0;
+	public static float $security_permissions_table_time = 0;
+	public static int $security_permissions_table_count = 0;
+	public static float $security_permissions_total_time = 0;
+	public static int $security_permissions_total_calls = 0;
 
 	// search
-	public static $search_total_time = 0;
-	public static $search_total_calls = 0;
+	public static float $search_total_time = 0;
+	public static int $search_total_calls = 0;
 
 	// ontology
-	public static $ontology_total_time = 0;
-	public static $ontology_total_calls = 0;
-	public static $ontology_total_calls_cached = 0;
+	public static float $ontology_total_time = 0;
+	public static int $ontology_total_calls = 0;
+	public static int $ontology_total_calls_cached = 0;
 
 	// matrix
-	public static $matrix_total_time = 0;
-	public static $matrix_total_calls = 0;
+	public static float $matrix_total_time = 0;
+	public static int $matrix_total_calls = 0;
 
 	// exec_search matrix_db_manager
-	public static $exec_search_total_time = 0;
-	public static $exec_search_total_calls = 0;
+	public static float $exec_search_total_time = 0;
+	public static int $exec_search_total_calls = 0;
 
 	// exec_search dd_ontology_db_manager
-	public static $exec_dd_ontology_search_total_time = 0;
-	public static $exec_dd_ontology_search_total_calls = 0;
+	public static float $exec_dd_ontology_search_total_time = 0;
+	public static int $exec_dd_ontology_search_total_calls = 0;
 
 	// get_tools (current element context tools calculations)
-	public static $get_tools_total_time = 0;
-	public static $get_tools_total_calls = 0;
-	public static $get_tools_total_calls_cached = 0;
-	public static $get_tool_config_total_time = 0;
-	public static $get_tool_config_total_calls = 0;
+	public static float $get_tools_total_time = 0;
+	public static int $get_tools_total_calls = 0;
+	public static int $get_tools_total_calls_cached = 0;
+	public static float $get_tool_config_total_time = 0;
+	public static int $get_tool_config_total_calls = 0;
 
 	// section_save
-	public static $section_save_total_time = 0;
-	public static $section_save_total_calls = 0;
+	public static float $section_save_total_time = 0;
+	public static int $section_save_total_calls = 0;
 
 	// context
-	public static $structure_context_total_time = 0;
-	public static $structure_context_total_calls = 0;
+	public static float $structure_context_total_time = 0;
+	public static int $structure_context_total_calls = 0;
 
 	// data
-	public static $data_total_time = 0;
-	public static $data_total_calls = 0;
+	public static float $data_total_time = 0;
+	public static int $data_total_calls = 0;
 
 	// presets
-	public static $presets_total_time = 0;
-	public static $presets_total_calls = 0;
+	public static float $presets_total_time = 0;
+	public static int $presets_total_calls = 0;
 
 	// db_connection
-	public static $db_connection_total_time = 0;
-	public static $db_connection_total_calls = 0;
-	public static $db_connection_total_calls_cached = 0;
+	public static float $db_connection_total_time = 0;
+	public static int $db_connection_total_calls = 0;
+	public static int $db_connection_total_calls_cached = 0;
 
 	/**
 	* ADD_METRIC

@@ -14,11 +14,6 @@ class component_inverse extends component_common {
 
 
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
-
-
-
 	/**
 	* GET_DATA
 	* This component don't store data, only access to section inverse_locators data

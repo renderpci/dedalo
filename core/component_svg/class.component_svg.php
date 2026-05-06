@@ -9,12 +9,6 @@ class component_svg extends component_media_common implements component_media_in
 
 
 	/**
-	* CLASS VARS
-	*/
-
-
-
-	/**
 	* GET_AR_QUALITY
 	* Get the list of defined svg qualities in Dédalo config
 	* @return array $ar_quality

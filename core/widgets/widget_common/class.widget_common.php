@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * WIDGET_COMMON
 *
@@ -10,11 +10,40 @@ class widget_common {
 	/**
 	* CLASS VARS
 	*/
-		public $section_tipo;
-		public $section_id;
-		public $mode;
-		public $lang;
-		public $ipo;
+		/**
+		 * Section tipo (ontology identifier) of the record being displayed by this widget.
+		 * Defines which section/hierarchy the widget data belongs to.
+		 * @var ?string $section_tipo
+		 */
+		public ?string $section_tipo = null;
+
+		/**
+		 * Section ID of the record being displayed. Null for list mode widgets.
+		 * Identifies the specific record within the section for detail/edit views.
+		 * @var string|int|null $section_id
+		 */
+		public string|int|null $section_id = null;
+
+		/**
+		 * Display mode for this widget instance. Default 'edit'.
+		 * Controls rendering context: 'edit', 'list', 'search', etc.
+		 * @var ?string $mode
+		 */
+		public ?string $mode = null;
+
+		/**
+		 * Language code for multilingual widget content. Default DEDALO_DATA_LANG.
+		 * Determines which language version of labels/data to display.
+		 * @var ?string $lang
+		 */
+		public ?string $lang = null;
+
+		/**
+		 * Input-Process-Output configuration array from ontology.
+		 * Array of objects defining the widget's data sources, processing, and output format.
+		 * @var ?array $ipo
+		 */
+		public ?array $ipo = null;
 
 
 

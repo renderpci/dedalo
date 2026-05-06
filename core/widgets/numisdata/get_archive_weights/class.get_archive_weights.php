@@ -1,12 +1,12 @@
-<?php
-
-
+<?php declare(strict_types=1);
 /*
 * CLASS GET_ARCHIVE_WEIGHTS
 *
 *
 */
 class get_archive_weights extends widget_common {
+
+
 
 	/**
 	* GET_DATA
@@ -220,5 +220,7 @@ class get_archive_weights extends widget_common {
 
 		return $data;
 	}//end get_data
+
+
 
 }//end get_archive_weights

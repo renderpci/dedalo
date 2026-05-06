@@ -5,17 +5,22 @@ declare(ticks=1);
 
 class Thread {
 
-	protected static $names = [];
-	protected static $fibers = [];
-	protected static $params = [];
+	/** @var array $names List of registered thread names */
+	protected static array $names = [];
 
-	public static function register(string|int $name, callable $callback, array $params) {
+	/** @var Fiber[] $fibers List of active Fiber instances */
+	protected static array $fibers = [];
+
+	/** @var array $params Parameters for each fiber */
+	protected static array $params = [];
+
+	public static function register(string|int $name, callable $callback, array $params) : void {
 		self::$names[]  = $name;
 		self::$fibers[] = new Fiber($callback);
 		self::$params[] = $params;
 	}
 
-	public static function run() {
+	public static function run() : array {
 		$output = [];
 
 		while (self::$fibers) {
@@ -40,7 +45,7 @@ class Thread {
 		return $output;
 	}
 
-	public static function scheduler () {
+	public static function scheduler() : void {
 		if(Fiber::getCurrent() === null) {
 			return;
 		}

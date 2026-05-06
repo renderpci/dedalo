@@ -12,15 +12,28 @@ class component_info extends component_common {
 
 
 	/**
-	* properties
-	* @var
+	* CLASS VARS
 	*/
-	public $widget_lang;
-	public $widget_mode;
-	public $use_db_data = false;
+		/**
+		 * Language code for widget content display within this component. E.g. 'lg-spa'
+		 * Determines the language version used when rendering widget information.
+		 * @var ?string $widget_lang
+		 */
+		public ?string $widget_lang = null;
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+		/**
+		 * Display mode for widgets within this component info instance.
+		 * Controls widget rendering context: 'edit', 'list', etc.
+		 * @var ?string $widget_mode
+		 */
+		public ?string $widget_mode = null;
+
+		/**
+		 * Whether this component should use database-stored data.
+		 * When false, data is computed/generated rather than retrieved from storage.
+		 * @var bool $use_db_data
+		 */
+		public bool $use_db_data = false;
 
 
 
@@ -574,7 +587,12 @@ class component_info extends component_common {
 	*/
 	public function get_grid_flat_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		return $this->get_grid_value($ddo);
+		$grid_value = $this->get_grid_value($ddo);
+
+		// Resolve the complex grid value into a flat string
+		// $grid_value->value = dd_grid_cell_object::resolve_value($grid_value);
+
+		return $grid_value;
 	}//end get_grid_flat_value
 
 

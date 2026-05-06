@@ -9,80 +9,128 @@ class section extends common {
 
 
 
-	// traits. Files added to current class file to split the large code.
-	// use section_v7;
-
-
-
 	/**
 	* CLASS VARS
 	*/
-		// FIELDS
-		// protected $section_id;
-		// protected $dato;
-
-		// Buttons objects
-		public $ar_buttons;
-
-		public $ar_all_project_langs;
-
-		public $show_inspector = true; // default show: true
-
-		public $section_virtual = false;
-		public $section_real_tipo;
-
-		public $is_temp = false; // Used to force save data to session instead database. Default is false
-
-		public $options;
-
-		// SAVE_HANDLER
-		// Default is 'database'. Other options like 'session' are accepted
-		// Note that section change automatically this value (to 'session' for example) when received section_id is like 'temp1' for manage this cases as temporal section
-		public $save_handler = 'database';
-
-		// static cache for section instances
-		public static $ar_section_instances = [];
-
-		public $save_modified = true; # Default is true
-
-		// public $layout_map;
-
-		// injected whole database record, with all columns
-		public $record;
-
-		// string column in Database
-		// Defined in every component
-		public $data_column_name;
-
-		// tm_context. Array
-		public $tm_context;
-
-		// // time machine save control
-		// public $save_tm = true;
 
 		/**
-		* SECTIONS FOR DATAFRAME
-		*________________________
-		*/
-			/**
-			* @param object $caller_dataframe
-			* locator (section_id, section_tipo)
-			* The section that has data in DDBB, it's the section of the portal with the data that need to be data-framed with roles, uncertainty or any other dataframe.
-			*/
-			public $caller_dataframe;
+		 * Array of button elements associated with this section.
+		 * Populated during rendering based on section configuration and user permissions.
+		 * @var ?array $ar_buttons
+		 */
+		public ?array $ar_buttons = null;
 
+		/**
+		 * List of all project languages available for this section.
+		 * Used for multilingual content management and language switching.
+		 * @var ?array $ar_all_project_langs
+		 */
+		public ?array $ar_all_project_langs = null;
 
-		// object $JSON_RecordObj_matrix. Instance from JSON_RecordObj_matrix class
-		// It contains the section data source directly from DB.
-		protected $JSON_RecordObj_matrix;
+		/**
+		 * Whether to display the inspector panel for this section.
+		 * Controls visibility of metadata and debugging information in the UI.
+		 * @var bool $show_inspector
+		 */
+		public bool $show_inspector = true;
 
+		/**
+		 * Whether this section is a virtual section (ontology-based alias).
+		 * Virtual sections map to a real section type for storage but have their own ontology definition.
+		 * @var bool $section_virtual
+		 */
+		public bool $section_virtual = false;
 
-		// Section record instances, array
-		protected array $section_records;
+		/**
+		 * The real section tipo (type identifier) when this is a virtual section.
+		 * Points to the actual section where data is stored in the database.
+		 * @var ?string $section_real_tipo
+		 */
+		public ?string $section_real_tipo = null;
 
-		// cache
-		public static $cache_ar_children_tipo = [];
-		public static $section_map_cache = [];
+		/**
+		 * Whether this section instance is temporary (e.g., 'temp1').
+		 * Temp sections use 'session' save_handler and are not persisted to the database.
+		 * @var bool $is_temp
+		 */
+		public bool $is_temp = false;
+
+		/**
+		 * Generic options object passed during instantiation.
+		 * Allows flexible configuration without changing the constructor signature.
+		 * @var ?object $options
+		 */
+		public ?object $options = null;
+
+		/**
+		 * Storage backend for this section: 'database' (default) or 'session'.
+		 * Automatically switches to 'session' when section_id is a temp identifier (e.g., 'temp1').
+		 * @var string $save_handler
+		 */
+		public string $save_handler = 'database';
+
+		/**
+		 * Static cache holding section instances to prevent duplicate object creation (singleton pattern).
+		 * Cleared by clear() to prevent memory leaks across worker requests.
+		 * @var array $ar_section_instances
+		 */
+		public static array $ar_section_instances = [];
+
+		/**
+		 * Whether this section has been modified since last save.
+		 * Used by save logic to skip unnecessary database writes.
+		 * @var bool $save_modified
+		 */
+		public bool $save_modified = true;
+
+		/**
+		 * The full database record object with all columns (id, section_tipo, section_id, data, etc.).
+		 * Injected after load or directly assigned for performance in bulk operations.
+		 * @var ?object $record
+		 */
+		public ?object $record = null;
+
+		/**
+		 * Name of the JSONB column where component data is stored in the database.
+		 * Typically 'data' for standard sections. Defined per component context.
+		 * @var ?string $data_column_name
+		 */
+		public ?string $data_column_name = null;
+
+		/**
+		 * Time Machine context data for tracking changes.
+		 * Array of temporal metadata used by the time machine versioning system.
+		 * @var ?array $tm_context
+		 */
+		public ?array $tm_context = null;
+
+		/**
+		 * Instance of JSON_RecordObj_matrix containing the raw section data source from the database.
+		 * Provides direct access to the underlying JSONB record before object hydration.
+		 * @var ?object $JSON_RecordObj_matrix
+		 */
+		protected ?object $JSON_RecordObj_matrix = null;
+
+		/**
+		 * Array of section_record instances belonging to this section.
+		 * Used in list mode to iterate over records matching the current filter.
+		 * @var array $section_records
+		 */
+		protected array $section_records = [];
+
+		/**
+		 * Static cache mapping section tipos to their child component tipos.
+		 * Avoids repeated ontology lookups for section structure.
+		 * @var array $cache_ar_children_tipo
+		 */
+		public static array $cache_ar_children_tipo = [];
+
+		/**
+		 * Static cache for resolved section map structures.
+		 * Stores parsed section definitions to avoid re-processing ontology maps.
+		 * @var array $section_map_cache
+		 */
+		public static array $section_map_cache = [];
 
 		/**
 		* CLEAR
@@ -300,7 +348,7 @@ class section extends common {
 	private function __construct( string $tipo, string $mode ) {
 
 		// uid
-			$this->uid = hrtime(true); // nanoseconds
+			$this->uid = to_string( hrtime(true) ); // nanoseconds
 
 		// Set general vars
 			$this->lang			= DEDALO_DATA_NOLAN;

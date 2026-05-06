@@ -18,20 +18,46 @@ class logger {
 
 
 
-	// Static backend storage - replaces unused instance properties
-	// Removed: $h_log_file, $log_level (unused)
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Debug log level. Most verbose, used for development diagnostics.
+		 * Higher numbers = less important. Gaps allow future intermediate levels.
+		 */
+		const DEBUG = 100;
 
-	// Logging levels. The higher the number, the less important.
-	// Gaps are left in the numbering so that other levels can be added later
-	const DEBUG		= 100;
-	const INFO		= 75;
-	const NOTICE	= 50;
-	const WARNING	= 25;
-	const ERROR		= 10;
-	const CRITICAL	= 5;
+		/**
+		 * Info log level. General operational information.
+		 */
+		const INFO = 75;
 
-	// global logger obj array to store instances of logger
-	public static $obj;
+		/**
+		 * Notice log level. Normal but significant events.
+		 */
+		const NOTICE = 50;
+
+		/**
+		 * Warning log level. Potential issues that don't prevent operation.
+		 */
+		const WARNING = 25;
+
+		/**
+		 * Error log level. Runtime errors that require attention.
+		 */
+		const ERROR = 10;
+
+		/**
+		 * Critical log level. Severe errors requiring immediate action.
+		 */
+		const CRITICAL = 5;
+
+		/**
+		 * Global logger objects array storing registered backend instances.
+		 * Factory pattern storage for pluggable logging backends (activity, file, etc.).
+		 * @var array $obj
+		 */
+		public static array $obj = [];
 
 
 

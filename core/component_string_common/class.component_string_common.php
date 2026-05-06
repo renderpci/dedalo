@@ -34,12 +34,20 @@ class component_string_common extends component_common {
 	/**
 	* CLASS VARS
 	*/
+		/**
+		 * Whether this component supports multi-language data storage.
+		 * When true, data can be stored/retrieved in different languages.
+		 * When false, the component is language-agnostic (uses DEDALO_DATA_NOLAN).
+		 * @var bool $supports_translation
+		 */
+		protected bool $supports_translation = true;
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = true;
-
-	// default records separator
-	protected string $default_records_separator = ' | ';
+		/**
+		 * Default separator string for joining multiple records in display.
+		 * Used when concatenating multiple values for output.
+		 * @var string $default_records_separator
+		 */
+		protected string $default_records_separator = ' | ';
 
 
 

@@ -10,7 +10,7 @@ class ontology_data_io {
 
 
 
-	public static $dd_tables = ['matrix_dd','matrix_counter_dd','matrix_layout_dd'];
+	public static array $dd_tables = ['matrix_dd','matrix_counter_dd','matrix_layout_dd'];
 
 
 

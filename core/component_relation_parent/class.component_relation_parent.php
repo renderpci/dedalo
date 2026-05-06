@@ -7,20 +7,36 @@ class component_relation_parent extends component_relation_common {
 
 
 
-	// Current component relation_type (used to filter locators in 'relations' container data)
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_PARENT_TIPO;
-	protected $default_relation_type_rel	= null;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for parent relations (DEDALO_RELATION_TYPE_PARENT_TIPO).
+		 * Used to filter locators in the 'relations' container data.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_PARENT_TIPO;
 
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+		/**
+		 * Last SQL query executed for get_parents operations.
+		 * Stored for debugging purposes only.
+		 * @var ?string $get_parents_query
+		 */
+		public static ?string $get_parents_query = null;
 
-	// SQL query stored for debug only
-	public static $get_parents_query;
-
-	// errors. Store statically the class errors
-	public static $errors;
+		/**
+		 * Static storage for class-level errors.
+		 * Accumulates errors encountered during parent relation operations.
+		 * @var array $errors
+		 */
+		public static array $errors = [];
 
 
 

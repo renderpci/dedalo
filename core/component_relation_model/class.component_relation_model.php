@@ -18,13 +18,29 @@ class component_relation_model extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_MODEL_TIPO;
-	protected $default_relation_type_rel	= null;
-	public $ar_target_section_tipo			= null;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for model relations (DEDALO_RELATION_TYPE_MODEL_TIPO).
+		 * Defines the ontology tipo used for model-type section relations.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_MODEL_TIPO;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+		/**
+		 * Cached array of target section tipos for this relation.
+		 * Stores resolved target sections from hierarchy or free mode lookup.
+		 * @var array $ar_target_section_tipo
+		 */
+		protected array $ar_target_section_tipo = [];
+
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
@@ -43,8 +59,19 @@ class component_relation_model extends component_relation_common {
 	public function get_ar_target_section_tipo() : array {
 
 		// cache
-			if(isset($this->ar_target_section_tipo)) {
+			if(!empty($this->ar_target_section_tipo)) {
 				return $this->ar_target_section_tipo;
+			}
+
+		// section_tipo check
+			$section_tipo = $this->get_section_tipo();
+			if (empty($section_tipo)) {
+				$msg = "Error. section_tipo is not defined! "
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' section_id: '   . $this->section_id;
+				debug_log(__METHOD__ . ' ' . $msg, logger::ERROR);
+				return [];
 			}
 
 		$target_mode = $this->properties->target_mode ?? null;
@@ -89,7 +116,7 @@ class component_relation_model extends component_relation_common {
 
 
 		// Fix value
-		$this->ar_target_section_tipo = $ar_target_section_tipo;
+			$this->ar_target_section_tipo = $ar_target_section_tipo;
 
 
 		return $ar_target_section_tipo;

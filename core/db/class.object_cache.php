@@ -55,7 +55,7 @@
 *   error_log(section_record_instances_cache::exportAnalytics('json'));
 */
 class section_record_instances_cache {
-    
+
     protected static array $instances = [];
     protected static int $maxSize = 500;
 
@@ -64,22 +64,22 @@ class section_record_instances_cache {
     private static int $misses = 0;
     private static array $accessLog = [];      // Track which keys are accessed
     private static array $missedKeys = [];     // Track which keys miss
-    private static bool $analyticsEnabled = false;    
-    
+    private static bool $analyticsEnabled = false;
+
     /**
      * Get a cached section_record instance
-     * 
+     *
      * @param string|int $key Unique identifier (section_id, tipo, etc.)
      * @return section_record|null
      */
-    public static function get($key): ?object {
+    public static function get(string|int|array $key): ?object {
         $cacheKey = self::normalizeKey($key);
 
         // Track access pattern
         if (self::$analyticsEnabled) {
             self::trackAccess($cacheKey);
         }
-        
+
         if (!isset(self::$instances[$cacheKey])) {
             self::$misses++;
             if (self::$analyticsEnabled) {
@@ -87,34 +87,34 @@ class section_record_instances_cache {
             }
             return null;
         }
-        
+
         self::$hits++;
-        
+
         // LRU: Move to end (mark as recently used)
         $instance = self::$instances[$cacheKey];
         unset(self::$instances[$cacheKey]);
         self::$instances[$cacheKey] = $instance;
-        
+
         return $instance;
     }
-    
+
     /**
      * Store a section_record instance in cache
-     * 
+     *
      * @param string|int $key Unique identifier
      * @param section_record $instance The record instance
      */
     public static function set($key, object $instance): void {
         $cacheKey = self::normalizeKey($key);
-        
+
         // If already exists, remove it (we'll re-add at end)
         if (isset(self::$instances[$cacheKey])) {
             unset(self::$instances[$cacheKey]);
         }
-        
+
         // Add to end (most recently used)
         self::$instances[$cacheKey] = $instance;
-        
+
         // Evict oldest if over limit
         if (count(self::$instances) > self::$maxSize) {
             // Remove first item (least recently used)
@@ -124,7 +124,7 @@ class section_record_instances_cache {
 
             $evicted = array_key_first(self::$instances);
             unset(self::$instances[$evicted]);
-            
+
             if (self::$analyticsEnabled) {
                 self::trackEviction($evicted);
             }
@@ -137,21 +137,21 @@ class section_record_instances_cache {
     public static function getAnalytics(): array {
         $total = self::$hits + self::$misses;
         $hitRate = $total > 0 ? round((self::$hits / $total) * 100, 2) : 0;
-        
+
         // Find most accessed keys
         arsort(self::$accessLog);
         $topKeys = array_slice(self::$accessLog, 0, 10, true);
-        
+
         // Find most missed keys
         arsort(self::$missedKeys);
         $topMisses = array_slice(self::$missedKeys, 0, 10, true);
-        
+
         // Calculate access distribution
         $uniqueKeysAccessed = count(self::$accessLog);
-        $cacheUtilization = self::$maxSize > 0 
-            ? round((count(self::$instances) / self::$maxSize) * 100, 2) 
+        $cacheUtilization = self::$maxSize > 0
+            ? round((count(self::$instances) / self::$maxSize) * 100, 2)
             : 0;
-        
+
         return [
             'hit_rate' => $hitRate . '%',
             'cache_size' => count(self::$instances),
@@ -175,10 +175,10 @@ class section_record_instances_cache {
         $issues = [];
         $total = self::$hits + self::$misses;
         $hitRate = $total > 0 ? (self::$hits / $total) * 100 : 0;
-        $utilization = self::$maxSize > 0 
-            ? (count(self::$instances) / self::$maxSize) * 100 
+        $utilization = self::$maxSize > 0
+            ? (count(self::$instances) / self::$maxSize) * 100
             : 0;
-        
+
         // Low hit rate with low utilization
         if ($hitRate < 70 && $utilization < 50) {
             $issues[] = [
@@ -187,7 +187,7 @@ class section_record_instances_cache {
                 'description' => 'You\'re accessing many different records without re-using them. Hit rate is low despite cache having plenty of space.'
             ];
         }
-        
+
         // Check if same keys are being missed repeatedly
         $repeatedMisses = 0;
         foreach (self::$missedKeys as $count) {
@@ -195,7 +195,7 @@ class section_record_instances_cache {
                 $repeatedMisses++;
             }
         }
-        
+
         if ($repeatedMisses > 5) {
             $issues[] = [
                 'type' => 'CACHE_KEY_MISMATCH',
@@ -203,12 +203,12 @@ class section_record_instances_cache {
                 'description' => "Same keys are missing repeatedly ({$repeatedMisses} keys). You might be using inconsistent cache keys for the same records."
             ];
         }
-        
+
         // Check access concentration
         if (count(self::$accessLog) > 0) {
             $topAccesses = array_sum(array_slice(self::$accessLog, 0, 10));
             $concentration = ($topAccesses / array_sum(self::$accessLog)) * 100;
-            
+
             if ($concentration < 30) {
                 $issues[] = [
                     'type' => 'UNIFORM_DISTRIBUTION',
@@ -217,7 +217,7 @@ class section_record_instances_cache {
                 ];
             }
         }
-        
+
         // Check if cache is useful at all
         if ($total > 100 && $hitRate < 20) {
             $issues[] = [
@@ -226,43 +226,43 @@ class section_record_instances_cache {
                 'description' => 'Cache hit rate is critically low. Consider disabling cache or changing strategy.'
             ];
         }
-        
+
         return $issues ?: [['type' => 'HEALTHY', 'severity' => 'INFO', 'description' => 'No issues detected']];
     }
-    
+
     /**
      * Get actionable recommendations
      */
     private static function getRecommendations(): array {
         $recommendations = [];
-        $hitRate = self::$hits + self::$misses > 0 
-            ? (self::$hits / (self::$hits + self::$misses)) * 100 
+        $hitRate = self::$hits + self::$misses > 0
+            ? (self::$hits / (self::$hits + self::$misses)) * 100
             : 0;
-        $utilization = self::$maxSize > 0 
-            ? (count(self::$instances) / self::$maxSize) * 100 
+        $utilization = self::$maxSize > 0
+            ? (count(self::$instances) / self::$maxSize) * 100
             : 0;
-        
+
         if ($hitRate < 70 && $utilization < 50) {
             $recommendations[] = 'Consider reducing cache size to ' . (count(self::$instances) * 2) . ' - you don\'t need ' . self::$maxSize . ' slots';
             $recommendations[] = 'Investigate if you\'re doing batch operations that don\'t benefit from caching';
             $recommendations[] = 'Check if you can pre-load commonly accessed records';
         }
-        
+
         // Check for key consistency
         $missedKeyPatterns = array_keys(self::$missedKeys);
         $cachedKeyPatterns = array_keys(self::$instances);
-        
+
         if (count($missedKeyPatterns) > 0 && count($cachedKeyPatterns) > 0) {
             $recommendations[] = 'Review your cache key generation - ensure consistency across different access methods';
         }
-        
+
         if ($hitRate < 20) {
             $recommendations[] = 'URGENT: Cache is ineffective. Consider disabling it or using a different strategy (e.g., query result caching instead)';
         }
-        
+
         return $recommendations ?: ['Cache is performing well'];
     }
-    
+
     /**
      * Track access patterns
      */
@@ -272,28 +272,28 @@ class section_record_instances_cache {
         }
         self::$accessLog[$key]++;
     }
-    
+
     /**
      * Track cache misses
      */
-    private static function trackMiss(string $normalizedKey, $originalKey): void {
-        $keyInfo = is_array($originalKey) 
-            ? json_encode($originalKey) 
+    private static function trackMiss(string $normalizedKey, string|int|array $originalKey): void {
+        $keyInfo = is_array($originalKey)
+            ? json_encode($originalKey)
             : $originalKey;
-        
+
         if (!isset(self::$missedKeys[$keyInfo])) {
             self::$missedKeys[$keyInfo] = 0;
         }
         self::$missedKeys[$keyInfo]++;
     }
-    
+
     /**
      * Track evictions (future use)
      */
     private static function trackEviction(string $key): void {
         // Could log which keys are being evicted prematurely
     }
-    
+
     /**
      * Reset analytics data
      */
@@ -303,7 +303,7 @@ class section_record_instances_cache {
         self::$accessLog = [];
         self::$missedKeys = [];
     }
-    
+
     /**
      * Enable/disable analytics
      */
@@ -317,57 +317,57 @@ class section_record_instances_cache {
     public static function getAnalyticsStatus(): bool {
         return self::$analyticsEnabled;
     }
-    
+
     /**
      * Export analytics for external analysis
      */
     public static function exportAnalytics(string $format = 'json'): string {
         $data = self::getAnalytics();
-        
+
         switch ($format) {
             case 'json':
                 return json_encode($data, JSON_PRETTY_PRINT);
-            
+
             case 'text':
                 $output = "=== CACHE ANALYTICS ===\n\n";
                 $output .= "Hit Rate: {$data['hit_rate']}\n";
                 $output .= "Cache Size: {$data['cache_size']} / {$data['max_size']}\n";
                 $output .= "Utilization: {$data['cache_utilization']}\n\n";
-                
+
                 $output .= "Top Accessed Keys:\n";
                 foreach ($data['top_accessed_keys'] as $key => $count) {
                     $output .= "  - {$key}: {$count} accesses\n";
                 }
-                
+
                 $output .= "\nTop Missed Keys:\n";
                 foreach ($data['top_missed_keys'] as $key => $count) {
                     $output .= "  - {$key}: {$count} misses\n";
                 }
-                
+
                 $output .= "\nDiagnosis:\n";
                 foreach ($data['diagnosis'] as $issue) {
                     $output .= "  [{$issue['severity']}] {$issue['description']}\n";
                 }
-                
+
                 $output .= "\nRecommendations:\n";
                 foreach ($data['recommendations'] as $rec) {
                     $output .= "  - {$rec}\n";
                 }
-                
+
                 return $output;
-            
+
             default:
                 return '';
         }
     }
-    
+
     /**
      * Check if key exists in cache
      */
     public static function has($key): bool {
         return isset(self::$instances[self::normalizeKey($key)]);
     }
-    
+
     /**
      * Remove specific item from cache
      */
@@ -375,7 +375,7 @@ class section_record_instances_cache {
         $cacheKey = self::normalizeKey($key);
         unset(self::$instances[$cacheKey]);
     }
-    
+
     /**
      * Clear entire cache
      */
@@ -384,14 +384,14 @@ class section_record_instances_cache {
         self::$hits = 0;
         self::$misses = 0;
     }
-    
+
     /**
      * Get cache statistics
      */
     public static function getStats(): array {
         $total = self::$hits + self::$misses;
         $hitRate = $total > 0 ? round((self::$hits / $total) * 100, 2) : 0;
-        
+
         return [
             'size' => count(self::$instances),
             'max_size' => self::$maxSize,
@@ -401,11 +401,11 @@ class section_record_instances_cache {
             'memory_usage' => self::getMemoryUsage()
         ];
     }
-    
+
     /**
      * Normalize cache key to string
      */
-    protected static function normalizeKey($key): string {
+    protected static function normalizeKey(string|int|array $key): string {
         if (is_array($key)) {
             // For composite keys like ['section_id' => 1, 'tipo' => 'ts1']
             ksort($key);
@@ -413,7 +413,7 @@ class section_record_instances_cache {
         }
         return (string) $key;
     }
-    
+
     /**
      * Get approximate memory usage
      */
@@ -427,7 +427,7 @@ class section_record_instances_cache {
         }
         return round($bytes, 2) . ' ' . $units[$i];
     }
-    
+
     /**
      * Configure cache settings
      */
@@ -446,50 +446,50 @@ class component_instances_cache {
     protected static int $maxSize = 500;
     protected static int $hits = 0;
     protected static int $misses = 0;
-    
-    
+
+
     /**
      * Get a cached section_record instance
-     * 
+     *
      * @param string|int $key Unique identifier (section_id, tipo, etc.)
      * @return section_record|null
      */
-    public static function get($key) : ?object {
+    public static function get(string|int|array $key) : ?object {
         $cacheKey = self::normalizeKey($key);
-        
+
         if ( !isset(self::$instances[$cacheKey]) ) {
             self::$misses++;
             return null;
         }
-        
+
         self::$hits++;
-        
+
         // LRU: Move to end (mark as recently used)
         $instance = self::$instances[$cacheKey];
         unset(self::$instances[$cacheKey]);
         self::$instances[$cacheKey] = $instance;
-                
-        
+
+
         return $instance;
     }
-    
+
     /**
      * Store a section_record instance in cache
-     * 
+     *
      * @param string|int $key Unique identifier
      * @param section_record $instance The record instance
      */
-    public static function set($key, object $instance): void {
+    public static function set(string|int|array $key, object $instance): void {
         $cacheKey = self::normalizeKey($key);
-        
+
         // If already exists, remove it (we'll re-add at end)
         if (isset(self::$instances[$cacheKey])) {
             unset(self::$instances[$cacheKey]);
         }
-        
+
         // Add to end (most recently used)
         self::$instances[$cacheKey] = $instance;
-        
+
         // Evict oldest if over limit
         if (count(self::$instances) > self::$maxSize) {
             // Remove first item (least recently used)
@@ -498,22 +498,22 @@ class component_instances_cache {
             self::$instances = array_slice(self::$instances, 1, null, true);
         }
     }
-    
+
     /**
      * Check if key exists in cache
      */
-    public static function has($key): bool {
+    public static function has(string|int|array $key): bool {
         return isset(self::$instances[self::normalizeKey($key)]);
     }
-    
+
     /**
      * Remove specific item from cache
      */
-    public static function delete($key): void {
+    public static function delete(string|int|array $key): void {
         $cacheKey = self::normalizeKey($key);
         unset(self::$instances[$cacheKey]);
     }
-    
+
     /**
      * Clear entire cache
      */
@@ -522,14 +522,14 @@ class component_instances_cache {
         self::$hits = 0;
         self::$misses = 0;
     }
-    
+
     /**
      * Get cache statistics
      */
     public static function getStats(): array {
         $total = self::$hits + self::$misses;
         $hitRate = $total > 0 ? round((self::$hits / $total) * 100, 2) : 0;
-        
+
         return [
             'size' => count(self::$instances),
             'max_size' => self::$maxSize,
@@ -539,11 +539,11 @@ class component_instances_cache {
             'memory_usage' => self::getMemoryUsage()
         ];
     }
-    
+
     /**
      * Normalize cache key to string
      */
-    protected static function normalizeKey($key): string {
+    protected static function normalizeKey(string|int|array $key): string {
         if (is_array($key)) {
             // For composite keys like ['section_id' => 1, 'tipo' => 'ts1']
             ksort($key);
@@ -551,7 +551,7 @@ class component_instances_cache {
         }
         return (string) $key;
     }
-    
+
     /**
      * Get approximate memory usage
      */
@@ -565,7 +565,7 @@ class component_instances_cache {
         }
         return round($bytes, 2) . ' ' . $units[$i];
     }
-    
+
     /**
      * Configure cache settings
      */

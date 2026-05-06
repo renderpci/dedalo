@@ -66,7 +66,7 @@ class dd_object extends stdClass implements JsonSerializable {
 	 * Identifies this structure as a DDO.
 	 * @var string
 	 */
-	public $typo = 'ddo';
+	public string $typo = 'ddo';
 
 	// Core identity
 	protected ?string $type = null;
@@ -140,7 +140,7 @@ class dd_object extends stdClass implements JsonSerializable {
 	 *
 	 * @var array<int,string>
 	 */
-	public static $ar_type_allowed = [
+	public static array $ar_type_allowed = [
 		'area',
 		'section',
 		'relation_list',

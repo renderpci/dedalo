@@ -16,49 +16,141 @@ abstract class component_common extends common {
 
 	/**
 	* CLASS VARS
-	* @var
 	*/
 
+		/**
+		 * Dataframe object attached to this component for additional metadata.
+		 * Holds contextual information such as roles, uncertainty, or temporal frames.
+		 * @var ?object $dataframe
+		 */
+		public ?object $dataframe = null;
 
-		public $dataframe;				// object dataframe
-		public $locator;				// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
-		public $data_resolved;
-		// db_data used to stored previous data before save it, to check if it has Time Machine
-		public $db_data;
-		// parent section obj (optional, useful for component_av...)
-		public $section_obj;
-		// diffusion_properties
-		public $diffusion_properties;
-		// update_diffusion_info_propagate_changes bool
-		// To optimize save process in scripts of importation, you can disable (false) this option if is not really necessary
-		public $update_diffusion_info_propagate_changes;
-		// matrix_id
-		public $matrix_id;
-		// bulk_process_id, use to identified the process that change the component and save it into time_machine.
-		// It will use to get all changes done by bulk processes together.
-		// ex: 21 (section_id of the bulk process section)
-		public $bulk_process_id;
-		// observable data, used for propagate to other components that are seeing this component changes.
-		public $observable_data;
-		// string from_section_tipo
-		public $from_section_tipo;
-		// string from_component_tipo
-		public $from_component_tipo;
-		// object column_obj
-		public $column_obj;
-		// observers_data
-		public $observers_data;
-		// fields_separator. Default separator between fields
-		public $fields_separator = ' | ';
-		// save_to_database, used for controlled if the component save his data to database. bool. default: true.
-		public $save_to_database;
-		// array ar_list_of_values
-		public $ar_list_of_values;
-		// public bool cache
-		public $cache;
-		// components mono-value (his data is array but only first element is used)
-		// Used in tool propagate_component_data to determine if they can use 'add' functionality
-		public static $components_monovalue = [
+		/**
+		 * Full locator used to instantiate this component.
+		 * While only section_tipo, component_tipo, mode, and lang are used for instantiation,
+		 * the full locator is needed for properties like tag_id and top_tipo.
+		 * @var ?object $locator
+		 */
+		public ?object $locator = null;
+
+		/**
+		 * Resolved data for this component. Null is a valid initial state.
+		 * Do not set a default value here; it will be populated by get_data().
+		 * @var ?array $data_resolved
+		 */
+		public ?array $data_resolved;
+
+		/**
+		 * Previous database data snapshot before saving.
+		 * Used to detect changes and trigger Time Machine versioning when data differs.
+		 * @var array|null $db_data
+		 */
+		public array|null $db_data = null;
+
+		/**
+		 * Parent section object this component belongs to.
+		 * Optional reference, primarily used by media components (e.g., component_av) to access section context.
+		 * @var ?object $section_obj
+		 */
+		public ?object $section_obj = null;
+
+		/**
+		 * Diffusion properties object controlling how this component is published.
+		 * Defines mapping rules and transformations for export/diffusion endpoints.
+		 * @var ?object $diffusion_properties
+		 */
+		public ?object $diffusion_properties = null;
+
+		/**
+		 * Whether to propagate diffusion info changes on save.
+		 * Set to false in import scripts to optimize batch saves when diffusion updates are unnecessary.
+		 * @var bool $update_diffusion_info_propagate_changes
+		 */
+		public bool $update_diffusion_info_propagate_changes = true;
+
+		/**
+		 * Database matrix record ID (primary key of the matrix row).
+		 * Used for direct database operations and Time Machine references.
+		 * @var string|int|null $matrix_id
+		 */
+		public string|int|null $matrix_id = null;
+
+		/**
+		 * Identifier of the bulk process that last modified this component.
+		 * Groups related Time Machine entries for batch operations (e.g., import scripts).
+		 * Example: 21 (section_id of the bulk process section).
+		 * @var string|int|null $bulk_process_id
+		 */
+		public string|int|null $bulk_process_id = null;
+
+		/**
+		 * Data used to notify observing components of value changes.
+		 * Enables reactive updates across components watching this one's state.
+		 * @var array|null $observable_data
+		 */
+		public array|null $observable_data = null;
+
+		/**
+		 * Source section tipo when this component is referenced from another section.
+		 * Used in cross-section portal or autocomplete contexts.
+		 * @var ?string $from_section_tipo
+		 */
+		public ?string $from_section_tipo = null;
+
+		/**
+		 * Source component tipo when this component is referenced from another component.
+		 * Tracks the originating component in portal or autocomplete relationships.
+		 * @var ?string $from_component_tipo
+		 */
+		public ?string $from_component_tipo = null;
+
+		/**
+		 * Column configuration object for list view rendering.
+		 * Defines width, alignment, label, and other presentation metadata.
+		 * @var ?object $column_obj
+		 */
+		public ?object $column_obj = null;
+
+		/**
+		 * Data from components observing this component's value changes.
+		 * Used to manage bidirectional reactive dependencies between components.
+		 * @var ?array $observers_data
+		 */
+		public ?array $observers_data = null;
+
+		/**
+		 * Default string separator between concatenated field values in list outputs.
+		 * @var string $fields_separator
+		 */
+		public string $fields_separator = ' | ';
+
+		/**
+		 * Whether this component persists its data to the database on save.
+		 * Set to false for computed or transient components that should not write to storage.
+		 * @var bool $save_to_database
+		 */
+		public bool $save_to_database = true;
+
+		/**
+		 * Array of list-of-values options for components with predefined choices (select, radio, etc.).
+		 * Populated on demand from the ontology or external sources.
+		 * @var ?array $ar_list_of_values
+		 */
+		public ?array $ar_list_of_values = null;
+
+		/**
+		 * Whether to use cached data for this component instance.
+		 * Disabling cache forces fresh data load from the database.
+		 * @var bool $cache
+		 */
+		public bool $cache = true;
+
+		/**
+		 * Registry of component models whose data is an array but only uses the first element (mono-value).
+		 * Used by tools like propagate_component_data to restrict 'add' functionality.
+		 * @var array $components_monovalue
+		 */
+		public static array $components_monovalue = [
 			'component_3d',
 			'component_av',
 			'component_geolocation',
@@ -75,8 +167,13 @@ abstract class component_common extends common {
 			'component_svg',
 			'component_text_area'
 		];
-		// components_using_value_property as [{"id": 1,"value": mixed}]
-		public static $components_using_value_property = [
+
+		/**
+		 * Registry of component models that store data in the format [{"id": 1, "value": mixed}].
+		 * Determines data structure expectations for value-based components.
+		 * @var array $components_using_value_property
+		 */
+		public static array $components_using_value_property = [
 			'component_email',
 			'component_filter_records',
 			'component_info',
@@ -84,27 +181,65 @@ abstract class component_common extends common {
 			'component_json',
 			'component_number',
 			'component_password',
-			// 'component_security_access', ? [{"id": 1,"tipo": "dd242","value": 2,"section_tipo": "dd242"}]
 			'component_text_area'
 		];
-		// dataframe ddo
-		// the component_dataframe defines by the request config
-		public $ar_dataframe_ddo;
-		public $section_record;
-		// string column in Database
-		// Defined in every component
-		public $data_column_name;
-		// Property to enable or disable the get and set data in different languages
-		protected $supports_translation;
-		// boolean is_temporal (used to identify temporal data that is saved differently)
-		public $is_temporal;
 
-		// Default format for diffusion outputs based on diffusion endpoint
-		public static $diffusion_output_format = ['sql' => 'string'];
+		/**
+		 * Array of dataframe DDO (data definition objects) defined by request config.
+		 * Describes additional metadata columns linked to this component.
+		 * @var ?array $ar_dataframe_ddo
+		 */
+		public ?array $ar_dataframe_ddo = null;
 
-		// Cache for list of values
-		public static $ar_list_of_values_data_cache = [];
-		public static $list_of_values_data_cache = [];
+		/**
+		 * Reference to the parent section_record instance containing this component.
+		 * Provides access to sibling components and section-level context.
+		 * @var ?object $section_record
+		 */
+		public ?object $section_record = null;
+
+		/**
+		 * Name of the JSONB column where component data is stored in the database.
+		 * Typically 'relation', 'string', 'date', 'iri', `geo', 'number', 'media', 'misc'
+		 * for standard components. Defined per component type.
+		 * @var ?string $data_column_name
+		 */
+		public ?string $data_column_name = null;
+
+		/**
+		 * Whether this component supports language-specific values (translation).
+		 * When false, the component uses a single non-language value (lg-nolan).
+		 * @var bool $supports_translation
+		 */
+		protected bool $supports_translation = false;
+
+		/**
+		 * Whether this component holds temporal data requiring special save handling.
+		 * Temporal components use alternative persistence logic (e.g., session-based or time machine tracks).
+		 * @var bool $is_temporal
+		 */
+		public bool $is_temporal = false;
+
+		/**
+		 * Default output format mapping for diffusion endpoints.
+		 * Keyed by endpoint type (e.g., 'sql') with target format as value.
+		 * @var array $diffusion_output_format
+		 */
+		public static array $diffusion_output_format = ['sql' => 'string'];
+
+		/**
+		 * Static cache for resolved list-of-values data to avoid repeated ontology queries.
+		 * Cleared by clear() to prevent memory leaks across worker requests.
+		 * @var array $ar_list_of_values_data_cache
+		 */
+		public static array $ar_list_of_values_data_cache = [];
+
+		/**
+		 * Static cache for raw list-of-values data arrays.
+		 * Stores pre-processed option lists for components with predefined choices.
+		 * @var array $list_of_values_data_cache
+		 */
+		public static array $list_of_values_data_cache = [];
 
 		/**
 		* CLEAR
@@ -385,7 +520,7 @@ abstract class component_common extends common {
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, bool $is_temporal=false ) {
 
 		// uid
-			$this->uid = hrtime(true); // nanoseconds
+			$this->uid = to_string( hrtime(true) ); // nanoseconds
 
 		// tipo
 			$this->tipo = $tipo;

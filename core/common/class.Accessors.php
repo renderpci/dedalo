@@ -1,10 +1,12 @@
 <?php declare(strict_types=1);
-
+/**
+ * Summary of Accessors
+ */
 class Accessors {
 
 
 	# ACCESSORS
-	final public function __call(string $strFunction, array $arArguments) {
+	final public function __call(string $strFunction, array $arArguments) : mixed {
 
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -18,7 +20,7 @@ class Accessors {
 		return false;
 	}
 	# SET
-	private function SetAccessor(string $strMember, $strNewValue) {
+	private function SetAccessor(string $strMember, mixed $strNewValue) : bool {
 
 		if(property_exists($this, $strMember)) {
 
@@ -31,7 +33,7 @@ class Accessors {
 		}
 	}
 	# GET
-	private function GetAccessor(string $strMember) {
+	private function GetAccessor(string $strMember) : mixed {
 
 		return property_exists($this, $strMember)
 			? $this->$strMember

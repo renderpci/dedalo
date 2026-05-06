@@ -11,13 +11,32 @@ class button_common extends common {
 	/**
 	* CLASS VARS
 	*/
-		public $target;
-		public $id;
-		public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
+
+		/**
+		 * Target section ID or record identifier the button operates on.
+		 * Typically a matrix table ID (int) for delete/edit operations.
+		 * @var string|int|null $target
+		 */
+		public string|int|null $target = null;
+
+		/**
+		 * Unique identifier for this button instance.
+		 * Set via define_id(), often null for simple action buttons.
+		 * @var string|int|null $id
+		 */
+		public string|int|null $id = null;
+
+		/**
+		 * Tipo of the calling context (department, section, area, etc.).
+		 * Represents who instantiated the button, regardless of the button's own model.
+		 * Examples: 'dd12' (department), 'dd323' (section).
+		 * @var ?string $context_tipo
+		 */
+		public ?string $context_tipo = null;
 
 
 
-	function __construct($tipo, $target, $section_tipo) {
+	function __construct(string $tipo, int $target, string $section_tipo) {
 
 		$this->tipo 		= $tipo;
 		$this->target 		= $target;
@@ -29,7 +48,7 @@ class button_common extends common {
 		parent::load_structure_data();
 
 		# Target is normally a int section id matrix
-		if(!empty($target) && !is_int($target)) throw new Exception("Error creating delete button (target $target is not valid int id matrix)", 1);
+		if(!empty($target) && !is_int($target)) throw new Exception("Error creating delete button (target '$target' is not valid int id matrix)", 1);
 	}
 
 	# define id

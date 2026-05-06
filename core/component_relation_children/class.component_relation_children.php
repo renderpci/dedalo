@@ -20,17 +20,16 @@ class component_relation_children extends component_relation_common {
 	use search_component_relation_children;
 
 	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-	protected $default_relation_type_rel	= null;
+	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 	// ar_target_section_tipo
-	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
+	protected array $ar_target_section_tipo = [];	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
 
 	// Cache for ar_related_parent_tipo
-	public static $ar_parent_tipo_cache = [];
+	public static array $ar_parent_tipo_cache = [];
 
 
 

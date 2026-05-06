@@ -2,32 +2,48 @@
 /**
 * CLASS COMPONENT_RELATION_RELATED
 *
+* Manages related-term relations in thesaurus hierarchies.
+* Supports unidirectional, bidirectional and multidirectional relation types.
+* Extends component_relation_common to inherit locator-based data handling.
+*
+* @package Dedalo
+* @subpackage Core
 */
 class component_relation_related extends component_relation_common {
 
 
 
-	// relation_type . Determines inverse resolutions and locator format
-	// DEDALO_RELATION_TYPE_RELATED_TIPO (Default)
-	// protected $relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO; // Default
-	// protected $relation_type ; // Set on construct from properties
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for related terms (DEDALO_RELATION_TYPE_RELATED_TIPO).
+		 * Determines inverse resolutions and locator format.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO;
 
-	// type of rel (like unidirectional, bidirectional, multi directional, etc..) This info is inside each locator of current component data
-	// DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (Default)
-	// DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO
-	// DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO
-	// protected $relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO; // Default
-	// protected $relation_type_rel ; // Set on construct from properties
+		/**
+		 * Default relation directionality type.
+		 * Values: UNIDIRECTIONAL (default), BIDIRECTIONAL, MULTIDIRECTIONAL.
+		 * Stored inside each locator of current component data.
+		 * @var ?string $default_relation_type_rel
+		 */
+		protected ?string $default_relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO;
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_RELATED_TIPO;
-	protected $default_relation_type_rel	= DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO;
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
-
-	// cache
-	public static $references_recursive_resolved_cache = [];
+		/**
+		 * Static cache for recursively resolved references.
+		 * Stores computed reference trees to avoid expensive re-calculation.
+		 * @var array $references_recursive_resolved_cache
+		 */
+		public static array $references_recursive_resolved_cache = [];
 
 
 
@@ -50,9 +66,12 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_CALCULATED_REFERENCES
-	* used for get the references, this function call the the get_references that make the recursive loop of the calculation
-	* @param bool $only_data = false
-	* @return array $references
+	* Resolves references (related terms that point to current locator).
+	* Calls get_references_recursive for bidirectional/multidirectional types.
+	* When only_data is true, returns raw locators; otherwise returns locators with labels.
+	*
+	* @param bool $only_data - If true, return locators without labels (for merging with real data)
+	* @return array $references - Array of reference objects (locators or locator+label items)
 	*/
 	public function get_calculated_references(bool $only_data=false) : array {
 
@@ -122,7 +141,9 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_TYPE_REL
-	* @return string $this->relation_type_rel
+	* Get the current relation type rel (unidirectional/bidirectional/multidirectional)
+	*
+	* @return string - The relation_type_rel value
 	*/
 	public function get_type_rel() : string {
 

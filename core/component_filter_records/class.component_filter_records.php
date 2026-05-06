@@ -8,10 +8,6 @@
 class component_filter_records extends component_common {
 
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
-
-
 
 	/**
 	* GET_GRID_VALUE
@@ -75,7 +71,7 @@ class component_filter_records extends component_common {
 
 			// add object item with label
 				$datalist_item = new stdclass();
-					$datalist_item->tipo = $area_item->tipo;					
+					$datalist_item->tipo = $area_item->tipo;
 					$datalist_item->permissions = $area_item->value;
 					$datalist_item->label = $label;
 

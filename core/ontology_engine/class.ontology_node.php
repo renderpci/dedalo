@@ -17,56 +17,113 @@
  */
 class ontology_node {
 
-	// tipo
-	// Ontology identifier of the node.
-	// 'tipo' : Typology of Indirect Programming Objects.
-	// Every node in the ontology has a unique identifier.
-	// It allows to define the node properties.
-	// 'tipo' uses a TLD plus a unique id for this TLD, e.g. 'oh1':
-	//  - 'oh' = TLD (Top Level Domain) / ontology namespace, e.g. Oral History
-	//  - '1'  = unique and sequential id within that TLD
-	public string $tipo;
 
-	// data
-	// An object with all properties of the ontology node:
-	//	{
-	//		parent			: "tch188"				string | null
-	//		term			: {"lg-eng": "Object"}	object | null
-	//		model			: "section"				string | null
-	//		order_number	: 5						int | null
-	//		relations		: [{"tipo":"tch7"}]		array | null
-	//		tld				: "tch"					string
-	//		properties		: {"color": "#2d8894"}	object | null
-	//		model_tipo		: "dd6"					string | null
-	//		is_model		: false					boolean
-	//		is_translatable	: false					boolean
-	//		propiedades		: "{}"					string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
-	//	}
-	// Every property has its own column in the `dd_ontology` table.
-	protected $data;
+	/**
+	* CLASS VARS
+	*/
 
-	// is_loaded_data
-	// Marks if the node data has already been loaded from database.
-	protected bool $is_loaded_data = false;
+		/**
+		 * Ontology identifier (tipo) of the node.
+		 * Typology of Indirect Programming Objects. Every node has a unique identifier
+		 * combining TLD (Top Level Domain / ontology namespace) plus a sequential ID.
+		 * Example: 'oh1' where 'oh' = Oral History namespace, '1' = unique ID within that TLD.
+		 * @var string $tipo
+		 */
+		public string $tipo;
 
-	// ar_recursive_children_of_this
-	// Internal cache for expensive recursive-children calculations.
-	protected array $ar_recursive_children_of_this = [];
+		/**
+		 * Object containing all properties of the ontology node.
+		 * Properties include: parent, term, model, order_number, relations, tld,
+		 * properties, model_tipo, is_model, is_translatable, propiedades (deprecated).
+		 * Each property maps to a column in the `dd_ontology` table.
+		 * E.g.
+		 * {
+		 *      parent          : "tch188"              string | null
+		*      term            : {"lg-eng" : "Object"} object | null
+		*      model           : "section"             string | null
+		*      order_number    : 5                     int | null
+		*      relations       : [{"tipo" :"tch7"}]    array | null
+		*      tld             : "tch"                 string
+		*      properties      : {"color" : "#2d8894"}  object | null
+		*      model_tipo      : "dd6"                 string | null
+		*      is_model        : false                 boolean
+		*      is_translatable : false                 boolean
+		*      propiedades     : "{}"                  string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
+		* }
+		* @var ?object $data
+		*/
+		protected ?object $data = null;
 
-	// default table
-	// Physical table used to store ontology nodes.
-	// It is treated as read-only during normal application execution.
-	// When DEDALO_RECOVERY_MODE is active, operations may target `dd_ontology_recovery`.
-	public static $table = 'dd_ontology';
+		/**
+		 * Whether the node data has already been loaded from the database.
+		 * Prevents redundant database queries when accessing node properties multiple times.
+		 * @var bool $is_loaded_data
+		 */
+		protected bool $is_loaded_data = false;
 
-	// static cache
-	public static $instances = []; // array of ontology_node instances
-	public static $label_by_tipo_cache = []; // array of ontology_node labels
-	public static $model_by_tipo_cache = []; // array of ontology_node models
-	public static $ar_children_of_this_stat_data = []; // array of ontology_node children
-	public static $ar_parents_of_this_data = []; // array of ontology_node parents
-	public static $ar_siblings_of_this_data = []; // array of ontology_node siblings
-	public static $ar_tipo_by_model_name_and_relation_data = []; // array of ontology_node tipo by model name and relation
+		/**
+		 * Internal cache for expensive recursive children calculations.
+		 * Stores pre-computed descendant nodes to optimize tree traversal operations.
+		 * @var array $ar_recursive_children_of_this
+		 */
+		protected array $ar_recursive_children_of_this = [];
+
+		/**
+		 * Physical database table storing ontology nodes.
+		 * Treated as read-only during normal execution. When DEDALO_RECOVERY_MODE
+		 * is active, operations may target `dd_ontology_recovery` instead.
+		 * @var string $table
+		 */
+		public static string $table = 'dd_ontology';
+
+		/**
+		 * Static cache of ontology_node instances (singleton pattern per tipo).
+		 * Maps tipo strings to their instantiated ontology_node objects.
+		 * @var array $instances
+		 */
+		public static array $instances = [];
+
+		/**
+		 * Static cache mapping tipos to their human-readable labels.
+		 * Optimizes label lookups by avoiding repeated database queries.
+		 * @var array $label_by_tipo_cache
+		 */
+		public static array $label_by_tipo_cache = [];
+
+		/**
+		 * Static cache mapping tipos to their model (component/section type) names.
+		 * Avoids repeated model resolution from the ontology.
+		 * @var array $model_by_tipo_cache
+		 */
+		public static array $model_by_tipo_cache = [];
+
+		/**
+		 * Static cache for children lookups per node.
+		 * Stores arrays of child ontology_node tipos for fast hierarchical queries.
+		 * @var array $ar_children_of_this_stat_data
+		 */
+		public static array $ar_children_of_this_stat_data = [];
+
+		/**
+		 * Static cache for parent lookups per node.
+		 * Stores arrays of parent ontology_node tipos for fast ancestry queries.
+		 * @var array $ar_parents_of_this_data
+		 */
+		public static array $ar_parents_of_this_data = [];
+
+		/**
+		 * Static cache for sibling lookups per node.
+		 * Stores arrays of sibling ontology_node tipos for fast peer queries.
+		 * @var array $ar_siblings_of_this_data
+		 */
+		public static array $ar_siblings_of_this_data = [];
+
+		/**
+		 * Static cache for tipo resolution by model name and relation.
+		 * Maps model name + relation combinations to their corresponding tipos.
+		 * @var array $ar_tipo_by_model_name_and_relation_data
+		 */
+		public static array $ar_tipo_by_model_name_and_relation_data = [];
 
 
 
@@ -224,7 +281,7 @@ class ontology_node {
 	 * @param bool   $fallback Enable label fallback strategy
 	 * @return string|null     Term in the resolved language, or null when none available
 	 */
-	public function get_term( string $lang, $fallback=true ) : ?string {
+	public function get_term( string $lang, bool $fallback=true ) : ?string {
 
 		$term_data = $this->get_term_data();
 
@@ -585,7 +642,7 @@ class ontology_node {
 	 *
 	 * @param string|null $parent Parent tipo or null for root
 	 */
-	public function set_parent( ?string $parent ) {
+	public function set_parent( ?string $parent ) : void {
 
 		if ($parent === null) {
 			$this->data->parent = null;
@@ -610,7 +667,7 @@ class ontology_node {
 	 *
 	 * @param object|null $term
 	 */
-	public function set_term_data( ?object $term ) {
+	public function set_term_data( ?object $term ) : void {
 
 		$this->data->term = $term;
 	}//end set_term_data
@@ -623,7 +680,7 @@ class ontology_node {
 	 *
 	 * @param string|null $model
 	 */
-	public function set_model( ?string $model ) {
+	public function set_model( ?string $model ) : void {
 
 		$this->data->model = $model;
 	}//end set_model
@@ -636,7 +693,7 @@ class ontology_node {
 	 *
 	 * @param int|null $order_number
 	 */
-	public function set_order_number( ?int $order_number ) {
+	public function set_order_number( ?int $order_number ) : void {
 
 		$this->data->order_number = $order_number;
 	}//end set_order_number
@@ -649,7 +706,7 @@ class ontology_node {
 	 *
 	 * @param array|null $relations
 	 */
-	public function set_relations( ?array $relations) {
+	public function set_relations( ?array $relations) : void {
 
 		$this->data->relations = $relations;
 	}//end set_relations
@@ -662,7 +719,7 @@ class ontology_node {
 	 *
 	 * @param string|null $tld
 	 */
-	public function set_tld( ?string $tld ) {
+	public function set_tld( ?string $tld ) : void {
 
 		$this->data->tld = $tld;
 	}//end set_tld
@@ -675,7 +732,7 @@ class ontology_node {
 	 *
 	 * @param object|null $properties
 	 */
-	public function set_properties( ?object $properties) {
+	public function set_properties( ?object $properties) : void {
 
 		$this->data->properties = $properties;
 	}//end set_properties
@@ -688,7 +745,7 @@ class ontology_node {
 	 *
 	 * @param string|null $model_tipo
 	 */
-	public function set_model_tipo( ?string $model_tipo ) {
+	public function set_model_tipo( ?string $model_tipo ) : void {
 
 		$this->data->model_tipo = $model_tipo;
 	}//end set_model_tipo
@@ -701,7 +758,7 @@ class ontology_node {
 	 *
 	 * @param bool $is_model
 	 */
-	public function set_is_model( bool $is_model) {
+	public function set_is_model( bool $is_model) : void {
 
 		$this->data->is_model = $is_model;
 	}//end set_is_model
@@ -714,7 +771,7 @@ class ontology_node {
 	 *
 	 * @param bool $is_translatable
 	 */
-	public function set_is_translatable( bool $is_translatable ) {
+	public function set_is_translatable( bool $is_translatable ) : void {
 
 		$this->data->is_translatable = $is_translatable;
 	}//end set_is_translatable
@@ -730,7 +787,7 @@ class ontology_node {
 	 *
 	 * @param ?string $propiedades JSON-encoded string
 	 */
-	public function set_propiedades( ?string $propiedades ) {
+	public function set_propiedades( ?string $propiedades ) : void {
 
 		$this->data->propiedades = $propiedades;
 	}//end set_propiedades

@@ -33,8 +33,8 @@ abstract class filter {
 
 
 
-	public static $user_authorized_projects_cache = [];
-	public static $user_projects_cache = [];
+	public static array $user_authorized_projects_cache = [];
+	public static array $user_projects_cache = [];
 
 
 

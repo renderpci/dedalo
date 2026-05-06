@@ -9,15 +9,35 @@ abstract class DBi {
 
 
 	/**
-	 * @var PgSql\Connection|null Stores the cached PgSql\Connection instance.
-	 */
-	private static ?PgSql\Connection $pg_conn_cache = null;
-	// Connection caching variables
-	private static $pg_conn_valid_until = 0;
-	private static $connection_check_interval = 30; // seconds
+	* CLASS VARS
+	*/
+		/**
+		 * Cached PostgreSQL connection instance.
+		 * Stores the persistent PgSql\Connection to avoid re-connecting on each request.
+		 * @var ?PgSql\Connection $pg_conn_cache
+		 */
+		private static ?PgSql\Connection $pg_conn_cache = null;
 
-	// array of already defined prepared statements.
-	public static array $prepared_statements = [];
+		/**
+		 * Unix timestamp until which the cached connection is considered valid.
+		 * Used to reduce connection status checks (optimization).
+		 * @var int $pg_conn_valid_until
+		 */
+		private static int $pg_conn_valid_until = 0;
+
+		/**
+		 * Interval in seconds between connection validity checks.
+		 * Default 30 seconds to balance performance and connection freshness.
+		 * @var int $connection_check_interval
+		 */
+		private static int $connection_check_interval = 30;
+
+		/**
+		 * Registry of already defined prepared statement names.
+		 * Tracks which SQL prepared statements have been registered with PostgreSQL.
+		 * @var array $prepared_statements
+		 */
+		public static array $prepared_statements = [];
 
 
 

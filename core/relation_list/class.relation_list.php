@@ -11,27 +11,82 @@ class relation_list extends common {
 	/**
 	* CLASS VARS
 	*/
-		public $sqo;
-		public $count;
-		// diffusion_properties
-		public $diffusion_properties;
-		// diffusion_dato_cache
-		public static $diffusion_dato_cache;
-		public static $diffusion_value_cache;
- 
-		// optional filters applied to sqo in get_data()
-		protected ?array $section_filter   = null; // limits section_tipo returned
-		protected ?array $component_filter = null; // limits from_component_tipo in filter_by_locators
 
-		public function set_section_filter(?array $section_filter) : static {
-			$this->section_filter = $section_filter;
-			return $this;
-		}
+		/**
+		 * Search Query Object defining the filter and pagination for relation lookups.
+		 * Determines which related records are retrieved and how they are sorted.
+		 * @var ?object $sqo
+		 */
+		public ?object $sqo = null;
 
-		public function set_component_filter(?array $component_filter) : static {
-			$this->component_filter = $component_filter;
-			return $this;
-		}
+		/**
+		 * Total count of relations matching the current query.
+		 * Populated during get_data() to enable pagination controls.
+		 * @var ?int $count
+		 */
+		public ?int $count = null;
+
+		/**
+		 * Diffusion properties object controlling how relations are exported/published.
+		 * Defines mapping rules for relation output formats in diffusion endpoints.
+		 * @var ?object $diffusion_properties
+		 */
+		public ?object $diffusion_properties = null;
+
+		/**
+		 * Static cache for diffusion dato (raw relation data) to avoid repeated processing.
+		 * Stores parsed relation data for reuse across diffusion operations.
+		 * @var array $diffusion_dato_cache
+		 */
+		public static array $diffusion_dato_cache = [];
+
+		/**
+		 * Static cache for diffusion values (formatted relation strings) to optimize exports.
+		 * Prevents re-formatting the same relation data multiple times.
+		 * @var array $diffusion_value_cache
+		 */
+		public static array $diffusion_value_cache = [];
+
+		/**
+		 * Optional filter to limit which section tipos are returned in relation results.
+		 * Applied to the SQO in get_data() to restrict the scope of related sections.
+		 * @var ?array $section_filter
+		 */
+		protected ?array $section_filter = null;
+
+		/**
+		 * Optional filter to limit which component tipos are included in filter_by_locators.
+		 * Restricts relations based on the originating component tipo.
+		 * @var ?array $component_filter
+		 */
+		protected ?array $component_filter = null;
+
+
+
+
+	/**
+	* SET_SECTION_FILTER
+	* Sets the section filter to limit which section tipos are returned in relation results.
+	* @param ?array $section_filter
+	* @return static
+	*/
+	public function set_section_filter(?array $section_filter) : static {
+		$this->section_filter = $section_filter;
+		return $this;
+	}
+
+
+
+	/**
+	* SET_COMPONENT_FILTER
+	* Sets the section filter to limit which section tipos are returned in relation results.
+	* @param ?array $component_filter
+	* @return static
+	*/
+	public function set_component_filter(?array $component_filter) : static {
+		$this->component_filter = $component_filter;
+		return $this;
+	}
 
 
 

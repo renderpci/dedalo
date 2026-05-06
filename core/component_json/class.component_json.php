@@ -14,11 +14,6 @@ class component_json extends component_common {
 	use search_component_json;
 
 
-	// Property to enable or disable the get and set data in different languages
-
-	protected $supports_translation = false;
-
-
 
 	/**
 	* __CONSTRUCT

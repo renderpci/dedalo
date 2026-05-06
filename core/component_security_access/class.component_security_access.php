@@ -10,19 +10,22 @@ class component_security_access extends component_common {
 
 
 	/**
-	 * @var array Datalist array
-	 */
-	public $datalist;
+	* CLASS VARS
+	*/
+		/**
+		 * Datalist containing the ontology tree hierarchy for access permissions.
+		 * Stores the complete security access tree with areas, sections, and components.
+		 * Generated during user login and used for permission management UI.
+		 * @var array $datalist
+		 */
+		public array $datalist = [];
 
-	/**
-	 * @var array Cache of admin types
-	 */
-	public static $ar_tipo_admin_cache;
-
-	/**
-	 * @var bool Property to enable or disable the get and set data in different languages
-	 */
-	protected $supports_translation = false;
+		/**
+		 * Static cache for admin tipo lookups.
+		 * Stores resolved admin types to avoid repeated ontology queries.
+		 * @var array $ar_tipo_admin_cache
+		 */
+		public static array $ar_tipo_admin_cache = [];
 
 
 
@@ -87,7 +90,7 @@ class component_security_access extends component_common {
 		$start_time = start_time();
 
 		// already resolved in current instance
-			if (isset($this->datalist)) {
+			if (!empty($this->datalist)) {
 				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__
 						.' Return already set datalist. count: '.count($this->datalist)

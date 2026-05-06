@@ -3,15 +3,13 @@
 * AREA
 *
 */
-class area extends area_common  {
+class area extends area_common {
 
 
-
-	public static $ar_ts_children_all_areas_hierarchized;
 
 	// CHILDREN AREAS CRITERION
-	public static $ar_children_include_model_name	= array('area','section','section_tool');
-	public static $ar_children_exclude_modelo_name	= array('login','tools','section_list','filter');
+	public static array $ar_children_include_model_name = ['area','section','section_tool'];
+	public static array $ar_children_exclude_modelo_name = ['login','tools','section_list','filter'];
 
 
 

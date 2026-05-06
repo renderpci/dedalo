@@ -30,19 +30,19 @@ class component_iri extends component_common {
 	* @var
 	*/
 	// with_lang_versions. Set in properties for true like component_input_text
-	public $with_lang_versions = true;
+	public bool $with_lang_versions = true;
 
 	// bool . Property to enable or disable the get and set data in different languages
-	protected $supports_translation = true;
+	protected bool $supports_translation = true;
 
 	// bool . included_dataframe_properties
-	private $included_dataframe_properties = false;
+	private bool $included_dataframe_properties = false;
 
 	// string . Label dataframe target section tipo
-	private static $label_target_section_tipo = 'dd1706';
+	private static string $label_target_section_tipo = 'dd1706';
 
 	// string . Label dataframe target component tipo
-	private static $label_target_component_tipo = 'dd1715';
+	private static string $label_target_component_tipo = 'dd1715';
 
 
 
@@ -55,7 +55,7 @@ class component_iri extends component_common {
 			$this->with_lang_versions = true;
 
 		// Fix translatable for clarity
-			$this->translatable = 'no';
+			$this->translatable = false;
 
 		// common constructor. Creates the component as normally do with parent class
 			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);

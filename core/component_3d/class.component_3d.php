@@ -11,7 +11,7 @@ class component_3d extends component_media_common implements component_media_int
 	* CLASS VARS
 	*/
 		// url. File name formatted as 'tipo'-'order_id' like dd732-1
-		public $url;
+		public ?string $url = null;
 
 
 

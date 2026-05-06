@@ -11,12 +11,12 @@ class component_image extends component_media_common implements component_media_
 	* CLASS VARS
 	*/
 		// id . file name formatted as 'tipo'-'order_id' like dd732-1
-		public $image_url;
+		public ?string $image_url = null;
 		// external_source
 		// public $external_source;
 		// Default image dimensions (as showed in section edit)
-		public $width	= 539;
-		public $height	= 404;
+		public int $width = 539;
+		public int $height = 404;
 
 
 

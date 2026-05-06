@@ -9,21 +9,40 @@ class area_graph extends area_common {
 
 	/**
 	* CLASS VARS
-	* @var
 	*/
-	public static $typologies_section_tipo	= 'nexus57'; // 'hierarchy13'
-	public static $typologies_name_tipo	= 'nexus61'; // 'hierarchy16'
 
-	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view = false;
+		/**
+		 * Section tipo for the typologies section in the ontology.
+		 * Identifies the section that stores network typology definitions ('nexus57').
+		 * @var string $typologies_section_tipo
+		 */
+		public static string $typologies_section_tipo = 'nexus57';
 
-	// thesaurus_mode
-	public $thesaurus_mode = null;
+		/**
+		 * Component tipo for the typology name field.
+		 * Identifies the component that stores the human-readable typology name ('nexus61').
+		 * @var string $typologies_name_tipo
+		 */
+		public static string $typologies_name_tipo = 'nexus61';
+
+		/**
+		 * Whether to display the model view variant in thesaurus mode.
+		 * Set via GET['model']=true to show model hierarchies instead of term hierarchies.
+		 * @var bool $model_view
+		 */
+		protected bool $model_view = false;
+
+		/**
+		 * Current thesaurus mode identifier for this area instance.
+		 * Determines which thesaurus display mode is active (terms, models, etc.).
+		 * @var ?string $thesaurus_mode
+		 */
+		public ?string $thesaurus_mode = null;
 
 
 
 	/**
-	* get_networks_typologies
+	* GET_NETWORKS_TYPOLOGIES
 	* Get an array of all section_id from records of current section
 	* @return array $networks_typologies
 	*/

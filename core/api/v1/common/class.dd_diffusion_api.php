@@ -1,8 +1,5 @@
 <?php declare(strict_types=1);
-
-
 require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
-
 /**
  * DIFFUSION_API
  * Main entry point for the new diffusion system.
@@ -10,19 +7,36 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
  */
 class dd_diffusion_api {
 
+
+
 	/**
-	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* CLASS VARS
 	*/
-	public const API_ACTIONS = [
-		'diffuse',
-		'get_diffusion_info',
-		'validate',
-		'get_ontology_map'
-	];
+		/**
+		 * SEC-024: explicit allowlist of methods callable as remote API actions.
+		 * Security measure defining which methods can be invoked via remote API calls.
+		 */
+		public const API_ACTIONS = [
+			'diffuse',
+			'get_diffusion_info',
+			'validate',
+			'get_ontology_map'
+		];
 
-	public static $datum = [];
+		/**
+		 * Accumulated resolved diffusion datum objects for the current request.
+		 * Stores processed/resolved data during multi-level diffusion operations.
+		 * @var array $datum
+		 */
+		public static array $datum = [];
 
-	public static $datum_unresolved = [];
+		/**
+		 * Queue of unresolved locators and their diffusion types.
+		 * Used for multi-level recursive diffusion resolution.
+		 * @var array $datum_unresolved
+		 */
+		public static array $datum_unresolved = [];
+
 
 
 	/**
@@ -38,7 +52,7 @@ class dd_diffusion_api {
 	 * @return object Standardized JSON response
 	 */
 	public static function diffuse(object $rqo): object {
-		
+
 		// Release the session lock immediately so the frontend UI isn't blocked
 		// while this long-running diffusion chunk processes.
 		session_write_close();
@@ -255,10 +269,10 @@ class dd_diffusion_api {
 
 		// response
 		$response->result	= $result;
-		$response->msg		= empty($response->errors) 
-			? 'Diffusion info retrieved successfully' 
+		$response->msg		= empty($response->errors)
+			? 'Diffusion info retrieved successfully'
 			: 'Diffusion info retrieved with errors';
-		
+
 
 		return $response;
 	}//end get_diffusion_info
@@ -343,7 +357,7 @@ class dd_diffusion_api {
 	private static function build_main_hierarchy(string $diffusion_tipo): array {
 
 		$virtual_tree = diffusion_utils::get_virtual_diffusion_tree();
-		
+
 		$target_vnode = null;
 		foreach ($virtual_tree as $vnode) {
 			// Find the target node in the fully resolved virtual tree
@@ -359,7 +373,7 @@ class dd_diffusion_api {
 		}
 
 		$hierarchy = [];
-		
+
 		// The vnode->parents array contains parents from immediate parent at index 0 up to domain at last index.
 		// Assemble full path tipos top-down: domain -> ... -> parent -> target
 		$path_tipos = [];
@@ -373,9 +387,9 @@ class dd_diffusion_api {
 		// Now traverse downwards to build the exact main array objects expected by frontend
 		$parent_tipo = null;
 		foreach ($path_tipos as $tipo) {
-			
+
 			$resolved = diffusion_utils::resolve_node_with_alias($tipo);
-			
+
 			if ($resolved->is_alias) {
 				$model_name = $resolved->model;
 				$term       = $resolved->label;
@@ -429,7 +443,7 @@ class dd_diffusion_api {
 
 		$parent = $source_node->get_parent();
 		$main_section_tipo = diffusion_utils::get_related_section_tipo($diffusion_tipo);
-		
+
 		$properties = $source_node->get_properties();
 
 		$diffusion_node_model = $source_node->get_model();

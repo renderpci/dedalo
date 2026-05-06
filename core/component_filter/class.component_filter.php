@@ -16,15 +16,14 @@ class component_filter extends component_relation_common {
 
 
 
-	private $user_id;
-	public $run_propagate_filter = true;
+	private string|int|null $user_id = null;
+	public bool $run_propagate_filter = true;
 
 	// relation_type defaults
-	protected $default_relation_type = DEDALO_RELATION_TYPE_FILTER;
-	protected $default_relation_type_rel = null;
+	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_FILTER;
 
-	# test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	// test_equal_properties is used to verify duplicates when add locators
+	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 

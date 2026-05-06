@@ -155,29 +155,62 @@
 				}
 			}
 		]
-
 */
 class request_config_object extends stdClass {
 
 
 
 	/**
-	* VARS
+	* CLASS VARS
 	*/
-		// $api_engine; // string like 'dedalo'. Default 'dedalo'
-		public $api_engine;
-		// string $type . (main*|secondary)
-		public $type;
-		// $sqo; // object search_query_object
-		public $sqo;
-		// $show; // object. config of elements to show (ddo_map, sqo_config..)
-		public $show;
-		// $search; // object. config of elements to show in search mode
-		public $search;
-		// $choose; // object. config of elements to show in choose mode
-		public $choose;
-		// api_config object|null
-		public $api_config;
+		/**
+		 * API engine identifier for processing this request.
+		 * Specifies which engine handles the data retrieval (e.g., 'dedalo', 'zenon').
+		 * @var ?string $api_engine
+		 */
+		public ?string $api_engine = null;
+
+		/**
+		 * Request configuration type identifier.
+		 * Defines the context/purpose of this request (e.g., 'section', 'component', 'search').
+		 * @var ?string $type
+		 */
+		public ?string $type = null;
+
+		/**
+		 * Search Query Object defining filter, pagination, and sort criteria.
+		 * Contains the SQO used to query and filter the requested data.
+		 * @var ?object $sqo
+		 */
+		public ?object $sqo = null;
+
+		/**
+		 * Display configuration for show mode rendering.
+		 * Defines which fields/components to display and their presentation options.
+		 * @var ?object $show
+		 */
+		public ?object $show = null;
+
+		/**
+		 * Search mode configuration for UI search interface.
+		 * Defines search fields, operators, and UI options for the search panel.
+		 * @var ?object $search
+		 */
+		public ?object $search = null;
+
+		/**
+		 * Configuration for choose mode element selection.
+		 * Defines selectable elements and behavior when user is choosing records.
+		 * @var ?object $choose
+		 */
+		public ?object $choose = null;
+
+		/**
+		 * API-specific configuration parameters.
+		 * Engine-specific settings for external API connections (e.g., Zenon API options).
+		 * @var ?object $api_config
+		 */
+		public ?object $api_config = null;
 
 
 
@@ -233,7 +266,7 @@ class request_config_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_api_engine(string $value) {
+	public function set_api_engine(string $value) : void {
 
 		$this->api_engine = $value;
 	}//end set_api_engine
@@ -245,7 +278,7 @@ class request_config_object extends stdClass {
 	* @param string $value
 	* @return void
 	*/
-	public function set_type(string $value) {
+	public function set_type(string $value) : void {
 
 		$this->type = $value;
 	}//end set_type
@@ -257,7 +290,7 @@ class request_config_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_sqo(object $value) {
+	public function set_sqo(object $value) : void {
 
 		$this->sqo = $value;
 	}//end set_sqo
@@ -269,7 +302,7 @@ class request_config_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_show(object $value) {
+	public function set_show(object $value) : void {
 
 		$this->show = $value;
 	}//end set_show
@@ -281,7 +314,7 @@ class request_config_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_search(object $value) {
+	public function set_search(object $value) : void {
 
 		$this->search = $value;
 	}//end set_search
@@ -293,7 +326,7 @@ class request_config_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_choose(object $value) {
+	public function set_choose(object $value) : void {
 
 		$this->choose = $value;
 	}//end set_choose
@@ -304,7 +337,7 @@ class request_config_object extends stdClass {
 	* @param object $value
 	* @return void
 	*/
-	public function set_hide(object $value) {
+	public function set_hide(object $value) : void {
 
 		$this->hide = $value;
 	}//end set_hide
@@ -316,7 +349,7 @@ class request_config_object extends stdClass {
 	* @param object|null $value
 	* @return void
 	*/
-	public function set_api_config(object|null $value) {
+	public function set_api_config(object|null $value) : void {
 
 		$this->api_config = $value;
 	}//end set_api_config

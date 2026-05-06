@@ -13,7 +13,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* CLASS VARS
 	*/
 	// file name formatted as 'tipo'-'order_id' like dd732-1
-	public $pdf_url;
+	public ?string $pdf_url = null;
 
 
 

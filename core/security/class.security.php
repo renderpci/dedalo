@@ -16,25 +16,63 @@ class security {
 	/**
 	* CLASS VARS
 	*/
-		// private $permissions;
 
-		private $user_id;
-		private $permissions_tipo;			// permissions defined in config
-		private $permissions_dato;			// permissions defined in config that contains data
+		/**
+		 * ID of the currently logged-in user.
+		 * Set in constructor from session. Used to resolve user-specific permissions.
+		 * @var ?int $user_id
+		 */
+		private ?int $user_id = null;
 
-		private static $ar_permissions_in_matrix_for_current_user; // array data
-		private static $ar_permissions_table;
+		/**
+		 * Tipo of the section storing user permissions in config.
+		 * Defines where the permission matrix is stored in the ontology.
+		 * @var ?string $permissions_tipo
+		 */
+		private ?string $permissions_tipo = null;
 
-		private $filename_user_ar_permissions_table;
+		/**
+		 * Component tipo within the permissions section that contains the actual permission data.
+		 * Points to the specific field holding permission values.
+		 * @var ?string $permissions_dato
+		 */
+		private ?string $permissions_dato = null;
 
-		public static $permissions_table_cache;
+		/**
+		 * Static cache of permissions matrix for the current user.
+		 * Array mapping section_tipos to permission levels (0-3) for the active user.
+		 * @var ?array $ar_permissions_in_matrix_for_current_user
+		 */
+		private static ?array $ar_permissions_in_matrix_for_current_user = null;
 
-		// read_only_scope. Server-only static flag used to grant a read-level
-		// permission shortcut for non-destructive flows (e.g. autocomplete /
-		// label resolution) where the user may not have direct access to the
-		// linked section but the resolution is needed to render a label.
-		// Must be set ONLY by trusted server code paths and reset in a finally
-		// block. Never trust this flag from a client-supplied rqo.
+		/**
+		 * Static cache of the full permissions lookup table.
+		 * Stores all user/section permission mappings for fast access.
+		 * @var ?array $ar_permissions_table
+		 */
+		private static ?array $ar_permissions_table = null;
+
+		/**
+		 * Filename for caching the user's permissions table on disk.
+		 * Used to persist permission lookups across requests for performance.
+		 * @var ?string $filename_user_ar_permissions_table
+		 */
+		private ?string $filename_user_ar_permissions_table = null;
+
+		/**
+		 * Static cache for parsed permissions table data.
+		 * Prevents repeated file reads or database queries for permission lookups.
+		 * @var array $permissions_table_cache
+		 */
+		public static array $permissions_table_cache = [];
+
+		/**
+		 * Server-only flag to grant temporary read access for non-destructive operations.
+		 * Used in autocomplete and label resolution where the user lacks direct access
+		 * but needs to read linked data. Must ONLY be set by trusted server code
+		 * and reset in a finally block. Never trust client-supplied rqo for this flag.
+		 * @var bool $read_only_scope
+		 */
 		public static bool $read_only_scope = false;
 
 
@@ -383,7 +421,12 @@ class security {
 		}
 
 		// empty static var
-		security::$permissions_table_cache = null;
+		security::$permissions_table_cache = [];
+
+		// delete on-disk cache so the next lookup regenerates from the component
+		dd_cache::delete_cache_files([
+			'cache_permissions_table.php'
+		]);
 
 		return true;
 	}//end clean_cache

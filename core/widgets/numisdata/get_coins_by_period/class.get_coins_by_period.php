@@ -1,6 +1,4 @@
-<?php
-
-
+<?php declare(strict_types=1);
 /**
 * CLASS GET_COINS_BY_PERIOD
 *
@@ -67,6 +65,8 @@
 *	}
 */
 class get_coins_by_period extends widget_common {
+
+
 
 	/**
 	* GET_DATA

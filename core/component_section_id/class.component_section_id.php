@@ -15,9 +15,6 @@ class component_section_id extends component_common {
 	// traits. Files added to current class file to split the large code.
 	use search_component_section_id;
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
-
 
 
 	/**
