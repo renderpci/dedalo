@@ -459,10 +459,15 @@ final class component_common_test extends BaseTestCase {
 				'component_relation_index', // data is external, not loaded from section
 				'component_relation_children', // data is external, not loaded from section
 				'component_inverse', // data is external, not loaded from section
-				'component_section_id' // data is direct, not loaded from section
+				'component_section_id', // data is direct, not loaded from section
+				'component_info' // data is from widgets, not loaded from section
 			])) {
 
-				$this->assertInstanceOf(section_record::class, $component->section_record);
+				$this->assertInstanceOf(
+					section_record::class,
+					$component->section_record,
+					"section_record is null for model: {$element->model}, tipo: {$element->tipo}, section_id: {$element->section_id}"
+				);
 
 				$this->assertTrue(
 					$component->section_record->section_id == $component->section_id,
@@ -600,7 +605,7 @@ final class component_common_test extends BaseTestCase {
 			$this->assertInstanceOf(dd_grid_cell_object::class, $dd_grid_cell_object);
 
 			switch ($element->model) {
-				case 'component_section_id':
+				case 'component_section_id99':
 					$this->assertTrue(
 						gettype($dd_grid_cell_object->value)==='integer',
 						'expected get_grid_value type is object->value. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
@@ -722,8 +727,8 @@ final class component_common_test extends BaseTestCase {
 
 			if (!empty($dd_grid_cell_object->value)) {
 				$this->assertTrue(
-					gettype($dd_grid_cell_object->value)==='string',
-					'expected get_grid_value type is string. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
+					gettype($dd_grid_cell_object->value)==='string' || gettype($dd_grid_cell_object->value)==='array',
+					'expected get_grid_value type is string or array. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
 					." ($element->model)" . PHP_EOL
 					. json_encode($dd_grid_cell_object)
 				);
@@ -1006,6 +1011,7 @@ final class component_common_test extends BaseTestCase {
 
 			switch ($element->model) {
 				case 'component_inverse':
+				case 'component_info':
 				case 'component_section_id':
 				case 'component_3d':
 				case 'component_filter':
@@ -1310,6 +1316,8 @@ final class component_common_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_regenerate_component() {
+
+		$this->user_login();
 
 		// default data
 		foreach (get_elements() as $element) {

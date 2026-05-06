@@ -9,6 +9,7 @@ final class tool_export_test extends BaseTestCase {
 
 
 	protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );

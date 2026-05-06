@@ -273,11 +273,14 @@ final class component_common_changed_data_test extends BaseTestCase {
 
 		unset($component->data_resolved);
 		$data_after = $component->get_data();
-		$this->assertCount(2, $data_after, 'Should have 2 entries after insert');
 
-		// Verify new entry was appended
+		// Monovalue components replace on insert, multi-value components append
+		$expected_count = in_array('component_text_area', component_common::$components_monovalue) ? 1 : 2;
+		$this->assertCount($expected_count, $data_after, 'Should have ' . $expected_count . ' entries after insert');
+
+		// Verify the entry value
 		$last_entry = end($data_after);
-		$this->assertEquals('new entry', $last_entry->value, 'Last entry should be the new one');
+		$this->assertEquals('new entry', $last_entry->value, 'Entry should have the new value');
 
 	}//end test_update_data_value_insert_with_null_id
 

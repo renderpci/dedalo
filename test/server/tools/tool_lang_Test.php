@@ -10,6 +10,7 @@ final class tool_lang_test extends BaseTestCase {
 
 
 	protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );
@@ -98,9 +99,9 @@ final class tool_lang_test extends BaseTestCase {
 		);
 
 		$this->assertStringContainsString(
-			'Translator config URI is not defined',
+			'Missing required parameters',
 			$response->msg,
-			'expected error message contains URI not defined'
+			'expected error message contains missing parameters'
 		);
 	}//end test_automatic_translation_validation
 

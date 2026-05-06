@@ -8,6 +8,7 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
 	protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );
