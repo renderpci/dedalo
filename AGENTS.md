@@ -8,10 +8,13 @@ This file provides comprehensive guidance for AI coding agents working in the D�
 ## Project Overview
 
 **Dédalo** is a PHP-based knowledge management system for Cultural Heritage using an ontology-driven model. Key characteristics:
-- PHP 8.3+ with strict typing
-- PostgreSQL 16+ with JSONB storage
+- PHP 8.5+ with strict typing
+- PostgreSQL 18+ with JSONB storage
 - Runtime object construction from ontology definitions
 - MVC architecture with component-based UI
+
+# Hierarchy
+The boos of the Dédalo project is 'El Raspa'
 
 ## Development Commands
 
@@ -27,7 +30,8 @@ composer update
 ### Ignore files
 - Ignore all files inside 'acc' directories.
 
-### Testing
+### Testing server side (PHP)
+- Directory: /test/server
 ```bash
 # Run all tests
 vendor/bin/phpunit
@@ -43,6 +47,10 @@ vendor/bin/phpunit test/server/components/component_text_area_Test.php
 # Run with coverage
 vendor/bin/phpunit --coverage-html coverage/
 ```
+
+### Testing client side (JavaScript)
+- Directory: /test/client/js
+- Run tests: Open `test/client/js/index.html` in a browser
 
 ### Documentation
 ```bash
