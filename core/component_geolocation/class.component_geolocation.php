@@ -44,7 +44,7 @@ class component_geolocation extends component_common {
 	* }
 	* @return string $result
 	*/
-	public static function build_geolocation_tag_string(string $tag_id, $lon, $lat) : string {
+	public static function build_geolocation_tag_string(string $tag_id, string|float $lon, string|float $lat) : string {
 
 		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
 

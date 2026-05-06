@@ -190,9 +190,9 @@ class dd_grid_cell_object {
 		/**
 		 * Array of cell values. Array of strings or objects defining column data.
 		 * Each item represents a row in its column position.
-		 * @var ?array $value
+		 * @var array|int|string|null $value
 		 */
-		public ?array $value = null;
+		public array|int|string|null $value = null;
 
 		/**
 		 * Fallback values when current language has no data.
@@ -451,10 +451,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_VALUE
-	* @param array|null $value
+	* @param array|int|string|null $value
 	* @return void
 	*/
-	public function set_value(?array $value) : void  {
+	public function set_value(array|int|string|null $value) : void  {
 		$this->value = $value;
 	}//end set_value
 

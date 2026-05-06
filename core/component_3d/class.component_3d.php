@@ -670,7 +670,7 @@ class component_3d extends component_media_common implements component_media_int
 	* @param string $file_path
 	* @return object|null $media_attributes
 	*/
-	public function get_media_attributes(string $file_path)  {
+	public function get_media_attributes(string $file_path) : ?object {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL

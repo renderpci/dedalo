@@ -660,8 +660,9 @@ class component_date extends component_common {
 	/**
 	* GET_STATS_VALUE_WITH_VALOR_ARGUMENTS
 	* @return string $label
+	* @deprecated Do not use this method (diffusion v6 ?)
 	*/
-	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) {
+	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) : string {
 
 		$value_decoded = json_decode($value);
 		if (!empty($value_decoded)) {
@@ -681,11 +682,13 @@ class component_date extends component_common {
 	/**
 	* DATA_TO_TEXT
 	* Used to convert component data to searchable text
+	* @param object|null $data_entry
 	* @return string $text
+	* @deprecated Do not use this method
 	*/
-	public static function data_to_text($data) : string {
+	public static function data_to_text( ?object $data_entry ) : string {
 
-		if (empty($data)) {
+		if (empty($data_entry)) {
 			$text = '';
 		}else{
 			$to_timestamp = function($item) {
@@ -696,11 +699,11 @@ class component_date extends component_common {
 				);
 			};
 			$ar_text = [];
-			if (isset($data->start)) {
-				$ar_text[] = $to_timestamp($data->start);
+			if (isset($data_entry->start)) {
+				$ar_text[] = $to_timestamp($data_entry->start);
 			}
-			if (isset($data->end)) {
-				$ar_text[] = $to_timestamp($data->end);
+			if (isset($data_entry->end)) {
+				$ar_text[] = $to_timestamp($data_entry->end);
 			}
 			$text = implode('/', $ar_text);
 		}

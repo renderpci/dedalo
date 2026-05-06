@@ -689,7 +689,7 @@ class component_image extends component_media_common implements component_media_
 	* GET_SVG_FILE_PATH
 	* @return string $file_path
 	*/
-	public function get_svg_file_path() {
+	public function get_svg_file_path() : string {
 
 		$id					= $this->get_id();
 		$additional_path	= $this->get_additional_path();
@@ -879,12 +879,20 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* ROTATE
-	*	Rotates the given quality image file
-	* @param string $degrees
-	* 	0 to 360 (positive/negative)
-	* @return string $result
+	* Rotates the given quality image file using ImageMagick
+	*
+	* @param object $options
+	*   Configuration object with the following properties:
+	*   - quality : string|null Image quality to rotate (e.g., 'original', '1.5MB')
+	*   - extension : string|null File extension (e.g., 'jpg', 'png')
+	*   - degrees : int|float Rotation angle (-360 to 360, positive/negative values)
+	*   - rotation_mode : string Rotation mode ('default' or 'expanded')
+	*   - background_color : string|null Background color for expanded rotation
+	*   - alpha : bool Whether to preserve alpha channel (disabled for JPG)
+	*
+	* @return string|null The command result from ImageMagick::rotate() or null on failure
 	*/
-	public function rotate( $options) : ?string {
+	public function rotate( object $options) : ?string {
 
 		$quality			= $options->quality ?? null;
 		$extension			= $options->extension ?? null;
@@ -922,21 +930,21 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CROP
-	* crops the given quality image file
+	* Crops the given quality image file using ImageMagick
+	*
 	* @param object $options
-	* {
-	* 	quality 	: 'modified',
-	* 	extension 	: 'png',
-	* 	crop_area 	: {
-	* 		x : x 			// Starting X position
-	* 		y : y 			// Starting Y position
-	* 		width : width 	// Crop width
-	* 		height : height // Crop height
-	*	}
-	* }
-	* @return string $result
+	*   Configuration object with the following properties:
+	*   - quality : string|null Image quality to crop (e.g., 'original', 'modified')
+	*   - extension : string|null File extension (e.g., 'jpg', 'png')
+	*   - crop_area : object Crop region coordinates:
+	*       - x : int|float Starting X position
+	*       - y : int|float Starting Y position
+	*       - width : int|float Crop width in pixels
+	*       - height : int|float Crop height in pixels
+	*
+	* @return string|null The command result from ImageMagick::crop() or null on failure
 	*/
-	public function crop( $options) : ?string {
+	public function crop( object $options) : ?string {
 
 		$quality			= $options->quality ?? null;
 		$extension			= $options->extension ?? null;
@@ -1296,9 +1304,13 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CHECK_NORMALIZED_FILES
+	* Ensures normalized image files exist for original and modified qualities.
+	* Creates normalized versions from uploaded source files if missing,
+	* and generates alternative format versions as needed.
+	*
 	* @return void
 	*/
-	public function check_normalized_files() {
+	public function check_normalized_files() : void {
 
 		// use qualities
 		$original_quality	= $this->get_original_quality();
@@ -1423,10 +1435,17 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
-	* @param int|string|null $source_pixels_width
-	* @param int|string|null $source_pixels_height
-	* @param string $target_quality
-	* @return array|null $result
+	* Calculates target pixel dimensions for converting an image to a specific quality.
+	* Returns width and height array based on source dimensions and target quality requirements.
+	* For original/retouched qualities, returns source dimensions unchanged.
+	* For thumb quality, returns fixed thumbnail dimensions.
+	* For other qualities, calculates dimensions based on target file size.
+	*
+	* @param int|string|null $source_pixels_width Source image width in pixels
+	* @param int|string|null $source_pixels_height Source image height in pixels
+	* @param string $target_quality Target quality identifier (e.g., 'thumb', '1.5MB', 'original')
+	*
+	* @return array|null Array containing [width, height] or null on invalid input
 	*/
 	public static function get_target_pixels_to_quality_conversion(int|string|null $source_pixels_width, int|string|null $source_pixels_height, string $target_quality) : ?array {
 
@@ -1491,11 +1510,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* PIXEL_TO_CENTIMETERS
-	* @param string $quality
-	* 	dir source of image
-	* @param $dpi = DEDALO_IMAGE_PRINT_DPI
-	*	resolution to convert E.g.: 72dpi or 300dpi
-	* @return array $px2cm
+	* Converts image pixel dimensions to centimeters based on DPI resolution.
+	* Uses the image at the specified quality to get dimensions,
+	* then converts to centimeters and formats the result.
+	*
+	* @param string $quality Image quality to use for source dimensions (e.g., 'original', 'modified')
+	* @param int $dpi Dots per inch resolution for conversion (default: DEDALO_IMAGE_PRINT_DPI)
+	*
+	* @return array Array containing [width, height] in formatted centimeters (e.g., ['15,50cm', '10,35cm'])
 	*/
 	public function pixel_to_centimeters(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
 
@@ -1525,10 +1547,17 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-build and save its data
+	* Force the current component to re-build and save its data.
+	* Extends regeneration with image-specific actions:
+	* - Optionally deletes normalized image files
+	* - Creates SVG representation file if missing
+	* - Fixes image paths in existing SVG files
+	*
 	* @see class.tool_update_cache.php
-	* @param object|null $options=null
-	* @return bool
+	* @param object|null $options Configuration options:
+	*   - delete_normalized_files : bool Whether to delete normalized files (default: true)
+	*
+	* @return bool True on success, false on failure
 	*/
 	public function regenerate_component( ?object $options=null ) : bool {
 
@@ -1587,12 +1616,17 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CREATE_ALTERNATIVE_VERSION
-	* Render a new alternative_version file from given quality and target extension.
-	* This method overwrites any existing file with same path
-	* @param string $quality
-	* @param string $extension
-	* @param object|null $options = null
-	* @return bool
+	* Creates an alternative format version of an image file using ImageMagick.
+	* Renders a new file with the target extension from the specified quality source.
+	* Overwrites any existing file with the same path.
+	* Skips thumb quality and extensions not defined as alternatives.
+	*
+	* @param string $quality Image quality to use as source (e.g., 'original', 'modified')
+	* @param string $extension Target file extension for the alternative version (e.g., 'avif', 'webp')
+	* @param object|null $options Optional configuration:
+	*   - resize : array|null Target dimensions [width, height] for resizing
+	*
+	* @return bool True on successful conversion, false on failure or skip
 	*/
 	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 

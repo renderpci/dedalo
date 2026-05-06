@@ -543,7 +543,7 @@ class component_filter extends component_relation_common {
 	* @param string $from_component_tipo
 	* @return mixed $new dato
 	*/
-	public static function convert_dato_pre_490( $dato, string $from_component_tipo ) {
+	public static function convert_dato_pre_490( mixed $dato, string $from_component_tipo ) {
 
 		if (!empty($dato) && $dato!='[]') {
 			// Old format is received case

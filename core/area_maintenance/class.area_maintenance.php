@@ -817,7 +817,7 @@ class area_maintenance extends area_common {
 	* @param object $options
 	* @return object $response
 	*/
-	protected static function set_config_core(object $options) {
+	protected static function set_config_core(object $options) : object {
 
 		// response
 			$response = new stdClass();

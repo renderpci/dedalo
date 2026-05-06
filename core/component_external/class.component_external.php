@@ -326,7 +326,7 @@ class component_external extends component_common {
 	*	but in some cases can be an array JSON encoded or some rare times a plain string
 	* @return bool
 	*/
-	public function set_data($data) : bool {
+	public function set_data( string|array|null $data) : bool {
 
 		// string case
 			if (is_string($data)) { # Tool Time machine case, data is string

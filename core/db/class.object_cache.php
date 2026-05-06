@@ -72,7 +72,7 @@ class section_record_instances_cache {
      * @param string|int $key Unique identifier (section_id, tipo, etc.)
      * @return section_record|null
      */
-    public static function get(string|int|array $key): ?object {
+    public static function get(string|int $key): ?object {
         $cacheKey = self::normalizeKey($key);
 
         // Track access pattern
@@ -104,7 +104,7 @@ class section_record_instances_cache {
      * @param string|int $key Unique identifier
      * @param section_record $instance The record instance
      */
-    public static function set($key, object $instance): void {
+    public static function set(string|int $key, object $instance): void {
         $cacheKey = self::normalizeKey($key);
 
         // If already exists, remove it (we'll re-add at end)
@@ -265,8 +265,9 @@ class section_record_instances_cache {
 
     /**
      * Track access patterns
+     * @param string|int $key Unique identifier
      */
-    private static function trackAccess(string $key): void {
+    private static function trackAccess(string|int $key): void {
         if (!isset(self::$accessLog[$key])) {
             self::$accessLog[$key] = 0;
         }
@@ -275,8 +276,10 @@ class section_record_instances_cache {
 
     /**
      * Track cache misses
+     * @param string|int $normalizedKey The normalized cache key
+     * @param string|int $originalKey The original cache key
      */
-    private static function trackMiss(string $normalizedKey, string|int|array $originalKey): void {
+    private static function trackMiss(string|int $normalizedKey, string|int $originalKey): void {
         $keyInfo = is_array($originalKey)
             ? json_encode($originalKey)
             : $originalKey;
@@ -289,8 +292,9 @@ class section_record_instances_cache {
 
     /**
      * Track evictions (future use)
+     * @param string|int $key The cache key that was evicted
      */
-    private static function trackEviction(string $key): void {
+    private static function trackEviction(string|int $key): void {
         // Could log which keys are being evicted prematurely
     }
 
@@ -454,7 +458,7 @@ class component_instances_cache {
      * @param string|int $key Unique identifier (section_id, tipo, etc.)
      * @return section_record|null
      */
-    public static function get(string|int|array $key) : ?object {
+    public static function get(string|int $key) : ?object {
         $cacheKey = self::normalizeKey($key);
 
         if ( !isset(self::$instances[$cacheKey]) ) {
@@ -479,7 +483,7 @@ class component_instances_cache {
      * @param string|int $key Unique identifier
      * @param section_record $instance The record instance
      */
-    public static function set(string|int|array $key, object $instance): void {
+    public static function set(string|int $key, object $instance): void {
         $cacheKey = self::normalizeKey($key);
 
         // If already exists, remove it (we'll re-add at end)

@@ -23,7 +23,7 @@ class indexation_grid {
 		 * Identifies the specific record within the section for detail views.
 		 * @var ?int $section_id
 		 */
-		protected ?int $section_id = null;
+		protected int|string|null $section_id = null;
 
 		/**
 		 * Section tipo (ontology identifier) of the thesaurus term.
