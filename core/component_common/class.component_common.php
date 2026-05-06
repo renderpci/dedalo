@@ -2382,7 +2382,22 @@ abstract class component_common extends common {
 
 		// target_section_tipo
 			$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
-			$target_section_tipo	= reset($ar_target_section_tipo);
+			$target_section_tipo	= $ar_target_section_tipo[0] ?? null;
+
+		// check target_section_tipo is valid
+			if (empty($target_section_tipo)) {
+				// response error
+					$response->result	= [];
+					$response->msg		= 'Error. target_section_tipo is empty. get_ar_target_section_tipo returned empty array';
+					debug_log(__METHOD__
+						.' '.$response->msg . PHP_EOL
+						.' tipo: '. $this->tipo
+						.' section_tipo: '. $this->section_tipo
+						, logger::ERROR
+					);
+
+				return $response;
+			}
 
 		// new search_query_object
 			$search_query_object = new search_query_object();
