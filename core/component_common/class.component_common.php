@@ -1530,11 +1530,11 @@ abstract class component_common extends common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -1542,19 +1542,19 @@ abstract class component_common extends common {
 			];
 
 		// short vars
-			$data		= $this->get_data();
+			$raw_data	= $this->get_data();
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
 
 		// data
-			$data = empty($data)
+			$data = empty($raw_data)
 				? null
 				: array_map(function($el){
 					if (is_array($el) || is_object($el)) {
 						return json_encode($el);
 					}
 					return $el;
-				}, $data);
+				}, $raw_data);
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
@@ -1575,6 +1575,9 @@ abstract class component_common extends common {
 				? $data
 				: null;
 
+		// value
+			$value = $data; // array|null
+
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
@@ -1586,7 +1589,7 @@ abstract class component_common extends common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($data);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_fallback_value($fallback_value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
@@ -1673,7 +1676,7 @@ abstract class component_common extends common {
 				$flat_value->set_cell_type('text');
 				$flat_value->set_ar_columns_obj([$column_obj]);
 				$flat_value->set_row_count($row_count);
-				$flat_value->set_value($value);
+				$flat_value->set_value([$value]); // array
 				$flat_value->set_model(get_called_class());
 
 

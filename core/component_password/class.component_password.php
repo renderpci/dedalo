@@ -135,11 +135,11 @@ class component_password extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? ',';
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -149,18 +149,6 @@ class component_password extends component_common {
 		// short vars
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
-
-		// data
-			$data = [
-				(object)[
-					'value' => $this->fake_value
-				]
-			];
-
-		// flat_value (array of one value full resolved)
-			$flat_value = empty($data)
-				? []
-				: [implode( $records_separator, array_column($data, 'value') )];
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
@@ -176,6 +164,9 @@ class component_password extends component_common {
 					? $properties->records_separator
 					: ' | ');
 
+		// value
+			$value = [$this->fake_value]; // array
+
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
@@ -187,7 +178,7 @@ class component_password extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($flat_value);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

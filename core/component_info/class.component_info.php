@@ -470,11 +470,11 @@ class component_info extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -513,7 +513,7 @@ class component_info extends component_common {
 						$value= json_encode($value);
 					}
 
-					$value = [$value];
+					$value = [$value]; // array
 
 					// create the new column obj id getting the previous id and add the new path
 					// it will set to the column_obj for the next loop
@@ -586,7 +586,7 @@ class component_info extends component_common {
 				}
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
-				$value->set_value($ar_columns);
+				$value->set_value($ar_columns); // array
 
 
 		return $value;

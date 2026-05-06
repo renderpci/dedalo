@@ -34,65 +34,81 @@ class component_input_text extends component_string_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
+
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
 			];
 
-		// records_separator. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$properties			= $this->get_properties();
-			$records_separator	= isset($ddo->records_separator)
-				? $ddo->records_separator
+		// properties
+			$properties = $this->get_properties();
+
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
 				: (isset($properties->records_separator)
 					? $properties->records_separator
 					: ' | ');
 
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
+
 		// data
 			$data = $this->get_data_lang();
 
-		// flat_value (array of one value full resolved)
-			$flat_value = [];
+		// value. flat_value (array of one value full resolved)
+			$value = [];
 			if (!empty($data)) {
 				$ar_values = [];
 				foreach ($data as $item) {
-					$value = $item->value ?? '';
+					$item_value = $item->value ?? '';
 					// Handle case where value is an object (convert to JSON string)
-					if (is_object($value)) {
-						$value = json_encode($value);
+					if (is_object($item_value)) {
+						$item_value = json_encode($item_value);
 					}
-					$ar_values[] = $value;
+					$ar_values[] = $item_value;
 				}
-				$flat_value = [implode($records_separator, $ar_values)];
+				$value = [
+					implode($records_separator, $ar_values)
+				];
 			}
 
-		// get the fallback value
-			$fallback_value	= $this->get_component_data_fallback(
-				$this->get_lang(), // string lang
-				DEDALO_DATA_LANG_DEFAULT // string main_lang
-			);
-
-		// flat_fallback_value (array of one value full resolved)
+		// fallback_value. Only compute when data is empty
 			$flat_fallback_value = [];
-			if (!empty($fallback_value)) {
-				$ar_fallback_values = [];
-				foreach ($fallback_value as $item) {
-					$value = $item->value ?? '';
-					// Handle case where value is an object (convert to JSON string)
-					if (is_object($value)) {
-						$value = json_encode($value);
+			if (empty($data)) {
+				$fallback_value = $this->get_component_data_fallback(
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				if (!empty($fallback_value)) {
+					$ar_fallback_values = [];
+					foreach ($fallback_value as $item) {
+						$item_value = $item->value ?? '';
+						// Handle case where value is an object (convert to JSON string)
+						if (is_object($item_value)) {
+							$item_value = json_encode($item_value);
+						}
+						$ar_fallback_values[] = $item_value;
 					}
-					$ar_fallback_values[] = $value;
+					$flat_fallback_value = [
+						implode($records_separator, $ar_fallback_values)
+					];
 				}
-				$flat_fallback_value = [implode($records_separator, $ar_fallback_values)];
 			}
-
-		// class_list
-			$class_list = $ddo->class_list ?? null;
 
 		// label
 			$label = $this->get_label();
 
-		// value
+		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
 				$dd_grid_cell_object->set_label($label);
@@ -101,8 +117,9 @@ class component_input_text extends component_string_common {
 				if(isset($class_list)){
 					$dd_grid_cell_object->set_class_list($class_list);
 				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($flat_value);
+				$dd_grid_cell_object->set_value($value); // array
 				$dd_grid_cell_object->set_fallback_value($flat_fallback_value);
 				$dd_grid_cell_object->set_model(get_called_class());
 

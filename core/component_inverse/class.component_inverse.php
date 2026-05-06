@@ -98,11 +98,11 @@ class component_inverse extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// short vars
 			$data		= $this->get_data();
@@ -164,10 +164,13 @@ class component_inverse extends component_common {
 				$ar_cells[] = $grid_row;
 
 		// always 1 data size it's not the rows
-			$row_count	= 1;
+			$row_count = 1;
 
 		// get the total of columns
-			$column_count	= sizeof($ar_columns_obj);
+			$column_count = sizeof($ar_columns_obj);
+
+		// value
+			$value = [$grid_row]; // array
 
 		// dd_grid_cell_object, final columns that has the row and his columns
 			$dd_grid_cell_object = new dd_grid_cell_object();
@@ -182,7 +185,7 @@ class component_inverse extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value([$grid_row]);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

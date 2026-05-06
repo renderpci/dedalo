@@ -27,30 +27,6 @@ class component_filter_records extends component_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Alias of component_common->get_grid_value
-	* @param object|null $ddo = null
-	*
-	* @return dd_grid_cell_object $dd_grid_cell_object
-	*/
-	// public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
-
-	// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
-
-	// 	// map values to JOSN to allow render it in list
-	// 		if (!empty($dd_grid_cell_object->value)) {
-	// 			$dd_grid_cell_object->value = array_map(function($el){
-	// 				return json_encode($el);
-	// 			}, $dd_grid_cell_object->value);
-	// 		}
-
-
-	// 	return $dd_grid_cell_object;
-	// }//end get_grid_value
-
-
-
-	/**
 	* GET_DATALIST
 	* Get the list of authorized sections and resolve label
 	* @return array $sections

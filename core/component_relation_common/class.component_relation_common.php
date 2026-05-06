@@ -220,10 +220,11 @@ class component_relation_common extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo customs: set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// data
 			$data = $this->get_data() ?? [];
@@ -602,7 +603,7 @@ class component_relation_common extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($ar_cells);
+				$dd_grid_cell_object->set_value($ar_cells); // array
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

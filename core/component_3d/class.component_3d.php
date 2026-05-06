@@ -142,6 +142,12 @@ class component_3d extends component_media_common implements component_media_int
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
+
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
@@ -196,12 +202,20 @@ class component_3d extends component_media_common implements component_media_int
 			$label = $this->get_label();
 
 		// value
+			$value = [$current_url]; // array
+
+		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
 				$dd_grid_cell_object->set_label($label);
 				$dd_grid_cell_object->set_cell_type('img');
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$dd_grid_cell_object->set_value([$current_url]);
+				if(isset($class_list)){
+					$dd_grid_cell_object->set_class_list($class_list);
+				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
