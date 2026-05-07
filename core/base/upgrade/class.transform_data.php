@@ -3335,7 +3335,12 @@ class transform_data {
 		// iterate items
 		foreach ($ar_transform_map as $item) {
 
-			$main_section	= $item->main_section;	
+			$main_section	= $item->main_section;
+			$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($main_section, true);
+			if($model_name !== 'section'){
+				continue;
+			}
+
 			$source_portal_tipo	= $item->source_portal_tipo;
 			$target_portal_tipo	= $item->target_portal_tipo;
 			$components		= $item->components;
