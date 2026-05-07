@@ -539,32 +539,31 @@
 				'info' => 'Used to search if the term is translatable or not, boolean values: true | false'
 			];
 
-		// parent is_descriptor and order
-			$ar_index[] = (object)[
-				'tables' => [
-					'dd_ontology'
-				],
-				'add' => '
-					CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx
-					ON {$table}
-					USING btree (
-						parent COLLATE pg_catalog.default ASC NULLS LAST,
-						order_number ASC NULLS LAST
-					);
-				',
-				'drop' => '
-					DROP INDEX IF EXISTS {$table}_parent_order_number_idx
-				',
-				'sample' => '
-					SELECT *
-					FROM dd_ontology
-					WHERE parent = \'tch1\'
-					LIMIT 1
-				',
-				'name' => 'dd_ontology_parent_order_number_idx',
-				'info' => 'Used to search descriptors by parent and order_number'
-			];
 
+		// parent and order_number
+		$ar_index[] = (object)[
+			'tables' => [
+				'dd_ontology'
+			],
+			'add' => '
+				CREATE INDEX {$table}_parent_order_number_idx ON {$table} USING btree (
+					parent COLLATE pg_catalog.default ASC NULLS LAST,
+					order_number ASC NULLS LAST
+				);
+			',
+			'drop' => '
+				DROP INDEX IF EXISTS {$table}_parent_order_number_idx
+			',
+			'sample' => '
+				SELECT *
+				FROM dd_ontology
+				WHERE parent = \'tch1\'
+				ORDER BY order_number
+				LIMIT 1
+			',
+			'name' => 'dd_ontology_parent_order_number_idx',
+			'info' => 'Used to search descriptors by parent and order_number'
+		];
 
 	// General
 
