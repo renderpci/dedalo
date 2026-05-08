@@ -297,10 +297,12 @@ class dd_diffusion_api {
 	 */
 	public static function get_ontology_map(object $rqo): object {
 		$response = new stdClass();
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+		$response->errors	= [];
 
 		// SEC-14: Restrict ontology map to global admins
 		if (security::is_global_admin(logged_user_id()) !== true) {
-			$response->result = false;
 			$response->errors[] = 'insufficient permissions';
 			$response->msg = 'Error. Insufficient permissions to access ontology map.';
 			return $response;
@@ -308,16 +310,17 @@ class dd_diffusion_api {
 
 		$diffusion_tipo = $rqo->options->diffusion_tipo ?? null;
 		if (!$diffusion_tipo) {
-			$response->result = false;
 			$response->errors[] = 'Missing diffusion_tipo';
+			$response->msg = 'Error. Missing diffusion_tipo';
 			return $response;
 		}
 
 		$ontology_node = ontology_node::get_instance($diffusion_tipo);
 		$properties = $ontology_node->get_properties();
 
-		$response->result = true;
-		$response->data = $properties->process ?? new stdClass();
+		$response->result	= true;
+		$response->msg		= 'OK. Ontology map retrieved';
+		$response->data		= $properties->process ?? new stdClass();
 
 		return $response;
 	}
