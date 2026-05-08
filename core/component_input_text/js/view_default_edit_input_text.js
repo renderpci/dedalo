@@ -154,6 +154,19 @@ const get_content_value = (i, current_value, self) => {
 					return
 				}
 			})
+		// keyup event
+			let debounce_timer = null
+			input.addEventListener('keyup', function(e) {
+				e.stopPropagation()
+				// skip non-character keys (modifiers, arrows, etc.)
+				if (e.key.length > 1 && e.key !== 'Process' && e.key !== 'Backspace' && e.key !== 'Delete') {
+					return
+				}
+				clearTimeout(debounce_timer)
+				debounce_timer = setTimeout(function(){
+					check_duplicates(self, input.value)
+				}, 300)
+			})
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
