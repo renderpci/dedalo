@@ -23,6 +23,10 @@ class BaseTestCase extends TestCase
 		// Ensure user is logged in
 		$this->user_login();
 
+		if(TEST_USER_ID === -1) {
+			return;
+		}
+
 		// Force global admin and developer privileges for the test user
 		// (force_login may set these to false if the security cache is not
 		// yet built; tests expect TEST_USER_ID to have full privileges)
