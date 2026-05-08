@@ -82,27 +82,25 @@ class component_input_text extends component_string_common {
 				];
 			}
 
-		// fallback_value. Only compute when data is empty
+		// fallback_value
 			$flat_fallback_value = [];
-			if (empty($data)) {
-				$fallback_value = $this->get_component_data_fallback(
-					$this->get_lang(), // string lang
-					DEDALO_DATA_LANG_DEFAULT // string main_lang
-				);
-				if (!empty($fallback_value)) {
-					$ar_fallback_values = [];
-					foreach ($fallback_value as $item) {
-						$item_value = $item->value ?? '';
-						// Handle case where value is an object (convert to JSON string)
-						if (is_object($item_value)) {
-							$item_value = json_encode($item_value);
-						}
-						$ar_fallback_values[] = $item_value;
+			$fallback_value = $this->get_component_data_fallback(
+				$this->get_lang(), // string lang
+				DEDALO_DATA_LANG_DEFAULT // string main_lang
+			);
+			if (!empty($fallback_value)) {
+				$ar_fallback_values = [];
+				foreach ($fallback_value as $item) {
+					$item_value = $item->value ?? '';
+					// Handle case where value is an object (convert to JSON string)
+					if (is_object($item_value)) {
+						$item_value = json_encode($item_value);
 					}
-					$flat_fallback_value = [
-						implode($records_separator, $ar_fallback_values)
-					];
+					$ar_fallback_values[] = $item_value;
 				}
+				$flat_fallback_value = [
+					implode($records_separator, $ar_fallback_values)
+				];
 			}
 
 		// label
