@@ -16,7 +16,6 @@ class security {
 	/**
 	* CLASS VARS
 	*/
-
 		/**
 		 * ID of the currently logged-in user.
 		 * Set in constructor from session. Used to resolve user-specific permissions.
@@ -315,10 +314,10 @@ class security {
 	* Locate component_security_access of current logged user based on user profile
 	* and return the component instance
 	* @param int $user_id
-	* @return object|null $component_security_access
+	* @return component_security_access|null $component_security_access
 	* Returns null if user profile is not found.
 	*/
-	public static function get_user_security_access(int $user_id) : ?object {
+	public static function get_user_security_access(int $user_id) : ?component_security_access {
 
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
@@ -355,7 +354,7 @@ class security {
 	public static function get_user_profile(int $user_id) : ?object {
 
 		// user profile
-			$component_profile_model	= ontology_node::get_model_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+			$component_profile_model	= ontology_node::get_model_by_tipo(DEDALO_USER_PROFILE_TIPO, true);
 			$component_profile			= component_common::get_instance(
 				$component_profile_model, // component_select expected
 				DEDALO_USER_PROFILE_TIPO,
@@ -492,7 +491,7 @@ class security {
 			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( $user_id==$logged_user_id ) {
+			if ( $user_id===$logged_user_id ) {
 
 				// get from session (set on user login)
 				$is_global_admin = logged_user_is_global_admin();
@@ -500,8 +499,12 @@ class security {
 			}else{
 
 				// Resolve from component
-				$security_administrator_model		= ontology_node::get_model_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
-				$component_security_administrator	= component_common::get_instance(
+				$security_administrator_model = ontology_node::get_model_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO, true);
+				if (!$security_administrator_model) {
+					debug_log('Model not found for tipo: ' . DEDALO_SECURITY_ADMINISTRATOR_TIPO, logger::ERROR);
+					return false;
+				}
+				$component_security_administrator = component_common::get_instance(
 					$security_administrator_model,
 					DEDALO_SECURITY_ADMINISTRATOR_TIPO,
 					$user_id,
@@ -509,11 +512,15 @@ class security {
 					DEDALO_DATA_NOLAN,
 					DEDALO_SECTION_USERS_TIPO
 				);
+				if ($component_security_administrator === null) {
+					debug_log('Component not found for tipo: ' . DEDALO_SECURITY_ADMINISTRATOR_TIPO, logger::ERROR);
+					return false;
+				}
 
 				$security_administrator_data = $component_security_administrator->get_data();
 
 				// empty user data case
-					if (empty($security_administrator_data)) {
+					if (empty($security_administrator_data) || !isset($security_administrator_data[0]->section_id)) {
 						return false;
 					}
 
@@ -544,11 +551,16 @@ class security {
 				return true;
 			}
 
+		// empty user_id
+			if (empty($user_id) || $user_id<1) {
+				return false;
+			}
+
 		// logged user_id (from session)
 			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( $user_id==$logged_user_id ) {
+			if ( $user_id===$logged_user_id ) {
 
 				// get from session value (set on user login)
 				$is_developer = logged_user_is_developer();
@@ -556,8 +568,12 @@ class security {
 			}else{
 
 				// Resolve from component data
-				$model		= ontology_node::get_model_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
-				$component	= component_common::get_instance(
+				$model = ontology_node::get_model_by_tipo(DEDALO_USER_DEVELOPER_TIPO, true);
+				if(!$model) {
+					debug_log('Model not found for tipo: ' . DEDALO_USER_DEVELOPER_TIPO, logger::ERROR);
+					return false;
+				}
+				$component = component_common::get_instance(
 					$model,
 					DEDALO_USER_DEVELOPER_TIPO,
 					$user_id,
@@ -565,10 +581,14 @@ class security {
 					DEDALO_DATA_NOLAN,
 					DEDALO_SECTION_USERS_TIPO
 				);
+				if ($component === null) {
+					debug_log('Component not found for tipo: ' . DEDALO_USER_DEVELOPER_TIPO, logger::ERROR);
+					return false;
+				}
 				$data = $component->get_data();
 
 				// empty user data case
-					if (empty($data)) {
+					if (empty($data) || !isset($data[0]->section_id)) {
 						return false;
 					}
 

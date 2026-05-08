@@ -344,7 +344,7 @@ abstract class component_common extends common {
 				// fix bad model
 					$component_name = $model_name;
 			}
-			if (!str_starts_with($component_name, 'component_')) {
+			if (empty($component_name) || !str_starts_with($component_name, 'component_')) {
 
 				debug_log(__METHOD__
 					. ' Error Processing Request. Illegal component: ' .PHP_EOL
