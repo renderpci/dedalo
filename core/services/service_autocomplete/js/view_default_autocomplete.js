@@ -192,6 +192,9 @@ const get_content_data = function(self) {
 			event_manager.subscribe('deactivate_component', deactivate_component_handler)
 		)
 
+	// store handler reference for cleanup on destroy
+		self._fn_keydown = fn_service_autocomplete_keys
+
 	// fix main nodes pointers
 		self.search_input		= search_input
 		self.datalist			= datalist_node
@@ -249,7 +252,7 @@ const render_source_selector = function(self) {
 						? ar_section[0].label || ('Unknown label ' + ar_section[0])
 						: 'Unknown label ' + JSON.stringify(ar_section)
 
-				const swicher_source = ui.create_dom_element({
+				const switcher_source = ui.create_dom_element({
 					element_type	: 'option',
 					parent			: select,
 					value			: i.toString(), // pass key as string option
@@ -257,7 +260,7 @@ const render_source_selector = function(self) {
 				})
 
 				if (search_engine===self.search_engine) {
-					swicher_source.setAttribute('selected', true)
+					switcher_source.setAttribute('selected', true)
 				}
 			}//end for (let i = 0; i < ar_search_length; i++)
 
@@ -265,14 +268,18 @@ const render_source_selector = function(self) {
 		select.addEventListener('change', async function(e){
 
 			// reset search cache
-			self.search_cache = []
+			self.search_cache = {}
 
 			const key = e.target.value
 
 			const request_config_object = clone(self.context.request_config[key])
 
+			// reset status to allow build() to process the new request_config_object
+			// (build() short-circuits when status is 'built')
+			self.status = 'initialized'
+
 			await self.build({
-				request_config_object: request_config_object
+				request_config_object : request_config_object
 			})
 			const content_data = await self.render({
 				render_level : 'content'
@@ -513,7 +520,7 @@ const render_filters_selector = function(self) {
 					change	: function(input_node){
 
 						// reset search cache
-						self.search_cache = []
+						self.search_cache = {}
 
 						const index = ar_sections.indexOf(input_node.dd_value)
 						if (input_node.checked===true && index===-1) {
@@ -572,7 +579,7 @@ const render_filters_selector = function(self) {
 						change	: function(input_node){
 
 							// reset search cache
-							self.search_cache = []
+							self.search_cache = {}
 
 							const index = ar_filter_by_list.findIndex(item => item.id===input_node.id)
 							if (input_node.checked===true && index===-1) {
@@ -649,7 +656,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		// change event
 		const change_handler = (e) => {
 			// reset search cache
-			self.search_cache = []
+			self.search_cache = {}
 
 			const checked_value	= e.target.checked
 			const inputs		= filter_node.querySelectorAll('input')
@@ -674,6 +681,22 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 	return filter_node
 }//end build_filter
+
+
+
+/**
+* SAFE_JSON_PARSE
+* Parses JSON from localStorage with error handling
+* @param {string} key - localStorage key
+* @return {*} Parsed value or null on error
+*/
+const safe_json_parse = function(key) {
+	try {
+		return JSON.parse(localStorage.getItem(key))
+	} catch (e) {
+		return null
+	}
+}//end safe_json_parse
 
 
 
@@ -715,28 +738,28 @@ const render_option_checkbox = function(self, datalist_item) {
 		input_checkbox.dd_value	= value
 
 		// local storage check. If exists, use it to update checked status
-			const local_storage_ar_id = JSON.parse(localStorage.getItem(`service_autocomplete_${self.id_base}`))
-			if (local_storage_ar_id) {
+			const local_storage_ar_id = safe_json_parse(`service_autocomplete_${self.id_base}`)
+		if (local_storage_ar_id) {
 
-				const current_state = input_checkbox.checked
+			const current_state = input_checkbox.checked
 
-				if (local_storage_ar_id.includes(id)) {
-					if (current_state!==true) {
-						input_checkbox.checked = true
-						change(input_checkbox) // caller callback function
-					}
-				}else{
-					if (current_state!==false) {
-						input_checkbox.checked = false
-						change(input_checkbox) // caller callback function
-					}
+			if (local_storage_ar_id.includes(id)) {
+				if (current_state!==true) {
+					input_checkbox.checked = true
+					change(input_checkbox) // caller callback function
+				}
+			}else{
+				if (current_state!==false) {
+					input_checkbox.checked = false
+					change(input_checkbox) // caller callback function
 				}
 			}
+		}
 
 		// event change
 			const change_handler = async function(e) {
 				// reset search cache
-				self.search_cache = []
+				self.search_cache = {}
 
 				change(this) // caller callback function
 
@@ -754,7 +777,7 @@ const render_option_checkbox = function(self, datalist_item) {
 				const id			= element.id
 				const current_state	= element.checked
 
-				const local_storage_ar_id = JSON.parse(localStorage.getItem(`service_autocomplete_${self.id_base}`))
+				const local_storage_ar_id = safe_json_parse(`service_autocomplete_${self.id_base}`)
 				if (local_storage_ar_id) {
 					// search current id in local_storage_ar_id array
 					const key = local_storage_ar_id.indexOf(id)
@@ -906,7 +929,7 @@ const render_operator_selector = function(self) {
 		select.addEventListener('change', async function(e){
 
 			// reset search cache
-			self.search_cache = []
+			self.search_cache = {}
 
 			// set the new operator selected
 			self.operator	= e.target.value
@@ -958,7 +981,7 @@ const render_operator_selector = function(self) {
 		async function fn_change(e) {
 
 			// reset search cache
-			self.search_cache = []
+			self.search_cache = {}
 
 			const value = parseInt( e.target.value )
 			if (value<1) {
@@ -1011,14 +1034,14 @@ const render_datalist = async function(self, result) {
 			datalist.removeChild(datalist.firstChild)
 		}
 
-	// empty case
-		if (!result.data || !result.data.length) {
+	// empty or falsy result case
+		if (!result || result===false || !result.data || !result.data.length) {
 			return datalist
 		}
 
 	// total
 		const sections_data	= result.data.find(el => el.typo==='sections')
-		const total			= sections_data
+		const total			= sections_data && sections_data.entries
 			? sections_data.entries.length
 			: 0
 		// if the api doesn't send any data, do not continue, return empty datalist
@@ -1054,7 +1077,7 @@ const render_datalist = async function(self, result) {
 		// const ar_search_sections = self.ar_search_section_tipo
 
 	// rqo_search. Get dd objects from the context that will be used to build the lists in correct order
-		const rqo_search = await self.rqo_search
+		const rqo_search = self.rqo_search
 
 	// fields_separator. Get the fields_separator between columns
 		const fields_separator = (rqo_search.show.fields_separator)
@@ -1131,7 +1154,7 @@ const render_datalist = async function(self, result) {
 
 							const params	= add_value.perform.params
 							const grid_node	= await view_default_autocomplete[add_value.perform.function](self, current_section_record , params)
-							if(!self.node.grid_choose_container){
+							if(grid_node && !self.node.grid_choose_container){
 								self.node.grid_choose_container = grid_node
 								document.body.appendChild(self.node.grid_choose_container)
 							}
@@ -1273,30 +1296,30 @@ view_default_autocomplete.hide = function () {
 const get_last_ddo_data_value = function(current_path, value, data) {
 
 	// check the path length sent, the first loop is the full path, but it is changed with the check data
+	// note: only the first locator in value is processed (the loop returned on first iteration)
 	const current_path_length = current_path.length
-	for (let i = 0; i < value.length; i++) {
-		const section_tipo 	= value[i].section_tipo
-		const section_id 	= value[i].section_id
-		// get the column data with last ddo
-		const ddo_item = current_path[current_path.length - 1];
-		// get the data into the full data from API and get the value (locator or final data as input_text data)
-		const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
-		const current_value = (current_element_data)
-			? current_element_data.value
-			: false
-		// if the element doesn't has data stop the recursion.
-		if(current_value === false) return false;
-		// create new_path without and remove the current ddo
-		const new_path = [...current_path]
-		new_path.pop()
-		// if it is the last ddo, the data is the correct data to build the column
-		// else continue with the path doing recursion
-		if (current_path_length===1) {
-			return current_element_data
-		}
-
-		return get_last_ddo_data_value(new_path, current_value, data)
+	const locator = value[0]
+	const section_tipo 	= locator.section_tipo
+	const section_id 	= locator.section_id
+	// get the column data with last ddo
+	const ddo_item = current_path[current_path.length - 1];
+	// get the data into the full data from API and get the value (locator or final data as input_text data)
+	const current_element_data = data.find((item)=> item.tipo===ddo_item.tipo && item.section_tipo===section_tipo && item.section_id===section_id)
+	const current_value = (current_element_data)
+		? current_element_data.value
+		: false
+	// if the element doesn't has data stop the recursion.
+	if(current_value === false) return false;
+	// create new_path without and remove the current ddo
+	const new_path = [...current_path]
+	new_path.pop()
+	// if it is the last ddo, the data is the correct data to build the column
+	// else continue with the path doing recursion
+	if (current_path_length===1) {
+		return current_element_data
 	}
+
+	return get_last_ddo_data_value(new_path, current_value, data)
 }//end get_last_ddo_data_value
 
 
@@ -1328,10 +1351,14 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 		)
 		const selected_label = data_selection
 			? data_selection.value
-			: selected_section_tipo + '_' + selected_section_tipo
+			: selected_section_tipo + '_' + selected_section_id
 
 	// data from API
 		const grid_choose_data = await get_grid_choose_data(self, section_record, params)
+		if (!grid_choose_data) {
+			console.warn('[render_grid_choose] No data returned from get_grid_choose_data')
+			return null
+		}
 
 	// get dd objects from the context that will be used to build the lists in correct order
 		const rqo_search	= grid_choose_data.rqo_search
@@ -1353,7 +1380,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 			}
 
 		// service node reference. Set bellow autocomplete search box when is created (once)
-			if (!current_container) {
+			if (!current_container && self.datalist) {
 				const reference_node	= self.datalist
 				const rect				= reference_node.getBoundingClientRect();
 				const top				= rect.top  + window.scrollY + 20
@@ -1376,11 +1403,10 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 			parent			: grid_choose_container
 		});
 		// drag move set
-			let x, y, target, margin_left, margin_top = null
+			let x = null, y = null, target = null, margin_left = null, margin_top = null
 
-			// mousedown event
-			// header is the drag area
-			const fn_mousedown = function(e) {
+			// mousedown event. Header is the drag area
+			const mousedown_handler = function(e) {
 				e.stopPropagation()
 
 				const path = e.composedPath();
@@ -1408,21 +1434,24 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 						return;
 					}
 				}
-			}//end fn_mousedown
-			header.addEventListener('mousedown', fn_mousedown)
+			}
+			header.addEventListener('mousedown', mousedown_handler)
 
 			// mouseup event
-			const fn_mouseup = function(e) {
+			const mouseup_handler = function(e) {
 				e.stopPropagation()
 				if (target) {
 					target.classList.remove('dragging');
 				}
 				target = null;
 			}
-			document.addEventListener('mouseup', fn_mouseup)
+			document.addEventListener('mouseup', mouseup_handler)
 
-			// end mousemove
-			const fn_mousemove = function(e) {
+			// store handlers on container for cleanup
+			grid_choose_container._drag_listeners = { mouseup: mouseup_handler, mousemove: null }
+
+			// mousemove event
+			const mousemove_handler = (e) => {
 				// no target case (mouse position changes but target is null or undefined)
 					if (!target) {
 						return;
@@ -1447,9 +1476,9 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					if (tgtRect.bottom > (pRect.bottom)) {
 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
 					}
-			}//end fn_mousemove
-			document.addEventListener('mousemove', fn_mousemove)
-
+			}
+			document.addEventListener('mousemove', mousemove_handler)
+			grid_choose_container._drag_listeners.mousemove = mousemove_handler
 
 	// button_close
 		const button_close = ui.create_dom_element({
@@ -1457,6 +1486,14 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 			class_name		: 'button close white',
 			parent			: header
 		})
+		const cleanup_drag_listeners = function() {
+			const listeners = grid_choose_container._drag_listeners
+			if (listeners) {
+				if (listeners.mouseup) document.removeEventListener('mouseup', listeners.mouseup)
+				if (listeners.mousemove) document.removeEventListener('mousemove', listeners.mousemove)
+				grid_choose_container._drag_listeners = null
+			}
+		}
 		const fn_click = function(e) {
 			e.stopPropagation()
 			while (grid_choose_container.firstChild) {
@@ -1467,8 +1504,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 				delete self.node.grid_choose_container
 			}
 
-			document.removeEventListener('mouseup', fn_mouseup)
-			document.removeEventListener('mousemove', fn_mousemove)
+			cleanup_drag_listeners()
 		}//end fn_click
 		button_close.addEventListener('click', fn_click)
 
@@ -1476,10 +1512,17 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 		// const ar_search_sections = rqo_search.sqo.section_tipo
 
 	// columns
-		const columns = rqo_search.show.columns
+		const columns = rqo_search.show?.columns
+		if (!columns || !columns.length) {
+			console.warn('[render_grid_choose] No columns defined in rqo_search.show')
+			return grid_choose_container
+		}
 
 	// get the ar_locator founded in sections
-		const data_locator	= data.find((item)=> item.tipo===rqo_search.source.tipo && item.typo==='sections');
+		const source_tipo = rqo_search.source?.tipo
+		const data_locator = source_tipo
+			? data.find((item)=> item.tipo===source_tipo && item.typo==='sections')
+			: null;
 		const ar_locator	= (data_locator) ? data_locator.entries : []
 
 	// iterate the sections
@@ -1512,7 +1555,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 						const current_element_data	= get_last_ddo_data_value(current_path, [current_locator], data)
 						// if the element doesn't has data continue to the next element.
 						if (typeof current_element_data==='undefined' || current_element_data===false) {
-							console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
+							console.warn('[render_grid_choose] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
 							continue
 						}
 
@@ -1544,8 +1587,9 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 							id_variant		: self.id
 						}
 						const current_instance = await get_instance(instance_options)
-						current_instance.build(false)
+						await current_instance.build(false)
 						const node = await current_instance.render()
+						console.log('----> node', node);
 
 					// append instance rendered node
 						grid_choose_container.appendChild(node)
@@ -1615,11 +1659,17 @@ const get_grid_choose_data = async function(self, section_record, params) {
 			use_worker	: true
 		})
 
+	// guard api_response
+		if (!api_response?.result || api_response.result===false) {
+			console.warn('[get_grid_choose_data] API returned no result')
+			return null
+		}
+
 	// grid_choose_data
 		const grid_choose_data = {
 			rqo_search	: rqo_search,
-			data		: api_response.result.data,
-			context		: api_response.result.context
+			data		: api_response.result.data || [],
+			context		: api_response.result.context || []
 		}
 
 

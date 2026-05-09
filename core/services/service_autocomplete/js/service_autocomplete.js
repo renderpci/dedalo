@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, SHOW_DEBUG, Promise */
+/*global get_label, SHOW_DEBUG, Promise, page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -44,7 +44,7 @@ export const service_autocomplete = function() {
 */
 // prototypes assign
 	// life-cycle
-	service_autocomplete.prototype.destroy	= common.prototype.destroy
+	service_autocomplete.prototype._parent_destroy = common.prototype.destroy
 	// others
 	service_autocomplete.prototype.hide		= view_default_autocomplete.hide
 	service_autocomplete.prototype.show		= view_default_autocomplete.show
@@ -90,7 +90,10 @@ service_autocomplete.prototype.init = async function(options) {
 		self.tipo			= options.tipo
 		self.section_tipo	= options.section_tipo
 		self.request_config	= clone(options.request_config)
-		self.lang			= options.lang || page_globals.dedalo_data_lang
+		self.lang			= options.lang || (typeof page_globals!=='undefined' ? page_globals.dedalo_data_lang : 'lg-eng')
+
+	// id_base. Used for localStorage keys (filter state persistence)
+	self.id_base = self.section_tipo + '_' + self.tipo
 
 	// set properties
 		self.model			= 'service_autocomplete'
@@ -227,7 +230,38 @@ service_autocomplete.prototype.build = async function(options={}) {
 	})()
 
 	return self._build_waiter
-}//end build//end build
+}//end build
+
+
+
+/**
+* DESTROY
+* Delete all dependent instances of the section and all events that was created by the instances,
+* but does not remove the section instance itself.
+* @param bool delete_self = true
+* 	On true, Delete self instance events, paginator, services, inspector, filter and instance
+* @param bool delete_dependencies = false
+* 	On true, Call to destroy all associated instances (ar_instances)
+* @param bool remove_dom = false
+* 	On true, removes the instance DOM node
+* @return object result
+* {
+* 	delete_dependencies : bool,
+* 	delete_self : bool
+* }
+*/
+service_autocomplete.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// remove document keydown listener if stored
+	if (self._fn_keydown) {
+		document.removeEventListener('keydown', self._fn_keydown, false)
+		self._fn_keydown = null
+	}
+
+	return self._parent_destroy(delete_self, delete_dependencies, remove_dom)
+}//end destroy
 
 
 
@@ -295,26 +329,6 @@ service_autocomplete.prototype.service_autocomplete_keys = function(e) {
 
 
 /**
-* DESTROY
-* @return bool
-*/
-	// service_autocomplete.prototype.destroy = async function() {
-
-	// 	const self = this
-
-	// 	self.node.remove()
-
-	// 	event_manager.publish('destroy_'+self.id, this)
-
-	// 	// status update
-	// 	self.status = 'destroyed'
-
-	// 	return true
-	// }//end destroy
-
-
-
-/**
 * RENDER
 * Delegates the DOM generation to the view render module (view_default_autocomplete)
 * based on the current service.view value.
@@ -330,14 +344,7 @@ service_autocomplete.prototype.render = async function(options={}) {
 		const view	= self.view
 
 	// wrapper
-		switch(view) {
-
-			case 'grid_chooser':
-				return view_default_autocomplete.render(self, options)
-
-			default:
-				return view_default_autocomplete.render(self, options)
-		}
+		return view_default_autocomplete.render(self, options)
 }//end render
 
 
@@ -503,7 +510,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 	const self = this
 
 	// search_query_object base stored in wrapper dataset
-		const rqo_search = await clone(self.rqo_search)
+		const rqo_search = clone(self.rqo_search)
 
 		// const rqo_search		= clone(original_rqo_search)
 		// self.rqo_search		= rqo_search
@@ -630,10 +637,7 @@ service_autocomplete.prototype.split_q = function(q) {
 		}
 
 		// The result can be accessed through the `m`-variable.
-		m.forEach((match, groupIndex) => {
-			//console.log(`Found match, group ${groupIndex}: ${match}`);
-			ar_q.push(match.trim())
-		});
+		ar_q.push(m[0].trim())
 	}
 
 	const divisor = (q.indexOf('|')!==-1) ? '|' : false
@@ -716,29 +720,30 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 					switch(field) {
 
 						case 'authors':
-							// console.log("++ authors:",record[field]);
-							if(SHOW_DEBUG===true) {
-								//console.log("primary:",primary);	console.log("secondary:",secondary);	console.log("corporate:",corporate);
+							if (!record[field]) {
+								break;
 							}
-
-							if (Object.keys(record[field].primary).length > 0) {
+							if (record[field].primary && Object.keys(record[field].primary).length > 0) {
 								authors_ar_value.push(Object.keys(record[field].primary).join(separator))
 							}
-							if (Object.keys(record[field].secondary).length > 0) {
+							if (record[field].secondary && Object.keys(record[field].secondary).length > 0) {
 								authors_ar_value.push(Object.keys(record[field].secondary).join(separator))
 							}
-							if (Object.keys(record[field].corporate).length > 0) {
+							if (record[field].corporate && Object.keys(record[field].corporate).length > 0) {
 								authors_ar_value.push(Object.keys(record[field].corporate).join(separator))
 							}
 							ar_value.push(authors_ar_value.join(separator))
 							break;
 
 						default:
+							if (record[field] == null) {
+								break;
+							}
 							if (Array.isArray(record[field])) {
 								if (record[field].length>0) {
 									ar_value.push(record[field].join(', '))
 								}
-							}else{
+							}else if (typeof record[field]==='string') {
 								if (record[field].length>0) {
 									ar_value.push(record[field])
 								}
@@ -757,7 +762,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 							type			: 'dd687',
 							tipo			: fields[j].tipo,
 							mode			: 'list',
-							value			: value
+							entries			: value
 						}
 
 					// insert formatted item
@@ -778,7 +783,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			const section = {
 				section_tipo	: section_tipo,
 				tipo			: self.caller.tipo,
-				value			: section_data,
+				entries			: section_data,
 				typo			: 'sections'
 			}
 
@@ -794,7 +799,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			}
 
 			if(SHOW_DEBUG===true) {
-				console.log('+++ data_formatted 2:',response);
+				console.log('+++ format_data response:', response);
 			}
 
 			return response
@@ -804,7 +809,15 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 		// Iterate current filter
 		let q = ''
-		const filter_free = rqo_search.sqo_options.filter_free
+		const filter_free = rqo_search.sqo_options?.filter_free
+		if (!filter_free) {
+			return {
+				result : {
+					data : []
+				},
+				msg : 'No filter_free defined'
+			}
+		}
 		for (let operator in filter_free) {
 
 			// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
