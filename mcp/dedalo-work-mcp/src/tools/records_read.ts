@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SqoBuilder, type WorkClient, type Filter as SqoFilter } from '@dedalo/mcp-common';
+import { SqoBuilder, type WorkClient } from '@dedalo/mcp-common';
 import { registerTool, type ToolContext } from './_shared/register.js';
-import { rqo } from './_shared/rqo.js';
+import { rqo, type RqoOptions } from './_shared/rqo.js';
 import {
 	TipoSchema,
 	OptionalLangSchema,
@@ -38,7 +38,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 				.filterByLocators([{ section_tipo, section_id }])
 				.build();
 			return client.call(
-				rqo('read', 'dd_core_api', { model: 'section', tipo: section_tipo, section_tipo, mode, lang }, sqo)
+				rqo({ action: 'read', source: { model: 'section', tipo: section_tipo, section_tipo, mode, lang }, sqo })
 			);
 		},
 	}, ctx);
@@ -56,16 +56,15 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 			full_count: PaginationSchema.shape.full_count,
 			filter: FilterSchema.optional().describe('Typed AND/OR filter tree.'),
 			order: z.array(OrderClauseSchema).optional().describe('Sort clauses applied in array order.'),
-			raw_sqo: z.record(z.unknown()).optional().describe('Escape hatch: raw SQO object that overrides all other fields when present.'),
+			raw_sqo: z.record(z.string(), z.unknown()).optional().describe('Escape hatch: raw SQO object that overrides all other fields when present.'),
 		}),
 		handler: async ({ section_tipo, lang, limit, offset, full_count, filter, order, raw_sqo }) => {
 			const built = (() => {
-				if (raw_sqo) return raw_sqo as unknown as Parameters<typeof rqo>[3];
+				if (raw_sqo) return raw_sqo as unknown as RqoOptions['sqo'];
 				const b = new SqoBuilder(section_tipo);
 				b.limit(limit).offset(offset);
 				if (filter) {
-					// SqoBuilder accepts top-level rules; pass filter through as-is via cast.
-					b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', (filter as SqoFilter).rules as never);
+					b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', filter.rules as never);
 				}
 				if (order) for (const o of order) b.order(o.path, o.direction);
 				if (full_count) b.fullCount(true);
@@ -74,7 +73,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 
 			const primarySection = Array.isArray(section_tipo) ? section_tipo[0] : section_tipo;
 			const res = await client.call(
-				rqo('read', 'dd_core_api', { model: 'section', section_tipo: primarySection, lang }, built)
+				rqo({ action: 'read', source: { model: 'section', section_tipo: primarySection, lang }, sqo: built })
 			);
 			return { ok: true as const, data: res, pagination: buildPagination(res, offset, limit) };
 		},
@@ -95,10 +94,10 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 		}),
 		handler: async ({ section_tipo, lang, limit, offset, full_count, filter }) => {
 			const b = new SqoBuilder(section_tipo).limit(limit).offset(offset);
-			if (filter) b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', (filter as SqoFilter).rules as never);
+			if (filter) b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', filter.rules as never);
 			if (full_count) b.fullCount(true);
 			const res = await client.call(
-				rqo('read_raw', 'dd_core_api', { tipo: section_tipo, section_tipo, lang }, b.build())
+				rqo({ action: 'read_raw', source: { tipo: section_tipo, section_tipo, lang }, sqo: b.build() })
 			);
 			return { ok: true as const, data: res, pagination: buildPagination(res, offset, limit) };
 		},
@@ -115,8 +114,8 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 		}),
 		handler: async ({ section_tipo, filter }) => {
 			const b = new SqoBuilder(section_tipo);
-			if (filter) b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', (filter as SqoFilter).rules as never);
-			return client.call(rqo('count', 'dd_core_api', { tipo: section_tipo, section_tipo }, b.build()));
+			if (filter) b.filter((filter.operator ?? 'AND') as 'AND' | 'OR', filter.rules as never);
+			return client.call(rqo({ action: 'count', source: { tipo: section_tipo, section_tipo }, sqo: b.build() }));
 		},
 	}, ctx);
 
@@ -131,6 +130,6 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ section_tipo, section_id, lang }) =>
-			client.call(rqo('get_indexation_grid', 'dd_core_api', { tipo: section_tipo, section_tipo, section_id, lang })),
+			client.call(rqo({ action: 'get_indexation_grid', source: { tipo: section_tipo, section_tipo, section_id, lang } })),
 	}, ctx);
 }
