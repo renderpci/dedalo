@@ -15,7 +15,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'Get Dédalo server environment: version, languages, install status, logged user info. Safe pre-auth call. Use this first to verify connectivity.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get environment' },
 		inputSchema: z.object({}),
-		handler: async () => client.call(rqo('get_environment', 'dd_core_api')),
+		handler: async () => client.call(rqo({ action: 'get_environment' })),
 	}, ctx);
 
 	registerTool(server, {
@@ -24,7 +24,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List sections' },
 		inputSchema: z.object({ lang: OptionalLangSchema }),
-		handler: async ({ lang }) => client.call(rqo('get_ontology_info', 'dd_core_api', { model: 'section', lang })),
+		handler: async ({ lang }) => client.call(rqo({ action: 'get_ontology_info', source: { model: 'section', lang } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -37,7 +37,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			model: z.string().optional().describe('Model name (e.g. `section`, `component_text_area`, `component_portal`).'),
 			lang: OptionalLangSchema,
 		}),
-		handler: async (a) => client.call(rqo('get_ontology_info', 'dd_core_api', a)),
+		handler: async (a) => client.call(rqo({ action: 'get_ontology_info', source: a })),
 	}, ctx);
 
 	registerTool(server, {
@@ -51,7 +51,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			mode: ModeSchema.default('edit'),
 		}),
 		handler: async ({ section_tipo, lang, mode }) =>
-			client.call(rqo('get_section_elements_context', 'dd_core_api', { tipo: section_tipo, section_tipo, lang, mode })),
+			client.call(rqo({ action: 'get_section_elements_context', source: { tipo: section_tipo, section_tipo, lang, mode } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -66,7 +66,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			mode: ModeSchema.default('edit'),
 		}),
 		handler: async ({ tipo, section_tipo, lang, mode }) =>
-			client.call(rqo('get_element_context', 'dd_core_api', { tipo, section_tipo: section_tipo ?? tipo, lang, mode })),
+			client.call(rqo({ action: 'get_element_context', source: { tipo, section_tipo: section_tipo ?? tipo, lang, mode } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -75,7 +75,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'Get the hierarchical tree for a thesaurus tipo. Returns all terms with parent-child relationships.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get thesaurus tree' },
 		inputSchema: z.object({ tipo: TipoSchema, lang: OptionalLangSchema }),
-		handler: async ({ tipo, lang }) => client.call(rqo('get_ontology_info', 'dd_core_api', { tipo, lang })),
+		handler: async ({ tipo, lang }) => client.call(rqo({ action: 'get_ontology_info', source: { tipo, lang } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -88,6 +88,6 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			mode: ModeSchema.optional(),
 			lang: OptionalLangSchema,
 		}),
-		handler: async (a) => client.call(rqo('start', 'dd_core_api', a)),
+		handler: async (a) => client.call(rqo({ action: 'start', source: a })),
 	}, ctx);
 }
