@@ -23,7 +23,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ section_tipo, lang }) =>
-			client.call(rqo('create', 'dd_core_api', { tipo: section_tipo, section_tipo, lang }, undefined, undefined, false)),
+			client.call(rqo({ action: 'create', source: { tipo: section_tipo, section_tipo, lang }, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
@@ -37,7 +37,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ section_tipo, section_id, lang }) =>
-			client.call(rqo('duplicate', 'dd_core_api', { tipo: section_tipo, section_tipo, section_id, lang }, undefined, undefined, false)),
+			client.call(rqo({ action: 'duplicate', source: { tipo: section_tipo, section_tipo, section_id, lang }, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
@@ -53,7 +53,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 			value: z.unknown().describe('Value to write. Format depends on the component model.'),
 		}),
 		handler: async ({ tipo, section_tipo, section_id, lang, value }) =>
-			client.call(rqo('save', 'dd_core_api', { tipo, section_tipo, section_id, lang }, undefined, { value }, false)),
+			client.call(rqo({ action: 'save', source: { tipo, section_tipo, section_id, lang }, options: { value }, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
@@ -67,6 +67,6 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ section_tipo, section_id, lang }) =>
-			client.call(rqo('delete', 'dd_core_api', { tipo: section_tipo, section_tipo, section_id, lang }, undefined, undefined, false)),
+			client.call(rqo({ action: 'delete', source: { tipo: section_tipo, section_tipo, section_id, lang }, prevent_lock: false })),
 	}, ctx);
 }
