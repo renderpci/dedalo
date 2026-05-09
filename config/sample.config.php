@@ -836,6 +836,14 @@
 
 
 
+// DEDALO_MCP_PROXY_URL
+	// URL of the dedalo-work-mcp server (Streamable HTTP transport).
+	// The AI Assistant tool proxies JSON-RPC requests through dd_mcp_api
+	// to this endpoint. Uncomment and configure for your deployment.
+	// define('DEDALO_MCP_PROXY_URL', 'http://localhost:3001');
+
+
+
 // maintenance
 	// maintenance mode active (true) / inactive (false)
 	define('DEDALO_MAINTENANCE_MODE', false);
