@@ -635,6 +635,8 @@ class diffusion_utils {
 			if (empty($current_type)) {
 				debug_log(__METHOD__
 					. " Ignored bad diffusion obj_value: type is mandatory!" . PHP_EOL
+					. " To fix this error, go to Ontology definition node and set the proper diffusion type config." . PHP_EOL
+					. ' Sample: ' . json_encode(json_decode('{ "diffusion" : { "type" : "sql" } }'), JSON_PRETTY_PRINT) . PHP_EOL
 					. ' obj_value : ' . to_string($obj_value)
 					, logger::ERROR
 				);
