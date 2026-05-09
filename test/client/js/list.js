@@ -53,9 +53,10 @@ export const livecycle_detail = [
 	'test_component_relation_model',
 	'test_component_relation_parent',
 	'test_component_relation_related',
+	'test_component_section_id',
+	'test_component_security_access',
 	'test_component_select',
 	'test_component_select_lang',
-	'test_component_section_id',
 	'test_component_svg',
 	'test_component_text_area',
 ]
