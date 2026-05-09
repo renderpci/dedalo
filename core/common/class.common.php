@@ -202,23 +202,23 @@ abstract class common {
 		/**
 		 * Static cache for resolved structure context objects.
 		 * Avoids re-calculating context for elements with the same tipo and mode.
-		 * @var array $structure_context_cache
+		 * @var array $cache_structure_context
 		 */
-		public static array $structure_context_cache = [];
+		public static array $cache_structure_context = [];
 
 		/**
 		 * Static cache mapping section/component tipos to their matrix table names.
 		 * Avoids repeated database lookups for storage table resolution.
-		 * @var array $matrix_table_from_tipo
+		 * @var array $cache_matrix_table_from_tipo
 		 */
-		public static array $matrix_table_from_tipo = [];
+		public static array $cache_matrix_table_from_tipo = [];
 
 		/**
 		 * Static cache for matrix tables that have relation columns.
 		 * Used by diffusion and relation queries to target the correct tables.
-		 * @var array $cache_ar_tables_with_relations
+		 * @var array $cache_tables_with_relations
 		 */
-		public static array $cache_ar_tables_with_relations = [];
+		public static ?array $cache_tables_with_relations = null;
 
 		/**
 		 * Static cache for the current main language per section.
@@ -244,9 +244,9 @@ abstract class common {
 		/**
 		 * Static cache for resolved tool definitions per element.
 		 * Tools are expensive to calculate; this cache prevents recalculation.
-		 * @var array $get_tools_cache
+		 * @var array $cache_get_tools
 		 */
-		public static array $get_tools_cache = [];
+		public static array $cache_get_tools = [];
 
 		/**
 		 * Dataframe locator of the element that instantiated this one (component, section, area).
@@ -352,13 +352,13 @@ abstract class common {
 		* Purges persistent caches to prevent memory leaks across worker requests.
 		*/
 		public static function clear() : void {
-			self::$structure_context_cache = [];
-			self::$matrix_table_from_tipo = [];
-			self::$cache_ar_tables_with_relations = [];
+			self::$cache_structure_context = [];
+			self::$cache_matrix_table_from_tipo = [];
+			self::$cache_tables_with_relations = null;
 			self::$current_main_lang = [];
 			self::$ar_related_by_model_data = [];
 			self::$resolved_request_properties_parsed = [];
-			self::$get_tools_cache = [];
+			self::$cache_get_tools = [];
 			self::$pdata = null;
 		}
 
@@ -638,11 +638,11 @@ abstract class common {
 
 		// cache
 			// Safe control: prevent big array memory and performance problems
-			self::manage_cache_size(self::$matrix_table_from_tipo);
+			self::manage_cache_size(self::$cache_matrix_table_from_tipo);
 
 			// check cache
-			if(isset(self::$matrix_table_from_tipo[$tipo])) {
-				return self::$matrix_table_from_tipo[$tipo];
+			if(isset(self::$cache_matrix_table_from_tipo[$tipo])) {
+				return self::$cache_matrix_table_from_tipo[$tipo];
 			}
 
 		// all case
@@ -739,7 +739,7 @@ abstract class common {
 			}//end switch
 
 		// cache
-			self::$matrix_table_from_tipo[$tipo] = $matrix_table;
+			self::$cache_matrix_table_from_tipo[$tipo] = $matrix_table;
 
 
 		return $matrix_table;
@@ -755,8 +755,8 @@ abstract class common {
 	public static function get_matrix_tables_with_relations() : array {
 
 		// cache
-			if (!empty(self::$cache_ar_tables_with_relations)) {
-				return self::$cache_ar_tables_with_relations;
+			if (self::$cache_tables_with_relations !== null) {
+				return self::$cache_tables_with_relations;
 			}
 
 		// tables
@@ -816,7 +816,7 @@ abstract class common {
 			}
 
 		// cache
-			self::$cache_ar_tables_with_relations = $ar_tables_with_relations;
+			self::$cache_tables_with_relations = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -993,64 +993,6 @@ abstract class common {
 
 		return false;
 	}//end setVar
-
-
-
-	/**
-	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
-	* @return string
-	*/
-		// public static function get_page_query_string(bool $remove_optional_vars=true) : string {
-
-		// 	$queryString	= $_SERVER['QUERY_STRING']; # like max=10
-		// 	$queryString	= safe_xss($queryString);
-
-		// 	if($remove_optional_vars===false) {
-		// 		return $queryString;
-		// 	}
-
-		// 	$qs 				= '' ;
-		// 	$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
-
-		// 	$search			= array('&&',	'&=',	'=&',	'??',	'==');
-		// 	$replace		= array('&',	'&',	'&',	'?',	'=' );
-		// 	$queryString	= str_replace($search, $replace, $queryString);
-
-		// 	$posAND		= strpos($queryString, '&');
-		// 	$posEQUAL	= strpos($queryString, '=');
-
-		// 	# go through and rebuild the query without the optional variables
-		// 	if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
-
-		// 		$ar_pares = explode('&', $queryString);
-		// 		if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
-
-		// 			#echo " <br> $key - $par ";
-		// 			if(strpos($par,'=')!==false) {
-
-		// 				$troz		= explode('=',$par) ;
-
-		// 				$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
-		// 				$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
-
-		// 				if(!in_array($varName, $ar_optional_vars)) {
-		// 					$qs .= $varName . '=' . $varValue .'&';
-		// 				}
-		// 			}
-		// 		}
-
-		// 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
-
-		// 		$qs = $queryString ;
-		// 	}
-
-		// 	$qs = str_replace($search, $replace, $qs);
-
-		// 	# if last char is & delete it
-		// 	if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
-
-		// 	return $qs;
-		// }//end get_page_query_string
 
 
 
@@ -1392,7 +1334,7 @@ abstract class common {
 				$use_cache = true;
 				if ($use_cache===true) {
 					$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
-					if (isset(self::$structure_context_cache[$ddo_key])) {
+					if (isset(self::$cache_structure_context[$ddo_key])) {
 						if(SHOW_DEBUG===true) {
 							$len = !empty($this->tipo)
 								? strlen($this->tipo)
@@ -1406,7 +1348,7 @@ abstract class common {
 								logger::DEBUG
 							);
 						}
-						return self::$structure_context_cache[$ddo_key];
+						return self::$cache_structure_context[$ddo_key];
 					}
 				}
 
@@ -1822,9 +1764,9 @@ abstract class common {
 
 		// cache. fix context dd_object
 			if ($use_cache===true) {
-				self::$structure_context_cache[$ddo_key] = $dd_object;
+				self::$cache_structure_context[$ddo_key] = $dd_object;
 				// Manage cache size to prevent memory leaks
-				self::manage_cache_size(self::$structure_context_cache);
+				self::manage_cache_size(self::$cache_structure_context);
 			}
 
 		// Debug
@@ -3494,12 +3436,12 @@ abstract class common {
 			$use_cache = true;
 			if ($use_cache===true) {
 				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-				if (isset(self::$get_tools_cache[$cache_key])) {
+				if (isset(self::$cache_get_tools[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
 						metrics::$get_tools_total_calls_cached++;
 					}
-					return self::$get_tools_cache[$cache_key];
+					return self::$cache_get_tools[$cache_key];
 				}
 			}
 
@@ -3576,9 +3518,9 @@ abstract class common {
 		// cache
 			if ($use_cache===true) {
 				// static
-				self::$get_tools_cache[$cache_key] = $tools;
+				self::$cache_get_tools[$cache_key] = $tools;
 				// Manage cache size to prevent memory leaks
-				self::manage_cache_size(self::$get_tools_cache);
+				self::manage_cache_size(self::$cache_get_tools);
 			}
 
 		// debug
