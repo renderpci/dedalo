@@ -14,7 +14,7 @@ export function registerDiffusionTools(server: McpServer, client: WorkClient, ct
 		description: 'Get diffusion targets, export rules, and current status.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion info' },
 		inputSchema: z.object({ tipo: TipoSchema.optional() }),
-		handler: async ({ tipo }) => client.call(rqo('get_diffusion_info', 'dd_diffusion_api', { tipo })),
+		handler: async ({ tipo }) => client.call(rqo({ action: 'get_diffusion_info', dd_api: 'dd_diffusion_api', source: { tipo } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -23,7 +23,7 @@ export function registerDiffusionTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion validate' },
 		inputSchema: z.object({ section_tipo: TipoSchema }),
 		handler: async ({ section_tipo }) =>
-			client.call(rqo('validate', 'dd_diffusion_api', { tipo: section_tipo, section_tipo })),
+			client.call(rqo({ action: 'validate', dd_api: 'dd_diffusion_api', source: { tipo: section_tipo, section_tipo } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -32,19 +32,19 @@ export function registerDiffusionTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion ontology map' },
 		inputSchema: z.object({ section_tipo: TipoSchema.optional() }),
 		handler: async ({ section_tipo }) =>
-			client.call(rqo('get_ontology_map', 'dd_diffusion_api', { tipo: section_tipo })),
+			client.call(rqo({ action: 'get_ontology_map', dd_api: 'dd_diffusion_api', source: { tipo: section_tipo } })),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_diffusion_run',
 		description:
 			'Execute the diffusion process for a section_tipo: publishes data from the work DB to the publication layer.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion run' },
+		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Diffusion run' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
-			options: z.record(z.unknown()).optional().describe('Additional diffusion options (target db, scope, ...)'),
+			options: z.record(z.string(), z.unknown()).optional().describe('Additional diffusion options (target db, scope, ...)'),
 		}),
 		handler: async ({ section_tipo, options }) =>
-			client.call(rqo('diffuse', 'dd_diffusion_api', { tipo: section_tipo, section_tipo }, undefined, options, false)),
+			client.call(rqo({ action: 'diffuse', dd_api: 'dd_diffusion_api', source: { tipo: section_tipo, section_tipo }, options, prevent_lock: false })),
 	}, ctx);
 }
