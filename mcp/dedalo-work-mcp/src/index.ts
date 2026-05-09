@@ -1,7 +1,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import pino from 'pino';
-import { WorkClient } from '@dedalo/mcp-common';
+import { WorkClient, TokenBucketRateLimiter } from '@dedalo/mcp-common';
 import { loadConfig } from './config.js';
 import { createWorkServer } from './server.js';
 
@@ -24,11 +24,25 @@ const client = new WorkClient({
 	autoLogin: true,
 });
 
+const limiter = config.rateLimit ? new TokenBucketRateLimiter(config.rateLimit) : null;
+
 const server = createWorkServer({
 	client,
 	logger,
-	rateLimit: config.rateLimit,
+	limiter,
 });
+
+// Periodically evict stale rate-limiter buckets to prevent memory leaks.
+if (limiter) {
+	const CLEANUP_INTERVAL_MS = 60_000;
+	const cleanupTimer = setInterval(() => {
+		const removed = limiter.cleanup();
+		if (removed > 0) {
+			logger.debug({ removed, remaining: limiter.size }, 'Rate limiter cleanup');
+		}
+	}, CLEANUP_INTERVAL_MS);
+	cleanupTimer.unref();
+}
 
 /**
  * Validate an incoming HTTP Origin against the allowlist.
