@@ -26,7 +26,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Portal: delete locator' },
 		inputSchema: z.object({ ...baseRecord, locator: LocatorSchema }),
 		handler: async ({ tipo, section_tipo, section_id, lang, locator }) =>
-			client.call(rqo('delete_locator', 'dd_component_portal_api', { tipo, section_tipo, section_id, lang }, undefined, { locator }, false)),
+			client.call(rqo({ action: 'delete_locator', dd_api: 'dd_component_portal_api', source: { tipo, section_tipo, section_id, lang }, options: { locator }, prevent_lock: false })),
 	}, ctx);
 
 	// ── Text area tags ───────────────────────────────────────────────────
@@ -36,7 +36,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Text area: get tags info' },
 		inputSchema: z.object(baseRecord),
 		handler: async ({ tipo, section_tipo, section_id, lang }) =>
-			client.call(rqo('get_tags_info', 'dd_component_text_area_api', { tipo, section_tipo, section_id, lang })),
+			client.call(rqo({ action: 'get_tags_info', dd_api: 'dd_component_text_area_api', source: { tipo, section_tipo, section_id, lang } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -45,7 +45,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Text area: delete tag' },
 		inputSchema: z.object({ ...baseRecord, tag_id: z.string().min(1).describe('Tag identifier to delete.') }),
 		handler: async ({ tipo, section_tipo, section_id, lang, tag_id }) =>
-			client.call(rqo('delete_tag', 'dd_component_text_area_api', { tipo, section_tipo, section_id, lang }, undefined, { tag_id }, false)),
+			client.call(rqo({ action: 'delete_tag', dd_api: 'dd_component_text_area_api', source: { tipo, section_tipo, section_id, lang }, options: { tag_id }, prevent_lock: false })),
 	}, ctx);
 
 	// ── AV ───────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'AV: get media streams' },
 		inputSchema: z.object(baseRecord),
 		handler: async ({ tipo, section_tipo, section_id, lang }) =>
-			client.call(rqo('get_media_streams', 'dd_component_av_api', { tipo, section_tipo, section_id, lang })),
+			client.call(rqo({ action: 'get_media_streams', dd_api: 'dd_component_av_api', source: { tipo, section_tipo, section_id, lang } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -64,7 +64,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'AV: download fragment' },
 		inputSchema: z.object({ ...baseRecord, fragment: z.string().min(1).describe('Fragment identifier or time range expression.') }),
 		handler: async ({ tipo, section_tipo, section_id, lang, fragment }) =>
-			client.call(rqo('download_fragment', 'dd_component_av_api', { tipo, section_tipo, section_id, lang }, undefined, { fragment })),
+			client.call(rqo({ action: 'download_fragment', dd_api: 'dd_component_av_api', source: { tipo, section_tipo, section_id, lang }, options: { fragment } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -73,7 +73,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'AV: create posterframe' },
 		inputSchema: z.object({ ...baseRecord, time: z.number().min(0).describe('Time position in seconds.') }),
 		handler: async ({ tipo, section_tipo, section_id, lang, time }) =>
-			client.call(rqo('create_posterframe', 'dd_component_av_api', { tipo, section_tipo, section_id, lang }, undefined, { time }, false)),
+			client.call(rqo({ action: 'create_posterframe', dd_api: 'dd_component_av_api', source: { tipo, section_tipo, section_id, lang }, options: { time }, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
@@ -82,7 +82,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'AV: delete posterframe' },
 		inputSchema: z.object(baseRecord),
 		handler: async ({ tipo, section_tipo, section_id, lang }) =>
-			client.call(rqo('delete_posterframe', 'dd_component_av_api', { tipo, section_tipo, section_id, lang }, undefined, undefined, false)),
+			client.call(rqo({ action: 'delete_posterframe', dd_api: 'dd_component_av_api', source: { tipo, section_tipo, section_id, lang }, prevent_lock: false })),
 	}, ctx);
 
 	// ── 3D ───────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true, title: '3D: move file' },
 		inputSchema: z.object({ ...baseRecord, target_dir: z.string().min(1).describe('Target directory inside Dédalo media storage.') }),
 		handler: async ({ tipo, section_tipo, section_id, lang, target_dir }) =>
-			client.call(rqo('move_file_to_dir', 'dd_component_3d_api', { tipo, section_tipo, section_id, lang }, undefined, { target_dir }, false)),
+			client.call(rqo({ action: 'move_file_to_dir', dd_api: 'dd_component_3d_api', source: { tipo, section_tipo, section_id, lang }, options: { target_dir }, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
@@ -101,6 +101,6 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: '3D: delete posterframe' },
 		inputSchema: z.object(baseRecord),
 		handler: async ({ tipo, section_tipo, section_id, lang }) =>
-			client.call(rqo('delete_posterframe', 'dd_component_3d_api', { tipo, section_tipo, section_id, lang }, undefined, undefined, false)),
+			client.call(rqo({ action: 'delete_posterframe', dd_api: 'dd_component_3d_api', source: { tipo, section_tipo, section_id, lang }, prevent_lock: false })),
 	}, ctx);
 }
