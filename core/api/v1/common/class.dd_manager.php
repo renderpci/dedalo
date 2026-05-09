@@ -246,7 +246,8 @@ final class dd_manager {
 				'dd_component_portal_api',
 				'dd_component_text_area_api',
 				'dd_component_av_api',
-				'dd_component_3d_api'
+				'dd_component_3d_api',
+				'dd_mcp_api'
 			];
 			$dd_api_type	= $rqo->dd_api ?? 'dd_core_api';
 			if (!in_array($dd_api_type, $allowed_api_classes, true)) {
