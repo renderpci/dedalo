@@ -1,4 +1,4 @@
-import { z, type ZodObject, type ZodRawShape } from 'zod';
+import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { TokenBucketRateLimiter } from '@dedalo/mcp-common';
 import type { Logger } from 'pino';
@@ -10,12 +10,12 @@ import type { Structured } from './output.js';
  * `structuredContent` in the response. The payload itself is permissive
  * because each tool defines its own `data` shape.
  */
-const StructuredOutputShape = {
+const StructuredOutputSchema = z.object({
 	ok: z.boolean(),
 	data: z.unknown().optional(),
 	pagination: z.unknown().optional(),
 	error: z.unknown().optional(),
-};
+});
 
 /**
  * Tool semantics hints for MCP clients. These are *hints only* —
@@ -42,12 +42,12 @@ export interface ToolContext {
  */
 export type ToolHandler<TIn, TOut> = (args: TIn, ctx: ToolContext) => Promise<TOut>;
 
-export interface ToolDefinition<TShape extends ZodRawShape, TOut> {
+export interface ToolDefinition<TSchema extends z.ZodType, TOut> {
 	name: string;
 	description: string;
 	annotations: ToolAnnotations;
-	inputSchema: ZodObject<TShape>;
-	handler: ToolHandler<z.infer<ZodObject<TShape>>, TOut>;
+	inputSchema: TSchema;
+	handler: ToolHandler<z.infer<TSchema>, TOut>;
 }
 
 /**
@@ -59,15 +59,10 @@ export interface ToolDefinition<TShape extends ZodRawShape, TOut> {
  * - Responses always wrapped as `{ ok: true, data, [pagination] }` on
  *   success or `{ ok: false, error: { code, message, hint? } }` on
  *   failure, emitted both as text content and as `structuredContent`.
- *
- * The registered callback is cast to `any` at the SDK boundary because
- * `@modelcontextprotocol/sdk` v1.29 declares the callback return type
- * against a vendored zod-v4 runtime while this package uses zod-v3;
- * the shapes are structurally identical at runtime.
  */
-export function registerTool<TShape extends ZodRawShape, TOut>(
+export function registerTool<TSchema extends z.ZodType, TOut>(
 	server: McpServer,
-	def: ToolDefinition<TShape, TOut>,
+	def: ToolDefinition<TSchema, TOut>,
 	ctx: ToolContext
 ): void {
 	const { name, description, annotations, inputSchema, handler } = def;
@@ -114,7 +109,7 @@ export function registerTool<TShape extends ZodRawShape, TOut>(
 
 		const started = Date.now();
 		try {
-			const data = await handler(parsed.data as z.infer<ZodObject<TShape>>, ctx);
+			const data = await handler(parsed.data as z.infer<TSchema>, ctx);
 			const latency = Date.now() - started;
 			ctx.logger.info({ tool: name, latency }, 'tool_call_ok');
 			const structured: Structured =
@@ -137,12 +132,14 @@ export function registerTool<TShape extends ZodRawShape, TOut>(
 		}
 	};
 
+	// Cast to `any` because the SDK pins its own vendored $ZodType version
+	// which may lag behind the workspace zod version; identical at runtime.
 	server.registerTool(
 		name,
 		{
 			description,
-			inputSchema: inputSchema.shape,
-			outputSchema: StructuredOutputShape,
+			inputSchema: inputSchema as any,
+			outputSchema: StructuredOutputSchema as any,
 			annotations,
 		},
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
