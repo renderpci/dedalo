@@ -22,45 +22,24 @@ export declare const SourceSchema: z.ZodObject<{
     model: z.ZodOptional<z.ZodString>;
     tipo: z.ZodOptional<z.ZodString>;
     section_tipo: z.ZodOptional<z.ZodString>;
-    section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-    mode: z.ZodOptional<z.ZodEnum<["edit", "list", "search", "tm", "portal", "tool"]>>;
+    section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    mode: z.ZodOptional<z.ZodEnum<{
+        edit: "edit";
+        list: "list";
+        search: "search";
+        tm: "tm";
+        portal: "portal";
+        tool: "tool";
+    }>>;
     lang: z.ZodOptional<z.ZodString>;
     action: z.ZodOptional<z.ZodString>;
     from_user_version: z.ZodOptional<z.ZodBoolean>;
     from_section_tipo: z.ZodOptional<z.ZodString>;
-    from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-    row_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
+    from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    row_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
     parent_tipo: z.ZodOptional<z.ZodString>;
     component_tipo: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    model?: string | undefined;
-    tipo?: string | undefined;
-    section_tipo?: string | undefined;
-    section_id?: string | number | undefined;
-    mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-    lang?: string | undefined;
-    action?: string | undefined;
-    from_user_version?: boolean | undefined;
-    from_section_tipo?: string | undefined;
-    from_section_id?: string | number | undefined;
-    row_section_id?: string | number | undefined;
-    parent_tipo?: string | undefined;
-    component_tipo?: string | undefined;
-}, {
-    model?: string | undefined;
-    tipo?: string | undefined;
-    section_tipo?: string | undefined;
-    section_id?: string | number | undefined;
-    mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-    lang?: string | undefined;
-    action?: string | undefined;
-    from_user_version?: boolean | undefined;
-    from_section_tipo?: string | undefined;
-    from_section_id?: string | number | undefined;
-    row_section_id?: string | number | undefined;
-    parent_tipo?: string | undefined;
-    component_tipo?: string | undefined;
-}>;
+}, z.core.$strip>;
 export type Source = z.infer<typeof SourceSchema>;
 /**
     * FILTER_RULE_SCHEMA / FILTER_RULE
@@ -84,19 +63,7 @@ export declare const FilterRuleSchema: z.ZodObject<{
     value: z.ZodAny;
     q_name: z.ZodOptional<z.ZodString>;
     use_function: z.ZodOptional<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    operator: string;
-    value?: any;
-    q_name?: string | undefined;
-    use_function?: boolean | undefined;
-}, {
-    path: string;
-    operator: string;
-    value?: any;
-    q_name?: string | undefined;
-    use_function?: boolean | undefined;
-}>;
+}, z.core.$strip>;
 /**
     * FILTER_SCHEMA / FILTER
     * Recursive logical group used in `Sqo.filter`.
@@ -150,29 +117,13 @@ export type Filter = {
     */
 export declare const LocatorSchema: z.ZodObject<{
     section_tipo: z.ZodString;
-    section_id: z.ZodUnion<[z.ZodString, z.ZodNumber]>;
+    section_id: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
     component_tipo: z.ZodOptional<z.ZodString>;
     tag_id: z.ZodOptional<z.ZodString>;
     type: z.ZodOptional<z.ZodString>;
     from_section_tipo: z.ZodOptional<z.ZodString>;
-    from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-}, "strip", z.ZodTypeAny, {
-    section_tipo: string;
-    section_id: string | number;
-    type?: string | undefined;
-    from_section_tipo?: string | undefined;
-    from_section_id?: string | number | undefined;
-    component_tipo?: string | undefined;
-    tag_id?: string | undefined;
-}, {
-    section_tipo: string;
-    section_id: string | number;
-    type?: string | undefined;
-    from_section_tipo?: string | undefined;
-    from_section_id?: string | number | undefined;
-    component_tipo?: string | undefined;
-    tag_id?: string | undefined;
-}>;
+    from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+}, z.core.$strip>;
 export type Locator = z.infer<typeof LocatorSchema>;
 /**
     * SQO_SCHEMA / SQO
@@ -210,46 +161,27 @@ export type Locator = z.infer<typeof LocatorSchema>;
     */
 export declare const SqoSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
-    section_tipo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodArray<z.ZodString, "many">]>>;
+    section_tipo: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>;
     limit: z.ZodOptional<z.ZodNumber>;
     offset: z.ZodOptional<z.ZodNumber>;
-    filter: z.ZodOptional<z.ZodType<Filter, z.ZodTypeDef, Filter>>;
+    filter: z.ZodOptional<z.ZodType<Filter, unknown, z.core.$ZodTypeInternals<Filter, unknown>>>;
     filter_by_locators: z.ZodOptional<z.ZodArray<z.ZodObject<{
         section_tipo: z.ZodString;
-        section_id: z.ZodUnion<[z.ZodString, z.ZodNumber]>;
+        section_id: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         component_tipo: z.ZodOptional<z.ZodString>;
         tag_id: z.ZodOptional<z.ZodString>;
         type: z.ZodOptional<z.ZodString>;
         from_section_tipo: z.ZodOptional<z.ZodString>;
-        from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-    }, "strip", z.ZodTypeAny, {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }, {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }>, "many">>;
-    select: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    }, z.core.$strip>>>;
+    select: z.ZodOptional<z.ZodArray<z.ZodString>>;
     order: z.ZodOptional<z.ZodArray<z.ZodObject<{
-        direction: z.ZodEnum<["ASC", "DESC"]>;
+        direction: z.ZodEnum<{
+            ASC: "ASC";
+            DESC: "DESC";
+        }>;
         path: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        path: string;
-        direction: "ASC" | "DESC";
-    }, {
-        path: string;
-        direction: "ASC" | "DESC";
-    }>, "many">>;
+    }, z.core.$strip>>>;
     allow_dataset: z.ZodOptional<z.ZodBoolean>;
     skip_projects_filter: z.ZodOptional<z.ZodBoolean>;
     parsed: z.ZodOptional<z.ZodBoolean>;
@@ -257,61 +189,7 @@ export declare const SqoSchema: z.ZodObject<{
     fixed_mode: z.ZodOptional<z.ZodString>;
     full_count: z.ZodOptional<z.ZodBoolean>;
     type: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    section_tipo?: string | string[] | undefined;
-    filter?: Filter | undefined;
-    type?: string | undefined;
-    id?: string | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
-    filter_by_locators?: {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }[] | undefined;
-    select?: string[] | undefined;
-    order?: {
-        path: string;
-        direction: "ASC" | "DESC";
-    }[] | undefined;
-    allow_dataset?: boolean | undefined;
-    skip_projects_filter?: boolean | undefined;
-    parsed?: boolean | undefined;
-    children_recursive?: boolean | undefined;
-    fixed_mode?: string | undefined;
-    full_count?: boolean | undefined;
-}, {
-    section_tipo?: string | string[] | undefined;
-    filter?: Filter | undefined;
-    type?: string | undefined;
-    id?: string | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
-    filter_by_locators?: {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }[] | undefined;
-    select?: string[] | undefined;
-    order?: {
-        path: string;
-        direction: "ASC" | "DESC";
-    }[] | undefined;
-    allow_dataset?: boolean | undefined;
-    skip_projects_filter?: boolean | undefined;
-    parsed?: boolean | undefined;
-    children_recursive?: boolean | undefined;
-    fixed_mode?: string | undefined;
-    full_count?: boolean | undefined;
-}>;
+}, z.core.$strip>;
 export type Sqo = z.infer<typeof SqoSchema>;
 /**
     * RQO_SCHEMA / RQO
@@ -344,87 +222,47 @@ export declare const RqoSchema: z.ZodObject<{
         model: z.ZodOptional<z.ZodString>;
         tipo: z.ZodOptional<z.ZodString>;
         section_tipo: z.ZodOptional<z.ZodString>;
-        section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-        mode: z.ZodOptional<z.ZodEnum<["edit", "list", "search", "tm", "portal", "tool"]>>;
+        section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        mode: z.ZodOptional<z.ZodEnum<{
+            edit: "edit";
+            list: "list";
+            search: "search";
+            tm: "tm";
+            portal: "portal";
+            tool: "tool";
+        }>>;
         lang: z.ZodOptional<z.ZodString>;
         action: z.ZodOptional<z.ZodString>;
         from_user_version: z.ZodOptional<z.ZodBoolean>;
         from_section_tipo: z.ZodOptional<z.ZodString>;
-        from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-        row_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
+        from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        row_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
         parent_tipo: z.ZodOptional<z.ZodString>;
         component_tipo: z.ZodOptional<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        model?: string | undefined;
-        tipo?: string | undefined;
-        section_tipo?: string | undefined;
-        section_id?: string | number | undefined;
-        mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-        lang?: string | undefined;
-        action?: string | undefined;
-        from_user_version?: boolean | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        row_section_id?: string | number | undefined;
-        parent_tipo?: string | undefined;
-        component_tipo?: string | undefined;
-    }, {
-        model?: string | undefined;
-        tipo?: string | undefined;
-        section_tipo?: string | undefined;
-        section_id?: string | number | undefined;
-        mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-        lang?: string | undefined;
-        action?: string | undefined;
-        from_user_version?: boolean | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        row_section_id?: string | number | undefined;
-        parent_tipo?: string | undefined;
-        component_tipo?: string | undefined;
-    }>>;
+    }, z.core.$strip>>;
     sqo: z.ZodOptional<z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
-        section_tipo: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodArray<z.ZodString, "many">]>>;
+        section_tipo: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodArray<z.ZodString>]>>;
         limit: z.ZodOptional<z.ZodNumber>;
         offset: z.ZodOptional<z.ZodNumber>;
-        filter: z.ZodOptional<z.ZodType<Filter, z.ZodTypeDef, Filter>>;
+        filter: z.ZodOptional<z.ZodType<Filter, unknown, z.core.$ZodTypeInternals<Filter, unknown>>>;
         filter_by_locators: z.ZodOptional<z.ZodArray<z.ZodObject<{
             section_tipo: z.ZodString;
-            section_id: z.ZodUnion<[z.ZodString, z.ZodNumber]>;
+            section_id: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
             component_tipo: z.ZodOptional<z.ZodString>;
             tag_id: z.ZodOptional<z.ZodString>;
             type: z.ZodOptional<z.ZodString>;
             from_section_tipo: z.ZodOptional<z.ZodString>;
-            from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-        }, "strip", z.ZodTypeAny, {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }, {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }>, "many">>;
-        select: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+            from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        }, z.core.$strip>>>;
+        select: z.ZodOptional<z.ZodArray<z.ZodString>>;
         order: z.ZodOptional<z.ZodArray<z.ZodObject<{
-            direction: z.ZodEnum<["ASC", "DESC"]>;
+            direction: z.ZodEnum<{
+                ASC: "ASC";
+                DESC: "DESC";
+            }>;
             path: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            path: string;
-            direction: "ASC" | "DESC";
-        }, {
-            path: string;
-            direction: "ASC" | "DESC";
-        }>, "many">>;
+        }, z.core.$strip>>>;
         allow_dataset: z.ZodOptional<z.ZodBoolean>;
         skip_projects_filter: z.ZodOptional<z.ZodBoolean>;
         parsed: z.ZodOptional<z.ZodBoolean>;
@@ -432,172 +270,14 @@ export declare const RqoSchema: z.ZodObject<{
         fixed_mode: z.ZodOptional<z.ZodString>;
         full_count: z.ZodOptional<z.ZodBoolean>;
         type: z.ZodOptional<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        section_tipo?: string | string[] | undefined;
-        filter?: Filter | undefined;
-        type?: string | undefined;
-        id?: string | undefined;
-        limit?: number | undefined;
-        offset?: number | undefined;
-        filter_by_locators?: {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }[] | undefined;
-        select?: string[] | undefined;
-        order?: {
-            path: string;
-            direction: "ASC" | "DESC";
-        }[] | undefined;
-        allow_dataset?: boolean | undefined;
-        skip_projects_filter?: boolean | undefined;
-        parsed?: boolean | undefined;
-        children_recursive?: boolean | undefined;
-        fixed_mode?: string | undefined;
-        full_count?: boolean | undefined;
-    }, {
-        section_tipo?: string | string[] | undefined;
-        filter?: Filter | undefined;
-        type?: string | undefined;
-        id?: string | undefined;
-        limit?: number | undefined;
-        offset?: number | undefined;
-        filter_by_locators?: {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }[] | undefined;
-        select?: string[] | undefined;
-        order?: {
-            path: string;
-            direction: "ASC" | "DESC";
-        }[] | undefined;
-        allow_dataset?: boolean | undefined;
-        skip_projects_filter?: boolean | undefined;
-        parsed?: boolean | undefined;
-        children_recursive?: boolean | undefined;
-        fixed_mode?: string | undefined;
-        full_count?: boolean | undefined;
-    }>>;
+    }, z.core.$strip>>;
     show: z.ZodOptional<z.ZodAny>;
     options: z.ZodOptional<z.ZodAny>;
     prevent_lock: z.ZodOptional<z.ZodBoolean>;
     csrf_token: z.ZodOptional<z.ZodString>;
     key_dir: z.ZodOptional<z.ZodString>;
     row_key: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    action: string;
-    options?: any;
-    dd_api?: string | undefined;
-    source?: {
-        model?: string | undefined;
-        tipo?: string | undefined;
-        section_tipo?: string | undefined;
-        section_id?: string | number | undefined;
-        mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-        lang?: string | undefined;
-        action?: string | undefined;
-        from_user_version?: boolean | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        row_section_id?: string | number | undefined;
-        parent_tipo?: string | undefined;
-        component_tipo?: string | undefined;
-    } | undefined;
-    sqo?: {
-        section_tipo?: string | string[] | undefined;
-        filter?: Filter | undefined;
-        type?: string | undefined;
-        id?: string | undefined;
-        limit?: number | undefined;
-        offset?: number | undefined;
-        filter_by_locators?: {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }[] | undefined;
-        select?: string[] | undefined;
-        order?: {
-            path: string;
-            direction: "ASC" | "DESC";
-        }[] | undefined;
-        allow_dataset?: boolean | undefined;
-        skip_projects_filter?: boolean | undefined;
-        parsed?: boolean | undefined;
-        children_recursive?: boolean | undefined;
-        fixed_mode?: string | undefined;
-        full_count?: boolean | undefined;
-    } | undefined;
-    show?: any;
-    prevent_lock?: boolean | undefined;
-    csrf_token?: string | undefined;
-    key_dir?: string | undefined;
-    row_key?: string | undefined;
-}, {
-    action: string;
-    options?: any;
-    dd_api?: string | undefined;
-    source?: {
-        model?: string | undefined;
-        tipo?: string | undefined;
-        section_tipo?: string | undefined;
-        section_id?: string | number | undefined;
-        mode?: "edit" | "list" | "search" | "tm" | "portal" | "tool" | undefined;
-        lang?: string | undefined;
-        action?: string | undefined;
-        from_user_version?: boolean | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        row_section_id?: string | number | undefined;
-        parent_tipo?: string | undefined;
-        component_tipo?: string | undefined;
-    } | undefined;
-    sqo?: {
-        section_tipo?: string | string[] | undefined;
-        filter?: Filter | undefined;
-        type?: string | undefined;
-        id?: string | undefined;
-        limit?: number | undefined;
-        offset?: number | undefined;
-        filter_by_locators?: {
-            section_tipo: string;
-            section_id: string | number;
-            type?: string | undefined;
-            from_section_tipo?: string | undefined;
-            from_section_id?: string | number | undefined;
-            component_tipo?: string | undefined;
-            tag_id?: string | undefined;
-        }[] | undefined;
-        select?: string[] | undefined;
-        order?: {
-            path: string;
-            direction: "ASC" | "DESC";
-        }[] | undefined;
-        allow_dataset?: boolean | undefined;
-        skip_projects_filter?: boolean | undefined;
-        parsed?: boolean | undefined;
-        children_recursive?: boolean | undefined;
-        fixed_mode?: string | undefined;
-        full_count?: boolean | undefined;
-    } | undefined;
-    show?: any;
-    prevent_lock?: boolean | undefined;
-    csrf_token?: string | undefined;
-    key_dir?: string | undefined;
-    row_key?: string | undefined;
-}>;
+}, z.core.$strip>;
 export type Rqo = z.infer<typeof RqoSchema>;
 /**
     * DEDALO_RESPONSE_SCHEMA / DEDALO_RESPONSE
@@ -616,36 +296,16 @@ export type Rqo = z.infer<typeof RqoSchema>;
     * should not be parsed programmatically (use `errors` instead).
     */
 export declare const DedaloResponseSchema: z.ZodObject<{
-    result: z.ZodUnion<[z.ZodBoolean, z.ZodAny]>;
+    result: z.ZodUnion<readonly [z.ZodBoolean, z.ZodAny]>;
     msg: z.ZodOptional<z.ZodString>;
-    errors: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    errors: z.ZodOptional<z.ZodArray<z.ZodString>>;
     debug: z.ZodOptional<z.ZodAny>;
     csrf_token: z.ZodOptional<z.ZodString>;
     dedalo_last_error: z.ZodOptional<z.ZodString>;
     data: z.ZodOptional<z.ZodAny>;
     context: z.ZodOptional<z.ZodAny>;
     total: z.ZodOptional<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    csrf_token?: string | undefined;
-    result?: any;
-    msg?: string | undefined;
-    errors?: string[] | undefined;
-    debug?: any;
-    dedalo_last_error?: string | undefined;
-    data?: any;
-    context?: any;
-    total?: number | undefined;
-}, {
-    csrf_token?: string | undefined;
-    result?: any;
-    msg?: string | undefined;
-    errors?: string[] | undefined;
-    debug?: any;
-    dedalo_last_error?: string | undefined;
-    data?: any;
-    context?: any;
-    total?: number | undefined;
-}>;
+}, z.core.$strip>;
 export type DedaloResponse = z.infer<typeof DedaloResponseSchema>;
 /**
     * PUBLICATION_REQUEST_SCHEMA / PUBLICATION_REQUEST
@@ -665,17 +325,7 @@ export declare const PublicationRequestSchema: z.ZodObject<{
     lang: z.ZodOptional<z.ZodString>;
     db_name: z.ZodOptional<z.ZodString>;
     options: z.ZodAny;
-}, "strip", z.ZodTypeAny, {
-    code: string;
-    options?: any;
-    lang?: string | undefined;
-    db_name?: string | undefined;
-}, {
-    code: string;
-    options?: any;
-    lang?: string | undefined;
-    db_name?: string | undefined;
-}>;
+}, z.core.$strip>;
 export type PublicationRequest = z.infer<typeof PublicationRequestSchema>;
 /**
     * PUBLICATION_OPTIONS_SCHEMA / PUBLICATION_OPTIONS
@@ -706,37 +356,21 @@ export declare const PublicationOptionsSchema: z.ZodObject<{
     table: z.ZodOptional<z.ZodString>;
     section_tipo: z.ZodOptional<z.ZodString>;
     lang: z.ZodOptional<z.ZodString>;
-    id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-    ar_id: z.ZodOptional<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodNumber]>, "many">>;
+    id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    ar_id: z.ZodOptional<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
     limit: z.ZodOptional<z.ZodNumber>;
     offset: z.ZodOptional<z.ZodNumber>;
     order: z.ZodOptional<z.ZodString>;
-    fields: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    fields: z.ZodOptional<z.ZodArray<z.ZodString>>;
     filter_by_locators: z.ZodOptional<z.ZodArray<z.ZodObject<{
         section_tipo: z.ZodString;
-        section_id: z.ZodUnion<[z.ZodString, z.ZodNumber]>;
+        section_id: z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>;
         component_tipo: z.ZodOptional<z.ZodString>;
         tag_id: z.ZodOptional<z.ZodString>;
         type: z.ZodOptional<z.ZodString>;
         from_section_tipo: z.ZodOptional<z.ZodString>;
-        from_section_id: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodNumber]>>;
-    }, "strip", z.ZodTypeAny, {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }, {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }>, "many">>;
+        from_section_id: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    }, z.core.$strip>>>;
     sql_filter: z.ZodOptional<z.ZodString>;
     value: z.ZodOptional<z.ZodString>;
     search_thesaurus: z.ZodOptional<z.ZodBoolean>;
@@ -744,7 +378,7 @@ export declare const PublicationOptionsSchema: z.ZodObject<{
     terms: z.ZodOptional<z.ZodBoolean>;
     q: z.ZodOptional<z.ZodString>;
     q_operator: z.ZodOptional<z.ZodString>;
-    path: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    path: z.ZodOptional<z.ZodArray<z.ZodString>>;
     tipo: z.ZodOptional<z.ZodString>;
     model: z.ZodOptional<z.ZodString>;
     web_path: z.ZodOptional<z.ZodString>;
@@ -755,82 +389,6 @@ export declare const PublicationOptionsSchema: z.ZodObject<{
     resolve_references: z.ZodOptional<z.ZodBoolean>;
     media: z.ZodOptional<z.ZodString>;
     db_name: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    dedalo_get: string;
-    model?: string | undefined;
-    tipo?: string | undefined;
-    section_tipo?: string | undefined;
-    value?: string | undefined;
-    filter?: string | undefined;
-    path?: string[] | undefined;
-    type?: string | undefined;
-    lang?: string | undefined;
-    id?: string | number | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
-    filter_by_locators?: {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }[] | undefined;
-    order?: string | undefined;
-    db_name?: string | undefined;
-    table?: string | undefined;
-    ar_id?: (string | number)[] | undefined;
-    fields?: string[] | undefined;
-    sql_filter?: string | undefined;
-    search_thesaurus?: boolean | undefined;
-    add_parents?: boolean | undefined;
-    terms?: boolean | undefined;
-    q?: string | undefined;
-    q_operator?: string | undefined;
-    web_path?: string | undefined;
-    term_id?: string | undefined;
-    children?: boolean | undefined;
-    resolve_references?: boolean | undefined;
-    media?: string | undefined;
-}, {
-    dedalo_get: string;
-    model?: string | undefined;
-    tipo?: string | undefined;
-    section_tipo?: string | undefined;
-    value?: string | undefined;
-    filter?: string | undefined;
-    path?: string[] | undefined;
-    type?: string | undefined;
-    lang?: string | undefined;
-    id?: string | number | undefined;
-    limit?: number | undefined;
-    offset?: number | undefined;
-    filter_by_locators?: {
-        section_tipo: string;
-        section_id: string | number;
-        type?: string | undefined;
-        from_section_tipo?: string | undefined;
-        from_section_id?: string | number | undefined;
-        component_tipo?: string | undefined;
-        tag_id?: string | undefined;
-    }[] | undefined;
-    order?: string | undefined;
-    db_name?: string | undefined;
-    table?: string | undefined;
-    ar_id?: (string | number)[] | undefined;
-    fields?: string[] | undefined;
-    sql_filter?: string | undefined;
-    search_thesaurus?: boolean | undefined;
-    add_parents?: boolean | undefined;
-    terms?: boolean | undefined;
-    q?: string | undefined;
-    q_operator?: string | undefined;
-    web_path?: string | undefined;
-    term_id?: string | undefined;
-    children?: boolean | undefined;
-    resolve_references?: boolean | undefined;
-    media?: string | undefined;
-}>;
+}, z.core.$strip>;
 export type PublicationOptions = z.infer<typeof PublicationOptionsSchema>;
 //# sourceMappingURL=index.d.ts.map
