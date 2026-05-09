@@ -19,7 +19,7 @@ export function registerTimeMachineTools(server: McpServer, client: WorkClient, 
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ tipo, section_id, lang }) =>
-			client.call(rqo('get_node_data', 'dd_ts_api', { tipo, section_tipo: tipo, section_id, lang })),
+			client.call(rqo({ action: 'get_node_data', dd_api: 'dd_ts_api', source: { tipo, section_tipo: tipo, section_id, lang } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -32,6 +32,6 @@ export function registerTimeMachineTools(server: McpServer, client: WorkClient, 
 			lang: OptionalLangSchema,
 		}),
 		handler: async ({ tipo, section_id, lang }) =>
-			client.call(rqo('get_children_data', 'dd_ts_api', { tipo, section_tipo: tipo, section_id, lang })),
+			client.call(rqo({ action: 'get_children_data', dd_api: 'dd_ts_api', source: { tipo, section_tipo: tipo, section_id, lang } })),
 	}, ctx);
 }
