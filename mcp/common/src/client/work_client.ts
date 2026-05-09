@@ -82,11 +82,22 @@ export class WorkClient {
 	    headers['X-Dedalo-Csrf-Token'] = this.csrfToken;
 	  }
 
-	  const res = await fetch(this.baseUrl, {
-	    method: 'POST',
-	    headers,
-	    body: JSON.stringify(body),
-	  });
+	  let res: Response;
+	  try {
+	    res = await fetch(this.baseUrl, {
+	      method: 'POST',
+	      headers,
+	      body: JSON.stringify(body),
+	    });
+	  } catch (err) {
+	    const message = err instanceof Error ? err.message : String(err);
+	    throw new DedaloError(
+	      `Network error calling Dédalo API: ${message}`,
+	      'network_error',
+	      [],
+	      { originalError: message }
+	    );
+	  }
 
 	  const setCookie = res.headers.get('set-cookie');
 	  if (setCookie) {
