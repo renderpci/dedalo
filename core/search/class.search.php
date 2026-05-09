@@ -245,22 +245,22 @@ class search {
 		// then we find their children and perform the final combined search.
 		// This avoids side effects on the current instance.
 		if (isset($this->sqo->children_recursive) && $this->sqo->children_recursive===true) {
-			
+
 			// Create a dedicated search for all parents
 			$parents_sqo = clone $this->sqo;
 			$parents_sqo->children_recursive = false;
 			$parents_sqo->limit  = 'all';
 			$parents_sqo->offset = 0;
-			
+
 			$parents_search = search::get_instance($parents_sqo);
 			$parents_db_result = $parents_search->search();
-			
+
 			if (!$parents_db_result) {
 				return false;
 			}
 
 			// Process parents to find children and execute final combined search
-			return $this->search_children_recursive($parents_db_result->get_result());
+			return $this->search_children_recursive($parents_db_result);
 		}
 
 		// parse SQO. Converts JSON search_query_object to SQL query string
@@ -280,7 +280,7 @@ class search {
 		// Note: intercepted at the beginning of search() if sqo->children_recursive is true
 		// This block is left only for the case when search_children_recursive() is called directly (rarely)
 		// but since we intercepted it above, this should be redundant for normal search calls.
-		
+
 		// debug
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time,'ms');
@@ -333,14 +333,14 @@ class search {
 	* Creates a new SQO with all section_id of parents and children.
 	* Searches the combination and updates main SQO with the new SQO (with all
 	* parents and children) to be used for pagination.
-	* @param object $main_result (\PgSql\Result)
+	* @param db_result $parents_db_result
 	* @return db_result|false $result
 	*/
-	private function search_children_recursive( object $main_result ) : db_result|false {
+	private function search_children_recursive( db_result $parents_db_result ) : db_result|false {
 
 		$ar_row_children = [];
 		$ar_records = [];
-		while ( $row = pg_fetch_object($main_result) ) {
+		foreach ($parents_db_result as $row) {
 
 			// row expected an object as {section_tipo: oh1, section_id: 2} (select previously changed on parse sqo)
 			// Note: when full_count is set, section_tipo may not be selected, so we fall back to main_section_tipo
@@ -362,7 +362,7 @@ class search {
 			$ar_row_children = [...$ar_row_children, ...$row_children];
 		}
 
-		// No children found case. Return the main search result wrapped in db_result.
+		// No children found case. Return the main search result rewound to start.
 		if (empty($ar_row_children)) {
 			// Update total with parents count even if no children are found
 			$this->sqo->total = count($ar_records);
@@ -372,8 +372,8 @@ class search {
 			}
 
 			// Reset pointer to beginning since it was already iterated
-			pg_result_seek($main_result, 0);
-			return new db_result($main_result);
+			$parents_db_result->seek(0);
+			return $parents_db_result;
 		}
 
 		// Merges parent and children records
