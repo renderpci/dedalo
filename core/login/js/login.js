@@ -247,6 +247,9 @@ login.quit = async function() {
 	// is_developer. Determine if the user is a developer
 	const is_developer = typeof page_globals !== 'undefined' ? (page_globals.is_developer ?? false) : false;
 
+	// Dédalo root web. Main http dir for Dédalo files (usually '/dedalo')
+	const dedalo_root_web = typeof DEDALO_ROOT_WEB !== 'undefined' ? DEDALO_ROOT_WEB : '/'
+
 	try {
 
 		// data_manager. Make API call to quit
@@ -304,7 +307,7 @@ login.quit = async function() {
 						window.location.replace(window.location.href);
 					}else{
 						// redirect to Dédalo base URL to force access to default user section
-						window.location.href = DEDALO_ROOT_WEB
+						window.location.href = dedalo_root_web
 					}
 				}
 			);
@@ -312,7 +315,7 @@ login.quit = async function() {
 			}else{
 				console.error('API call failed:', api_response);
 				// redirect to Dédalo base URL to force access to default user section
-				window.location.href = DEDALO_ROOT_WEB
+				window.location.href = dedalo_root_web
 			}
 	} catch (error) {
 		console.error('Error in quit function:', error);
