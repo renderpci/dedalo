@@ -72,5 +72,21 @@ export declare class TokenBucketRateLimiter {
      * Useful after a successful re-login or admin override.
      */
     reset(key: string): void;
+    /**
+     * CLEANUP
+     * Remove stale buckets that have not been accessed recently.
+     *
+     * Why: in long-running HTTP servers, every unique session key
+     * accumulates a bucket.  Buckets that have been idle for longer
+     * than `2 * refillRateMs` are safe to evict — their tokens would
+     * have fully refilled anyway.
+     *
+     * @param maxAgeMs  Maximum idle time (ms) before eviction.
+     *                  Defaults to `2 * refillRateMs`.
+     * @return          Number of buckets removed.
+     */
+    cleanup(maxAgeMs?: number): number;
+    /** Number of active buckets (for monitoring). */
+    get size(): number;
 }
 //# sourceMappingURL=rate_limit.d.ts.map

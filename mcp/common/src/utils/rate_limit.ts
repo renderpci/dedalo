@@ -115,4 +115,35 @@ export class TokenBucketRateLimiter {
 	reset(key: string): void {
 	  this.store.delete(key);
 	}
+
+	/**
+	 * CLEANUP
+	 * Remove stale buckets that have not been accessed recently.
+	 *
+	 * Why: in long-running HTTP servers, every unique session key
+	 * accumulates a bucket.  Buckets that have been idle for longer
+	 * than `2 * refillRateMs` are safe to evict — their tokens would
+	 * have fully refilled anyway.
+	 *
+	 * @param maxAgeMs  Maximum idle time (ms) before eviction.
+	 *                  Defaults to `2 * refillRateMs`.
+	 * @return          Number of buckets removed.
+	 */
+	cleanup(maxAgeMs?: number): number {
+	  const threshold = maxAgeMs ?? this.refillRateMs * 2;
+	  const now = Date.now();
+	  let removed = 0;
+	  for (const [key, bucket] of this.store) {
+	    if (now - bucket.lastRefill > threshold) {
+	      this.store.delete(key);
+	      removed++;
+	    }
+	  }
+	  return removed;
+	}
+
+	/** Number of active buckets (for monitoring). */
+	get size(): number {
+	  return this.store.size;
+	}
 }
