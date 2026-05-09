@@ -643,10 +643,8 @@ class component_relation_index extends component_relation_common {
 	public static function get_referenced_locators_with_cache( object $locator, string $cache_key ) : array {
 
 		// cache
-
-
 			// Safe control: prevent big array memory and performance problems
-			if (isset(self::$referended_locators_cache) && count(self::$referended_locators_cache) > 1000) {
+			if (count(self::$referended_locators_cache) > 1000) {
 				self::$referended_locators_cache = [];
 			}
 
