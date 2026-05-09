@@ -61,9 +61,9 @@ class security {
 		/**
 		 * Static cache for parsed permissions table data.
 		 * Prevents repeated file reads or database queries for permission lookups.
-		 * @var array $permissions_table_cache
+		 * @var ?array $permissions_table_cache
 		 */
-		public static array $permissions_table_cache = [];
+		public static ?array $permissions_table_cache = null;
 
 		/**
 		 * Server-only flag to grant temporary read access for non-destructive operations.
@@ -234,7 +234,7 @@ class security {
 				// static cache
 				// (!) Its important to use static cache here to handle properly the login sequence,
 				// where some permission resolutions are called before the file cache is created.
-				if (isset(self::$permissions_table_cache)) {
+				if (self::$permissions_table_cache !== null) {
 					return self::$permissions_table_cache;
 				}
 
@@ -420,7 +420,7 @@ class security {
 		}
 
 		// empty static var
-		security::$permissions_table_cache = [];
+		security::$permissions_table_cache = null;
 
 		// delete on-disk cache so the next lookup regenerates from the component
 		dd_cache::delete_cache_files([
