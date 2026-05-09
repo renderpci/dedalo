@@ -1,4 +1,6 @@
 import { z } from 'zod';
+export { FilterSchema, FilterRuleSchema } from '@dedalo/mcp-common';
+export type { Filter, FilterRule } from '@dedalo/mcp-common';
 
 /**
  * SCHEMAS
@@ -48,44 +50,6 @@ export const PaginationSchema = z.object({
 	offset: z.number().int().min(0).default(0).describe('Records to skip before returning results.'),
 	full_count: z.boolean().default(false).describe('If true, include the total matching-rows count ignoring limit/offset.'),
 });
-
-/** Single filter rule: `{ path, operator, value }`. */
-export const FilterRuleSchema = z.object({
-	path: z.string().describe('Component tipo to test (e.g. `oh14`).'),
-	operator: z.string().describe('Comparator: `=`, `!=`, `contains`, `starts`, `>`, `<`, `is_null`, `is_not_null`, ...'),
-	value: z.unknown().optional().describe('Comparison value. Type depends on the component and operator.'),
-	q_name: z.string().optional(),
-	use_function: z.boolean().optional(),
-});
-export type FilterRuleInput = z.infer<typeof FilterRuleSchema>;
-
-/**
- * Recursive AND/OR filter tree.
- *
- * Example:
- * ```json
- * {
- *   "operator": "AND",
- *   "rules": [
- *     { "path": "oh14", "operator": "contains", "value": "Picasso" },
- *     { "operator": "OR", "rules": [
- *       { "path": "oh15", "operator": "=", "value": "lg-eng" },
- *       { "path": "oh15", "operator": "=", "value": "lg-spa" }
- *     ] }
- *   ]
- * }
- * ```
- */
-export type FilterInput = {
-	operator?: 'AND' | 'OR';
-	rules: Array<FilterRuleInput | FilterInput>;
-};
-export const FilterSchema: z.ZodType<FilterInput> = z.lazy(() =>
-	z.object({
-		operator: z.enum(['AND', 'OR']).default('AND').describe('Combiner for `rules`. Defaults to AND.'),
-		rules: z.array(z.union([FilterRuleSchema, FilterSchema])).describe('Array of rules or nested filter groups.'),
-	})
-);
 
 /** Order clause: `{ path, direction }`. */
 export const OrderClauseSchema = z.object({
