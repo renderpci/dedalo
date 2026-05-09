@@ -19,8 +19,8 @@ export function reg(
 ): void {
 	server.registerTool(
 		name,
-		{ description, inputSchema: schema },
-		async (args: unknown, extra) => {
+		{ description, inputSchema: schema as any },
+		async (args: unknown, extra: { sessionId?: string }) => {
 			if (limiter) {
 				const sessionId = extra.sessionId ?? 'default';
 				const result = limiter.consume(sessionId);
