@@ -23,6 +23,8 @@ function hintFor(code: DedaloErrorCode): string | undefined {
 			return 'The record is locked by another session. Wait and retry, or use `dedalo_update_lock_state` to release the lock if you own it.';
 		case 'db_connection_failed':
 			return 'The Dédalo server could not reach its database. This is a server-side issue; check DB logs.';
+		case 'network_error':
+			return 'Could not reach the Dédalo server. Verify DEDALO_WORK_API_URL is correct and the server is running.';
 		case 'invalid_request':
 			return 'The request shape was rejected by Dédalo. Review the input against the tool schema.';
 		default:
