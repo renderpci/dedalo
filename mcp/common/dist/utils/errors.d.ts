@@ -15,7 +15,7 @@
     * const code: DedaloErrorCode = 'not_logged'; // TS validates this
     * ```
     */
-export type DedaloErrorCode = 'permissions_denied' | 'csrf_failed' | 'not_logged' | 'invalid_api_class' | 'invalid_action' | 'invalid_request' | 'login_failed' | 'maintenance_mode' | 'update_lock' | 'db_connection_failed' | 'unknown';
+export type DedaloErrorCode = 'permissions_denied' | 'csrf_failed' | 'not_logged' | 'invalid_api_class' | 'invalid_action' | 'invalid_request' | 'login_failed' | 'maintenance_mode' | 'update_lock' | 'db_connection_failed' | 'network_error' | 'unknown';
 /**
     * CLASS DEDALO_ERROR
     * Typed exception that carries both a human-readable message and the

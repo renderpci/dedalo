@@ -26,6 +26,7 @@ export type DedaloErrorCode =
 	| 'maintenance_mode'
 	| 'update_lock'
 	| 'db_connection_failed'
+	| 'network_error'
 	| 'unknown';
 
 /**
