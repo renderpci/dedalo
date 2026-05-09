@@ -24,7 +24,7 @@ class diffusion_utils {
      * Locate component_publication in requested locator section and get its boolean value.
      */
     public static function is_publishable(object $locator): bool {
-        
+
         $section_tipo = $locator->section_tipo;
         $section_id   = $locator->section_id;
         $uid          = $section_tipo . '_' . $section_id;
@@ -38,12 +38,12 @@ class diffusion_utils {
         $ar_children = section::get_ar_children_tipo_by_model_name_in_section(
             $section_tipo,
             ['component_publication'],
-            true, 
-            true, 
-            true, 
+            true,
+            true,
+            true,
             true
         );
-        
+
         if (empty($ar_children)) {
             return true;
         }
@@ -60,7 +60,7 @@ class diffusion_utils {
      * GET_COMPONENT_PUBLICATION_BOOL_VALUE
      */
     public static function get_component_publication_bool_value(string $component_publication_tipo, string|int $section_id, string $section_tipo): bool {
-        
+
         $component_publication = component_common::get_instance(
             'component_publication',
             $component_publication_tipo,
@@ -112,7 +112,7 @@ class diffusion_utils {
         return null;
     }
 
-    
+
 
     /**
      * GET_DIFFUSION_ELEMENT
@@ -140,7 +140,7 @@ class diffusion_utils {
 
 
 
-	
+
 	/**
 	 * GET_SECTION_DIFFUSION_NODES
 	 * Builds a hierarchical tree of diffusion nodes mapped to a specific section.
@@ -193,11 +193,11 @@ class diffusion_utils {
 	public static function get_virtual_diffusion_tree() : array {
 
 		static $virtual_tree_cache = null;
-		
+
 		if ($virtual_tree_cache !== null) {
 			return $virtual_tree_cache;
 		}
-		
+
 		$diffusion_domain_tipo = self::get_diffusion_domain_tipo();
 		if ($diffusion_domain_tipo === null) {
 			debug_log(__METHOD__
@@ -224,9 +224,9 @@ class diffusion_utils {
 		$all_virtual_nodes = [];
 		$path = [];
 		self::walk_virtual_diffusion_tree(
-			$diffusion_domain_tipo, 
-			$path, 
-			$all_virtual_nodes, 
+			$diffusion_domain_tipo,
+			$path,
+			$all_virtual_nodes,
 			$consumed_by_alias
 		);
 
@@ -258,7 +258,7 @@ class diffusion_utils {
 			}
 
 			if (!empty($ar_related_sections) && in_array($section_tipo, $ar_related_sections)) {
-				
+
 				$item = new stdClass();
 				$item->tipo    = $vnode->tipo;
 				$item->model   = $vnode->model;
@@ -317,7 +317,7 @@ class diffusion_utils {
 		$vnode->real_tipo  = $resolved->real_tipo;
 		$vnode->parents    = $path;
 
-		// Merge recursive children properties (alias own + real non-overridden) 
+		// Merge recursive children properties (alias own + real non-overridden)
 		// Note we use full recursive children to populate the fields list for the UI
 		$own_children  = ontology_node::get_ar_recursive_children($current_tipo) ?: [];
 		$real_children = [];
@@ -350,14 +350,14 @@ class diffusion_utils {
 		if ($resolved->model === 'diffusion_element' || $resolved->model === 'diffusion_element_alias') {
 			$path_item->type = $resolved->properties->diffusion->type ?? 'unknown';
 		}
-		
+
 		$new_path = array_merge([$path_item], $path); // Puts immediate parent first
 
-		// Recursively explore ALL children to ensure deeply nested elements 
-		// (like RDF components, XML fields, etc.) that may hold the section relation 
+		// Recursively explore ALL children to ensure deeply nested elements
+		// (like RDF components, XML fields, etc.) that may hold the section relation
 		// are mapped under this virtual hierarchy.
 		$ar_children_tipos = ontology_node::get_ar_children($current_tipo) ?: [];
-		
+
 		if ($resolved->is_alias && $resolved->real_tipo) {
 			$real_children = ontology_node::get_ar_children($resolved->real_tipo) ?: [];
 			$ar_children_tipos = array_merge($ar_children_tipos, $real_children);
@@ -572,7 +572,7 @@ class diffusion_utils {
 	/**
 	 * Get diffusion domain tipo
 	 * @return string|null The diffusion domain tipo or null if not found
-	 */	
+	 */
 	public static function get_diffusion_domain_tipo() : ?string {
 
 		$diffusion_domain_tipos = ontology_node::get_ar_tipo_by_model_and_relation(
@@ -607,7 +607,7 @@ class diffusion_utils {
 			// $use_cache = true;
 			// if ($use_cache===true) {
 			// 	// session
-			// 	if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {                  
+			// 	if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {
 			// 		return $_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo];
 			// 	}
 			// }

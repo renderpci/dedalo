@@ -52,9 +52,5 @@ Unify component change handler across views
 @check-component.md
 @component
 
--- NO ---
-Create/Update a complete test of the component, including:
-- Server side (PHP) live cycle (create, add data, change data, remove data, destroy)
-- Client side (Javascript) live cycle (init, build, render, destroy, add data, change data, remove data) in all modes and views
+32. **tool_indexation** access from Oral History list fails
 
-31 - Tool import: uploaded csv files -> on delete from tool ui, delete the file moving to a 'deleted' folder like media do.
