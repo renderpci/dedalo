@@ -39,6 +39,13 @@ class area_graph extends area_common {
 		 */
 		public ?string $thesaurus_mode = null;
 
+		/**
+		 * Cache for hierarchy names to avoid redundant lookups.
+		 * Stores hierarchy section_id -> name mappings.
+		 * @var array $hierarchy_name_cache
+		 */
+		protected static array $hierarchy_name_cache = [];
+
 
 
 	/**
@@ -343,9 +350,8 @@ class area_graph extends area_common {
 	public function get_hierarchy_name(int|string $hierarchy_section_id) : string {
 
 		// cache
-			static $hierarchy_names_cache;
-			if (isset($hierarchy_names_cache[$hierarchy_section_id])) {
-				return $hierarchy_names_cache[$hierarchy_section_id];
+			if (isset(self::$hierarchy_name_cache[$hierarchy_section_id])) {
+				return self::$hierarchy_name_cache[$hierarchy_section_id];
 			}
 
 		// short vars
@@ -383,7 +389,7 @@ class area_graph extends area_common {
 			}
 
 		// cache
-			$hierarchy_names_cache[$hierarchy_section_id] = $hierarchy_name;
+			self::$hierarchy_name_cache[$hierarchy_section_id] = $hierarchy_name;
 
 
 		return (string)$hierarchy_name;
