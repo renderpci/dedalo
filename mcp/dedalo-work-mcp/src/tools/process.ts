@@ -13,7 +13,7 @@ export function registerProcessTools(server: McpServer, client: WorkClient, ctx:
 		description: 'Get the status of an asynchronous background process by `process_id`. Returns progress, state and messages.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get process status' },
 		inputSchema: z.object({ process_id: z.string().min(1) }),
-		handler: async ({ process_id }) => client.call(rqo('get_process_status', 'dd_utils_api', { process_id })),
+		handler: async ({ process_id }) => client.call(rqo({ action: 'get_process_status', dd_api: 'dd_utils_api', source: { process_id } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -21,7 +21,7 @@ export function registerProcessTools(server: McpServer, client: WorkClient, ctx:
 		description: 'Long-poll variant of get_process_status. Blocks until status changes or the server-side timeout fires.',
 		annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true, title: 'Poll process status' },
 		inputSchema: z.object({ process_id: z.string().min(1) }),
-		handler: async ({ process_id }) => client.call(rqo('get_process_status_poll', 'dd_utils_api', { process_id })),
+		handler: async ({ process_id }) => client.call(rqo({ action: 'get_process_status_poll', dd_api: 'dd_utils_api', source: { process_id } })),
 	}, ctx);
 
 	registerTool(server, {
@@ -29,6 +29,6 @@ export function registerProcessTools(server: McpServer, client: WorkClient, ctx:
 		description: 'Cancel a running asynchronous process by `process_id`.',
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Stop process' },
 		inputSchema: z.object({ process_id: z.string().min(1) }),
-		handler: async ({ process_id }) => client.call(rqo('stop_process', 'dd_utils_api', { process_id }, undefined, undefined, false)),
+		handler: async ({ process_id }) => client.call(rqo({ action: 'stop_process', dd_api: 'dd_utils_api', source: { process_id }, prevent_lock: false })),
 	}, ctx);
 }
