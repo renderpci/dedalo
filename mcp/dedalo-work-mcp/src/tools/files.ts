@@ -26,42 +26,42 @@ export function registerFilesTools(server: McpServer, client: WorkClient, ctx: T
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Upload file' },
 		inputSchema: z.object({ options: UploadOptions }),
 		handler: async ({ options }) =>
-			client.call(rqo('upload', 'dd_utils_api', undefined, undefined, options, false)),
+			client.call(rqo({ action: 'upload', dd_api: 'dd_utils_api', options, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_join_chunked_files',
 		description: 'Join previously uploaded chunks into a single complete file. Use after a chunked upload.',
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Join chunked files' },
-		inputSchema: z.object({ options: z.record(z.unknown()).describe('Options identifying the file and its chunks.') }),
+		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).describe('Options identifying the file and its chunks.') }),
 		handler: async ({ options }) =>
-			client.call(rqo('join_chunked_files_uploaded', 'dd_utils_api', undefined, undefined, options, false)),
+			client.call(rqo({ action: 'join_chunked_files_uploaded', dd_api: 'dd_utils_api', options, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_list_uploads',
 		description: 'List files staged in the upload directory but not yet processed.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List uploads' },
-		inputSchema: z.object({ options: z.record(z.unknown()).optional() }),
+		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).optional() }),
 		handler: async ({ options }) =>
-			client.call(rqo('list_uploaded_files', 'dd_utils_api', undefined, undefined, options)),
+			client.call(rqo({ action: 'list_uploaded_files', dd_api: 'dd_utils_api', options })),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_delete_upload',
 		description: 'Delete a staged file that has not yet been processed.',
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Delete upload' },
-		inputSchema: z.object({ options: z.record(z.unknown()).describe('Options identifying the file to delete.') }),
+		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).describe('Options identifying the file to delete.') }),
 		handler: async ({ options }) =>
-			client.call(rqo('delete_uploaded_file', 'dd_utils_api', undefined, undefined, options, false)),
+			client.call(rqo({ action: 'delete_uploaded_file', dd_api: 'dd_utils_api', options, prevent_lock: false })),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_browse_files',
 		description: 'Browse the Dédalo media file system. Returns directory listings and metadata.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Browse files' },
-		inputSchema: z.object({ options: z.record(z.unknown()).optional() }),
+		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).optional() }),
 		handler: async ({ options }) =>
-			client.call(rqo('get_dedalo_files', 'dd_utils_api', undefined, undefined, options)),
+			client.call(rqo({ action: 'get_dedalo_files', dd_api: 'dd_utils_api', options })),
 	}, ctx);
 }
