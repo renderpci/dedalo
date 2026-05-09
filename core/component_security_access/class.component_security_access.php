@@ -47,7 +47,7 @@ class component_security_access extends component_common {
 		 * Stores resolved admin types to avoid repeated ontology queries.
 		 * @var array $ar_tipo_admin_cache
 		 */
-		public static array $ar_tipo_admin_cache = [];
+		public static ?array $ar_tipo_admin_cache = null;
 
 
 
@@ -490,33 +490,32 @@ class component_security_access extends component_common {
 	/**
 	* GET ARRAY TIPO ADMIN
 	* Returns the 'Admin' area as well as its children (used to exclude the admin options in the tree)
-	* @return array $ar_tipo_admin_cache
+	* @return array $ar_admin_tipos
 	*/
 	public static function get_ar_tipo_admin() : array {
 
 		// static cache
-		if(isset(self::$ar_tipo_admin_cache)) {
+		if(self::$ar_tipo_admin_cache !== null) {
 			return self::$ar_tipo_admin_cache;
 		}
 
 		$ar_result 	= ontology_utils::get_ar_tipo_by_model('area_admin');
-		$ar_tesauro = [];
+		$ar_admin_tipos = [];
 
 		if(!empty($ar_result[0])) {
-			$tipo					= $ar_result[0];
-			$obj					= ontology_node::get_instance($tipo);
-			$ar_children_of_this	= $obj->get_ar_children_of_this();
-			$ar_tesauro				= $ar_children_of_this;
+			$tipo			= $ar_result[0];
+			$obj			= ontology_node::get_instance($tipo);
+			$ar_admin_tipos	= $obj->get_ar_children_of_this();
 
 			// We add the term itself as the father of the tree
-			array_unshift($ar_tesauro, $tipo);
+			array_unshift($ar_admin_tipos, $tipo);
 		}
 
 		// store cache data
-		self::$ar_tipo_admin_cache = $ar_tesauro;
+		self::$ar_tipo_admin_cache = $ar_admin_tipos;
 
 
-		return $ar_tesauro ;
+		return $ar_admin_tipos;
 	}//end get_ar_tipo_admin
 
 
