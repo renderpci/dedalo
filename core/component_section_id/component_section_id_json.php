@@ -23,16 +23,17 @@ if (!isset($this)) { http_response_code(404); exit; }
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$this->context = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
 				$color = ontology_node::get_color($this->section_tipo);
-				$current_context = $this->get_structure_context($permissions);
-					$current_context->color = $color;
-				$context[] = $current_context;
+				$this->context = $this->get_structure_context($permissions);
+					$this->context->color = $color;
 				break;
 		}
+
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 

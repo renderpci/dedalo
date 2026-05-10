@@ -24,26 +24,26 @@ if (!isset($this)) { http_response_code(404); exit; }
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple($permissions);
+				$this->context = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-				$current_context = $this->get_structure_context($permissions);
+				$this->context = $this->get_structure_context($permissions);
 
 				// append additional info
-				$current_context->features = new stdClass();
-					$current_context->features->allowed_extensions		= $this->get_allowed_extensions();
-					$current_context->features->default_target_quality	= $this->get_original_quality();
-					$current_context->features->ar_quality				= $this->get_ar_quality(); // defined in config
-					$current_context->features->default_quality			= $this->get_default_quality();
-					$current_context->features->quality					= $this->get_quality(); // current instance quality
-					$current_context->features->key_dir					= 'pdf';
-					$current_context->features->alternative_extensions	= $this->get_alternative_extensions();
-					$current_context->features->extension				= $this->get_extension();
-
-				$context[] = $current_context;
+				$this->context->features = new stdClass();
+					$this->context->features->allowed_extensions		= $this->get_allowed_extensions();
+					$this->context->features->default_target_quality	= $this->get_original_quality();
+					$this->context->features->ar_quality				= $this->get_ar_quality(); // defined in config
+					$this->context->features->default_quality			= $this->get_default_quality();
+					$this->context->features->quality					= $this->get_quality(); // current instance quality
+					$this->context->features->key_dir					= 'pdf';
+					$this->context->features->alternative_extensions	= $this->get_alternative_extensions();
+					$this->context->features->extension				= $this->get_extension();
 				break;
 		}
+
+		$context[] = $this->context;
 	}//end if($options->get_context===true))
 
 

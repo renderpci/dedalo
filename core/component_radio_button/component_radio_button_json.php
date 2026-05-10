@@ -24,12 +24,12 @@ if (!isset($this)) { http_response_code(404); exit; }
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$item_context = $this->get_structure_context_simple($permissions,true);
+				$this->context = $this->get_structure_context_simple($permissions,true);
 				break;
 
 			default:
 				// item_context
-					$item_context = $this->get_structure_context(
+					$this->context = $this->get_structure_context(
 						$permissions,
 						true // add_request_config
 					);
@@ -41,11 +41,11 @@ if (!isset($this)) { http_response_code(404); exit; }
 							'label'	=> ontology_node::get_term_by_tipo($tipo, DEDALO_DATA_LANG, true, true)
 						];
 					}, $this->get_ar_target_section_tipo());
-					$item_context->set_target_sections($target_sections);
+					$this->context->set_target_sections($target_sections);
 				break;
 		}
 
-		$context[] = $item_context;
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 

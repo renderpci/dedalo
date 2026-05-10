@@ -27,7 +27,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$context[] = $this->get_structure_context_simple(
+				$this->context = $this->get_structure_context_simple(
 					$permissions,
 					$add_rqo
 				);
@@ -36,12 +36,14 @@ if (!isset($this)) { http_response_code(404); exit; }
 			default:
 
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context(
+					$this->context = $this->get_structure_context(
 						$permissions,
 						$add_rqo
 					);
 				break;
 		}
+
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 

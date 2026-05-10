@@ -32,7 +32,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$permissions,
 					$has_dataframe
 				);
-				$context[] = $this->context;
 				break;
 
 			default:
@@ -41,7 +40,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$permissions,
 					$has_dataframe
 				);
-				$context[] = $this->context;
 				break;
 		}
 
