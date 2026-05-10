@@ -1,8 +1,21 @@
 [
-	{
-		"id": 1,
-		"section_id": "000903635",
-		"section_tipo": "zenon1",
-		"from_component_tipo": "rsc368"
-	}
+    {
+        "section_id": "001338683",
+        "section_tipo": "zenon1",
+        "tipo": "zenon4",
+        "mode": "list",
+        "lang": "lg-nolan",
+        "from_component_tipo": "rsc368",
+        "entries": [
+            "Santa María de Ripoll : informe sobre las obras realizadas en la basílica y las fuentes de la restauración "
+        ],
+        "debug_model": "component_external",
+        "debug_label": "Title",
+        "debug_dataframe": {
+            "section_id_key": "001338683",
+            "section_tipo_key": "zenon1",
+            "section_tipo": "rsc332",
+            "main_component_tipo": "rsc368"
+        }
+    }
 ]

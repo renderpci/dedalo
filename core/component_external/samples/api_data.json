@@ -1,29 +1,22 @@
 {
-	"section_id": 2,
-	"section_tipo": "rsc332",
-	"tipo": "rsc368",
-	"mode": "edit",
-	"lang": "lg-nolan",
-	"from_component_tipo": "rsc368",
-	"entries": [
-		{
-			"id": 1,
-			"section_id": "000903635",
-			"section_tipo": "zenon1",
-			"from_component_tipo": "rsc368",
-			"paginated_key": 0
-		}
-	],
-	"debug_model": "component_portal",
-	"debug_label": "Publication",
-	"debug_dataframe": null,
-	"parent_tipo": "rsc332",
-	"parent_section_id": 2,
-	"pagination": {
-		"total": 1,
-		"limit": 10,
-		"offset": 0
-	},
-	"row_section_id": 2,
-	"changed_data": []
+    "section_id": "001338683",
+    "section_tipo": "zenon1",
+    "tipo": "zenon4",
+    "mode": "list",
+    "lang": "lg-nolan",
+    "from_component_tipo": "rsc368",
+    "entries": [
+        "Santa María de Ripoll : informe sobre las obras realizadas en la basílica y las fuentes de la restauración "
+    ],
+    "debug_model": "component_external",
+    "debug_label": "Title",
+    "debug_dataframe": {
+        "section_id_key": "001338683",
+        "section_tipo_key": "zenon1",
+        "section_tipo": "rsc332",
+        "main_component_tipo": "rsc368"
+    },
+    "row_section_id": 3,
+    "parent_tipo": "rsc332",
+    "changed_data": []
 }
