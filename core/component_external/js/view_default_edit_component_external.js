@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {get_buttons} from './render_edit_component_external.js'
 
 
 
@@ -36,9 +37,15 @@ view_default_edit_component_external.render = async function(self, options)  {
 			return content_data
 		}
 
+	// buttons
+		const buttons = (self.permissions > 1)
+			? get_buttons(self)
+			: null
+
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
-			content_data : content_data
+			content_data : content_data,
+			buttons 	 : buttons
 		})
 		// set pointers
 		wrapper.content_data = content_data

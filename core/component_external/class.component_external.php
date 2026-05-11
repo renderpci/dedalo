@@ -69,7 +69,7 @@ class component_external extends component_common {
 
 		// cache
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
-			if (array_key_exists($uid, self::$data_from_remote_cache)) {
+			if (isset(self::$data_from_remote_cache[$uid])) {
 				return self::$data_from_remote_cache[$uid];
 			}
 
@@ -119,7 +119,7 @@ class component_external extends component_common {
 			$response_map	= $api_config->response_map;
 			$entity			= $api_config->entity;
 
-		// entity_is_available (usually Zenon).
+		// Check if the entity is available (usually Zenon).
 		// If Zenon or current entity is not available, is saved in session to prevent to try to load again and again.
 		// On user quits, the status is reset and Dédalo try to connect again.
 			$entity_is_available = $_SESSION['dedalo']['config'][$entity.'_is_available'] ?? null;
@@ -131,91 +131,85 @@ class component_external extends component_common {
 				return null;
 			}
 
+		// Entity is avilable. Proceed
 			// ar_fields
-				$ar_fields = [];
-				$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-					$section_tipo,
-					['component'],
-					true,
-					true,
-					true,
-					false,
-					false
-				);
-				foreach ($children_tipo as $component_tipo) {
+			$ar_fields = [];
+			$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo,
+				['component'],
+				true,
+				true,
+				true,
+				false,
+				false
+			);
 
-					$ontology_node			= ontology_node::get_instance($component_tipo);
-					$component_properties	= $ontology_node->get_properties();
+			foreach ($children_tipo as $component_tipo) {
 
-					// check component_properties
-					if(empty($component_properties) || !isset($component_properties->fields_map)){
-						continue;
-					}
+				$ontology_node			= ontology_node::get_instance($component_tipo);
+				$component_properties	= $ontology_node->get_properties();
 
-					$field_name = array_find((array)$component_properties->fields_map, function($el){
-						return $el->local==='dato';
-					});
-					if (is_object($field_name)) {
-						$ar_fields[] = $field_name->remote;
-					}
+				// check component_properties
+				if(empty($component_properties) || !isset($component_properties->fields_map)){
+					continue;
 				}
+
+				$field_name = array_find((array)$component_properties->fields_map, function($el){
+					return $el->local==='dato';
+				});
+				if (is_object($field_name)) {
+					$ar_fields[] = $field_name->remote;
+				}
+			}
 
 			// call entity class to build custom api URL
 			// The entity class is expected to have a static method build_row_request_url that returns a string (URL)
-				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
+			include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
 
-				// url build
-					$url = $entity::build_row_request_url((object)[
-						'api_url'		=> $api_url,
-						'ar_fields'		=> $ar_fields,
-						'section_id'	=> $section_id,
-						'lang'			=> $lang
-					]);
+			// url build
+			$url = $entity::build_row_request_url((object)[
+				'api_url'		=> $api_url,
+				'ar_fields'		=> $ar_fields,
+				'section_id'	=> $section_id,
+				'lang'			=> $lang
+			]);
 
-				// SEC-075: SSRF confinement. Ontology-defined `api_url` drives
-				// this call. Even though admins own the ontology, the
-				// constructed `$url` must still point to a public endpoint to
-				// prevent cloud-metadata / internal-service reads.
-					if (!is_safe_remote_url($url)) {
-						debug_log(__METHOD__
-							.' SEC-075: refused unsafe external URL: ' . to_string($url)
-							, logger::ERROR
-						);
-						$_SESSION['dedalo']['config'][$entity.'_is_available'] = false;
-						return null;
-					}
-
-				// remote API request
-					$request_response = curl_request((object)[
-						'url'		=> $url, // string
-						'header'	=> false, // bool
-						'timeout'	=> 4 // int in secs
-					]);
-					$response_obj = !empty($request_response->result)
-						? json_decode($request_response->result)
-						: null;
-
-				// check response
-					if (empty($response_obj)) {
-						debug_log(__METHOD__
-							." ERROR. Unable to load data from_remote. Empty response from api_config:" .PHP_EOL
-							.' request_response: ' . to_string($request_response)
-							, logger::ERROR
-					);
-
-				// Fix Zenon as not available to prevent to try access again and again.
+			// SEC-075: SSRF confinement. Ontology-defined `api_url` drives
+			// this call. Even though admins own the ontology, the
+			// constructed `$url` must still point to a public endpoint to
+			// prevent cloud-metadata / internal-service reads.
+			if (!is_safe_remote_url($url)) {
+				debug_log(__METHOD__
+					.' SEC-075: refused unsafe external URL: ' . to_string($url)
+					, logger::ERROR
+				);
 				$_SESSION['dedalo']['config'][$entity.'_is_available'] = false;
-
 				return null;
 			}
 
-		// decode JSON response
-			// if (!$response_obj=json_decode($response)) {
-			// 	debug_log(__METHOD__." ERROR. Empty parse JSON response from api_config:" .PHP_EOL. to_string($request_response), logger::ERROR);
-			// 	return null;
-			// }
+			// remote API request
+			$request_response = curl_request((object)[
+				'url'		=> $url, // string
+				'header'	=> false, // bool
+				'timeout'	=> 4 // int in secs
+			]);
+			$response_obj = !empty($request_response->result)
+				? json_decode($request_response->result)
+				: null;
 
-		// row_data
+			// check response
+			if (empty($response_obj)) {
+				debug_log(__METHOD__
+					." ERROR. Unable to load data from_remote. Empty response from api_config:" .PHP_EOL
+					.' request_response: ' . to_string($request_response)
+					, logger::ERROR
+				);
+				// Fix Zenon as not available to prevent to try access again and again.
+				$_SESSION['dedalo']['config'][$entity.'_is_available'] = false;
+				return null;
+			}
+
+			// row_data
 			$row_data = array_reduce($response_map, function($carry, $item) use($response_obj){
 				if ($item->local==='ar_records') {
 					$name = $item->remote;
@@ -224,7 +218,7 @@ class component_external extends component_common {
 				return $carry;
 			});
 
-		// cache
+			// cache
 			self::$data_from_remote_cache[$uid] = $row_data;
 
 
@@ -236,85 +230,87 @@ class component_external extends component_common {
 	/**
 	* GET DATA
 	* @return ?array
-	* 	Usually is a string like: ..
+	* 	Returns array of extracted values from remote data.
 	*/
 	public function get_data() : ?array {
 
 		// load data from remote returns an object as
-			// {
-			//     "id": "001327065",
-			//     "title": "Arse : Boletín del Centro Arqueológico Saguntino (Sagunto).",
-			//     "authors": {
-			//         "primary": [],
-			//         "secondary": [],
-			//         "corporate": []
-			//     },
-			//     "publicationDates": [
-			//         "2011"
-			//     ],
-			//     "recordPage": "/Record/001327065",
-			//     "physicalDescriptions": [
-			//         "213 p."
-			//     ]
-			// }
-			$row_data = $this->load_data_from_remote();
+		// {
+		//     "id": "001327065",
+		//     "title": "Arse : Boletín del Centro Arqueológico Saguntino (Sagunto).",
+		//     "authors": {
+		//         "primary": [],
+		//         "secondary": [],
+		//         "corporate": []
+		//     },
+		//     "publicationDates": [
+		//         "2011"
+		//     ],
+		//     "recordPage": "/Record/001327065",
+		//     "physicalDescriptions": [
+		//         "213 p."
+		//     ]
+		// }
+		$row_data = $this->load_data_from_remote();
 
-			// early return if no remote data
-			if (empty($row_data)) {
-				return null;
-			}
+		// early return if no remote data
+		if (empty($row_data)) {
+			return null;
+		}
 
 		// properties (fields_map) returns an object as
-			// {
-			// 	"fields_map": [
-			// 		{
-			// 			"local": "dato",
-			// 			"format": "zenon_authors",
-			// 			"remote": "authors"
-			// 		}
-			// 	]
-			// }
-			$properties = $this->get_properties();
+		// {
+		// 	"fields_map": [
+		// 		{
+		// 			"local": "dato",
+		// 			"format": "zenon_authors",
+		// 			"remote": "authors"
+		// 		}
+		// 	]
+		// }
+		$properties = $this->get_properties();
 
-			// properties check
-			if (empty($properties) || !isset($properties->fields_map)) {
-				debug_log(__METHOD__
-					." Error. Missing fields_map in properties"
-					, logger::ERROR
-				);
-				return null;
-			}
+		// properties check
+		if (empty($properties) || !isset($properties->fields_map)) {
+			debug_log(__METHOD__
+				." Error. Missing fields_map in properties"
+				, logger::ERROR
+			);
+			return null;
+		}
 
 		// data extraction
 		$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
-			if (empty($row_data)) {
-				return $carry;
-			}
 			if($item->local==='dato') { // Note that 'dato' is the default local name for external components
 				$name = $item->remote;
 				if (isset($row_data->{$name})) {
+					$resolved = null;
 
 					if (isset($item->format)) {
 						switch ($item->format) {
 							case 'array_values':
-								$value = implode(' | ', $row_data->{$name});
+								$resolved = is_array($row_data->{$name})
+									? implode(' | ', $row_data->{$name})
+									: to_string($row_data->{$name});
 								break;
 							case 'zenon_authors':
 								$ar_names = [];
-								foreach ($row_data->{$name} as $key => $element) {
-									if (empty($element)) continue;
-									$ar_names[] = $key  .': '. implode(' - ', array_keys((array)$element));
+								if (is_array($row_data->{$name})) {
+									foreach ($row_data->{$name} as $key => $element) {
+										if (empty($element)) continue;
+										$ar_names[] = $key  .': '. implode(' - ', array_keys((array)$element));
+									}
 								}
-								$value = implode(' | ', $ar_names);
+								$resolved = implode(' | ', $ar_names);
 								break;
 							default:
-								$value = to_string($row_data->{$name});
+								$resolved = to_string($row_data->{$name});
 								break;
 						}
 					}else{
-						$value = $row_data->{$name};
+						$resolved = $row_data->{$name};
 					}
-					return $value;
+					return $resolved;
 				}else{
 					debug_log(__METHOD__
 						." Error. Not found key: '$name' in row_data" . PHP_EOL
@@ -326,7 +322,7 @@ class component_external extends component_common {
 				}
 			}
 			return $carry;
-		}, null); // Added explicit initial value
+		}, null);
 
 		// return null if no value was found
 		if ($value === null) {
@@ -345,45 +341,24 @@ class component_external extends component_common {
 
 	/**
 	* SET_DATA
-	* @param mixed $data
+	* @param array|null $data
 	* 	Data now is multiple. For this expected type is array
-	*	but in some cases can be an array JSON encoded or some rare times a plain string
 	* @return bool
 	*/
-	public function set_data( string|array|null $data) : bool {
-
-		// string case
-			if (is_string($data)) { # Tool Time machine case, data is string
-				if (strpos($data, '[')!==false) {
-					# data is JSON encoded
-					$data = json_handler::decode($data);
-				}else{
-					# data is string plain value
-					$data = array($data);
-				}
-			}
-
-		// array check
-			if(SHOW_DEBUG===true) {
-				if (!is_array($data)) {
-					debug_log(__METHOD__
-						." Warning. [$this->tipo,$this->section_id]. Received data is NOT array. Type is '".gettype($data)."' and data: '".to_string($data)."' will be converted to array"
-						, logger::DEBUG
-					);
-				}
-			}
+	public function set_data( ?array $data) : bool {
 
 		// safe_data
+		if($data !== null) {
 			$safe_data = [];
-			foreach ((array)$data as $value) {
-				if (!is_string($value)) {
-					$safe_data[] = to_string($value);
+			foreach ($data as $data_entry) {
+				if (!is_string($data_entry)) {
+					$safe_data[] = to_string($data_entry);
 				}else{
-					$safe_data[] = $value;
+					$safe_data[] = $data_entry;
 				}
 			}
 			$data = $safe_data;
-
+		}
 
 		return parent::set_data( $data );
 	}//end set_data

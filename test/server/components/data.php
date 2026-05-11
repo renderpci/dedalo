@@ -220,6 +220,15 @@ function convert_date_to_seconds($dd_date, $mode) {
 
 
 
+function random_external_data() {
+	$result = [
+		random_string(64)
+	];
+	return $result;
+}
+
+
+
 function random_email() {
 	$result = '';
 	$length = 40;

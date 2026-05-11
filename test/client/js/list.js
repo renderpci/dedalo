@@ -33,6 +33,7 @@ export const livecycle_detail = [
 	'test_component_check_box',
 	'test_component_date',
 	'test_component_email',
+	'test_component_external',
 	'test_component_filter',
 	'test_component_filter_records',
 	'test_component_geolocation',
