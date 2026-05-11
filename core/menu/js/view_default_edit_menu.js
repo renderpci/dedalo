@@ -13,6 +13,7 @@
 	import * as menu_tree from './render_menu_tree.js'
 	import * as menu_mobile from './render_menu_mobile.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {toggle_theme} from '../../page/js/theme.js'
 
 
 
@@ -300,6 +301,18 @@ const get_content_data_edit = function(self) {
 			class_name		: 'menu_spacer top_item',
 			parent			: fragment
 		})
+
+	// theme toggle
+		const theme_toggle = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'theme_toggle top_item',
+			title			: get_label.theme_toggle || 'Toggle dark mode',
+			parent			: fragment
+		})
+		theme_toggle.tabIndex = 0
+		theme_toggle.setAttribute('role', 'button')
+		theme_toggle.addEventListener('click', () => { toggle_theme() })
+		theme_toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_theme() })
 
 	// ai_assistant button
 		const ai_assistant_button = ui.create_dom_element({
