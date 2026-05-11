@@ -162,107 +162,99 @@ button {
 	}
 
 	&.primary {
-		@color: @color_primary;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_primary;
+		border-color: @color_primary_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_primary_hover_bg;
+			border-color: @color_primary_hover_border;
 		}
 	}
 	&.secondary {
-		@color: @color_grey_6;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_grey_6;
+		border-color: @color_secondary_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_secondary_hover_bg;
+			border-color: @color_secondary_hover_border;
 		}
 	}
 	&.success {
-		@color: @color_success;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_success;
+		border-color: @color_success_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_success_hover_bg;
+			border-color: @color_success_hover_border;
 		}
 	}
 	&.danger {
-		@color: @color_danger;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_danger;
+		border-color: @color_danger_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_danger_hover_bg;
+			border-color: @color_danger_hover_border;
 		}
 	}
 	&.warning {
-		@color: @color_orange_dedalo;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_orange_dedalo;
+		border-color: @color_orange_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_orange_hover_bg;
+			border-color: @color_orange_hover_border;
 		}
 	}
 	&.info {
-		@color: @color_info;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_info;
+		border-color: @color_info_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_info_hover_bg;
+			border-color: @color_info_hover_border;
 		}
 	}
 	&.light {
-		@color: @color_grey_15;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_grey_15;
+		border-color: @color_light_border;
 		color: @color_grey_1;
 		&:before {
 			background-color: @color_grey_1 !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_light_hover_bg;
+			border-color: @color_light_hover_border;
 		}
 	}
 	&.dark {
-		@color: @color_grey_3;
-		background-color: @color;
-		border-color: darken(@color, 2%);
+		background-color: @color_grey_3;
+		border-color: @color_dark_border;
 		color: @color_white ;
 		&:before {
 			background-color: @color_white  !important;
 		}
 		&:hover {
-			background-color: darken(@color, 5%);
-			border-color: darken(@color, 7%);
+			background-color: @color_dark_hover_bg;
+			border-color: @color_dark_hover_border;
 		}
 	}
 	&.link {
@@ -668,4 +660,9 @@ button.button_spinner {
 			border-top-color: transparent;
 		}
 	}
+}
+
+// dark mode: grey button variant
+:root[data-theme="dark"] .button.grey {
+	background-color: @color_grey_6;
 }
