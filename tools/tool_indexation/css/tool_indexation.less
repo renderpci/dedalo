@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #23bcc7;
+:root {
+	--tool_indexation: #23bcc7;
+}
+@tool_color: var(--tool_indexation);
 
 // column_id (section_tool list)
 .column_section_id > .button_edit.list_tool_indexation {
