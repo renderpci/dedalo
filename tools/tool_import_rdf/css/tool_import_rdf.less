@@ -8,7 +8,11 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #5e77b3;
+:root {
+	--tool_import_rdf: #5e77b3;
+	--tool_import_rdf_border: #475f97;
+}
+@tool_color : var(--tool_import_rdf);
 
 // tool wrapper
 .wrapper_tool.tool_import_rdf {
@@ -44,7 +48,7 @@
 			width: 8rem;
 			margin-top: 2rem;
 			background-color: @tool_color;
-			border-color: darken(@tool_color, 10%);
+			border-color: var(--tool_import_rdf_border);
 		}
 		.component_data_label {
 			font-size: 16px;
