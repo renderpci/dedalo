@@ -8,7 +8,11 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #2b77c7; // blue
+:root {
+	--tool_import_files: #2b77c7;
+	--tool_import_files_border: #286fba;
+}
+@tool_color: var(--tool_import_files);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -333,7 +337,7 @@
 				padding-left: 1.5em;
 				padding-right: 1.5em;
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 3%);
+				border-color: var(--tool_import_files_border);
 			}
 		}
 
