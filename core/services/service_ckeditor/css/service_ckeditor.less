@@ -221,3 +221,12 @@ dd-modal .find_and_replace {
  		/* toggle-pill-color end */
 	}
 }//end dd-modal
+
+:root[data-theme="dark"] .toolbar_button {
+	&:hover, &.active {
+		background-color: var(--toolbar_btn_hover_bg);
+	}
+	img {
+		filter: var(--toolbar_btn_icon_filter);
+	}
+}
