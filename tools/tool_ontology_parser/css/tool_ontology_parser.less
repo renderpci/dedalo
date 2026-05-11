@@ -5,7 +5,10 @@
 */
 
 // local vars
-@tool_color: #276f67;
+:root {
+	--tool_ontology_parser: #276f67;
+}
+@tool_color: var(--tool_ontology_parser);
 
 // imports
 @import (once) '../../../core/page/css/layout/vars';
