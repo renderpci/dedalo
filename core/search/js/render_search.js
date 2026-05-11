@@ -482,6 +482,7 @@ render_search.prototype.render_search_buttons = function(){
 				// toggle filter container if there are results
 				dd_request_idle_callback(async ()=>{
 					const caller = self.caller
+					if (!caller) return
 					const total = await caller.get_total()
 					if(total > 0) {
 						toggle_search_panel(self) // toggle to open from default state close
