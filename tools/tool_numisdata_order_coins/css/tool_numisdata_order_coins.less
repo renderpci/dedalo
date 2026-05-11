@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #9b8962;
+:root {
+	--tool_numisdata_order_coins: #9b8962;
+}
+@tool_color: var(--tool_numisdata_order_coins);
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_numisdata_order_coins {
