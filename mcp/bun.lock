@@ -7,7 +7,7 @@
       "dependencies": {
         "pino": "^9.3.2",
         "pino-pretty": "^11.2.2",
-        "zod": "^3.23.8",
+        "zod": "^4.4.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -24,7 +24,7 @@
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "^5.5.0",
-        "zod": "^3.23.8",
+        "zod": "^4.4.2",
       },
     },
     "dedalo-public-mcp": {
@@ -37,7 +37,7 @@
         "@dedalo/mcp-common": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.12.0",
         "pino": "^9.3.2",
-        "zod": "^3.23.8",
+        "zod": "^4.4.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -54,10 +54,11 @@
         "@dedalo/mcp-common": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.12.0",
         "pino": "^9.3.2",
-        "zod": "^3.23.8",
+        "zod": "^4.4.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
+        "pino-pretty": "^11.2.2",
         "typescript": "^5.5.0",
       },
     },
@@ -327,10 +328,10 @@
 
     "wrappy": ["wrappy@1.0.2", "", {}, "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ=="],
 
-    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+    "zod": ["zod@4.4.2", "", {}, "sha512-IynmDyxsEsb9RKzO3J9+4SxXnl2FTFSzNBaKKaMV6tsSk0rw9gYw9gs+JFCq/qk2LCZ78KDwyj+Z289TijSkUw=="],
 
     "zod-to-json-schema": ["zod-to-json-schema@3.25.2", "", { "peerDependencies": { "zod": "^3.25.28 || ^4" } }, "sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA=="],
 
-    "@dedalo/mcp-common/zod": ["zod@4.4.2", "", {}, "sha512-IynmDyxsEsb9RKzO3J9+4SxXnl2FTFSzNBaKKaMV6tsSk0rw9gYw9gs+JFCq/qk2LCZ78KDwyj+Z289TijSkUw=="],
+    "@modelcontextprotocol/sdk/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
   }
 }
