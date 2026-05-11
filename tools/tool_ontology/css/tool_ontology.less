@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: @color_green_ontology;
+:root {
+	--tool_ontology: var(--color_green_ontology);
+}
+@tool_color: var(--tool_ontology);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
