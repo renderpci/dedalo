@@ -1,0 +1,222 @@
+/**
+ * theme_dark
+ *
+ * Dark palette overrides. Activated by `data-theme="dark"` on `<html>`.
+ * Imported from main.less after vars.less.
+ */
+
+:root[data-theme="dark"] {
+
+	// ---- COLOR PALETTE (DARK) ----
+	// Greys inverted: lightest becomes darkest and vice-versa.
+	--color_white:                    #1b1d20;
+	--color_grey_16:                  #1f2227;
+	--color_grey_15:                  #24272d;
+	--color_grey_14:                  #2a2e35;
+	--color_grey_13:                  #353a42;
+	--color_grey_12:                  #3d434c;
+	--color_grey_11:                  #4a5059;
+	--color_grey_10:                  #5a606a;
+	--color_grey_9:                   #6b7280;
+	--color_grey_8:                   #8b9098;
+	--color_grey_7:                   #a3a8b0;
+	--color_grey_6:                   #b8bcc4;
+	--color_grey_5:                   #cfd2d8;
+	--color_grey_4:                   #e5e7ea;
+	--color_grey_3:                   #ecedf0;
+	--color_grey_2:                   #f2f3f5;
+	--color_grey_1:                   #f8f9fb;
+	--color_black:                    #ffffff;
+
+	// Tinted surfaces (low-saturation, AA contrast)
+	--color_hilite_3:                 #3a3520;
+	--color_hilite:                   #4a3424;
+	--color_hilite_2:                 #4a4020;
+	--color_hilite_yellow:            #4a4520;
+	--color_orange:                   #4a3a20;
+	--color_orange_dedalo:            #ffa54a;
+	--color_warning:                  #f08245;
+	--color_mandatory:                #4a2424;
+	--color_red_light:                #6a3030;
+	--color_danger:                   #ef5560;
+	--color_green_light:              #1f3a2c;
+	--color_green_success:            #46c46c;
+	--color_success:                  #46c46c;
+	--color_green_ontology_hover:     #5a9a90;
+	--color_green_ontology:           #4a8a80;
+	--color_blue_light:               #243352;
+	--color_blue_light_2:             #243a4a;
+	--color_cyan:                     #2a5a55;
+	--color_info:                     #38c0d6;
+	--color_primary:                  #4a9eff;
+	--color_blue:                     #5a9aff;
+	--color_blue_2:                   #4a8ae8;
+	--color_blue_3:                   #3a7ad8;
+	--color_input_focus:              #4a9eff;
+	--color_purple_light:             #2a2040;
+	--color_purple:                   #c060c0;
+
+	// Ontology
+	--color_ontology_css:             #a080a5;
+	--color_ontology_rqo:             #c06060;
+	--color_ontology_properties:      #30a038;
+	--color_ontology_properties_v5:   #4a4520;
+
+	// Tags
+	--color_tag_indexation_normal:    #ffa54a;
+	--color_tag_indexation_removed:   #5aa0ff;
+	--color_tag_indexation_to_review: #ff6040;
+
+	// Libs
+	--color_php:                      #9090c0;
+
+	// ---- SEMANTIC SURFACE TOKENS ----
+	--bg_app:         #15171a;
+	--bg_surface:     #1b1d20;
+	--bg_surface_alt: #1f2227;
+	--bg_elevated:    #24272d;
+	--bg_input:       #1f2227;
+	--bg_header:      #2a2e35;
+	--bg_menu:        #101214;
+	--fg_default:     #e5e7ea;
+	--fg_muted:       #a3a8b0;
+	--fg_inverse:     #ffffff;
+	--border_default: #353a42;
+	--border_strong:  #4a5059;
+	--shadow_default: rgba(0, 0, 0, 0.55);
+	--focus_ring:     var(--color_input_focus);
+
+	// ---- DERIVED TOKENS (dark variants) ----
+
+	// button: primary
+	--color_primary_border:          #3a8aee;
+	--color_primary_hover_bg:        #3a8aee;
+	--color_primary_hover_border:    #2a7ade;
+	// button: secondary
+	--color_secondary_border:        #a0a8b0;
+	--color_secondary_hover_bg:      #c0c4cc;
+	--color_secondary_hover_border:  #b0b4bc;
+	// button: success
+	--color_success_border:          #3ab85a;
+	--color_success_hover_bg:        #3ab85a;
+	--color_success_hover_border:    #2aa84a;
+	// button: danger
+	--color_danger_border:           #e04050;
+	--color_danger_hover_bg:         #e04050;
+	--color_danger_hover_border:     #d03040;
+	--color_danger_dark:             #410e0e;
+	// button: orange / warning
+	--color_orange_border:           #ff9a40;
+	--color_orange_hover_bg:         #ff9a40;
+	--color_orange_hover_border:     #ee8a30;
+	--color_orange_dark:             #dd7a20;
+	--color_orange_light:            #2a2218;
+	// button: info
+	--color_info_border:             #30b8cc;
+	--color_info_hover_bg:           #30b8cc;
+	--color_info_hover_border:       #20a8bc;
+	// button: light
+	--color_light_border:            #30353a;
+	--color_light_hover_bg:          #3a3f44;
+	--color_light_hover_border:      #353a3f;
+	// button: dark
+	--color_dark_border:             #d0d4d8;
+	--color_dark_hover_bg:           #e0e4e8;
+	--color_dark_hover_border:       #d8dce0;
+
+	// component / service derived
+	--color_tag_indexation_normal_dark:   #cc8430;
+	--color_tag_indexation_normal_darker: #b07020;
+	--color_green_success_dark:           #30a050;
+	--color_grey_10_light:                #6a7078;
+	--color_grey_10_dark:                 #404850;
+	--color_grey_4_light:                 #f0f2f5;
+	--menu_bg_active_border:              #cc7a20;
+	--service_bg_dark:                    #cc6a10;
+
+	// ---- COMPONENT SEMANTIC TOKENS (dark) ----
+	--menu_dropdown_text:       #9c9c9c;
+	--menu_dropdown_bg:         #31353d;
+	--menu_dropdown_border:     #3a3a3a;
+	--menu_dropdown_li_border:  transparent;
+	--debug_info_bar_bg:        #522525;
+	--debug_info_bar_text:      var(--color_grey_8);
+	--checkbox_bg:              #4a5059;
+	--checkbox_border:          #6b7280;
+	--checkbox_checked_bg:      var(--color_primary);
+	--checkbox_checkmark:       var(--color_white);
+	--input_bg:                 #1f2227;
+	--input_fg:                 #ffffff;
+	--input_outline:            none;
+	--select_bg:                #1f2227;
+	--select_fg:                #ffffff;
+	--select_outline:           none;
+	--toolbar_btn_hover_bg:     #9c9c9c;
+	--toolbar_btn_icon_filter:  invert(0.85);
+
+	// ---- MODAL TOKENS (dark) ----
+	--modal_overlay_bg:            rgba(0, 0, 0, 0.6);
+	--modal_overlay_bg_weak:      rgba(0, 0, 0, 0.2);
+	--modal_content_bg:           var(--color_grey_15);
+	--modal_content_shadow:       0 4px 8px 0 rgba(0,0,0,0.4), 0 6px 20px 0 rgba(0,0,0,0.35);
+	--modal_header_bg:            var(--color_grey_4);
+	--modal_header_shadow:        0 2px 6px rgba(0, 0, 0, 0.4);
+	--modal_header_color:         var(--color_black);
+	--modal_btn_color:            var(--color_grey_4);
+	--modal_btn_hover_color:      var(--color_white);
+	--modal_mini_header_bg:       var(--color_grey_4);
+	--modal_radius:               7px;
+
+	// ---- TOOL COLORS (dark variants) ----
+	// Tools that alias existing vars inherit their dark values automatically.
+	// Tools with hardcoded hex get dark-optimized variants here.
+	--tool_dd_label:                  #b0b0b0;
+	--tool_dd_label_border:           #808080;
+	--tool_dev_template:              #ffa040;
+	--tool_diffusion:                 #a0c080;
+	--tool_diffusion_text:            #1a1d20;
+	--tool_diffusion_border:          #90b070;
+	--tool_export:                    #9070c8;
+	--tool_export_lighten_40:         #2a2438;
+	--tool_export_lighten_5:          #a080d8;
+	--tool_export_border:             #7058a0;
+	--tool_export_lighten_10:         #b090e0;
+	--tool_hierarchy:                 #ff3030;
+	--tool_hierarchy_border:          #dd2020;
+	--tool_image_rotation:            #7a9db0;
+	--tool_image_rotation_border:     #608090;
+	--tool_import_dedalo_csv:         #30c8e0;
+	--tool_import_files:              #4a9eff;
+	--tool_import_files_border:       #3a8eee;
+	--tool_import_marc21:             #80c0ff;
+	--tool_import_marc21_border:      #60b0ff;
+	--tool_import_rdf:                #7a98d0;
+	--tool_import_rdf_border:         #6080b8;
+	--tool_import_zotero:             #e04050;
+	--tool_import_zotero_border:      #d03040;
+	--tool_indexation:                #30d8e0;
+	--tool_lang:                      #a098f0;
+	--tool_lang_border:               #8070e0;
+	--tool_lang_multi:                #9878d0;
+	--tool_media_versions:            #c06060;
+	--tool_numisdata_epigraphy:       #f09060;
+	--tool_numisdata_order_coins:     #b8a078;
+	--tool_ontology_parser:           #409890;
+	--tool_pdf_extractor:             #986080;
+	--tool_pdf_extractor_border:      #885070;
+	--tool_posterframe:               #90b848;
+	--tool_posterframe_border:        #80a838;
+	--tool_propagate_component_data:  #e03040;
+	--tool_qr:                        #90c0e0;
+	--tool_subtitles:                 #ff9040;
+	--tool_tc:                        #ffffff;
+	--tool_tc_border:                 #cccccc;
+	--tool_tc_border_strong:          #aaaaaa;
+	--tool_time_machine:              #ffa040;
+	--tool_tr_print:                  #c07080;
+	--tool_transcription:             #ff9040;
+	--tool_transcription_border:      #ee8030;
+	--tool_update_cache:              #80a888;
+	--tool_upload:                    #ffa040;
+	--tool_user_admin:                #d04050;
+}
