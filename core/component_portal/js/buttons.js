@@ -186,7 +186,7 @@ buttons.render_button_link = (self) => {
 
 	// Validate target_section exists
 	if (target_section_length === 0) {
-		console.error('No target sections available for link button');
+		console.warn('No target sections available for button link', self);
 		return null;
 	}
 

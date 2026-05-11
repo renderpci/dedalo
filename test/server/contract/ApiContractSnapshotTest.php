@@ -31,13 +31,13 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      */
     protected function setUp(): void {
         parent::setUp();
-        
+
         // Check for update flag
         $this->update_snapshots = getenv('UPDATE_SNAPSHOTS') === 'true';
-        
+
         // Initialize comparator
         $this->comparator = new SnapshotComparator(__DIR__ . '/snapshots');
-        
+
         // Ensure user is logged in for API calls
         $this->user_login();
     }
@@ -167,7 +167,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_utils_api::get_login_context response structure
      */
     public function test_get_login_context_contract(): void {
-        
+
         $rqo = (object)[
             'action' => 'get_login_context',
             'dd_api' => 'dd_utils_api',
@@ -198,7 +198,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_utils_api::get_element_context response structure for a component
      */
     public function test_get_element_context_contract(): void {
-        
+
         // Use a test component tipo (component_input_text)
         $rqo = (object)[
             'action' => 'get_element_context',
@@ -261,7 +261,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify component_input_text JSON structure (context + data)
      */
     public function test_component_input_text_context_contract(): void {
-        
+
         // Build component instance
         $component = component_common::get_instance(
             'component_input_text',

@@ -1570,8 +1570,8 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 						}
 
 					// mode and view
-						current_element_context.mode	= params.mode || 'list'
-						current_element_context.view	= params.view || 'default'
+						current_element_context.mode = params.mode || 'list'
+						current_element_context.view = params.view || 'default'
 
 					// instance
 						const instance_options = {
@@ -1589,7 +1589,6 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 						const current_instance = await get_instance(instance_options)
 						await current_instance.build(false)
 						const node = await current_instance.render()
-						console.log('----> node', node);
 
 					// append instance rendered node
 						grid_choose_container.appendChild(node)
