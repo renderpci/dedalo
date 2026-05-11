@@ -19,8 +19,8 @@
 	top: -0.1px;
 	left: 0px;
 	z-index: 4;
-	background-color: @color_grey_1;
-	box-shadow: 0 2px 3px @color_grey_7;
+	background-color: var(--bg_menu);
+	box-shadow: var(--shadow_default);
 
 	>.content_data {
 		// vars
@@ -32,7 +32,7 @@
 		flex-wrap: wrap;
 		align-items: center;
 		font-size: 1rem;
-		color: @color_white;
+		color: var(--fg_inverse);
 		line-height: 1.2em;
 
 		&.master {
@@ -142,7 +142,7 @@
 					font-weight: 300;// !important;
 
 					&:active {
-						background-color: darken(@menu_bg_color_active, 13%) !important;
+						background-color: @menu_bg_active_border !important;
 					}
 				}
 
@@ -433,6 +433,24 @@
 				}
 			}
 
+		// theme toggle
+			>.theme_toggle {
+				width: 1.4em;
+				height: 2rem;
+				background-image: url('../../themes/default/icons/moon.svg');
+				background-size: contain;
+				background-repeat: no-repeat;
+				background-position: center;
+				cursor: pointer;
+				opacity: 0.85;
+				margin-right: 0.5rem;
+				filter: brightness(0) invert(1);
+
+				&:hover {
+					opacity: 1;
+				}
+			}
+
 		// ai assistant button
 			>.ai_assistant_button {
 				background-image: url('../../../tools/tool_assistant/img/ai-assistant.svg');
@@ -515,7 +533,7 @@
 	// debug info bar
 	>.debug_info_bar {
 		contain: content;
-		background-color: lighten(@color_grey_4, 2%);
+		background-color: @color_grey_4_light;
 		width: 100%;
 		margin: 0px;
 		padding: 0.35rem;
@@ -589,6 +607,31 @@
 		}
 	}
 }//end .menu_wrapper
+
+// dark mode: menu-specific overrides
+// The menu is always dark; override background to match page surface.
+:root[data-theme="dark"] .menu {
+	background-color: var(--bg_surface_alt);
+
+	.menu_hierarchy a {
+		color: var(--menu_dropdown_text);
+	}
+	.menu_hierarchy ul:not(#dd1) {
+		background: var(--menu_dropdown_bg);
+		border-color: var(--menu_dropdown_border);
+	}
+	.menu_hierarchy ul li {
+		border-color: var(--menu_dropdown_li_border);
+	}
+	.debug_info_bar {
+		background-color: var(--debug_info_bar_bg);
+	}
+}
+
+// dark mode: swap theme toggle icon
+:root[data-theme="dark"] .menu > .content_data > .theme_toggle {
+	background-image: url('../../themes/default/icons/sun.svg');
+}
 
 // out of element styles
 
