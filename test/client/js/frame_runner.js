@@ -18,8 +18,8 @@ if (!area) {
 }
 
 // inherit theme from URL
-if (url_vars.theme === 'light') {
-	document.documentElement.classList.add('light')
+if (url_vars.theme === 'dark') {
+	document.documentElement.setAttribute('data-theme', 'dark')
 }
 
 await (async () => {
@@ -86,16 +86,8 @@ runner.on('end', function() {
 // listen for theme changes from parent
 window.addEventListener('message', function(e) {
 	if (e.data && e.data.type === 'theme') {
-		document.documentElement.classList.toggle('light', e.data.light)
+		document.documentElement.setAttribute('data-theme', e.data.light ? '' : 'dark')
 	}
 })
-
-// inherit theme from parent on load
-try {
-	const parent_light = document.documentElement.classList.contains('light')
-	if (parent_light) {
-		document.documentElement.classList.add('light')
-	}
-} catch(e) {}
 
 // @license-end
