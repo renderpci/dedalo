@@ -406,29 +406,54 @@
       "dato": {
         "lg-nolan": [
           {
-              "model_id": {
-                "value": "onnx-community/Qwen3.5-0.8B-ONNX",
+            "engine": {
+                "value": [
+                  {
+                    "name": "local",
+                    "type": "browser",
+                    "label": "Local transcriber"
+                  }
+                ],
                 "client": true
               },
-            "dtype": {
-              "value": "q4f16",
-              "client": true
-            },
-            "device": {
-              "value": "webgpu",
-              "client": true
-            },
-             "fallback_device": {
-               "value": "wasm",
-               "client": true
-             },
-             "fallback_model_id": {
-               "value": "onnx-community/Qwen3-0.6B-ONNX",
-               "client": true
-             },
-            "max_new_tokens": {
-              "value": 2048,
-              "client": true
+            "models": {
+              "client": true,
+              "value": [
+                {
+                  "model_id": "onnx-community/Qwen3.5-0.8B-ONNX",
+                  "label": "Qwen3.5 0.8B",
+                  "dtype": "q4f16",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none", "low", "high"],
+                  "client": true
+                },
+                {
+                  "model_id": "onnx-community/gemma-4-E2B-it-ONNX",
+                  "label": "Gemma 4 E2B-it",
+                  "dtype": "q4f16",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none"],
+                  "client": true
+                },
+                {
+                  "model_id": "onnx-community/Qwen3-0.6B-ONNX",
+                  "label": "Qwen3 0.6B",
+                  "dtype": "q4",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none", "low", "high"],
+                  "client": true,
+                  "default":true
+                }
+              ]
             }
           }
         ]

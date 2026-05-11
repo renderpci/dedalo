@@ -355,53 +355,102 @@ export const chat_render = class chat_render {
 			e.stopPropagation()
 		})
 
-		// model select
-			const model_label = document.createElement('label')
-			model_label.classList.add('assistant_settings_label')
-			model_label.textContent = 'Model'
-			const model_select = document.createElement('select')
-			model_select.classList.add('assistant_settings_input')
-			const model_options = settings.model_options || [settings.model_id]
-			model_options.forEach(function(m) {
-				if (!m) return
-				const opt = document.createElement('option')
-				opt.value = m
-				opt.textContent = m.split('/').pop()
-				if (m === settings.model_id) opt.selected = true
-				model_select.appendChild(opt)
-			})
-			model_label.appendChild(model_select)
-			this._settings_popover.appendChild(model_label)
+	// model select — each entry in `models` is a self-contained config
+		const model_label = document.createElement('label')
+		model_label.classList.add('assistant_settings_label')
+		model_label.textContent = 'Model'
+		const model_select = document.createElement('select')
+		model_select.classList.add('assistant_settings_input')
+		const models = Array.isArray(settings.models) && settings.models.length > 0
+			? settings.models
+			: [{
+				model_id	: settings.model_id,
+				label		: settings.model_id,
+				dtype		: settings.dtype,
+				device		: settings.device,
+				thinking	: settings.thinking || 'none',
+				thinking_options: settings.thinking_options || ['none']
+			}]
+		models.forEach(function(m) {
+			if (!m || !m.model_id) return
+			const opt = document.createElement('option')
+			opt.value = m.model_id
+			opt.textContent = m.label || m.model_id.split('/').pop()
+			opt.dataset.dtype			= m.dtype || 'q4f16'
+			opt.dataset.device			= m.device || 'webgpu'
+			opt.dataset.fallback_device	= m.fallback_device || 'wasm'
+			opt.dataset.max_new_tokens	= m.max_new_tokens || 2048
+			opt.dataset.thinking		= m.thinking || 'none'
+			opt.dataset.thinking_options= JSON.stringify(m.thinking_options || ['none'])
+			if (m.model_id === settings.model_id) opt.selected = true
+			model_select.appendChild(opt)
+		})
+		model_label.appendChild(model_select)
+		this._settings_popover.appendChild(model_label)
 
-		// device select
-			const device_label = document.createElement('label')
-			device_label.classList.add('assistant_settings_label')
-			device_label.textContent = 'Device'
-			const device_select = document.createElement('select')
-			device_select.classList.add('assistant_settings_input')
-			;['webgpu', 'wasm'].forEach(function(d) {
-				const opt = document.createElement('option')
-				opt.value = d
-				opt.textContent = d
-				if (d === settings.device) opt.selected = true
-				device_select.appendChild(opt)
-			})
-			device_label.appendChild(device_select)
-			this._settings_popover.appendChild(device_label)
+	// device select
+		const device_label = document.createElement('label')
+		device_label.classList.add('assistant_settings_label')
+		device_label.textContent = 'Device'
+		const device_select = document.createElement('select')
+		device_select.classList.add('assistant_settings_input')
+		;['webgpu', 'wasm'].forEach(function(d) {
+			const opt = document.createElement('option')
+			opt.value = d
+			opt.textContent = d
+			if (d === settings.device) opt.selected = true
+			device_select.appendChild(opt)
+		})
+		device_label.appendChild(device_select)
+		this._settings_popover.appendChild(device_label)
 
-		// apply button
-			const apply = document.createElement('button')
-			apply.type = 'button'
-			apply.classList.add('assistant_settings_apply')
-			apply.textContent = 'Apply'
-			apply.addEventListener('click', function() {
-				self._close_settings()
-				self._on_settings_change({
-					model_id	: model_select.value,
-					device		: device_select.value
-				})
+	// thinking select (per-model options)
+		const thinking_label = document.createElement('label')
+		thinking_label.classList.add('assistant_settings_label')
+		thinking_label.textContent = 'Thinking'
+		const thinking_select = document.createElement('select')
+		thinking_select.classList.add('assistant_settings_input')
+		const render_thinking_options = function(opts, current) {
+			thinking_select.innerHTML = ''
+			;(opts && opts.length ? opts : ['none']).forEach(function(level) {
+				const opt = document.createElement('option')
+				opt.value = level
+				opt.textContent = level
+				if (level === current) opt.selected = true
+				thinking_select.appendChild(opt)
 			})
-			this._settings_popover.appendChild(apply)
+			thinking_select.disabled = thinking_select.options.length <= 1
+		}
+		render_thinking_options(settings.thinking_options, settings.thinking)
+		thinking_label.appendChild(thinking_select)
+		this._settings_popover.appendChild(thinking_label)
+
+	// refresh device+thinking when model changes
+		model_select.addEventListener('change', function() {
+			const sel = model_select.selectedOptions[0]
+			if (!sel) return
+			device_select.value = sel.dataset.device || device_select.value
+			let opts = ['none']
+			try { opts = JSON.parse(sel.dataset.thinking_options || '["none"]') } catch(e) {}
+			render_thinking_options(opts, sel.dataset.thinking || 'none')
+		})
+
+	// apply button
+		const apply = document.createElement('button')
+		apply.type = 'button'
+		apply.classList.add('assistant_settings_apply')
+		apply.textContent = 'Apply'
+		apply.addEventListener('click', function() {
+			const selected = model_select.selectedOptions[0]
+			self._close_settings()
+			self._on_settings_change({
+				model_id	: model_select.value,
+				device		: device_select.value,
+				dtype		: selected ? selected.dataset.dtype : null,
+				thinking	: thinking_select.value
+			})
+		})
+		this._settings_popover.appendChild(apply)
 	}//end _render_settings
 
 

@@ -122,7 +122,10 @@ export const ai_assistant = class ai_assistant {
 			get_settings		: () => ({
 				model_id		: self._config.model_id,
 				device			: self._config.device,
-				model_options	: self._collect_model_options()
+				dtype			: self._config.dtype,
+				thinking		: self._config.thinking,
+				thinking_options: self._config.thinking_options,
+				models			: self._collect_models()
 			})
 		})
 
@@ -204,20 +207,24 @@ export const ai_assistant = class ai_assistant {
 
 
 
-	_collect_model_options() {
-		// pull options from tool_config.properties.model_id.options if present
-		const props = (this._tool_self && this._tool_self.tool_config && this._tool_self.tool_config.properties) || {}
-		const cfg = props.model_id || {}
-		if (Array.isArray(cfg.options) && cfg.options.length > 0) {
-			return cfg.options.slice()
+	_collect_models() {
+		// each entry is a self-contained model config: { model_id, label, dtype,
+		// device, fallback_device, max_new_tokens, thinking, thinking_options }.
+		if (Array.isArray(this._config.models) && this._config.models.length > 0) {
+			return this._config.models.slice()
 		}
-		// sensible defaults
-		const list = [this._config.model_id]
-		if (this._config.fallback_model_id && this._config.fallback_model_id !== this._config.model_id) {
-			list.push(this._config.fallback_model_id)
-		}
-		return list
-	}//end _collect_model_options
+		// sensible default mirroring current active config
+		return [{
+			model_id		: this._config.model_id,
+			label			: this._config.label || this._config.model_id,
+			dtype			: this._config.dtype,
+			device			: this._config.device,
+			fallback_device	: this._config.fallback_device || 'wasm',
+			max_new_tokens	: this._config.max_new_tokens || 2048,
+			thinking		: this._config.thinking || 'none',
+			thinking_options: this._config.thinking_options || ['none']
+		}]
+	}//end _collect_models
 
 
 
@@ -225,21 +232,50 @@ export const ai_assistant = class ai_assistant {
 
 		const self = this
 		if (!new_settings) return
-		const model_changed = new_settings.model_id && new_settings.model_id !== this._config.model_id
-		const device_changed = new_settings.device && new_settings.device !== this._config.device
-		if (!model_changed && !device_changed) return
+		const model_changed		= new_settings.model_id && new_settings.model_id !== this._config.model_id
+		const device_changed	= new_settings.device && new_settings.device !== this._config.device
+		const thinking_changed	= new_settings.thinking && new_settings.thinking !== this._config.thinking
+		const needs_reload		= model_changed || device_changed
+
+		if (!needs_reload && !thinking_changed) return
 
 		if (this._is_generating || this._model_loading) {
 			this._chat_render.add_system_message('Cannot change settings while busy.')
 			return
 		}
 
-		this._config.model_id = new_settings.model_id || this._config.model_id
-		this._config.device = new_settings.device || this._config.device
+		// if a different model is selected, pull its full config from `models`
+		if (model_changed) {
+			const next = (Array.isArray(this._config.models) ? this._config.models : [])
+				.find(m => m && m.model_id === new_settings.model_id)
+			if (next) {
+				this._config.model_id			= next.model_id
+				this._config.label				= next.label || next.model_id
+				this._config.dtype				= next.dtype || 'q4f16'
+				this._config.device				= next.device || 'webgpu'
+				this._config.fallback_device	= next.fallback_device || 'wasm'
+				this._config.max_new_tokens		= next.max_new_tokens || 2048
+				this._config.thinking			= next.thinking || 'none'
+				this._config.thinking_options	= Array.isArray(next.thinking_options) ? next.thinking_options : ['none']
+			} else {
+				this._config.model_id = new_settings.model_id
+			}
+		}
+		// explicit user overrides take precedence over model defaults
+		if (new_settings.device)	this._config.device = new_settings.device
+		if (new_settings.dtype)		this._config.dtype = new_settings.dtype
+		if (new_settings.thinking)	this._config.thinking = new_settings.thinking
+
 		ai_assistant._write_prefs({
 			model_id	: this._config.model_id,
-			device		: this._config.device
+			device		: this._config.device,
+			thinking	: this._config.thinking
 		})
+
+		if (!needs_reload) {
+			// thinking-only change: engine picks it up on next generate via config ref
+			return
+		}
 
 		// rebuild engine
 		try { this._model_engine.unload() } catch(e) {}
@@ -378,6 +414,9 @@ export const ai_assistant = class ai_assistant {
 		const max_iterations	= 5
 		let iteration			= 0
 
+		const system_prompt	= self._build_system_prompt()
+		const tools			= self._build_tools_for_model()
+
 		try {
 			while (iteration < max_iterations) {
 				iteration++
@@ -387,11 +426,9 @@ export const ai_assistant = class ai_assistant {
 				}
 
 				const messages = [
-					{ role: 'system', content: self._build_system_prompt() },
+					{ role: 'system', content: system_prompt },
 					...self._conversation
 				]
-
-				const tools = self._build_tools_for_model()
 
 				let stream_started = false
 				const stream_callback = (token_text) => {

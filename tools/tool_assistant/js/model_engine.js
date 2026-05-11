@@ -20,7 +20,8 @@ export const model_engine = class model_engine {
 		this._model_id	= config.model_id || 'onnx-community/Qwen3.5-0.8B-ONNX'
 		this._device	= config.device || 'webgpu'
 		this._loaded	= false
-		this._wasm_fallback_model = config.fallback_model_id || 'onnx-community/Qwen3-0.6B-ONNX'
+		// per-model fallback: same model_id reloaded on `fallback_device` (e.g. wasm)
+		this._fallback_device = config.fallback_device || 'wasm'
 	}//end constructor
 
 
@@ -199,7 +200,10 @@ export const model_engine = class model_engine {
 
 	async _reload_as_wasm() {
 
-		console.log('[model_engine] reloading with WASM fallback model:', this._wasm_fallback_model)
+		// reload the SAME model on the configured fallback device (wasm by default)
+		const fb_device = this._fallback_device || 'wasm'
+		const fb_dtype = fb_device === 'wasm' ? 'q4' : (this._config.dtype || 'q4f16')
+		console.log('[model_engine] reloading on fallback device:', fb_device, 'model:', this._model_id)
 		this._pipeline	= null
 		this._model		= null
 		this._processor	= null
@@ -213,13 +217,21 @@ export const model_engine = class model_engine {
 
 		this._pipeline = await transformers.pipeline(
 			'text-generation',
-			this._wasm_fallback_model,
-			{ device: 'wasm', dtype: 'q4' }
+			this._model_id,
+			{ device: fb_device, dtype: fb_dtype }
 		)
-		this._device	= 'wasm'
-		this._model_id	= this._wasm_fallback_model
+		this._device	= fb_device
 		this._loaded	= true
 	}//end _reload_as_wasm
+
+
+
+	_is_thinking_enabled() {
+		// `thinking` is a level string: 'none' | 'low' | 'high'. Any non-'none'
+		// value turns on the chat-template thinking flag.
+		const level = (this._config && this._config.thinking) || 'none'
+		return level !== 'none' && level !== false
+	}//end _is_thinking_enabled
 
 
 
@@ -231,7 +243,7 @@ export const model_engine = class model_engine {
 			temperature			: 0.7,
 			top_p				: 0.9,
 			repetition_penalty	: 1.1,
-			enable_thinking		: false
+			enable_thinking		: this._is_thinking_enabled()
 		}
 
 		if (tools.length > 0) {
@@ -262,7 +274,7 @@ export const model_engine = class model_engine {
 				return_dict			: true,
 				add_generation_prompt: true,
 				tools				: tools.length > 0 ? tools : undefined,
-				enable_thinking		: false
+				enable_thinking		: this._is_thinking_enabled()
 			}
 		)
 
