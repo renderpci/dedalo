@@ -208,7 +208,16 @@
 		return time
 	}
 
-	export const random_email_value = function() {
+	export const random_external_value = function() {
+	const data_element = {
+		id		: 1,
+		value	: random_string(64),
+		lang	: 'lg-nolan'
+	}
+	return data_element
+}
+
+export const random_email_value = function() {
 		let result				= ''
 		const length			= 40
 		const characters		= 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

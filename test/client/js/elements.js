@@ -104,7 +104,19 @@ export const permissions	= 2
 		new_value			: fn.random_email_value
 	})
 
-// component_external -zenon- (WORKING HERE)
+// component_external
+	elements.push({
+		model				: 'component_external',
+		tipo				: 'test215',
+		// section_tipo		: section_tipo,
+		section_tipo		: 'zenon1',
+		// section_id		: section_id,
+		section_id			: '000147689',
+		mode				: mode,
+		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
+		new_value			: fn.random_external_value,
+		test_save			: false
+	})
 
 // component_filter_master
 	elements.push({

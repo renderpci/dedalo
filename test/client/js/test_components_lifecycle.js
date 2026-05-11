@@ -167,12 +167,12 @@ async function life_cycle_test(element, view) {
 			// asserts
 				assert.equal(new_instance.status, 'built');
 				// assert.equal(new_instance.mode, element_mode);
-				assert.notEqual(new_instance.context, null);
+				assert.notEqual(new_instance.context, null, 'The instance context must be distinct of null');
 
-				assert.notEqual(new_instance.type, null);
-				assert.notEqual(new_instance.label, null);
-				assert.notEqual(new_instance.tools, null);
-				assert.notEqual(new_instance.permissions, null);
+				assert.notEqual(new_instance.type, null, 'The instance type must be distinct of null');
+				assert.notEqual(new_instance.label, null, 'The instance label must be distinct of null');
+				assert.notEqual(new_instance.tools, null, 'The instance tools must be distinct of null');
+				assert.notEqual(new_instance.permissions, null, 'The instance permissions must be distinct of null');
 				// assert.notEqual(new_instance.view, null);
 				assert.notEqual(new_instance.rqo_test, null);
 				assert.notEqual(new_instance.data, null);
@@ -191,7 +191,7 @@ async function life_cycle_test(element, view) {
 				// }
 
 			// asserts
-				assert.equal(new_instance.status, 'rendered');
+				assert.equal(new_instance.status, 'rendered', 'The instance status must be "rendered"');
 				assert.notEqual(new_instance.node, null);
 
 				if (new_instance.mode==='edit' && new_instance.view!=='line' && new_instance.view!=='mini') {
@@ -207,7 +207,7 @@ async function life_cycle_test(element, view) {
 						`label must be a DOM node on edit mode. (view: ${new_instance.view} - mode: ${new_instance.mode})`
 					);
 					const buttons_container = new_instance.node.querySelector('.buttons_container')
-					assert.notEqual(buttons_container, null);
+					assert.notEqual(buttons_container, null, 'Buttons container must not be null');
 					assert.notEqual(new_instance.node.querySelector('.content_data'), null);
 				}
 				else if(new_instance.mode==='list') {
