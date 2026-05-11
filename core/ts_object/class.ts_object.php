@@ -50,27 +50,80 @@ class ts_object {
 
 
 
-	// int (mandatory)
-	public $section_id;
-	// string (mandatory)
-	public $section_tipo;
-	// object
-	// protected $section;
-	// mixed object|null (default null)
-	protected $options;
-	// string (default 'edit')
-	protected $mode;
-	// int
-	public $order;
-	// ar_elements
-	public $ar_elements;
-	// ts_id as dd1_1
-	public $ts_id;
-	// ts_parent as dd1_1
-	public $ts_parent;
-	// cache
-	public static $term_by_locator_data_cache = [];
-	public static $resolved_child_cache = [];
+	/**
+	* CLASS VARS
+	*/
+
+		/**
+		 * Section ID of the thesaurus term record. Mandatory.
+		 * Identifies the specific term within the section (thesaurus hierarchy).
+		 * @var string|int|null $section_id
+		 */
+		public string|int|null $section_id = null;
+
+		/**
+		 * Section tipo of the thesaurus term. Mandatory.
+		 * Defines which hierarchy/ontology type this term belongs to.
+		 * @var ?string $section_tipo
+		 */
+		public ?string $section_tipo = null;
+
+		/**
+		 * Optional configuration object for this thesaurus element.
+		 * Defines display options, children behavior, and rendering preferences.
+		 * @var ?object $options
+		 */
+		protected ?object $options = null;
+
+		/**
+		 * Display mode for this thesaurus object. Default 'edit'.
+		 * Controls how the term is rendered (edit, list, search, etc.).
+		 * @var ?string $mode
+		 */
+		protected ?string $mode = null;
+
+		/**
+		 * Display order/position of this term within its parent hierarchy.
+		 * Used for sorting siblings in the thesaurus tree view.
+		 * @var string|int|float|null $order
+		 */
+		public string|int|float|null $order = null;
+
+		/**
+		 * Array of UI elements (term, icons, links) for this thesaurus object.
+		 * Populated from ontology section_list_thesaurus configuration.
+		 * @var ?array $ar_elements
+		 */
+		public ?array $ar_elements = null;
+
+		/**
+		 * Thesaurus ID combining section_tipo and section_id. Format: "dd1_1".
+		 * Unique identifier for the term within the thesaurus tree structure.
+		 * @var ?string $ts_id
+		 */
+		public ?string $ts_id = null;
+
+		/**
+		 * Parent thesaurus ID linking this term to its parent node. Format: "dd1_1".
+		 * Establishes the hierarchical parent-child relationship in the tree.
+		 * @var ?string $ts_parent
+		 */
+		public ?string $ts_parent = null;
+
+		/**
+		 * Static cache mapping locators to their term data.
+		 * Avoids repeated database queries for the same term lookups.
+		 * @var array $term_by_locator_data_cache
+		 */
+		public static array $term_by_locator_data_cache = [];
+
+		/**
+		 * Static cache for resolved child thesaurus objects.
+		 * Stores pre-computed child arrays to optimize tree traversal.
+		 * @var array $resolved_child_cache
+		 */
+		public static array $resolved_child_cache = [];
+
 
 
 	/**

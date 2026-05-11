@@ -7,6 +7,8 @@
 // imports
 	import {view_default_list_component_external} from './view_default_list_component_external.js'
 	import {view_text_list_component_external} from './view_text_list_component_external.js'
+	import {view_mini_list_external} from './view_mini_list_external.js'
+
 
 
 /**
@@ -33,6 +35,9 @@ render_list_component_external.prototype.list = async function(options) {
 		const view = self.context.view || 'default'
 
 	switch(view) {
+
+		case 'mini':
+			return view_mini_list_external.render(self, options)
 
 		case 'line':
 		case 'text':

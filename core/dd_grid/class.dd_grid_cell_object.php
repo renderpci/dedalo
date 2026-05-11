@@ -104,51 +104,145 @@
 */
 class dd_grid_cell_object {
 
+	/**
+	* CLASS VARS
+	*/
 
+		/**
+		 * Unique identifier for the column. Format: "oh1_id".
+		 * Used to identify data within the same column across rows.
+		 * @var ?string $id
+		 */
+		public ?string $id = null;
 
-	// string id. As "oh1_id" - the unique id of the column to identify data inside the same column
-	public $id;
-	// string class_list. CSS selector As "caption bold"
-	public $class_list;
-	// string type. row column - type of the element
-	public $type;
-	// string label. As "name" - one column of the grid (every column is a object)
-	public $label;
-	// int row_count. Total rows of the component, used by portals to define the rows that could be separated individually.
-	public $row_count;
-	// int column_count. Total columns of the component, used by portals to define the columns that could be separated individually.
-	public $column_count;
-	// array column_labels. Names of the columns that will use the portal to define sub columns names
-	public $column_labels;
-	// string $fields_separator. AS ", " with the glue of the fields
-	public $fields_separator;
-	// string records_separator. As "<br>" - with the glue of the rows
-	public $records_separator;
-	// string cell_type. Type of the element to represent in the cell
-	public $cell_type;
-	// object action . Used by buttons to define the action will done by the user
-	//		method 	: string - name of the method will be used by the element
-	//		options : object - parameters to configure the method
-	// 		event 	: string - name of the user event
-	public $action;
-	// array value. array of strings || array of objects - every object define one column of data and action - [{"type": "button","action": "hello","data": []}] - every item inside the array will be a row of the column of his position inside the array
-	public $value;
-	// array fallback_value. array of strings - when a component doesn't has value in the current lang, use the fallback_value with one value in other languages
-	public $fallback_value;
-	// array data. component raw data in current lang. optional (!). See COMPONENT_IRI case
-	public $data;
+		/**
+		 * CSS class list for styling the cell. Example: "caption bold".
+		 * Space-separated CSS selectors applied to the cell element.
+		 * @var ?string $class_list
+		 */
+		public ?string $class_list = null;
 
-	// render_label
-	public $render_label;
-	// string|null column
-	public $column;
-	// array ar_columns_obj
-	public $ar_columns_obj;
-	// object features
-	// Multipurpose container used to pass useful information, for example the section color
-	public $features;
-	// model string|null
-	public $model;
+		/**
+		 * Type of grid element. Values: 'row', 'column'.
+		 * Defines whether this cell represents a row header or data column.
+		 * @var ?string $type
+		 */
+		public ?string $type = null;
+
+		/**
+		 * Human-readable label for the column. Example: "name".
+		 * Displayed as column header in the grid.
+		 * @var ?string $label
+		 */
+		public ?string $label = null;
+
+		/**
+		 * Total number of rows in the component.
+		 * Used by portals to define separable row groups.
+		 * @var ?int $row_count
+		 */
+		public ?int $row_count = null;
+
+		/**
+		 * Total number of columns in the component.
+		 * Used by portals to define separable column groups.
+		 * @var ?int $column_count
+		 */
+		public ?int $column_count = null;
+
+		/**
+		 * Array of column labels for portal sub-columns.
+		 * Names used by portals to define nested column headers.
+		 * @var ?array $column_labels
+		 */
+		public ?array $column_labels = null;
+
+		/**
+		 * Separator string between fields within a cell. Example: ", ".
+		 * Glue used when concatenating multiple field values.
+		 * @var ?string $fields_separator
+		 */
+		public ?string $fields_separator = null;
+
+		/**
+		 * Separator string between records/rows. Example: "<br>".
+		 * HTML or string used to separate multiple records in the same cell.
+		 * @var ?string $records_separator
+		 */
+		public ?string $records_separator = null;
+
+		/**
+		 * Type of element to render within the cell.
+		 * Values: 'av', 'img', 'iri', 'button', 'json', 'section_id', 'text'.
+		 * @var ?string $cell_type
+		 */
+		public ?string $cell_type = null;
+
+		/**
+		 * Action configuration for interactive elements (buttons).
+		 * Object with method, options, and event properties defining user actions.
+		 * Every object defines one column of data and action - [{"type": "button","action": "hello","data": []}] -
+		 * every item inside the array will be a row of the column of his position inside the array
+		 * @var object|string|null $action
+		 */
+		public object|string|null $action = null;
+
+		/**
+		 * Array of cell values. Array of strings or objects defining column data.
+		 * Each item represents a row in its column position.
+		 * @var array|null $value
+		 */
+		public array|null $value = null;
+
+		/**
+		 * Fallback values when current language has no data.
+		 * When a component doesn't has value in the current lang, use the fallback_value with one value in another language.
+		 * Array of strings with values from other languages.
+		 * @var ?array $fallback_value
+		 */
+		public ?array $fallback_value = null;
+
+		/**
+		 * Raw component data in current language (optional).
+		 * Used for special cases like COMPONENT_IRI.
+		 * @var ?array $data
+		 */
+		public ?array $data = null;
+
+		/**
+		 * Whether to render the column label/heading.
+		 * Controls visibility of the column header text.
+		 * @var ?bool $render_label
+		 */
+		public ?bool $render_label = null;
+
+		/**
+		 * Column identifier for grouping and positioning.
+		 * Defines which column group this cell belongs to.
+		 * @var ?string $column
+		 */
+		public ?string $column = null;
+
+		/**
+		 * Array of column objects for nested column definitions.
+		 * Used for complex grid layouts with sub-columns.
+		 * @var array|object|null $ar_columns_obj
+		 */
+		public array|object|null $ar_columns_obj = null;
+
+		/**
+		 * Multipurpose container for additional cell features.
+		 * Used to pass extra information like section color.
+		 * @var ?object $features
+		 */
+		public ?object $features = null;
+
+		/**
+		 * Component model/type identifier.
+		 * Specifies which component model this cell represents.
+		 * @var ?string $model
+		 */
+		public ?string $model = null;
 
 	// ar_value_type_allowed
 		// private static $ar_value_type_allowed = [
@@ -281,7 +375,7 @@ class dd_grid_cell_object {
 	* @param int|null $value
 	* @return void
 	*/
-	public function set_column_count(?int $value) {
+	public function set_column_count(?int $value) : void {
 		$this->column_count = $value;
 	}//end set_column_count
 
@@ -357,10 +451,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_VALUE
-	* @param mixed $value
+	* @param array|null $value
 	* @return void
 	*/
-	public function set_value($value) : void  {
+	public function set_value(?array $value) : void  {
 		$this->value = $value;
 	}//end set_value
 

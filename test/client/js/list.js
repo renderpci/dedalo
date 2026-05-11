@@ -33,6 +33,7 @@ export const livecycle_detail = [
 	'test_component_check_box',
 	'test_component_date',
 	'test_component_email',
+	'test_component_external',
 	'test_component_filter',
 	'test_component_filter_records',
 	'test_component_geolocation',
@@ -48,6 +49,13 @@ export const livecycle_detail = [
 	'test_component_portal',
 	'test_component_publication',
 	'test_component_radio_button',
+	'test_component_relation_children',
+	'test_component_relation_index',
+	'test_component_relation_model',
+	'test_component_relation_parent',
+	'test_component_relation_related',
+	'test_component_section_id',
+	'test_component_security_access',
 	'test_component_select',
 	'test_component_select_lang',
 	'test_component_svg',
@@ -218,7 +226,7 @@ if (typeof content !== 'undefined') {
 	}
 
 	create_group_section('generic', 'generic', list_of_test, 'generic')
-	create_group_section('lifecycle', 'generic', livecycle_detail, 'generic')
+	create_group_section('life-cycle', 'generic', livecycle_detail, 'generic')
 	create_group_section('components', 'component', elements, 'component')
 
 	update_global_stats()

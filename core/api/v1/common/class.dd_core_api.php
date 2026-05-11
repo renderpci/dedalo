@@ -34,26 +34,40 @@ final class dd_core_api {
 
 
 
-	// Version. Important!
-		public static $version = "1.0.0";  // 05-06-2019
+	/**
+	 * Version constant.
+	 * Format: "Major.Minor.Patch" (e.g., "1.0.0" for Dédalo 7.x).
+	 * @var string
+	 */
+	public static string $version = "1.0.0";  // 05-06-2019
 
-	// ar_dd_objects . store current ar_dd_objects received in context to allow external access (portals, etc.)
-		// static $ar_dd_objects;
+	/**
+	 * Request Query Object (RQO) currently being processed.
+	 * Allows access to request parameters globally within the API context.
+	 * @var ?object $rqo
+	 */
+	public static ?object $rqo = null;
 
-	// $request_ddo_value . store current ddo items added by get_config_context methods (portals, etc.)
-		// static $request_ddo_value = [];
+	/**
+	 * Cache for calculated context dd_objects.
+	 * Stores resolved ontology and data objects to prevent redundant calculations.
+	 * @var ?array $context_dd_objects
+	 */
+	public static ?array $context_dd_objects = null;
 
-	// rqo . store current rqo received in context to allow external access (portals, etc.)
-		public static $rqo;
+	/**
+	 * The complete calculated response context object.
+	 * Holds the final structure and data to be returned to the client.
+	 * @var ?object $context
+	 */
+	public static ?object $context = null;
 
-	// context_dd_objects . store calculated context dd_objects
-		public static $context_dd_objects;
-
-	// context . Whole calculated context
-		public static $context;
-
-	// static debug sql_query search
-		public static $sql_query_search = [];
+	/**
+	 * Debug container for SQL queries executed during the request.
+	 * Only populated when SHOW_DEBUG is enabled.
+	 * @var array $sql_query_search
+	 */
+	public static array $sql_query_search = [];
 
 
 

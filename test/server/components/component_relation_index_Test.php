@@ -262,7 +262,7 @@ final class component_relation_index_test extends BaseTestCase {
 			}
 		');
 
-		$result = component_relation_index::get_referended_locators_with_cache(
+		$result = component_relation_index::get_referenced_locators_with_cache(
 			$locator_base,
 			DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . self::$section_tipo . '_' . 1 // cache_key
 		);
@@ -403,6 +403,123 @@ final class component_relation_index_test extends BaseTestCase {
 		$this->assertArrayHasKey('*', $result);
 		$this->assertArrayHasKey('!*', $result);
 	}//end test_search_operators_info
+
+
+
+	/**
+	* TEST_IS_EMPTY
+	* Uses is_empty_data() for array-level check and is_empty() for item-level
+	* @return void
+	*/
+	public function test_is_empty() {
+
+		$component = $this->build_component_instance();
+
+		// is_empty_data: array-level check
+			$data = $component->get_data();
+			$result = $component->is_empty_data($data);
+			$this->assertTrue(
+				gettype($result)==='boolean',
+				'expected is_empty_data to return boolean : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// is_empty with null data_item
+			$result_null = $component->is_empty(null);
+			$this->assertTrue(
+				$result_null===true,
+				'expected is_empty(null) to return true'
+			);
+	}//end test_is_empty
+
+
+
+	/**
+	* TEST_GET_IDENTIFIER
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_identifier();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected get_identifier to return string : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			strlen($result) > 0,
+			'expected non-empty identifier'
+		);
+		$this->assertTrue(
+			str_contains($result, self::$tipo),
+			'identifier expected to contain tipo'
+		);
+	}//end test_get_identifier
+
+
+
+	/**
+	* TEST_COMPONENT_INSTANCE_MODES
+	* Verify component can be instantiated in edit, list, and search modes
+	* @return void
+	*/
+	public function test_component_instance_modes() {
+
+		$modes = ['edit', 'list', 'search'];
+
+		foreach ($modes as $mode) {
+
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				1,
+				$mode,
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+
+			$this->assertTrue(
+				get_class($component)==='component_relation_index',
+				"expected class component_relation_index for mode $mode : " . PHP_EOL
+					. get_class($component)
+			);
+			$this->assertTrue(
+				$component->get_mode()===$mode,
+				"expected mode $mode : " . PHP_EOL
+					. $component->get_mode()
+			);
+
+			// get_data should work in all modes
+			$result = $component->get_data();
+			$this->assertTrue(
+				gettype($result)==='array' || gettype($result)==='NULL',
+				"expected type array or null for mode $mode : " . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_component_instance_modes
+
+
+
+	/**
+	* TEST_GET_GRID_VALUE
+	* @return void
+	*/
+	public function test_get_grid_value() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_grid_value();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_grid_value
 
 
 

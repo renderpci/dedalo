@@ -1889,4 +1889,267 @@ class v6_to_v7 {
 
 
 
+	/**
+	 * MIGRATE_SEARCH_PRESETS_V6_TO_V7
+	 *
+	 * Migrates search preset data from v6 to v7 format by adding mandatory `id` properties.
+	 * Presets are stored in `matrix_list` table, section_tipo 'dd655', component_json 'dd625'.
+	 * (!) This feature is in process of implementation.
+	 *
+	 * Transformation rules:
+	 * - Add `"id": 1` to top-level preset object
+	 * - When `q` is not null: add `"id": 1` to each item in the `q` array
+	 * - When `q` is null: remove any existing `id` property from the filter item
+	 * - Idempotent: skips already-converted data (checks for top-level id)
+	 *
+	 * @param bool $save If true, saves changes to DB. If false, dry-run only.
+	 * @return object Standard response with result, msg, errors
+	 */
+	public static function migrate_search_presets_v6_to_v7(bool $save) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		debug_log(__METHOD__ . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			. ' MIGRATING SEARCH PRESETS ... ' . PHP_EOL
+			. ' ))))))))))))))))))))))))))))))))))))))))))))))))))))))) ' . PHP_EOL
+			, logger::WARNING
+		);
+
+		// CLI process data initialization
+		if (running_in_cli() === true) {
+			if (!isset(common::$pdata)) {
+				common::$pdata = new stdClass();
+			}
+			common::$pdata->table		= 'matrix_list';
+			common::$pdata->memory		= '';
+			common::$pdata->counter		= 0;
+			common::$pdata->modified	= 0;
+		}
+
+		$conn		= DBi::_getConnection();
+		$table		= 'matrix_list';
+		$section_tipo	= 'dd655'; // temp presets section tipo
+		$component_tipo	= 'dd625'; // component_json tipo
+
+		$escaped_table = pg_escape_identifier($conn, $table);
+
+		// Query records with section_tipo dd655
+		$strQuery = "
+			SELECT id, section_id, misc
+			FROM $escaped_table
+			WHERE section_tipo = $1
+		";
+		$result = matrix_db_manager::exec_search($strQuery, [$section_tipo]);
+
+		if ($result === false) {
+			$msg = "Failed to query matrix_list for section_tipo $section_tipo";
+			debug_log(__METHOD__ . " ERROR: $msg", logger::ERROR);
+			$response->errors[] = $msg;
+			return $response;
+		}
+
+		$rows_processed	= 0;
+		$rows_modified	= 0;
+
+		while ($row = pg_fetch_assoc($result)) {
+
+			$id		= $row['id'];
+			$section_id	= $row['section_id'];
+			$misc_json	= $row['misc'];
+
+			// CLI process data status
+			if (running_in_cli() === true) {
+				common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': ' . __METHOD__
+					. ' | table: ' . $table
+					. ' | id: ' . $id
+					. ' | section_id: ' . $section_id;
+				common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+					? dd_memory_usage()
+					: common::$pdata->memory;
+				common::$pdata->counter++;
+				print_cli(common::$pdata);
+			}
+
+			if (empty($misc_json)) {
+				continue;
+			}
+
+			$misc = json_handler::decode($misc_json);
+			if (empty($misc) || !isset($misc->{$component_tipo})) {
+				continue;
+			}
+
+			$preset_data = $misc->{$component_tipo};
+
+			// Check if already migrated (idempotent check)
+			if (is_array($preset_data) && isset($preset_data[0]) && is_object($preset_data[0]) && isset($preset_data[0]->id)) {
+				// Already has top-level id, skip
+				continue;
+			}
+
+			// Transform the preset data
+			$transformed = self::transform_search_preset($preset_data);
+
+			if ($transformed === null) {
+				// No changes needed
+				continue;
+			}
+
+			// Update misc with transformed data
+			$misc->{$component_tipo} = $transformed;
+			$new_misc_json = json_handler::encode($misc, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+			$update_query = "
+				UPDATE $escaped_table
+				SET misc = $1
+				WHERE id = $2
+			";
+
+			if ($save) {
+				$update_result = matrix_db_manager::exec_search($update_query, [$new_misc_json, $id]);
+				if ($update_result === false) {
+					$msg = "Failed to update matrix_list id $id";
+					debug_log(__METHOD__ . " ERROR: $msg", logger::ERROR);
+					$response->errors[] = $msg;
+					continue;
+				}
+			}
+
+			$rows_modified++;
+			$rows_processed++;
+		}
+
+		pg_free_result($result);
+
+		$response->result	= empty($response->errors);
+		$response->msg		= empty($response->errors)
+			? "Migration completed. Processed: $rows_processed, Modified: $rows_modified"
+			: 'Request done with errors (' . count($response->errors) . ')';
+		$response->processed	= $rows_processed;
+		$response->modified	= $rows_modified;
+
+		return $response;
+	}//end migrate_search_presets_v6_to_v7
+
+
+
+	/**
+	 * TRANSFORM_SEARCH_PRESET
+	 *
+	 * Transforms a single search preset from v6 to v7 format.
+	 * Adds id properties as required. Handles nested $and/$or operators recursively.
+	 *
+	 * @param array $preset_data The preset array to transform
+	 * @return array|null The transformed array, or null if no changes needed
+	 */
+	private static function transform_search_preset(array $preset_data) : ?array {
+
+		if (empty($preset_data) || !isset($preset_data[0])) {
+			return null;
+		}
+
+		$preset = $preset_data[0];
+
+		if (!is_object($preset)) {
+			return null;
+		}
+
+		// Check if already has id (idempotent)
+		if (isset($preset->id)) {
+			return null;
+		}
+
+		// Add id to top-level preset
+		$preset->id = 1;
+
+		// Process value object if exists
+		if (isset($preset->value) && is_object($preset->value)) {
+			self::process_filter_operators($preset->value);
+		}
+
+		return [$preset];
+	}//end transform_search_preset
+
+
+
+	/**
+	 * PROCESS_FILTER_OPERATORS
+	 *
+	 * Recursively processes $and and $or operators in filter objects.
+	 * Handles nested operators by calling itself recursively.
+	 *
+	 * @param object $filter_object The filter object containing $and/$or arrays
+	 * @return void
+	 */
+	private static function process_filter_operators(object $filter_object) : void {
+
+		// Process $and array if exists
+		if (isset($filter_object->{'$and'}) && is_array($filter_object->{'$and'})) {
+			self::process_filter_items($filter_object->{'$and'});
+		}
+
+		// Process $or array if exists
+		if (isset($filter_object->{'$or'}) && is_array($filter_object->{'$or'})) {
+			self::process_filter_items($filter_object->{'$or'});
+		}
+	}//end process_filter_operators
+
+
+
+	/**
+	 * PROCESS_FILTER_ITEMS
+	 *
+	 * Processes an array of filter items, handling both regular filters with 'q' property
+	 * and nested operators ($and/$or) recursively.
+	 *
+	 * @param array $filter_items Array of filter item objects
+	 * @return void
+	 */
+	private static function process_filter_items(array $filter_items) : void {
+
+		foreach ($filter_items as &$filter_item) {
+
+			if (!is_object($filter_item)) {
+				continue;
+			}
+
+			// Check for nested operators ($and or $or) - recurse into them
+			if (isset($filter_item->{'$and'}) && is_array($filter_item->{'$and'})) {
+				self::process_filter_items($filter_item->{'$and'});
+				continue; // Skip further processing for nested operator objects
+			}
+
+			if (isset($filter_item->{'$or'}) && is_array($filter_item->{'$or'})) {
+				self::process_filter_items($filter_item->{'$or'});
+				continue; // Skip further processing for nested operator objects
+			}
+
+			// Handle q property for regular filter items
+			if (property_exists($filter_item, 'q')) {
+
+				if ($filter_item->q !== null && is_array($filter_item->q)) {
+					// q is array: add id to each item
+					foreach ($filter_item->q as &$q_item) {
+						if (is_object($q_item) && !isset($q_item->id)) {
+							$q_item->id = 1;
+						}
+					}
+					unset($q_item);
+				} elseif ($filter_item->q === null) {
+					// q is null: remove id property if exists
+					if (isset($filter_item->id)) {
+						unset($filter_item->id);
+					}
+				}
+			}
+		}
+		unset($filter_item);
+	}//end process_filter_items
+
+
+
 }//end class v6_to_v7

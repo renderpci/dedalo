@@ -1,16 +1,26 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_SVG
-* Manage specific component svg logic
-* Common components properties and method are inherited of component_common class that are inherited from common class
+* Manages SVG (Scalable Vector Graphics) components in Dédalo.
+*
+* Handles SVG file operations including:
+* - Upload, download, and deletion of SVG files
+* - Quality level management for different SVG variants
+* - SVG content parsing and manipulation
+* - Thumbnail/preview generation for SVG graphics
+* - MIME type handling for SVG formats
+* - File path and URL generation for SVG assets
+*
+* Used for standalone SVG assets as well as for annotation overlays
+* on other media types (e.g., image annotation layers).
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_svg extends component_media_common implements component_media_interface {
-
-
-
-	/**
-	* CLASS VARS
-	*/
 
 
 

@@ -1349,41 +1349,6 @@ final class core_functions_test extends BaseTestCase {
 
 
 	/**
-	* TEST_safe_table
-	* @return void
-	*/
-	public function test_safe_table() {
-
-		$result = safe_table('my strange table <?php exit();');
-
-		$eq = gettype($result)==='string' || gettype($result)==='boolean';
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-
-		$eq = $result===false;
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-
-		// true
-		$result = safe_table('matrix_activity');
-
-		$eq = $result==='matrix_activity';
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-	}//end test_safe_table
-
-
-
-	/**
 	* TEST_safe_lang
 	* @return void
 	*/

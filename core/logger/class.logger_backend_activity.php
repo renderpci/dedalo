@@ -27,7 +27,7 @@ class logger_backend_activity extends logger_backend {
 	* @see diffusion_section_stats::build_what() for statistics usage
 	* @var array<int, int>
 	*/
-	static $what = [
+	static array $what = [
 		'LOG IN'			=>	1,	// dd696 login module
 		'LOG OUT'			=>	2,	// dd697 login module
 		'NEW'				=>	3,	// dd695 section
@@ -47,62 +47,62 @@ class logger_backend_activity extends logger_backend {
 	];
 
 	// tipos
-	static $_SECTION_TIPO = [
+	static array $_SECTION_TIPO = [
 		'tipo'			=>'dd542',
 		'model_name'	=>'section'
 	];
-	static $_COMPONENT_IP = [
+	static array $_COMPONENT_IP = [
 		'tipo'			=>'dd544',	// (v5 former component_ip)
 		'model_name'	=>'component_input_text'
 	];
-	static $_COMPONENT_WHO = [
+	static array $_COMPONENT_WHO = [
 		'tipo'			=>'dd543',
 		'model_name'	=>'component_portal'	//component_autocomplete
 	];
-	static $_COMPONENT_WHAT = [
+	static array $_COMPONENT_WHAT = [
 		'tipo'			=> 'dd545',
 		'model_name'	=> 'component_select'	// (v5 former component_input_text)
 	];
-	static $_COMPONENT_WHERE = [
+	static array $_COMPONENT_WHERE = [
 		'tipo'			=>'dd546',	// (v5 former component_autocomplete_ts)
 		'model_name'	=>'component_input_text'
 	];
-	static $_COMPONENT_WHEN	= [
+	static array $_COMPONENT_WHEN	= [
 		'tipo'			=>'dd547',
 		'model_name'	=>'component_date'
 	];
-	static $_COMPONENT_PROJECTS	= [
+	static array $_COMPONENT_PROJECTS	= [
 		'tipo'			=>'dd550',
 		'model_name'	=>'component_filter'
 	];
-	static $_COMPONENT_DATA = [
+	static array $_COMPONENT_DATA = [
 		'tipo'			=>'dd551',
 		'model_name'	=>'component_json'	// (v5 former component_input_text)
 		// in Ontology appears as component_input_text from v5 compatibility, but mapped to component_json in 'get_model()'
 	];
 
 	// ar_elements_activity_tipo
-	static $ar_elements_activity_tipo;
+	static array $ar_elements_activity_tipo;
 
 	// enable_log static
-	public static $enable_log = true;
+	public static bool $enable_log = true;
 
 	// Cached column names for performance (pre-computed in constructor)
-	static $_COLUMN_IP;
-	static $_COLUMN_WHO;
-	static $_COLUMN_WHAT;
-	static $_COLUMN_WHERE;
-	static $_COLUMN_WHEN;
-	static $_COLUMN_DATA;
+	static string $_COLUMN_IP;
+	static string $_COLUMN_WHO;
+	static string $_COLUMN_WHAT;
+	static string $_COLUMN_WHERE;
+	static string $_COLUMN_WHEN;
+	static string $_COLUMN_DATA;
 
 	// O(1) lookup map for infinite loop prevention
-	static $ar_elements_activity_tipo_map;
+	static array $ar_elements_activity_tipo_map;
 
 	// Log queue for batching (prevents 1000s of shutdown functions)
-	private static $log_queue = [];
+	private static array $log_queue = [];
 
 	// Maximum queue size before forced flush (prevents memory bloat)
-	private const MAX_QUEUE_SIZE = 100;
+	private const int MAX_QUEUE_SIZE = 100;
 
 
 

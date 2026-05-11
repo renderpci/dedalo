@@ -2,30 +2,45 @@
 include_once 'trait.search_component_relation_index.php';
 /**
 * CLASS COMPONENT_RELATION_INDEX
+* Manages indexation references and inverse relations in Dédalo.
 *
-* Manage indexation references data (Reverse Relations)
+* Core Concept and Purpose:
+* - Inverse Relations: Identifies other sections/records that reference the current
+*   record ("who points to me"). Used to display records linking TO the current section.
+* - External Nature: Primarily calculated/dynamic. Resolves inverse locators rather than
+*   relying solely on stored values.
+* - Search Optimization: Values are saved to database to enable "Easy Search" without
+*   recalculating the entire relationship graph.
+* - Relation Type: Uses DEDALO_RELATION_TYPE_INDEX_TIPO (dd96) for reverse relations.
 *
-* 1. Core Concept and Purpose
-*    - Inverse Relations: Its main job is to identify other sections/records in the system that reference the current record ("who points to me").
-*    - EXTERNAL Nature: This component is primarily calculated/dynamic. It resolves calling data (inverse locators) rather than relying solely on stored values.
-*    - Search Optimization: While calculated dynamically, values are saved to the database to allow for "Easy Search" (indexing relations) without recalculating the entire graph.
-*    - Used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO - dd96) to the current section.
+* Key Functionalities:
+* - Data Retrieval (get_data): Finds "Inverse Locators" using search_related.
+*   Asks "Find all records that relation-link to ME" with caching for performance.
+* - Context Resolution (get_related_section_context): Displays data from OTHER calling
+*   sections (e.g., list "Paintings" that cite this "Artist"). Groups by section_tipo,
+*   initializes samples for request_config, and merges into unified "Related List".
+* - Searching (resolve_query_object_sql):
+*   * `*` (Not Empty): Finds records cited by others
+*   * `!*` (Empty): Finds orphan records (not cited by anyone)
 *
-* 2. Key Functionalities
-*    - Data Retrieval (get_data): Finds "Inverse Locators" using `search_related`. It asks "Find all records that relation-link to ME".
-*      Includes caching mechanisms to avoid expensive lookups during repetitive processes like publication.
-*    - Context Resolution (get_related_section_context):
-*      This serves to display data from *other* calling sections (e.g., showing a list of "Paintings" that cite this "Artist").
-*      It groups calling records by `section_tipo`, initializes sample instances to fetch their `request_config`, and merges these into the component's context.
-*      This allows a unified "Related List" of heterogeneous records.
-*    - Searching (resolve_query_object_sql):
-*      o `*` (Not Empty): Finds records that *are cited* by others.
-*      o `!*` (Empty): Finds records that are *orphans* (not cited by anyone).
+* Data Model:
+* Array of locator objects representing incoming links:
+* ```
+* [{
+*   "type": "dd96",
+*   "section_tipo": "...",
+*   "section_id": "...",
+*   "component_tipo": "...",
+*   "tag_id": "..."
+* }]
+* ```
 *
-* 3. Data Model
-*    The data is a list of `locator` objects representing incoming links:
-*    [{ "type": "dd96", "section_tipo": "...", "section_id": "...", "component_tipo": "...", "tag_id": "..." }]
- */
+* Extends component_relation_common and uses search_component_relation_index trait
+* for inverse relation queries.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class component_relation_index extends component_relation_common {
 
 
@@ -33,22 +48,45 @@ class component_relation_index extends component_relation_common {
 	// traits. Files added to current class file to split the large code.
 	use search_component_relation_index;
 
-	// cache
-	public static $referended_locators_cache;
 
 
 	/**
-	* @var
+	* CLASS VARS
 	*/
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
-	protected $default_relation_type_rel	= null;
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties			= ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
+		/**
+		 * Static cache for referenced locators to avoid expensive lookups.
+		 * Stores inverse locator results during repetitive processes like publication.
+		 * @var array $referended_locators_cache
+		 */
+		public static array $referended_locators_cache = [];
 
-	// default_target_section, when is not set in properties it will set as all related sections than call.
-	protected $default_target_section		= ['all'];
-	public $target_section;
+		/**
+		 * Default relation type for indexation (DEDALO_RELATION_TYPE_INDEX_TIPO - dd96).
+		 * Defines the ontology tipo used for reverse relation identification.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
+
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
+
+		/**
+		 * Default target section when not explicitly set in properties.
+		 * Value ['all'] means all related sections that reference the current record.
+		 * @var array $default_target_section
+		 */
+		protected array $default_target_section = ['all'];
+
+		/**
+		 * Target sections for filtering indexation references.
+		 * Array of section tipos to limit which referencing sections are displayed.
+		 * @var array $target_section
+		 */
+		public array $target_section = [];
 
 
 
@@ -73,7 +111,7 @@ class component_relation_index extends component_relation_common {
 
 		// referenced locators. Get calculated inverse locators for all matrix tables
 			// $ar_inverse_locators = search_related::get_referenced_locators($reference_locator);
-			$ar_inverse_locators = component_relation_index::get_referended_locators_with_cache(
+			$ar_inverse_locators = component_relation_index::get_referenced_locators_with_cache(
 				$filter_locator,
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
@@ -565,7 +603,7 @@ class component_relation_index extends component_relation_common {
 
 		// referenced_locators
 			// $referenced_locators = search_related::get_referenced_locators($locator);
-			$referenced_locators = component_relation_index::get_referended_locators_with_cache(
+			$referenced_locators = component_relation_index::get_referenced_locators_with_cache(
 				$locator,
 				$type . '_' . $section_tipo // cache_key
 			);
@@ -593,7 +631,7 @@ class component_relation_index extends component_relation_common {
 
 
 	/**
-	* GET_REFERENDED_LOCATORS_WITH_CACHE
+	* GET_REFERENCED_LOCATORS_WITH_CACHE
 	* Get inverse locators using cache
 	* Note that, in publication process, many languages are resolved for every record and the result
 	* for all of them is the same. Use this cache-able function to prevent calculate inverse locators
@@ -602,13 +640,11 @@ class component_relation_index extends component_relation_common {
 	* @param string $cache_key
 	* @return array $referenced_locators
 	*/
-	public static function get_referended_locators_with_cache( object $locator, string $cache_key ) : array {
+	public static function get_referenced_locators_with_cache( object $locator, string $cache_key ) : array {
 
 		// cache
-
-
 			// Safe control: prevent big array memory and performance problems
-			if (isset(self::$referended_locators_cache) && count(self::$referended_locators_cache) > 1000) {
+			if (count(self::$referended_locators_cache) > 1000) {
 				self::$referended_locators_cache = [];
 			}
 
@@ -624,11 +660,7 @@ class component_relation_index extends component_relation_common {
 
 
 		return $referenced_locators;
-	}//end get_referended_locators_with_cache
-
-
-
-
+	}//end get_referenced_locators_with_cache
 
 
 
@@ -643,11 +675,16 @@ class component_relation_index extends component_relation_common {
 	private function get_target_section() : array {
 
 		// target section
-			$target_section	= isset($this->target_section)
+			$target_section	= !empty($this->target_section)
 				? $this->target_section
 				: (isset( $this->properties->source->request_config )
 					? $this->get_ar_target_section_tipo()
 					: $this->default_target_section);
+
+		// Ensure target_section is not empty to avoid search errors
+			if (empty($target_section)) {
+				$target_section = $this->default_target_section;
+			}
 
 		return $target_section;
 	}//end get_target_section

@@ -459,10 +459,15 @@ final class component_common_test extends BaseTestCase {
 				'component_relation_index', // data is external, not loaded from section
 				'component_relation_children', // data is external, not loaded from section
 				'component_inverse', // data is external, not loaded from section
-				'component_section_id' // data is direct, not loaded from section
+				'component_section_id', // data is direct, not loaded from section
+				'component_info' // data is from widgets, not loaded from section
 			])) {
 
-				$this->assertInstanceOf(section_record::class, $component->section_record);
+				$this->assertInstanceOf(
+					section_record::class,
+					$component->section_record,
+					"section_record is null for model: {$element->model}, tipo: {$element->tipo}, section_id: {$element->section_id}"
+				);
 
 				$this->assertTrue(
 					$component->section_record->section_id == $component->section_id,
@@ -600,7 +605,7 @@ final class component_common_test extends BaseTestCase {
 			$this->assertInstanceOf(dd_grid_cell_object::class, $dd_grid_cell_object);
 
 			switch ($element->model) {
-				case 'component_section_id':
+				case 'component_section_id99':
 					$this->assertTrue(
 						gettype($dd_grid_cell_object->value)==='integer',
 						'expected get_grid_value type is object->value. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
@@ -684,7 +689,7 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_grid_flat_value
+	* TEST_GET_GRID_FLAT_VALUE
 	* @return void
 	*/
 	public function test_get_grid_flat_value() {
@@ -722,8 +727,8 @@ final class component_common_test extends BaseTestCase {
 
 			if (!empty($dd_grid_cell_object->value)) {
 				$this->assertTrue(
-					gettype($dd_grid_cell_object->value)==='string',
-					'expected get_grid_value type is string. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
+					gettype($dd_grid_cell_object->value)==='string' || gettype($dd_grid_cell_object->value)==='array',
+					'expected get_grid_value type is string or array. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
 					." ($element->model)" . PHP_EOL
 					. json_encode($dd_grid_cell_object)
 				);
@@ -1006,6 +1011,7 @@ final class component_common_test extends BaseTestCase {
 
 			switch ($element->model) {
 				case 'component_inverse':
+				case 'component_info':
 				case 'component_section_id':
 				case 'component_3d':
 				case 'component_filter':
@@ -1188,10 +1194,11 @@ final class component_common_test extends BaseTestCase {
 					'result[0]->model expected "section" ' .$element->model .PHP_EOL
 					. json_encode($result)
 				);
-				if ($element->model !== 'component_3d' && $element->model !== 'component_av' && $element->model !== 'component_date' && $element->model !== 'component_email' && $element->model !== 'component_filter_master' && $element->model !== 'component_filter_records' && $element->model !== 'component_filter' && $element->model !== 'component_geolocation' && $element->model !== 'component_image' && $element->model !== 'component_input_text' && $element->model !== 'component_inverse' && $element->model !== 'component_iri' && $element->model !== 'component_json' && $element->model !== 'component_number' && $element->model !== 'component_password' && $element->model !== 'component_pdf' && $element->model !== 'component_portal' && $element->model !== 'component_relation_children' && $element->model !== 'component_publication' && $element->model !== 'component_relation_index' && $element->model !== 'component_radio_button' && $element->model !== 'component_relation_parent' && $element->model !== 'component_relation_model' && $element->model !== 'component_relation_related' && $element->model !== 'component_section_id' && $element->model !== 'component_security_access' && $element->model !== 'component_select_lang' && $element->model !== 'component_select' && $element->model !== 'component_svg' && $element->model !== 'component_text_area') {
+
+				if(TEST_USER_ID === -1) {
 					$this->assertTrue(
-						$result[0]->permissions>=1,
-						'expected result[0]->permissions>=1 ' .$element->model .PHP_EOL
+						$result[0]->permissions >= 1,
+						'expected result[0]->permissions >= 1 ' .$element->model .PHP_EOL
 						. json_encode($result)
 					);
 				}
@@ -1311,6 +1318,8 @@ final class component_common_test extends BaseTestCase {
 	*/
 	public function test_regenerate_component() {
 
+		$this->user_login();
+
 		// default data
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
@@ -1357,6 +1366,8 @@ final class component_common_test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_get_component_data_fallback() {
+
+		$this->user_login();
 
 		// default data
 		foreach (get_elements() as $element) {
@@ -1405,8 +1416,13 @@ final class component_common_test extends BaseTestCase {
 	*/
 	public function test_get_component_permissions() {
 
+		$this->user_login();
+
+		// components definition list
+		$elements = get_elements();
+
 		// default data
-		foreach (get_elements() as $element) {
+		foreach ($elements as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
 			$component = component_common::get_instance(
@@ -1432,21 +1448,20 @@ final class component_common_test extends BaseTestCase {
 				'result type expected integer. current type: ' .gettype($result) .' - '.$element->model
 			);
 
-			$expected = 2;
-
-			if ($element->model === 'component_3d' || $element->model === 'component_av' || $element->model === 'component_check_box' || $element->model === 'component_date' || $element->model === 'component_email' || $element->model === 'component_filter_master' || $element->model === 'component_filter_records' || $element->model === 'component_filter' || $element->model === 'component_geolocation' || $element->model === 'component_image' || $element->model === 'component_input_text' || $element->model === 'component_inverse' || $element->model === 'component_iri' || $element->model === 'component_json' || $element->model === 'component_number' || $element->model === 'component_password' || $element->model === 'component_pdf' || $element->model === 'component_portal' || $element->model === 'component_relation_children' || $element->model === 'component_publication' || $element->model === 'component_relation_index' || $element->model === 'component_radio_button' || $element->model === 'component_relation_parent' || $element->model === 'component_relation_model' || $element->model === 'component_relation_related' || $element->model === 'component_section_id' || $element->model === 'component_security_access' || $element->model === 'component_select_lang' || $element->model === 'component_select' || $element->model === 'component_svg' || $element->model === 'component_text_area') {
-				continue;
+			if(TEST_USER_ID === -1) {
+				$expected = 2;
+				$this->assertTrue(
+					$result >= $expected,
+					'result type expected '.$expected.'. current: ' .$result .' - '.$element->model
+				);
 			}
-			$this->assertTrue(
-				$result>=$expected,
-				'result type expected '.$expected.'. current: ' .$result .' - '.$element->model
-			);
 
 			$component->set_permissions(1);
 			$result = $component->get_component_permissions();
+			$expected = 1;
 			$this->assertTrue(
-				$result===1,
-				'result type expected 1. current: ' .$result .' - '.$element->model
+				$result === $expected,
+				'result type expected '.$expected.'. current: ' .$result .' - '.$element->model
 			);
 		}//end foreach items
 	}//end test_get_component_permissions

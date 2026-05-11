@@ -42,167 +42,309 @@ abstract class common {
 	/**
 	* CLASS VARS
 	*/
-		// string tipo. like 'dd4525'
-		public $tipo;
-		// string section_tipo. like 'oh1'
-		public $section_tipo;
-		// string section_id. like '1526'
-		public $section_id;
-		// string mode. like 'edit'
-		public $mode;
-		// string model. like 'component_date'
-		public $model;
-		// string lang. like 'lg-eng'
-		public $lang;
-		// string label. like 'component_section_id'
-		public $label;
-		// Avoid using this var, v6 access to data, now use $this->get_data() or $this->set_data() always
-		private $data = 'NO USABLE DATA';
+		/**
+		 * Ontology tipo (type identifier) of this element. Example: 'dd4525'.
+		 * Unique code that identifies the element's definition in the ontology.
+		 * @var ?string $tipo
+		 */
+		public ?string $tipo = null;
 
-		// object ontology_node. Ontology definition object
-		public $ontology_node;
+		/**
+		 * Tipo of the section this element belongs to. Example: 'oh1'.
+		 * Defines the parent section context for component instances.
+		 * @var ?string $section_tipo
+		 */
+		public ?string $section_tipo = null;
 
-		// order_number
-		public $order_number;
+		/**
+		 * Identifier of the section record this element is bound to. Example: 1526.
+		 * Can be a numeric ID, a temp string (e.g., 'temp1'), or null for new records.
+		 * @var string|int|null $section_id
+		 */
+		public string|int|null $section_id = null;
 
-		// bool translatable
-		public $translatable;
+		/**
+		 * Mode of the element. Examples: 'edit', 'list', 'search', 'tm'.
+		 * Determines which view and behavior are activated for the UI and the data format.
+		 * Note that data in list mode is a reduction of the full data given in edit mode.
+		 * @var ?string $mode
+		 */
+		public ?string $mode = null;
 
-		// permissions. int value from 0 to 3
-		public $permissions;
+		/**
+		 * Specific view variant combined with mode to drive element rendering.
+		 * Allows multiple visual presentations for the same mode (e.g., 'mini', 'line').
+		 * @var ?string $view
+		 */
+		public ?string $view = null;
 
-		// pagination. object used to paginate sections, portals, etc.
-		public $pagination;
+		/**
+		 * View variant for child elements nested under this element.
+		 * Overrides the default rendering of grouped or related sub-elements.
+		 * @var ?string $children_view
+		 */
+		public ?string $children_view = null;
 
-		// bl_loaded_structure_data. Set to true when element structure data is loaded. Avoid reload structure data again
-		public $bl_loaded_structure_data;
+		/**
+		 * Component model (class name) of this element. Example: 'component_date'.
+		 * Maps to the PHP class that implements the element's behavior.
+		 * @var ?string $model
+		 */
+		public ?string $model = null;
 
-		// context. Object with information about context of current element
-		public $context;
+		/**
+		 * Language code for multilingual content. Example: 'lg-eng'.
+		 * Uses 'lg-nolan' for non-translatable (language-neutral) values.
+		 * @var ?string $lang
+		 */
+		public ?string $lang = null;
 
-		// public properties
-		public $properties;
+		/**
+		 * Human-readable label for this element. Example: 'component_section_id'.
+		 * Displayed in the UI as the field or section title.
+		 * @var ?string $label
+		 */
+		public ?string $label = null;
 
-		// from_parent. Used to link context ddo elements
-		public $from_parent;
+		/**
+		 * Legacy v6 raw data property. Not usable in v7.
+		 * Always use get_data() and set_data() instead of accessing this directly.
+		 * @var string $data
+		 */
+		private string $data = 'NO USABLE DATA';
 
-		// parent_grouper
-		public $parent_grouper;
+		/**
+		 * Ontology node object containing the full definition of this element.
+		 * Loaded from the ontology and defines properties, relations, and behavior.
+		 * @var ?object $ontology_node
+		 */
+		public ?object $ontology_node = null;
 
-		// build options sent by the client into show ddo to modify the standard get data.
-		// in area_thesaurus it send if the thesaurus need get models or terms.
-		// in component_portal it send if the source external need to be updated.
-		public $build_options = null;
+		/**
+		 * Display order number for sorting elements within a section or group.
+		 * Can be numeric or a string depending on the sorting scheme.
+		 * @var string|int|float|null $order_number
+		 */
+		public string|int|float|null $order_number = null;
 
-		// request config with show, select and search of the item
-		public $request_config;
+		/**
+		 * Whether this element supports multilingual (translated) values.
+		 * When true, the component stores separate values per language.
+		 * @var ?bool $translatable
+		 */
+		public ?bool $translatable = null;
 
-		// cache of calculated context, used to get the context that was calculated and reuse it.
-		public static $structure_context_cache = [];
-		public static $matrix_table_from_tipo = [];
-		public static $cache_ar_tables_with_relations;
-		public static $current_main_lang = [];
-		public static $ar_related_by_model_data = [];
-		public static $resolved_request_properties_parsed = [];
-		public static $get_tools_cache = [];
+		/**
+		 * User permission level for this element. Integer from 0 (none) to 3 (full).
+		 * Controls read/write access in the UI and API.
+		 * @var ?int $permissions
+		 */
+		public ?int $permissions = null;
 
-		// view. Specific element view combined with mode is used to render elements
-		public $view;
+		/**
+		 * Pagination object for paginated lists (sections, portals, etc.).
+		 * Holds offset, limit, and total count for dataset navigation.
+		 * Used for relationable components like 'component_portal'
+		 * @var ?object $pagination
+		 */
+		public ?object $pagination = null;
 
-		// children_view. Specific element children_view used to render child elements
-		public $children_view;
+		/**
+		 * Whether the element's structure data has already been loaded.
+		 * Prevents redundant ontology lookups and re-processing.
+		 * @var bool $bl_loaded_structure_data
+		 */
+		public bool $bl_loaded_structure_data = false;
 
-		// caller_dataframe the element that call to other element (component, section, area, etc)
-		public $caller_dataframe;
+		/**
+		 * Context object describing the runtime environment of this element.
+		 * Contains mode, view, permissions, and other rendering metadata.
+		 * Cache-able because do not changes in each call.
+		 * @var ?object $context
+		 */
+		public ?object $context = null;
 
-		// data_source . string ('tm' for time machine source data)
-		public $data_source;
+		/**
+		 * Parsed ontology properties object for this element.
+		 * False when properties are explicitly absent; null when not yet loaded.
+		 * @var object|false|null $properties
+		 */
+		public object|false|null $properties = null;
 
-		// uid. Unique id string
-		public $uid;
+		/**
+		 * Parent tipo used to link context DDO elements in nested structures.
+		 * Establishes hierarchy relationships between components.
+		 * @var ?string $from_parent
+		 */
+		public ?string $from_parent = null;
 
-		// with_lang_versions
-		public $with_lang_versions;
+		/**
+		 * Parent grouper tipo for grouping related elements in the UI.
+		 * Links elements to their containing section_group or tab.
+		 * @var ?string $parent_grouper
+		 */
+		public ?string $parent_grouper = null;
 
-		// CLI process data object (messages and process data in background processes)
-		// use as { msg: string, property1: mixed, ... }
-		public static $pdata;
+		/**
+		 * Client-sent build options to customize data retrieval.
+		 * Example: thesaurus models vs terms, portal external source update flags.
+		 * @var ?object $build_options
+		 */
+		public ?object $build_options = null;
 
-		// tools. Array of element tools. If defined, they will not be recalculated
-		public $tools;
+		/**
+		 * Request configuration array defining show, select, and search for this element.
+		 * Parsed from the ontology or client request to drive data loading.
+		 * @var ?array $request_config
+		 */
+		public ?array $request_config = null;
 
-		// buttons_context. Used to store calculated buttons context value
-		// Note that on get_structure_context_simple case, is set to [] to prevent calculate it
-		public $buttons_context;
+		/**
+		 * Static cache for resolved structure context objects.
+		 * Avoids re-calculating context for elements with the same tipo and mode.
+		 * @var array $cache_structure_context
+		 */
+		public static array $cache_structure_context = [];
 
-		// Caller. name of the caller class. String 'tool_export'
-		// used to identify the caller that made the instance.
-		public $caller;
+		/**
+		 * Static cache mapping section/component tipos to their matrix table names.
+		 * Avoids repeated database lookups for storage table resolution.
+		 * @var array $cache_matrix_table_from_tipo
+		 */
+		public static array $cache_matrix_table_from_tipo = [];
 
-		public static $ar_temp_map_models = [
-			// map from old model => new model
+		/**
+		 * Static cache for matrix tables that have relation columns.
+		 * Used by diffusion and relation queries to target the correct tables.
+		 * @var array $cache_tables_with_relations
+		 */
+		public static ?array $cache_tables_with_relations = null;
+
+		/**
+		 * Static cache for the current main language per section.
+		 * Optimizes language resolution in multilingual contexts.
+		 * @var array $current_main_lang
+		 */
+		public static array $current_main_lang = [];
+
+		/**
+		 * Static cache for model-related data lookups.
+		 * Stores resolved information for components related by model.
+		 * @var array $ar_related_by_model_data
+		 */
+		public static array $ar_related_by_model_data = [];
+
+		/**
+		 * Static cache for parsed request properties.
+		 * Avoids re-parsing complex property expressions across requests.
+		 * @var array $resolved_request_properties_parsed
+		 */
+		public static array $resolved_request_properties_parsed = [];
+
+		/**
+		 * Static cache for resolved tool definitions per element.
+		 * Tools are expensive to calculate; this cache prevents recalculation.
+		 * @var array $cache_get_tools
+		 */
+		public static array $cache_get_tools = [];
+
+		/**
+		 * Dataframe locator of the element that instantiated this one (component, section, area).
+		 * Used for cross-referencing in dataframe and portal contexts.
+		 * @var ?object $caller_dataframe
+		 */
+		public ?object $caller_dataframe = null;
+
+		/**
+		 * Source identifier for the data origin. 'tm' indicates time machine data.
+		 * Distinguishes live data from historical or backup sources.
+		 * @var ?string $data_source
+		 */
+		public ?string $data_source = null;
+
+		/**
+		 * Unique instance identifier for this element.
+		 * Generated per instance to distinguish objects with identical tipo and section_id.
+		 * @var ?string $uid
+		 */
+		public ?string $uid = null;
+
+		/**
+		 * Whether to include language version metadata in the output.
+		 * When true, responses include all available language values.
+		 * @var bool $with_lang_versions
+		 */
+		public bool $with_lang_versions = false;
+
+		/**
+		 * CLI process data object for background process messaging.
+		 * Structure: { msg: string, property1: mixed, ... }.
+		 * @var ?object $pdata
+		 */
+		public static ?object $pdata = null;
+
+		/**
+		 * Array of tool definitions attached to this element.
+		 * If set, these tools are used directly instead of being recalculated from the ontology.
+		 * @var ?array $tools
+		 */
+		public ?array $tools = null;
+
+		/**
+		 * Calculated buttons context for this element.
+		 * Set to empty array in get_structure_context_simple mode to skip calculation.
+		 * @var ?array $buttons_context
+		 */
+		public ?array $buttons_context = null;
+
+		/**
+		 * Name of the class that instantiated this element. Example: 'tool_export'.
+		 * Used for tracing and conditional behavior based on the caller.
+		 * @var ?string $caller
+		 */
+		public ?string $caller = null;
+
+		/**
+		 * Temporary model name mappings for legacy v5/v6 to v7 migration.
+		 * Maps old component model names to their new equivalents.
+		 * old model => new model
+		 * @var array $ar_temp_map_models
+		 */
+		public static array $ar_temp_map_models = [
 			'component_autocomplete_hi'	=> 'component_portal',
 			'component_autocomplete'	=> 'component_portal',
 			'section_group_div'			=> 'section_group',
 			'component_calculation' 	=> 'component_info'
 		];
-		public static $ar_temp_exclude_models = [
-			// v5
+
+		/**
+		 * Temporary list of legacy models excluded from v7 processing.
+		 * Models listed here are ignored during instantiation or migration.
+		 * @var array $ar_temp_exclude_models
+		 */
+		public static array $ar_temp_exclude_models = [
 			'component_security_areas',
-			'component_autocomplete_ts', // ?
-			// 'button_trigger',
-			// v6
-			// 'component_autocomplete'
-			// 'component_av'
-			// 'component_calculation',
-			// 'component_check_box'
-			// 'component_date'
-			// 'component_email'
-			// 'component_external',
-			// 'component_filter'
-			// 'component_filter_master'
-			// 'component_filter_records'
-			// 'component_geolocation'
+			'component_autocomplete_ts',
 			'component_html_file',
-			// 'component_html_text',
-			// 'component_image'
-			// 'component_info',
-			// 'component_input_text'
 			'component_input_text_large',
-			//'component_inverse',
 			'component_ip',
-			// 'component_iri'
-			// 'component_json'
 			'component_layout',
-			// 'component_number'
-			// 'component_password',
-			// 'component_pdf'
-			// 'component_portal'
-			// 'component_publication'
-			// 'component_radio_button'
-			// 'component_relation_children',
-			// 'component_relation_index',
-			// 'component_relation_model',
-			// 'component_relation_parent',
-			// 'component_relation_related',
 			'component_relation_struct',
 			'component_score',
-			// 'component_section_id'
-			// 'component_security_access'
 			'component_security_tools',
-			// 'component_select'
-			// 'component_select_lang'
-			'component_state',
-			// 'component_svg'
-			// 'component_text_area'
+			'component_state'
 		];
-		public static $groupers = [
+
+		/**
+		 * Registry of element types that act as UI groupers.
+		 * Used to identify container elements (tabs, groups) for layout rendering.
+		 * @var array $groupers
+		 */
+		public static array $groupers = [
 			'section_group',
 			'section_group_div',
 			'section_tab',
 			'tab'
-			// 'section_group_relation',
-			// 'section_group_portal'
 		];
 
 		/**
@@ -210,13 +352,13 @@ abstract class common {
 		* Purges persistent caches to prevent memory leaks across worker requests.
 		*/
 		public static function clear() : void {
-			self::$structure_context_cache = [];
-			self::$matrix_table_from_tipo = [];
-			self::$cache_ar_tables_with_relations = null;
+			self::$cache_structure_context = [];
+			self::$cache_matrix_table_from_tipo = [];
+			self::$cache_tables_with_relations = null;
 			self::$current_main_lang = [];
 			self::$ar_related_by_model_data = [];
 			self::$resolved_request_properties_parsed = [];
-			self::$get_tools_cache = [];
+			self::$cache_get_tools = [];
 			self::$pdata = null;
 		}
 
@@ -496,11 +638,11 @@ abstract class common {
 
 		// cache
 			// Safe control: prevent big array memory and performance problems
-			self::manage_cache_size(self::$matrix_table_from_tipo);
+			self::manage_cache_size(self::$cache_matrix_table_from_tipo);
 
 			// check cache
-			if(isset(self::$matrix_table_from_tipo[$tipo])) {
-				return self::$matrix_table_from_tipo[$tipo];
+			if(isset(self::$cache_matrix_table_from_tipo[$tipo])) {
+				return self::$cache_matrix_table_from_tipo[$tipo];
 			}
 
 		// all case
@@ -597,7 +739,7 @@ abstract class common {
 			}//end switch
 
 		// cache
-			self::$matrix_table_from_tipo[$tipo] = $matrix_table;
+			self::$cache_matrix_table_from_tipo[$tipo] = $matrix_table;
 
 
 		return $matrix_table;
@@ -613,8 +755,8 @@ abstract class common {
 	public static function get_matrix_tables_with_relations() : array {
 
 		// cache
-			if (isset(self::$cache_ar_tables_with_relations)) {
-				return self::$cache_ar_tables_with_relations;
+			if (self::$cache_tables_with_relations !== null) {
+				return self::$cache_tables_with_relations;
 			}
 
 		// tables
@@ -674,7 +816,7 @@ abstract class common {
 			}
 
 		// cache
-			self::$cache_ar_tables_with_relations = $ar_tables_with_relations;
+			self::$cache_tables_with_relations = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -851,64 +993,6 @@ abstract class common {
 
 		return false;
 	}//end setVar
-
-
-
-	/**
-	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
-	* @return string
-	*/
-		// public static function get_page_query_string(bool $remove_optional_vars=true) : string {
-
-		// 	$queryString	= $_SERVER['QUERY_STRING']; # like max=10
-		// 	$queryString	= safe_xss($queryString);
-
-		// 	if($remove_optional_vars===false) {
-		// 		return $queryString;
-		// 	}
-
-		// 	$qs 				= '' ;
-		// 	$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
-
-		// 	$search			= array('&&',	'&=',	'=&',	'??',	'==');
-		// 	$replace		= array('&',	'&',	'&',	'?',	'=' );
-		// 	$queryString	= str_replace($search, $replace, $queryString);
-
-		// 	$posAND		= strpos($queryString, '&');
-		// 	$posEQUAL	= strpos($queryString, '=');
-
-		// 	# go through and rebuild the query without the optional variables
-		// 	if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
-
-		// 		$ar_pares = explode('&', $queryString);
-		// 		if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
-
-		// 			#echo " <br> $key - $par ";
-		// 			if(strpos($par,'=')!==false) {
-
-		// 				$troz		= explode('=',$par) ;
-
-		// 				$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
-		// 				$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
-
-		// 				if(!in_array($varName, $ar_optional_vars)) {
-		// 					$qs .= $varName . '=' . $varValue .'&';
-		// 				}
-		// 			}
-		// 		}
-
-		// 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
-
-		// 		$qs = $queryString ;
-		// 	}
-
-		// 	$qs = str_replace($search, $replace, $qs);
-
-		// 	# if last char is & delete it
-		// 	if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
-
-		// 	return $qs;
-		// }//end get_page_query_string
 
 
 
@@ -1250,7 +1334,7 @@ abstract class common {
 				$use_cache = true;
 				if ($use_cache===true) {
 					$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
-					if (isset(self::$structure_context_cache[$ddo_key])) {
+					if (isset(self::$cache_structure_context[$ddo_key])) {
 						if(SHOW_DEBUG===true) {
 							$len = !empty($this->tipo)
 								? strlen($this->tipo)
@@ -1264,7 +1348,7 @@ abstract class common {
 								logger::DEBUG
 							);
 						}
-						return self::$structure_context_cache[$ddo_key];
+						return self::$cache_structure_context[$ddo_key];
 					}
 				}
 
@@ -1680,9 +1764,9 @@ abstract class common {
 
 		// cache. fix context dd_object
 			if ($use_cache===true) {
-				self::$structure_context_cache[$ddo_key] = $dd_object;
+				self::$cache_structure_context[$ddo_key] = $dd_object;
 				// Manage cache size to prevent memory leaks
-				self::manage_cache_size(self::$structure_context_cache);
+				self::manage_cache_size(self::$cache_structure_context);
 			}
 
 		// Debug
@@ -3352,12 +3436,12 @@ abstract class common {
 			$use_cache = true;
 			if ($use_cache===true) {
 				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-				if (isset(self::$get_tools_cache[$cache_key])) {
+				if (isset(self::$cache_get_tools[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
 						metrics::$get_tools_total_calls_cached++;
 					}
-					return self::$get_tools_cache[$cache_key];
+					return self::$cache_get_tools[$cache_key];
 				}
 			}
 
@@ -3434,9 +3518,9 @@ abstract class common {
 		// cache
 			if ($use_cache===true) {
 				// static
-				self::$get_tools_cache[$cache_key] = $tools;
+				self::$cache_get_tools[$cache_key] = $tools;
 				// Manage cache size to prevent memory leaks
-				self::manage_cache_size(self::$get_tools_cache);
+				self::manage_cache_size(self::$cache_get_tools);
 			}
 
 		// debug

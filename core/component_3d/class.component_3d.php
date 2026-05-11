@@ -1,7 +1,19 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_3D
+* Manages 3D media components in Dédalo.
 *
+* Handles 3D file operations including:
+* - Upload, download, and deletion of 3D model files
+* - Quality level management for different 3D file variants
+* - MIME type resolution for 3D formats (GLB, GLTF, OBJ, etc.)
+* - File path and URL generation for 3D assets
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_3d extends component_media_common implements component_media_interface {
 
@@ -11,7 +23,7 @@ class component_3d extends component_media_common implements component_media_int
 	* CLASS VARS
 	*/
 		// url. File name formatted as 'tipo'-'order_id' like dd732-1
-		public $url;
+		public ?string $url = null;
 
 
 
@@ -130,6 +142,12 @@ class component_3d extends component_media_common implements component_media_int
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
+
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
@@ -184,12 +202,20 @@ class component_3d extends component_media_common implements component_media_int
 			$label = $this->get_label();
 
 		// value
+			$value = [$current_url]; // array
+
+		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
 				$dd_grid_cell_object->set_label($label);
 				$dd_grid_cell_object->set_cell_type('img');
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$dd_grid_cell_object->set_value([$current_url]);
+				if(isset($class_list)){
+					$dd_grid_cell_object->set_class_list($class_list);
+				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
@@ -670,7 +696,7 @@ class component_3d extends component_media_common implements component_media_int
 	* @param string $file_path
 	* @return object|null $media_attributes
 	*/
-	public function get_media_attributes(string $file_path)  {
+	public function get_media_attributes(string $file_path) : ?object {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL
@@ -680,6 +706,7 @@ class component_3d extends component_media_common implements component_media_int
 		// $media_attributes = ffmpeg::get_media_attributes($file_path);
 
 		// return $media_attributes;
+		return null;
 	}//end get_media_attributes
 
 

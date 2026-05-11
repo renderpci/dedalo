@@ -1,39 +1,28 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_FILTER_RECORDS
-* Manages the filter records component that is loacated into the User section (dd128) to set
-* the specific records that the user can access to.
-* data_column_name : 'misc'
+* Manages record-level access control for specific section records in Dédalo.
+*
+* Used exclusively in the User section (dd128) to grant access to individual records
+* across different sections, providing finer-grained control than project-based filtering.
+*
+* Unlike component_filter (project-based), this component allows specifying exactly
+* which records a user can access regardless of their project assignments.
+*
+* Key features:
+* - Lists authorized sections the user has permission to access
+* - Provides section labels from ontology for user interface display
+* - Filters by permission level (value >= 2 required for access)
+* - Sorted alphabetically by section label
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_filter_records extends component_common {
-
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
-
-
-
-	/**
-	* GET_GRID_VALUE
-	* Alias of component_common->get_grid_value
-	* @param object|null $ddo = null
-	*
-	* @return dd_grid_cell_object $dd_grid_cell_object
-	*/
-	// public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
-
-	// 	$dd_grid_cell_object = parent::get_grid_value($lang, $ddo);
-
-	// 	// map values to JOSN to allow render it in list
-	// 		if (!empty($dd_grid_cell_object->value)) {
-	// 			$dd_grid_cell_object->value = array_map(function($el){
-	// 				return json_encode($el);
-	// 			}, $dd_grid_cell_object->value);
-	// 		}
-
-
-	// 	return $dd_grid_cell_object;
-	// }//end get_grid_value
 
 
 
@@ -75,7 +64,7 @@ class component_filter_records extends component_common {
 
 			// add object item with label
 				$datalist_item = new stdclass();
-					$datalist_item->tipo = $area_item->tipo;					
+					$datalist_item->tipo = $area_item->tipo;
 					$datalist_item->permissions = $area_item->value;
 					$datalist_item->label = $label;
 

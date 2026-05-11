@@ -31,13 +31,13 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      */
     protected function setUp(): void {
         parent::setUp();
-        
+
         // Check for update flag
         $this->update_snapshots = getenv('UPDATE_SNAPSHOTS') === 'true';
-        
+
         // Initialize comparator
         $this->comparator = new SnapshotComparator(__DIR__ . '/snapshots');
-        
+
         // Ensure user is logged in for API calls
         $this->user_login();
     }
@@ -79,10 +79,10 @@ final class ApiContractSnapshotTest extends BaseTestCase {
 
         if (!$result['matches']) {
             $failure_message = $message ?? $result['message'];
-            
+
             // Add helpful context for CI
             $failure_message .= $this->formatFailureContext($result, $snapshot_name);
-            
+
             $this->fail($failure_message);
         }
 
@@ -100,7 +100,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      */
     protected function updateSnapshot(object|array $data, string $snapshot_name): void {
         $success = $this->comparator->saveSnapshot($snapshot_name, $data);
-        
+
         if (!$success) {
             $this->fail("Failed to save snapshot '$snapshot_name'");
         }
@@ -120,7 +120,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
         $context = "\n\n";
         $context .= "📋 To update this snapshot (if change is intentional):\n";
         $context .= "   UPDATE_SNAPSHOTS=true vendor/bin/phpunit --filter test_get_ontology_map_contract\n\n";
-        
+
         if ($result['snapshot'] === null) {
             $context .= "⚠️  Snapshot '$snapshot_name.json' does not exist.\n";
             $context .= "   Run with UPDATE_SNAPSHOTS=true to create it.\n";
@@ -136,7 +136,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_diffusion_api::get_ontology_map response structure
      */
     public function test_get_ontology_map_contract(): void {
-        
+
         $rqo = (object)[
             'dd_api' => 'dd_diffusion_api',
             'action' => 'get_ontology_map',
@@ -167,7 +167,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_utils_api::get_login_context response structure
      */
     public function test_get_login_context_contract(): void {
-        
+
         $rqo = (object)[
             'action' => 'get_login_context',
             'dd_api' => 'dd_utils_api',
@@ -198,7 +198,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_utils_api::get_element_context response structure for a component
      */
     public function test_get_element_context_contract(): void {
-        
+
         // Use a test component tipo (component_input_text)
         $rqo = (object)[
             'action' => 'get_element_context',
@@ -229,7 +229,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify dd_diffusion_api::validate response structure
      */
     public function test_diffuse_validate_contract(): void {
-        
+
         $rqo = (object)[
             'dd_api' => 'dd_diffusion_api',
             'action' => 'validate',
@@ -261,7 +261,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify component_input_text JSON structure (context + data)
      */
     public function test_component_input_text_context_contract(): void {
-        
+
         // Build component instance
         $component = component_common::get_instance(
             'component_input_text',
@@ -296,7 +296,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      * Verify the comparator utility works correctly
      */
     public function test_snapshot_comparator_utility(): void {
-        
+
         // Create test data
         $test_data = (object)[
             'result' => true,

@@ -20,21 +20,62 @@ class hierarchy extends ontology {
 
 
 
-	// Table where hierarchy data is stored
-	public static $main_table			= 'matrix_hierarchy_main';
-	public static $main_section_tipo	= 'hierarchy1';
+	/**
+	* CLASS VARS
+	*/
 
-	// array hierarchy_portals_tipo
-	// store hierarchy portals data (former component_relation_children, now component_portal)
-	public static $hierarchy_portals_tipo = [
-		DEDALO_HIERARCHY_CHILDREN_TIPO, // hierarchy45 hierarchy main: General term
-		DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO // hierarchy59 hierarchy main: General term model
-	];
+		/**
+		 * Primary database table storing hierarchy (thesaurus) master records.
+		 * Contains ontology-driven hierarchy definitions and configuration.
+		 * @var string $main_table
+		 */
+		public static string $main_table = 'matrix_hierarchy_main';
 
-	public static $cache_main_lang;
-	public static $cache_section_map_elemets;
-	public static $cache_hierarchy_section;
-	public static $cache_hierarchy_elements;
+		/**
+		 * Tipo of the main hierarchy section in the ontology.
+		 * Identifies the 'hierarchy1' section that defines hierarchy metadata.
+		 * @var string $main_section_tipo
+		 */
+		public static string $main_section_tipo = 'hierarchy1';
+
+		/**
+		 * Array of hierarchy portal tipos for children relations.
+		 * Formerly component_relation_children, now component_portal based.
+		 * Maps to hierarchy45 (General term) and hierarchy59 (General term model).
+		 * @var array $hierarchy_portals_tipo
+		 */
+		public static array $hierarchy_portals_tipo = [
+			DEDALO_HIERARCHY_CHILDREN_TIPO,
+			DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
+		];
+
+		/**
+		 * Static cache for hierarchy main language lookups.
+		 * Maps hierarchy tipos to their primary language code (e.g., 'lg-eng').
+		 * @var array $cache_main_lang
+		 */
+		public static array $cache_main_lang = [];
+
+		/**
+		 * Static cache for hierarchy section map elements.
+		 * Stores resolved section structure to avoid repeated ontology traversal.
+		 * @var array $cache_section_map_elemets
+		 */
+		public static array $cache_section_map_elemets = [];
+
+		/**
+		 * Static cache for hierarchy section instances.
+		 * Maps section tipos to their hierarchy objects for fast retrieval.
+		 * @var array $cache_hierarchy_section
+		 */
+		public static array $cache_hierarchy_section = [];
+
+		/**
+		 * Static cache for hierarchy element definitions.
+		 * Stores parsed hierarchy components and their configuration.
+		 * @var array $cache_hierarchy_elements
+		 */
+		public static array $cache_hierarchy_elements = [];
 
 
 
@@ -1356,7 +1397,7 @@ class hierarchy extends ontology {
 	public static function get_active_elements() : array {
 
 		// cache
-		if (isset(self::$cache_hierarchy_elements)) {
+		if (!empty(self::$cache_hierarchy_elements)) {
 			return self::$cache_hierarchy_elements;
 		}
 

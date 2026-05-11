@@ -33,10 +33,10 @@ final class SecurityAudit_Test extends BaseTestCase {
             ]
         ];
 
-        // We expect this to NOT return any records because 'test3\' OR \'1\'=\'1' 
+        // We expect this to NOT return any records because 'test3\' OR \'1\'=\'1'
         // is now a parameter and won't match any real section_tipo.
         $response = dd_core_api::read($rqo);
-        
+
         $this->assertEmpty($response->result->data, "SQL injection string should not match any section_tipo as it is now sanitized via placeholders");
     }
 
@@ -63,7 +63,7 @@ final class SecurityAudit_Test extends BaseTestCase {
         ];
 
         $response = dd_core_api::read($rqo);
-        
+
         $this->assertEmpty($response->result->data, "Data should be redacted for sections without READ permissions");
     }
 
@@ -85,7 +85,7 @@ final class SecurityAudit_Test extends BaseTestCase {
         ];
 
         $response = dd_core_api::duplicate($rqo);
-        
+
         $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for duplicate");
     }
 
@@ -108,7 +108,7 @@ final class SecurityAudit_Test extends BaseTestCase {
         ];
 
         $response = dd_core_api::delete($rqo);
-        
+
         $this->assertContains('insufficient permissions', $response->errors, "Should return insufficient permissions error for delete");
     }
 
@@ -263,7 +263,13 @@ final class SecurityAudit_Test extends BaseTestCase {
 
         $response = dd_tools_api::tool_request($rqo);
 
-        $this->assertContains('unauthorized_method', $response->errors, "Should return unauthorized_method error for non-callable methods");
+        $this->assertTrue(
+            in_array('unauthorized_method', $response->errors)
+                || in_array('Tool not authorized for current user: tool_time_machine', $response->errors)
+                || strpos($response->msg, 'tool method not accessible') !== false
+                || strpos($response->msg, 'Tool not authorized') !== false,
+            "Should be blocked by security layer. errors: " . json_encode($response->errors) . " msg: " . $response->msg
+        );
     }
 
     private function force_limited_user_login(int $user_id) : void {

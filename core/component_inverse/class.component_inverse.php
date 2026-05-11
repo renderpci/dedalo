@@ -1,21 +1,28 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INVERSE
-* It is used to manage inverse relations
-* (references to current section)
-* E.g. component 'rsc555' (Catalogue) in section 'rsc550' (Restoration Intervention)
-* Display the section_id of the sections that call to this section from the catalogue.
-* The data is a calculation of the inverse locators of sections that call to this section.
-* This component do not store data in DB, data is always calculated on the fly using 'get_inverse_references' method.
+* Manages inverse relationship references in Dédalo.
 *
-* data_column_name : 'misc'
+* Displays which sections reference the current record via portal or relationship fields,
+* showing the "backlinks" or "inverse relations" without storing duplicate data.
+*
+* Example: In a "Restoration Intervention" section (rsc550), shows all "Catalogue" records
+* (rsc555) that reference this intervention, without storing that list in the database.
+*
+* Key characteristics:
+* - No database storage (use_db_data = false)
+* - Data calculated on-the-fly via section->get_inverse_references()
+* - Shows which records reference the current record from other sections
+* - Prevents data duplication by computing relationships dynamically
+*
+* Data is stored in the 'misc' column of matrix tables (for configuration only).
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_inverse extends component_common {
-
-
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
 
 
 
@@ -91,11 +98,11 @@ class component_inverse extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// short vars
 			$data		= $this->get_data();
@@ -157,10 +164,13 @@ class component_inverse extends component_common {
 				$ar_cells[] = $grid_row;
 
 		// always 1 data size it's not the rows
-			$row_count	= 1;
+			$row_count = 1;
 
 		// get the total of columns
-			$column_count	= sizeof($ar_columns_obj);
+			$column_count = sizeof($ar_columns_obj);
+
+		// value
+			$value = [$grid_row]; // array
 
 		// dd_grid_cell_object, final columns that has the row and his columns
 			$dd_grid_cell_object = new dd_grid_cell_object();
@@ -175,7 +185,7 @@ class component_inverse extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value([$grid_row]);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

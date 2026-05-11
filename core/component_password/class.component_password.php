@@ -1,8 +1,29 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT PASSWORD
+* CLASS COMPONENT_PASSWORD
+* Manages password storage with secure hashing in Dédalo.
 *
-* data_column_name : 'string'
+* Stores user passwords using one-way Argon2id hashing for security.
+* Legacy AES-encrypted passwords are migrated to Argon2id on the next
+* successful login via lazy upgrade in login::Login().
+*
+* Key security features:
+* - Argon2id one-way hashing (non-reversible)
+* - Fake value display in grids and exports to prevent password exposure
+* - Lazy migration from legacy AES encryption
+* - Hash values persisted verbatim for export/import compatibility
+*
+* Display behavior:
+* - Grid views show fake_value: '****************'
+* - Diffusion exports return fake_value instead of actual hash
+* - Raw hash values never exposed in user-facing contexts
+*
+* Data is stored in the 'string' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_password extends component_common {
 
@@ -10,10 +31,7 @@ class component_password extends component_common {
 
 	// string . Fake value to show in grid
 
-	public $fake_value = '****************';
-
-	// bool . Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public string $fake_value = '****************';
 
 
 
@@ -117,11 +135,11 @@ class component_password extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? ',';
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -131,18 +149,6 @@ class component_password extends component_common {
 		// short vars
 			$label		= $this->get_label();
 			$properties	= $this->get_properties();
-
-		// data
-			$data = [
-				(object)[
-					'value' => $this->fake_value
-				]
-			];
-
-		// flat_value (array of one value full resolved)
-			$flat_value = empty($data)
-				? []
-				: [implode( $records_separator, array_column($data, 'value') )];
 
 		// fields_separator
 			$fields_separator = isset($fields_separator)
@@ -158,6 +164,9 @@ class component_password extends component_common {
 					? $properties->records_separator
 					: ' | ');
 
+		// value
+			$value = [$this->fake_value]; // array
+
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
@@ -169,7 +178,7 @@ class component_password extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($flat_value);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

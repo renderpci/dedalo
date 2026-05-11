@@ -172,3 +172,4 @@ diff_*.txt
 /lib/acc
 security-audit
 .rr.yaml
+composer.local.lock

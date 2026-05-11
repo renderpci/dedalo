@@ -12,6 +12,7 @@ final class tool_propagate_component_data_test extends BaseTestCase {
 
 
     protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );

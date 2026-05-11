@@ -9,6 +9,7 @@ final class dd_api_Test extends BaseTestCase {
 
 
 	protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );
@@ -107,6 +108,23 @@ final class dd_api_Test extends BaseTestCase {
 		// login_Test::force_login('-1');
 
 		$user_id = 1; // DEDALO_SUPERUSER
+
+		// Ensure session is active (login::Quit() from previous tests may have destroyed it)
+		if (session_status() !== PHP_SESSION_ACTIVE) {
+			session_start();
+		}
+
+		// Ensure logged out for the no-login case
+		// login::Quit() calls session_destroy() which makes the session inactive,
+		// and PHP can restore the session data from the cookie on the next session_start().
+		// Instead, directly unset the auth keys that login::is_logged() checks
+		// (user_id, is_logged, salt_secure) to guarantee is_logged() returns false
+		// while keeping the session active for subsequent writes.
+		unset(
+			$_SESSION['dedalo']['auth']['user_id'],
+			$_SESSION['dedalo']['auth']['is_logged'],
+			$_SESSION['dedalo']['auth']['salt_secure']
+		);
 
 		// rqo start section
 			$rqo = (object)[
@@ -325,6 +343,15 @@ final class dd_api_Test extends BaseTestCase {
 	public function test_read(): void {
 
 		$this->user_login();
+
+		// Debug: Verify session state before API call
+		$this->assertTrue(login::is_logged(), 'User should be logged in before read');
+		$this->assertEquals(TEST_USER_ID, logged_user_id(), 'logged_user_id should be TEST_USER_ID');
+
+		// Debug: Check DB connection before API call
+		$db_conn = DBi::_getConnection();
+		$this->assertNotFalse($db_conn, 'DB connection should not be false');
+		$this->assertNotNull($db_conn, 'DB connection should not be null');
 
 		// default search
 			$rqo = json_handler::decode('
@@ -951,6 +978,8 @@ final class dd_api_Test extends BaseTestCase {
 	* @return void
 	*/
 	public function test_delete() : void {
+
+		$this->user_login();
 
 		$section_id		= 2;
 		$section_tipo	= 'test3';

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 // SEC-026 (§9.3): server-agnostic deny for direct HTTP access. This file is
 // included by common::get_json() inside the calling object scope; reaching
 // it through a URL means the web server config did not block the path.
@@ -32,7 +32,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$permissions,
 					$has_dataframe
 				);
-				$context[] = $this->context;
 				break;
 
 			default:
@@ -41,7 +40,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$permissions,
 					$has_dataframe
 				);
-				$context[] = $this->context;
 				break;
 		}
 
@@ -239,7 +237,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 					$item->parent_section_id	= $value[0]->parent_section_id ?? null;
 					$item->parent_section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO;
 					// remove the parent_section_id from the value
-					unset($item->entries[0]->parent_section_id);		
+					unset($item->entries[0]->parent_section_id);
 
 					// created_by_user_id. Used for time machine notes user verification
 					$item->created_by_user_id = abs(intval($this->section_id))>0

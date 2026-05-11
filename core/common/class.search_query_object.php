@@ -65,32 +65,154 @@ class search_query_object extends stdClass {
 
 
 	/**
-	* VARS
+	* CLASS VARS
 	*/
-		public $id;
-		public $section_tipo;
-		public $mode;
-		public $filter;
-		// public $select;
-		public $limit;
-		public $offset;
-		public $total;
-		public $full_count;
-		public $group_by;
-		public $order;
+		/**
+		 * Unique identifier for this search query object.
+		 * Combines section_tipo and other params for query identification. Example: 'oh1_list'.
+		 * @var string|int|null $id
+		 */
+		public string|int|null $id = null;
 
-		public $filter_by_locators;
-		public $filter_by_locators_op;
-		public $allow_sub_select_by_id;
-		public $children_recursive;
-		public $remove_distinct;
-		public $skip_projects_filter;
-		public $parsed;
-		public $breakdown;
-		public $tables;
-		public $select;
-		// generated_time
-		public $generated_time;
+		/**
+		 * Array of section tipos to search within.
+		 * Defines which sections are included in the query scope. Example: ['oh1', 'oh2'].
+		 * @var ?array $section_tipo
+		 */
+		public ?array $section_tipo = null;
+
+		/**
+		 * Search mode determining which matrix tables and models to query.
+		 * Values: 'edit', 'list', 'tm' (time machine), 'related'. Affects database table selection.
+		 * @var ?string $mode
+		 */
+		public ?string $mode = null;
+
+		/**
+		 * Filter object defining search conditions and constraints.
+		 * Contains operator ($and/$or), q (search string), path (component hierarchy), and options.
+		 * @var ?object $filter
+		 */
+		public ?object $filter = null;
+
+		/**
+		 * Maximum number of records to return in the result set.
+		 * Can be an integer limit or string for special pagination modes.
+		 * @var int|string|null $limit
+		 */
+		public int|string|null $limit = null;
+
+		/**
+		 * Number of records to skip before returning results.
+		 * Used for paginated queries to navigate through large datasets.
+		 * @var ?int $offset
+		 */
+		public ?int $offset = null;
+
+		/**
+		 * Total count of matching records (if pre-calculated).
+		 * When null, the total is calculated. When set, skips count query for performance.
+		 * @var ?int $total
+		 */
+		public ?int $total = null;
+
+		/**
+		 * Whether to execute a parallel count query for full result set size.
+		 * When true, returns both results and total count for pagination.
+		 * @var ?bool $full_count
+		 */
+		public ?bool $full_count = null;
+
+		/**
+		 * Array of columns or components to group results by.
+		 * Used for aggregation queries and counting distinct values.
+		 * @var ?array $group_by
+		 */
+		public ?array $group_by = null;
+
+		/**
+		 * Array defining result sort order with direction and component paths.
+		 * Each item contains direction (ASC/DESC) and path array for nested sorting.
+		 * @var ?array $order
+		 */
+		public ?array $order = null;
+
+		/**
+		 * Array of locators to filter results by specific related records.
+		 * Limits results to records matching these section_tipo/component_tipo combinations.
+		 * @var ?array $filter_by_locators
+		 */
+		public ?array $filter_by_locators = null;
+
+		/**
+		 * Logical operator for filter_by_locators conditions. Values: 'OR', 'AND'.
+		 * Determines how multiple locator filters are combined in the WHERE clause.
+		 * @var ?string $filter_by_locators_op
+		 */
+		public ?string $filter_by_locators_op = null;
+
+		/**
+		 * Whether to allow sub-select queries by ID for complex filtering.
+		 * Enables optimized nested queries for large dataset filtering.
+		 * @var ?bool $allow_sub_select_by_id
+		 */
+		public ?bool $allow_sub_select_by_id = null;
+
+		/**
+		 * Whether to include recursive children in the search results.
+		 * When true, traverses hierarchical relationships to find nested matches.
+		 * @var ?bool $children_recursive
+		 */
+		public ?bool $children_recursive = null;
+
+		/**
+		 * Whether to remove DISTINCT from the SQL query for performance.
+		 * When true, may return duplicate records but executes faster.
+		 * @var ?bool $remove_distinct
+		 */
+		public ?bool $remove_distinct = null;
+
+		/**
+		 * Whether to skip project-based filtering for this query.
+		 * When true, bypasses project access restrictions (admin use only).
+		 * @var ?bool $skip_projects_filter
+		 */
+		public ?bool $skip_projects_filter = null;
+
+		/**
+		 * Whether this SQO has been parsed and validated.
+		 * Set to true after filter and paths are processed into SQL-ready format.
+		 * @var ?bool $parsed
+		 */
+		public ?bool $parsed = null;
+
+		/**
+		 * Whether to include detailed breakdown data in results.
+		 * When true, returns additional metadata about query composition.
+		 * @var ?bool $breakdown
+		 */
+		public ?bool $breakdown = null;
+
+		/**
+		 * Array of database tables to search within.
+		 * Used in 'related' mode to limit which tables are queried.
+		 * @var ?array $tables
+		 */
+		public ?array $tables = null;
+
+		/**
+		 * Array of fields/components to return in the result set.
+		 * Defines the SELECT clause columns for efficient data retrieval.
+		 * @var ?array $select
+		 */
+		public ?array $select = null;
+
+		/**
+		 * Timestamp when this SQO was generated (microseconds).
+		 * Used for performance profiling and query optimization analysis.
+		 * @var ?float $generated_time
+		 */
+		public ?float $generated_time = null;
 
 
 

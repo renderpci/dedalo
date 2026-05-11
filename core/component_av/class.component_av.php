@@ -1,7 +1,22 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_AV
+* Manages audio/video media components in Dédalo.
 *
+* Handles audio and video file operations including:
+* - Upload, download, and deletion of AV files
+* - Quality level management (original, modified, audio, thumb)
+* - FFmpeg-based transcoding and processing
+* - Poster frame generation for video previews
+* - Subtitle management (VTT, SRT)
+* - TC (timecode) processing and subtitle generation
+* - Video stream handling and alternative format generation
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_av extends component_media_common implements component_media_interface {
 
@@ -131,6 +146,12 @@ class component_av extends component_media_common implements component_media_int
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
+
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
@@ -174,12 +195,20 @@ class component_av extends component_media_common implements component_media_int
 			$label = $this->get_label();
 
 		// value
+			$value = [$current_url]; // array
+
+		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
 				$dd_grid_cell_object->set_label($label);
 				$dd_grid_cell_object->set_cell_type('img');
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$dd_grid_cell_object->set_value([$current_url]);
+				if(isset($class_list)){
+					$dd_grid_cell_object->set_class_list($class_list);
+				}
+				$dd_grid_cell_object->set_fields_separator($fields_separator);
+				$dd_grid_cell_object->set_records_separator($records_separator);
+				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 

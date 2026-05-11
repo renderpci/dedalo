@@ -9,9 +9,9 @@ class lang {
 
 
 	// fixed matrix table where are stored all langs
-	public static $langs_matrix_table = 'matrix_langs';
+	public static string $langs_matrix_table = 'matrix_langs';
 	// cache static vars
-	public static $resolve_multiple_lang_cache = [];
+	public static array $resolve_multiple_lang_cache = [];
 
 
 

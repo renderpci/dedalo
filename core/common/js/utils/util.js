@@ -856,24 +856,33 @@ export function time_unit_auto(total_ms) {
 * [{"section_id":34,"dd_lang":"lg-aar","tld4":"aar","tld2":"aa","glotocode":"afar1241","walls":"qaf","lat":12.0,"long":42.0,"locale":"aa"},...]
 * @return array|null json_langs
 */
-export const get_json_langs = async function () {
+let _json_langs_promise = null
+export const get_json_langs = function () {
 
 	// return from page global value
 		if (window['json_langs']) {
-			return window['json_langs']
+			return Promise.resolve(window['json_langs'])
+		}
+
+	// return in-flight promise to prevent concurrent duplicate requests
+		if (_json_langs_promise) {
+			return _json_langs_promise
 		}
 
 	// calculate from server
-		const json_langs = await data_manager.request({
+		_json_langs_promise = data_manager.request({
 			url		: DEDALO_CORE_URL + '/common/js/lang.json',
 			method	: 'GET',
 			cache	: 'force-cache' // force use cache because the file do not changes
 		})
-		// fix as page global
-		window['json_langs'] = json_langs
+		.then(json_langs => {
+			// fix as page global
+			window['json_langs'] = json_langs
+			_json_langs_promise = null
+			return json_langs
+		})
 
-
-	return json_langs
+	return _json_langs_promise
 }//end get_json_langs
 
 

@@ -3,18 +3,33 @@ include_once 'trait.search_component_iri.php';
 include dirname(__FILE__) . '/class.dd_iri.php';
 /**
 * CLASS COMPONENT_IRI
-* Manages Internationalized Resource Identifiers (URI allowing Unicode). E.g. https://dedalo.dev
+* Manages Internationalized Resource Identifier (IRI) components in Dédalo.
 *
-*[
-*	{
-*		"id": 1,
-*		"iri": "https://dedalo.dev",
-*		"title": "Dédalo web site",
-*		"id": 1
-*	}
-*]
+* Stores and displays web URLs and URIs with optional title labels.
+* Supports Unicode characters in URLs (IRI standard), unlike plain ASCII URIs.
 *
-* data_column_name : 'iri'
+* Data format:
+* ```
+* [{
+*   "id": 1,
+*   "iri": "https://dedalo.dev",
+*   "title": "Dédalo web site"
+* }]
+* ```
+*
+* Key features:
+* - Stores URLs with multilingual title labels
+* - Supports Unicode characters in IRIs (RFC 3987)
+* - Language version support for localized titles
+* - Dataframe integration for contextual metadata
+* - Clickable link rendering in list and edit modes
+*
+* Data is stored in the 'iri' column of matrix tables.
+*
+* Extends component_common and uses search_component_iri trait for IRI-specific queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_iri extends component_common {
 
@@ -30,19 +45,19 @@ class component_iri extends component_common {
 	* @var
 	*/
 	// with_lang_versions. Set in properties for true like component_input_text
-	public $with_lang_versions = true;
+	public bool $with_lang_versions = true;
 
 	// bool . Property to enable or disable the get and set data in different languages
-	protected $supports_translation = true;
+	protected bool $supports_translation = true;
 
 	// bool . included_dataframe_properties
-	private $included_dataframe_properties = false;
+	private bool $included_dataframe_properties = false;
 
 	// string . Label dataframe target section tipo
-	private static $label_target_section_tipo = 'dd1706';
+	private static string $label_target_section_tipo = 'dd1706';
 
 	// string . Label dataframe target component tipo
-	private static $label_target_component_tipo = 'dd1715';
+	private static string $label_target_component_tipo = 'dd1715';
 
 
 
@@ -55,7 +70,7 @@ class component_iri extends component_common {
 			$this->with_lang_versions = true;
 
 		// Fix translatable for clarity
-			$this->translatable = 'no';
+			$this->translatable = false;
 
 		// common constructor. Creates the component as normally do with parent class
 			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
@@ -471,10 +486,11 @@ class component_iri extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -528,8 +544,8 @@ class component_iri extends component_common {
 				}
 			}
 
-		// flat_value (array of one value full resolved)
-			$flat_value = [implode($records_separator, $ar_values)];
+		// value. flat_value (array of one value full resolved)
+			$value = [implode($records_separator, $ar_values)]; // array
 
 		// value
 			$dd_grid_cell_object = new dd_grid_cell_object();
@@ -542,7 +558,8 @@ class component_iri extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($flat_value);
+				$dd_grid_cell_object->set_value($value);
+				$dd_grid_cell_object->set_fallback_value($value);
 				$dd_grid_cell_object->set_data($data);
 				$dd_grid_cell_object->set_model(get_called_class());
 

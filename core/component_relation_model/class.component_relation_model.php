@@ -1,33 +1,86 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_MODEL
+* Manages model-type hierarchical relations between sections in Dédalo.
 *
+* Handles relationships where records are linked through the ontology's hierarchical
+* model structure, allowing records to reference other records based on their
+* position in the hierarchy tree.
+*
+* Key features:
+* - Resolves target sections from ontology hierarchy structure
+* - Supports 'free' mode for direct target_values configuration
+* - Uses component_select for client-side user interface
+* - Supports sortable locator lists for ordered relationships
+* - Prefix-based fallback calculation (prefix.'2') for hierarchy resolution
+*
+* Target resolution modes:
+* - Hierarchy mode: Calculates from hierarchy section's target model component
+* - Free mode: Uses target_values defined directly in ontology properties
+*
+* Extends component_relation_common with DEDALO_RELATION_TYPE_MODEL_TIPO relation type.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_relation_model extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_MODEL_TIPO;
-	protected $default_relation_type_rel	= null;
-	public $ar_target_section_tipo;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for model relations (DEDALO_RELATION_TYPE_MODEL_TIPO).
+		 * Defines the ontology tipo used for model-type section relations.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_MODEL_TIPO;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+		/**
+		 * Cached array of target section tipos for this relation.
+		 * Stores resolved target sections from hierarchy or free mode lookup.
+		 * @var array $ar_target_section_tipo
+		 */
+		protected array $ar_target_section_tipo = [];
+
+		/**
+		 * Properties used to verify duplicate locators when adding relations.
+		 * Array of property names that must match to consider two locators equal.
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Select source section/s
-	* Overrides component common method
-	* @return array $ar_target_section_tipo
+	* Resolves the target section tipo(s) for this relation component.
+	* Supports two modes via properties->target_mode:
+	*   - 'free': uses target_values defined directly in ontology properties
+	*   - default: calculates from hierarchy section's target model component,
+	*     with fallback to prefix-based calculation (prefix.'2')
+	*
+	* Overrides component_common method.
+	*
+	* @return array Array of target section tipo strings
 	*/
 	public function get_ar_target_section_tipo() : array {
 
 		// cache
-			if(isset($this->ar_target_section_tipo)) {
+			if(!empty($this->ar_target_section_tipo)) {
 				return $this->ar_target_section_tipo;
+			}
+
+		// section_tipo check
+			$section_tipo = $this->get_section_tipo();
+			if (empty($section_tipo)) {
+				$msg = "Error. section_tipo is not defined! "
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' section_id: '   . $this->section_id;
+				debug_log(__METHOD__ . ' ' . $msg, logger::ERROR);
+				return [];
 			}
 
 		$target_mode = $this->properties->target_mode ?? null;
@@ -72,7 +125,7 @@ class component_relation_model extends component_relation_common {
 
 
 		// Fix value
-		$this->ar_target_section_tipo = $ar_target_section_tipo;
+			$this->ar_target_section_tipo = $ar_target_section_tipo;
 
 
 		return $ar_target_section_tipo;
@@ -82,8 +135,10 @@ class component_relation_model extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Returns whether the component's locator list is sortable.
+	* Override to return false when sorting is not applicable.
+	*
+	* @return bool Always true for component_relation_model
 	*/
 	public function get_sortable() : bool {
 

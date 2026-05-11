@@ -27,7 +27,7 @@ class area_maintenance extends area_common {
 	* @see core/base/process_runner.php
 	* @see core/api/v1/common/class.dd_area_maintenance_api.php
 	*/
-	public const BACKGROUND_RUNNABLE = [
+	public const array BACKGROUND_RUNNABLE = [
 		'build_install_version',
 		'update_data_version',
 		'long_process_stream',
@@ -58,7 +58,7 @@ class area_maintenance extends area_common {
 	* `widget_request` uses the same gate against the dispatched widget
 	* class's own `API_ACTIONS` (rolled out per-widget in a follow-up).
 	*/
-	public const API_ACTIONS = [
+	public const array API_ACTIONS = [
 		'build_install_version',
 		'create_test_record',
 		'long_process_stream',
@@ -817,7 +817,7 @@ class area_maintenance extends area_common {
 	* @param object $options
 	* @return object $response
 	*/
-	protected static function set_config_core(object $options) {
+	protected static function set_config_core(object $options) : object {
 
 		// response
 			$response = new stdClass();

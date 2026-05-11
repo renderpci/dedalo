@@ -12,7 +12,7 @@
 	// 	1, // admin general (no projects)
 	// 	2 // regular user
 	// ]
-	define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
+	define('TEST_USER_ID', -1); // DEDALO_SUPERUSER
 
 // IS_UNIT_TEST
 	define('IS_UNIT_TEST', true);

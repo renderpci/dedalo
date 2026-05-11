@@ -10,7 +10,12 @@
 
 
 /**
-* COMPONENT_RELATION_RELATED. Alias of component_portal
+* COMPONENT_RELATION_RELATED
+* Alias of component_portal. Reuses portal's UI and data management
+* for thesaurus related-term relations, adding server-side reference
+* resolution (bidirectional/multidirectional) via the PHP class.
+*
+* @type {typeof component_portal}
 */
 export const component_relation_related = component_portal
 

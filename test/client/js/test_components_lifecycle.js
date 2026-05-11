@@ -6,301 +6,222 @@
 import {
 	elements
 } from './elements.js'
-import {get_instance, get_all_instances, delete_instance} from '../../../core/common/js/instances.js'
+import {get_instance} from '../../../core/common/js/instances.js'
 
 
 
-// vars
-	const ar_view_edit = [
-		'line_edit',
-		'print'
-	]
-	const ar_view_list = [
-		'mini',
-		'text'
-	]
-	const ar_mode = [
-		'edit',
-		'list',
-		'search'
-	]
-	const ar_mode_length	= ar_mode.length
-	const elements_length	= elements.length
+// test matrix: mode → views to test for that mode
+const test_matrix = {
+	edit   : ['default', 'line_edit', 'print'],
+	list   : ['default', 'mini', 'text'],
+	search : ['default']
+}
+
+/**
+* BUILD_OPTIONS
+* Builds instance options from element, mode and view
+* @param object element - element definition from elements.js
+* @param string mode - edit | list | search
+* @param string view - default | line_edit | print | mini | text
+* @return object options for get_instance
+*/
+const build_options = (element, mode, view) => ({
+	id_variant    : Math.random() + '-' + Math.random(),
+	lang          : element.lang,
+	mode          : mode,
+	model         : element.model,
+	section_id    : element.section_id,
+	section_tipo  : element.section_tipo,
+	tipo          : element.tipo,
+	view          : view
+})
 
 
 
-// const content = document.getElementById('content');
-
-
-
-describe(`COMPONENTS LIFE-CYCLE`, async function() {
+describe(`COMPONENTS LIFE-CYCLE`, function() {
 
 	this.timeout(5000);
 
-	// elements iterate
-	for (let i = 0; i < elements_length; i++) {
+	// iterate all elements
+	for (let i = 0; i < elements.length; i++) {
 
-		// element is an object with the instance options
 		const element = elements[i]
 
-		describe(`${element.model.toUpperCase()}`, async function() {
+		// (!) component_external uses network connection, this makes very variable the response time
+		// Its intencionally excluded to have a more estable test completion time metrics.
+		if(element.model === 'component_external') {
+			continue
+		}
+
+		describe(`${element.model.toUpperCase()}`, function() {
 
 			this.timeout(15000);
 
-			// modes iterate for each element (edit, list, search)
-				await (async ()=>{
-					for (let k = 0; k < ar_mode_length; k++) {
-
-						element.mode = ar_mode[k]
-						element.view = 'default'
-
-						const options = {
-							id_variant		: Math.random() + '-' + Math.random(),
-							lang			: element.lang,
-							mode			: ar_mode[k],
-							model			: element.model,
-							section_id		: element.section_id,
-							section_tipo	: element.section_tipo,
-							tipo			: element.tipo,
-							view			: element.view
-						}
-
-						// exec
-						life_cycle_test(options, element.view)
-					}
-				})()
-
-			// views_edit iterate (line_edit)
-				await (async ()=>{
-					for (let k = 0; k < ar_view_edit.length; k++) {
-
-						element.mode = 'edit'
-						element.view = ar_view_edit[k]
-
-						const options = {
-							id_variant		: Math.random() + '-' + Math.random(),
-							lang			: element.lang,
-							mode			: ar_mode[k],
-							model			: element.model,
-							section_id		: element.section_id,
-							section_tipo	: element.section_tipo,
-							tipo			: element.tipo,
-							view			: element.view
-						}
-
-						// exec
-						life_cycle_test(options, element.view)
-					}
-				})()
-
-			// views_list iterate (mini)
-				await (async ()=>{
-					for (let k = 0; k < ar_view_list.length; k++) {
-
-						element.mode = 'list'
-						element.view = ar_view_list[k]
-
-						const options = {
-							id_variant		: Math.random() + '-' + Math.random(),
-							lang			: element.lang,
-							mode			: ar_mode[k],
-							model			: element.model,
-							section_id		: element.section_id,
-							section_tipo	: element.section_tipo,
-							tipo			: element.tipo,
-							view			: element.view
-						}
-
-						// exec
-						life_cycle_test(options, element.view)
-					}
-				})()
+			// iterate mode → view combinations from test_matrix
+			for (const mode of Object.keys(test_matrix)) {
+				for (const view of test_matrix[mode]) {
+					const options = build_options(element, mode, view)
+					life_cycle_test(options, view)
+				}
+			}
 		});
+	}
+});//end describe(`COMPONENTS LIFE-CYCLE`)
 
-	}//end for (let i = 0; i < elements_length; i++)
-});//end describe(`COMPONENTS LIFE-CYCLE`
 
 
+// models that render content_data in list mode (skip content_data=null check)
+const LIST_SKIP_CONTENT_DATA = [
+	'component_inverse',
+	'component_portal',
+	'component_relation',
+	'component_3d',
+	'component_av',
+	'component_image',
+	'component_pdf',
+	'component_svg',
+	'component_relation_children',
+	'component_relation_index',
+	'component_relation_related',
+	'component_relation_parent',
+	'component_text_area',
+	'component_json',
+	'component_info'
+]
+
+// models that may render labels in list mode (skip label=null check)
+const LIST_SKIP_LABEL = [
+	'component_info'
+]
 
 /**
 * LIFE_CYCLE_TEST
-* @param object element
+* Runs the full init → build → render → destroy cycle for one mode/view combination
+* @param object options - instance options (from build_options)
+* @param string view - view name for descriptions
 * @return void
 */
-async function life_cycle_test(element, view) {
+function life_cycle_test(options, view) {
 
 	let new_instance = null
 
-	describe(`${element.model} ${element.mode} ${view} `, function() {
+	const tag = `${options.model} [${options.mode}/${view}]`
+
+	describe(tag, function() {
 
 		this.timeout(15000);
 
-		it(`${element.model} INIT ${element.mode}`, async function() {
+		it(`INIT ${options.mode}/${view}`, async function() {
 
-			// options
-				const options = element
+			new_instance = await get_instance(options)
 
-			// init instance
-				new_instance = await get_instance(options)
+			// status and core properties
+			assert.equal(new_instance.status, 'initialized', 'status must be initialized');
+			assert.equal(new_instance.mode, options.mode);
+			assert.equal(new_instance.context, null);
+			assert.equal(new_instance.node, null);
+			assert.equal(new_instance.active, false);
+			assert.equal(new_instance.is_data_changed, false);
 
-			// asserts
-				assert.equal(new_instance.status, 'initialized', 'Instance status must be initialized ');
-				assert.equal(new_instance.mode, options.mode);
-				assert.equal(new_instance.context, null);
-				assert.equal(new_instance.node, null);
-				assert.equal(new_instance.active, false);
-				assert.equal(new_instance.is_data_changed, false);
-
-				assert.notEqual(new_instance.model, null);
-				assert.notEqual(new_instance.tipo, null);
-				assert.notEqual(new_instance.section_tipo, null);
-				assert.notEqual(new_instance.mode, null);
-				assert.notEqual(new_instance.lang, null);
-				assert.notEqual(new_instance.standalone, null);
+			// identity properties must be set
+			assert.notEqual(new_instance.model, null);
+			assert.notEqual(new_instance.tipo, null);
+			assert.notEqual(new_instance.section_tipo, null);
+			assert.notEqual(new_instance.mode, null);
+			assert.notEqual(new_instance.lang, null);
+			assert.notEqual(new_instance.standalone, null);
 		});
 
-		it(`${element.model} BUILD (autoload=true) ${element.mode}`, async function() {
+		it(`BUILD ${options.mode}/${view}`, async function() {
 
-			// build instance
-				await new_instance.build(true)
+			await new_instance.build(true)
 
-			// asserts
-				assert.equal(new_instance.status, 'built');
-				// assert.equal(new_instance.mode, element_mode);
-				assert.notEqual(new_instance.context, null);
-
-				assert.notEqual(new_instance.type, null);
-				assert.notEqual(new_instance.label, null);
-				assert.notEqual(new_instance.tools, null);
-				assert.notEqual(new_instance.permissions, null);
-				// assert.notEqual(new_instance.view, null);
-				assert.notEqual(new_instance.rqo_test, null);
-				assert.notEqual(new_instance.data, null);
-				assert.notEqual(new_instance.db_data, null);
+			assert.equal(new_instance.status, 'built');
+			assert.notEqual(new_instance.context, null, 'context must not be null after build');
+			assert.notEqual(new_instance.type, null, 'type must not be null');
+			assert.notEqual(new_instance.label, null, 'label must not be null');
+			assert.notEqual(new_instance.tools, null, 'tools must not be null');
+			assert.notEqual(new_instance.permissions, null, 'permissions must not be null');
+			assert.notEqual(new_instance.rqo_test, null, 'rqo_test must not be null');
+			assert.notEqual(new_instance.data, null, 'data must not be null');
+			assert.notEqual(new_instance.db_data, null, 'db_data must not be null');
 		});
 
-		it(`${element.model} RENDER ${element.mode}`, async function() {
+		it(`RENDER ${options.mode}/${view}`, async function() {
 
-			// render instance
-				const new_node = await new_instance.render()
-				// console.log('new_node:', new_node);
+			const node = await new_instance.render()
 
-			// insert in DOM
-				// if (new_instance.mode==='edit') {
-				// 	content.prepend(new_node)
-				// }
+			assert.equal(new_instance.status, 'rendered', 'status must be rendered');
+			assert.notEqual(new_instance.node, null, 'node must not be null after render');
 
-			// asserts
-				assert.equal(new_instance.status, 'rendered');
-				assert.notEqual(new_instance.node, null);
+			// edit mode: label, buttons_container, content_data expected
+			if (new_instance.mode === 'edit' && new_instance.view !== 'line_edit' && new_instance.view !== 'mini' && new_instance.view !== 'print') {
+				assert.notEqual(
+					new_instance.node.querySelector('.label'),
+					null,
+					`label must exist in edit mode (view: ${new_instance.view})`
+				);
+				assert.notEqual(
+					new_instance.node.querySelector('.buttons_container'),
+					null,
+					'buttons_container must exist in edit mode'
+				);
+				assert.notEqual(
+					new_instance.node.querySelector('.content_data'),
+					null,
+					'content_data must exist in edit mode'
+				);
+			}
 
-				if (new_instance.mode==='edit' && new_instance.view!=='line' && new_instance.view!=='mini') {
-					// assert.notEqual(
-					// 	new_instance.node.content_data,
-					// 	null,
-					// 	'element node content data must be null'
-					// );
-					// assert.notEqual(new_instance.node.content_data, undefined);
-					assert.notEqual(
+			// list mode (non-text view): no label, no buttons, no content_data (for most models)
+			if (new_instance.mode === 'list' && new_instance.view !== 'text') {
+				if (!LIST_SKIP_CONTENT_DATA.includes(new_instance.model)) {
+					assert.equal(
+						new_instance.node.querySelector('.content_data'),
+						null,
+						'content_data must be null in list mode'
+					);
+				}
+				if (!LIST_SKIP_LABEL.includes(new_instance.model)) {
+					assert.equal(
 						new_instance.node.querySelector('.label'),
 						null,
-						`label must be a DOM node on edit mode. (view: ${new_instance.view} - mode: ${new_instance.mode})`
+						'label must be null in list mode'
 					);
-					const buttons_container = new_instance.node.querySelector('.buttons_container')
-					assert.notEqual(buttons_container, null);
-					assert.notEqual(new_instance.node.querySelector('.content_data'), null);
 				}
-				else if(new_instance.mode==='list') {
-					// console.log('+++ new_instance.node:', new_instance.node);
-					if (new_instance.view!=='text') {
-						// console.log('new_instance.node:', new_instance.node, new_instance.mode, new_instance.view);
-						const skip_models = [
-							'component_inverse',
-							'component_portal',
-							'component_relation',
-							'component_3d',
-							'component_av',
-							'component_image',
-							'component_pdf',
-							'component_svg',
-							'component_relation_children',
-							'component_relation_index',
-							'component_relation_related',
-							'component_relation_parent',
-							'component_text_area',
-							'component_json',
-							'component_info'
-						]
-						if (!skip_models.includes(new_instance.model)) {
-							// assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
-							assert.equal(
-								new_instance.node.querySelector('.content_data'),
-								null,
-								'content_data must be null on list mode'
-							);
-						}
-						// Skip label check for component_info as it renders widgets that may have labels
-						const skip_label_models = [
-							'component_info'
-						]
-						if (!skip_label_models.includes(new_instance.model)) {
-							assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
-						}
-						assert.equal(new_instance.node.querySelector('.buttons_container'), null, 'buttons_container must be null on list mode');
-					}
-				}
-		});
-
-		it(`${element.model} DESTROY ${element.mode}`, async function() {
-
-			// destroy instance
-				const destroy_result = await new_instance.destroy(
-					true,  // delete_self . default true
-					true, // delete_dependencies . default false
-					true // remove_dom . default false
+				assert.equal(
+					new_instance.node.querySelector('.buttons_container'),
+					null,
+					'buttons_container must be null in list mode'
 				);
+			}
 
-				assert.equal(
-					destroy_result.delete_dependencies,
-					true,
-					'delete_dependencies: ' + JSON.stringify(destroy_result.delete_dependencies)
-				)
-				assert.equal(
-					destroy_result.delete_self,
-					true,
-					'destroy_result.delete_self: ' + JSON.stringify(destroy_result.delete_self)
-				)
-				assert.equal(new_instance.status, 'destroyed')
-				assert.deepEqual(new_instance.ar_instances, [])
-				assert.deepEqual(new_instance.node, null)
-				assert.deepEqual(new_instance.events_tokens, [])
-
-			// all instances check
-				// let all_instances = get_all_instances()
-
-				// // component_iri case
-				// // Because component_iri creates the component_dataframe on render without wait,
-				// // the ar_instances additions is made it after the component is destroyed.
-				// if (new_instance.model==='component_iri') {
-				// 	const found = all_instances.find(el => el.model === 'component_dataframe')
-				// 	if (found) {
-				// 		if(!delete_instance(found.id)) {
-				// 			console.log('Deleting instance failed:', found.id);
-				// 		}
-				// 		// update values
-				// 		all_instances = get_all_instances()
-				// 		console.log('all_instances:', all_instances);
-				// 	}
-				// }
-
-				// assert.deepEqual(
-				// 	all_instances,
-				// 	[],
-				// 	'all_instances: ' //+ JSON.stringify(all_instances)
-				// );
+			// search mode: node must be a valid DOM element
+			if (new_instance.mode === 'search') {
+				assert.ok(
+					new_instance.node instanceof Element,
+					'rendered node must be a DOM Element in search mode'
+				);
+			}
 		});
 
-	});//end describe(element.model, function()
+		it(`DESTROY ${options.mode}/${view}`, async function() {
+
+			const result = await new_instance.destroy(
+				true,  // delete_self
+				true,  // delete_dependencies
+				true   // remove_dom
+			);
+
+			assert.equal(result.delete_dependencies, true, 'delete_dependencies must succeed');
+			assert.equal(result.delete_self, true, 'delete_self must succeed');
+			assert.equal(new_instance.status, 'destroyed');
+			assert.deepEqual(new_instance.ar_instances, []);
+			assert.deepEqual(new_instance.node, null);
+			assert.deepEqual(new_instance.events_tokens, []);
+		});
+
+	});
 }//end life_cycle_test
 
 

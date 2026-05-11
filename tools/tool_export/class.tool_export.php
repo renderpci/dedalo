@@ -348,12 +348,8 @@ class tool_export extends tool_common {
 			$column_tipos_len	= sizeof($column_tipos)-1;
 			foreach ($column_tipos as $column_key => $column_tipo) {
 				if(safe_tipo($column_tipo)===false) {
-					debug_log(__METHOD__
-					  .' Ignored invalid tipo'
-					  .' column_key: ' . to_string($column_key)
-					  .' column_tipo: ' . to_string($column_tipo)
-					  , logger::ERROR
-					);
+					// Use non-tipo strings directly as labels (e.g. from widget sub-columns)
+					$column_labels[] = $column_tipo;
 					continue;
 				}
 				if($this->data_format==='dedalo_raw'){
@@ -545,6 +541,11 @@ class tool_export extends tool_common {
 				$column_labels		= [];
 				$column_tipos_len	= sizeof($column_tipos)-1;
 				foreach ($column_tipos as $column_key => $column_tipo) {
+					if(safe_tipo($column_tipo)===false) {
+						// Use non-tipo strings directly as labels (e.g. from widget sub-columns)
+						$column_labels[] = $column_tipo;
+						continue;
+					}
 					// set the column name, if the format is Dédalo use the $tipo and section_id
 					// for standard format use the name
 					if($this->data_format==='dedalo_raw'){

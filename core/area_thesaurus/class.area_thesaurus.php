@@ -13,24 +13,25 @@ class area_thesaurus extends area_common {
 	 * Typologies section tipo
 	 * @var string
 	 */
-	public static $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
+	public static string $typologies_section_tipo = DEDALO_HIERARCHY_TYPES_SECTION_TIPO; // 'hierarchy13'
 
 	/**
 	 * Typologies name tipo
 	 * @var string
 	 */
-	public static $typologies_name_tipo	= DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
+	public static string $typologies_name_tipo = DEDALO_HIERARCHY_TYPES_NAME_TIPO;	// 'hierarchy16'
 
 	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view = false;
+	protected bool $model_view = false;
 
 	// thesaurus_mode
-	public $thesaurus_mode = null;
+	public ?string $thesaurus_mode = null;
 
 	// cache
-	public static $typology_names_cache;
-	public static $typology_order_values_cache;
-	public static $hierarchy_names_cache;
+	public static array $typology_names_cache = [];
+	public static array $typology_order_values_cache = [];
+	public static array $hierarchy_names_cache = [];
+
 
 
 	/**

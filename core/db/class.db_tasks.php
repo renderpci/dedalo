@@ -548,21 +548,25 @@ class db_tasks {
 			// 1 Drop
 				// exec drop query
 				$sql_query		= db_tasks::clean_sql_sentence($function->drop);
-				$query_response	= db_tasks::exec_sql_query($sql_query);
+				if (!empty($sql_query)) {
+					$query_response	= db_tasks::exec_sql_query($sql_query);
 
-				if( $query_response->result===false ) {
-					$response->errors[] = $query_response->errors;
-					continue;
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->errors;
+						continue;
+					}
 				}
 
 			// 2 Add
 				// exec add query
 				$sql_query		= db_tasks::clean_sql_sentence($function->add);
-				$query_response	= db_tasks::exec_sql_query($sql_query);
+				if (!empty($sql_query)) {
+					$query_response	= db_tasks::exec_sql_query($sql_query);
 
-				if( $query_response->result===false ) {
-					$response->errors[] = $query_response->errors;
-					continue;
+					if( $query_response->result===false ) {
+						$response->errors[] = $query_response->errors;
+						continue;
+					}
 				}
 
 				$response->success++;
@@ -650,22 +654,26 @@ class db_tasks {
 						// exec drop query
 						$sql_query		= db_tasks::parse_sql_sentence($index->drop, $table);
 						$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-						$query_response	= db_tasks::exec_sql_query($sql_query);
+						if (!empty($sql_query)) {
+							$query_response	= db_tasks::exec_sql_query($sql_query);
 
-						if( $query_response->result===false ) {
-							$response->errors[] = $query_response->errors;
-							continue;
+							if( $query_response->result===false ) {
+								$response->errors[] = $query_response->errors;
+								continue;
+							}
 						}
 
 					// 2 Add
 						// exec add query
 						$sql_query		= db_tasks::parse_sql_sentence($index->add, $table);
 						$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-						$query_response	= db_tasks::exec_sql_query($sql_query);
+						if (!empty($sql_query)) {
+							$query_response	= db_tasks::exec_sql_query($sql_query);
 
-						if( $query_response->result===false ) {
-							$response->errors[] = $query_response->errors;
-							continue;
+							if( $query_response->result===false ) {
+								$response->errors[] = $query_response->errors;
+								continue;
+							}
 						}
 
 					$executed[] = $sql_query;
@@ -753,22 +761,26 @@ class db_tasks {
 					// exec drop query
 					$sql_query		= db_tasks::parse_sql_sentence($constraint->drop, $table);
 					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-					$query_response	= db_tasks::exec_sql_query($sql_query);
+					if (!empty($sql_query)) {
+						$query_response	= db_tasks::exec_sql_query($sql_query);
 
-					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->errors;
-						continue;
+						if( $query_response->result===false ) {
+							$response->errors[] = $query_response->errors;
+							continue;
+						}
 					}
 
 				// 2 Add
 					// exec add query
 					$sql_query		= db_tasks::parse_sql_sentence($constraint->add, $table);
 					$sql_query		= db_tasks::clean_sql_sentence($sql_query);
-					$query_response	= db_tasks::exec_sql_query($sql_query);
+					if (!empty($sql_query)) {
+						$query_response	= db_tasks::exec_sql_query($sql_query);
 
-					if( $query_response->result===false ) {
-						$response->errors[] = $query_response->errors;
-						continue;
+						if( $query_response->result===false ) {
+							$response->errors[] = $query_response->errors;
+							continue;
+						}
 					}
 			}
 
@@ -893,8 +905,6 @@ class db_tasks {
 
 		return $indexes;
 	}//end get_table_indexes
-
-
 
 
 

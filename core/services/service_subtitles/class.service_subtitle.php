@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 include( dirname(dirname(__FILE__)) . '/shared/class.subtitles.php');
 /**
 * SERVICE_SUBTITLES

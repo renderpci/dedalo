@@ -11,19 +11,46 @@ class sections extends common {
 	/**
 	* CLASS VARS
 	*/
-		// FIELDS
-		protected $ar_locators;
-		protected $ar_section_tipo;
-		private $data;
+		/**
+		 * Array of locators identifying the specific section records to load.
+		 * Each locator contains section_tipo and section_id for targeted data retrieval.
+		 * @var ?array $ar_locators
+		 */
+		protected ?array $ar_locators = null;
 
-		// dd_request. Full dd_request
-		public $dd_request;
+		/**
+		 * Array of section tipos this sections instance operates on.
+		 * Defines which section types are included in the data scope.
+		 * @var ?array $ar_section_tipo
+		 */
+		protected ?array $ar_section_tipo = null;
 
-		// search_query_object
-		public $search_query_object;
+		/**
+		 * Database result object containing the queried section records.
+		 * Holds raw db_result from PostgreSQL before transformation to section objects.
+		 * @var ?db_result $data
+		 */
+		private ?db_result $data = null;
 
-		// string (section/portal)
-		public $caller_tipo;
+		/**
+		 * Full dd_request object defining the data retrieval configuration.
+		 * Contains show, select, and search parameters for the sections query.
+		 * @var ?object $dd_request
+		 */
+		public ?object $dd_request = null;
+
+		/**
+		 * Search query object with parsed SQL conditions and filters.
+		 * Defines how section records are filtered, sorted, and paginated.
+		 * @var ?object $search_query_object
+		 */
+		public ?object $search_query_object = null;
+
+		/**
+		 * Tipo of the calling element that instantiated this sections object.
+		 * @var ?string $caller_tipo
+		 */
+		public ?string $caller_tipo = null;
 
 
 

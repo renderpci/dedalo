@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 // SEC-026 (§9.3): server-agnostic deny for direct HTTP access. This file is
 // included by common::get_json() inside the calling object scope; reaching
 // it through a URL means the web server config did not block the path.
@@ -23,19 +23,20 @@ if (!isset($this)) { http_response_code(404); exit; }
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-					$current_context = $this->get_structure_context_simple($permissions);
+					$this->context = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-				$current_context = $this->get_structure_context($permissions);
+				$this->context = $this->get_structure_context($permissions);
 
 				// append additional info
-				$current_context->features = new stdClass();
-					$current_context->features->allowed_extensions		= $this->get_allowed_extensions();
-					$current_context->features->default_target_quality	= null;
+				$this->context->features = new stdClass();
+					$this->context->features->allowed_extensions		= $this->get_allowed_extensions();
+					$this->context->features->default_target_quality	= null;
 				break;
 		}
-		$context[] = $current_context;
+
+		$context[] = $this->context;
 	}//end if($options->get_context===true)
 
 

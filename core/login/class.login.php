@@ -21,16 +21,33 @@ class login extends common {
 
 	/**
 	* CLASS VARS
-	*
-	* @var int|null $id Unique identifier for the login instance
-	* @var string $tipo_active_account Ontology tipo for active account status component
-	* @var string $tipo_button_login Ontology tipo for login button component
-	* @var string $SU_DEFAULT_PASSWORD Default password for super user (root)
 	*/
-		protected $id;
-		protected $tipo_active_account	= 'dd131';
-		protected $tipo_button_login	= 'dd259';
-		const SU_DEFAULT_PASSWORD		= '';
+		/**
+		 * Unique identifier for the login instance.
+		 * Set via set_id(), typically null for login operations.
+		 * @var ?int $id
+		 */
+		protected ?int $id = null;
+
+		/**
+		 * Ontology tipo for the active account status component.
+		 * Identifies the component that stores whether a user account is active ('dd131').
+		 * @var string $tipo_active_account
+		 */
+		protected string $tipo_active_account = 'dd131';
+
+		/**
+		 * Ontology tipo for the login button component.
+		 * Identifies the button element that triggers login submission ('dd259').
+		 * @var string $tipo_button_login
+		 */
+		protected string $tipo_button_login = 'dd259';
+
+		/**
+		 * Default password for the super user (root) account.
+		 * Empty string indicates no default; must be set during installation.
+		 */
+		const SU_DEFAULT_PASSWORD = '';
 
 
 

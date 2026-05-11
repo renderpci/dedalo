@@ -448,7 +448,7 @@ class locator extends stdClass {
 	* @param string $value
 	* @return bool
 	*/
-	public function set_section_tipo_key(string $value) {
+	public function set_section_tipo_key(string $value) : bool {
 		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid section_tipo_key: $value", 1);
 		}
@@ -465,7 +465,7 @@ class locator extends stdClass {
 	* @param string $value
 	* @return bool
 	*/
-	public function set_main_component_tipo(string $value) {
+	public function set_main_component_tipo(string $value) : bool {
 		if(!get_tld_from_tipo($value)) {
 			throw new Exception("Error Processing Request. Invalid main_component_tipo: $value", 1);
 		}
@@ -904,7 +904,7 @@ class locator extends stdClass {
 		}
 		return(false);
 	}
-	private function GetAccessor(string $variable) {
+	private function GetAccessor(string $variable) : string|false {
 		if(property_exists($this, $variable)) {
 			return (string)$this->$variable;
 		}else{

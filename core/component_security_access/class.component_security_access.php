@@ -1,28 +1,53 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT SECURITY ACCESS
-* Manages ontology elements access and permissions
+* CLASS COMPONENT_SECURITY_ACCESS
+* Manages ontology access control and permission management in Dédalo.
 *
-* data_column_name : 'misc'
+* Handles the security access tree for controlling user permissions across
+* ontology elements (areas, sections, components). Used primarily in the
+* User section to define what users can access and do within the system.
+*
+* Key features:
+* - Generates and caches ontology tree hierarchy for permission management
+* - Controls access levels (none, read, edit, admin) for ontology elements
+* - Provides datalist of areas, sections, and components for permission UI
+* - Caches tree structure per language for performance
+* - Supports permission inheritance through hierarchy
+*
+* Permission levels:
+* - 0: No access
+* - 1: Read-only
+* - 2: Read and edit
+* - 3: Admin (full control)
+*
+* Data is stored in the 'misc' column of matrix tables.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_security_access extends component_common {
 
 
 
 	/**
-	 * @var array Datalist array
-	 */
-	public $datalist;
+	* CLASS VARS
+	*/
+		/**
+		 * Datalist containing the ontology tree hierarchy for access permissions.
+		 * Stores the complete security access tree with areas, sections, and components.
+		 * Generated during user login and used for permission management UI.
+		 * @var array $datalist
+		 */
+		public array $datalist = [];
 
-	/**
-	 * @var array Cache of admin types
-	 */
-	public static $ar_tipo_admin_cache;
-
-	/**
-	 * @var bool Property to enable or disable the get and set data in different languages
-	 */
-	protected $supports_translation = false;
+		/**
+		 * Static cache for admin tipo lookups.
+		 * Stores resolved admin types to avoid repeated ontology queries.
+		 * @var array $ar_tipo_admin_cache
+		 */
+		public static ?array $ar_tipo_admin_cache = null;
 
 
 
@@ -87,7 +112,7 @@ class component_security_access extends component_common {
 		$start_time = start_time();
 
 		// already resolved in current instance
-			if (isset($this->datalist)) {
+			if (!empty($this->datalist)) {
 				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__
 						.' Return already set datalist. count: '.count($this->datalist)
@@ -465,33 +490,32 @@ class component_security_access extends component_common {
 	/**
 	* GET ARRAY TIPO ADMIN
 	* Returns the 'Admin' area as well as its children (used to exclude the admin options in the tree)
-	* @return array $ar_tipo_admin_cache
+	* @return array $ar_admin_tipos
 	*/
 	public static function get_ar_tipo_admin() : array {
 
 		// static cache
-		if(isset(self::$ar_tipo_admin_cache)) {
+		if(self::$ar_tipo_admin_cache !== null) {
 			return self::$ar_tipo_admin_cache;
 		}
 
 		$ar_result 	= ontology_utils::get_ar_tipo_by_model('area_admin');
-		$ar_tesauro = [];
+		$ar_admin_tipos = [];
 
 		if(!empty($ar_result[0])) {
-			$tipo					= $ar_result[0];
-			$obj					= ontology_node::get_instance($tipo);
-			$ar_children_of_this	= $obj->get_ar_children_of_this();
-			$ar_tesauro				= $ar_children_of_this;
+			$tipo			= $ar_result[0];
+			$obj			= ontology_node::get_instance($tipo);
+			$ar_admin_tipos	= $obj->get_ar_children_of_this();
 
 			// We add the term itself as the father of the tree
-			array_unshift($ar_tesauro, $tipo);
+			array_unshift($ar_admin_tipos, $tipo);
 		}
 
 		// store cache data
-		self::$ar_tipo_admin_cache = $ar_tesauro;
+		self::$ar_tipo_admin_cache = $ar_admin_tipos;
 
 
-		return $ar_tesauro ;
+		return $ar_admin_tipos;
 	}//end get_ar_tipo_admin
 
 

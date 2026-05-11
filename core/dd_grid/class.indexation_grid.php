@@ -9,27 +9,73 @@ class indexation_grid {
 
 
 	/**
-	* @var
+	* CLASS VARS
 	*/
-		protected $tipo;
-		protected $section_id;
-		protected $section_tipo;
-		protected $value;
-		protected $pagination;
-		protected $target_section;
-		protected $sqo;
+		/**
+		 * Ontology tipo (component identifier) for this indexation grid.
+		 * Identifies which component type is being indexed/queried.
+		 * @var ?string $tipo
+		 */
+		protected ?string $tipo = null;
+
+		/**
+		 * Section ID of the thesaurus term being indexed.
+		 * Identifies the specific record within the section for detail views.
+		 * @var ?int $section_id
+		 */
+		protected int|string|null $section_id = null;
+
+		/**
+		 * Section tipo (ontology identifier) of the thesaurus term.
+		 * Defines which hierarchy/section the indexation belongs to.
+		 * @var ?string $section_tipo
+		 */
+		protected ?string $section_tipo = null;
+
+		/**
+		 * Filter value for indexation queries. Array of section tipos.
+		 * Used to filter locators to specific section types like ['oh1', 'rsc1'].
+		 * @var ?array $value
+		 */
+		protected ?array $value = null;
+
+		/**
+		 * Pagination configuration object for indexation results.
+		 * Contains limit, offset, and total properties for result paging.
+		 * @var ?object $pagination
+		 */
+		protected ?object $pagination = null;
+
+		/**
+		 * Target section tipo to filter indexation results.
+		 * Limits the indexation grid to records from this specific section type.
+		 * @var ?string $target_section
+		 */
+		protected ?string $target_section = null;
+
+		/**
+		 * Search Query Object for building the indexation filter.
+		 * Contains the SQO used to query and filter indexation data.
+		 * @var ?object $sqo
+		 */
+		protected ?object $sqo = null;
 
 
 
 	/**
 	* CONSTRUCT
+	* @param string $section_tipo Section tipo (ontology identifier) of the thesaurus term.
+	* @param int|string $section_id Section ID of the thesaurus term being indexed.
+	* @param string $tipo Ontology tipo (component identifier) for this indexation grid.
+	* @param ?array $value Filter value for indexation queries. Array of section tipos.
+	* @return void
 	*/
-	public function __construct($section_tipo, $section_id, $tipo, $value=false) {
+	public function __construct(string $section_tipo, int|string $section_id, string $tipo, ?array $value=null) {
 
 		$this->tipo			= $tipo;
 		$this->section_id	= $section_id;
 		$this->section_tipo	= $section_tipo;
-		$this->value		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+		$this->value		= $value; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
 		// set pagination
 		if (!isset($this->pagination)) {

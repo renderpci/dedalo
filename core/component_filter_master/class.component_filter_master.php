@@ -1,11 +1,22 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_FILTER_MASTER
-* Overwrite some methods of component_filter.
-* This component is defined only in User section (dd128) to set the user projects.
-* As opposed to the component_filter, this component is not used to filter data, 
-* but to set the user projects access.
-* The operation is basically the same as the component filter, but it is specialised for use only in this section (dd128).
+* Specialized variant of component_filter for managing user project assignments.
+*
+* Used exclusively in the User section (dd128) to define which projects a user
+* has access to. Unlike component_filter which filters records by project,
+* this component controls the user's project permissions themselves.
+*
+* Key differences from component_filter:
+* - Only used in User section for project assignment
+* - Clears filter cache on every save to ensure permission changes take effect
+* - Disables filter propagation (no cascading permission changes)
+*
+* Extends component_filter and overrides save() to reset user cache
+* and propagate_filter() to prevent unnecessary processing.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_filter_master extends component_filter {
 

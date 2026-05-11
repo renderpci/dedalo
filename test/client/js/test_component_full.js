@@ -35,7 +35,7 @@ const model		= url_vars.model
 * @return promise
 * 	resolve element instance
 */
-async function make_element_test(options) {
+function make_element_test(options) {
 
 	// options
 		const element		= options.element
@@ -130,7 +130,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -159,7 +159,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -170,7 +170,7 @@ async function make_element_test(options) {
 				assert.equal(
 					new_instance.status,
 					'rendered',
-					'Status must be rendered'
+					'Component status must be rendered'
 				);
 				assert.notEqual(
 					new_instance.node,
@@ -208,7 +208,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -251,7 +251,6 @@ async function make_element_test(options) {
 					true,
 					'instance wrapper classList display must contains "view_default" '
 				);
-
 			}
 		})	}) })
 	}
@@ -264,7 +263,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -319,7 +318,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -337,11 +336,11 @@ async function make_element_test(options) {
 					null,
 					'Main node not could be null'
 				);
-				if (element.model!=='component_portal') {
+				if (element.model !== 'component_portal' && element.model !== 'component_external') {
 					assert.equal(
 						new_instance.node.querySelector(':scope >.label'),
 						null,
-						'Main label should not exist in line view (Except for portals)'
+						'Main label should not exist in line view (Except for portals and component_external)'
 					);
 				}
 				// assert.notEqual(
@@ -375,7 +374,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -434,7 +433,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -493,7 +492,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -552,7 +551,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -614,7 +613,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -643,7 +642,7 @@ async function make_element_test(options) {
 						new_instance.node.querySelector(':scope >.content_data'),
 						null,
 						'content_data must necessarily exist'
-					);								
+					);
 					assert.notEqual(
 						new_instance.node.content_data,
 						undefined,

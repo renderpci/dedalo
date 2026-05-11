@@ -213,24 +213,30 @@ class exec_ {
 
 
 
-/* An easy way to keep in track of external processes.
+/**
+ * An easy way to keep in track of external processes.
  * Ever wanted to execute a process in php, but you still wanted to have somewhat control of the process ? Well.. This is a way of doing it.
  * @compatibility: Linux only. (Windows does not work).
  * @author: Peec
  */
 class process {
 
-    private $pid;
-    private $command;
-    private $file;
+    /** @var int|null $pid */
+    private ?int $pid = null;
 
-    public function __construct($cl=false){
+    /** @var string|null $command */
+    private ?string $command = null;
+
+    /** @var string|null $file */
+    private ?string $file = null;
+
+    public function __construct(?string $cl=null) {
         if ($cl != false){
             $this->command = $cl;
             $this->runCom();
         }
     }
-    private function runCom(){
+    private function runCom() : void {
     	// reference command for non blocking process
 		// $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
 		$command = $this->command; // untouched command
@@ -248,15 +254,15 @@ class process {
         $this->pid = (int)$output[0];
     }
 
-    public function setPid($pid){
+    public function setPid(?int $pid) : void {
         $this->pid = $pid;
     }
 
-    public function getPid(){
+    public function getPid() : ?int {
         return $this->pid;
     }
 
-    public function status(){
+    public function status() : bool {
         // SEC-043 defence-in-depth: cast pid to int. `setPid()` accepts arbitrary
         // input from `dd_utils_api::get_process_status` (which now does its own
         // ownership check), but quoting here means future callers cannot inject
@@ -267,12 +273,15 @@ class process {
         else return true;
     }
 
-    public function start(){
-        if ($this->command != '')$this->runCom();
-        else return true;
+    public function start() : bool {
+        if ($this->command != '') {
+            $this->runCom();
+            return true;
+        }
+        return true;
     }
 
-    public function stop(){
+    public function stop() : bool {
         // SEC-043 defence-in-depth: int-cast pid before shell interpolation.
         $command = 'kill '.(int)$this->pid;
         exec($command);
@@ -280,11 +289,11 @@ class process {
         else return false;
     }
 
-    public function setFile($file){
+    public function setFile(?string $file) : void {
         $this->file = $file;
     }
 
-    public function read(){
+    public function read() : array {
         // SEC-043 defence-in-depth: shell-quote $this->file. Currently set only
         // through `processes::get_process_item()` (server-generated path from
         // `get_unique_process_file()`); the helper now enforces escaping so

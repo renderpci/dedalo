@@ -1,15 +1,41 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_GEOLOCATION
-* Manages
-* data_column_name : 'geo'
+* Manages geographic coordinate components in Dédalo.
+*
+* Stores and handles latitude/longitude location data in GeoJSON-compatible format.
+* Used for mapping, spatial queries, and geographic visualization of records.
+*
+* Data format (GeoJSON-like):
+* ```
+* {
+*   "type": "FeatureCollection",
+*   "features": [{
+*     "type": "Feature",
+*     "properties": {},
+*     "geometry": {
+*       "type": "Point",
+*       "coordinates": [longitude, latitude]
+*     }
+*   }]
+* }
+* ```
+*
+* Key features:
+* - Latitude and longitude coordinate storage
+* - GeoJSON FeatureCollection format for map integration
+* - Tag-based location references for text components
+* - Support for multiple location points per component
+*
+* Data is stored in the 'geo' column of matrix tables.
+* Always uses DEDALO_DATA_NOLAN (language-neutral) for storage.
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_geolocation extends component_common {
-
-
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
 
 
 
@@ -49,7 +75,7 @@ class component_geolocation extends component_common {
 	* }
 	* @return string $result
 	*/
-	public static function build_geolocation_tag_string(string $tag_id, $lon, $lat) : string {
+	public static function build_geolocation_tag_string(string $tag_id, string|float $lon, string|float $lat) : string {
 
 		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
 

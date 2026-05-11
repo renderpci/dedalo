@@ -28,9 +28,9 @@ export const view_default_list_component_external = function() {
 view_default_list_component_external.render = async function(self, options) {
 
 	// short vars
-		const data				= self.data || {}
-		const entries			= data.entries || []
-		const value_string		= entries.join(' | ')
+		const data			= self.data || {}
+		const entries		= data.entries || []
+		const value_string	= entries.join(' | ')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

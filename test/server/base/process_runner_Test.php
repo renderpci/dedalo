@@ -39,12 +39,13 @@ final class process_runner_test extends BaseTestCase {
         ]);
 
         $php_code = "<?php\n";
-        $php_code .= "session_id('{$session_id}'); session_start();\n";
-        $php_code .= "session_write_close();\n";
         $php_code .= "\$argv = [NULL];\n";
         $php_code .= "\$argv[1] = " . var_export($payload, true) . ";\n";
         $php_code .= "include " . var_export($runner_path, true) . ";\n";
         file_put_contents($wrapper_file, $php_code);
+
+        // Release session lock so process_runner.php can read auth data
+        session_write_close();
 
         exec('php ' . escapeshellarg($wrapper_file) . ' 2>&1', $output, $ret);
         $joined = implode(PHP_EOL, $output);
@@ -74,12 +75,13 @@ final class process_runner_test extends BaseTestCase {
         ]);
 
         $php_code = "<?php\n";
-        $php_code .= "session_id('{$session_id}'); session_start();\n";
-        $php_code .= "session_write_close();\n";
         $php_code .= "\$argv = [NULL];\n";
         $php_code .= "\$argv[1] = " . var_export($payload, true) . ";\n";
         $php_code .= "include " . var_export($runner_path, true) . ";\n";
         file_put_contents($wrapper_file, $php_code);
+
+        // Release session lock so process_runner.php can read auth data
+        session_write_close();
 
         exec('php ' . escapeshellarg($wrapper_file) . ' 2>&1', $output, $ret);
         $joined = implode(PHP_EOL, $output);
@@ -108,12 +110,13 @@ final class process_runner_test extends BaseTestCase {
         ]);
 
         $php_code = "<?php\n";
-        $php_code .= "session_id('{$session_id}'); session_start();\n";
-        $php_code .= "session_write_close();\n";
         $php_code .= "\$argv = [NULL];\n";
         $php_code .= "\$argv[1] = " . var_export($payload, true) . ";\n";
         $php_code .= "include " . var_export($runner_path, true) . ";\n";
         file_put_contents($wrapper_file, $php_code);
+
+        // Release session lock so process_runner.php can read auth data
+        session_write_close();
 
         exec('php ' . escapeshellarg($wrapper_file) . ' 2>&1', $output, $ret);
         $joined = implode(PHP_EOL, $output);
@@ -148,12 +151,13 @@ final class process_runner_test extends BaseTestCase {
         ]);
 
         $php_code = "<?php\n";
-        $php_code .= "session_id('{$session_id}'); session_start();\n";
-        $php_code .= "session_write_close();\n";
         $php_code .= "\$argv = [NULL];\n";
         $php_code .= "\$argv[1] = " . var_export($payload, true) . ";\n";
         $php_code .= "include " . var_export($runner_path, true) . ";\n";
         file_put_contents($wrapper_file, $php_code);
+
+        // Release session lock so process_runner.php can read auth data
+        session_write_close();
 
         exec('php ' . escapeshellarg($wrapper_file) . ' 2>&1', $output, $ret);
         $joined = implode(PHP_EOL, $output);
@@ -184,12 +188,13 @@ final class process_runner_test extends BaseTestCase {
         ]);
 
         $php_code = "<?php\n";
-        $php_code .= "session_id('{$session_id}'); session_start();\n";
-        $php_code .= "session_write_close();\n";
         $php_code .= "\$argv = [NULL];\n";
         $php_code .= "\$argv[1] = " . var_export($payload, true) . ";\n";
         $php_code .= "include " . var_export($runner_path, true) . ";\n";
         file_put_contents($wrapper_file, $php_code);
+
+        // Release session lock so process_runner.php can read auth data
+        session_write_close();
 
         exec('php ' . escapeshellarg($wrapper_file) . ' 2>&1', $output, $ret);
         $joined = implode(PHP_EOL, $output);

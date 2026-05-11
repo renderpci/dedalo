@@ -279,10 +279,12 @@ final class component_password_test extends BaseTestCase {
 		);
 		$reloaded_data = $reloaded->get_data();
 		$this->assertIsArray($reloaded_data);
-		$this->assertEquals(
-			component_password::encrypt_password($pass),
-			$reloaded_data[0]->value
-		);
+		$stored = $reloaded_data[0]->value ?? '';
+		$this->assertIsString($stored);
+		$this->assertStringStartsWith('$argon2', $stored, 'reload from DB must yield an Argon2id hash');
+		[$ok, $needs_rehash] = component_password::verify_password($pass, $stored);
+		$this->assertTrue($ok, 'verify_password must accept the password after save+reload');
+		$this->assertFalse($needs_rehash, 'a freshly-stored Argon2id hash must not request rehash');
 
 		// restore
 		$component->set_data($old_data);

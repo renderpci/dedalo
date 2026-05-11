@@ -27,9 +27,9 @@ export const view_text_list_component_external = function() {
 view_text_list_component_external.render = async function(self, options) {
 
 	// short vars
-		const data				= self.data || {}
-		const entries			= data.entries || []
-		const value_string		= entries.join(' | ')
+		const data			= self.data || {}
+		const entries		= data.entries || []
+		const value_string	= entries.join(' | ')
 
 	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({

@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * STATIC_PROFILER
 * Utility to inspect and report on the memory usage of static properties across declared classes.
@@ -12,7 +12,7 @@ class static_profiler {
 	* @return array
 	*/
 	public static function get_report(bool $human_readable = true) : array {
-		
+
 		$report = [];
 		$classes = get_declared_classes();
 
@@ -27,7 +27,7 @@ class static_profiler {
 			foreach ($props as $name => $value) {
 				if ($value !== null && $value !== [] && $value !== '') {
 					$size_bytes = self::estimate_memory($value);
-					
+
 					// Ignore small values to noise reduction
 					if ($size_bytes < 0) {
 						continue;
@@ -93,4 +93,3 @@ class static_profiler {
 		return $value;
 	}
 }
-?>

@@ -7,19 +7,30 @@ abstract class backup {
 
 
 
-	// Columns to save (used by copy command, etc.)
-	// Do not use id column NEVER here
-	public static $dd_ontology_columns		= 'tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades';
-	public static $checked_download_str_dir	= false;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Columns to export/save from the dd_ontology table for backup operations.
+		 * Used by copy commands to specify which columns to include in SQL dumps.
+		 * Note: id column is intentionally excluded to allow proper data restoration.
+		 * @var array $dd_ontology_columns
+		 */
+		public static array $dd_ontology_columns = ['tipo', 'parent', 'term', 'model', 'order_number', 'relations', 'tld', 'properties', 'model_tipo', 'is_model', 'is_translatable', 'propiedades'];
+
+		/**
+		 * Flag indicating whether the download directory has been verified/created.
+		 * Prevents repeated filesystem checks during backup operations.
+		 * @var bool $checked_download_str_dir
+		 */
+		public static bool $checked_download_str_dir = false;
 
 
 
 	/**
 	* INIT_BACKUP_SEQUENCE
 	* Make backup (compressed SQL dump) of current dedalo DB before login
-	* @param int $user_id
-	* @param string $username
-	* @param bool $skip_backup_time_range = false
+	* @param object $options {user_id: int, username: string, skip_backup_time_range: bool}
 	* @return object $response
 	*/
 	public static function init_backup_sequence(object $options) : object {
@@ -268,7 +279,7 @@ abstract class backup {
 
 				# COPY . Load data from file
 				$path_file_escaped = escapeshellarg($path_file);
-				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(backup::$dd_ontology_columns).") from {$path_file_escaped}\" ";
+				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(implode(',', backup::$dd_ontology_columns)).") from {$path_file_escaped}\" ";
 				$ar_res[] = shell_exec($command);
 				$command_history[] = $command;
 				break;

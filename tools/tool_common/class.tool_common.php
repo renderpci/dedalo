@@ -25,28 +25,60 @@ class tool_common {
 	/**
 	* CLASS VARS
 	*/
-		/** @var string Tool identifier name (same as class name) */
+		/**
+		 * Tool identifier name (same as class name).
+		 * Set automatically from the called class name during instantiation.
+		 * @var string $name
+		 */
 		public string $name;
 
-		/** @var object|null Tool configuration object */
+		/**
+		 * Tool configuration object loaded from register.json.
+		 * Contains tool-specific settings, properties, and behavior definitions.
+		 * @var ?object $config
+		 */
 		public ?object $config;
 
-		/** @var string Section Type identifier */
+		/**
+		 * Section tipo (ontology identifier) where the tool is being invoked.
+		 * Defines the context section for tool operations.
+		 * @var string $section_tipo
+		 */
 		public string $section_tipo;
 
-		/** @var string|int|null Section ID identifier */
+		/**
+		 * Section ID of the record being processed by the tool.
+		 * Null when tool is invoked in list mode without specific record context.
+		 * @var string|int|null $section_id
+		 */
 		public string|int|null $section_id;
 
-		/** @var array|null Cache for all registered tools */
+		/**
+		 * Static cache for all registered tools from the database.
+		 * Stores the complete tools registry to avoid repeated DB queries.
+		 * @var ?array $all_registered_tools_cache
+		 */
 		protected static $all_registered_tools_cache;
 
-		/** @var db_result|false Cache for active tools db result */
+		/**
+		 * Static cache for active tools database query result.
+		 * Stores the raw db_result for active tools to avoid repeated filtering queries.
+		 * @var db_result|false $active_tools_cache
+		 */
 		protected static $active_tools_cache;
 
-		/** @var array Cache for individual tool configurations */
+		/**
+		 * Static cache for individual tool configurations.
+		 * Maps tool names to their parsed configuration objects.
+		 * @var array $cache_config_tool
+		 */
 		protected static $cache_config_tool = [];
 
-		/** @var array Cache for user-specific tool lists */
+		/**
+		 * Static cache for user-specific tool availability lists.
+		 * Maps user IDs to their accessible tools based on permissions.
+		 * @var array $user_tools_cache
+		 */
 		protected static $user_tools_cache = [];
 
 

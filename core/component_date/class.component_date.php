@@ -2,47 +2,51 @@
 include_once 'trait.search_component_date.php';
 include_once 'trait.search_component_date_tm.php';
 /**
-* CLASS COMPONENT DATE
-* data_column_name : 'date'
-* used to manage dates, component_date use a object to represent dates, ISO dates as '2012-11-07 17:33:49' will be transform to object format as:
-* {
-*	"year": 2012,
-*	"month": 11,
-*	"day": 07,
-*	"hour": 17,
-*	"minute": 33,
-*	"second": 49
-* }
-* Dates' data are objects enclosed with start and/or end container
-* [{
-*	"start" : {
-*		"year": 2012,
-*		"month": 11,
-*		"day": 07,
-*		"hour": 17,
-*		"minute": 33,
-*		"second": 49
-* 		},
-*	"end" : {
-*		"year": 2012,
-*		"month": 12,
-*		"day": 08,
-*		"hour": 22,
-*		"minute": 15,
-*		"second": 35
-*		}
-* }]
-* The component has 4 different modes:
-* 	date: with start date only
-* 	range: with start date and end date
-* 	period: with year, moth, day, hour, minute, second, millisecond
-* 	time: with hour, minute, second, millisecond
+* CLASS COMPONENT_DATE
+* Manages date and time values in Dédalo.
 *
-* Export value use a
+* Data is stored in the 'date' column as structured objects representing
+* ISO format dates. Single dates and date ranges are supported with start
+* and/or end date containers.
+*
+* Date object format:
+* ```
+* {
+*   "year": 2012,
+*   "month": 11,
+*   "day": 7,
+*   "hour": 17,
+*   "minute": 33,
+*   "second": 49
+* }
+* ```
+*
+* Date range format (with start/end containers):
+* ```
+* [{
+*   "start": {
+*     "year": 2012, "month": 11, "day": 7,
+*     "hour": 17, "minute": 33, "second": 49
+*   },
+*   "end": {
+*     "year": 2012, "month": 12, "day": 8,
+*     "hour": 22, "minute": 15, "second": 35
+*   }
+* }]
+* ```
+*
+* Component modes:
+* - date: Single date (year, month, day)
+* - range: Date range with start and end dates
+* - period: Full period (year to millisecond)
+* - time: Time only (hour, minute, second, millisecond)
+*
+* Extends component_common and uses search traits for date-specific queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_date extends component_common {
-
-
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_date;
@@ -51,12 +55,9 @@ class component_date extends component_common {
 
 
 	// American data format
-	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
+	public static array $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 	// default date mode
-	public static $default_date_mode = 'date';
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public static string $default_date_mode = 'date';
 
 
 
@@ -197,11 +198,11 @@ class component_date extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo. set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -244,9 +245,8 @@ class component_date extends component_common {
 				}//end foreach ($data as $key => $current_data)
 			}
 
-		// flat_value (array of one value full resolved)
-			$flat_value = [implode($records_separator, $ar_values)];
-
+		// value. flat_value (array of one value full resolved)
+			$value = [implode($records_separator, $ar_values)]; // array
 
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
@@ -259,7 +259,8 @@ class component_date extends component_common {
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($flat_value);
+				$dd_grid_cell_object->set_value($value);
+				$dd_grid_cell_object->set_fallback_value($value);
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
@@ -662,9 +663,10 @@ class component_date extends component_common {
 
 	/**
 	* GET_STATS_VALUE_WITH_VALOR_ARGUMENTS
-	* @return string $label
+	* @return string|int $label
+	* @deprecated Do not use this method (diffusion v6 ?)
 	*/
-	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) {
+	public static function get_stats_value_with_valor_arguments($value, $valor_arguments) : string|int {
 
 		$value_decoded = json_decode($value);
 		if (!empty($value_decoded)) {
@@ -684,11 +686,13 @@ class component_date extends component_common {
 	/**
 	* DATA_TO_TEXT
 	* Used to convert component data to searchable text
+	* @param object|null $data_entry
 	* @return string $text
+	* @deprecated Do not use this method
 	*/
-	public static function data_to_text($data) : string {
+	public static function data_to_text( ?object $data_entry ) : string {
 
-		if (empty($data)) {
+		if (empty($data_entry)) {
 			$text = '';
 		}else{
 			$to_timestamp = function($item) {
@@ -699,11 +703,11 @@ class component_date extends component_common {
 				);
 			};
 			$ar_text = [];
-			if (isset($data->start)) {
-				$ar_text[] = $to_timestamp($data->start);
+			if (isset($data_entry->start)) {
+				$ar_text[] = $to_timestamp($data_entry->start);
 			}
-			if (isset($data->end)) {
-				$ar_text[] = $to_timestamp($data->end);
+			if (isset($data_entry->end)) {
+				$ar_text[] = $to_timestamp($data_entry->end);
 			}
 			$text = implode('/', $ar_text);
 		}
@@ -724,7 +728,7 @@ class component_date extends component_common {
 	* @param string $section_tipo
 	* @return array $path
 	*/
-	public function get_order_path(string $component_tipo, string $section_tipo) : array {
+	public function get_order_path( string $component_tipo, string $section_tipo ) : array {
 
 		// self path
 		$path = parent::get_order_path($component_tipo, $section_tipo);
@@ -797,7 +801,7 @@ class component_date extends component_common {
 	* rsc85_dmy // component tipo and the date format
 	* @return object $response
 	*/
-	public function conform_import_data(string $import_value, string $column_name) : object {
+	public function conform_import_data( string $import_value, string $column_name ) : object {
 
 		// Response
 		$response = new stdClass();

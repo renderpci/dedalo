@@ -1,7 +1,23 @@
 <?php declare(strict_types=1);
 /**
-* LOCK_COMPONENTS
-* Lock Components class for Matrix Notifications.
+* CLASS LOCK_COMPONENTS
+* Manages component-level locking for real-time collaborative editing.
+*
+* Prevents concurrent edit conflicts by tracking which users are actively
+* working on specific components. Stores lock state in the matrix_notifications table
+* with automatic expiration after a configurable timeout period.
+*
+* Key features:
+* - Tracks user focus and blur events on components
+* - Maintains lock state with automatic expiration (5 hours default)
+* - Provides real-time conflict detection for concurrent editing
+* - Notifies users when components are locked by others
+*
+* Used by the notification system to coordinate multi-user access
+* and prevent data loss from simultaneous edits.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class lock_components {
 
@@ -375,7 +391,7 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS_FULL
-	* Get all active users with full details (user id, element_id, component_id, timestamp) 
+	* Get all active users with full details (user id, element_id, component_id, timestamp)
 	* @return array $ar_user_actions
 	*/
 	public static function get_active_users_full() : array {

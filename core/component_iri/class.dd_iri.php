@@ -18,11 +18,15 @@
 */
 class dd_iri extends stdClass {
 
+
+
+	/**
+	 * CLASS VARS
+	 */
 	public ?string $iri = null;
 	public ?string $title = null;
 	public ?int $id = null;
 	public ?int $label_id = null;
-
 	const DELIMITER = '_';
 
 
@@ -64,7 +68,7 @@ class dd_iri extends stdClass {
 	* @param string|null $value
 	* @return void
 	*/
-	public function set_iri( ?string $value ) {
+	public function set_iri( ?string $value ) : void {
 
 		if (!empty($value)) {
 			$iri = parse_url($value);
@@ -88,7 +92,7 @@ class dd_iri extends stdClass {
 	* Expected descriptive string as 'My organization'
 	* @param string $value
 	*/
-	public function set_title( string $value ) {
+	public function set_title( string $value ) : void {
 
 		$this->title = $value;
 	}//end set_title
@@ -101,7 +105,7 @@ class dd_iri extends stdClass {
 	* The value set is always an integer, but a string is accepted as a parameter.
 	* @param string|int $value
 	*/
-	public function set_id( string|int $value ) {
+	public function set_id( string|int $value ) : void {
 
 		$this->id = (int)$value;
 	}//end set_id
@@ -117,7 +121,7 @@ class dd_iri extends stdClass {
 	* The value set is always an integer, but a string is accepted as a parameter.
 	* @param string|int $value
 	*/
-	public function set_label_id( string|int $value ) {
+	public function set_label_id( string|int $value ) : void {
 
 		$this->label_id = (int)$value;
 	}//end set_label_id
@@ -128,7 +132,7 @@ class dd_iri extends stdClass {
 	* SET_IRI_FROM_URL_PARTS
 	* @param object $url_parts
 	*/
-	public function set_iri_from_url_parts( object $url_parts ) {
+	public function set_iri_from_url_parts( object $url_parts ) : void {
 
 		$scheme		= $url_parts->scheme; //mandatory
 		$host		= $url_parts->host; //mandatory
@@ -179,7 +183,7 @@ class dd_iri extends stdClass {
 	* GET METHODS
 	* By accessors. When property exits, return property value, else return null
 	*/
-	public function __call($strFunction, $arArguments) {
+	public function __call(string $strFunction, array $arArguments) : mixed {
 
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember 	= substr($strFunction, 4);
@@ -193,7 +197,7 @@ class dd_iri extends stdClass {
 		}
 		return(false);
 	}
-	private function GetAccessor(string $variable) {
+	private function GetAccessor(string $variable) : string|false {
 		if(property_exists($this, $variable) && $this->$variable !== null) {
 			return (string)$this->$variable;
 		}else{

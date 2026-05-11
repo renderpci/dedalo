@@ -210,17 +210,17 @@ tool_indexation.prototype.build = async function(autoload=false) {
 	try {
 
 		// transcription_component. fix transcription_component for convenience
-			const transcription_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='transcription_component')
+			const transcription_component_ddo = self.tool_config.ddo_map.find(el => el.role==='transcription_component')
 			if (!transcription_component_ddo) {
 				self.error = "Invalid transcription_component_ddo"
-				console.warn(self.error, 'options:', options);
-				return false
+				console.error('error:', self.error, 'options:', options);
+				return true
 			}
-			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
+			self.transcription_component = self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
 			if (!self.transcription_component) {
 				self.error = "transcription_component not found"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
 			// force change lang if related_component_lang is defined (original lang)
 			if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
@@ -235,33 +235,33 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			}
 
 		// indexing_component. fix indexing_component for convenience
-			const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='indexing_component')
+			const indexing_component_ddo = self.tool_config.ddo_map.find(el => el.role==='indexing_component')
 			if (!indexing_component_ddo) {
 				self.error = "Invalid indexing_component_ddo"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
-			self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
+			self.indexing_component = self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
 			if (!self.indexing_component) {
 				self.error = "indexing_component not found"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
 			// show_interface
 			self.indexing_component.show_interface.tools = false
 
 		// media_component. fix media_component for convenience
-			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='media_component')
+			const media_component_ddo = self.tool_config.ddo_map.find(el => el.role==='media_component')
 			if (!media_component_ddo) {
 				self.error = "Invalid media_component_ddo"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
-			self.media_component			= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+			self.media_component = self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
 			if (!self.media_component) {
 				self.error = "media_component not found"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
 			// show_interface
 			self.media_component.show_interface.tools = false
@@ -269,15 +269,16 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		// people_section. fix people_section for convenience
 			const people_section_ddo = self.tool_config.ddo_map.find(el => el.role==='people_section')
 			if (!people_section_ddo) {
-				self.error = "Invalid people_section_ddo"
-				console.warn(self.error);
-				return false
+				self.error = "Invalid people_section_ddo from tool_config.ddo_map"
+				console.error('error:', self.error);
+				console.log('self.tool_config.ddo_map', self.tool_config.ddo_map)
+				return true
 			}
 			self.people_section = self.ar_instances.find(el => el.tipo===people_section_ddo.tipo)
 			if (!self.people_section) {
 				self.error = "people_section not found"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
 			// set instance in thesaurus mode 'relation'
 			self.people_section.linker = self.indexing_component
@@ -286,14 +287,14 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus');
 			if (!area_thesaurus_ddo) {
 				self.error = "Invalid area_thesaurus_ddo"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
-			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo);
+			self.area_thesaurus = self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo);
 			if (!self.area_thesaurus) {
 				self.error = "area_thesaurus not found"
-				console.warn(self.error);
-				return false
+				console.error('error:', self.error);
+				return true
 			}
 			// set instance in thesaurus mode 'relation'
 			self.area_thesaurus.context.thesaurus_mode	= 'relation';

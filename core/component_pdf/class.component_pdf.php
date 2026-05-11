@@ -1,9 +1,21 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT PDF
-* Manages PDF files
+* CLASS COMPONENT_PDF
+* Manages PDF document components in Dédalo.
 *
-* data_column_name : 'media'
+* Handles PDF file operations including:
+* - Upload, download, and deletion of PDF files
+* - Quality level management for different PDF variants
+* - PDF text extraction and content indexing
+* - Thumbnail/preview generation for PDF documents
+* - MIME type handling for PDF formats
+* - File path and URL generation for PDF assets
+*
+* Extends component_media_common and implements component_media_interface
+* for standard media component behavior across the system.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_pdf extends component_media_common implements component_media_interface {
 
@@ -13,7 +25,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* CLASS VARS
 	*/
 	// file name formatted as 'tipo'-'order_id' like dd732-1
-	public $pdf_url;
+	public ?string $pdf_url = null;
 
 
 

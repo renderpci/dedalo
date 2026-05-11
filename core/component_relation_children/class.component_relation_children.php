@@ -1,13 +1,27 @@
 <?php declare(strict_types=1);
 include_once 'trait.search_component_relation_children.php';
 /**
-* COMPONENT_RELATION_CHILDREN
-* Class to manage children relations between sections.
-* It does not store its own data, it only manages the component_relation_parent data in 'reverse' mode.
-* This component is responsible for identifying and listing sections that reference the current section
-* via a parent relation component. It acts as a read-only view of these relationships from the
-* perspective of the child, although it provides utility methods to modify the relationship
-* by interacting with the parent component.
+* CLASS COMPONENT_RELATION_CHILDREN
+* Manages hierarchical child relationships between sections in Dédalo.
+*
+* Provides a read-only view of sections that reference the current section
+* as their parent via component_relation_parent. Acts as the inverse of
+* component_relation_parent, showing "downstream" relationships from the
+* parent's perspective.
+*
+* Key characteristics:
+* - No database storage (use_db_data = false)
+* - Data is calculated from component_relation_parent records
+* - Lists all child sections referencing the current record as parent
+* - Provides utility methods to modify relationships via the parent component
+* - Search mode uses parent behavior for stored data compatibility
+*
+* Example hierarchy:
+* - Section A (parent) has component_relation_children showing Section B and C
+* - Section B and C have component_relation_parent pointing to Section A
+*
+* Extends component_relation_common and uses search_component_relation_children trait
+* for hierarchical relationship queries.
 *
 * @package Dédalo
 * @subpackage Core
@@ -16,21 +30,48 @@ class component_relation_children extends component_relation_common {
 
 
 
-	// traits. Files added to current class file to split the large code.
 	use search_component_relation_children;
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_CHILDREN_TIPO;
-	protected $default_relation_type_rel	= null;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
-	// ar_target_section_tipo
-	public $ar_target_section_tipo;	// Used to fix section tipo (calculated from the related component of type section) Could be virtual or real
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for children relationships.
+		 * Inherited from DEDALO_RELATION_TYPE_CHILDREN_TIPO constant.
+		 * Defines the type of relationship for parent-child hierarchical links.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_CHILDREN_TIPO;
 
-	// Cache for ar_related_parent_tipo
-	public static $ar_parent_tipo_cache = [];
+		/**
+		 * Properties used to detect duplicate locators when adding child relationships.
+		 * Locators with identical values for all these properties are considered duplicates.
+		 * - section_tipo : Target child section type identifier
+		 * - section_id : Target child section record ID
+		 * - type : Relation type (typically children type)
+		 * - from_component_tipo : Source component tipo creating the relation
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+
+		/**
+		 * Array of target section tipos for this children component.
+		 * Calculated from the related component of type section (could be virtual or real).
+		 * Used to determine which sections can be children of the current section.
+		 * Empty array indicates no restriction on child section types.
+		 * @var array $ar_target_section_tipo
+		 */
+		protected array $ar_target_section_tipo = [];
+
+		/**
+		 * Static cache for parent tipo lookups.
+		 * Maps section tipos to their related parent component tipos.
+		 * Avoids repeated ontology queries for parent relationship resolution.
+		 * @var array $ar_parent_tipo_cache
+		 */
+		public static array $ar_parent_tipo_cache = [];
 
 
 
@@ -122,6 +163,10 @@ class component_relation_children extends component_relation_common {
 				$limit,
 				$offset
 			);
+
+		// set total (count all children)
+			$data = $this->get_data();
+			$this->pagination->total = is_array($data) ? count($data) : 0;
 
 
 		return $data_paginated;
@@ -682,8 +727,8 @@ class component_relation_children extends component_relation_common {
 	* @return array|false $changed
 	* @see dd_ts_api::save_order
 	*/
-	public static function sort_children( 
-		string $section_tipo, 
+	public static function sort_children(
+		string $section_tipo,
 		array $locators,
 		string $parent_section_tipo,
 		int $parent_section_id

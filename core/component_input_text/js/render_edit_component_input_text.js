@@ -135,6 +135,8 @@ export const change_handler = function(e, key, self, options={}) {
 
 	// is_unique check
 		if (self.context.properties.unique) {
+			// invalidate cache for the old value so re-check is fresh
+			self.find_equal_cache.delete(e.target.value)
 			check_duplicates(self, e.target.value)
 		}
 
@@ -304,13 +306,27 @@ const _do_remove = function(input, id, key, self, current_value) {
 */
 export const check_duplicates = async function(self, value) {
 
+	if (!self.context?.properties?.unique) {
+		return
+	}
+
+	// reset warning
+	const reset_warning = () => {
+		if (self.node.warning_wrap) {
+			self.node.warning_wrap.remove()
+			self.node.warning_wrap = null
+		}
+	}
+
 	// empty case
 		if (!value || value.length<1) {
+			reset_warning()
 			return
 		}
 
 	// into tool case
 		if (self.caller?.type==='tool') {
+			reset_warning()
 			return
 		}
 
@@ -343,10 +359,7 @@ export const check_duplicates = async function(self, value) {
 			}
 		)
 	}else{
-		if (self.node.warning_wrap) {
-			self.node.warning_wrap.remove()
-			self.node.warning_wrap = null
-		}
+		reset_warning()
 	}
 }//end check_duplicates
 

@@ -37,6 +37,10 @@ export const component_input_text = function(){
 
 	this.duplicates		= false
 
+	// find_equal cache and concurrency control
+	this.find_equal_cache		= new Map()
+	this.find_equal_request_id	= 0
+
 	// search_q_operator_default. Map of component tipos that will use default search operator
 	this.search_q_operator_default = new Map([
 		['ontology7', '=='] // Ontology TLD field
@@ -103,6 +107,8 @@ component_input_text.prototype.init = async function(options) {
 * FIND_EQUAL
 * Check if the given value already exists in the database for the same section tipo.
 * Excludes the current record (self.section_id) from the search.
+* Uses a per-instance cache to avoid redundant DB queries and a request ID
+* to discard stale responses when a newer call supersedes an older one.
 * @param string value
 * @return int|null section_id of the matching record, or null if no duplicate found
 */
@@ -115,6 +121,18 @@ component_input_text.prototype.find_equal = async function(value) {
 			return null
 		}
 
+	// cache hit
+		const cache_key = value
+		if (self.find_equal_cache.has(cache_key)) {
+			if(SHOW_DEBUG===true) {
+				console.log('---> find_equal cache hit for:', cache_key);
+			}
+			return self.find_equal_cache.get(cache_key)
+		}
+
+	// concurrency control: increment request ID and capture it
+		const current_request_id = ++self.find_equal_request_id
+
 	// sqo
 		const sqo = {
 			section_tipo			: [self.section_tipo],
@@ -124,7 +142,7 @@ component_input_text.prototype.find_equal = async function(value) {
 				$and : [
 					{
 						q			: {value : value},
-						q_operator	: '=',
+						q_operator	: '==',
 						q_split		: false,
 						path		: [
 							{
@@ -173,6 +191,14 @@ component_input_text.prototype.find_equal = async function(value) {
 			}
 		})
 
+	// stale request check: a newer call was made while we were waiting
+		if (self.find_equal_request_id !== current_request_id) {
+			if(SHOW_DEBUG===true) {
+				console.log('---> find_equal stale response discarded for:', value);
+			}
+			return null
+		}
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.warn('---> find_equal api_response', api_response);
@@ -191,9 +217,13 @@ component_input_text.prototype.find_equal = async function(value) {
 		const record = data.find(item => item.tipo===self.tipo)
 		if (record) {
 			const section_id = record.entries[0].section_id || null
+			// cache the result
+			self.find_equal_cache.set(cache_key, section_id)
 			return section_id
 		}
 
+	// cache null result too (no duplicate found)
+		self.find_equal_cache.set(cache_key, null)
 
 	return null
 }//end find_equal

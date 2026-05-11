@@ -8,14 +8,14 @@ class json_handler {
 
 
 
-	protected static $_messages = array(
+	protected static array $_messages = [
 		JSON_ERROR_NONE				=> 'No error has occurred',
 		JSON_ERROR_DEPTH			=> 'The maximum stack depth has been exceeded',
 		JSON_ERROR_STATE_MISMATCH	=> 'Invalid or malformed JSON',
 		JSON_ERROR_CTRL_CHAR		=> 'Control character error, possibly incorrectly encoded',
 		JSON_ERROR_SYNTAX			=> 'Syntax error',
 		JSON_ERROR_UTF8				=> 'Malformed UTF-8 characters, possibly incorrectly encoded'
-	);
+	];
 
 
 
@@ -26,7 +26,7 @@ class json_handler {
 	* @param mixed $options = JSON_UNESCAPED_UNICODE
 	* @return mixed $result
 	*/
-	public static function encode($value, $options=JSON_UNESCAPED_UNICODE) {
+	public static function encode(mixed $value, int $options=JSON_UNESCAPED_UNICODE) : string|false {
 
 		$result = json_encode($value, $options);
 
@@ -70,7 +70,7 @@ class json_handler {
 	* @param bool $assoc = false
 	* @return mixed $result
 	*/
-	public static function decode(string $json, bool $assoc=false) {
+	public static function decode(string $json, bool $assoc=false) : mixed {
 
 		if ($json==='null') {
 			return null;
@@ -103,7 +103,7 @@ class json_handler {
 	* @param mixed $value
 	* @return bool
 	*/
-	public static function is_json($value) : bool {
+	public static function is_json(mixed $value) : bool {
 		return is_string($value) && is_array(json_decode($value, true)) && (json_last_error() == JSON_ERROR_NONE)
 			? true
 			: false;

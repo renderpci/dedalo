@@ -552,4 +552,24 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 
 
+/**
+* GET_TOTAL
+* Return the number of results in the current search data
+* @return int - count of found items (0 if no data)
+*/
+area_thesaurus.prototype.get_total = function() {
+
+	const self = this
+
+	const data = self.data || []
+
+	const ts_search = data[0]?.ts_search || {}
+
+	const found = ts_search.found || []
+
+	return found.length
+}//end get_total
+
+
+
 // @license-end

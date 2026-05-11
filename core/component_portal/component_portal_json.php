@@ -93,14 +93,10 @@ if (!isset($this)) { http_response_code(404); exit; }
 						$item->parent_tipo			= $tipo;
 						$item->parent_section_id	= $section_id;
 						// fix pagination vars
-							$pagination = new stdClass();
-								$pagination->total	= count($data_value);
-								$pagination->limit	= $limit;
-								$pagination->offset	= $offset;
-								// $pagination->offset	= $offset>=$pagination->total
-								// 	? floor($pagination->total/$limit) * $limit
-								// 	: $offset;
-
+						$pagination = new stdClass();
+							$pagination->total	= count($data_value);
+							$pagination->limit	= $limit;
+							$pagination->offset	= $offset;
 						$item->pagination = $pagination;
 
 					$data[] = $item;
@@ -117,7 +113,6 @@ if (!isset($this)) { http_response_code(404); exit; }
 					foreach ($ar_subdata as $sub_value) {
 						$data[] = $sub_value;
 					}
-
 			}//end if (!empty($data_value))
 
 		// debug

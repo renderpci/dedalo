@@ -5,8 +5,8 @@
 */
 class ontology {
 
-	// Cache management constants
-	const MAX_CACHE_SIZE = 1000;
+	// Cache management constant
+	public const int MAX_CACHE_SIZE = 1000;
 
 	/**
 	* MANAGE_CACHE_SIZE
@@ -34,15 +34,15 @@ class ontology {
 
 
 	// Table where ontology data is stored
-	public static $main_table			= 'matrix_ontology_main';
-	public static $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
+	public static string $main_table		= 'matrix_ontology_main';
+	public static string $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
 	// children_tipo (component_relation_children)
-	public static $children_tipo = 'ontology14';
+	public static string $children_tipo = 'ontology14';
 
 	// cache
-	public static $cache_ontology_sections;
-	public static $cache_active_ontology_elements;
+	public static array $cache_ontology_sections = [];
+	public static array $cache_active_ontology_elements = [];
 
 
 	/**
@@ -1297,7 +1297,7 @@ class ontology {
 	public static function get_all_ontology_sections() : array {
 
 		// cache
-		if ( isset(self::$cache_ontology_sections) ) {
+		if ( !empty(self::$cache_ontology_sections) ) {
 			return self::$cache_ontology_sections;
 		}
 
@@ -1385,7 +1385,7 @@ class ontology {
 	public static function get_active_elements() : array {
 
 		// cache
-		if ( isset(self::$cache_active_ontology_elements) ) {
+		if ( !empty(self::$cache_active_ontology_elements) ) {
 			return self::$cache_active_ontology_elements;
 		}
 

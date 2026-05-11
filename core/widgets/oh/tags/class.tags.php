@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /*
 * CLASS TAGS
 * Compute transcription text tags info and statistics

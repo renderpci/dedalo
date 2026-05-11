@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 // SEC-026 (§9.3): server-agnostic deny for direct HTTP access. This file is
 // included by common::get_json() inside the calling object scope; reaching
 // it through a URL means the web server config did not block the path.
@@ -13,8 +13,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
-	$section_tipo	= $this->section_tipo;
-	$lang			= $this->lang;
+	$section_tipo	= $this->get_section_tipo();
+	$lang			= $this->get_lang();
 	$tipo			= $this->get_tipo();
 	$properties		= $this->get_properties() ?? new stdClass();
 

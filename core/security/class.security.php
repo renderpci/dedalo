@@ -16,25 +16,62 @@ class security {
 	/**
 	* CLASS VARS
 	*/
-		// private $permissions;
+		/**
+		 * ID of the currently logged-in user.
+		 * Set in constructor from session. Used to resolve user-specific permissions.
+		 * @var ?int $user_id
+		 */
+		private ?int $user_id = null;
 
-		private $user_id;
-		private $permissions_tipo;			// permissions defined in config
-		private $permissions_dato;			// permissions defined in config that contains data
+		/**
+		 * Tipo of the section storing user permissions in config.
+		 * Defines where the permission matrix is stored in the ontology.
+		 * @var ?string $permissions_tipo
+		 */
+		private ?string $permissions_tipo = null;
 
-		private static $ar_permissions_in_matrix_for_current_user; // array data
-		private static $ar_permissions_table;
+		/**
+		 * Component tipo within the permissions section that contains the actual permission data.
+		 * Points to the specific field holding permission values.
+		 * @var ?string $permissions_dato
+		 */
+		private ?string $permissions_dato = null;
 
-		private $filename_user_ar_permissions_table;
+		/**
+		 * Static cache of permissions matrix for the current user.
+		 * Array mapping section_tipos to permission levels (0-3) for the active user.
+		 * @var ?array $ar_permissions_in_matrix_for_current_user
+		 */
+		private static ?array $ar_permissions_in_matrix_for_current_user = null;
 
-		public static $permissions_table_cache;
+		/**
+		 * Static cache of the full permissions lookup table.
+		 * Stores all user/section permission mappings for fast access.
+		 * @var ?array $ar_permissions_table
+		 */
+		private static ?array $ar_permissions_table = null;
 
-		// read_only_scope. Server-only static flag used to grant a read-level
-		// permission shortcut for non-destructive flows (e.g. autocomplete /
-		// label resolution) where the user may not have direct access to the
-		// linked section but the resolution is needed to render a label.
-		// Must be set ONLY by trusted server code paths and reset in a finally
-		// block. Never trust this flag from a client-supplied rqo.
+		/**
+		 * Filename for caching the user's permissions table on disk.
+		 * Used to persist permission lookups across requests for performance.
+		 * @var ?string $filename_user_ar_permissions_table
+		 */
+		private ?string $filename_user_ar_permissions_table = null;
+
+		/**
+		 * Static cache for parsed permissions table data.
+		 * Prevents repeated file reads or database queries for permission lookups.
+		 * @var ?array $permissions_table_cache
+		 */
+		public static ?array $permissions_table_cache = null;
+
+		/**
+		 * Server-only flag to grant temporary read access for non-destructive operations.
+		 * Used in autocomplete and label resolution where the user lacks direct access
+		 * but needs to read linked data. Must ONLY be set by trusted server code
+		 * and reset in a finally block. Never trust client-supplied rqo for this flag.
+		 * @var bool $read_only_scope
+		 */
 		public static bool $read_only_scope = false;
 
 
@@ -197,7 +234,7 @@ class security {
 				// static cache
 				// (!) Its important to use static cache here to handle properly the login sequence,
 				// where some permission resolutions are called before the file cache is created.
-				if (isset(self::$permissions_table_cache)) {
+				if (self::$permissions_table_cache !== null) {
 					return self::$permissions_table_cache;
 				}
 
@@ -277,10 +314,10 @@ class security {
 	* Locate component_security_access of current logged user based on user profile
 	* and return the component instance
 	* @param int $user_id
-	* @return object|null $component_security_access
+	* @return component_security_access|null $component_security_access
 	* Returns null if user profile is not found.
 	*/
-	public static function get_user_security_access(int $user_id) : ?object {
+	public static function get_user_security_access(int $user_id) : ?component_security_access {
 
 		// user profile
 			$user_profile = security::get_user_profile($user_id);
@@ -317,7 +354,7 @@ class security {
 	public static function get_user_profile(int $user_id) : ?object {
 
 		// user profile
-			$component_profile_model	= ontology_node::get_model_by_tipo(DEDALO_USER_PROFILE_TIPO,true);
+			$component_profile_model	= ontology_node::get_model_by_tipo(DEDALO_USER_PROFILE_TIPO, true);
 			$component_profile			= component_common::get_instance(
 				$component_profile_model, // component_select expected
 				DEDALO_USER_PROFILE_TIPO,
@@ -385,6 +422,11 @@ class security {
 		// empty static var
 		security::$permissions_table_cache = null;
 
+		// delete on-disk cache so the next lookup regenerates from the component
+		dd_cache::delete_cache_files([
+			'cache_permissions_table.php'
+		]);
+
 		return true;
 	}//end clean_cache
 
@@ -449,7 +491,7 @@ class security {
 			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( $user_id==$logged_user_id ) {
+			if ( $user_id===$logged_user_id ) {
 
 				// get from session (set on user login)
 				$is_global_admin = logged_user_is_global_admin();
@@ -457,8 +499,12 @@ class security {
 			}else{
 
 				// Resolve from component
-				$security_administrator_model		= ontology_node::get_model_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO,true);
-				$component_security_administrator	= component_common::get_instance(
+				$security_administrator_model = ontology_node::get_model_by_tipo(DEDALO_SECURITY_ADMINISTRATOR_TIPO, true);
+				if (!$security_administrator_model) {
+					debug_log('Model not found for tipo: ' . DEDALO_SECURITY_ADMINISTRATOR_TIPO, logger::ERROR);
+					return false;
+				}
+				$component_security_administrator = component_common::get_instance(
 					$security_administrator_model,
 					DEDALO_SECURITY_ADMINISTRATOR_TIPO,
 					$user_id,
@@ -466,11 +512,15 @@ class security {
 					DEDALO_DATA_NOLAN,
 					DEDALO_SECTION_USERS_TIPO
 				);
+				if ($component_security_administrator === null) {
+					debug_log('Component not found for tipo: ' . DEDALO_SECURITY_ADMINISTRATOR_TIPO, logger::ERROR);
+					return false;
+				}
 
 				$security_administrator_data = $component_security_administrator->get_data();
 
 				// empty user data case
-					if (empty($security_administrator_data)) {
+					if (empty($security_administrator_data) || !isset($security_administrator_data[0]->section_id)) {
 						return false;
 					}
 
@@ -501,11 +551,16 @@ class security {
 				return true;
 			}
 
+		// empty user_id
+			if (empty($user_id) || $user_id<1) {
+				return false;
+			}
+
 		// logged user_id (from session)
 			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( $user_id==$logged_user_id ) {
+			if ( $user_id===$logged_user_id ) {
 
 				// get from session value (set on user login)
 				$is_developer = logged_user_is_developer();
@@ -513,8 +568,12 @@ class security {
 			}else{
 
 				// Resolve from component data
-				$model		= ontology_node::get_model_by_tipo(DEDALO_USER_DEVELOPER_TIPO,true);
-				$component	= component_common::get_instance(
+				$model = ontology_node::get_model_by_tipo(DEDALO_USER_DEVELOPER_TIPO, true);
+				if(!$model) {
+					debug_log('Model not found for tipo: ' . DEDALO_USER_DEVELOPER_TIPO, logger::ERROR);
+					return false;
+				}
+				$component = component_common::get_instance(
 					$model,
 					DEDALO_USER_DEVELOPER_TIPO,
 					$user_id,
@@ -522,10 +581,14 @@ class security {
 					DEDALO_DATA_NOLAN,
 					DEDALO_SECTION_USERS_TIPO
 				);
+				if ($component === null) {
+					debug_log('Component not found for tipo: ' . DEDALO_USER_DEVELOPER_TIPO, logger::ERROR);
+					return false;
+				}
 				$data = $component->get_data();
 
 				// empty user data case
-					if (empty($data)) {
+					if (empty($data) || !isset($data[0]->section_id)) {
 						return false;
 					}
 

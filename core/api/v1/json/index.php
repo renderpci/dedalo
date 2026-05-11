@@ -268,9 +268,9 @@ try {
 		$response->dedalo_last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
 
 		// real_execution_time add
-		$total_time_api_exec					= exec_time_unit($global_start_time, 'ms');
+		$total_time_api_exec					= exec_time_unit_auto($global_start_time);
 		$response->debug						= $response->debug ?? new stdClass();
-		$response->debug->real_execution_time	= $total_time_api_exec . ' ms';
+		$response->debug->real_execution_time	= $total_time_api_exec;
 
 	} else {
 

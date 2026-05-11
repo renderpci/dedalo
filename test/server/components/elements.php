@@ -55,6 +55,16 @@ function get_elements() : array {
 			'new_value'		=> 'random_date'
 		],
 		(object)[
+			'model'			=> 'component_external',
+			'tipo'			=> 'test215',
+			'section_tipo'	=> $section_tipo,
+			'section_id'	=> $section_id,
+			'mode'			=> $mode,
+			'lang'			=> DEDALO_DATA_NOLAN,
+			'new_value'		=> 'random_external_data',
+			'test_save'		=> false
+		],
+		(object)[
 			'model'			=> 'component_email',
 			'tipo'			=> 'test208',
 			'section_tipo'	=> $section_tipo,

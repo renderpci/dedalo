@@ -5,9 +5,11 @@
 */
 class request_config_presets {
 
-	public static $active_request_config_cache_file_name = 'cache_active_request_config.php';
+
+	// cache file name
+	public static string $active_request_config_cache_file_name = 'cache_active_request_config.php';
 	// Cache for active request config
-	public static $active_request_config_cache;
+	public static array $active_request_config_cache = [];
 
 
 

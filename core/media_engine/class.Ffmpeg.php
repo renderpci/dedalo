@@ -10,11 +10,11 @@ final class Ffmpeg {
 
 
 	// ar_settings. Array of settings files
-	static protected $ar_settings;
+	static protected array $ar_settings = [];
 	// ar_supported_quality_settings. Supported quality's array. Defined quality settings for conversion (in PAL, NTSC, et.)
-	static protected $ar_supported_quality_settings = ['1080','720','576','480','404','240','audio'];
-	// audio_codec. Audio codec resolution
-	static protected $audio_codec;
+	static protected array $ar_supported_quality_settings = ['1080','720','576','480','404','240','audio'];
+	// audio_codec. Audio codec resolution. E.g. 'libfdk_aac'
+	static protected string $audio_codec = '';
 
 
 
@@ -126,7 +126,7 @@ final class Ffmpeg {
 	*/
 	public static function get_ar_settings() : ?array {
 
-		if (isset(Ffmpeg::$ar_settings)) {
+		if (!empty(Ffmpeg::$ar_settings)) {
 			return Ffmpeg::$ar_settings;
 		}
 
@@ -144,7 +144,7 @@ final class Ffmpeg {
 			// fix value
 			Ffmpeg::$ar_settings = $ar_settings;
 
-			return 	$ar_settings;
+			return $ar_settings;
 		}
 
 
@@ -860,7 +860,7 @@ final class Ffmpeg {
 			}
 
 		// aspect_ratio_cmd
-			$raw_aspect_ratio = Ffmpeg::get_aspect_ratio($src_file, $quality);
+			$raw_aspect_ratio = Ffmpeg::get_aspect_ratio($src_file);
 			if ($quality==='original') {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '936x720'
@@ -1311,7 +1311,7 @@ final class Ffmpeg {
 	public static function get_audio_codec() : string {
 
 		// cache
-			if (isset(Ffmpeg::$audio_codec)) {
+			if (!empty(Ffmpeg::$audio_codec)) {
 				return Ffmpeg::$audio_codec;
 			}
 

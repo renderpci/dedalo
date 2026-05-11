@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * CLASS ZENON
 * Manage specific entity Dainst Zenon API elements
@@ -26,11 +26,11 @@ class zenon {
 		// options
 			$api_url	= $options->api_url;
 			$ar_fields	= $options->ar_fields;
-			$section_id	= $options->section_id ;
+			$section_id	= $options->section_id;
 			$lang		= $options->lang;
 
 		// lang value tld 2
-			$lang_value = lang::get_alpha2_from_code($lang);
+			$lang_value = lang::get_alpha2_from_code($lang) ?? 'en';
 
 		// ar_fields_var
 			$ar_fields_var = [];
@@ -39,7 +39,8 @@ class zenon {
 			}
 
 		// url
-			$url = $api_url .'?id='. $section_id .'&lgn='. $lang_value .'&'. implode('&', $ar_fields_var);
+			$fields_query = empty($ar_fields_var) ? '' : '&'. implode('&', $ar_fields_var);
+			$url = $api_url .'?id='. $section_id .'&lgn='. $lang_value . $fields_query;
 
 
 		return $url;

@@ -2,25 +2,50 @@
 include_once 'trait.search_component_string_common.php';
 include_once 'trait.search_component_string_common_tm.php';
 /**
-* INTERFACE COMPONENT_STRING_COMMON
-* Used as common base from all components that works with media
-* like component_3d, component_av, component_image, component_pdf, component_svg
+* INTERFACE COMPONENT_STRING_INTERFACE
+* Interface for string-based components in Dédalo.
 *
-* data_column_name : 'string'
+* Defines the contract for components that handle text/string data,
+* supporting multilingual content and various text operations.
+*
+* Implemented by:
+* - component_input_text : Single-line text input
+* - component_text_area : Multi-line rich text
+* - component_email : Email addresses
+*
+* @package Dédalo
+* @subpackage Core
 */
 interface component_string_interface {
 
 	// from component_string_common
 
 
-}//end component_media_interface
+}//end component_string_interface
 
 
 
 /**
 * CLASS COMPONENT_STRING_COMMON
-* Used as common base from all components that works with media
-* like component_input_text, component_text_area
+* Abstract base class for all string-based components in Dédalo.
+*
+* Provides shared functionality for components that handle text/string data:
+* - Multi-language content support with translation handling
+* - String validation and manipulation utilities
+* - Record separation for display/export
+* - Empty value detection for string content
+*
+* Extended by string components:
+* - component_input_text : Single-line text input
+* - component_text_area : Multi-line rich text
+* - component_email : Email addresses
+*
+* Uses traits for code organization:
+* - search_component_string_common : String-based search operations
+* - search_component_string_common_tm : Time Machine search for strings
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_string_common extends component_common {
 
@@ -31,15 +56,24 @@ class component_string_common extends component_common {
 	use search_component_string_common_tm;
 
 
+
 	/**
 	* CLASS VARS
 	*/
+		/**
+		 * Whether this component supports multi-language data storage.
+		 * When true, data can be stored/retrieved in different languages.
+		 * When false, the component is language-agnostic (uses DEDALO_DATA_NOLAN).
+		 * @var bool $supports_translation
+		 */
+		protected bool $supports_translation = true;
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = true;
-
-	// default records separator
-	protected string $default_records_separator = ' | ';
+		/**
+		 * Default separator string for joining multiple records in display.
+		 * Used when concatenating multiple values for output.
+		 * @var string $default_records_separator
+		 */
+		protected string $default_records_separator = ' | ';
 
 
 

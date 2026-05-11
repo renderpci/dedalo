@@ -9,13 +9,13 @@ class dd_date implements JsonSerializable {
 
 
 	// Separator when format output
-	static $separator = '/';
+	static string $separator = '/';
 	// Separator when format output
-	static $time_separator = ':';
+	static string $time_separator = ':';
 	// Virtual year days
-	static $virtual_year_days  = 372;
+	static int $virtual_year_days  = 372;
 	// Virtual month days
-	static $virtual_month_days = 31;
+	static int $virtual_month_days = 31;
 
 	// day
 	public ?int $day = null;
@@ -169,7 +169,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_year($value, bool $constrain=false) : bool {
+	public function set_year(int|string $value, bool $constrain=false) : bool {
 
 		$this->year = (int)$value;
 
@@ -196,7 +196,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_month($value, bool $constrain=false) : bool {
+	public function set_month(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<1 || (int)$value>12 ) {
@@ -245,7 +245,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_day($value, bool $constrain=false) : bool {
+	public function set_day(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<1 || (int)$value>31 ) {
@@ -343,7 +343,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_hour($value, bool $constrain=false) : bool {
+	public function set_hour(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>23 ) {
@@ -392,7 +392,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_minute($value, bool $constrain=false) : bool {
+	public function set_minute(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>59 ) {
@@ -441,7 +441,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_second($value, bool $constrain=false) : bool {
+	public function set_second(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>59 ) {
@@ -490,7 +490,7 @@ class dd_date implements JsonSerializable {
 	* @param bool $constrain = false
 	* @return bool
 	*/
-	public function set_ms($value, bool $constrain=false) : bool {
+	public function set_ms(int|string $value, bool $constrain=false) : bool {
 
 		// check valid value (constrain)
 			if( (int)$value<0 || (int)$value>999 ) {
@@ -1090,4 +1090,3 @@ class dd_date implements JsonSerializable {
 
 
 }//end class dd_date
-

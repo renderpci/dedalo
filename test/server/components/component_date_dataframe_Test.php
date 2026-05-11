@@ -257,7 +257,7 @@ final class component_date_dataframe_test extends BaseTestCase {
 		// Remove first item
 		$changed_data = (object)[
 			'action'	=> 'remove',
-			'key'		=> 0
+			'id'		=> 1
 		];
 		$result = $component->update_data_value($changed_data, DEDALO_DATA_LANG);
 

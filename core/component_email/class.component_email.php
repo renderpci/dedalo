@@ -1,8 +1,23 @@
 <?php declare(strict_types=1);
 /**
-* CLASS COMPONENT EMAIL
-* Manages e-mail addresses data.
+* CLASS COMPONENT_EMAIL
+* Manages email address components in Dédalo.
 *
+* Handles email data with automatic validation, sanitization, and format checking.
+* Email addresses are always stored language-neutral (DEDALO_DATA_NOLAN).
+*
+* Key features:
+* - Email format validation on save with regex pattern checking
+* - Automatic email address cleaning and normalization
+* - Sanitization of input data to prevent injection
+* - Validation both client-side (JavaScript) and server-side
+*
+* Data format: Objects with 'value' property containing the email address string.
+*
+* Extends component_string_common for string-based component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_email extends component_string_common {
 

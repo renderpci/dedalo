@@ -1,21 +1,55 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_PUBLICATION
-* Manages record publishable status.
-* Possible values are null | locator yes | locator no
+* Manages record publication status in Dédalo.
 *
-* column_name: relation
+* Controls whether records are marked for publication to external systems.
+* Uses a simple yes/no toggle stored as locator objects referencing
+* the publication status section (dd_component_publication_value).
+*
+* Possible values:
+* - null: Not yet decided / default state
+* - locator 'yes': Record is marked for publication
+* - locator 'no': Record is explicitly excluded from publication
+*
+* Key features:
+* - Simple binary publication control (yes/no)
+* - Language-neutral storage (DEDALO_DATA_NOLAN)
+* - Sortable by publication status in lists
+* - Integration with diffusion/publication systems
+*
+* Data is stored in the 'relation' column of matrix tables.
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_publication extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
-	protected $default_relation_type_rel	= null;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for publication status linking relationships.
+		 * Inherited from DEDALO_RELATION_TYPE_LINK constant.
+		 * Defines the type of relationship created when publication status is set.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
 
-	// test_equal_properties is used to verify duplicates when add locators
-	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
+		/**
+		 * Properties used to detect duplicate locators when adding publication status.
+		 * Locators with identical values for all these properties are considered duplicates.
+		 * - section_tipo : Target publication status section type identifier
+		 * - section_id : Target publication status record ID (yes/no)
+		 * - type : Relation type (typically link type)
+		 * - from_component_tipo : Source component tipo creating the relation
+		 * @var array $test_equal_properties
+		 */
+		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 

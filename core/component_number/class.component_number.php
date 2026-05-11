@@ -3,19 +3,36 @@ include_once 'trait.search_component_number.php';
 include_once 'trait.search_component_number_tm.php';
 /**
 * CLASS COMPONENT_NUMBER
-* Manage numbers with specific precision
-* types supported : int|float
-* data_column_name = 'number'
-* (!) Note that Ontology previous to 04/07/2024 used a wrong object format like "type":{"float":2}
-* data format : [number,xx]
-* data example : [6.12]
-* example multiple : [6.12,88]
-* Default type : float
-* Default precision: 2
-* Default decimal separator: . used as $decimal public variable
-* Properties can define the type and precision as "type":"float", "precision":4
-* Notes: Data storage format does not support internationalization for numbers the float point is always . and does not use thousand separator
-* but is possible format it in render->view to accommodate to specific formats as Spanish format 1.234,56 from data 1234.56
+* Manages numeric data with specific precision control.
+*
+* Types supported: int|float
+* Data column name: 'number'
+*
+* Data format: Array of numeric values
+* - Single value: [6.12]
+* - Multiple values: [6.12, 88]
+*
+* Defaults:
+* - Type: float
+* - Precision: 2
+* - Decimal separator: '.' (stored in $decimal public variable)
+*
+* Configuration via component properties:
+* - type: 'int' or 'float' (e.g., "type":"float")
+* - precision: Number of decimal places (e.g., "precision":4)
+*
+* Legacy note: Ontology prior to 04/07/2024 used incorrect object format like "type":{"float":2}
+*
+* Internationalization notes:
+* - Data storage format does not support internationalization
+* - Decimal point is always '.' (no thousand separator in storage)
+* - Display formatting is applied in render/view layer to accommodate regional formats
+* - Example: Spanish format 1.234,56 from stored data 1234.56
+*
+* Extends component_common and uses search_component_number trait for numeric queries.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_number extends component_common {
 
@@ -25,12 +42,10 @@ class component_number extends component_common {
 	use search_component_number;
 	use search_component_number_tm;
 
+
+
 	// decimal separator
-
-	public $decimal = '.';
-
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+	public string $decimal = '.';
 
 
 

@@ -1,26 +1,53 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
-* Manages specific component info logic
-* Common component properties and methods are inherited from the component_common class
-* that are inherited from the common class.
+* Manages information display components that aggregate widget data in Dédalo.
 *
-* data_column_name : 'misc'
+* Serves as a container for multiple widgets, each computing and displaying specific
+* information about the current record or related data. Unlike standard components
+* that store data in the database, component_info generates data dynamically from widgets.
+*
+* Key features:
+* - Aggregates data from multiple configured widgets
+* - Widgets compute their own data dynamically (use_db_data = false)
+* - Supports language-specific widget rendering via widget_lang
+* - Display mode control for different contexts (edit, list, etc.)
+* - No direct database storage; data is generated on-demand
+*
+* Data is stored in the 'misc' column of matrix tables (when needed for widget configuration).
+*
+* Extends component_common for standard component functionality.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_info extends component_common {
 
 
 
 	/**
-	* properties
-	* @var
+	* CLASS VARS
 	*/
-	public $widget_lang;
-	public $widget_mode;
-	public $use_db_data = false;
+		/**
+		 * Language code for widget content display within this component. E.g. 'lg-spa'
+		 * Determines the language version used when rendering widget information.
+		 * @var ?string $widget_lang
+		 */
+		public ?string $widget_lang = null;
 
-	// Property to enable or disable the get and set data in different languages
-	protected $supports_translation = false;
+		/**
+		 * Display mode for widgets within this component info instance.
+		 * Controls widget rendering context: 'edit', 'list', etc.
+		 * @var ?string $widget_mode
+		 */
+		public ?string $widget_mode = null;
+
+		/**
+		 * Whether this component should use database-stored data.
+		 * When false, data is computed/generated rather than retrieved from storage.
+		 * @var bool $use_db_data
+		 */
+		public bool $use_db_data = false;
 
 
 
@@ -443,11 +470,11 @@ class component_info extends component_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$fields_separator	= $ddo->fields_separator ?? null;
-			$records_separator	= $ddo->records_separator ?? null;
-			$format_columns		= $ddo->format_columns ?? null;
-			$class_list			= $ddo->class_list ?? null;
+		// ddo customs
+			$fields_separator	= $ddo?->fields_separator ?? null;
+			$records_separator	= $ddo?->records_separator ?? null;
+			$format_columns		= $ddo?->format_columns ?? null;
+			$class_list			= $ddo?->class_list ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -486,7 +513,7 @@ class component_info extends component_common {
 						$value= json_encode($value);
 					}
 
-					$value = [$value];
+					$value = [$value]; // array
 
 					// create the new column obj id getting the previous id and add the new path
 					// it will set to the column_obj for the next loop
@@ -559,7 +586,7 @@ class component_info extends component_common {
 				}
 				$value->set_fields_separator($fields_separator);
 				$value->set_records_separator($records_separator);
-				$value->set_value($ar_columns);
+				$value->set_value($ar_columns); // array
 
 
 		return $value;
@@ -574,7 +601,12 @@ class component_info extends component_common {
 	*/
 	public function get_grid_flat_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		return $this->get_grid_value($ddo);
+		$grid_value = $this->get_grid_value($ddo);
+
+		// Resolve the complex grid value into a flat string
+		// $grid_value->value = dd_grid_cell_object::resolve_value($grid_value);
+
+		return $grid_value;
 	}//end get_grid_flat_value
 
 

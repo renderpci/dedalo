@@ -10,16 +10,40 @@ class tm_record {
 	/**
 	* CLASS VARS
 	*/
-	// in id
- 	public int $id;
-	// string section_tipo
- 	public string $section_tipo;
- 	// string|int section_id
- 	public string|int $section_id;
-	// section_record_data class instance
-	protected object $data_instance;
-	// To disable time machine save GLOBAL, set: tm_record::$save_tm = false;
-	public static $save_tm = true;
+		/**
+		 * Database ID of the time machine record (primary key).
+		 * Unique identifier for this specific tm_record in the matrix_time_machine table.
+		 * @var int $id
+		 */
+		public int $id;
+
+		/**
+		 * Section tipo (ontology identifier) of the record being tracked.
+		 * Defines which section/hierarchy the time machine data belongs to.
+		 * @var string $section_tipo
+		 */
+		public string $section_tipo;
+
+		/**
+		 * Section ID of the record being tracked by time machine.
+		 * Identifies the specific record within the section.
+		 * @var string|int $section_id
+		 */
+		public string|int $section_id;
+
+		/**
+		 * Data instance handling database operations for this tm_record.
+		 * Instance of tm_record_data class managing all data persistence tasks.
+		 * @var object $data_instance
+		 */
+		protected object $data_instance;
+
+		/**
+		 * Global flag to enable/disable time machine save operations.
+		 * Set to false to disable TM globally: tm_record::$save_tm = false.
+		 * @var bool $save_tm
+		 */
+		public static bool $save_tm = true;
 
 
 
@@ -546,7 +570,7 @@ class tm_record {
 			// 1. search notes with current matrix_id
 				$sqo = new search_query_object();
 					$sqo->select		= [];
-					$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
+					$sqo->section_tipo	= [DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO]; // rsc832
 					$sqo->filter = (object)[
 						'$and' => [
 							(object)[

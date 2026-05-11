@@ -24,8 +24,12 @@
 final class dd_manager {
 
 
-
-	public static $version = '1.0.0'; // 05-06-2019
+	/**
+	 * Version constant.
+	 * Format: "Major.Minor.Patch" (e.g., "1.0.0" for Dédalo 7.x).
+	 * @var string
+	 */
+	public static string $version = '1.0.0'; // 05-06-2019
 
 	/**
 	* SEC-008: CSRF protection.
@@ -49,6 +53,7 @@ final class dd_manager {
 		'get_ontology_update_info',
 		'get_code_update_info',
 		'get_diffusion_info',
+		'get_dedalo_files',
 		'read_raw'
 	];
 

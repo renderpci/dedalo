@@ -1,15 +1,42 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_SELECT_LANG
+* Manages language selection components for multilingual content in Dédalo.
 *
+* Specialized select component for choosing language codes (e.g., 'lg-eng', 'lg-spa')
+* from the Dédalo language ontology. Typically used alongside text components to
+* specify the language of content.
+*
+* Key features:
+* - Links to Dédalo language records (lg- prefix tipos)
+* - Provides language code resolution for diffusion/export
+* - Associates with component_text_area for multilingual content
+* - Supports language-based filtering in search
+*
+* Use cases:
+* - Specifying language of text content in component_text_area
+* - Setting audio/video language for media components
+* - Language tagging for translation workflows
+*
+* Extends component_relation_common for relationship management capabilities.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class component_select_lang extends component_relation_common {
 
 
 
-	// relation_type defaults
-	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
-	protected $default_relation_type_rel	= null;
+	/**
+	* CLASS VARS
+	*/
+		/**
+		 * Default relation type for language selection (DEDALO_RELATION_TYPE_LINK).
+		 * Defines the ontology tipo used for linking to language records.
+		 * @var ?string $default_relation_type
+		 */
+		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
+
 
 
 	/**

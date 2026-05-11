@@ -8,7 +8,7 @@ abstract class label {
 
 
 
-	public static $ar_label;
+	public static array $ar_label = [];
 
 
 

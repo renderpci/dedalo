@@ -9,6 +9,7 @@ final class dd_utils_api_Test extends BaseTestCase {
 
 
 	protected function setUp(): void   {
+		parent::setUp();
 		// $this->markTestSkipped(
 		// 	'Disabled !'
 		// );
