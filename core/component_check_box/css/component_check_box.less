@@ -205,3 +205,33 @@
 		}
 	}
 }
+
+// dark mode: checkbox inputs
+:root[data-theme="dark"] .component_check_box input[type="checkbox"] {
+	background-color: var(--checkbox_bg);
+	border: 1px solid var(--checkbox_border);
+	-webkit-appearance: none;
+	appearance: none;
+	width: 1em;
+	height: 1em;
+	border-radius: 2px;
+	cursor: pointer;
+	position: relative;
+
+	&:checked {
+		background-color: var(--checkbox_checked_bg);
+		border-color: var(--checkbox_checked_bg);
+
+		&:after {
+			content: '';
+			position: absolute;
+			left: 0.25em;
+			top: 0.05em;
+			width: 0.35em;
+			height: 0.6em;
+			border: solid var(--checkbox_checkmark);
+			border-width: 0 2px 2px 0;
+			transform: rotate(45deg);
+		}
+	}
+}

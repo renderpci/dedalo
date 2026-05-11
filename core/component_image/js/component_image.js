@@ -215,7 +215,7 @@ component_image.prototype.load_vector_editor = async function() {
 	const self = this
 
 	const data					= self.data || {}
-	const entries					= data.entries || []
+	const entries				= data.entries || []
 	const default_layer_color	= '#ffffff';
 
 	// options

@@ -173,3 +173,4 @@ diff_*.txt
 security-audit
 .rr.yaml
 composer.local.lock
+mcp/dedalo-work-mcp/.env

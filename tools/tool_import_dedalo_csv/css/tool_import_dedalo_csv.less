@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #17a2b8;
+:root {
+	--tool_import_dedalo_csv: #17a2b8;
+}
+@tool_color: var(--tool_import_dedalo_csv);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions

@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #9d535e;
+:root {
+	--tool_tr_print: #9d535e;
+}
+@tool_color: var(--tool_tr_print);
 
 // wrapper_tool
 	.wrapper_tool.tool_tr_print {

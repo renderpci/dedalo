@@ -82,8 +82,8 @@ window.load_test = function(area, model, test_name, on_complete) {
 	window.history.replaceState({}, '', `./?${params.toString()}`)
 
 	// set iframe src - fresh page load each time
-	const is_light = document.documentElement.classList.contains('light')
-	test_frame.src = `./frame.html?area=${area}${model ? '&model=' + model : ''}&theme=${is_light ? 'light' : 'dark'}`
+	const is_dark = document.documentElement.getAttribute('data-theme') === 'dark'
+	test_frame.src = `./frame.html?area=${area}${model ? '&model=' + model : ''}&theme=${is_dark ? 'dark' : 'light'}`
 
 	// listen for iframe messages
 	const handler = function(e) {
@@ -160,10 +160,10 @@ window.load_test = function(area, model, test_name, on_complete) {
 	const icon_sun = theme_toggle?.querySelector('.theme_icon_sun')
 
 	function set_theme(light) {
-		document.documentElement.classList.toggle('light', light)
+		document.documentElement.setAttribute('data-theme', light ? '' : 'dark')
 		if (icon_moon) icon_moon.style.display = light ? 'none' : 'block'
 		if (icon_sun) icon_sun.style.display = light ? 'block' : 'none'
-		try { localStorage.setItem('dedalo_test_theme', light ? 'light' : 'dark') } catch(e) {}
+		try { localStorage.setItem('dedalo_theme', light ? 'light' : 'dark') } catch(e) {}
 		// sync iframe
 		if (test_frame.contentWindow) {
 			test_frame.contentWindow.postMessage({ type: 'theme', light: light }, '*')
@@ -171,12 +171,12 @@ window.load_test = function(area, model, test_name, on_complete) {
 	}
 
 	// restore saved theme
-	const saved = localStorage.getItem('dedalo_test_theme')
-	set_theme(saved === 'light')
+	const saved = localStorage.getItem('dedalo_theme')
+	set_theme(saved !== 'dark')
 
 	if (theme_toggle) {
 		theme_toggle.addEventListener('click', () => {
-			set_theme(!document.documentElement.classList.contains('light'))
+			set_theme(document.documentElement.getAttribute('data-theme') !== 'dark')
 		})
 	}
 

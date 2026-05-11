@@ -84,3 +84,15 @@
 	}
 
 }//end .component_select
+
+:root[data-theme="dark"] .component_select,
+:root[data-theme="dark"] .component_select_lang,
+:root[data-theme="dark"] .component_relation_model {
+	> .content_data > .content_value > .select {
+		background-color: var(--select_bg);
+		color: var(--select_fg);
+		outline: var(--select_outline);
+		-webkit-appearance: none;
+		appearance: none;
+	}
+}

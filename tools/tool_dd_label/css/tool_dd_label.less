@@ -8,7 +8,11 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #818181;
+:root {
+	--tool_dd_label: #818181;
+	--tool_dd_label_border: #5b5b5b;
+}
+@tool_color : var(--tool_dd_label);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -53,7 +57,7 @@
 						border-right: 1px solid @color_white;
 
 						&.name {
-							background-color: darken(@tool_color, 15%);
+							background-color: var(--tool_dd_label_border);
 						}
 					}
 				}

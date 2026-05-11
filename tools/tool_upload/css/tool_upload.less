@@ -5,7 +5,10 @@
 */
 
 // local vars
-@tool_color : #f78a1c;
+:root {
+	--tool_upload: #f78a1c;
+}
+@tool_color : var(--tool_upload);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions

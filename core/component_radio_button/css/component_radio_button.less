@@ -128,3 +128,33 @@
 	}//end .search
 
 }//end .component_radio_button
+
+// dark mode: radio button inputs
+:root[data-theme="dark"] .component_radio_button input[type="radio"] {
+	background-color: var(--checkbox_bg);
+	border: 1px solid var(--checkbox_border);
+	-webkit-appearance: none;
+	appearance: none;
+	width: 1em;
+	height: 1em;
+	border-radius: 50%;
+	cursor: pointer;
+	position: relative;
+
+	&:checked {
+		background-color: var(--checkbox_checked_bg);
+		border-color: var(--checkbox_checked_bg);
+
+		&:after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			width: 0.4em;
+			height: 0.4em;
+			background: var(--checkbox_checkmark);
+			border-radius: 50%;
+			transform: translate(-50%, -50%);
+		}
+	}
+}

@@ -8,7 +8,14 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #7152a5;
+:root {
+	--tool_export: #7152a5;
+	--tool_export_lighten_40: #dfd8eb;
+	--tool_export_lighten_5: #7e60b0;
+	--tool_export_border: #5a4183;
+	--tool_export_lighten_10: #8c71b9;
+}
+@tool_color : var(--tool_export);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -143,11 +150,11 @@
 
 						&:hover {
 							cursor: move;
-							background-color: lighten(@tool_color, 40%);
+							background-color: var(--tool_export_lighten_40);
 						}
 
 						&:active {
-							background-color: lighten(@tool_color, 5%);
+							background-color: var(--tool_export_lighten_5);
 							color: @color_white;
 
 							>.button {
@@ -160,7 +167,7 @@
 
 							@keyframes active_animation {
 								0%  {
-									background-color: lighten(@tool_color, 5%);
+									background-color: var(--tool_export_lighten_5);
 									color: @color_white;
 								}
 								65%  {
@@ -261,7 +268,7 @@
 					width: 100%;
 					margin-left: 0;
 					background-color: @tool_color;
-					border-color: darken(@tool_color, 10%);
+					border-color: var(--tool_export_border);
 					position: sticky;
 					top: 2rem;
 					padding: 1rem;
@@ -269,7 +276,7 @@
 					z-index: 1;
 
 					&:not(.loading):hover {
-						background-color: darken(@tool_color, -10%);
+						background-color: var(--tool_export_lighten_10);
 					}
 
 					&.loading {
@@ -366,7 +373,7 @@
 			// buttons
 			.processing_import {
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 10%);
+				border-color: var(--tool_export_border);
 				margin-bottom: 0.25rem;
 
 				@media screen and (max-width: @width_break_point_1) {

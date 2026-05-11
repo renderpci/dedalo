@@ -70,7 +70,7 @@ export const get_d3_data = function(options) {
 	const nodes = []
 	const links = []
 
-	const default_color = '#dddddd';
+	const default_color = 'var(--color_grey_13)';
 
 	const sources_length = sources.length
 	for (let i = sources_length - 1; i >= 0; i--) {

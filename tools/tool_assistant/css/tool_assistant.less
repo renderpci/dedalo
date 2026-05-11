@@ -1,0 +1,499 @@
+@assistant_color: #6366f1;
+@assistant_color_light: #818cf8;
+@assistant_color_dark: #4f46e5;
+@border_color: #e5e7eb;
+@text_muted: #6b7280;
+
+// content_data wrapper for the assistant tool
+.assistant_content_data {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	height: 100%;
+	min-height: 400px;
+	background-color: #f9fafb;
+}
+
+// toolbar
+.assistant_toolbar {
+	display: flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.4rem 0.6rem;
+	background-color: #fff;
+	border-bottom: 1px solid @border_color;
+	position: relative;
+}
+
+.assistant_toolbar_button {
+	background: none;
+	border: 1px solid @border_color;
+	color: #374151;
+	font-size: 0.95rem;
+	line-height: 1;
+	padding: 0.3rem 0.5rem;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s, border-color 0.15s;
+
+	&:hover {
+		background-color: #f3f4f6;
+		border-color: #d1d5db;
+	}
+}
+
+.assistant_history_wrap,
+.assistant_settings_wrap {
+	position: relative;
+}
+
+.assistant_model_badge {
+	margin-left: auto;
+	font-size: 0.7rem;
+	color: @text_muted;
+	background-color: #f3f4f6;
+	border: 1px solid @border_color;
+	border-radius: 999px;
+	padding: 0.15rem 0.6rem;
+	font-family: monospace;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 60%;
+}
+
+// history dropdown
+.assistant_history_dropdown {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	min-width: 240px;
+	max-width: 360px;
+	max-height: 320px;
+	overflow-y: auto;
+	background-color: #fff;
+	border: 1px solid @border_color;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	z-index: 100;
+	padding: 0.25rem;
+}
+
+.assistant_history_empty {
+	padding: 0.5rem 0.75rem;
+	color: @text_muted;
+	font-size: 0.8rem;
+	font-style: italic;
+}
+
+.assistant_history_item {
+	display: flex;
+	align-items: stretch;
+	gap: 0.25rem;
+
+	&:hover {
+		background-color: #f3f4f6;
+	}
+}
+
+.assistant_history_item_label {
+	flex: 1;
+	background: none;
+	border: none;
+	text-align: left;
+	padding: 0.4rem 0.6rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: #1f2937;
+}
+
+.assistant_history_item_delete {
+	background: none;
+	border: none;
+	color: @text_muted;
+	font-size: 1rem;
+	line-height: 1;
+	padding: 0 0.5rem;
+	cursor: pointer;
+
+	&:hover {
+		color: #dc2626;
+	}
+}
+
+// settings popover
+.assistant_settings_popover {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	min-width: 260px;
+	background-color: #fff;
+	border: 1px solid @border_color;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	z-index: 100;
+	padding: 0.6rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.assistant_settings_label {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	font-size: 0.75rem;
+	color: @text_muted;
+}
+
+.assistant_settings_input {
+	border: 1px solid #d1d5db;
+	border-radius: 4px;
+	padding: 0.3rem 0.4rem;
+	font-size: 0.85rem;
+}
+
+.assistant_settings_apply {
+	align-self: flex-end;
+	background-color: @assistant_color;
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	padding: 0.35rem 0.85rem;
+	font-size: 0.8rem;
+	cursor: pointer;
+
+	&:hover {
+		background-color: @assistant_color_dark;
+	}
+}
+
+// progress bar
+.assistant_progress_bar {
+	display: flex;
+	align-items: center;
+	padding: 0.35rem 1rem;
+	background-color: #eef2ff;
+	border-bottom: 1px solid #c7d2fe;
+	position: relative;
+	height: 1.5rem;
+}
+
+.assistant_progress_fill {
+	height: 100%;
+	background-color: @assistant_color;
+	border-radius: 2px;
+	transition: width 0.3s ease;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.assistant_progress_text {
+	position: relative;
+	z-index: 1;
+	color: @assistant_color_dark;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+// messages container
+.assistant_messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.75rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	scroll-behavior: smooth;
+}
+
+// message bubbles
+.assistant_message {
+	max-width: 88%;
+	padding: 0.5rem 0.75rem;
+	border-radius: 0.75rem;
+	font-size: 0.85rem;
+	line-height: 1.45;
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	position: relative;
+}
+
+.assistant_user_message {
+	align-self: flex-end;
+	background-color: @assistant_color;
+	color: #fff;
+	border-bottom-right-radius: 0.2rem;
+	white-space: pre-wrap;
+}
+
+.assistant_assistant_message {
+	align-self: flex-start;
+	background-color: #fff;
+	color: #1f2937;
+	border: 1px solid @border_color;
+	border-bottom-left-radius: 0.2rem;
+
+	.md_paragraph {
+		margin: 0 0 0.5rem 0;
+		&:last-child { margin-bottom: 0; }
+	}
+	.md_heading {
+		margin: 0.4rem 0 0.3rem;
+		font-size: 1rem;
+	}
+	.md_list {
+		margin: 0.25rem 0 0.5rem;
+		padding-left: 1.25rem;
+	}
+	.md_blockquote {
+		margin: 0.4rem 0;
+		padding: 0.25rem 0.6rem;
+		border-left: 3px solid @assistant_color_light;
+		color: @text_muted;
+	}
+	.md_code_inline {
+		background-color: #f3f4f6;
+		padding: 0.05rem 0.3rem;
+		border-radius: 3px;
+		font-size: 0.8rem;
+		font-family: monospace;
+	}
+	.md_code_block {
+		background-color: #1f2937;
+		color: #f3f4f6;
+		padding: 0.6rem 0.75rem;
+		border-radius: 6px;
+		overflow-x: auto;
+		margin: 0.4rem 0;
+		font-size: 0.78rem;
+		line-height: 1.4;
+
+		code {
+			font-family: monospace;
+			background: transparent;
+			color: inherit;
+		}
+	}
+	a {
+		color: @assistant_color_dark;
+		text-decoration: underline;
+	}
+}
+
+.assistant_system_message {
+	align-self: center;
+	background-color: transparent;
+	color: #9ca3af;
+	font-size: 0.75rem;
+	font-style: italic;
+	text-align: center;
+	padding: 0.25rem 0.5rem;
+}
+
+// thinking pulse bubble
+.assistant_thinking_message {
+	align-self: flex-start;
+	background-color: #fff;
+	color: @text_muted;
+	border: 1px dashed @border_color;
+	border-bottom-left-radius: 0.2rem;
+	font-size: 0.8rem;
+	font-style: italic;
+	animation: assistant_pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes assistant_pulse {
+	0%, 100% { opacity: 0.55; }
+	50% { opacity: 1; }
+}
+
+// copy button on assistant messages
+.assistant_copy_button {
+	position: absolute;
+	top: 0.25rem;
+	right: 0.25rem;
+	background: rgba(255,255,255,0.85);
+	border: 1px solid @border_color;
+	border-radius: 4px;
+	width: 1.4rem;
+	height: 1.4rem;
+	font-size: 0.85rem;
+	line-height: 1;
+	color: @text_muted;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s, background-color 0.15s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&.copied {
+		color: #166534;
+		background-color: #dcfce7;
+		border-color: #86efac;
+	}
+}
+
+.assistant_assistant_message:hover .assistant_copy_button {
+	opacity: 1;
+}
+
+// tool call (now <details>)
+.assistant_tool_call {
+	align-self: flex-start;
+	background-color: #f0fdf4;
+	color: #166534;
+	border: 1px solid #bbf7d0;
+	border-radius: 0.5rem;
+	padding: 0.3rem 0.6rem;
+	font-size: 0.75rem;
+	font-family: monospace;
+	max-width: 100%;
+
+	summary {
+		cursor: pointer;
+		outline: none;
+		list-style: none;
+	}
+	summary::-webkit-details-marker {
+		display: none;
+	}
+	&[open] summary {
+		margin-bottom: 0.4rem;
+	}
+}
+
+.assistant_tool_call_calling {
+	background-color: #fefce8;
+	color: #854d0e;
+	border-color: #fde68a;
+}
+
+.assistant_tool_call_error {
+	background-color: #fef2f2;
+	color: #991b1b;
+	border-color: #fecaca;
+}
+
+.assistant_tool_call_denied {
+	background-color: #f9fafb;
+	color: @text_muted;
+	border-color: @border_color;
+	text-decoration: line-through;
+}
+
+.assistant_tool_call_label {
+	font-size: 0.7rem;
+	font-weight: 700;
+	margin-top: 0.3rem;
+	opacity: 0.75;
+}
+
+.assistant_tool_call_pre {
+	margin: 0.15rem 0 0.25rem;
+	padding: 0.4rem 0.5rem;
+	background-color: rgba(0,0,0,0.04);
+	border-radius: 4px;
+	max-height: 240px;
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
+	font-size: 0.72rem;
+	color: #1f2937;
+}
+
+// footer with input
+.assistant_footer {
+	display: flex;
+	align-items: flex-end;
+	gap: 0.5rem;
+	padding: 0.5rem;
+	background-color: #fff;
+	border-top: 1px solid @border_color;
+}
+
+.assistant_input {
+	flex: 1;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	padding: 0.4rem 0.6rem;
+	font-size: 0.85rem;
+	font-family: var(--font-family-normal, sans-serif);
+	resize: none;
+	max-height: 8rem;
+	min-height: 1.8rem;
+	line-height: 1.4;
+	outline: none;
+	transition: border-color 0.15s;
+	overflow-y: auto;
+
+	&:focus {
+		border-color: @assistant_color;
+		box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+	}
+
+	&:disabled {
+		background-color: #f3f4f6;
+		opacity: 0.6;
+	}
+}
+
+.assistant_send_button,
+.assistant_stop_button {
+	background-color: @assistant_color;
+	color: #fff;
+	border: none;
+	border-radius: 0.5rem;
+	width: 2.2rem;
+	height: 2.2rem;
+	font-size: 1.1rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	transition: background-color 0.15s;
+
+	&:hover {
+		background-color: @assistant_color_dark;
+	}
+
+	&:disabled {
+		background-color: #c7d2fe;
+		cursor: not-allowed;
+	}
+}
+
+.assistant_stop_button {
+	background-color: #dc2626;
+
+	&:hover {
+		background-color: #b91c1c;
+	}
+}
+
+// menu button (entry point in the top menu)
+.ai_assistant_button {
+	width: 1.4rem;
+	min-height: var(--menu_heigth);
+	background-image: url('../img/ai-assistant.svg');
+	background-repeat: no-repeat;
+	background-size: contain;
+	background-position: center;
+	cursor: pointer;
+	opacity: 0.85;
+	transition: opacity 0.15s;
+
+	&:hover {
+		opacity: 1;
+	}
+
+	&:active {
+		opacity: 0.5;
+	}
+}

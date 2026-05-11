@@ -8,7 +8,11 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #7f75e0;
+:root {
+	--tool_lang: #7f75e0;
+	--tool_lang_border: #584bd7;
+}
+@tool_color : var(--tool_lang);
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_lang {
@@ -187,7 +191,7 @@
 
 				.button_automatic_translation {
 					background-color: @tool_color;
-					border-color: darken(@tool_color, 10%);
+					border-color: var(--tool_lang_border);
 				}
 
 				>select {

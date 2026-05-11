@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #be0f1d;
+:root {
+	--tool_propagate_component_data: #be0f1d;
+}
+@tool_color: var(--tool_propagate_component_data);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions

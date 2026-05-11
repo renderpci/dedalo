@@ -5,7 +5,10 @@
 */
 
 // local vars
-@tool_color : #7859ae;
+:root {
+	--tool_lang_multi: #7859ae;
+}
+@tool_color : var(--tool_lang_multi);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions

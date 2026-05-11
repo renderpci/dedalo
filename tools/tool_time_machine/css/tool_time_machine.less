@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color: #f78a1c;
+:root {
+	--tool_time_machine: #f78a1c;
+}
+@tool_color: var(--tool_time_machine);
 
 // wrapper_tool
 .wrapper_tool.tool_time_machine {

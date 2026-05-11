@@ -6,7 +6,11 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_color: #cc2936; // blue
+:root {
+	--tool_import_zotero: #cc2936;
+	--tool_import_zotero_border: #bf2633;
+}
+@tool_color: var(--tool_import_zotero);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -197,7 +201,7 @@
 				padding-left: 1.5em;
 				padding-right: 1.5em;
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 3%);
+				border-color: var(--tool_import_zotero_border);
 			}
 		}
 	}//end content_data

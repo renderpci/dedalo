@@ -7,7 +7,11 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_color: #794960;
+:root {
+	--tool_pdf_extractor: #794960;
+	--tool_pdf_extractor_border: #6f4358;
+}
+@tool_color: var(--tool_pdf_extractor);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -51,7 +55,7 @@
 
 		>.button_submit {
 			background-color: @tool_color;
-			border-color: darken(@tool_color, 3%);
+			border-color: var(--tool_pdf_extractor_border);
 
 			.icon {
 				margin-right: 0.5rem;
@@ -82,7 +86,7 @@
 
 		>.button_select {
 			background-color: @tool_color;
-			border-color: darken(@tool_color, 3%);
+			border-color: var(--tool_pdf_extractor_border);
 			color: @color_white;
 			margin-left: calc(50% - 5rem);
 			margin-top: 1.5rem;

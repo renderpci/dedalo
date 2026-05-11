@@ -1,0 +1,479 @@
+{
+  "label": "Asistente de IA",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd201": {
+      "inf": "modified_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 5,
+              "hour": 12,
+              "time": 0,
+              "year": 2026,
+              "month": 5,
+              "minute": 0,
+              "second": 0
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-eng": [
+          "<p>AI Assistant powered by a local language model. Search records, navigate the ontology, and perform actions using natural language.</p>"
+        ],
+        "lg-spa": [
+          "<p>Asistente de IA impulsado por un modelo de lenguaje local. Buscar registros, navegar la ontología y realizar acciones usando lenguaje natural.</p>"
+        ],
+        "lg-cat": [
+          "<p>Assistent d'IA impulsat per un model de llenguatge local. Cercar registres, navegar l'ontologia i realitzar accions usant llenguatge natural.</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-eng": [
+          "AI Assistant"
+        ],
+        "lg-spa": [
+          "Asistente de IA"
+        ],
+        "lg-cat": [
+          "Assistent d'IA"
+        ],
+        "lg-ita": [
+          "Assistente IA"
+        ],
+        "lg-deu": [
+          "KI-Assistent"
+        ],
+        "lg-fra": [
+          "Assistant IA"
+        ],
+        "lg-por": [
+          "Assistente de IA"
+        ],
+        "lg-ell": [
+          "Βοηθός IA"
+        ],
+        "lg-nep": [
+          "AI सहायक"
+        ],
+        "lg-eus": [
+          "IA laguntzailea"
+        ],
+        "lg-ara": [
+          "مساعد الذكاء الاصطناعي"
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_assistant"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "1.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "7.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "modal",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "send",
+              "value": "Send"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "send",
+              "value": "Enviar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "send",
+              "value": "Enviar"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "send",
+              "value": "Invia"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "send",
+              "value": "Senden"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "send",
+              "value": "Envoyer"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "thinking",
+              "value": "Thinking..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "thinking",
+              "value": "Pensando..."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "thinking",
+              "value": "Pensant..."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "thinking",
+              "value": "Pensando..."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "thinking",
+              "value": "Denke nach..."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "thinking",
+              "value": "Réflexion..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "calling_tool",
+              "value": "Calling tool..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "calling_tool",
+              "value": "Llamando herramienta..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "confirm_action",
+              "value": "Confirm action"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "confirm_action",
+              "value": "Confirmar acción"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "model_loading",
+              "value": "Loading model..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "model_loading",
+              "value": "Cargando modelo..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "no_webgpu",
+              "value": "WebGPU is not available. Using CPU fallback (slower)."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "no_webgpu",
+              "value": "WebGPU no disponible. Usando CPU (más lento)."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "new_conversation",
+              "value": "New conversation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "new_conversation",
+              "value": "Nueva conversación"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "connecting_mcp",
+              "value": "Connecting to Dédalo MCP server..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "connecting_mcp",
+              "value": "Conectando al servidor MCP de Dédalo..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "mcp_connected",
+              "value": "Connected. {n} tools available."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "mcp_connected",
+              "value": "Conectado. {n} herramientas disponibles."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "mcp_failed",
+              "value": "MCP connection failed:"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "mcp_failed",
+              "value": "Conexión MCP fallida:"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "model_ready",
+              "value": "Model ready. How can I help you?"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "model_ready",
+              "value": "Modelo listo. ¿En qué puedo ayudarte?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "model_failed",
+              "value": "Model load failed:"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "model_failed",
+              "value": "Carga del modelo fallida:"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "generation_stopped",
+              "value": "Generation stopped."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "generation_stopped",
+              "value": "Generación detenida."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "stop",
+              "value": "Stop"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "stop",
+              "value": "Detener"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "history",
+              "value": "History"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "history",
+              "value": "Historial"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "copy",
+              "value": "Copy"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "copy",
+              "value": "Copiar"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "delete_thread",
+              "value": "Delete conversation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "delete_thread",
+              "value": "Eliminar conversación"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "ask_placeholder",
+              "value": "Ask something..."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "ask_placeholder",
+              "value": "Pregunta algo..."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "denied",
+              "value": "User denied this action."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "denied",
+              "value": "El usuario denegó esta acción."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "settings",
+              "value": "Settings"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "settings",
+              "value": "Configuración"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "no_threads",
+              "value": "No saved conversations"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "no_threads",
+              "value": "Sin conversaciones guardadas"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "new_conversation_started",
+              "value": "New conversation started."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "new_conversation_started",
+              "value": "Nueva conversación iniciada."
+            }
+          ]
+        ]
+      }
+    },
+    "dd1633": {
+      "inf": "Default configuration [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "engine": {
+                "value": [
+                  {
+                    "name": "local",
+                    "type": "browser",
+                    "label": "Local transcriber"
+                  }
+                ],
+                "client": true
+              },
+            "models": {
+              "client": true,
+              "value": [
+                {
+                  "model_id": "onnx-community/Qwen3.5-0.8B-ONNX",
+                  "label": "Qwen3.5 0.8B",
+                  "dtype": "q4f16",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none", "low", "high"],
+                  "client": true
+                },
+                {
+                  "model_id": "onnx-community/gemma-4-E2B-it-ONNX",
+                  "label": "Gemma 4 E2B-it",
+                  "dtype": "q4f16",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none"],
+                  "client": true
+                },
+                {
+                  "model_id": "onnx-community/Qwen3-0.6B-ONNX",
+                  "label": "Qwen3 0.6B",
+                  "dtype": "q4",
+                  "device": "webgpu",
+                  "fallback_device": "wasm",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none", "low", "high"],
+                  "client": true,
+                  "default":true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
+    }
+  },
+  "section_id": null,
+  "created_date": "2026-05-05 00:00:00",
+  "section_tipo": "dd1340",
+  "modified_date": "2026-05-05 00:00:00",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": 1
+}

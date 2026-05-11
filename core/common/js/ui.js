@@ -2179,16 +2179,18 @@ export const ui = {
 						}
 						event_manager.subscribe('modal_close', modal_close_handler)
 
-					modal_container._showModalBig();
+					modal_container.open('big');
+					modal_container.dataset.size = 'big';
 					break;
 				}
 				case 'small' :
-					modal_container._showModalSmall();
+					modal_container.open('small');
+					modal_container.dataset.size = 'small';
 					break;
 
 				case 'normal' :
 				default :
-					modal_container._showModal();
+					modal_container.open('normal');
 					break;
 			}
 

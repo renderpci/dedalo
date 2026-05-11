@@ -261,7 +261,7 @@ const get_content_value = (key, current_value, self) => {
 				// Show error in UI
 				content_value.textContent = `Error loading JSON editor: ${error.message}`;
 				content_value.style.padding = '1rem';
-				content_value.style.color = 'red';
+				content_value.style.color = 'var(--color_danger)';
 			}
 		}//end load_editor
 

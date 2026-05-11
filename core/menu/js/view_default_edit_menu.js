@@ -12,6 +12,8 @@
 	import {render_section_label} from './render_menu.js'
 	import * as menu_tree from './render_menu_tree.js'
 	import * as menu_mobile from './render_menu_mobile.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {toggle_theme} from '../../page/js/theme.js'
 
 
 
@@ -299,6 +301,62 @@ const get_content_data_edit = function(self) {
 			class_name		: 'menu_spacer top_item',
 			parent			: fragment
 		})
+
+	// theme toggle
+		const theme_toggle = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'theme_toggle top_item',
+			title			: get_label.theme_toggle || 'Toggle dark mode',
+			parent			: fragment
+		})
+		theme_toggle.tabIndex = 0
+		theme_toggle.setAttribute('role', 'button')
+		theme_toggle.addEventListener('click', () => { toggle_theme() })
+		theme_toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle_theme() })
+
+	// ai_assistant button
+		const ai_assistant_button = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'ai_assistant_button top_item',
+			title			: get_label.ai_assistant || 'AI Assistant',
+			parent			: fragment
+		})
+		ai_assistant_button.tabIndex = 0
+		ai_assistant_button.setAttribute('role', 'button')
+		// cache for assistant tool context
+			let assistant_tool_context = null
+		const ai_assistant_click_handler = async (e) => {
+			e.stopPropagation()
+			try {
+				// fetch user tools from server (first call only, then cached)
+					if (!assistant_tool_context) {
+						const api_response = await data_manager.request({
+							body : {
+								action	: 'user_tools',
+								dd_api	: 'dd_tools_api',
+								options	: {
+									ar_requested_tools : ['tool_assistant']
+								}
+							}
+						})
+						if (api_response.result && Array.isArray(api_response.result)) {
+							assistant_tool_context = api_response.result.find(t => t.name === 'tool_assistant') || false
+						}
+					}
+				// if tool not found, user doesn't have permission
+					if (!assistant_tool_context) return
+				// open the tool modal directly
+					const { open_tool } = await import('../../../tools/tool_common/js/tool_common.js')
+					open_tool({
+						tool_context	: assistant_tool_context,
+						caller			: self
+					})
+			} catch (err) {
+				console.error('[ai_assistant_click_handler]', err)
+			}
+		}
+		ai_assistant_button.addEventListener('click', ai_assistant_click_handler)
+		ai_assistant_button.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') ai_assistant_click_handler(e) })
 
 	// section label container
 		const section_label_container = ui.create_dom_element({

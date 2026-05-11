@@ -220,7 +220,7 @@ const get_graph = async function(options) {
 	const width		= size.width;
 	const height	= size.height;
 
-	const default_fill_color = '#dddddd';
+	const default_fill_color = 'var(--color_grey_13)';
 
 	// load lib files
 	// load files only when is really necessary
@@ -384,7 +384,7 @@ const get_graph = async function(options) {
 		// the user can drop new thing (people, entity, mint,...) in the node
 		// when user drop a thing, create new nexus section, the node will be source and the dropped thing will be the target
 		node.append("circle")
-			.attr("stroke", "#ffffff") // a stroke around the circle, white as background
+			.attr("stroke", "var(--color_white)") // a stroke around the circle, white as background
 			.attr("stroke-width", 1.5) // a tiny stroke use to "cut" the link path
 			.attr("r", 10) // fixed radius, if it change, change the r in the "tick" function
 			.attr("fill", d => (d.value) ? d.color : default_fill_color) // use different color for every section, if the value is empty, use gray

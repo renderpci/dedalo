@@ -380,7 +380,7 @@
 				// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 				overflow: initial; // !important
 				&:not(.hilite_element) {
-					background-color: lighten(@color_orange_dedalo, 45.1%);
+					background-color: @color_orange_light;
 				}
 
 				.show_on_active {
@@ -572,12 +572,11 @@
 		.header {
 			display: flex;
 			padding: 1rem;
-			background-color: @color_orange_dedalo;
-			color: @color_white ;
+			background-color: var(--modal_header_bg, @color_orange_dedalo);
+			color: var(--modal_header_color, @color_white);
 			font-weight: normal;
 			z-index: 2;
-			// shadow like menu
-			box-shadow: 0 2px 3px @color_grey_10;
+			box-shadow: var(--modal_header_shadow, 0 2px 3px @color_grey_10);
 
 			&.label, &.content, >div.label, >span.label {
 				font-size: 1.4em;
@@ -609,7 +608,7 @@
 				width: 100%;
 
 				.close_modal {
-					color: @color_black;
+					color: var(--modal_btn_hover_color, @color_black);
 				}
 				.label {
 					width: calc(100% - 1rem);
