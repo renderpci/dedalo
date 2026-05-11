@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #6fa7cd;
+:root {
+	--tool_qr: #6fa7cd;
+}
+@tool_color : var(--tool_qr);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
