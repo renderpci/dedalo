@@ -226,7 +226,7 @@ if (typeof content !== 'undefined') {
 	}
 
 	create_group_section('generic', 'generic', list_of_test, 'generic')
-	create_group_section('lifecycle', 'generic', livecycle_detail, 'generic')
+	create_group_section('life-cycle', 'generic', livecycle_detail, 'generic')
 	create_group_section('components', 'component', elements, 'component')
 
 	update_global_stats()

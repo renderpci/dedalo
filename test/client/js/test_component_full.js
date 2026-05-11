@@ -35,7 +35,7 @@ const model		= url_vars.model
 * @return promise
 * 	resolve element instance
 */
-async function make_element_test(options) {
+function make_element_test(options) {
 
 	// options
 		const element		= options.element
@@ -130,7 +130,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -159,7 +159,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -208,7 +208,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -263,7 +263,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -318,7 +318,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -374,7 +374,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -433,7 +433,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -492,7 +492,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -551,7 +551,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
@@ -613,7 +613,7 @@ async function make_element_test(options) {
 		const name			= `${element.model} ${mode}-${view}-${permissions}`
 		describe(name, function() {
 		it(`${element.model.toUpperCase()} ${name}`, async function() {
-		await make_element_test({
+		make_element_test({
 			mode		: mode,
 			view		: view,
 			permissions	: permissions,
