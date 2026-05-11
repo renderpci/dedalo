@@ -8,7 +8,12 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : @color_black;
+:root {
+	--tool_tc: #000000;
+	--tool_tc_border: #000000;
+	--tool_tc_border_strong: #000000;
+}
+@tool_color : var(--tool_tc);
 @text_color : #00e801;
 
 // wrapper_tool
@@ -50,10 +55,10 @@
 				color: @text_color;
 				text-transform: capitalize;
 				background-color: @tool_color;
-				border-color: darken(@tool_color, 5%);
+				border-color: var(--tool_tc_border);
 
 				&:focus {
-					border: 1.2px solid darken(@tool_color, 8%) !important;
+					border: 1.2px solid var(--tool_tc_border_strong) !important;
 					opacity: 0.7;
 				}
 			}
