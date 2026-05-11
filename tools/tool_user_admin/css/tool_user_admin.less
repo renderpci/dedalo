@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@tool_color : #a22b29;
+:root {
+	--tool_user_admin: #a22b29;
+}
+@tool_color : var(--tool_user_admin);
 
 // tool wrapper. Encapsulate all tool content to prevent core collisions
 .wrapper_tool.tool_user_admin {
