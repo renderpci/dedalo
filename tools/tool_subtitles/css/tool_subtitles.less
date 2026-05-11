@@ -8,7 +8,10 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@tool_color : #fd7f26; // @color_orange_dedalo;
+:root {
+	--tool_subtitles: #fd7f26;
+}
+	@tool_color : var(--tool_subtitles);
 
 
 // column_id (section_tool list)
