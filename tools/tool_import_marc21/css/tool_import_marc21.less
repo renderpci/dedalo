@@ -6,7 +6,11 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_color: #63adf8; // blue
+:root {
+	--tool_import_marc21: #63adf8;
+	--tool_import_marc21_border: #54a5f7;
+}
+@tool_color: var(--tool_import_marc21);
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -114,7 +118,7 @@
 					padding-left: 1.5em;
 					padding-right: 1.5em;
 					background-color: @tool_color;
-					border-color: darken(@tool_color, 3%);
+					border-color: var(--tool_import_marc21_border);
 				}
 			}
 
