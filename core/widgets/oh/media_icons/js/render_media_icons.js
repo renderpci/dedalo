@@ -292,7 +292,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 			inner_html		: data_tc.value || '',
 			parent			: li
 		})
-	
+
 
 	return li
 }//end get_value_element

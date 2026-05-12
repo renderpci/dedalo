@@ -58,10 +58,12 @@ class media_icons extends widget_common {
 							$source_section_tipo
 						);
 						$source_data = $source_component->get_data();
-						// locator will use to get the label of the components that has the information, only 1 locator is necessary
-						$locator = $source_data[0] ?? null;
-						if($locator){
-							$ar_locator[] = $locator;
+						// add all locators from the source component data
+						// each locator represents a separate record (e.g. audiovisual) that needs its own icon row
+						foreach ($source_data as $locator) {
+							if($locator){
+								$ar_locator[] = $locator;
+							}
 						}
 					}
 					break;
@@ -174,15 +176,7 @@ class media_icons extends widget_common {
 									// get the config for this tool, and get the ddo_map
 									$properties			= $section_tool->get_properties();
 									$tool_config		= $properties->tool_config->{$tool_name} ?? false;
-									$ar_tool_ddo_map	= $tool_config->ddo_map;
 
-									// add the section_id to the ddo_map, only when the section_id is for components in audiovisual section. (ts doesn't has section_id)
-									for ($i=0; $i < sizeof($ar_tool_ddo_map); $i++) {
-										$current_ddo = $ar_tool_ddo_map[$i];
-										if($current_ddo->section_id==='self'){
-											$current_ddo->section_id = $locator->section_id;
-										}
-									}
 									// build the tool_context
 										if ($tool_name) {
 											$user_tools = tool_common::get_user_tools( logged_user_id() );
@@ -195,6 +189,15 @@ class media_icons extends widget_common {
 													, logger::ERROR
 												);
 											}else{
+												if (is_object($tool_config) && isset($tool_config->ddo_map)) {
+													$ar_tool_ddo_map = $tool_config->ddo_map;
+													for ($i=0; $i < sizeof($ar_tool_ddo_map); $i++) {
+														$current_ddo = $ar_tool_ddo_map[$i];
+														if($current_ddo->section_id==='self'){
+															$current_ddo->section_id = $locator->section_id;
+														}
+													}
+												}
 												$tool_context = tool_common::create_tool_simple_context($tool_info, $tool_config);
 											}
 										}
