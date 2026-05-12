@@ -584,9 +584,10 @@ function curl_request(object $options) : object {
 
 /**
 * START_TIME
-* Returns the system's high resolution time, counted from an arbitrary point in time.
-* The delivered timestamp is monotonic and can not be adjusted.
-* @return float $time (nanoseconds)
+* Returns the system's high-resolution monotonic time in nanoseconds.
+* The timestamp is counted from an arbitrary point and cannot be adjusted.
+*
+* @return int Nanoseconds since an arbitrary epoch.
 */
 function start_time() : int {
 
@@ -597,6 +598,7 @@ function start_time() : int {
 
 /**
 * EXEC_TIME_UNIT
+* Calculate elapsed time from a start timestamp and convert it to the requested unit.
 * @param float $start
 * 	time in nanoseconds from function start_time()
 * @param string $unit = 'ms' (milliseconds)
@@ -637,10 +639,12 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : float {
 
 /**
 * EXEC_TIME_UNIT_AUTO
+* Calculate elapsed time from start and automatically select the most appropriate unit.
+* Returns a human-readable string with the time value and unit (ms, sec, min, hour, or day).
 * @param float $start
 * 	time expressed in days, hours, minutes, seconds or milliseconds from function start_time()
 * @return string $result
-* 	as '3.521 hour'
+* 	E.g. '3.521 hour'
 */
 function exec_time_unit_auto(float $start) : string {
 
@@ -802,9 +806,9 @@ function get_dir_files( string $dir, array $ext, ?callable $processor=null ) : a
 * @param string $path
 * @param array|null $allowedExtensions = null
 * @param array $ar_exclude = ['/acc/','/backups/']
-* @return int|date
-*/
-function get_last_modification_date( string $path, ?array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/'] ) {
+* @return int Timestamp of last modification, or 0 if path does not exist.
+ */
+function get_last_modification_date( string $path, ?array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/'] ) : int {
 
 	// file does not exists case
 		if (!file_exists($path)) {
@@ -850,10 +854,15 @@ function get_last_modification_date( string $path, ?array $allowedExtensions=nul
 
 /**
 * GET_LAST_MODIFIED_FILE
-* @param string $path
-* @param array $allowed_extensions
-* @param callable|null $fn_validate = null
-* @return string|null $last_modified_file
+* Recursively searches a directory tree to find the most recently modified file matching specified criteria.
+*
+* This function traverses all subdirectories within the given path, filters files by extension,
+* optionally applies a custom validation callback, and returns the file with the latest modification timestamp.
+*
+* @param string $path The directory path to search recursively. Must be a valid directory.
+* @param array $allowed_extensions Array of file extensions to include (e.g., ['php', 'json']). Files with other extensions are skipped.
+* @param callable|null $fn_validate Optional callback function for additional file validation. Receives file path as argument, must return false to skip file.
+* @return string|null Full path to the most recently modified file, or null if no matching files found or path is invalid.
 */
 function get_last_modified_file( string $path, array $allowed_extensions, ?callable $fn_validate=null ) : ?string {
 
@@ -975,7 +984,7 @@ function dedalo_encrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 * @param string $key = DEDALO_INFORMATION
 * @return mixed Decoded value, or empty string on failure (legacy contract).
 */
-function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) {
+function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) : mixed {
 
 	if (!function_exists('openssl_decrypt')) {
 		throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
@@ -1102,7 +1111,7 @@ function dedalo_encrypt_v2(string $plaintext, ?string $key=null) : string {
 * @param string|null $key
 * @return mixed The decoded value, or `false` on failure.
 */
-function dedalo_decrypt_v2(string $payload, ?string $key=null) {
+function dedalo_decrypt_v2(string $payload, ?string $key=null) : mixed {
 
 	if (strncmp($payload, 'v2:', 3) !== 0) {
 		return false;
@@ -1253,11 +1262,11 @@ function dedalo_decrypt_auto(string $payload, ?string $key=null) {
 /**
 * IS_SERIALIZED
 * Check value to find if it was serialized.
-* @param string $data   Value to check to see if was serialized.
+* @param string $data Value to check to see if was serialized.
 * @param bool $strict Optional. Whether to be strict about the end of the string. Default true.
 * @return bool False if not serialized and true if it was.
  */
-function is_serialized( $data, $strict = true): bool {
+function is_serialized( string $data, bool $strict = true): bool {
 	// If it isn't a string, it isn't serialized.
 	if ( ! is_string( $data ) ) {
 		return false;
@@ -1328,11 +1337,11 @@ function is_serialized( $data, $strict = true): bool {
 *   A list of keys to ignore.
 * @param $path
 *   The intermediate path. Internal use only.
-* @return array|boolean
+* @return array|false
 *   The path to the parent of the first occurrence of the key, represented as an array where entries are consecutive keys.
 * 	by http://thereisamoduleforthat.com/content/dealing-deep-arrays-php
 */
-function array_key_path(string $needle, array $haystack, array $forbidden=array(), array $path=array()) {
+function array_key_path(string $needle, array $haystack, array $forbidden=array(), array $path=array()) : array|false {
 
 	foreach ($haystack as $key => $val) {
 		if (in_array($key, $forbidden)) {
@@ -1567,6 +1576,15 @@ function array_get_by_key(mixed $array, string|int $key) : array {
 
 	return $results;
 }
+/**
+ * ARRAY_GET_BY_KEY_R
+ * Recursively search for a key in a nested array and collect all values found.
+ *
+ * @param mixed $array Array or value to search through.
+ * @param string|int $key Key to look for.
+ * @param array &$results Reference to array where matching values are collected.
+ * @return void
+ */
 function array_get_by_key_r(mixed $array, $key, &$results) {
 	if (!is_array($array)) {
 		return;
@@ -1583,14 +1601,18 @@ function array_get_by_key_r(mixed $array, $key, &$results) {
 
 
 
-// decbin32
-// In order to simplify working with IP addresses (in binary) and their
-// netmasks, it is easier to ensure that the binary strings are padded
-// with zeros out to 32 characters - IP addresses are 32 bit numbers
+/**
+ * DECBIN32
+ * Pad a decimal binary string to 32 characters.
+ * Useful for working with IP addresses and netmasks in binary format.
+ *
+ * @param int $dec Decimal number to convert.
+ * @return string 32-character zero-padded binary string.
+ */
 function decbin32(int $dec) : string {
 
 	return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
-}
+}//end decbin32
 
 
 
@@ -1730,7 +1752,15 @@ function dd_memory_usage() : string {
 
 /**
 * APP_LANG_TO_TLD2
-* Use only for fast application lang tld resolve
+* (Use only for fast application lang tld resolve)
+* Converts Dédalo language codes to 2-letter top-level domain (TLD) codes.
+*
+* This function maps internal Dédalo language identifiers (e.g., 'lg-spa', 'lg-eng')
+* to their corresponding 2-letter TLD codes (e.g., 'es', 'en'). Used for fast language
+* to TLD resolution in application contexts.
+*
+* @param string $lang The Dédalo language code (e.g., 'lg-spa', 'lg-eng', 'lg-cat').
+* @return string The 2-letter TLD code. Defaults to 'es' for unknown languages.
 */
 function app_lang_to_tld2(string $lang) : string {
 
@@ -1760,6 +1790,16 @@ function app_lang_to_tld2(string $lang) : string {
 
 /**
 * STR_LREPLACE
+* Replaces the last occurrence of a search string within a subject string.
+*
+* This function finds the position of the last occurrence of the search string
+* and replaces it with the replacement string. If the search string is not found,
+* the subject is returned unchanged.
+*
+* @param string $search The string to search for and replace.
+* @param string $replace The replacement string.
+* @param string $subject The string to perform the replacement on.
+* @return string The modified string with the last occurrence replaced, or the original if not found.
 */
 function str_lreplace(string $search, string $replace, string $subject) : string {
 
@@ -1814,7 +1854,15 @@ function get_request_var(string $var_name) : mixed {
 
 /**
 * SAFE_XSS
-* @return mixed $value
+* Sanitizes input data to prevent XSS attacks.
+*
+* This function handles both plain strings and JSON-encoded data. For JSON strings,
+* it decodes, recursively sanitizes the structure, and re-encodes. For plain strings,
+* it strips HTML tags (allowing only <br>, <strong>, <em>) and applies htmlspecialchars.
+* Uses json_last_error() to correctly identify JSON data including falsy values.
+*
+* @param mixed $value The input value to sanitize (string, object, array, or other types).
+* @return mixed The sanitized value. Strings are escaped, JSON is decoded/sanitized/re-encoded.
 */
 function safe_xss(mixed $value) : mixed {
 
@@ -2359,8 +2407,15 @@ function format_size_units(int $bytes) : string {
 
 /**
 * ENCODEURICOMPONENT
-* @param string $str
-* @return string
+* PHP implementation of JavaScript's encodeURIComponent function.
+*
+* Encodes a URI component by escaping special characters, but preserves certain
+* characters that JavaScript's encodeURIComponent does not encode (!, *, ', (, )).
+* Uses rawurlencode as base and reverts specific encoded characters to match
+* JavaScript behavior for cross-language compatibility.
+*
+* @param string $str The string to encode as a URI component.
+* @return string The encoded string with special characters escaped, except ! * ' ( ).
 */
 function encodeURIComponent(string $str) : string {
 	$revert = array('%21'=>'!', '%2A'=>'*', '%27'=>"'", '%28'=>'(', '%29'=>')');
@@ -2485,9 +2540,16 @@ function get_dedalo_version() : array {
 
 
 /**
-* CHECK_BASIC_SYSTEM
-* @return object $response
-*/
+ * CHECK_BASIC_SYSTEM
+ * Verify basic system prerequisites before running Dédalo.
+ * Checks that JS lang files exist (generating them if missing),
+ * and ensures the `dd_ontology` table is installed (running pre_update_version if needed).
+ *
+ * @return object stdClass with properties:
+ *         - bool   result  True if all checks pass, false on failure.
+ *         - string msg     Human-readable status message.
+ *         - array  errors  List of error strings when result is false.
+ */
 function check_basic_system() : object {
 
 	$response = new stdClass();
@@ -2605,6 +2667,23 @@ if (!function_exists('array_find')) {
 
 
 /**
+* ARRAY_FIND_KEY
+* PHP 8.4 array_find_key replacement for compatibility with PHP < 8.4
+*/
+if (!function_exists('array_find_key')) {
+	function array_find_key($array, $callback) {
+	    foreach ($array as $key => $value) {
+	        if ($callback($value, $key)) {
+	            return $key;
+	        }
+	    }
+	    return null;
+	}
+}//end array_find_key
+
+
+
+/**
 * GET_OBJECT_PROPERTY
 * Extract value from a object using dynamic path array
 * @param object $object
@@ -2639,7 +2718,7 @@ function get_object_property(object $object, array $ar_property_path) : mixed {
 * @param string $constant_name
 * @return mixed $constant_value
 */
-function get_legacy_constant_value(string $constant_name) {
+function get_legacy_constant_value(string $constant_name) : mixed {
 
 	// check constant exists
 		if(!defined($constant_name)) {
@@ -2783,25 +2862,6 @@ function callback( callable $fn ) {
 
 
 /**
-* BUILD_LINK
-* @param string $name
-* @param array $arguments
-* @return string $link
-*/
-function build_link(string $name, array $arguments) : string {
-
-	$url	= $arguments['url'] ?? null;
-	$css	= $arguments['css'] ?? '';
-	$target	= $arguments['target'] ?? '_blank';
-
-	$link = "<a href=\"$url\" target=\"$target\" class=\"$css\">$name</a>";
-
-	return $link;
-}//end build_link
-
-
-
-/**
 * IS_EMPTY
 * Check if data given is considered empty
 * This prevents pseudo-empty values like '<p></p>' or similar
@@ -2852,9 +2912,14 @@ function is_empty(mixed $data) : bool {
 
 /**
 * GET_FILE_EXTENSION
-* @param string $name
-* @param bool $lowercase = true
-* @return string $extension
+* Extracts the file extension from a filename or path.
+*
+* Uses pathinfo() to parse the filename and extract the extension.
+* Optionally converts the extension to lowercase for consistent comparison.
+*
+* @param string $name The filename or path to extract the extension from.
+* @param bool $lowercase Whether to convert the extension to lowercase (default: true).
+* @return string The file extension without the dot, or empty string if no extension found.
 */
 function get_file_extension(string $name, bool $lowercase=true) : string {
 
@@ -3307,7 +3372,7 @@ function check_url( string $url ) : bool {
 * Check if Ontology (dd_ontology) is reachable
 * @return bool
 */
-function is_ontology_available() {
+function is_ontology_available() : bool {
 
 	try {
 
@@ -3349,23 +3414,6 @@ function get_relation_name( ?string $tipo ) : string {
 		default:		return 'Not defined';
 	}
  }//end get_relation_name
-
-
-
-/**
-* ARRAY_FIND_KEY
-* PHP 8.4 array_find_key replacement for compatibility with PHP < 8.4
-*/
-if (!function_exists('array_find_key')) {
-	function array_find_key($array, $callback) {
-	    foreach ($array as $key => $value) {
-	        if ($callback($value, $key)) {
-	            return $key;
-	        }
-	    }
-	    return null;
-	}
-}//end array_find_key
 
 
 
