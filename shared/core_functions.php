@@ -3451,5 +3451,26 @@ function debug_prepared_statement( string $sql_template, array $params, $connect
         $debug_sql = str_replace('$' . ($i + 1), (string)$value, $debug_sql);
     }
 
+    $debug_sql = clean_sql($debug_sql);
+
     return $debug_sql;
 }//end debug_prepared_statement
+
+
+
+/**
+ * CLEAN_SQL
+ * Normalizes SQL string formatting by removing leading whitespace from each line,
+ * trimming trailing whitespace, and discarding empty lines.
+ *
+ * @param string $sql Raw SQL string potentially containing extra indentation and blank lines.
+ * @return string Cleaned SQL string with consistent formatting.
+ */
+function clean_sql(string $sql): string {
+    $lines = explode("\n", $sql);
+
+    $lines = array_map(fn($line) => rtrim(preg_replace('/^[\t ]+/', '', $line)), $lines);
+    $lines = array_filter($lines, fn($line) => $line !== '');
+
+    return implode("\n", $lines);
+}//end clean_sql
