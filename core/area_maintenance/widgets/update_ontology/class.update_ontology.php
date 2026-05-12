@@ -51,17 +51,20 @@ class update_ontology {
 		// check ontology servers
 			$ontology_servers = [];
 			foreach ($servers as $current_server) {
+
 				$server = (object)$current_server;
+
 				$server_ready			= ontology_data_io::check_remote_server( $server );
 				$server->msg			= $server_ready->msg;
 				$server->errors			= $server_ready->errors;
 				$server->response_code	= $server_ready->code;
 				$server->result			= $server_ready->result;
-				$server->code			= $server->code;
-				if($server->code === 'localhost' && $server->result!==false){
+
+				if($server->code === 'localhost' && $server->result !== false){
 					$server->result->result = true;
 				}
-				$ontology_servers[]		= $server;
+
+				$ontology_servers[]	= $server;
 			}
 
 		// tld list
