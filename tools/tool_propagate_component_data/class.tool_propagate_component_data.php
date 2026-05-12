@@ -214,7 +214,7 @@ class tool_propagate_component_data extends tool_common {
 					throw new Exception("Failed to create bulk process record");
 				}
 
-				// Save the process name into the process section
+				// Save the process label into the process section
 				$bulk_process_label_model = ontology_node::get_model_by_tipo(DEDALO_BULK_PROCESS_LABEL_TIPO, true);
 				$bulk_process_label_component = component_common::get_instance(
 					$bulk_process_label_model, // expected 'component_input_text'
@@ -231,7 +231,7 @@ class tool_propagate_component_data extends tool_common {
 
 				$data_label = [(object)[
 					'lang' => DEDALO_DATA_NOLAN,
-					'value' => $bulk_process_label ?? 'Propagate ' . $action . ' to ' . $component_label
+					'value' => $bulk_process_label ?? ('Propagate ' . $action . ' to ' . $component_label)
 				]];
 				$bulk_process_label_component->set_data($data_label);
 				$bulk_process_label_component->save();
