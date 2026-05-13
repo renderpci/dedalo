@@ -32,6 +32,7 @@ abstract class dd_ontology_db_manager {
 		'model_tipo'		=> true,
 		'is_model'			=> true,
 		'is_translatable'	=> true,
+		'is_main'			=> true,
 		'propiedades'		=> true
 	];
 
@@ -50,7 +51,8 @@ abstract class dd_ontology_db_manager {
 	// bool columns to parse
 	public static array $boolean_columns = [
 		'is_model'			=> true,
-		'is_translatable'	=> true
+		'is_translatable'	=> true,
+		'is_main'			=> true
 	];
 
 	// load_cache
