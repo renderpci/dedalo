@@ -1753,5 +1753,12 @@
 		"typology": 1,
 		"active_in_thesaurus": true,
 		"install_checked_default": false
+	},
+	{
+		"tld": "scvis",
+		"label": "Visigothic epigraphy",
+		"typology": 7,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
 	}
 ]
