@@ -535,6 +535,7 @@ template {
   --color_input_focus: #3b87fd;
   --color_purple_light: #eae0f4;
   --color_purple: #a347a3;
+  --color_grey_blue: #bbbbbb;
   --color_ontology_css: #826b85;
   --color_ontology_rqo: #9d4a4a;
   --color_ontology_properties: #1b531f;
@@ -573,6 +574,7 @@ template {
   --select_bg: var(--color_grey_16);
   --select_fg: var(--color_grey_4);
   --select_outline: none;
+  --select_icon_url: url('../../themes/default/icons/select_arrows.svg');
   --toolbar_btn_hover_bg: var(--color_grey_11);
   --toolbar_btn_icon_filter: none;
   --modal_overlay_bg: rgba(0, 0, 0, 0.4);
@@ -673,6 +675,7 @@ template {
   --color_input_focus: #4a9eff;
   --color_purple_light: #2a2040;
   --color_purple: #c060c0;
+  --color_grey_blue: #4a5161;
   --color_ontology_css: #a080a5;
   --color_ontology_rqo: #c06060;
   --color_ontology_properties: #30a038;
@@ -746,13 +749,14 @@ template {
   --select_bg: #1f2227;
   --select_fg: #ffffff;
   --select_outline: none;
+  --select_icon_url: url('../../themes/default/icons/select_arrows_light.svg');
   --toolbar_btn_hover_bg: #9c9c9c;
   --toolbar_btn_icon_filter: invert(0.85);
   --modal_overlay_bg: rgba(0, 0, 0, 0.6);
   --modal_overlay_bg_weak: rgba(0, 0, 0, 0.2);
   --modal_content_bg: var(--color_grey_15);
   --modal_content_shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.4), 0 6px 20px 0 rgba(0, 0, 0, 0.35);
-  --modal_header_bg: var(--color_grey_4);
+  --modal_header_bg: var(--color_grey_blue);
   --modal_header_shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   --modal_header_color: var(--color_black);
   --modal_btn_color: var(--color_grey_4);
@@ -1193,6 +1197,11 @@ pre {
   transition: transform 0.26s ease-out;
   width: 1em;
 }
+@media (prefers-color-scheme: dark) {
+  .icon_arrow:after {
+    background-color: var(--color_grey_blue);
+  }
+}
 .icon_arrow.up:after {
   transform: rotate(180deg);
 }
@@ -1257,7 +1266,7 @@ select:focus,
 }
 select {
   width: auto;
-  background: url('../../themes/default/icons/select_arrows.svg');
+  background: var(--select_icon_url);
   background-color: var(--color_grey_16);
   background-repeat: no-repeat;
   background-position: 97%;
@@ -4907,8 +4916,8 @@ dd-modal .spinner_modal {
 dd-modal .header {
   display: flex;
   padding: 1rem;
-  background-color: var(--modal_header_bg, var(--color_orange_dedalo));
-  color: var(--modal_header_color, var(--color_white));
+  background-color: var(--modal_header_bg);
+  color: var(--modal_header_color);
   font-weight: normal;
   z-index: 2;
   box-shadow: var(--modal_header_shadow, 0 2px 3px var(--color_grey_10));
@@ -4917,7 +4926,7 @@ dd-modal .header.label,
 dd-modal .header.content,
 dd-modal .header > div.label,
 dd-modal .header > span.label {
-  font-size: 1.4em;
+  font-size: 1.35rem;
   line-height: 1.5rem;
   padding-right: 0.5em;
   text-overflow: ellipsis;
@@ -15962,7 +15971,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   position: absolute;
   width: 42px;
   height: 22px;
-  background-color: var(--color_white);
+  background-color: var(--checkbox_bg);
   border-radius: 11px;
   transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
   transition: transform 0.25s linear;

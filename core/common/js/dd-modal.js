@@ -1,10 +1,39 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global Promise, page_globals, SHOW_DEBUG, get_label */
-
+/**
+ * DDModal — Custom Element (<dd-modal>)
+ *
+ * A Web Component that provides a draggable, minimizable modal dialog.
+ * Uses Shadow DOM with named slots (header, body, footer) for content projection.
+ *
+ * Sizes (set via data-size attribute):
+ *   'normal' — centered, 80% width
+ *   'big'    — 97vw × 97vh, hides page content behind
+ *   'small'  — fit-content, max 32vw
+ *
+ * Features:
+ *   - Drag by header (pins CSS position to inline on first mousedown)
+ *   - Minimize to bottom strip (toggle with _ button)
+ *   - Close via × button, overlay click, or Escape key
+ *   - Unsaved-data check before close (via check_unsaved_data)
+ *   - Modal stack: window.modal_stack tracks open modals; Escape closes topmost
+ *   - Event: publishes 'modal_close' via event_manager on close
+ *
+ * Public API:
+ *   open(type)          — show modal ('normal'|'big'|'small')
+ *   close()             — async close (checks unsaved data)
+ *   get_modal_node()    — returns the .modal shadow element
+ *   get_modal_content() — returns the .modal-content shadow element
+ *   remove_miniModal()  — removes the minimize button
+ *
+ * Properties set externally by attach_to_modal:
+ *   on_close      : function — called after modal is hidden
+ *   publish_close : function — publishes 'modal_close' event
+ */
 
 
 // imports
-	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+import {check_unsaved_data} from '../../component_common/js/component_common.js'
 
 
 
@@ -150,6 +179,9 @@ class DDModal extends HTMLElement {
 				position: sticky;
 				top: 0;
 				z-index: 4;
+				background-color: var(--modal_header_bg, var(--color_orange_dedalo));
+				color: var(--modal_header_color, var(--color_white));
+				box-shadow: var(--modal_header_shadow, 0 2px 3px var(--color_grey_10));
 			}
 
 			.modal-body {
@@ -286,14 +318,28 @@ class DDModal extends HTMLElement {
 		}
 	}
 
+	/**
+	 * attributeChangedCallback
+	 * Observed attribute: data-size. Delegates to the appropriate _showModal* method
+	 * which adds visibility class and size-specific class to the shadow .modal element.
+	 */
 	attributeChangedCallback(name, oldVal, newVal) {
 		if (name === 'data-size' && this._modal) {
-			this._modal.classList.remove('modal_big', 'modal_small');
-			if (newVal === 'big') this._modal.classList.add('modal_big');
-			if (newVal === 'small') this._modal.classList.add('modal_small');
+			if (newVal === 'big') {
+				this._showModalBig();
+			} else if (newVal === 'small') {
+				this._showModalSmall();
+			} else {
+				this._showModal();
+			}
 		}
 	}
 
+	/**
+	 * _showModal
+	 * Shows the modal at normal size (80% width, centered via margin:auto).
+	 * Cleans up any leftover modal_big class from a previous size change.
+	 */
 	_showModal() {
 		this._modalVisible = true;
 		this._modal.classList.add('modal_show');
@@ -302,6 +348,11 @@ class DDModal extends HTMLElement {
 		}
 	}
 
+	/**
+	 * _showModalBig
+	 * Shows the modal at full size (97vw × 97vh).
+	 * Adjusts iframe padding if an iframe.fixed is present.
+	 */
 	_showModalBig() {
 		this._modalVisible = true;
 		this._modal.classList.add('modal_show');
@@ -315,6 +366,11 @@ class DDModal extends HTMLElement {
 		}
 	}
 
+	/**
+	 * _showModalSmall
+	 * Shows the modal at small size (fit-content, max 32vw).
+	 * Cleans up any leftover modal_big class.
+	 */
 	_showModalSmall() {
 		this._modalVisible = true;
 		this._modal.classList.add('modal_show');
@@ -400,15 +456,6 @@ class DDModal extends HTMLElement {
 			}
 		}
 
-		const header = this.querySelector("[slot='header']");
-		if (header) header.remove();
-
-		const body = this.querySelector("[slot='body']");
-		if (body) body.remove();
-
-		const footer = this.querySelector("[slot='footer']");
-		if (footer) footer.remove();
-
 		return true;
 	}
 
@@ -433,10 +480,29 @@ class DDModal extends HTMLElement {
 		return this.shadowRoot.querySelector(".modal-content");
 	}
 
+	/**
+	 * _onHeaderMousedown
+	 * Initiates modal dragging. On first drag, pins the CSS-centered position
+	 * to inline styles (position:absolute, margin:0) so the modal stays under
+	 * the cursor without jumping. Then records the offset between cursor and
+	 * the modal-content top-left corner for smooth tracking.
+	 */
 	_onHeaderMousedown(e) {
-		if (this.modal_content.classList.contains('center')) {
-			const modal_content_dimensions = this.modal_content.getBoundingClientRect();
-			this.modal_content.style.top = modal_content_dimensions.top + 'px';
+		// Pin current rendered position to inline styles before drag starts.
+		// Without this, the modal jumps because CSS positions it (margin: auto, top: 3.5vh)
+		// but the drag offset calc reads empty inline style.left/top as 0.
+		if (!this.modal_content.style.left || !this.modal_content.style.top) {
+			const rect = this.modal_content.getBoundingClientRect();
+			const parentRect = this.modal_content.parentElement.getBoundingClientRect();
+
+			// Pin current position
+			this.modal_content.style.left = (rect.left - parentRect.left) + 'px';
+			this.modal_content.style.top = (rect.top - parentRect.top) + 'px';
+
+			// Remove margins, centering and set absolute position to prevent jumps
+			// and ensure drag offsets are relative to the modal container.
+			this.modal_content.style.position = 'absolute';
+			this.modal_content.style.margin = '0';
 			this.modal_content.classList.remove('center');
 		}
 
@@ -449,51 +515,55 @@ class DDModal extends HTMLElement {
 			else if (clickedDragger === true && path[i].classList.contains('draggable')) {
 				this.drag_data.target = path[i];
 				this.drag_data.target.classList.add('dragging');
-				this.drag_data.x = e.clientX - this.drag_data.target.style.left.slice(0, -2);
-				this.drag_data.y = e.clientY - this.drag_data.target.style.top.slice(0, -2);
+				this.drag_data.x = e.clientX - (parseInt(this.drag_data.target.style.left, 10) || 0);
+				this.drag_data.y = e.clientY - (parseInt(this.drag_data.target.style.top, 10) || 0);
 
-				const compStyles		= window.getComputedStyle(this.drag_data.target);
-				this.drag_data.margin_left	= parseInt(compStyles.getPropertyValue('margin-left'));
-				this.drag_data.margin_top	= parseInt(compStyles.getPropertyValue('margin-top'));
+				const compStyles			= window.getComputedStyle(this.drag_data.target);
+				this.drag_data.margin_left	= parseInt(compStyles.getPropertyValue('margin-left')) || 0;
+				this.drag_data.margin_top	= parseInt(compStyles.getPropertyValue('margin-top')) || 0;
 
 				return;
 			}
 		}
 	}
 
+	/**
+	 * mousemove
+	 * Moves the dragged modal-content, clamped inside its parent bounds.
+	 */
 	mousemove(e) {
-		const self = window.modal_stack?.[window.modal_stack.length - 1];
-		if (!self || !self.drag_data || !self.drag_data.target) {
+		if (!this.drag_data || !this.drag_data.target) {
 			return;
 		}
 
-		self.drag_data.target.style.left	= e.clientX - self.drag_data.x + 'px';
-		self.drag_data.target.style.top		= e.clientY - self.drag_data.y + 'px';
+		this.drag_data.target.style.left	= e.clientX - this.drag_data.x + 'px';
+		this.drag_data.target.style.top		= e.clientY - this.drag_data.y + 'px';
 
-		const pRect		= self.drag_data.target.parentElement.getBoundingClientRect();
-		const tgtRect	= self.drag_data.target.getBoundingClientRect();
+		const pRect		= this.drag_data.target.parentElement.getBoundingClientRect();
+		const tgtRect	= this.drag_data.target.getBoundingClientRect();
 		if (tgtRect.left < pRect.left) {
-			self.drag_data.target.style.left = (0 - self.drag_data.margin_left) + 'px';
+			this.drag_data.target.style.left = (0 - this.drag_data.margin_left) + 'px';
 		}
 		if (tgtRect.top < pRect.top) {
-			self.drag_data.target.style.top = (0 - self.drag_data.margin_top) + 'px';
+			this.drag_data.target.style.top = (0 - this.drag_data.margin_top) + 'px';
 		}
 		if (tgtRect.right > pRect.right) {
-			self.drag_data.target.style.left = (pRect.width - tgtRect.width - self.drag_data.margin_left) + 'px';
+			this.drag_data.target.style.left = (pRect.width - tgtRect.width - this.drag_data.margin_left) + 'px';
 		}
 		if (tgtRect.bottom > pRect.bottom) {
-			self.drag_data.target.style.top = (pRect.height - tgtRect.height - self.drag_data.margin_top - 1) + 'px';
+			this.drag_data.target.style.top = (pRect.height - tgtRect.height - this.drag_data.margin_top - 1) + 'px';
 		}
 	}
 
+	/**
+	 * mouseup
+	 * Ends the drag, removes the dragging cursor class.
+	 */
 	mouseup(e) {
-		const self = window.modal_stack?.[window.modal_stack.length - 1];
-		if (!self) return;
-
-		if (self.drag_data.target) {
-			self.drag_data.target.classList.remove('dragging');
+		if (this.drag_data.target) {
+			this.drag_data.target.classList.remove('dragging');
 		}
-		self.drag_data.target = null;
+		this.drag_data.target = null;
 	}
 
 	remove_miniModal() {
@@ -502,6 +572,6 @@ class DDModal extends HTMLElement {
 	}
 }
 customElements.define('dd-modal', DDModal);
-}
+}//end if (typeof HTMLElement!=='undefined')
 
 // @license-end

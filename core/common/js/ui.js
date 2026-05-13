@@ -2019,32 +2019,43 @@ export const ui = {
 
 	/**
 	* ATTACH_TO_MODAL
-	* Insert content into a dd-modal box
-	* Generic point of rendering a modal. Used by components, sections, widgets and tools to display
-	* temporary information such as options, validation, confirmation dialogs, etc.
-	* It is desirable to use the generic options, but if you need to customize the modal,
-	* set styles in callback for safe implementation.
+	* Insert content into a dd-modal custom element (Web Component).
+	* Generic point for rendering modals across the application. Used by components,
+	* sections, widgets and tools to display temporary information such as options,
+	* validation, confirmation dialogs, etc.
+	*
+	* Lifecycle:
+	* 1. Creates a <dd-modal> element and appends it to modal_parent
+	* 2. Slots header/body/footer into the shadow DOM (blank hidden divs fill empty slots)
+	* 3. Sets data-size attribute which triggers attributeChangedCallback → _showModal*()
+	* 4. On close: publish_close fires 'modal_close' event, then on_close removes the element
+	*    and restores the previously active component selection.
+	*
+	* Drag: the modal header is draggable. On first mousedown the CSS-centered position
+	* is pinned to inline styles (position:absolute, margin:0) so the modal stays under
+	* the cursor without jumping.
+	*
 	* @param object options
 	* {
-	* 	header : HTMLElement|string
-	* 	body : HTMLElement|string
-	* 	footer : HTMLElement|string
-	* 	size : string (normal|big|small)
-	* 	modal_parent: HTMLElement
-	* 	remove_overlay : bool (default false)
-	* 	minimizable: bool (default true)
-	* 	on_close: function|null (fired on modal close)
-	* 	callback : function|null (fired on dd-modal node is ready in DOM)
+	* 	header : HTMLElement|string — slotted into header slot. String auto-wrapped in div.
+	* 	body : HTMLElement|string — slotted into body slot. String auto-wrapped in div.
+	* 	footer : HTMLElement|string — slotted into footer slot. String auto-wrapped in div.
+	* 	size : string — 'normal'|'big'|'small' (default 'normal')
+	* 	modal_parent : HTMLElement — container for the dd-modal (default .wrapper.page or body)
+	* 	remove_overlay : bool — weakens overlay background (default false)
+	* 	minimizable : bool — shows/hides minimize button (default true)
+	* 	on_close : function|null — called after modal is removed from DOM
+	* 	callback : function|null — called with (dd_modal) when element is ready for styling
 	* }
-	* @info
-	* To set a custom width, add a callback as
+	*
+	* @info To set a custom width, use the callback:
 	* {
-	*	...
 	* 	callback : (dd_modal) => {
-	*		dd_modal.modal_content.style.width = '34rem'
+	* 		dd_modal.modal_content.style.width = '34rem'
 	* 	}
 	* }
-	* @return HTMLElement modal_container
+	*
+	* @return HTMLElement modal_container — the <dd-modal> element
 	*/
 	attach_to_modal : (options) => {
 
@@ -2104,7 +2115,6 @@ export const ui = {
 		// publish close event
 			modal_container.publish_close = function(e) {
 				event_manager.publish('modal_close', e)
-				modal_container.remove()
 			}
 
 		// header. Add node header to modal header and insert it into slot
@@ -2116,12 +2126,12 @@ export const ui = {
 				modal_container.appendChild(header)
 				modal_container.header = header
 			}else{
-				const header_blank = ui.create_dom_element({
+				const header = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'hide'
 				})
-				header_blank.slot = 'header'
-				modal_container.appendChild(header_blank)
+				header.slot = 'header'
+				modal_container.appendChild(header)
 				modal_container.header = header
 			}
 
@@ -2131,6 +2141,14 @@ export const ui = {
 				if (!body.classList.contains('body')) {
 					body.classList.add('body')
 				}
+				modal_container.appendChild(body)
+				modal_container.body = body
+			}else{
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hide'
+				})
+				body.slot = 'body'
 				modal_container.appendChild(body)
 				modal_container.body = body
 			}
@@ -2143,8 +2161,17 @@ export const ui = {
 				}
 				modal_container.appendChild(footer)
 				modal_container.footer = footer
+			}else{
+				const footer = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'hide'
+				})
+				footer.slot = 'footer'
+				modal_container.appendChild(footer)
+				modal_container.footer = footer
 			}
 
+		// remove_miniModal
 			if(minimizable===false){
 				modal_container.remove_miniModal();
 			}
@@ -2157,40 +2184,38 @@ export const ui = {
 			switch(size) {
 				case 'big' : {
 					// hide contents to avoid double scrollbars
-						const content_data_page	= document.querySelector('.content_data.page')
-						const debug_div			= document.getElementById('debug')
+					const content_data_page	= document.querySelector('.content_data.page')
+					const debug_div			= document.getElementById('debug')
 
 					// show hidden elements again on close
-						const modal_close_handler = () => {
+					const modal_close_handler = () => {
 
-							if(content_data_page) {
-								content_data_page.classList.remove('hide')
-							}
-
-							if(debug_div) {
-								debug_div.classList.remove('hide')
-							}
-
-							// scroll window to previous scroll position
-							window.scrollTo({
-								top			: page_y_offset,
-								behavior	: 'auto'
-							})
+						if(content_data_page) {
+							content_data_page.classList.remove('hide')
 						}
-						event_manager.subscribe('modal_close', modal_close_handler)
 
-					modal_container.open('big');
+						if(debug_div) {
+							debug_div.classList.remove('hide')
+						}
+
+						// scroll window to previous scroll position
+						window.scrollTo({
+							top			: page_y_offset,
+							behavior	: 'auto'
+						})
+					}
+					event_manager.subscribe_once('modal_close', modal_close_handler)
+
 					modal_container.dataset.size = 'big';
 					break;
 				}
 				case 'small' :
-					modal_container.open('small');
 					modal_container.dataset.size = 'small';
 					break;
 
 				case 'normal' :
 				default :
-					modal_container.open('normal');
+					modal_container.dataset.size = 'normal';
 					break;
 			}
 
@@ -2211,7 +2236,7 @@ export const ui = {
 			}
 
 		// callback. Here the modal_container is ready and you can set styles safely
-			if (callback && typeof callback=='function') {
+			if (callback && typeof callback==='function') {
 				callback(modal_container)
 			}
 

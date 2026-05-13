@@ -421,7 +421,7 @@
 
 		&:after {
 			.fn_add_mask('arrow_down.svg');
-			background-color: @color_grey_10;
+			background-color: var(--color_grey_10);
 			content: ' ';
 			cursor: pointer;
 			height: 1em;
@@ -431,6 +431,10 @@
 			right: 0px;
 			transition: transform 0.26s ease-out;
 			width: 1em;
+
+			@media (prefers-color-scheme: dark) {
+				background-color: var(--color_grey_blue);
+			}
 		}
 
 		&.up {
@@ -494,7 +498,7 @@
 	select {
 		width: auto;
 		// removes browser appearance style
-		background: url('../../themes/default/icons/select_arrows.svg');
+		background: var(--select_icon_url);
 		background-color: @color_grey_16;
 		background-repeat: no-repeat;
 		background-position: 97%;
