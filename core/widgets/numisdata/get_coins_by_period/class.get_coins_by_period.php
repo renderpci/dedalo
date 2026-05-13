@@ -1,76 +1,133 @@
 <?php declare(strict_types=1);
 /**
-* CLASS GET_COINS_BY_PERIOD
-*
-* Used to count every coin into his period (specify by chronological thesaurus)
-* and group then into "Era" terms
-* Every coin could has his own period as "s.I to s.II" this period could has a parent term as era "Roman"
-* example of ipo:
-*
-*	{
-*		"ipo": [{
-*			"input": [
-*				{
-*					"type": "source",
-*					"section_tipo": "numisdata5",
-*					"component_tipo": "numisdata322"
-*				},
-*				{
-*					"type": "period",
-*					"use_parent": true,
-*					"section_tipo": "numisdata4",
-*					"component_tipo": "numisdata1373",
-*					"target_sections":["dc1"],
-*					"target_model_section_id": 1
-*				},
-*				{
-*					"type": "target_component_section_id",
-*					"section_tipo": "numisdata4",
-*					"component_tipo": "numisdata130"
-*				},
-*				{
-*					"type": "duplicated",
-*					"section_tipo": "numisdata4",
-*					"component_tipo": "numisdata157"
-*				}
-*			],
-*			"output": [
-*				{
-*					"id": "period",
-*					"value": "string"
-*				}
-*			]
-*		}],
-*		"path": "/numisdata/get_coins_by_period",
-*		"data_source": [
-*			{
-*				"type": "source",
-*				"section_tipo": "numisdata5",
-*				"component_tipo": "numisdata322"
-*			},
-*			{
-*				"type": "period",
-*				"section_tipo": "numisdata4",
-*				"component_tipo": "numisdata1373"
-*			},
-*			{
-*				"type": "duplicated",
-*				"section_tipo": "numisdata4",
-*				"component_tipo": "numisdata157"
-*			}
-*		],
-*		"widget_info": "Create a summatory of elements by period.",
-*		"widget_name": "get_coins_by_period",
-*		"widget_path": "/numisdata/widgets"
-*	}
-*/
+ * CLASS GET_COINS_BY_PERIOD
+ *
+ * Widget that counts linked numismatic records (coins) grouped by chronological
+ * period, using a thesaurus hierarchy. Each coin is assigned to its period term
+ * (e.g. "s.I to s.II"); when `use_parent` is enabled, coins are rolled up into
+ * their parent "Era" term (e.g. "Roman").
+ * sample of ipo:
+ *
+ *   {
+ *       "ipo": [{
+ *           "input": [
+ *               {
+ *                   "type": "source",
+ *                   "section_tipo": "numisdata5",
+ *                   "component_tipo": "numisdata322"
+ *               },
+ *               {
+ *                   "type": "period",
+ *                   "use_parent": true,
+ *                   "section_tipo": "numisdata4",
+ *                   "component_tipo": "numisdata1373",
+ *                   "target_sections":["dc1"],
+ *                   "target_model_section_id": 1
+ *               },
+ *               {
+ *                   "type": "target_component_section_id",
+ *                   "section_tipo": "numisdata4",
+ *                   "component_tipo": "numisdata130"
+ *               },
+ *               {
+ *                   "type": "duplicated",
+ *                   "section_tipo": "numisdata4",
+ *                   "component_tipo": "numisdata157"
+ *               }
+ *           ],
+ *           "output": [
+ *               {
+ *                   "id": "period",
+ *                   "value": "string"
+ *               }
+ *           ]
+ *       }],
+ *       "path": "/numisdata/get_coins_by_period",
+ *       "data_source": [
+ *           {
+ *               "type": "source",
+ *               "section_tipo": "numisdata5",
+ *               "component_tipo": "numisdata322"
+ *           },
+ *           {
+ *               "type": "period",
+ *               "section_tipo": "numisdata4",
+ *               "component_tipo": "numisdata1373"
+ *           },
+ *           {
+ *               "type": "duplicated",
+ *               "section_tipo": "numisdata4",
+ *               "component_tipo": "numisdata157"
+ *           }
+ *       ],
+ *       "widget_info": "Create a summatory of elements by period.",
+ *       "widget_name": "get_coins_by_period",
+ *       "widget_path": "/numisdata/widgets"
+ *   }
+ *
+ * Key features:
+ * - Reads coin locators from a source portal (IPO input)
+ * - Resolves the chronological thesaurus hierarchy recursively
+ * - Filters out duplicated coins (skips when duplicated flag section_id === '2')
+ * - Groups coins by period term, optionally aggregating into parent "Era" model terms
+ * - Outputs an array of period objects with label and count, consumed by render_get_coins_by_period.js
+ * - Unmatched or empty periods are collected into an "?" catch-all bucket
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class get_coins_by_period extends widget_common {
 
 
 
 	/**
 	* GET_DATA
-	* @return
+	* Resolve the widget IPO configuration into a grouped coin count per period.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": [
+	*     { "type": "source",                    "section_tipo": "numisdata5", "component_tipo": "numisdata322" },
+	*     {
+	*       "type": "period",
+	*       "use_parent": true,
+	*       "section_tipo": "numisdata4",
+	*       "component_tipo": "numisdata1373",
+	*       "target_sections": ["dc1"],
+	*       "target_model_section_id": 1
+	*     },
+	*     { "type": "target_component_section_id","section_tipo": "numisdata4", "component_tipo": "numisdata130" },
+	*     { "type": "duplicated",               "section_tipo": "numisdata4", "component_tipo": "numisdata157" }
+	*   ],
+	*   "output": [
+	*     { "id": "period", "value": "string" }
+	*   ]
+	* }
+	*
+	* Sample returned data item:
+	* {
+	*   "widget": "get_coins_by_period",
+	*   "key": 0,
+	*   "widget_id": "period",
+	*   "value": [
+	*     { "section_id": "42", "section_tipo": "dc1", "parent": { ... }, "label": "Roman", "count": 15 },
+	*     { "section_id": "77", "section_tipo": "dc1", "parent": { ... }, "label": "Greek",  "count": 8 },
+	*     { "section_id": null, "section_tipo": null, "parent": null, "label": "?", "count": 3 }
+	*   ]
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'get_coins_by_period',
+	*       'path'          => 'numisdata/get_coins_by_period',
+	*       'section_tipo'  => 'numisdata5',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 

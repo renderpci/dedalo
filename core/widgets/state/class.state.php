@@ -1,15 +1,91 @@
 <?php declare(strict_types=1);
-/*
-* CLASS STATE
-*
-*
-*/
+/**
+ * CLASS STATE
+ *
+ * Widget that resolves and displays the completion state / situation of a record
+ * by following ontology paths to status and situation components. It computes
+ * per-column totals and percentage-done metrics across project languages.
+ *
+ * Key features:
+ * - Accepts input as direct locators or component_data sources
+ * - Resolves multi-level ontology paths via `search::get_data_with_path()`
+ * - Distinguishes user-controlled situation (`dd174`) from admin-controlled status (`dd501`)
+ * - Computes completion totals per column (state / situation) with percentage across languages
+ * - Outputs detail rows and summary total rows consumed by render_edit_state.js / render_list_state.js
+ * - Provides `get_data_list()` to enumerate available state values for the UI dropdown
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class state extends widget_common {
 
 
 
 	/**
 	* GET_DATA
+	* Resolve the widget IPO configuration into detail and total state data.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": {
+	*     "type": "component_data",
+	*     "source": [
+	*       {
+	*         "section_tipo": "current",
+	*         "section_id": "current",
+	*         "component_tipo": "oh1"
+	*       }
+	*     ],
+	*     "paths": [
+	*       [
+	*         {
+	*           "var_name": "av",
+	*           "section_tipo": "rsc167",
+	*           "component_tipo": "rsc35"
+	*         }
+	*       ]
+	*     ]
+	*   },
+	*   "output": [
+	*     { "id": "state" },
+	*     { "id": "situation" }
+	*   ]
+	* }
+	*
+	* Sample returned detail item:
+	* {
+	*   "widget": "state",
+	*   "key": 0,
+	*   "widget_id": "state",
+	*   "lang": "lg-nolan",
+	*   "value": 1,
+	*   "locator": { "type":"dd151", "section_id":"3", "section_tipo":"dd501", "lang":"lg-nolan" },
+	*   "column": "state",
+	*   "type": "detail"
+	* }
+	*
+	* Sample returned total item:
+	* {
+	*   "widget": "state",
+	*   "key": 0,
+	*   "widget_id": "state",
+	*   "lang": "lg-nolan",
+	*   "value": 0.33,
+	*   "column": "state",
+	*   "type": "total"
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'state',
+	*       'path'          => 'state',
+	*       'section_tipo'  => 'oh1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
 	* @return array|null $data
 	*/
 	public function get_data() : ?array {
@@ -232,9 +308,14 @@ class state extends widget_common {
 
 	/**
 	* GET_LABEL
+	* Resolve the label of a related component (portal) for a given locator.
+	* Typically used to fetch the human-readable name of a state/situation value.
+	*
 	* @param object $locator
+	*  Locator pointing to the record whose label is needed.
 	* @param string $component_tipo
-	* @return string
+	*  Tipo of the component that stores the label (e.g. dd185, dd503).
+	* @return string $label
 	*/
 	public function get_label(object $locator, string $component_tipo) : string {
 
@@ -261,10 +342,14 @@ class state extends widget_common {
 
 	/**
 	* GET_VALUE
-	* Get component data
+	* Get the numeric value of a component for a given locator.
+	* Typically used to retrieve the completion percentage of a state/situation.
+	*
 	* @param object $locator
+	*  Locator pointing to the record whose value is needed.
 	* @param string $component_tipo
-	* 	Usually component_number 'dd92', (Value %) or 'dd83'
+	*  Tipo of the component that stores the numeric value.
+	*  Usually component_number 'dd92' (value %) or 'dd83'.
 	* @return float $value
 	*/
 	public function get_value(object $locator, string $component_tipo) : float {
@@ -292,7 +377,11 @@ class state extends widget_common {
 
 	/**
 	* GET_DATA_LIST
+	* Enumerate the available list-of-values for the final component of each IPO path.
+	* Used by the client renderer to populate the state/situation selector dropdown.
+	*
 	* @return array $data_list
+	*  Array of objects enriched with `widget` and `key` properties.
 	*/
 	public function get_data_list() : array {
 

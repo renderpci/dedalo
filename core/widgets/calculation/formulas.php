@@ -1,24 +1,65 @@
-<?php
+<?php declare(strict_types=1);
 /**
-* Formulas used by the Calculation widget
-*/
+ * CALCULATION FORMULAS
+ *
+ * Collection of standalone PHP functions invoked by the `calculation` widget
+ * via `resolve_logic()`. Each function receives a request_options object and
+ * returns a structured result array keyed by output identifiers.
+ *
+ * Key features:
+ * - Designed for external invocation through the widget's process->fn mapping
+ * - Accepts either a JSON string or an object as request_options
+ * - Returns arrays of {id, value} objects consumed by render_calculation.js
+ * - Currently provides: summarize() for numeric/date aggregation
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 
 
 
 /**
 * SUMMARIZE
-* Collect data given (array of values) and summarize values
-* in the number format defined as type
-* @param object $request_options
-* 	{
-* 		data: object with var and value as { "number": 23.5}
-* 		options: object with some other params
-* 	}
-* @return array $result
+* Aggregate numeric or date values from the input data object and return a
+* single total keyed as "total". Supports three data types: date, float, and int.
+*
+* Date handling:
+* - Specific dates are converted to Unix timestamps, summed, then re-formed
+*   into a dd_date preserving the original "shape" (partial dates remain partial)
+* - Periods (relative intervals: day/month/year) are added to the running total
+*
+* Numeric handling:
+* - float: sums all values and rounds to configurable precision (default 2)
+* - int: sums all values and rounds to 0 decimals
+*
+* Expected request_options structure:
 * {
-* 	id : total,
-* 	value: 65
+*   "data": { "var_name": value, ... },
+*   "options": { "type": "float|int|date", "precision": 2 }
 * }
+*
+* Sample float input data:
+* {
+*   "au": "1",
+*   "ag": "2.1",
+*   "cu": "8.4",
+*   "pb": "",
+*   "sn": "0.34"
+* }
+*
+* Sample returned result:
+* [
+*   { "id": "total", "value": 65 }
+* ]
+*
+* Usage:
+*   $result = summarize((object)[
+*       'data'    => (object)[ 'number' => 23.5, 'extra' => 41.5 ],
+*       'options' => (object)[ 'type' => 'float', 'precision' => 2 ]
+*   ]);
+*
+* @param string|object $request_options JSON string or object with data and options
+* @return array $result Array of objects, each with id and value properties
 */
 function summarize( string|object $request_options) : array {
 
@@ -26,11 +67,9 @@ function summarize( string|object $request_options) : array {
 		? json_decode($request_options)
 		: $request_options;
 
-	$data		= $options->data;
-	$options	= $options->options;
-	$type		= $options->type;
-
-
+	$data	 = $options->data;
+	$options = $options->options;
+	$type	 = $options->type;
 
 	switch ($type) {
 
@@ -108,7 +147,6 @@ function summarize( string|object $request_options) : array {
 						$ar_values[]	= $unix_timestamp;
 						break;
 				}
-
 			}
 
 			$total_sum	= array_sum($ar_values);
@@ -137,7 +175,6 @@ function summarize( string|object $request_options) : array {
 
 			break;
 		case 'float':
-
 			// sample data:
 			//	{
 			//		"au": "1",
@@ -159,11 +196,10 @@ function summarize( string|object $request_options) : array {
 
 			$precision = $options->precision ?? 2;
 			$total = round($total_sum, $precision);
-
 			break;
+
 		case 'int':
 		default:
-
 			$ar_values = [];
 			foreach ($data as $key => $value) {
 				if (empty($value)) {
@@ -174,10 +210,8 @@ function summarize( string|object $request_options) : array {
 			$total_sum = array_sum($ar_values);
 
 			$total = round($total_sum, 0);
-
 			break;
 	}
-
 
 	$result[] = (object)[
 		'id'	=> 'total',

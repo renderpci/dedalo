@@ -1,16 +1,79 @@
 <?php declare(strict_types=1);
-/*
-* CLASS GET_ARCHIVE_WEIGHTS
-*
-*
-*/
+/**
+ * CLASS GET_ARCHIVE_WEIGHTS
+ *
+ * Widget that computes aggregated weight and diameter statistics from linked
+ * numismatic records (e.g. coins). It traverses a source portal to its target
+ * records, filters out unused or duplicated entries, and calculates per-archive
+ * averages, maxima, minima, and element counts.
+ *
+ * Key features:
+ * - Reads linked record locators from a source portal (IPO input)
+ * - Filters by "used" and "duplicated" portal flags (skips when section_id === '2')
+ * - Averages weight and diameter values across all linked records
+ * - Computes media, max, min, and total element count for both metrics
+ * - Returns keyed values driven by the IPO output map consumed by render_get_archive_weights.js
+ * - Values are reactive: the client subscribes to `update_widget_value_*` events for live refresh
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class get_archive_weights extends widget_common {
 
 
 
 	/**
 	* GET_DATA
-	* @return
+	* Resolve the widget IPO configuration into aggregated weight and diameter
+	* statistics from linked numismatic records.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": [
+	*     { "type": "source",       "section_tipo": "current", "component_tipo": "numis1" },
+	*     { "type": "used",         "section_tipo": "current", "component_tipo": "numis2" },
+	*     { "type": "duplicated",   "section_tipo": "current", "component_tipo": "numis3" },
+	*     { "type": "data_weights", "section_tipo": "current", "component_tipo": "numis4" },
+	*     { "type": "data_diamenter","section_tipo": "current", "component_tipo": "numis5" }
+	*   ],
+	*   "output": [
+	*     { "id": "media_weight" },
+	*     { "id": "max_weight" },
+	*     { "id": "min_weight" },
+	*     { "id": "total_elements_weights" },
+	*     { "id": "media_diameter" },
+	*     { "id": "max_diameter" },
+	*     { "id": "min_diameter" },
+	*     { "id": "total_elements_diameter" }
+	*   ]
+	* }
+	*
+	* Sample returned data items:
+	* {
+	*   "widget": "get_archive_weights",
+	*   "key": 0,
+	*   "widget_id": "media_weight",
+	*   "value": 12.45
+	* }
+	* {
+	*   "widget": "get_archive_weights",
+	*   "key": 0,
+	*   "widget_id": "total_elements_weights",
+	*   "value": 24
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'get_archive_weights',
+	*       'path'          => 'numisdata/get_archive_weights',
+	*       'section_tipo'  => 'numis1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 

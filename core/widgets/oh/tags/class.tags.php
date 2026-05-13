@@ -1,18 +1,85 @@
 <?php declare(strict_types=1);
-/*
-* CLASS TAGS
-* Compute transcription text tags info and statistics
-* Configuration is defined in component info ontology properties
-* NOTE: Text used is always from the 'original' lang (!)
-*/
+/**
+ * CLASS TAGS
+ *
+ * Widget that computes statistics about transcription text tags embedded in
+ * a `component_text_area`. It parses the raw Dédalo text to count and validate
+ * time-codes, index tags, notes, and character metrics.
+ *
+ * Key features:
+ * - Always reads from the original language of the transcription
+ * - Counts time-code (tc) tags and detects out-of-sequence entries
+ * - Counts index tags (in/out), detects missing pairs, deleted (blue) tags, and tags marked for review (red)
+ * - Counts private and public note annotations
+ * - Computes total characters, characters without spaces, and real UTF-8 length
+ * - Outputs keyed values driven by the IPO output map consumed by render_tags.js
+ * - Values are reactive: the client subscribes to `update_widget_value_*` events for live refresh
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class tags extends widget_common {
 
 
 
 	/**
 	* GET_DATA
+	* Parse the transcription text from the source component and return
+	* computed tag statistics keyed by the IPO output map.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": {
+	*     "type": "component_data",
+	*     "source": [
+	*       {
+	*         "var_name": "transcription",
+	*         "section_tipo": "current",
+	*         "section_id": "current",
+	*         "component_tipo": "rsc36"
+	*       }
+	*     ]
+	*   },
+	*   "output": [
+	*     { "id": "total_tc" },
+	*     { "id": "total_index" },
+	*     { "id": "total_missing_tags" },
+	*     { "id": "total_to_review_tags" },
+	*     { "id": "total_private_notes" },
+	*     { "id": "total_public_notes" },
+	*     { "id": "total_chars" },
+	*     { "id": "total_chars_no_spaces" },
+	*     { "id": "total_real_chars" }
+	*   ]
+	* }
+	*
+	* Sample returned data items:
+	* {
+	*   "widget": "tags",
+	*   "key": 0,
+	*   "widget_id": "total_tc",
+	*   "value": 24
+	* }
+	* {
+	*   "widget": "tags",
+	*   "key": 0,
+	*   "widget_id": "total_missing_tags",
+	*   "value": 3
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'tags',
+	*       'path'          => 'oh/tags',
+	*       'section_tipo'  => 'oh1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
 	* @return array $data
-	* 	Array of objects
+	*  Array of objects
 	*/
 	public function get_data() : ?array {
 
@@ -83,6 +150,7 @@ class tags extends widget_common {
 				}
 
 			// index
+
 				// index in
 				$pattern = TR::get_mark_pattern($mark='indexIn',$standalone=false);
 				preg_match_all($pattern,  $raw_text,  $matches_indexIn, PREG_PATTERN_ORDER);

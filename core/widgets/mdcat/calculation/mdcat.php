@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
 * Calculation formulas to mdcat
 */
@@ -433,8 +433,11 @@
 
 		$data = $options->data;
 
-		$total_period	= reset($data->total_period);
-		$total			= reset($data->total);
+		$total_period_item	= reset($data->total_period);
+		$total_item			= reset($data->total);
+
+		$total_period	= is_object($total_period_item) ? $total_period_item->value : $total_period_item;
+		$total			= is_object($total_item) ? $total_item->value : $total_item;
 
 		$total = $total - $total_period;
 
@@ -546,5 +549,3 @@
 
 		return $result;
 	}//end final_total
-
-

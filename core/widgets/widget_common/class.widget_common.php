@@ -1,8 +1,20 @@
 <?php declare(strict_types=1);
 /**
-* WIDGET_COMMON
-*
-*/
+ * CLASS WIDGET_COMMON
+ *
+ * Base class for all Dédalo widgets. Provides the common properties,
+ * factory method, and data contract that every widget must implement.
+ *
+ * Key features:
+ * - Defines the core property set: section_tipo, section_id, mode, lang, ipo
+ * - Acts as a factory via get_instance() to load and instantiate widget subclasses
+ * - Declares the get_data() contract that subclasses must override
+ * - Provides get_data_parsed() as a pass-through hook for post-processing
+ * - IPO (Input-Process-Output) drives all widget data resolution from ontology definitions
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class widget_common {
 
 
@@ -94,7 +106,9 @@ class widget_common {
 
 	/**
 	* GET_DATA
-	* @return
+	* Return the widget's resolved data. Must be overridden by every widget subclass.
+	*
+	* @return array|null $data Array of structured data items, or null if no data
 	*/
 	public function get_data() : ?array {
 
@@ -109,12 +123,16 @@ class widget_common {
 
 	/**
 	* GET_DATA_PARSED
-	* @return array|null $data_parsed
+	* Pass-through wrapper for get_data(). Subclasses may override to apply
+	* additional post-processing (formatting, filtering, localization) before
+	* the data is sent to the client renderer.
+	*
+	* @return array|null $data_parsed Array of processed data items, or null
 	*/
 	public function get_data_parsed() : ?array {
 
 		return $this->get_data();
-	}
+	}//get_data_parsed
 
 
 

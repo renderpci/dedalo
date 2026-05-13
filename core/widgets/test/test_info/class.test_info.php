@@ -18,7 +18,7 @@ class test_info extends widget_common {
 	*/
 	public function get_data() : ?array {
 
-		$ipo = $this->ipo;
+		$ipo = $this->ipo ?? [];
 
 		$data = [];
 

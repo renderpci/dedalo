@@ -1,24 +1,90 @@
 <?php declare(strict_types=1);
-
-
-/*
-* CLASS GET_ARCHIVE_STATES
-*
-*
-*/
+/**
+ * CLASS GET_ARCHIVE_STATES
+ *
+ * Widget that aggregates boolean or radio-button state values from linked
+ * records (via a source portal) and computes counts and percentages for two
+ * state dimensions: "answer" and "closed".
+ *
+ * Key features:
+ * - Reads linked record locators from a source portal (IPO input)
+ * - For each linked record, resolves an "answer" component and a "closed" component
+ * - Counts affirmative (section_id "1"), negative (section_id "2"), and totals
+ * - Computes percentages relative to the total number of linked records
+ * - Returns 14 keyed output values consumed by render_get_archive_states.js
+ * - Includes human-readable labels (closed_label, answer_label) on the first output item
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class get_archive_states extends widget_common {
 
 
 
 	/**
 	* GET_DATA
-	* @return
+	* Resolve the widget IPO configuration into aggregated state counts and
+	* percentages from linked records.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": [
+	*     { "type": "source",  "section_tipo": "self", "component_tipo": "dmm1" },
+	*     { "type": "answer",  "section_tipo": "current", "component_tipo": "dmm2" },
+	*     { "type": "closed",  "section_tipo": "current", "component_tipo": "dmm3" }
+	*   ],
+	*   "output": [
+	*     { "id": "closed_afirmative" },
+	*     { "id": "closed_afirmative_percent" },
+	*     { "id": "closed_negative" },
+	*     { "id": "closed_negative_percent" },
+	*     { "id": "closed_count" },
+	*     { "id": "closed_count_percent" },
+	*     { "id": "closed_total" },
+	*     { "id": "answer_afirmative" },
+	*     { "id": "answer_afirmative_percent" },
+	*     { "id": "answer_negative" },
+	*     { "id": "answer_negative_percent" },
+	*     { "id": "answer_count" },
+	*     { "id": "answer_count_percent" },
+	*     { "id": "answer_total" }
+	*   ]
+	* }
+	*
+	* Sample returned data items:
+	* {
+	*   "widget": "get_archive_states",
+	*   "key": 0,
+	*   "widget_id": "closed_afirmative",
+	*   "closed_label": "Closed",
+	*   "answer_label": "Answer",
+	*   "value": 12
+	* }
+	* {
+	*   "widget": "get_archive_states",
+	*   "key": 0,
+	*   "widget_id": "closed_afirmative_percent",
+	*   "value": 48.0
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'get_archive_states',
+	*       'path'          => 'dmm/get_archive_states',
+	*       'section_tipo'  => 'dmm1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
-		$ipo 			= $this->ipo;
+		$ipo 			= $this->ipo ?? [];
 
 		$data = [];
 		foreach ($ipo as $key => $current_ipo) {
@@ -56,7 +122,6 @@ class get_archive_states extends widget_common {
 					return [];
 				}
 
-
 			$component_answer = array_reduce($input, function ($carry, $item){
 
 				if ($item->type==='answer') {
@@ -67,7 +132,6 @@ class get_archive_states extends widget_common {
 
 			$component_tipo_answer 	= $component_answer->component_tipo;
 			$section_tipo_answer 	= $component_answer->section_tipo;
-
 
 			$component_closed = array_reduce($input, function ($carry, $item){
 
@@ -121,7 +185,6 @@ class get_archive_states extends widget_common {
 					if(!empty($closed_data)){
 						$ar_closed[] = $closed_data[0];
 					}
-
 				}
 
 				if(!empty($component_data)){
@@ -190,7 +253,6 @@ class get_archive_states extends widget_common {
 						$answer_count_percent	= round($answer_total_percent, 1);
 						$answer_total			= $total_data;
 					}
-
 
 				// fix data
 					// $data = new stdClass();

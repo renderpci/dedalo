@@ -1,98 +1,111 @@
 <?php declare(strict_types=1);
-/*
-* CLASS CALCULATION
-*
-*
-*/
+/**
+ * CLASS CALCULATION
+ *
+ * Widget that performs dynamic calculations by resolving component data,
+ * applying a custom processing function, and returning formatted results.
+ *
+ * Key features:
+ * - Reads values from one or more components (current record, all records, or search session)
+ * - Supports aggregation modes: raw value retrieval and numeric sum across records
+ * - Applies an external logic file/function (confined to DEDALO_WIDGETS_PATH for security)
+ * - Returns output items with optional label_before / label_after formatting
+ * - Can filter data using stored search_query_object configurations
+ * - Consumed client-side by render_calculation.js as label/value pairs
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class calculation extends widget_common {
 
 
 
 	/**
 	* GET_DATA
-	* @param array ipo
-	* can be configured with need of the widget
-	* for standard calculations data_souce need to be configured with two params:
-	* 	@param object $input
-	* 	indicate the way to get the data from sections and components
-	* 	data will be calculated before apply the logic
-	* 	the result of the obtain the data return components with var_name defined
-	* 	that will be used to convert to php variables
-	* 	@param object $process
-	* 	indicate the where can find the method to be used for calculate the data
-	* 	file indicate the file with the functions
-	* 	fn indicate the function name inside the file
-	* 	options are params that will be send to the function with the result data
-	* 	example of structure config for calculation widget with the logic parameters
-	* 	@param array $output
-	* 	the output format to be parse to html, every object will be a span node
-	* 	with label_before, data, label_after
-	*  "widgets": [
-	*    {
-	*      "widget_name": "calculation",
-	*      "widget_info": "sum calc.",
-	*      "path": "/calculation",
-	*      "ipo": [
-	*        {
-	*          "input": {
-	*            "section_tipo": "current",
-	*            "section_id": "current",
-	*            "filter": false,
-	*            "value": "sum",
-	*            "components": [
-	*              {
-	*                "tipo": "test139",
-	*                "var_name": "number"
-	*              },
-	*              {
-	*                "tipo": "test140",
-	*                "var_name": "fields_separator"
-	*              }
-	*            ]
-	*          },
-	*          "process": {
-	*            "file": "/mdcat/calculation/mdcat.php",
-	*            "fn": "to_euros",
-	*            "options": {
-	*              "label": true,
-	*              "years": true,
-	*              "months": true,
-	*              "days": true,
-	*              "separator": ", ",
-	*              "total": false
-	*            }
-	*          },
-	*		"output": [
-	*      		{
-	*           "id": "total",
-	*            "value": "float",
-	*            "label_after": "euros"
-	*           }
-	*         ]
-	*	  ]
-	*  }
-	* @return
+	* Resolve the widget IPO configuration: fetch component data, optionally
+	* apply a custom processing function, and map results into output items.
+	*
+	* Could be configured by needs of the widget.
+    * For standard calculations data_souce need to be configured with two params:
+    *   $input --------------------------------------------------------------------
+    *   indicate the way to get the data from sections and components
+    *   data will be calculated before apply the logic
+    *   the result of the obtain the data return components with var_name defined
+    *   that will be used to convert to php variables
+    *   $process ------------------------------------------------------------------
+    *   indicate the where can find the method to be used for calculate the data
+    *   file indicate the file with the functions
+    *   fn indicate the function name inside the file
+    *   options are params that will be send to the function with the result data
+    *   example of structure config for calculation widget with the logic parameters
+    *   $output ------------------------------------------------------------------
+    *   the output format to be parse to html, every object will be a span node
+    *   with label_before, data, label_after
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": {
+	*     "section_tipo": "current",
+	*     "section_id": "current",
+	*     "filter": false,
+	*     "value": "sum",
+	*     "components": [
+	*       { "tipo": "test139", "var_name": "number" },
+	*       { "tipo": "test140", "var_name": "fields_separator" }
+	*     ]
+	*   },
+	*   "process": {
+	*     "file": "/mdcat/calculation/mdcat.php",
+	*     "fn": "to_euros",
+	*     "options": { "label": true, "years": true, "months": true, "days": true, "separator": ", ", "total": false }
+	*   },
+	*   "output": [
+	*     { "id": "total", "value": "float", "label_after": "euros" }
+	*   ]
+	* }
+	*
+	* Sample returned data item:
+	* {
+	*   "widget": "calculation",
+	*   "key": 0,
+	*   "id": "total",
+	*   "value": "1,234.56 euros"
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'calculation',
+	*       'path'          => 'calculation',
+	*       'section_tipo'  => 'test1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 
-		$section_tipo 	= $this->section_tipo;
-		$section_id 	= $this->section_id;
-		$ipo 			= $this->ipo;
+		$ipo = $this->ipo ?? [];
+		if (empty($ipo)) {
+			return null;
+		}
 
 		$data = [];
-		foreach ($ipo as $key => $ipo) {
+		foreach ($ipo as $key => $ipo_value) {
 
 			// input
-			$data_input = $this->resolve_data($ipo->input);
+			$data_input = $this->resolve_data($ipo_value->input);
 
 			// process
-			if(isset($ipo->process) ){
-				$process = $ipo->process;
+			if(isset($ipo_value->process) ){
+				$process = $ipo_value->process;
 				$result = $this->resolve_logic($process, $data_input);
 			}
 
 			// output
-			foreach ($ipo->output as $data_map) {
+			foreach ($ipo_value->output as $data_map) {
 				$current_id = $data_map->id;
 				$found = array_find($result ?? [], function($item) use($current_id){
 					return $item->id===$current_id;
@@ -118,10 +131,21 @@ class calculation extends widget_common {
 
 
 	/**
-	* RESOLVE_DATA_FOR_FORMULA
-	* @param object $data
-	*	properties formula->data
-	* @return object $data_resolved
+	* RESOLVE_DATA
+	* Resolve the input configuration into a data object whose properties
+	* correspond to the var_name of each configured component.
+	*
+	* Supports three section_id scopes:
+	* - "current"        : reads component values from the current record
+	* - "all"            : sums the component values across all records
+	* - "search_session" : reads values or sums from the active search filter
+	*
+	* When filter is true, the component is expected to store a search_query_object
+	* (e.g. component_json) and the result is filtered through exec_data_filter_data.
+	*
+	* @param object $data Input configuration with section_tipo, section_id,
+	*                     components array, and optional filter/value flags.
+	* @return object|null $data_resolved Object keyed by var_name with resolved values
 	*/
 	public function resolve_data(object $data) : ?object {
 
@@ -302,7 +326,11 @@ class calculation extends widget_common {
 
 	/**
 	* EXEC_DATA_FILTER_DATA
-	* @return object $result
+	* Execute one or more search_query_object stored in a component_json data item,
+	* optionally mapping result columns via result_map.
+	*
+	* @param object $data_item Object containing a data property with search_query_object(s)
+	* @return object $result The input item with its data property replaced by search results
 	*/
 	public static function exec_data_filter_data(object $data_item) : object {
 
@@ -571,12 +599,12 @@ class calculation extends widget_common {
 
 	/**
 	* RESOLVE_LOGIC
-	* @param object $process
-	* the paths to the file and method that will be used for process the calculation
-	* @param object $data
-	* the pre-calculated data, with the name of the variable and the value
-	* {"number":5}
-	* @return
+	* Load an external PHP file and invoke a named function to process the
+	* pre-resolved data. The file path is confined to DEDALO_WIDGETS_PATH (SEC-052).
+	*
+	* @param object $process Object with engine, file, fn, and options.
+	* @param object $data    Pre-resolved data object keyed by var_name.
+	* @return mixed|null $result Result of the invoked function, or null on security refusal
 	*/
 	private function resolve_logic(object $process, $data) {
 

@@ -1,16 +1,86 @@
-<?php
-// declare(strict_types=1);
+<?php declare(strict_types=1);
 /**
-* CLASS DESCRIPTORS
-*
-*
-*/
+ * CLASS DESCRIPTORS
+ *
+ * Widget that displays indexed descriptor terms for a given record, typically
+ * used in Oral History sections. It aggregates thesaurus descriptors linked
+ * through a source component and renders them as a browsable term list
+ * (via a dd_grid instance on the client side).
+ *
+ * Key features:
+ * - Reads descriptor locators from a source component (IPO input)
+ * - Resolves each locator through ontology paths to the target component
+ * - Aggregates component_data and component_grid_value across all locators
+ * - Outputs term grid data and an indexation count
+ * - Short-circuits in list mode for performance
+ * - Consumed by render_edit_descriptors.js and render_list_descriptors.js
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class descriptors extends widget_common {
 
 
 
 	/**
 	* GET_DATA
+	* Resolve the widget IPO configuration into the structured data expected
+	* by the client-side renderer.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": {
+	*     "type": "component_data",
+	*     "source": [
+	*       {
+	*         "section_tipo": "current",
+	*         "section_id": "current",
+	*         "component_tipo": "oh24"
+	*       }
+	*     ],
+	*     "paths": [
+	*       [
+	*         {
+	*           "var_name": "descriptor",
+	*           "section_tipo": "rsc170",
+	*           "component_tipo": "rsc36"
+	*         }
+	*       ]
+	*     ]
+	*   },
+	*   "output": [
+	*     { "id": "indexation" },
+	*     { "id": "terms" }
+	*   ]
+	* }
+	*
+	* Sample returned data items:
+	* {
+	*   "widget": "descriptors",
+	*   "key": 0,
+	*   "widget_id": "indexation",
+	*   "value": 7,
+	*   "locator": { "type":"dd151", "section_id":"42", "section_tipo":"rsc170", "from_component_tipo":"oh24" }
+	* }
+	* {
+	*   "widget": "descriptors",
+	*   "key": 0,
+	*   "widget_id": "terms",
+	*   "value": { "value": [ ... ] },
+	*   "locator": { ... }
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'descriptors',
+	*       'path'          => 'oh/descriptors',
+	*       'section_tipo'  => 'oh1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
 	* @return array|null $data
 	*/
 	public function get_data() : ?array {

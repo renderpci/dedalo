@@ -1,23 +1,80 @@
 <?php declare(strict_types=1);
-/*
-* CLASS SUM_DATES
-*
-*
-*/
+/**
+ * CLASS SUM_DATES
+ *
+ * Widget that reads a sequence of date pairs (date_in / date_out) from linked
+ * records (via a source portal), computes the interval for each pair, and sums
+ * all intervals into a total duration. It also tracks estimated additions and
+ * indeterminate gaps caused by missing or partial dates.
+ *
+ * Key features:
+ * - Reads date_in and date_out components from each linked record
+ * - Computes DateInterval between each date pair, handling partial dates
+ * - When a date is missing, estimates a default interval ("1 day") and flags it
+ * - Sums all intervals into a total duration object (sum_intervals)
+ * - Separately sums estimated additions (sum_estitmated_time_add)
+ * - Flags indeterminate intermediate gaps (estitmated_time_undefined)
+ * - get_data_parsed() overrides to format intervals into human-readable localized text
+ * - Consumed by render_sum_dates.js which formats year/month/day labels
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class sum_dates extends widget_common {
 
 
 
 	/**
 	* GET_DATA
-	* @return
+	* Resolve the widget IPO configuration into summed date intervals from linked
+	* records, including raw interval objects and estimation flags.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": [
+	*     { "type": "source",   "section_tipo": "current", "component_tipo": "mdcat1" },
+	*     { "type": "date_in",  "section_tipo": "current", "component_tipo": "mdcat2" },
+	*     { "type": "date_out", "section_tipo": "current", "component_tipo": "mdcat3" }
+	*   ],
+	*   "output": [
+	*     { "id": "sum_intervals" },
+	*     { "id": "sum_estitmated_time_add" },
+	*     { "id": "estitmated_time_undefined" }
+	*   ]
+	* }
+	*
+	* Sample returned data items:
+	* {
+	*   "widget": "sum_dates",
+	*   "key": 0,
+	*   "widget_id": "sum_intervals",
+	*   "value": { "y": 2, "m": 3, "d": 15, "h": 0, "i": 0, "s": 0 }
+	* }
+	* {
+	*   "widget": "sum_dates",
+	*   "key": 0,
+	*   "widget_id": "estitmated_time_undefined",
+	*   "value": true
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'sum_dates',
+	*       'path'          => 'mdcat/sum_dates',
+	*       'section_tipo'  => 'mdcat1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
+	* @return array|null $data
 	*/
 	public function get_data() : ?array {
 
-
 		$section_tipo 	= $this->section_tipo;
 		$section_id 	= $this->section_id;
-		$ipo 			= $this->ipo;
+		$ipo 			= $this->ipo ?? [];
 
 		// auxiliary functions
 		if (!function_exists('sum_intervals')) {
@@ -351,8 +408,17 @@ class sum_dates extends widget_common {
 
 	/**
 	* GET_DATA_PARSED
-	* format the data as text to be exported
-	* @return array $data_parsed
+	* Override of widget_common::get_data_parsed(). Formats the raw interval
+	* objects returned by get_data() into human-readable localized text strings.
+	*
+	* - sum_intervals is formatted as "{y} years {m} months {d} days" using
+	*   singular/plural labels from the ontology (label::get_label)
+	* - sum_estitmated_time_add is formatted with the same pattern and combined
+	*   with an "indeterminat" suffix when estitmated_time_undefined is true
+	* - Returns three keyed items: sum_intervals, sum_estitmated_time_add,
+	*   and estitmated_time_undefined
+	*
+	* @return array $data_parsed Array of formatted text items
 	*/
 	public function get_data_parsed() : ?array  {
 

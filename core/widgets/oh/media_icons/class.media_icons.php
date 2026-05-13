@@ -1,15 +1,117 @@
 <?php declare(strict_types=1);
-/*
-* CLASS MEDIA_ICONS
-*
-*
-*/
+/**
+ * CLASS MEDIA_ICONS
+ *
+ * Widget that renders a row of action icons for each media record linked to
+ * the current section (typically Oral History interviews). Each linked
+ * audiovisual file gets its own row with:
+ *  - ID (opens the media record in a new window)
+ *  - A/V icon (opens the media viewer)
+ *  - Transcription tool link (TR)
+ *  - Indexation tool link (IN)
+ *  - Translation tool link (TL)
+ *  - Time code / duration (tc)
+ *
+ * Key features:
+ * - Reads linked-media locators from a source component (IPO input)
+ * - Resolves each locator into its target section (IPO paths)
+ * - Builds per-row tool contexts from ontology section_tool definitions
+ * - Falls back to real file duration calculation when DB has no cached value
+ * - Outputs data consumed by render_media_icons.js for DOM rendering
+ *
+ * @package Dédalo
+ * @subpackage Widgets
+ */
 class media_icons extends widget_common {
 
 
 
 	/**
 	* GET_DATA
+	* Resolve the widget IPO configuration into the structured data expected
+	* by the client-side renderer.
+	*
+	* Expected IPO sample (from ontology properties):
+	* {
+	*   "input": {
+	*     "type": "component_data",
+	*     "source": [
+	*       {
+	*         "section_tipo": "current",
+	*         "section_id": "current",
+	*         "component_tipo": "oh25"
+	*       }
+	*     ],
+	*     "paths": [
+	*       [
+	*         {
+	*           "var_name": "av",
+	*           "section_tipo": "rsc167",
+	*           "component_tipo": "rsc35"
+	*         }
+	*       ]
+	*     ]
+	*   },
+	*   "output": [
+	*     { "id": "id" },
+	*     { "id": "tc" },
+	*     {
+	*       "id": "transcription",
+	*       "label": "tool_transcription",
+	*       "process_section_tipo": "rsc190"
+	*     },
+	*     {
+	*       "id": "indexation",
+	*       "label": "tool_indexation",
+	*       "process_section_tipo": "rsc191"
+	*     },
+	*     {
+	*       "id": "translation",
+	*       "label": "tool_translation",
+	*       "process_section_tipo": "rsc192"
+	*     }
+	*   ]
+	* }
+	*
+	* Sample returned data item per locator:
+	* {
+	*   "widget": "media_icons",
+	*   "id": {
+	*     "widget": "media_icons",
+	*     "key": 0,
+	*     "widget_id": "id",
+	*     "locator": { "type":"dd151", "section_id":"13", "section_tipo":"rsc167", "from_component_tipo":"oh25" },
+	*     "value": "13"
+	*   },
+	*   "tc": {
+	*     "widget": "media_icons",
+	*     "key": 0,
+	*     "widget_id": "tc",
+	*     "locator": { ... },
+	*     "value": "00:05:23"
+	*   },
+	*   "transcription": {
+	*     "widget": "media_icons",
+	*     "key": 0,
+	*     "widget_id": "transcription",
+	*     "locator": { ... },
+	*     "tool_context": { ... }
+	*   },
+	*   "indexation": { ... },
+	*   "translation": { ... }
+	* }
+	*
+	* Usage:
+	*   $widget = widget_common::get_instance((object)[
+	*       'widget_name'   => 'media_icons',
+	*       'path'          => 'oh/media_icons',
+	*       'section_tipo'  => 'oh1',
+	*       'section_id'    => '123',
+	*       'mode'          => 'edit',
+	*       'ipo'           => $ipo_from_ontology
+	*   ]);
+	*   $data = $widget->get_data();
+	*
 	* @return array|null $data
 	*/
 	public function get_data() : ?array {
