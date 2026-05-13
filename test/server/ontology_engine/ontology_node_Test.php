@@ -8,6 +8,9 @@ final class ontology_node_test extends BaseTestCase {
 
 	public static $model = 'ontology_node';
 
+	public $section_tipo = 'rsc170'; // Images
+	public $area_tipo = 'dd14'; // Resources
+
 	public function test_get_instance() {
 		$this->user_login();
 		$node = ontology_node::get_instance('dd1');
@@ -355,40 +358,40 @@ final class ontology_node_test extends BaseTestCase {
 
 	public function test_legacy_get_model(): void {
 		$this->user_login();
-		$ontology_node = ontology_node::get_instance('activity2');
+		$ontology_node = ontology_node::get_instance($this->section_tipo);
 		$model = $ontology_node->get_model();
 
-		// For activity2, get_model returns 'section'
+		// For rsc170, get_model returns 'section'
 		$this->assertEquals('section', $model);
 	}
 
 	public function test_legacy_get_ar_children_of_this(): void {
 		$this->user_login();
-		$ontology_node = ontology_node::get_instance('hierarchymtype12');
+		$ontology_node = ontology_node::get_instance($this->area_tipo);
 		$ar_children = $ontology_node->get_ar_children_of_this();
 
 		$this->assertIsArray($ar_children);
 		$this->assertNotEmpty($ar_children);
-        $this->assertContains('activity2', $ar_children);
+        $this->assertContains($this->section_tipo, $ar_children);
 	}
 
 	public function test_legacy_get_ar_recursive_children_of_this(): void {
 		$this->user_login();
-		$ontology_node = ontology_node::get_instance('hierarchymtype12');
-		$ar_children = $ontology_node->get_ar_recursive_children_of_this('hierarchymtype12');
+		$ontology_node = ontology_node::get_instance($this->area_tipo);
+		$ar_children = $ontology_node->get_ar_recursive_children_of_this($this->area_tipo);
 
 		$this->assertIsArray($ar_children);
 		$this->assertNotEmpty($ar_children);
-        $this->assertContains('activity2', $ar_children);
+        $this->assertContains($this->section_tipo, $ar_children);
 	}
 
 	public function test_legacy_get_ar_tipo_by_model_and_relation(): void {
 		$this->user_login();
-		$ar_tipos = ontology_node::get_ar_tipo_by_model_and_relation('hierarchymtype12', 'section', 'children', true);
+		$ar_tipos = ontology_node::get_ar_tipo_by_model_and_relation($this->area_tipo, 'section', 'children', true);
 
 		$this->assertIsArray($ar_tipos);
 		$this->assertNotEmpty($ar_tipos);
-		$this->assertContains('activity2', $ar_tipos);
+		$this->assertContains($this->section_tipo, $ar_tipos);
 	}
 
 	public function test_legacy_setters_and_getters(): void {
@@ -468,17 +471,17 @@ final class ontology_node_test extends BaseTestCase {
 
 	public function test_legacy_hierarchy_helpers(): void {
 		$this->user_login();
-		$node = ontology_node::get_instance('activity2');
+		$node = ontology_node::get_instance($this->section_tipo);
 
 		// Parents
 		$parents = $node->get_ar_parents_of_this();
 		$this->assertNotEmpty($parents);
-		$this->assertContains('hierarchymtype12', $parents);
+		$this->assertContains($this->area_tipo, $parents);
 
 		// Siblings
 		$siblings = $node->get_ar_siblings_of_this();
 		$this->assertNotEmpty($siblings);
-		$this->assertContains('activity2', $siblings, 'Siblings list should include self in current implementation');
+		$this->assertContains($this->section_tipo, $siblings, 'Siblings list should include self in current implementation');
 	}
 
 	public function test_legacy_get_term_fallback(): void {
@@ -522,7 +525,7 @@ final class ontology_node_test extends BaseTestCase {
 		$this->assertEquals('dd6', $tipo);
 
 		// get_legacy_model
-		$node = ontology_node::get_instance('activity2');
+		$node = ontology_node::get_instance($this->section_tipo);
 		$node->load_data();
 		$legacy = $node->get_legacy_model();
 		$this->assertEquals('section', $legacy);
