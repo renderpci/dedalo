@@ -61,13 +61,15 @@ final class component_email_test extends BaseTestCase {
 		if (is_array($result)) {
 			$this->assertTrue(
 				gettype($result[0]->value)==='string',
-				'expected type string : ' . PHP_EOL
+				'expected type string fro entry 0 : ' . PHP_EOL
 					. gettype($result[0]->value)
 			);
 			$this->assertTrue(
 				strpos($result[0]->value, '@')!==false,
 				'expected @ position not false : ' . PHP_EOL
-					. (strpos($result[0]->value, '@')!==false)
+					. (strpos($result[0]->value, '@')!==false)  . PHP_EOL
+					. json_encode( $result, JSON_PRETTY_PRINT ) . PHP_EOL
+					. json_encode( debug_backtrace(), JSON_PRETTY_PRINT )
 			);
 		}
 	}//end test_get_data

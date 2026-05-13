@@ -700,11 +700,20 @@ final class component_common_changed_data_test extends BaseTestCase {
 			$initial_data = [(object)['value' => 'original', 'id' => 9001, 'lang' => DEDALO_DATA_NOLAN]];
 			$component->set_data($initial_data);
 
+			$current_value = 'updated_' . $model . '_' . $tipo;
+			if ($model === 'component_email') {
+				$current_value .= '@.com';
+			}
+
 			// Update by id
 			$changed_data = (object)[
 				'action' => 'update',
 				'id'     => 9001,
-				'value'  => (object)['value' => 'updated_' . $model, 'id' => 9001, 'lang' => DEDALO_DATA_NOLAN]
+				'value'  => (object)[
+					'value' => $current_value,
+					'id'    => 9001,
+					'lang'  => DEDALO_DATA_NOLAN
+				]
 			];
 
 			$result = $component->update_data_value($changed_data);
@@ -717,7 +726,7 @@ final class component_common_changed_data_test extends BaseTestCase {
 			$this->assertCount(1, $data_after,
 				"$model: Should have 1 entry after update, got " . count($data_after));
 
-			$this->assertEquals('updated_' . $model, $data_after[0]->value,
+			$this->assertEquals($current_value, $data_after[0]->value,
 				"$model: Value should be updated");
 		}
 

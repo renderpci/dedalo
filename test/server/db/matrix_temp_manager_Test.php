@@ -47,7 +47,7 @@ class matrix_temp_manager_test extends BaseTestCase {
         $values = (object)['section_id' => $this->section_id, 'data' => (object)['test'=>'creation']];
 
         // defined as create(string $section_tipo, string $table='temp', ?object $values = null)
-        $result = matrix_temp_manager::create($this->section_tipo, $this->table, $values);
+        $result = matrix_temp_manager::create($this->table, $this->section_tipo, $values);
 
         $this->assertEquals(0, $result, "Create should return 0 as section_id");
 
@@ -66,11 +66,21 @@ class matrix_temp_manager_test extends BaseTestCase {
      */
     public function test_update(): void {
         // Initial create
-        matrix_temp_manager::create($this->section_tipo, $this->table, (object)['section_id' => $this->section_id]);
+        $create_result = matrix_temp_manager::create($this->table, $this->section_tipo, (object)['section_id' => $this->section_id]);
+
+        $column_string_value = (object)[
+            'rsc283' => [
+                (object)[
+                    "id" => 1,
+                    "lang" => "lg-nolan",
+                    "value" => "Anselmus the First"
+                ]
+            ]
+        ];
 
         $values = (object)[
-            'data' => (object)['foo' => 'bar'],
-            'string' => 'some string value'
+            'data'   => (object)['foo' => 'bar'],
+            'string' => $column_string_value
         ];
 
         // update(string $table, string $section_tipo, int|string $section_id, object $values)
@@ -85,7 +95,7 @@ class matrix_temp_manager_test extends BaseTestCase {
         $this->assertEquals('bar', $decoded_data->foo);
 
         // Check string content (if it was stored)
-        $this->assertEquals('some string value', $read_data->string);
+        $this->assertEquals($column_string_value, json_decode($read_data->string));
     }
 
     /**
@@ -95,7 +105,7 @@ class matrix_temp_manager_test extends BaseTestCase {
     public function test_read(): void {
         // Create with data
         $values = (object)['string' => 'hello world'];
-        matrix_temp_manager::create($this->section_tipo, $this->table, $values);
+        matrix_temp_manager::create($this->table, $this->section_tipo, $values);
 
         // read(string $table, string $section_tipo, int|string $section_id)
         $result = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);
@@ -115,7 +125,7 @@ class matrix_temp_manager_test extends BaseTestCase {
      */
     public function test_update_by_key(): void {
         // Setup
-        matrix_temp_manager::create($this->section_tipo, $this->table);
+        matrix_temp_manager::create($this->table, $this->section_tipo);
 
         $data_to_save = [
             (object)[
@@ -165,7 +175,7 @@ class matrix_temp_manager_test extends BaseTestCase {
      */
     public function test_delete(): void {
         // Create
-        matrix_temp_manager::create($this->section_tipo, $this->table);
+        matrix_temp_manager::create($this->table, $this->section_tipo);
 
         // Verify exists
         $read = matrix_temp_manager::read($this->table, $this->section_tipo, $this->section_id);

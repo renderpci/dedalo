@@ -1211,7 +1211,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 		// short vars
 			const search_global_container	= self.search_global_container
-			const status_id					= 'open_search_panel'
+			const caller					= self.caller || {}
+			const status_id					= `open_search_panel_${caller.tipo || ''}_${caller.mode || ''}`
 			const status_table				= 'status'
 
 		// Add null check

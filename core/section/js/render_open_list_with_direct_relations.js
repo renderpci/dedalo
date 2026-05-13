@@ -89,7 +89,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label',
-			text_node		: body_label,
+			inner_html		: body_label,
 			parent			: body
 		})
 

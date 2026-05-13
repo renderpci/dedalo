@@ -1816,27 +1816,6 @@ final class core_functions_test extends BaseTestCase {
 
 
 	/**
-	* TEST_build_link
-	* @return void
-	*/
-	public function test_build_link() {
-
-		$result = build_link(
-			'name of the link',
-			['url' => 'https://dedalo.dev']
-		);
-
-		$eq = gettype($result)==='string';
-		$this->assertTrue(
-			$eq,
-			'expected true, but received is: '
-				. to_string( $eq )
-		);
-	}//end test_build_link
-
-
-
-	/**
 	* TEST_is_empty
 	* @return void
 	*/

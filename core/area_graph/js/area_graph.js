@@ -109,7 +109,7 @@ area_graph.prototype.init = async function(options) {
 		// render event
 		const render_handler = () => {
 			// open_search_panel. local DDBB table status
-			const status_id			= 'open_search_panel'
+			const status_id			= `open_search_panel_${self.tipo}_${self.mode}`
 			const collapsed_table	= 'status'
 			data_manager.get_local_db_data(status_id, collapsed_table, true)
 			.then(async function(ui_status){

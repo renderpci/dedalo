@@ -98,15 +98,9 @@ const get_content_data = async function(self) {
 		})
 		lock_items.push(components_list_container)
 
-	// component caller
-		ui.load_item_with_spinner({
-			container	: components_list_container,
-			callback	: async () => {
-				await self.get_component_to_propagate()
-				const component_node = await self.component_to_propagate.render()
-				return component_node
-			}
-		})
+	// component_to_propagate. Await is ready to minimise flicker.
+		const component_node = await self.component_to_propagate.render()
+		components_list_container.appendChild(component_node)
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -266,10 +260,6 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-	// content_data
-		const content_data = ui.tool.build_content_data(self)
-		content_data.appendChild(fragment)
-
 	// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
@@ -289,6 +279,10 @@ const get_content_data = async function(self) {
 			})
 		}
 		check_process_data()
+
+	// content_data
+		const content_data = ui.tool.build_content_data(self)
+		content_data.appendChild(fragment)
 
 
 	return content_data

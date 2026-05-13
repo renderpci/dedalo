@@ -12,8 +12,8 @@ final class common_test extends BaseTestCase {
 	protected function setUp() : void {
 		parent::setUp();
 		// Clear static caches in common
-		common::$structure_context_cache = [];
-		common::$matrix_table_from_tipo = [];
+		common::$cache_structure_context = [];
+		common::$cache_matrix_table_from_tipo = [];
 	}
 
 	/////////// ⬇︎ static methods ⬇︎ ////////////////
@@ -1546,10 +1546,10 @@ final class common_test extends BaseTestCase {
 	}
 
 	/**
-	* TEST_get_structure_context_cache
+	* TEST_get_cache_structure_context
 	* @return void
 	*/
-	public function test_get_structure_context_cache() {
+	public function test_get_cache_structure_context() {
 		$this->user_login();
 
 		$component = component_common::get_instance(
@@ -1693,7 +1693,7 @@ final class common_test extends BaseTestCase {
 			]
 		];
 		// Clear cache to re-calculate
-		common::$structure_context_cache = [];
+		common::$cache_structure_context = [];
 		$component->from_parent = null;
 		$result = $component->get_structure_context();
 		$this->assertEquals('session_parent', $result->parent);

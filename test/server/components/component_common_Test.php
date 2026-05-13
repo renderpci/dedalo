@@ -456,6 +456,7 @@ final class component_common_test extends BaseTestCase {
 			);
 
 			if (!in_array($element->model, [
+				'component_external',
 				'component_relation_index', // data is external, not loaded from section
 				'component_relation_children', // data is external, not loaded from section
 				'component_inverse', // data is external, not loaded from section

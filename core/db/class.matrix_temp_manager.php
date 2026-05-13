@@ -51,7 +51,7 @@ class matrix_temp_manager extends matrix_db_manager {
 	 * @package Dedalo
 	 * @subpackage Core
 	 */
-	public static function create(string $section_tipo, string $table='temp', ?object $values = null): int|false {
+	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
 		$key = self::get_uid($section_tipo);
 		$value = json_handler::encode($values ?: new stdClass());
@@ -158,7 +158,16 @@ class matrix_temp_manager extends matrix_db_manager {
 
 		$result = self::exec_search($sql, [$key, $json_values]);
 
-		return (bool)$result;
+		if (!$result) {
+			debug_log(__METHOD__
+				. " Error execution UPDATE/INSERT on table: $table " . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
 	}//end update
 
 

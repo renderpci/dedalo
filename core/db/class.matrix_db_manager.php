@@ -103,6 +103,9 @@ class matrix_db_manager {
 	*/
 	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
+		// Recursion guard (static persists across recursive calls within the same request)
+		static $create_depth = 0;
+
 		// Validate table
 		if (!isset(static::$tables[$table])) {
 			debug_log(
@@ -213,6 +216,35 @@ class matrix_db_manager {
 		$result = self::exec_search($sql, $params);
 
 		if (!$result) {
+			// Check if the error is because the counter is wrong
+			$error = pg_last_error($conn);
+			if (str_contains($error, 'ERROR:  duplicate key') || str_contains($error, '23505')) {
+				// Duplicate entry detected
+				debug_log(__METHOD__
+					.' The new record could not be created. The counter is wrong. Trying to fix it.' . PHP_EOL
+					.' func_get_args: ' . to_string( func_get_args() )
+					, logger::ERROR
+				);
+				// Try to fix the counter and exec again (with recursion guard)
+				if ($create_depth < 1) {
+					$create_depth++;
+					try {
+						$modify_counter_result = counter::modify_counter($section_tipo, 'fix');
+						if ($modify_counter_result === true) {
+							return self::create($table, $section_tipo, $values);
+						}
+					} catch (\Throwable $th) {
+						debug_log(__METHOD__
+							.' The new record could not be created. The counter is wrong and the counter fix attempt failed.' . PHP_EOL
+							.' func_get_args: ' . to_string( func_get_args() )
+							, logger::ERROR
+						);
+					} finally {
+						$create_depth--;
+					}
+				}
+			}
+
 			return false;
 		}
 
@@ -1005,7 +1037,7 @@ class matrix_db_manager {
 		// check result
 		if($result===false) {
 			debug_log(__METHOD__
-				." Error Processing exec_SEARCH Request. :". PHP_EOL
+				." Error Processing exec_search Request. :". PHP_EOL
 				.' pg_last_error: ' . pg_last_error($conn) . PHP_EOL
 				.' sql_query: ' . $sql_query . PHP_EOL
 				.' params: ' . json_encode($params) . PHP_EOL
@@ -1064,9 +1096,7 @@ class matrix_db_manager {
 				);
 			}else{
 				$color = $total_time_ms > 15 ? ANSI_BOLD_RED : ANSI_BOLD_GREEN;
-				// $lines = explode("\n", trim($sql_query));
-				// $subquery = substr($lines[0] ?? '', 0, 250);
-				$subquery = str_replace("\n", ' ', debug_prepared_statement($sql_query, $params, $conn));
+				$subquery = debug_prepared_statement($sql_query, $params, $conn);
 				$sql_query_debug = '-- exec_search: ' . $color . $total_time_ms . ANSI_RESET . ' ms - ' . count($params) . ' params [' .$stmt_name. '] ' . $subquery;
 				if(isset($prepend_sql)) {
 					$sql_query_debug = $prepend_sql . $sql_query_debug;

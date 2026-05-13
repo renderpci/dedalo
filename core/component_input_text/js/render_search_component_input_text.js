@@ -119,6 +119,16 @@ const get_content_value = (i, data_item, self) => {
 		// change event
 		const change_handler = (e) => {
 
+			// ontology7 split: if user typed a combined value like 'rsc170',
+			// split it into TLD ('rsc') and section_id ('170') across the two inputs
+			if (self.tipo==='ontology7') {
+				const split_done = split_tipo_to_fields(input.value, input, self)
+				if (split_done) {
+					// split_tipo_to_fields already dispatched change events on both inputs
+					return
+				}
+			}
+
 			const data_item_to_save = clone(data_item)
 
 			// parsed_value
@@ -151,8 +161,7 @@ const get_content_value = (i, data_item, self) => {
 
 		// paste event
 		const paste_handler = (e) => {
-			// Trigger paste_tipo function to handle TLD 'ontology7' cases
-			paste_tipo(e, self, input);
+			paste_tipo(e, self)
 		}
 		input.addEventListener('paste', paste_handler)
 
@@ -176,11 +185,70 @@ const get_content_value = (i, data_item, self) => {
 
 
 /**
-* PASTE_HANDLER
+* SPLIT_TIPO_TO_FIELDS
+* Splits a combined tipo value like 'rsc170' into TLD ('rsc') and section_id ('170'),
+* then sets each part into the corresponding input within the same search_group.
+* Used by both paste_tipo and change_handler when the component tipo is 'ontology7'.
+* @param string value - The combined value to split (e.g. 'rsc170')
+* @param HTMLElement input - The current input element (ontology7)
+* @param object self - Component instance
+* @return bool - true if split was performed, false otherwise
+*/
+const split_tipo_to_fields = (value, input, self) => {
+
+	// Only TLD input handles the split
+	if (self.tipo!=='ontology7') {
+		return false
+	}
+
+	// Match pattern like 'rsc170' → text='rsc', number='170'
+	const match = value.match(/^([a-zA-Z_]+)(\d+)$/)
+	if (!match) {
+		return false
+	}
+
+	const [ , text, number ] = match
+	if (!text || !number) {
+		return false
+	}
+
+	// Find ontology2 input scoped to the same search_group
+	const search_group = input.closest('.search_group')
+	if (!search_group) {
+		return false
+	}
+
+	const ontology2_input = search_group.querySelector('.wrapper_component.ontology2 input.input_value')
+	if (!ontology2_input) {
+		return false
+	}
+
+	// set new input values
+	input.value			= text
+	ontology2_input.value	= number
+
+	if(SHOW_DEBUG===true) {
+		console.log('debug split_tipo_to_fields set text:', text, 'number:', number);
+	}
+
+	// Trigger change event in both inputs to update instance data and search preset
+	input.dispatchEvent(new Event('change', { bubbles: true }))
+	ontology2_input.dispatchEvent(new Event('change', { bubbles: true }))
+
+	// Move focus to section_id input for natural flow
+	ontology2_input.focus()
+
+	return true
+}//end split_tipo_to_fields
+
+
+
+/**
+* PASTE_TIPO
 * Handle tipo paste when current component tipo is 'ontology7' (TLD).
 * This is a special case useful for Ontology searches.
 * It splits the pasted tipo like 'dd156' to 'dd' and '156' and
-* fix the values into the corresponding inputs (TLD, section_id)
+* fixes the values into the corresponding inputs (TLD, section_id)
 * @param e event
 * @param object self - component instance
 * @return void
@@ -192,41 +260,19 @@ const paste_tipo = (e, self) => {
 		return
 	}
 
-	// Get pasted text from clipboard as dd1
-	const pasted_text = e.clipboardData.getData('text');
-	const match = pasted_text.match(/^([a-zA-Z_]+)(\d+)$/);
+	// Get pasted text from clipboard
+	const pasted_text = e.clipboardData.getData('text')
+
+	// Prevent the default paste — split_tipo_to_fields will set both inputs
+	const match = pasted_text.match(/^([a-zA-Z_]+)(\d+)$/)
 	if (match) {
-		const [ , text, number ] = match;
-		if (text && number) {
-			// Find section_id "ontology2"
-			const component_section_id = document.querySelector('.wrapper_component.ontology2')
-			if (component_section_id) {
-				const component_section_id_input = component_section_id.querySelector('input.input_value')
-				if (component_section_id_input) {
-
-					// Prevent duplicate values on paste
-					e.preventDefault();
-
-					const input = e.target
-
-					// set new input values
-					input.value = text
-					component_section_id_input.value = number
-
-					if(SHOW_DEBUG===true) {
-						console.log('debug paste_tipo set text:', text, 'number:', number);
-					}
-
-					// Trigger change event in both inputs to save it in search preset
-					input.dispatchEvent(new Event('change', { bubbles: true }));
-					component_section_id_input.dispatchEvent(new Event('change', { bubbles: true }));
-
-					component_section_id_input.focus()
-				}
-			}
-		}
+		e.preventDefault()
+		const input = e.target
+		// Set the input value first so split_tipo_to_fields can read it
+		input.value = pasted_text
+		split_tipo_to_fields(pasted_text, input, self)
 	}
-}//end paste_handler
+}//end paste_tipo
 
 
 

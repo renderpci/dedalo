@@ -380,7 +380,7 @@ section.prototype.init = async function(options) {
 					if (self.search_container && self.filter) {
 						dd_request_idle_callback( () => {
 							// open_search_panel. local DDBB table status
-							const status_id		= 'open_search_panel'
+							const status_id		= `open_search_panel_${self.tipo}_${self.mode}`
 							const status_table	= 'status'
 							data_manager.get_local_db_data(status_id, status_table, true)
 							.then(async function(ui_status){

@@ -143,10 +143,12 @@ class exec_ {
 			$class_file		= $options->class_file;
 			$params			= $options->params;
 
-			$safe_params = new stdClass();
-			foreach ($params as $key => $value) {
-				$safe_params->{$key} = safe_xss($value);
-			}
+		// params. Pass through without safe_xss sanitization — params are
+		// application data (e.g. SQO filter values with '>' operators) not
+		// rendered as HTML. htmlspecialchars() corrupts such operational values.
+		// The direct (non-CLI) path also passes options unsanitized to tool
+		// methods, and process_runner.php now skips params sanitization too.
+			$safe_params = $params;
 
 		// server_vars
 			// sh_data mandatory vars

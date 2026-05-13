@@ -94,6 +94,9 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 		const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
 		self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
+	// init and build the component to propagate
+		await self.get_component_to_propagate()
+
 
 	return common_build
 }//end build_custom
@@ -105,11 +108,11 @@ tool_propagate_component_data.prototype.build = async function(autoload=false) {
 * Instance, build and save temporal data, self.main_element
 * @return promise
 */
-tool_propagate_component_data.prototype.get_component_to_propagate = function() {
+tool_propagate_component_data.prototype.get_component_to_propagate = async function() {
 
 	const self = this
 
-	return new Promise(async function(resolve){
+	try {
 
 		const section_id = 1 // fake section id for temporal data
 
@@ -122,11 +125,10 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			tipo			: self.main_element.tipo,
 			lang			: self.main_element.lang,
 			type			: self.main_element.type,
-			context			: self.main_element.context,
-			id_variant		: 'propagate_'+new Date().getUTCMilliseconds(),
+			context			: clone(self.main_element.context),
+			id_variant		: 'propagate_'+Date.now(),
 			standalone		: true,
-			caller			: self,
-			is_temporal		: true
+			caller			: self
 		}
 		// init
 			self.component_to_propagate = await get_instance(instance_options)
@@ -135,8 +137,8 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			await self.component_to_propagate.build(true)
 
 		// configure the component
-			self.component_to_propagate.datum			= self.main_element.datum
-			self.component_to_propagate.data			= self.main_element.data
+			self.component_to_propagate.datum			= clone(self.main_element.datum)
+			self.component_to_propagate.data			= clone(self.main_element.data)
 			self.component_to_propagate.data.section_id	= section_id
 
 		// show_interface. Change to add link and add buttons and remove save animation
@@ -147,14 +149,20 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			self.component_to_propagate.show_interface.list_from_component_data	= false
 
 		// set value and save to tmp section (temporal session stored)
+			const entries = self.main_element.data?.entries || []
 			const changed_data_item = Object.freeze({
-				action	: 'set_data',
-				value	: self.main_element.data.value || []
+				action	: 'set_data', // 'set_data' action replaces entire component value in current language
+				value	: entries
 			})
+
 			await self.component_to_propagate.save([changed_data_item])
 
-		resolve(true)
-	})
+	} catch (error) {
+		console.error('Error on get_component_to_propagate:', error)
+		throw error
+	}
+
+	return true
 }//end get_component_to_propagate
 
 
@@ -176,7 +184,7 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		const section_id			= self.main_element.section_id
 		const component_tipo		= self.main_element.tipo
 		const lang					= self.main_element.lang
-		const propagate_data_value	= self.component_to_propagate.data.value
+		const propagate_data_value	= self.component_to_propagate.data.entries
 		const bulk_process_text 	= self.get_tool_label('bulk_process_label') || 'Data propagation'
 		const action_label 			= self.get_tool_label(action) || action
 		const bulk_process_label 	= `${bulk_process_text} | ${action_label}`

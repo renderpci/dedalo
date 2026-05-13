@@ -74,6 +74,16 @@
 	};
 
 	foreach ($data as $key => $value) {
+		if ($key === 'params') {
+			// Skip recursive sanitization of params — they are application data
+			// (e.g. SQO filter values with '>' operators) not rendered as HTML.
+			// htmlspecialchars() corrupts such operational values. The direct
+			// (non-CLI) path also passes options unsanitized to tool methods.
+			// Infrastructure keys (class_name, method_name, file) are still
+			// sanitized below.
+			$safe_data[$key] = $value;
+			continue;
+		}
 		$safe_value = $sanitize($value);
 		if (is_string($value) && $safe_value !== $value) {
 			die("Invalid value [$key]: " . to_string($value));
