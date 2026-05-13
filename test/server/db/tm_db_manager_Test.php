@@ -56,7 +56,7 @@ final class tm_db_manager_test extends BaseTestCase {
 	public static function tearDownAfterClass(): void
 	{
 		// $conn = DBi::_getConnection();
-		
+
 		// // Drop test table and sequence
 		// $sql = "
 		// 	DROP TABLE IF EXISTS matrix_time_machine_test CASCADE;
@@ -139,7 +139,7 @@ final class tm_db_manager_test extends BaseTestCase {
 		// int_columns
 		$int_columns = tm_db_manager::$int_columns;
 		$eq = $int_columns === [
-			'id'				=> true,		
+			'id'				=> true,
 			'section_id'		=> true,
 			'user_id'			=> true,
 			'bulk_process_id'	=> true
@@ -177,7 +177,7 @@ final class tm_db_manager_test extends BaseTestCase {
 
 		// 1 - Create basic record
 		$start_time = start_time();
-		$result = tm_db_manager::create(			
+		$result = tm_db_manager::create(
 			$values
 		);
 
@@ -209,7 +209,7 @@ final class tm_db_manager_test extends BaseTestCase {
 		$values = (object)[
 			'section_tipo' => $section_tipo
 		];
-		$result = tm_db_manager::create(			
+		$result = tm_db_manager::create(
 			$values
 		);
 
@@ -274,7 +274,7 @@ final class tm_db_manager_test extends BaseTestCase {
 	 */
 	public function test_read(): void
 	{
-		
+
 		// create a record
 		$values = (object)[
 			'section_id'      => $this->section_id,
@@ -340,10 +340,10 @@ final class tm_db_manager_test extends BaseTestCase {
 			'expected true (object)' . PHP_EOL
 				. 'result type: ' . gettype($result) . PHP_EOL
 				. 'result: ' . to_string($result)
-		);		
+		);
 
 		// 3 - Reading non existing record
-		$result = tm_db_manager::read(		
+		$result = tm_db_manager::read(
 			$id = 999999999
 		);
 		$eq = $result === false;
@@ -382,7 +382,7 @@ final class tm_db_manager_test extends BaseTestCase {
 		$id = tm_db_manager::create(
 			null
 		);
-		
+
 		// 1 - update the record basic
 		$start_time = start_time();
  		$values = (object)[
@@ -395,7 +395,7 @@ final class tm_db_manager_test extends BaseTestCase {
 			],
 			'timestamp' => date('Y-m-d H:i:s')
 		];
-		$result = tm_db_manager::update(			
+		$result = tm_db_manager::update(
 			$id,
 			$values
 		);
@@ -440,7 +440,7 @@ final class tm_db_manager_test extends BaseTestCase {
 			'timestamp' => date('Y-m-d H:i:s')
 		];
 		$start_time = start_time();
-		$result = tm_db_manager::update(			
+		$result = tm_db_manager::update(
 			$id,
 			$values2
 		);
@@ -462,7 +462,7 @@ final class tm_db_manager_test extends BaseTestCase {
 		);// result_data
 		// convert to array and sort to compare
 		$result_data_array = (array)json_decode($result->data);
-		ksort($result_data_array);	
+		ksort($result_data_array);
 		$values2_data_array = (array)$values2->data;
 		ksort($values2_data_array);
 		$eq = $result_data_array == $values2_data_array;
@@ -475,7 +475,7 @@ final class tm_db_manager_test extends BaseTestCase {
 
 
 		// 4 - Updating non existing record
-		$result = tm_db_manager::update(			
+		$result = tm_db_manager::update(
 			$id = 999999999,
 			$values
 		);
@@ -525,7 +525,7 @@ final class tm_db_manager_test extends BaseTestCase {
 
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
-		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
+		// debug_log(__METHOD__ . " total_time (1): " . $total_time, logger::ERROR);
 		$eq = $total_time < 5;
 		$this->assertTrue(
 			$eq,
@@ -550,7 +550,7 @@ final class tm_db_manager_test extends BaseTestCase {
 				. 'result: ' . to_string($result)
 		);
 
-		
+
 		// 2 - read and check all is written OK
 		$result	= tm_db_manager::read(
 			$id
@@ -577,7 +577,7 @@ final class tm_db_manager_test extends BaseTestCase {
 				. 'result: ' . to_string($result)
 		);
 
-		
+
 		// 4 - massive delete
 		$counter_value = $this->get_counter_value();
 		$this->execution_timing(
@@ -610,7 +610,7 @@ final class tm_db_manager_test extends BaseTestCase {
 			],
 			'timestamp' => date('Y-m-d H:i:s')
 		]);
-		
+
 		// Test 2: Invalid column name (should fail)
 		$result = tm_db_manager::update(
 			$id,
@@ -650,7 +650,7 @@ final class tm_db_manager_test extends BaseTestCase {
 	 * @return void
 	 */
 	public function test_delete_edge_cases(): void
-	{	
+	{
 		// Test 1: Delete non-existent record (should still return true)
 		$result = tm_db_manager::delete(
 			999999999
@@ -661,7 +661,7 @@ final class tm_db_manager_test extends BaseTestCase {
 		$id = tm_db_manager::create();
 		$result1 = tm_db_manager::delete($id);
 		$this->assertTrue($result1, 'first delete should succeed');
-		
+
 		$result2 = tm_db_manager::delete($id);
 		$this->assertTrue($result2, 'second delete should also return true');
 	}//end test_delete_edge_cases
