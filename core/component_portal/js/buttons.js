@@ -122,7 +122,10 @@ buttons.render_button_add = (self) => {
 				const section_tipo	= last_value.section_tipo
 				const section_id	= last_value.section_id
 
-				// section. Create the new section instance
+				// header
+				const header = (get_label.new || 'New section') + ' ' + (target_section[0]?.label || '')
+
+				// body section. Create the new section instance
 				const section = await get_instance({
 					model			: 'section',
 					mode			: 'edit',
@@ -135,9 +138,6 @@ buttons.render_button_add = (self) => {
 				})
 				await section.build(true)
 				const section_node = await section.render()
-
-				// header
-				const header = (get_label.new || 'New section') + ' ' + target_section[0].label
 
 				// modal. Create a modal to attach the section node
 				const modal = ui.attach_to_modal({
@@ -225,8 +225,8 @@ buttons.render_button_link = (self) => {
 
 			// modal_body
 				const iframe_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'iframe_container'
+					element_type	: 'div',
+					class_name		: 'iframe_container'
 				})
 				const iframe = ui.create_dom_element({
 					element_type	: 'iframe',
