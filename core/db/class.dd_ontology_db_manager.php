@@ -658,4 +658,49 @@ abstract class dd_ontology_db_manager {
 
 
 
+	/**
+	 * SEARCH_EXACT_TERM
+	 * Searches dd_ontology by JSONB containment on the term column.
+	 *
+	 * Uses the `@>` operator to match a specific language key and value
+	 * inside the term JSONB object, e.g. `term @> '{"lg-eng":"Oral History"}'`.
+	 *
+	 * @param string $text Exact text to match
+	 * @param string $lang Language code (e.g. 'lg-eng')
+	 * @param string|null $model Optional model name filter
+	 * @param int $limit Max results
+	 * @return array|false Array of tipos, or false on error
+	 */
+	public static function search_exact_term(
+		string $text,
+		string $lang,
+		?string $model = null,
+		bool $is_main = false,
+		int $limit = 50
+	) : array|false {
+
+		$json_search = (object)[
+			'operator' => '@>',
+			'value' => '{"' . $lang . '":"' . $text . '"}'
+		];
+
+		$search_values = [
+			'term' => $json_search
+		];
+
+		if (!empty($model)) {
+			$search_values['model'] = $model;
+		}
+
+		if ($is_main) {
+			$search_values['is_main'] = $is_main;
+		}
+
+		return self::search($search_values, false, $limit);
+	}//end search_exact_term
+
+
+
+
+
 }//end class dd_ontology_db_manager
