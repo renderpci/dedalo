@@ -86,10 +86,11 @@ view_default_edit_menu.render = async function(self, options) {
 		const resize_observer = new ResizeObserver((entries) => {
 			for (const entry of entries) {
 				const height = entry.contentRect.height;
+				const win_width = window.innerWidth;
 				if (height > 50) {
 					content_data.classList.add('compact');
-					content_data._compact_edge = entry.contentRect.width;
-				} else if (content_data._compact_edge && entry.contentRect.width > content_data._compact_edge) {
+					content_data._compact_edge = win_width;
+				} else if (content_data._compact_edge && win_width > content_data._compact_edge) {
 					content_data.classList.remove('compact');
 				}
 			}
