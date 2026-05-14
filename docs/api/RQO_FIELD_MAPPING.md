@@ -389,17 +389,17 @@ This document contains **precise, method-specific RQO field usage** extracted di
 
 ---
 
-### get_ontology_info()
-**Purpose**: Retrieve ontology type information.  
+### get_matrix_ontology_locator()
+**Purpose**: Retrieve the matrix_ontology locator of the ontology tipo.  
 **RQO Fields Used**:
 - `source`: object (optional)
-  - `tipo`: string (optional) — specific type to query
+  - `tipo`: string (optional) — the matrix_ontology locator of the specific tipo to query
 
 **Example Request**:
 ```json
 {
   "dd_api": "dd_core_api",
-  "action": "get_ontology_info",
+  "action": "get_matrix_ontology_locator",
   "source": {
     "tipo": "rsc167"
   }
