@@ -635,14 +635,21 @@ export const open_tool = async (options) => {
 const view_modal = async function(options) {
 
 	// options
-		const tool_context		= options.tool_context || {}
 		const caller			= options.caller
 		const windowFeatures	= options.windowFeatures || null
 
-	// tool context additional properties
-		tool_context.lang		= caller.lang
-		tool_context.type		= 'tool'
-		tool_context.id_variant	= caller.id_base // prevent instance id collisions
+	// validate caller
+		if (!caller) {
+			console.error('view_modal: missing caller');
+			return false
+		}
+
+	// tool context (clone to avoid mutating the passed-in object)
+		const tool_context = Object.assign({}, options.tool_context || {}, {
+			lang		: caller.lang,
+			type		: 'tool',
+			id_variant	: caller.id_base // prevent instance id collisions
+		})
 
 	// instance options
 		const instance_options = Object.assign({
@@ -653,8 +660,15 @@ const view_modal = async function(options) {
 		const tool_instance = await get_instance(instance_options)
 
 	// stop if already loaded (toggle tool)
-		if (tool_instance.status && tool_instance.status!=='initialized') {
+		if (tool_instance && tool_instance.status && tool_instance.status!=='initialized') {
 			return false
+		}
+
+	// load tool CSS
+		const tool_css_url = tool_context.css?.url
+		if(tool_css_url) {
+			// Don't await here. Race conditions are handled
+			common.prototype.load_style(tool_css_url)
 		}
 
 	// modal
@@ -663,7 +677,7 @@ const view_modal = async function(options) {
 			element_type	: 'div',
 			class_name		: `tool_header ${tool_context.name} header`,
 			inner_html		: `<div class="tool_name_container">
-								<div class="label">${tool_context.label}</div>
+								<div class="label"><span class="button white" style="mask: url("${tool_context.icon}");"></span>${tool_context.label}</div>
 								<div class="description">${loading_label}</div>
 							  </div>`
 		})
@@ -754,21 +768,18 @@ const view_modal = async function(options) {
 		})
 		modal.on_close	= () => {
 
-			if (typeof tool_instance.on_close_actions==='function') {
+			// remove modal from DOM (original on_close was overwritten,
+			// so we must call remove() explicitly to avoid DOM leak)
+			modal.remove()
+
+			if (tool_instance && typeof tool_instance.on_close_actions==='function') {
 
 				// custom actions
 				tool_instance.on_close_actions('modal')
-				// re-select the caller component
-				if (caller.type==='component') {
-					dd_request_idle_callback(
-						() => {
-							ui.component.activate(caller)
-						}
-					)
-				}
 
-			}else{
+			}else if (tool_instance) {
 
+				tool_instance.destroy(true, true, true)
 				caller.refresh({
 					refresh_id_base_lang : true
 				})
@@ -780,7 +791,18 @@ const view_modal = async function(options) {
 						}
 					)
 				})
-				tool_instance.destroy(true, true, true)
+				.catch(err => {
+					console.error('view_modal: caller.refresh failed:', err)
+				})
+			}
+
+			// re-select the caller component
+			if (caller.type==='component') {
+				dd_request_idle_callback(
+					() => {
+						ui.component.activate(caller)
+					}
+				)
 			}
 		}
 
