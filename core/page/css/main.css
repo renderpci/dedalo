@@ -6993,6 +6993,7 @@ dd-modal .footer.distribute {
 .search_component > .wrapper_component {
   flex-grow: 1;
   display: grid;
+  padding-bottom: 0.8rem;
 }
 .search_component > .wrapper_component > .label {
   padding: 0.5em;
@@ -7012,6 +7013,37 @@ dd-modal .footer.distribute {
 }
 .search_component > .button.close:active {
   opacity: 0.5;
+}
+.search_component > .button.up,
+.search_component > .button.down {
+  position: absolute;
+  bottom: 0.1rem;
+  z-index: 3;
+  opacity: 0.4;
+  background-image: url(../../themes/default/icons/sort_up.svg);
+  background-color: transparent;
+  background-repeat: no-repeat;
+}
+.search_component > .button.up:hover,
+.search_component > .button.down:hover {
+  opacity: 1;
+}
+.search_component > .button.up:active,
+.search_component > .button.down:active {
+  opacity: 0.5;
+}
+.search_component > .button.up.disabled,
+.search_component > .button.down.disabled {
+  opacity: 0.15;
+  pointer-events: none;
+}
+.search_component > .button.down {
+  right: -0.2rem;
+  transform: rotate(90deg) scale(0.9);
+}
+.search_component > .button.up {
+  right: 0.75rem;
+  transform: rotate(-90deg) scale(0.9);
 }
 .wrapper_search {
   position: relative;
@@ -7733,7 +7765,7 @@ dd-modal .footer.distribute {
   }
 }
 .menu > .content_data > .theme_toggle {
-  width: 1.4em;
+  width: 1.25em;
   height: 2rem;
   background-image: url('../../themes/default/icons/moon.svg');
   background-size: contain;
@@ -7741,20 +7773,18 @@ dd-modal .footer.distribute {
   background-position: center;
   cursor: pointer;
   opacity: 0.85;
-  margin-right: 0.5rem;
   filter: brightness(0) invert(1);
 }
 .menu > .content_data > .theme_toggle:hover {
   opacity: 1;
 }
 .menu > .content_data > .ai_assistant_button {
+  width: 1.3rem;
+  height: 2rem;
   background-image: url('../../../tools/tool_assistant/img/ai-assistant.svg');
   background-repeat: no-repeat;
   background-size: contain;
   background-position: center;
-  width: 1.4rem;
-  height: 2rem;
-  margin-right: 0.5rem;
   cursor: pointer;
   filter: brightness(0) invert(1);
 }
@@ -14341,11 +14371,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-left: 0.25rem;
   font-size: 1.1rem;
 }
-.component_input_text.search .content_value {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-}
 /**
 * view_default_input_text
 *
@@ -14941,6 +14966,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .component_portal.search .content_data .section_record,
 .portal.search .content_data .section_record {
   width: calc(100% - 50px);
+  display: contents;
 }
 .component_portal.search .input_value,
 .portal.search .input_value {
@@ -15115,7 +15141,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: all 0.15s;
+  transition: opacity 0.15s ease;
   border-radius: unset;
   border-top-left-radius: 0.5rem;
 }
