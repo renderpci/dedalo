@@ -21,6 +21,13 @@
 
 
 
+/**
+* TOOL_COMMON
+* Base constructor for tool instances.
+* Provides shared initialization, build, render, and utility methods for all tools.
+*
+* @return {boolean}
+*/
 export const tool_common = function(){
 
 	return true
@@ -31,18 +38,18 @@ export const tool_common = function(){
 /**
 * INIT
 * Generic tool init function.
-* @param object options
-* Sample:
-* {
-* 	caller: component_text_area {id: "component_text_area_rsc36_rsc167_1_edit_lg-eng_rsc167", …}
-*	lang: "lg-eng"
-*	mode: "edit"
-*	model: "tool_indexation"
-*	section_id: "1"
-*	section_tipo: "rsc167"
-*	tipo: "rsc36"
-*	tool_config: {ddo_map:[], ...}
-* }
+*
+* @param {Object} options - Configuration object for tool initialization
+* @param {Object} options.caller - Instance that calls the tool
+* @param {string} options.lang - Language code (e.g. "lg-eng")
+* @param {string} options.mode - Tool mode (e.g. "edit")
+* @param {string} options.model - Tool model name (e.g. "tool_indexation")
+* @param {string} options.section_id - Section ID
+* @param {string} options.section_tipo - Section tipo
+* @param {string} options.tipo - Element tipo
+* @param {Object} options.tool_config - Tool-specific configuration with ddo_map
+*
+* @return {boolean}
 */
 tool_common.prototype.init = async function(options) {
 	const self = this
@@ -50,6 +57,12 @@ tool_common.prototype.init = async function(options) {
 	if(SHOW_DEVELOPER===true) {
 		dd_console(`init tool options`, 'DEBUG', options)
 	}
+
+	// options validation
+		if (!options || typeof options !== 'object') {
+			console.error('Invalid init options:', options);
+			return false
+		}
 
 	// safe init double control. To detect duplicated events cases
 		if (self.is_init) {
@@ -59,7 +72,6 @@ tool_common.prototype.init = async function(options) {
 			}
 			return false
 		}
-		self.is_init = true
 
 	// status update
 		self.status = 'initializing'
@@ -84,9 +96,7 @@ tool_common.prototype.init = async function(options) {
 					// searchParams
 					const searchParams = new URLSearchParams(window.location.search)
 					// raw_data
-					const raw_data = searchParams.has('raw_data')
-						? searchParams.get('raw_data') // string from url
-						: null
+					const raw_data = searchParams.get('raw_data') // null if absent
 
 					if (raw_data) {
 
@@ -99,7 +109,13 @@ tool_common.prototype.init = async function(options) {
 							//	 tool_config : object {...}
 							// }
 							const url_data_string	= lzstring.decompressFromEncodedURIComponent(raw_data)
+							if (!url_data_string) {
+								throw new Error('Decompression returned empty result')
+							}
 							const url_data_object	= JSON.parse(url_data_string)
+							if (!url_data_object || typeof url_data_object !== 'object') {
+								throw new Error('Parsed URL data is not a valid object')
+							}
 							const caller_ddo		= url_data_object.caller_ddo
 							const tool_config		= url_data_object.tool_config
 							const caller_options	= url_data_object.caller_options
@@ -109,10 +125,14 @@ tool_common.prototype.init = async function(options) {
 								console.log(')) tool common url_data_object:', url_data_object);
 							}
 
+							// set and build caller
+							if (!caller_ddo) {
+								throw new Error('Missing caller_ddo in URL data')
+							}
+
 							// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
 
-							// set and build caller
 							self.caller = await get_instance( caller_ddo )
 
 							if (self.caller) {
@@ -161,10 +181,7 @@ tool_common.prototype.init = async function(options) {
 						// section_tool case
 
 						// from caller config (transcription case for example)
-							self.tool_config = clone(self.caller.config.tool_context.tool_config)
-							if(SHOW_DEBUG===true) {
-								// console.log("/// -> section_tool case self.caller.config -> self.tool_config:", self.tool_config);
-							}
+						self.tool_config = clone(self.caller.config.tool_context.tool_config)
 
 					}else if (self.caller.tools) {
 
@@ -215,6 +232,14 @@ tool_common.prototype.init = async function(options) {
 		self.events_tokens	= []
 		self.get_tool_label	= get_tool_label // function get_label called by the different tools to obtain the own label in the current lang. The scope is for every tool.
 
+	// set caller_dataframe default if not already set
+		if (self.caller_dataframe === undefined) {
+			self.caller_dataframe = null
+		}
+
+	// mark as initialized (after all async ops succeeded)
+		self.is_init = true
+
 	// set status
 		self.status = 'initialized'
 
@@ -226,12 +251,13 @@ tool_common.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Generic tool build function. Load basic tool config info (stored in component_json dd1353) and css files
-* @param bool autoload = false
-* @param object options = {}
-* 	callback function 'load_ddo_map'
-* @return promise
-* 	resolve: bool
+* Generic tool build function. Loads basic tool config info (stored in component_json dd1353) and CSS files.
+*
+* @param {boolean} [autoload=false] - Whether to autoload tool context from API
+* @param {Object} [options={}] - Build options
+* @param {Function} [options.load_ddo_map] - Custom callback to load ddo_map elements
+*
+* @return {Promise<boolean>}
 */
 tool_common.prototype.build = async function(autoload=false, options={}) {
 
@@ -286,13 +312,12 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 								? page_globals.dedalo_data_nolan // lg-nolan
 								: page_globals.dedalo_data_lang // current data lang (DEDALO_DATA_LANG)
 
-					ar_promises.push( new Promise(async (resolve) => {
+					ar_promises.push( (async () => {
 
 						// new window cases. Caller is calculated, NOT from existing component, so we recycle the instance
 							if (self.caller_is_calculated && el.tipo===self.caller.tipo) {
 								console.log('Used already resolved caller instance:', self.caller);
-								resolve(self.caller)
-								return
+								return self.caller
 							}
 
 						const element_options = {
@@ -311,23 +336,14 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 						}
 
 						// init and build instance
-							get_instance(element_options) // load and init
-							.then(function(element_instance) {
-								const load_data = true // el.model.indexOf('component')!==-1 || el.model==='area_thesaurus'
-								element_instance.build( load_data ) // build, loading data
-								.then(function(){
-									// console.log('--->>> element_instance', element_instance)
-									resolve(element_instance)
-								})
-							})
-					}))
+							const element_instance = await get_instance(element_options) // load and init
+							await element_instance.build(true) // build, loading data
+							return element_instance
+					})())
 				}//end for (let i = 0; i < ddo_map.length; i++)
 
 				// set on finish
-				await Promise.all(ar_promises).then((ar_instances) => {
-					// dd_console(`ar_instances`, 'DEBUG', ar_instances)
-					self.ar_instances = ar_instances
-				})
+				self.ar_instances = await Promise.all(ar_promises)
 
 				return true
 			  }//end async function() load_ddo_map
@@ -362,10 +378,14 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					const api_response = await data_manager.request({
 						body : rqo
 					})
-					self.context = api_response.result[0]
+					self.context = api_response.result?.[0] || null
 
 				// config update
-					self.config = self.context.config
+					if (self.context) {
+						self.config = self.context.config
+					}else{
+						console.error('Error. Tool context not loaded from API response:', api_response);
+					}
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -386,13 +406,14 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 /**
 * RENDER
-* This method is an alias of common.render to allow catch and manage start tool errors
-* Note that if is defined self.error (because a error was written in init or build phases)
-* the tool common error will be used instead tool render
-* @param object options
-*	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* This method is an alias of common.render to allow catching and managing start tool errors.
+* Note that if self.error is defined (because an error was written in init or build phases)
+* the tool common error will be used instead of the tool render.
+*
+* @param {Object} [options={}] - Render options
+* @param {string} [options.render_level] - Level of depth that is rendered (full | content)
+*
+* @return {Promise<HTMLElement>}
 */
 tool_common.prototype.render = async function(options={}) {
 
@@ -411,24 +432,26 @@ tool_common.prototype.render = async function(options={}) {
 
 /**
 * LOAD_COMPONENT
-* Loads a component to place it in respective container.
-* Initialize and build the component with given options.
-* @param object options
-* {
-* 	self				: instance of the caller
-* 	model				: model of the component to load
-* 	mode				: mode of the component to load
-* 	tipo				: tipo of the component to load
-* 	section_tipo		: section_tipo of the component to load
-* 	section_lang		: section_lang of the component to load
-* 	lang				: lang of the component to load
-* 	type				: type of the component to load
-* 	section_id			: section_id of the component to load
-* 	data_source			: data_source of the component to load
-* 	id_variant			: id_variant of the component to load, if not set use the model of the tool
-* 	to_delete_instances	: array of instance object
-* }
-* @return object component_instance
+* Loads a component to place it in its respective container.
+* Initializes and builds the component with the given options.
+*
+* @param {Object} options - Component load options
+* @param {Object} options.self - Instance of the caller
+* @param {string} options.model - Model of the component to load
+* @param {string} options.mode - Mode of the component to load
+* @param {string} options.tipo - Tipo of the component to load
+* @param {string} options.section_tipo - Section tipo of the component to load
+* @param {string} [options.section_lang] - Section lang of the component to load
+* @param {string} options.lang - Lang of the component to load
+* @param {string} [options.type] - Type of the component to load
+* @param {string} [options.section_id] - Section ID of the component to load
+* @param {string} [options.matrix_id] - Matrix ID of the component to load
+* @param {string} [options.data_source] - Data source of the component to load
+* @param {string} [options.id_variant] - ID variant to prevent ID conflicts (defaults to tool model)
+* @param {Object[]} [options.to_delete_instances] - Array of instance objects to destroy
+* @param {Object} [options.caller_dataframe] - Caller dataframe of the component to load
+*
+* @return {Promise<Object>}
 */
 export const load_component = async function(options) {
 
@@ -481,18 +504,10 @@ export const load_component = async function(options) {
 		if (to_delete_instances && to_delete_instances.length>0) {
 			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
 				const current_instance = self.ar_instances[i]
-				if (to_delete_instances.indexOf(current_instance)!==-1) {
-					// destroy previous preview component instances
-					const instance_index = self.ar_instances.findIndex( el => el.id===current_instance.id)
-					// dd_console(`To delete instance index:`, 'DEBUG', instance_index)
-					// remove from array of instances
-					if (instance_index!==-1) {
-						self.ar_instances.splice(instance_index, 1)
-						// destroy instance
-						await current_instance.destroy()
-					}else{
-						console.error("Error on delete previous component instance")
-					}
+				if (to_delete_instances.includes(current_instance)) {
+					// remove from array of instances and destroy
+					self.ar_instances.splice(i, 1)
+					await current_instance.destroy()
 				}
 			}
 		}
@@ -515,34 +530,38 @@ export const load_component = async function(options) {
 /**
 * OPEN_TOOL
 * Init, build and render the tool requested.
-* Called by page observe event (init)
-* To load tool, don't call directly, publish a event as
-	*	event_manager.publish('open_tool', {*
-	* 		caller 		 : self,
-	* 		tool_context : {
-	* 			css: "/v6/tools/tool_lang/css/tool_lang.css"
-	*			icon: "/v6/tools/tool_lang/img/icon.svg"
-	*			label: "Translation"
-	*			mode: "edit"
-	*			model: "tool_lang"
-	*			name: "tool_lang"
-	*			properties: {open_as: 'modal', windowFeatures: null}
-	*			section_id: 8
-	*			section_tipo: "dd1324"
-	*			show_in_component: true
-	* 		}
-	*	})
+* Called by page observe event (init).
+* To load a tool, do not call directly; publish an event as:
+*
+* ```js
+* event_manager.publish('open_tool', {
+* 	caller: self,
+* 	tool_context: {
+* 		css: "/v6/tools/tool_lang/css/tool_lang.css",
+* 		icon: "/v6/tools/tool_lang/img/icon.svg",
+* 		label: "Translation",
+* 		mode: "edit",
+* 		model: "tool_lang",
+* 		name: "tool_lang",
+* 		properties: {open_as: 'modal', windowFeatures: null},
+* 		section_id: 8,
+* 		section_tipo: "dd1324",
+* 		show_in_component: true
+* 	}
+* })
+* ```
+*
 * The event is fired by the tool button created with method ui.build_tool_button.
-* When the user triggers the click event, a publish 'open_tool' is made
-* @param object options
-* {
-* 	caller: object caller (instance)
-* 	tool_context: object
-* 	caller_options: object|null
-* 	open_as: string|null window|modal
-* }
-* @return object|bool
-* 	object is a tool instance
+* When the user triggers the click event, a publish 'open_tool' is made.
+*
+* @param {Object} options - Tool open options
+* @param {Object} options.caller - Object caller (instance)
+* @param {Object|string} options.tool_context - Tool context object or model name string
+* @param {Object|null} [options.caller_options] - Additional data for the tool
+* @param {string|null} [options.open_as] - Mode of visualization: window, modal, tab, popup
+* @param {string|Object|null} [options.windowFeatures] - Window features string or object
+*
+* @return {Promise<Object|boolean>}
 */
 export const open_tool = async (options) => {
 
@@ -551,8 +570,14 @@ export const open_tool = async (options) => {
 			console.warn("------ open_tool call options:",options);
 		}
 
+	// options validation
+		if (!options || typeof options!=='object') {
+			console.error('open_tool: invalid options', options);
+			return false
+		}
+
 	// options
-		// tool_context. Is is string, resolve context from API using value as model
+		// tool_context. If is string, resolve context from API using value as model
 		const tool_context = typeof options.tool_context==='string'
 			? await (async ()=>{
 				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
@@ -563,13 +588,18 @@ export const open_tool = async (options) => {
 						model : options.tool_context // expected name as 'tool_upload'
 					}
 				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				if (api_response.result && api_response.result[0]) {
-					return api_response.result[0] // tool context object
+				try {
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					if (api_response.result && api_response.result[0]) {
+						return api_response.result[0] // tool context object
+					}
+					return null
+				} catch (error) {
+					console.error('open_tool: failed to resolve tool_context from API:', error);
+					return null
 				}
-				return null
 			  })()
 			 : options.tool_context
 				? clone(options.tool_context) // (!) full clone here to avoid circular references
@@ -588,49 +618,46 @@ export const open_tool = async (options) => {
 		// open_as. Mode of tool visualization: modal, tab, popup
 		const open_as = options.open_as
 			? options.open_as // overwrite context value when is passed
-			: tool_context && tool_context.properties && tool_context.properties.open_as
+			: tool_context?.properties?.open_as
 				? tool_context.properties.open_as
 				: 'modal' // default is 'modal'
 		// windowFeatures. Features to pass to the tool visualizer
 		// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
 		const current_windowFeatures = options.windowFeatures
 			? options.windowFeatures // overwrite context value when is passed
-			: tool_context && tool_context.properties && tool_context.properties.windowFeatures
+			: tool_context?.properties?.windowFeatures
 				? tool_context.properties.windowFeatures
 				: null
 
 	// open tool visualization
-		const js_promise = (open_as==='window')
-			? view_window({
-				tool_context	: tool_context, // object
-				caller			: caller, // object like component_input_text instance
-				caller_options	: caller_options,
-				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
-			  })
-			: view_modal({
-				tool_context	: tool_context, // object
-				caller			: caller, // object like component_input_text instance
-				caller_options	: caller_options,
-				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
-			  })
-
-
-	return js_promise
+	return (open_as==='window')
+		? await view_window({
+			tool_context	: tool_context, // object
+			caller			: caller, // object like component_input_text instance
+			caller_options	: caller_options,
+			windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
+		  })
+		: await view_modal({
+			tool_context	: tool_context, // object
+			caller			: caller, // object like component_input_text instance
+			caller_options	: caller_options,
+			open_as			: open_as, // string like 'tab' | 'popup'
+			windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
+		  })
 }//end open_tool
 
 
 
 /**
 * VIEW_MODAL
-* @param object options
-* {
-* 	tool_context: object
-* 	caller: object (instance)
-* }
-* @return promise
-* 	Resolve: object tool_instance
+* Opens the tool in a modal view.
+*
+* @param {Object} options - Modal view options
+* @param {Object} options.tool_context - Tool context object
+* @param {Object} options.caller - Caller instance
+* @param {Object|null} [options.windowFeatures] - Window features to customize modal size
+*
+* @return {Promise<Object|boolean>}
 */
 const view_modal = async function(options) {
 
@@ -822,15 +849,15 @@ const view_modal = async function(options) {
 
 /**
 * VIEW_WINDOW
-* @param object options
-* {
-* 	tool_context: object
-* 	caller: object (instance)
-* 	caller_options: object|null
-* 	windowFeatures: object|null
-* }
-* @return promise
-* 	Resolve: object tool_window
+* Opens the tool in a new browser window or tab.
+*
+* @param {Object} options - Window view options
+* @param {Object} options.tool_context - Tool context object
+* @param {Object} options.caller - Caller instance
+* @param {Object|null} [options.caller_options] - Additional data for the tool
+* @param {string|Object|null} [options.windowFeatures] - Window features string or object
+*
+* @return {Promise<Window|null>}
 */
 const view_window = async function(options) {
 
@@ -840,6 +867,12 @@ const view_window = async function(options) {
 		const caller_options	= options.caller_options || null
 		// const open_as		= options.open_as
 		const windowFeatures	= options.windowFeatures || null
+
+	// caller guard
+		if (!caller) {
+			console.error('view_window: caller is required');
+			return null;
+		}
 		// windowFeatures sample:
 			// {
 			// 	left	: 'return screen.width -760',
@@ -882,7 +915,7 @@ const view_window = async function(options) {
 
 	// URL
 		// raw_data will be compressed and de-compressed from target window
-		const raw_data	= lzstring.compressToEncodedURIComponent(
+		const raw_data = lzstring.compressToEncodedURIComponent(
 			JSON.stringify({
 				caller_ddo		: caller_ddo,
 				tool_config		: tool_config,
@@ -897,37 +930,39 @@ const view_window = async function(options) {
 	// window features
 		const parsed_windowFeatures = typeof windowFeatures==='string'
 			? windowFeatures // string case as 'left=100,top=100,width=320,height=320'
-			: (()=>{ // object case as {"left":"return screen.width -760","top":0,"width":760,"height":500}
+			: (windowFeatures && typeof windowFeatures==='object')
+				? (()=>{ // object case as {"left":"return screen.width -760","top":0,"width":760,"height":500}
 
-				const parsed_pairs = []
-				for(const key in windowFeatures) {
+					const parsed_pairs = []
+					for(const key in windowFeatures) {
 
-					// value could be a Function as string like 'return screen.width -500'
-					// @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
-					const value = typeof windowFeatures[key]==='string' && windowFeatures[key].indexOf('return')===0
-						? Function(windowFeatures[key])() // parse and auto exec the created Function
-						: windowFeatures[key]
+						// value could be a Function as string like 'return screen.width -500'
+						// @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
+						const value = typeof windowFeatures[key]==='string' && windowFeatures[key].indexOf('return')===0
+							? Function(windowFeatures[key])() // parse and auto exec the created Function
+							: windowFeatures[key]
 
-					const pair = `${key}=${value}`
+						const pair = `${key}=${value}`
 
-					parsed_pairs.push(pair)
-				}
+						parsed_pairs.push(pair)
+					}
 
-				const parsed_string = parsed_pairs.join(',')
+					const parsed_string = parsed_pairs.join(',')
 
-				return parsed_string
-			  })()
+					return parsed_string
+				  })()
+				: null // null or non-object case
 
 	// tool_window
 		const window_name	= name +'_'+ (caller.id_base || '')
 		const tool_window	= open_window({
 			url			: url,
 			target		: window_name,
-			features	: parsed_windowFeatures || 'new_tab',
-			on_blur : () => {
-				// Do not use blur here. Use instead this window focus
-			}
+			features	: parsed_windowFeatures || 'new_tab'
 		})
+		if (!tool_window) {
+			console.error('view_window: popup blocked or failed to open');
+		}
 		// this window focus event (not use blur because tool_upload blurs on open file window)
 		const fn_refresh_caller = function() {
 			window.removeEventListener('focus', fn_refresh_caller)
@@ -945,15 +980,6 @@ const view_window = async function(options) {
 		}
 		window.addEventListener('focus', fn_refresh_caller)
 
-	// close tool_window
-		// tool_window.addEventListener('close', fn_onclose, true);
-		// function fn_onclose() {
-		// 	// refresh caller
-		// 	if (caller) {
-		// 		caller.refresh()
-		// 	}
-		// }
-
 
 	return tool_window
 }//end view_window
@@ -962,49 +988,53 @@ const view_window = async function(options) {
 
 /**
 * GET_TOOL_LABEL
-* Return the label in the current language.
-* If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
-* @param string label_name like 'indexation_tool'
-* @param string rest
-* 	Accept an undefined (infinite) number of arguments in the function parameters
-* 	rest is using to get any other string parameters into the functions, it iterate the parameters ...rest
-* 	Using as: get_tool_label(label_name, string_1, string_2)
-* @return string|null
-* 	like 'Indexation Tool'
+* Returns the label in the current language.
+* If the label is not defined in the current language, it tries the default language,
+* then any available language. Returns null if nothing is found.
+*
+* @param {string} label_name - Label key like 'indexation_tool'
+* @param {...string} rest - Additional strings for printf interpolation
+*
+* @return {string|null}
+*   Localized label like 'Indexation Tool', or null if not found
 */
 const get_tool_label = function(label_name, ...rest) {
 
-	const self = this
-
-	const tool_labels = self.context.labels || []
-	if (tool_labels.length>0) {
-
-		// current lang try
-			const found = tool_labels.find(el => el.name===label_name && el.lang===page_globals.dedalo_application_lang)
-
-			if (found) {
-				return printf(found.value, ...rest)
-				// return found.value
-			}
-
-		// fallback to application lang default
-			const lang_default 	= page_globals.dedalo_application_langs_default
-			const found_default = tool_labels.find(el => el.name===label_name && el.lang===lang_default)
-			if (found_default) {
-				return printf(found_default.value, ...rest)
-				// return found_default.value
-			}
-
-		// fallback to any lang available
-			const found_any = tool_labels.find(el => el.name===label_name)
-			if (found_any) {
-				return printf(found_any.value, ...rest)
-				// return found_any.value
-			}
+	const tool_labels = this.context?.labels
+	if (!tool_labels) {
+		return null
 	}
 
+	// single-pass: match by priority (current lang > default lang > any lang)
+	const lang_current	= page_globals.dedalo_application_lang
+	const lang_default	= page_globals.dedalo_application_langs_default
 
-	return null
+	let found_current	= null
+	let found_default	= null
+	let found_any		= null
+
+	const len = tool_labels.length
+	for (let i = 0; i < len; i++) {
+		const el = tool_labels[i]
+		if (el.name !== label_name) continue
+
+		if (!found_any) {
+			found_any = el
+		}
+		if (!found_default && el.lang === lang_default) {
+			found_default = el
+		}
+		if (!found_current && el.lang === lang_current) {
+			found_current = el
+			break // highest priority, no need to continue
+		}
+	}
+
+	const found = found_current || found_default || found_any
+
+	return found
+		? printf(found.value, ...rest)
+		: null
 }//end get_tool_label
 
 
