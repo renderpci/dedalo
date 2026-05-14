@@ -14547,7 +14547,7 @@ class WorkClient {
     const res = await this.fetchJson({
       action: "login",
       dd_api: "dd_utils_api",
-      source: { username: u, password: p }
+      options: { username: u, auth: p }
     });
     if (res.result !== true) {
       throw mapDedaloError(res);
