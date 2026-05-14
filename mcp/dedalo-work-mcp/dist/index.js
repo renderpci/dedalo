@@ -31078,7 +31078,7 @@ class WorkClient {
     const res = await this.fetchJson({
       action: "login",
       dd_api: "dd_utils_api",
-      source: { username: u, password: p }
+      options: { username: u, auth: p }
     });
     if (res.result !== true) {
       throw mapDedaloError(res);
@@ -53199,6 +53199,39 @@ function registerDiscoveryTools(server, client, ctx) {
     }),
     handler: async (a) => client.call(rqo({ action: "start", source: a }))
   }, ctx);
+  registerTool(server, {
+    name: "dedalo_resolve_ontology",
+    description: 'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' + "Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. " + "Returns the section tipo, labels, model, and full component tree. " + "This is the primary tool for discovering what fields/components a section contains from a human-readable name.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Resolve ontology term" },
+    inputSchema: exports_external2.object({
+      text: exports_external2.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
+      lang: OptionalLangSchema,
+      search_mode: exports_external2.enum(["exact", "fuzzy"]).default("fuzzy").describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).')
+    }),
+    handler: async ({ text, lang, search_mode }) => client.call(rqo({
+      action: "resolve_section",
+      dd_api: "dd_ontology_api",
+      source: { text, lang, mode: search_mode }
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_search_ontology",
+    description: "Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). " + "Returns matching ontology nodes with their metadata. " + "Use this to find all sections, components of a specific model, or nodes within a TLD namespace.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search ontology" },
+    inputSchema: exports_external2.object({
+      model: exports_external2.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
+      parent: TipoSchema.optional().describe("Filter by parent tipo."),
+      tld: exports_external2.string().optional().describe('Filter by TLD/namespace (e.g. "oh", "dd", "tch").'),
+      is_model: exports_external2.boolean().optional().describe("Filter by whether node is a model definition."),
+      is_translatable: exports_external2.boolean().optional().describe("Filter by whether node is translatable."),
+      limit: exports_external2.number().int().min(1).max(500).optional().describe("Max results to return (default 100).")
+    }),
+    handler: async (a) => client.call(rqo({
+      action: "search",
+      dd_api: "dd_ontology_api",
+      source: a
+    }))
+  }, ctx);
 }
 
 // src/tools/_shared/output.ts
@@ -53755,10 +53788,10 @@ function createWorkServer(config4) {
 }
 
 // src/index.ts
+var useHttp = process.argv.includes("--http");
 var logger = import_pino.default({
-  level: process.env.LOG_LEVEL ?? "info",
-  transport: { target: "pino-pretty" }
-});
+  level: process.env.LOG_LEVEL ?? "info"
+}, process.stderr);
 var config4;
 try {
   config4 = loadConfig(process.env, logger);
@@ -53795,7 +53828,6 @@ function isOriginAllowed(origin, allowlist) {
   return allowlist.includes(origin);
 }
 async function main() {
-  const useHttp = process.argv.includes("--http");
   try {
     await client.bootstrapCsrf();
     logger.info("CSRF token bootstrapped");

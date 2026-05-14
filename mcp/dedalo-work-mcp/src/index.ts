@@ -5,10 +5,10 @@ import { WorkClient, TokenBucketRateLimiter } from '@dedalo/mcp-common';
 import { loadConfig } from './config.js';
 import { createWorkServer } from './server.js';
 
+const useHttp = process.argv.includes('--http');
 const logger = pino({
 	level: process.env.LOG_LEVEL ?? 'info',
-	transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
-});
+}, process.stderr);
 
 let config;
 try {
@@ -56,7 +56,6 @@ function isOriginAllowed(origin: string | null, allowlist: string[]): boolean {
 }
 
 async function main(): Promise<void> {
-	const useHttp = process.argv.includes('--http');
 
 	// Prime CSRF before any tool call so the first request succeeds.
 	try {
