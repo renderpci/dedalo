@@ -376,18 +376,30 @@ export const ai_assistant = class ai_assistant {
 			'dedalo_start'
 		]
 
-		return this._mcp_tools.filter(function(tool) {
+		const sanitized_tools = this._mcp_tools.filter(function(tool) {
 			return allowed_tools.indexOf(tool.name) !== -1
 		}).map(function(tool) {
+			// force the top-level parameters schema to be an object even if the
+			// tool exposes an empty / non-object inputSchema
+			const raw = tool.inputSchema && typeof tool.inputSchema === 'object'
+				? Object.assign({ type: 'object' }, tool.inputSchema)
+				: { type: 'object' }
+			if (!raw.properties || typeof raw.properties !== 'object') {
+				raw.properties = {}
+			}
 			return {
 				type		: 'function',
 				function	: {
 					name		: tool.name,
 					description	: (tool.description || '').substring(0, 200),
-					parameters	: tool.inputSchema || {}
+					parameters	: ai_assistant._sanitize_schema(raw)
 				}
 			}
 		})
+
+		try { console.debug('[ai_assistant] sanitized tools:', JSON.parse(JSON.stringify(sanitized_tools))) } catch (e) {}
+
+		return sanitized_tools
 	}//end _build_tools_for_model
 
 
