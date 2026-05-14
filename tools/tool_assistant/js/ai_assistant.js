@@ -484,6 +484,12 @@ export const ai_assistant = class ai_assistant {
 
 		if (this._is_generating || this._model_loading) return
 
+		// guard: model must be loaded (after a failed load the engine is still unloaded)
+		if (!this._model_engine.is_loaded()) {
+			this._chat_render.add_system_message(t('model_not_ready', 'Model not loaded. Please wait or change settings.'))
+			return
+		}
+
 		this._abort_controller = new AbortController()
 
 		this._conversation.push({
@@ -525,12 +531,17 @@ export const ai_assistant = class ai_assistant {
 					self._chat_render.append_token(token_text)
 				}
 
+				const think_stream_callback = (token_text) => {
+					self._chat_render.append_thinking_token(token_text)
+				}
+
 				const generation_result = await self._model_engine.generate({
 					messages		: messages,
 					tools			: tools,
 					max_new_tokens	: self._config.max_new_tokens || 2048,
 					signal			: self._abort_controller.signal,
-					on_token		: stream_callback
+					on_token		: stream_callback,
+					on_think_token	: think_stream_callback
 				})
 
 				const tool_calls = self._model_engine.parse_tool_calls(generation_result)
