@@ -99,4 +99,26 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			})),
 	}, ctx);
 
+	registerTool(server, {
+		name: 'dedalo_search_ontology',
+		description:
+			'Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). ' +
+			'Returns matching ontology nodes with their metadata. ' +
+			'Use this to find all sections, components of a specific model, or nodes within a TLD namespace.',
+		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search ontology' },
+		inputSchema: z.object({
+			model: z.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
+			parent: TipoSchema.optional().describe('Filter by parent tipo.'),
+			tld: z.string().optional().describe('Filter by TLD/namespace (e.g. "oh", "dd", "tch").'),
+			is_model: z.boolean().optional().describe('Filter by whether node is a model definition.'),
+			is_translatable: z.boolean().optional().describe('Filter by whether node is translatable.'),
+			limit: z.number().int().min(1).max(500).optional().describe('Max results to return (default 100).'),
+		}),
+		handler: async (a) =>
+			client.call(rqo({
+				action: 'search',
+				dd_api: 'dd_ontology_api',
+				source: a,
+			})),
+	}, ctx);
 }
