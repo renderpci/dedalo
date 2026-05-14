@@ -3379,7 +3379,7 @@ abstract class common {
 								$element_tipo,
 								null,
 								'search',
-								$current_lang,
+								DEDALO_DATA_LANG,
 								$el_section_tipo
 							);
 
