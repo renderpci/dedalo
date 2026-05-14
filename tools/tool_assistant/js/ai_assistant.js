@@ -392,6 +392,92 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* _SANITIZE_SCHEMA
+	* Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen and
+	* Gemma chat templates can consume. Gemma 4's template applies the Jinja
+	* filter `upper` to every property's `type` without a guard, so any
+	* missing/non-string `type` raises
+	* "Cannot apply filter 'upper' to UndefinedValue".
+	* Strategy: whitelist only the fields Gemma understands (`type`, `description`,
+	* `properties`, `required`, `items`, `enum`, `nullable`) and ensure every node
+	* recursively has a valid string `type`. Untyped / `anyOf` / `$ref` / `unknown`
+	* leaves are coerced to `{ type: 'string' }`.
+	* @param object schema
+	* @return object
+	*/
+	static _sanitize_schema(schema) {
+
+		// non-mapping → safe default
+		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+			return { type: 'string' }
+		}
+
+		const allowed_types = ['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']
+
+		// pick first valid type when schema.type is an array (e.g. ["string", "null"])
+		let inferred_type = null
+		if (typeof schema.type === 'string' && allowed_types.indexOf(schema.type) !== -1) {
+			inferred_type = schema.type
+		} else if (Array.isArray(schema.type)) {
+			for (let i = 0; i < schema.type.length; i++) {
+				if (typeof schema.type[i] === 'string' && schema.type[i] !== 'null' && allowed_types.indexOf(schema.type[i]) !== -1) {
+					inferred_type = schema.type[i]
+					break
+				}
+			}
+		}
+
+		// fallback inference from shape
+		if (!inferred_type) {
+			if (schema.properties && typeof schema.properties === 'object') {
+				inferred_type = 'object'
+			} else if (schema.items) {
+				inferred_type = 'array'
+			} else if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+				inferred_type = typeof schema.enum[0] === 'number' ? 'number' : 'string'
+			} else {
+				inferred_type = 'string'
+			}
+		}
+
+		const out = { type: inferred_type }
+
+		if (typeof schema.description === 'string' && schema.description.length > 0) {
+			out.description = schema.description
+		}
+
+		if (schema.nullable === true) {
+			out.nullable = true
+		}
+
+		if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+			out.enum = schema.enum.slice()
+		}
+
+		if (inferred_type === 'object') {
+			out.properties = {}
+			if (schema.properties && typeof schema.properties === 'object') {
+				const keys = Object.keys(schema.properties)
+				for (let i = 0; i < keys.length; i++) {
+					const k = keys[i]
+					out.properties[k] = ai_assistant._sanitize_schema(schema.properties[k])
+				}
+			}
+			if (Array.isArray(schema.required) && schema.required.length > 0) {
+				out.required = schema.required.filter(function(r) { return typeof r === 'string' })
+			}
+		}
+
+		if (inferred_type === 'array') {
+			out.items = ai_assistant._sanitize_schema(schema.items || {})
+		}
+
+		return out
+	}//end _sanitize_schema
+
+
+
 	async _handle_user_message(message) {
 
 		const self = this
