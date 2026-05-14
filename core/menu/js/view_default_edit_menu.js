@@ -15,6 +15,50 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {toggle_theme} from '../../page/js/theme.js'
 
+// sync standalone assistant top/height with actual menu wrapper size (accounts for debug_info_bar)
+	const sync_standalone_position = (ac) => {
+		const menu_wrapper = document.querySelector('.menu_wrapper')
+		const menu_h = menu_wrapper ? menu_wrapper.offsetHeight : 0
+		if (menu_h > 0) {
+			ac.style.top = menu_h + 'px'
+			ac.style.height = 'calc(100vh - ' + menu_h + 'px)'
+			ac.style.maxHeight = 'calc(100vh - ' + menu_h + 'px)'
+		}
+	}
+
+// module-level assistant re-parenting on navigation (persists across menu re-renders)
+	let _assistant_nav_subscribed = false
+	if (!_assistant_nav_subscribed) {
+		_assistant_nav_subscribed = true
+		event_manager.subscribe('user_navigation', () => {
+			const ac = document.querySelector('.assistant_container.show')
+			if (!ac) return
+			const try_reparent = (attempts = 0) => {
+				if (attempts > 30) return // max ~3s
+				const ic = document.getElementById('inspector_container')
+				const is_standalone = !ic
+				const desired_parent = ic || document.body
+				ac.classList.toggle('standalone', is_standalone)
+				if (is_standalone) {
+					sync_standalone_position(ac)
+				} else {
+					ac.style.top = ''
+					ac.style.height = ''
+					ac.style.maxHeight = ''
+					ic.classList.add('has_assistant')
+				}
+				if (!ac.parentNode || !ac.parentNode.isConnected || ac.parentNode !== desired_parent) {
+					desired_parent.appendChild(ac)
+				}
+				// always retry a few times — DOM may not be ready yet on first attempts
+				if (attempts < 10) {
+					setTimeout(() => try_reparent(attempts + 1), 150)
+				}
+			}
+			setTimeout(() => try_reparent(), 50)
+		})
+	}
+
 
 
 /**
