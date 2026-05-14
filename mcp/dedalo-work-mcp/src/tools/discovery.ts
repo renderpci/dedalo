@@ -28,19 +28,6 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 	}, ctx);
 
 	registerTool(server, {
-		name: 'dedalo_get_ontology_info',
-		description:
-			'Query ontology metadata for a specific tipo or model. Returns structure, relationships and configuration. Provide `tipo` for a specific element or `model` to query all elements of that model.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get ontology info' },
-		inputSchema: z.object({
-			tipo: TipoSchema.optional().describe('Specific tipo to query.'),
-			model: z.string().optional().describe('Model name (e.g. `section`, `component_text_area`, `component_portal`).'),
-			lang: OptionalLangSchema,
-		}),
-		handler: async (a) => client.call(rqo({ action: 'get_ontology_info', source: a })),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_get_section_elements_context',
 		description:
 			'Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.',
@@ -90,4 +77,26 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		}),
 		handler: async (a) => client.call(rqo({ action: 'start', source: a })),
 	}, ctx);
+
+	registerTool(server, {
+		name: 'dedalo_resolve_ontology',
+		description:
+			'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' +
+			'Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. ' +
+			'Returns the section tipo, labels, model, and full component tree. ' +
+			'This is the primary tool for discovering what fields/components a section contains from a human-readable name.',
+		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve ontology term' },
+		inputSchema: z.object({
+			text: z.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
+			lang: OptionalLangSchema,
+			search_mode: z.enum(['exact', 'fuzzy']).default('fuzzy').describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).'),
+		}),
+		handler: async ({ text, lang, search_mode }) =>
+			client.call(rqo({
+				action: 'resolve_section',
+				dd_api: 'dd_ontology_api',
+				source: { text, lang, mode: search_mode } as Record<string, unknown> as any,
+			})),
+	}, ctx);
+
 }
