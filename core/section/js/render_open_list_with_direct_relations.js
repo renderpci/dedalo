@@ -221,6 +221,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 }// end render_open_list_with_direct_relations
 
 
+
 /**
 * OPEN_RELATED_DATA
 * Performs a `read_raw` API call to get the locators of the components pointing to target sections
@@ -293,9 +294,9 @@ const open_related_data = async function( options ){
 
 	// read_raw from Dédalo API
 	const rqo = {
-		action			: 'read_raw',
-		options			: rqo_options,
-		sqo				: sqo
+		action	: 'read_raw',
+		options	: rqo_options,
+		sqo		: sqo
 	}
 
 	// perform the search and get the result

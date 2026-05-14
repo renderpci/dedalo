@@ -849,7 +849,7 @@ export const change_handler = function(options) {
 	// changed_data_item
 		const changed_data_item = Object.freeze({
 			action	: 'update',
-			id		: value[key]?.id || null,
+			id      : value[key]?.id || null,
 			value	: data_value
 		})
 
