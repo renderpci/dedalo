@@ -173,21 +173,22 @@ export const model_engine = class model_engine {
 		const tools				= options.tools || []
 		const max_new_tokens	= options.max_new_tokens || this._config.max_new_tokens || 2048
 		const on_token			= options.on_token || (() => {})
+		const on_think_token	= options.on_think_token || (() => {})
 
 		try {
 			if (this._is_qwen35) {
-				return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token)
+				return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token)
 			}
-			return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token)
+			return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 		} catch (err) {
 			if (this._device === 'webgpu' && err.message && err.message.indexOf('bad_alloc') !== -1) {
 				console.warn('[model_engine] WebGPU OOM during inference, falling back to WASM')
 				try {
 					await this._reload_as_wasm()
 					if (this._is_qwen35) {
-						return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token)
+						return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token)
 					}
-					return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token)
+					return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 				} catch (wasm_err) {
 					throw new Error('Model too large for browser memory (WebGPU and WASM both failed). Use a smaller model like Qwen3-0.6B-ONNX.')
 				}
@@ -235,7 +236,7 @@ export const model_engine = class model_engine {
 
 
 
-	async _do_generate_pipeline(messages, tools, max_new_tokens, on_token) {
+	async _do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const generate_options = {
 			max_new_tokens		: max_new_tokens,
@@ -250,7 +251,7 @@ export const model_engine = class model_engine {
 			generate_options.tools = tools
 		}
 
-		const streamed_text	= this._create_streamer(this._pipeline.tokenizer, on_token)
+		const streamed_text	= this._create_streamer(this._pipeline.tokenizer, on_token, on_think_token)
 		generate_options.streamer = streamed_text.streamer
 
 		const result = await this._pipeline(messages, generate_options)
@@ -261,10 +262,10 @@ export const model_engine = class model_engine {
 
 
 
-	async _do_generate_qwen35(messages, tools, max_new_tokens, on_token) {
+	async _do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const tokenizer		= this._processor.tokenizer || this._processor
-		const stream		= this._create_streamer(tokenizer, on_token)
+		const stream		= this._create_streamer(tokenizer, on_token, on_think_token)
 
 		// apply chat template with tools
 		const inputs = tokenizer.apply_chat_template(
@@ -301,10 +302,13 @@ export const model_engine = class model_engine {
 
 
 
-	_create_streamer(tokenizer, on_token) {
+	_create_streamer(tokenizer, on_token, on_think_token) {
+
+		const think_cb = on_think_token || function(){}
 
 		// state machine: accumulates raw text and emits only content that is
 		// outside <think>...</think> and <tool_call>...</tool_call> blocks.
+		// Thinking content is forwarded to `think_cb` so the UI can render it.
 		// Uses a small pending buffer to never emit partial tag prefixes.
 		const state = {
 			text		: '',  // full raw stream (used by parse_tool_calls / _build_result)
@@ -357,10 +361,16 @@ export const model_engine = class model_engine {
 				if (state.in_think) {
 					const close = state.pending.indexOf('</think>')
 					if (close === -1) {
-						// drop everything except possible partial closing tag
+						// emit everything that cannot be the start of '</think>'
 						const keep = Math.max(0, state.pending.length - 8)
+						if (keep > 0) {
+							think_cb(state.pending.substring(0, keep))
+						}
 						state.pending = state.pending.substring(keep)
 						return
+					}
+					if (close > 0) {
+						think_cb(state.pending.substring(0, close))
 					}
 					state.pending = state.pending.substring(close + '</think>'.length)
 					state.in_think = false
@@ -425,7 +435,12 @@ export const model_engine = class model_engine {
 			get_text: function() { return state.text },
 			flush: function() {
 				// emit any safely-buffered tail at end of stream
-				if (state.in_think || state.in_tool) {
+				if (state.in_think) {
+					if (state.pending.length > 0) think_cb(state.pending)
+					state.pending = ''
+					return
+				}
+				if (state.in_tool) {
 					state.pending = ''
 					return
 				}
