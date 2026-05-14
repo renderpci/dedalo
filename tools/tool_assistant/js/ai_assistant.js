@@ -68,6 +68,7 @@ export const ai_assistant = class ai_assistant {
 
 		this._event_tokens.push(
 			event_manager.subscribe('activate_component', (data) => {
+
 				if (data && data.tipo) {
 					this._context.component_tipo	= data.tipo
 					this._context.component_label	= data.label || data.tipo
@@ -365,7 +366,7 @@ export const ai_assistant = class ai_assistant {
 		const allowed_tools = [
 			'dedalo_get_environment',
 			'dedalo_list_sections',
-			'dedalo_get_ontology_info',
+			'dedalo_resolve_ontology	',
 			'dedalo_get_section_elements_context',
 			'dedalo_read_record',
 			'dedalo_search_records',
