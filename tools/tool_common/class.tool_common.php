@@ -85,8 +85,8 @@ class tool_common {
 
 	/**
 	* __CONSTRUCT
-	* @param string|int|null $section_id
-	* @param string $section_tipo
+	* @param string|int|null $section_id Section ID of the record being processed. Null in list mode.
+	* @param string $section_tipo Section tipo (ontology identifier) where the tool is invoked
 	* @return void
 	*/
 	public function __construct(string|int|null $section_id, string $section_tipo) {
@@ -490,9 +490,9 @@ class tool_common {
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
 	* Alias of $this->get_structure_context method for compatibility.
-	* @param int $permissions = 0
-	* @param bool $add_request_config = false
-	* @return dd_object $full_ddo
+	* @param int $permissions = 0 User permissions level for the tool
+	* @param bool $add_request_config = false Whether to append request_config to the context
+	* @return dd_object The complete Dédalo object representing the tool context
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
@@ -613,8 +613,8 @@ class tool_common {
 	/**
 	* GET_ACTIVE_TOOLS
 	* Search all active tools in registered tools section
-	* @param bool $use_cache = true
-	* @return db_result|false $db_result
+	* @param bool $use_cache = true Whether to use static cache for the query result
+	* @return db_result|false Database result containing active tools, or false on failure
 	*/
 	public static function get_active_tools( bool $use_cache=true ) : db_result|false {
 
@@ -724,8 +724,8 @@ class tool_common {
 	/**
 	* GET_CONFIG
 	* Get given tool config if isset
-	* @param string $tool_name
-	* @return array|null $config
+	* @param string $tool_name The name of the tool (same as class name)
+	* @return array|null The tool configuration array, or null if not found
 	*/
 	public static function get_config(string $tool_name) : ?array {
 
@@ -938,8 +938,9 @@ class tool_common {
 	/**
 	* CALL_COMPONENT_METHOD (NOT USED AT THE MOMENT)
 	* Call component method
-	* @param object $options
-	* @return object $response
+	* @param object $options Options containing tipo, section_id, section_tipo, method, method_arguments
+	* @return object Response object with result and msg properties
+	* @throws Exception If the request cannot be processed
 	*/
 	public static function call_component_method(object $options) : object {
 
@@ -1147,7 +1148,7 @@ class tool_common {
 
 
 	/**
-	* GET_TOOL_CONFIG
+	* GET_TOOL_CONFIGURATION
 	* 	Get the specific tool config in registered tools or tool configuration
 	*	when the tool has a specific properties in the register or in his configuration records
 	*	overwrite the ontology properties with them
@@ -1157,7 +1158,7 @@ class tool_common {
 	*	2 else get the configuration in register, if isset use it
 	*	3 else get the ontology properties
 	*
-	* @param object $options
+	* @param object $options Options object with properties:
 	* {
 	* 	tool_name: string as 'tool_lang'
 	* 	tipo: string as 'dd47'
@@ -1165,7 +1166,7 @@ class tool_common {
 	* }
 	* @param array|null $tool_config = null
 	* 	Normally, is get from tools cache file, else will be calculated
-	* @return object|null $tool_config
+	* @return object|null The matching tool configuration object, or null if not found
 	*/
 	public static function get_tool_configuration( object $options, ?array $tool_config=null ) : ?object {
 
