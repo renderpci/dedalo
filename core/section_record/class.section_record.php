@@ -524,9 +524,6 @@ class section_record {
 			$data_to_save
 		);
 
-		// save event
-		$this->save_event();
-
 		// debug
 		if(SHOW_DEBUG) {
 			debug_log(__METHOD__
@@ -562,26 +559,20 @@ class section_record {
 	*/
 	public function save_component_data( array $save_path ) : bool {
 
-		// Save into DB
-		$result = $this->save_key_data(
-			$save_path
-		);
+		// Compute section metadata save_path items (sets data_instance, returns path)
+		$section_metadata_path = $this->get_modified_section_save_path('update_record');
 
+		// Merge component data + metadata into single save_path
+		$merged_path = array_merge($save_path, $section_metadata_path);
+
+		// Single DB update
+		$result = $this->save_key_data($merged_path);
 		if( $result === false ){
 			return false;
 		}
 
-		// section updates
-
-		// update_modified_section_data . Resolve and add modification date and user to current section dato
-		// component save is always an update record
-			$this->update_modified_section_data((object)[
-				'mode' => 'update_record'
-			]);
-
 		// save event
 		$this->save_event();
-
 
 		return true;
 	}//end save_component_data
@@ -935,29 +926,30 @@ class section_record {
 
 
 	/**
-	* UPDATE_MODIFIED_SECTION_DATA
-	* @param object $options
-	* @return object $this->dato
+	* GET_MODIFIED_SECTION_SAVE_PATH
+	* Computes metadata save_path items and sets data_instance values.
+	* Does NOT save to DB — caller is responsible for calling save_key_data + save_event.
+	* @param string $mode
+	* 	'new_record' | 'update_record'
+	* @return array
+	* 	Array of save_path items [(object)['column'=>'relation','key'=>'dd197'], ...]
 	*/
-	public function update_modified_section_data(object $options) : bool {
+	private function get_modified_section_save_path( string $mode ) : array {
 
 		// Skip for activity sections
 		if ($this->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			return false;
+			return [];
 		}
 
 		// Check user logged
 		$user_id = logged_user_id();
 		if( empty($user_id) ) {
 			debug_log(__METHOD__
-				. " ERROR: logged_user_id() is empty. Cannot set created/modified user locator. Aborting update_modified_section_data."
+				. " ERROR: logged_user_id() is empty. Cannot set created/modified user locator."
 				, logger::ERROR
 			);
-			return false;
+			return [];
 		}
-
-		// options
-			$mode = $options->mode;
 
 		// Fixed private tipos
 			$metadata_definition = section::get_metadata_definition();
@@ -980,6 +972,8 @@ class section_record {
 				$date_now->id		= 1; //fixed id
 				$date_now->lang		= DEDALO_DATA_NOLAN;
 
+		$save_path = [];
+
 		switch ($mode) {
 
 			case 'new_record': // new record
@@ -999,18 +993,17 @@ class section_record {
 						[$date_now]
 					);
 
-				// Save
-					$this->save_key_data(
-						[(object)[
+				// Build save_path items
+					$save_path = [
+						(object)[
 							'column' =>'relation',
 							'key' => $created_by_user->tipo
 						],
 						(object)[
 							'column' =>'date',
 							'key' => $created_date->tipo
-						]]
-					);
-
+						]
+					];
 
 				break;
 
@@ -1031,23 +1024,48 @@ class section_record {
 						[$date_now]
 					);
 
-				// Save
-					$this->save_key_data(
-						[(object)[
+				// Build save_path items
+					$save_path = [
+						(object)[
 							'column' =>'relation',
 							'key' => $modified_by_user->tipo
 						],
 						(object)[
 							'column' =>'date',
 							'key' => $modified_date->tipo
-						]]
-					);
+						]
+					];
 
 				break;
 		}
 
+		return $save_path;
+	}//end get_modified_section_save_path
 
-		return true;
+
+
+	/**
+	* UPDATE_MODIFIED_SECTION_DATA
+	* @param object $options
+	* @return bool
+	*/
+	public function update_modified_section_data(object $options) : bool {
+
+		// Compute metadata and set data_instance values
+		$metadata_path = $this->get_modified_section_save_path($options->mode);
+
+		// Nothing to save (activity section or no user)
+		if( empty($metadata_path) ){
+			return false;
+		}
+
+		// Save metadata to DB
+		$result = $this->save_key_data($metadata_path);
+
+		// save event
+		$this->save_event();
+
+		return $result;
 	}//end update_modified_section_data
 
 
