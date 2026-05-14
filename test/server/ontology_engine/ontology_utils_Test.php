@@ -8,6 +8,7 @@ final class ontology_utils_test extends BaseTestCase {
 
 	public static $model = 'ontology_utils';
 
+	public $tld = 'rsc'; // Recsources
 	public $section_tipo = 'rsc170'; // Images
 	public $area_tipo = 'dd14'; // Resources
 
@@ -37,13 +38,13 @@ final class ontology_utils_test extends BaseTestCase {
 		$tipos = ontology_utils::get_ar_all_tipo_of_model_tipo($model_tipo);
 
 		$this->assertIsArray($tipos);
-		// activity2 should be a section (model_tipo dd6)
+		// should be a section (model_tipo dd6)
 		$this->assertContains($this->section_tipo, $tipos);
 	}
 
 	public function test_check_tipo_is_valid(): void {
 		$this->user_login();
-		// dd6 is a model definition. activity2 is a valid instance of section.
+		// dd6 is a model definition. is a valid instance of section.
 		$this->assertTrue(ontology_utils::check_tipo_is_valid($this->section_tipo));
 
 		// invalid scenarios
@@ -62,8 +63,8 @@ final class ontology_utils_test extends BaseTestCase {
 
 		$this->assertIsArray($tlds);
 		$this->assertContains('dd', $tlds);
-		// activity is a TLD
-		$this->assertContains('activity', $tlds);
+		// is a TLD
+		$this->assertContains($this->tld, $tlds);
 
 		// second call assertions check the cache
 		$tlds_cached = ontology_utils::get_active_tlds();
@@ -493,7 +494,7 @@ final class ontology_utils_test extends BaseTestCase {
 		$ontology_node = ontology_node::get_instance($this->section_tipo);
 		$model = $ontology_node->get_model();
 
-		// For activity2, get_model returns 'section'
+		// For get_model returns 'section'
 		$this->assertEquals('section', $model);
 	}
 

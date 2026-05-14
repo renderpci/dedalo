@@ -555,8 +555,10 @@ export const save_preset = async function(options) {
 	}
 
 	// filter value
+	// Note that filter_obj may contain empty values.
+	// This is normal, as we need to save empty components in the search panel of the preset.
 	const parsed = self.parse_dom_to_json_filter({})
-	const filter_obj = parsed.filter
+	const filter_obj = parsed.filter || null
 
 	// Validate filter_obj
 	if (!filter_obj) {
@@ -564,7 +566,18 @@ export const save_preset = async function(options) {
 		return false
 	}
 
+	// resolve actual entry id from component data to preserve it in the new entry
+	const entry_id = self.component_json_data?.entries?.[0]?.id || null
+
+	// build the single entry value (preset is monovalue)
+	const entry_value = { value : filter_obj }
+	if (entry_id !== null) {
+		entry_value.id = entry_id
+	}
+
 	// rqo. save
+	// Uses 'set_data' action instead of 'update' to replace the entire entries array.
+	// This prevents duplication from accumulated entries with different ids.
 	const rqo = {
 		action	: 'save',
 		source	: {
@@ -577,9 +590,9 @@ export const save_preset = async function(options) {
 		data	: {
 			changed_data : [
 				{
-					action	: 'update',
-					id		: 1,
-					value	: { value : filter_obj }
+					action	: 'set_data',
+					id		: null,
+					value	: [entry_value]
 				}
 			]
 		}
@@ -601,7 +614,7 @@ export const save_preset = async function(options) {
 	// Used when user back from a tool and open the search
 	// if the cache is not refresh the data search changes will be accumulated into the components
 	if (self.component_json_data) {
-		self.component_json_data.entries = [filter_obj]
+		self.component_json_data.entries = [entry_value]
 	}
 
 

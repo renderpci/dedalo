@@ -95,19 +95,19 @@ export const render_open_list_with_direct_relations = ( options ) => {
 
 		// target sections
 
-			// target section selected
-			const change_target_section_handler = (e)=> {
-				if (rqo_options) {
-					rqo_options.section_tipo	= e.target.value
-					rqo_options.tipo			= e.target.value
-				}
-			}
 			// if the caller is a component
 			// or the main section is not connected with any target section
 			// don't show the target sections.
 			const target_sections_len = target_sections.length
-
 			if(target_sections_len > 0){
+
+				// target section selected
+				const change_target_section_handler = (e)=> {
+					if (rqo_options) {
+						rqo_options.section_tipo	= e.target.value
+						rqo_options.tipo			= e.target.value
+					}
+				}
 
 				const target_sections_content = ui.create_dom_element({
 					element_type	: 'div',
@@ -221,6 +221,7 @@ export const render_open_list_with_direct_relations = ( options ) => {
 }// end render_open_list_with_direct_relations
 
 
+
 /**
 * OPEN_RELATED_DATA
 * Performs a `read_raw` API call to get the locators of the components pointing to target sections
@@ -293,9 +294,9 @@ const open_related_data = async function( options ){
 
 	// read_raw from Dédalo API
 	const rqo = {
-		action			: 'read_raw',
-		options			: rqo_options,
-		sqo				: sqo
+		action	: 'read_raw',
+		options	: rqo_options,
+		sqo		: sqo
 	}
 
 	// perform the search and get the result

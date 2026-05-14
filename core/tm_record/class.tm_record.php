@@ -45,6 +45,17 @@ class tm_record {
 		 */
 		public static bool $save_tm = true;
 
+		/**
+		 * Section tipos excluded from time machine tracking.
+		 * Components belonging to these sections will not create TM records on save.
+		 * Add section_tipos here to skip TM for volatile or utility sections.
+		 * @var array $excluded_section_tipos
+		 */
+		public static array $excluded_section_tipos = [
+			DEDALO_TEMP_PRESET_SECTION_TIPO,	// dd655 - temporal search presets
+			DEDALO_TIME_MACHINE_SECTION_TIPO	// dd15 - time machine section
+		];
+
 
 
 	/**
@@ -231,6 +242,11 @@ class tm_record {
 		// do not allow to save time machine records of the section_tipo dd15
 		// dd15 is used to represent the time machine records
 		if($values->section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
+			return false;
+		}
+
+		// skip TM for excluded section_tipos (volatile/utility sections)
+		if (in_array($values->section_tipo, self::$excluded_section_tipos, true)) {
 			return false;
 		}
 

@@ -24,6 +24,7 @@
 		>.wrapper_component {
 			flex-grow: 1;
 			display: grid;
+			padding-bottom: 0.8rem;
 
 			>.label {
 				padding: 0.5em;
@@ -50,6 +51,36 @@
 			&:active {
 				opacity: 0.5;
 			}
+		}
+
+		>.button.up,
+		>.button.down {
+			position: absolute;
+			bottom: 0.1rem;
+			z-index: 3;
+			opacity: 0.4;
+			background-image: url(../../themes/default/icons/sort_up.svg);
+			background-color: transparent;
+			background-repeat: no-repeat;
+
+			&:hover {
+				opacity: 1;
+			}
+			&:active {
+				opacity: 0.5;
+			}
+			&.disabled {
+				opacity: 0.15;
+				pointer-events: none;
+			}
+		}
+		>.button.down {
+			right: -0.2rem;
+			transform: rotate(90deg) scale(0.90);
+		}
+		>.button.up {
+			right: 0.75rem;
+			transform: rotate(-90deg) scale(0.90);
 		}
 	}//end .search_component
 
