@@ -708,7 +708,65 @@ render_search.prototype.build_search_component = async function(options) {
 
 			// Set as changed
 			self.update_state({state:'changed'})
+
+			// update sibling reorder buttons after removal
+			const remaining = parent_div.querySelectorAll('.search_component')
+			remaining.forEach(sib => update_reorder_buttons(sib))
 		})
+
+	// button up (reorder)
+		const button_up = ui.create_dom_element({
+			element_type	: 'span',
+			parent			: search_component,
+			class_name		: 'button up'
+		})
+		button_up.addEventListener('click', function(e){
+			e.stopPropagation()
+			if (button_up.classList.contains('disabled')) return
+			const prev = search_component.previousElementSibling
+			if (prev && prev.classList.contains('search_component')) {
+				parent_div.insertBefore(search_component, prev)
+				self.update_state({state:'changed'})
+				update_reorder_buttons(search_component)
+				update_reorder_buttons(prev)
+			}
+		})
+
+	// button down (reorder)
+		const button_down = ui.create_dom_element({
+			element_type	: 'span',
+			parent			: search_component,
+			class_name		: 'button down'
+		})
+		button_down.addEventListener('click', function(e){
+			e.stopPropagation()
+			if (button_down.classList.contains('disabled')) return
+			const next = search_component.nextElementSibling
+			if (next && next.classList.contains('search_component')) {
+				parent_div.insertBefore(next, search_component)
+				self.update_state({state:'changed'})
+				update_reorder_buttons(search_component)
+				update_reorder_buttons(next)
+			}
+		})
+
+	// update_reorder_buttons: toggle disabled state on up/down based on sibling position
+		const update_reorder_buttons = function(el) {
+			const up_btn	= el.querySelector('.button.up')
+			const down_btn	= el.querySelector('.button.down')
+			const has_prev	= el.previousElementSibling && el.previousElementSibling.classList.contains('search_component')
+			const has_next	= el.nextElementSibling && el.nextElementSibling.classList.contains('search_component')
+			up_btn.classList.toggle('disabled', !has_prev)
+			down_btn.classList.toggle('disabled', !has_next)
+		}
+
+	// set initial button state
+		update_reorder_buttons(search_component)
+		// also update siblings since this insertion may change their state
+		const prev_sib = search_component.previousElementSibling
+		const next_sib = search_component.nextElementSibling
+		if (prev_sib && prev_sib.classList.contains('search_component')) update_reorder_buttons(prev_sib)
+		if (next_sib && next_sib.classList.contains('search_component')) update_reorder_buttons(next_sib)
 
 	// label component source if exists
 		if (first_item!==last_item) {
