@@ -1027,4 +1027,96 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_SEARCH_EXACT_TERM
+	* Tests dd_ontology_db_manager::search_exact_term using JSONB containment
+	* @return void
+	*/
+	public function test_search_exact_term(): void {
+
+		// Reset to real table for this test (search_exact_term uses real ontology data)
+		$original_table = dd_ontology_db_manager::$table;
+		dd_ontology_db_manager::$table = 'dd_ontology';
+
+		$result = dd_ontology_db_manager::search_exact_term('section', DEDALO_STRUCTURE_LANG, 'section', false, 5);
+
+		dd_ontology_db_manager::$table = $original_table;
+
+		$this->assertIsArray($result, 'Expected array result from search_exact_term');
+
+		// If data exists, verify it contains the section model tipo
+		if (!empty($result)) {
+			$section_tipo = ontology_node::get_tipo_from_model('section');
+			if ($section_tipo !== null) {
+				$this->assertContains(
+					$section_tipo,
+					$result,
+					'search_exact_term should find the section model tipo'
+				);
+			}
+		}
+	}//end test_search_exact_term
+
+
+
+	/**
+	* TEST_SEARCH_FUZZY_TERM
+	* Tests dd_ontology_db_manager::search_fuzzy_term using similarity/trigram
+	* @return void
+	*/
+	public function test_search_fuzzy_term(): void {
+
+		// Reset to real table for this test
+		$original_table = dd_ontology_db_manager::$table;
+		dd_ontology_db_manager::$table = 'dd_ontology';
+
+		$result = dd_ontology_db_manager::search_fuzzy_term('section', 'section', false, 10);
+
+		dd_ontology_db_manager::$table = $original_table;
+
+		$this->assertIsArray($result, 'Expected array result from search_fuzzy_term');
+		$this->assertGreaterThan(
+			0,
+			count($result),
+			'fuzzy search for "section" should return at least one result'
+		);
+
+		// Verify the section model tipo appears in results
+		$section_tipo = ontology_node::get_tipo_from_model('section');
+		if ($section_tipo !== null) {
+			$this->assertContains(
+				$section_tipo,
+				$result,
+				'fuzzy search for "section" should find the section model tipo'
+			);
+		}
+	}//end test_search_fuzzy_term
+
+
+
+	/**
+	* TEST_SEARCH_FUZZY_TERM_PARTIAL
+	* Tests dd_ontology_db_manager::search_fuzzy_term with partial text
+	* @return void
+	*/
+	public function test_search_fuzzy_term_partial(): void {
+
+		$original_table = dd_ontology_db_manager::$table;
+		dd_ontology_db_manager::$table = 'dd_ontology';
+
+		$result = dd_ontology_db_manager::search_fuzzy_term('sect', null, false, 10);
+
+		dd_ontology_db_manager::$table = $original_table;
+
+		$this->assertIsArray($result, 'Expected array result from search_fuzzy_term with partial text');
+
+		$this->assertGreaterThan(
+			0,
+			count($result),
+			'fuzzy search for partial "sect" should return at least one result'
+		);
+	}//end test_search_fuzzy_term_partial
+
+
+
 }//end class dd_ontology_db_manager_test
