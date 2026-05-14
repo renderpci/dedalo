@@ -1055,37 +1055,53 @@ const get_rqo_test = function(self) {
 * @return promise
 * 	resolve/reject src
 */
+// pending_styles: tracks in-flight style loads to prevent race conditions
+// (duplicate <link> elements and premature resolves from concurrent calls)
+const pending_styles = new Map();
+
 common.prototype.load_style = function (src) {
 
-	return new Promise(function(resolve, reject) {
+	// check if a load is already in-flight for this src
+	const pending = pending_styles.get(src);
+	if (pending) {
+		return pending;
+	}
+
+	const promise = new Promise(function(resolve, reject) {
 
 		// check already loaded
 			const links 	= document.getElementsByTagName('link');
-			const links_len = links.length
+			const links_len = links.length;
 			for (let i = links_len - 1; i >= 0; i--) {
 				if(links[i].getAttribute('href')===src) {
-					resolve(src)
-					return
+					resolve(src);
+					return;
 				}
 			}
 
 		// DOM tag
-			const element 	  = document.createElement('link')
-				  element.rel = 'stylesheet'
+			const element 	  = document.createElement('link');
+				  element.rel = 'stylesheet';
 
 			element.addEventListener('load', function(e) {
+				pending_styles.delete(src);
 				resolve(src);
-			})
+			});
 
 			element.addEventListener('error', function(e) {
+				pending_styles.delete(src);
 				reject(src);
-			})
+			});
 
-			element.href = src
+			element.href = src;
 
-			document.getElementsByTagName('head')[0].appendChild(element)
-	})
-	.catch(err => { console.error(err) });
+			document.getElementsByTagName('head')[0].appendChild(element);
+	});
+
+	// register as in-flight before returning
+	pending_styles.set(src, promise);
+
+	return promise;
 }//end load_style
 
 
@@ -1093,46 +1109,63 @@ common.prototype.load_style = function (src) {
 /**
 * LOAD_SCRIPT
 * @param string src
+* @param string|null content
 * @return promise
 * 	resolve/reject src
 */
+// pending_scripts: tracks in-flight script loads to prevent race conditions
+// (duplicate <script> elements and premature resolves from concurrent calls)
+const pending_scripts = new Map();
+
 common.prototype.load_script = async function(src, content=null) {
 
-	return new Promise(function(resolve, reject) {
+	// check if a load is already in-flight for this src
+	const pending = pending_scripts.get(src);
+	if (pending) {
+		return pending;
+	}
+
+	const promise = new Promise(function(resolve, reject) {
 
 		// check already loaded
 			const scripts 	  = document.getElementsByTagName('script');
-			const scripts_len = scripts.length
+			const scripts_len = scripts.length;
 			for (let i = scripts_len - 1; i >= 0; i--) {
 				if(scripts[i].getAttribute('src')===src) {
-					resolve(src)
-					return
+					resolve(src);
+					return;
 				}
 			}
 
 		// DOM tag
-			const element = document.createElement('script')
+			const element = document.createElement('script');
 			element.setAttribute('defer', 'defer');
 
 			if(content) {
 				// SEC-XSS-004: textContent is the correct way to set script source;
 				// innerHTML triggers the HTML parser unnecessarily.
-				element.textContent = content
+				element.textContent = content;
 			}
 
 			element.addEventListener('load', function(e) {
+				pending_scripts.delete(src);
 				resolve(src);
-			})
+			});
 
 			element.addEventListener('error', function(e) {
+				pending_scripts.delete(src);
 				reject(src);
-			})
+			});
 
-			element.src = src
+			element.src = src;
 
-			document.head.appendChild(element)
-	})
-	.catch(err => { console.error(err) });
+			document.head.appendChild(element);
+	});
+
+	// register as in-flight before returning
+	pending_scripts.set(src, promise);
+
+	return promise;
 }//end load_script
 
 
