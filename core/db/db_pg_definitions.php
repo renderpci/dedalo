@@ -152,6 +152,20 @@ $ar_function[] = (object)[
 	'info'   => 'Not used anymore (v6)'
 ];
 
+$ar_function[] = (object)[
+	'add' => "
+		CREATE OR REPLACE FUNCTION jsonb_values_as_text(j jsonb)
+		RETURNS text LANGUAGE sql IMMUTABLE STRICT AS \$\$
+			SELECT string_agg(value, ' ')
+			FROM jsonb_each_text(j)
+		\$\$;
+	",
+	'drop' => 'DROP FUNCTION IF EXISTS jsonb_values_as_text CASCADE',
+	'sample' => "SELECT tipo, term, jsonb_values_as_text(term) AS values_text FROM dd_ontology WHERE term IS NOT NULL LIMIT 5",
+	'name' => 'jsonb_values_as_text',
+	'info' => 'Aggregates all JSONB leaf values of the term column into a single searchable text string. Used by the ontology fuzzy search (similarity + trigram) to match human-readable text across all language keys.'
+];
+
 // ── Constraints ────────────────────────────────────────────────────────────────
 
 $ar_constraint = [];

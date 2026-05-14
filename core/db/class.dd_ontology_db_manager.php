@@ -586,11 +586,17 @@ abstract class dd_ontology_db_manager {
 					);
 					return false;
 				}
-				$params[] = $value->value;
+				$param_value = $value->value;
+				if (isset(self::$boolean_columns[$col]) && is_bool($param_value)) {
+					$param_value = ($param_value === true) ? 'true' : 'false';
+				}
+				$params[] = $param_value;
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
 
 			}else{
-
+				if (isset(self::$boolean_columns[$col])) {
+					$value = ($value === true) ? 'true' : 'false';
+				}
 				$params[] = $value;
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' = $'.$param_index;
 			}

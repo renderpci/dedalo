@@ -28,7 +28,7 @@ final class dd_core_api {
 		'get_section_elements_context',
 		'get_indexation_grid',
 		'get_environment',
-		'get_ontology_info',
+		'get_matrix_ontology_locator',
 		'test'
 	];
 
@@ -2976,20 +2976,29 @@ final class dd_core_api {
 
 
 	/**
-	* GET_ONTOLOGY_INFO
+	* GET_MATRIX_ONTOLOGY_LOCATOR
 	* Transform tipo like 'dd1' to an ontology section_tipo, section_id object
 	* @param object $rqo
 	* @return object $response
 	*/
-	public static function get_ontology_info( object $rqo ) : object {
+	public static function get_matrix_ontology_locator( object $rqo ) : object {
 
 		// tipo
-		$tipo = $rqo->tipo;
+		$source = $rqo->source ?? null;	
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
+
+		// Source check
+			if ( empty($source) ) {
+				$response->msg		= 'Error. Invalid source: '.to_string($source);
+				$response->errors[] = 'Bad source';
+				return $response;
+			}
+
+		$tipo = $source->tipo;
 
 		// tipo check
 			if ( safe_tipo($tipo)===false ) {
@@ -3017,7 +3026,7 @@ final class dd_core_api {
 
 
 		return $response;
-	}//end get_ontology_info
+	}//end get_matrix_ontology_locator
 
 
 
