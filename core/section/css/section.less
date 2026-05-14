@@ -47,19 +47,45 @@
 		}
 
 		>.inspector_container {
-			contain: contain;
-			overflow: auto;
+			contain: style;
+			display: flex;
+			flex-direction: column;
 			height: 100%;
+			max-height: calc(100vh - 5rem);
 			width: var(--inspector_width);
 			position: fixed;
 			left: calc(100vw - var(--inspector_width) - 0.75rem);
 			z-index: 2;
-			// prevent content from shifting left when the vertical scrollbar appears
-			overflow-y: overlay;
 			padding-right: 13px;
 			padding-left: 1px;
-			// adjust top position when notification is present
-			// transition: top 0.25s linear;
+
+			// inspector wrapper takes full height when no assistant is visible
+			> .wrapper_inspector {
+				flex: 1 1 auto;
+				overflow-y: auto;
+				overflow-y: overlay;
+				min-height: 0;
+			}
+
+			// assistant panel (below inspector)
+			> .assistant_container {
+				flex: 1 1 0;
+				min-height: 0;
+				display: none; // hidden by default, toggled via JS
+				flex-direction: column;
+				border-top: 2px solid @color_grey_12;
+				overflow: visible;
+
+				&.show {
+					display: flex;
+				}
+			}
+
+			// when assistant is shown, inspector gets a max proportion
+			&.has_assistant > .wrapper_inspector {
+				flex: 0 1 auto;
+				max-height: 50%;
+			}
 
 			@media screen and (max-width: @width_break_point_0) {
 				display: inline;
@@ -143,10 +169,6 @@
 			}
 		}
 
-		>.search_container {
-
-		}
-
 		>.paginator_container {
 			height: 39px;
 
@@ -212,3 +234,22 @@
 
 @import (once) './view_graph_section';
 @import (once) './view_base_section';
+
+// standalone assistant panel (list mode: no inspector_container, attached to document.body)
+.assistant_container.standalone {
+	position: fixed;
+	top: var(--menu_heigth, 2.6rem);
+	right: 0.75rem;
+	width: var(--inspector_width, 22rem);
+	height: calc(100vh - var(--menu_heigth, 2.6rem));
+	max-height: calc(100vh - var(--menu_heigth, 2.6rem));
+	z-index: 2;
+	border: 1px solid @color_grey_12;
+	border-radius: 6px;
+	box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+	display: none; // hidden by default, toggled via JS
+
+	&.show {
+		display: flex;
+	}
+}
