@@ -34,7 +34,6 @@ const t = function(key, fallback) {
 export const ai_assistant = class ai_assistant {
 
 
-
 	constructor(options={}) {
 
 		this._config			= Object.assign({}, options.tool_config || {})

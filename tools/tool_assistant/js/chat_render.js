@@ -54,6 +54,9 @@ export const chat_render = class chat_render {
 		this._current_assistant_node= null
 		this._current_assistant_raw	= ''
 		this._thinking_node			= null
+		this._thoughts_block_node	= null
+		this._thoughts_block_body	= null
+		this._thoughts_block_raw	= ''
 		this._auto_scroll			= true
 	}//end constructor
 
@@ -501,12 +504,48 @@ export const chat_render = class chat_render {
 
 
 
+	append_thinking_token(token_text) {
+
+		if (!token_text) return
+		this._hide_thinking()
+
+		if (!this._thoughts_block_node) {
+			const block = document.createElement('details')
+			block.classList.add('assistant_message', 'assistant_thoughts_block')
+			block.open = true
+
+			const summary = document.createElement('summary')
+			summary.classList.add('assistant_thoughts_summary')
+			summary.textContent = t('thoughts', 'Thoughts')
+			block.appendChild(summary)
+
+			const body = document.createElement('div')
+			body.classList.add('assistant_thoughts_body')
+			block.appendChild(body)
+
+			this._messages.appendChild(block)
+			this._thoughts_block_node = block
+			this._thoughts_block_body = body
+			this._thoughts_block_raw = ''
+		}
+
+		this._thoughts_block_raw += token_text
+		this._thoughts_block_body.textContent = this._thoughts_block_raw
+		this._scroll_to_bottom()
+	}//end append_thinking_token
+
+
+
 	append_token(token_text) {
 
 		if (!this._current_assistant_node) {
 			this.start_assistant_message()
 		}
 		this._hide_thinking()
+		// collapse the thoughts block once the final answer starts streaming
+		if (this._thoughts_block_node && this._thoughts_block_node.open) {
+			this._thoughts_block_node.open = false
+		}
 		this._current_assistant_raw += token_text
 		this._current_assistant_node.innerHTML = markdown.render(this._current_assistant_raw)
 		this._scroll_to_bottom()
@@ -522,6 +561,12 @@ export const chat_render = class chat_render {
 		}
 		this._current_assistant_node = null
 		this._current_assistant_raw = ''
+		if (this._thoughts_block_node) {
+			this._thoughts_block_node.dataset.raw = this._thoughts_block_raw
+		}
+		this._thoughts_block_node = null
+		this._thoughts_block_body = null
+		this._thoughts_block_raw = ''
 		this._hide_thinking()
 	}//end finalize_assistant_message
 
@@ -710,6 +755,9 @@ export const chat_render = class chat_render {
 		this._current_assistant_node = null
 		this._current_assistant_raw = ''
 		this._thinking_node = null
+		this._thoughts_block_node = null
+		this._thoughts_block_body = null
+		this._thoughts_block_raw = ''
 		this._auto_scroll = true
 	}//end clear_messages
 
