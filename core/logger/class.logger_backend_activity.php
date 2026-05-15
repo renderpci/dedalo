@@ -324,7 +324,7 @@ class logger_backend_activity extends logger_backend {
 			DEDALO_ACTIVITY_SECTION_TIPO,
 			$data
 		);
-	}//end log_message
+	}//end log_message_defer
 
 
 
