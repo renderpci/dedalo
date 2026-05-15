@@ -366,6 +366,16 @@ $ar_index[] = (object)[
 	'info'         => 'Used to search by id ordered ascendant. Used by diffusion_section_stats:update_user_activity_stats'
 ];
 
+// matrix_activity — timestamp + id
+$ar_index[] = (object)[
+	'tables'       => ['matrix_activity'],
+	'add'          => 'CREATE INDEX IF NOT EXISTS {$table}_timestamp_composite_idx ON {$table} ("timestamp", id) INCLUDE (section_tipo, section_id);',
+	'drop'         => 'DROP INDEX IF EXISTS "{$table}_timestamp_composite_idx"',
+	'sample'       => 'SELECT * FROM matrix_activity WHERE ("timestamp" >= date(\'2024-12-04\') AND "timestamp" < date(\'2024-12-05\')) AND relation @> \'{"dd543":[{"section_tipo":"dd128","section_id":"1"}]}\'',
+	'name'         => 'matrix_activity_timestamp_composite_idx',
+	'info'         => 'Used to search by timestamp, ordered id ascendant. Used by diffusion_section_stats:get_interval_raw_activity_data'
+];
+
 // matrix_time_machine — tipo + id DESC
 $ar_index[] = (object)[
 	'tables' => ['matrix_time_machine'],
