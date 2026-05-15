@@ -6,7 +6,42 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 final class tm_record_test extends BaseTestCase {
 
     public static $model = 'tm_record';
-    private static $test_id;
+    private array $created_ids = [];
+
+    /**
+    * SETUP
+    */
+    protected function setUp(): void {
+        parent::setUp();
+        $this->created_ids = [];
+    }
+
+    /**
+    * TEARDOWN
+    * Clean up any tm_records created during the test.
+    */
+    protected function tearDown(): void {
+        foreach ($this->created_ids as $id) {
+            try {
+                $tm_record = tm_record::get_instance($id);
+                if ($tm_record) {
+                    $tm_record->delete();
+                }
+            } catch (Exception $e) {
+                // Ignore cleanup errors
+            }
+        }
+        parent::tearDown();
+    }
+
+    /**
+    * Create a test tm_record and track it for cleanup
+    */
+    private function create_test_tm_record(stdClass $values) : tm_record {
+        $tm_record = tm_record::create($values);
+        $this->created_ids[] = $tm_record->id;
+        return $tm_record;
+    }
 
     /**
     * TEST_USER_LOGIN
@@ -29,30 +64,42 @@ final class tm_record_test extends BaseTestCase {
         $values->lang           = 'lg-eng';
         $values->data           = (object)['test' => 'data'];
 
-        $tm_record = tm_record::create($values);
+        $tm_record = $this->create_test_tm_record($values);
 
         $this->assertInstanceOf(tm_record::class, $tm_record, 'Expected instance of tm_record');
         $this->assertGreaterThan(0, $tm_record->id, 'Expected tm_record ID > 0');
-
-        self::$test_id = $tm_record->id;
     }
 
     /**
     * TEST_GET_INSTANCE
-    * @depends test_create
     */
     public function test_get_instance() : void {
-        $tm_record = tm_record::get_instance(self::$test_id);
-        $this->assertInstanceOf(tm_record::class, $tm_record);
-        $this->assertEquals(self::$test_id, $tm_record->id);
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'data'];
+
+        $tm_record = $this->create_test_tm_record($values);
+        $fetched = tm_record::get_instance($tm_record->id);
+
+        $this->assertInstanceOf(tm_record::class, $fetched);
+        $this->assertEquals($tm_record->id, $fetched->id);
     }
 
     /**
     * TEST_GET_DATA
-    * @depends test_create
     */
     public function test_get_data() : void {
-        $tm_record = tm_record::get_instance(self::$test_id);
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'data'];
+
+        $tm_record = $this->create_test_tm_record($values);
         $data = $tm_record->get_data();
 
         $this->assertIsObject($data);
@@ -62,10 +109,16 @@ final class tm_record_test extends BaseTestCase {
 
     /**
     * TEST_GET_ELEMENT_DATA
-    * @depends test_create
     */
     public function test_get_element_data() : void {
-        $tm_record = tm_record::get_instance(self::$test_id);
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'data'];
+
+        $tm_record = $this->create_test_tm_record($values);
         $element_data = $tm_record->get_element_data();
 
         $this->assertIsObject($element_data);
@@ -74,10 +127,16 @@ final class tm_record_test extends BaseTestCase {
 
     /**
     * TEST_SET_DATA
-    * @depends test_create
     */
     public function test_set_data() : void {
-        $tm_record = tm_record::get_instance(self::$test_id);
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'data'];
+
+        $tm_record = $this->create_test_tm_record($values);
         $data = $tm_record->get_data();
         $data->section_id = 654321;
 
@@ -90,9 +149,17 @@ final class tm_record_test extends BaseTestCase {
 
     /**
     * TEST_SEARCH
-    * @depends test_create
     */
     public function test_search() : void {
+        $values = new stdClass();
+        $values->section_id     = 654321;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'search'];
+
+        $tm_record = $this->create_test_tm_record($values);
+
         $search_values = new stdClass();
         $search_values->section_id = 654321;
 
@@ -103,10 +170,16 @@ final class tm_record_test extends BaseTestCase {
 
     /**
     * TEST_GET_SECTION_RECORD
-    * @depends test_create
     */
     public function test_get_section_record() : void {
-        $tm_record = tm_record::get_instance(self::$test_id);
+        $values = new stdClass();
+        $values->section_id     = 123456;
+        $values->section_tipo   = 'dd12';
+        $values->tipo           = 'dd1212';
+        $values->lang           = 'lg-eng';
+        $values->data           = (object)['test' => 'data'];
+
+        $tm_record = $this->create_test_tm_record($values);
         $section_record = $tm_record->get_section_record();
 
         $this->assertInstanceOf(section_record::class, $section_record);
@@ -116,7 +189,6 @@ final class tm_record_test extends BaseTestCase {
 
     /**
     * TEST_GET_SECTION_RECORD_COMPONENT_DATA_INJECTION
-    * @depends test_create
     */
     public function test_get_section_record_component_data_injection() : void {
         // Create tm_record with component data using valid tipo dd1212 (time machine type component)
@@ -137,8 +209,7 @@ final class tm_record_test extends BaseTestCase {
         $values->data           = $component_data;
         $values->user_id        = 1;
 
-        $tm_record = tm_record::create($values);
-        $this->assertInstanceOf(tm_record::class, $tm_record);
+        $tm_record = $this->create_test_tm_record($values);
 
         $section_record = $tm_record->get_section_record();
         $this->assertInstanceOf(section_record::class, $section_record);
@@ -152,24 +223,34 @@ final class tm_record_test extends BaseTestCase {
         $column = section_record_data::get_column_name('component_json');
         $data_by_dd1574 = $section_record->get_component_data(DEDALO_TIME_MACHINE_COLUMN_DATA, $column);
         $this->assertNotNull($data_by_dd1574, 'Component data should be accessible under dd1574');
-
-        // Cleanup
-        $tm_record->delete();
     }
 
     /**
     * TEST_DELETE
-    * @depends test_create
+    * Commented out: reveals a pre-existing SQL syntax error in matrix_db_manager::exec_search
+    * when tm_record::search() is called after deletion. This is an application bug,
+    * not a test idempotency issue.
     */
     // public function test_delete() : void {
-    //     $tm_record = tm_record::get_instance(self::$test_id);
-    //     $result = $tm_record->delete();
+    //     $values = new stdClass();
+    //     $values->section_id     = 123456;
+    //     $values->section_tipo   = 'dd12';
+    //     $values->tipo           = 'dd1212';
+    //     $values->lang           = 'lg-eng';
+    //     $values->data           = (object)['test' => 'delete'];
 
+    //     $tm_record = $this->create_test_tm_record($values);
+    //     $id = $tm_record->id;
+
+    //     $result = $tm_record->delete();
     //     $this->assertTrue($result);
+
+    //     // Remove from cleanup list since we already deleted it
+    //     $this->created_ids = array_diff($this->created_ids, [$id]);
 
     //     // Verify it's gone
     //     $search_values = new stdClass();
-    //     $search_values->id = self::$test_id;
+    //     $search_values->id = $id;
     //     $db_result = tm_record::search($search_values);
     //     $this->assertEquals(0, $db_result->row_count());
     // }

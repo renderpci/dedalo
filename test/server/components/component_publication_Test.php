@@ -12,13 +12,24 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 final class component_publication_test extends BaseTestCase {
 
-
+	private array $created_section_ids = [];
 
 	public static $model		= 'component_publication';
 	public static $tipo		= 'test92';
 	public static $section_tipo	= 'test3';
 
-
+	/**
+	* TEARDOWN
+	* Delete any section records created during the test.
+	*/
+	protected function tearDown(): void {
+		foreach ($this->created_section_ids as $section_id) {
+			$section = section::get_instance(self::$section_tipo);
+			$section->delete_record($section_id);
+		}
+		$this->created_section_ids = [];
+		parent::tearDown();
+	}
 
 	/**
 	* CREATE_COMPONENT_INSTANCE
@@ -32,6 +43,7 @@ final class component_publication_test extends BaseTestCase {
 		// Create a new section record to isolate test data
 		$section_inst	= section::get_instance(self::$section_tipo);
 		$section_id		= (string)$section_inst->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		$component = component_common::get_instance(
 			self::$model,

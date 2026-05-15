@@ -6,13 +6,26 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 final class component_relation_common_test extends BaseTestCase {
 
-
+	private array $created_section_ids = [];
 
 	public static $model		= 'component_portal';
 	public static $tipo			= 'test80';
 	public static $section_tipo	= 'test3';
 	public static $section_id	= '49';
 	public static $type			= DEDALO_RELATION_TYPE_LINK;
+
+	/**
+	* TEARDOWN
+	* Delete any section records created during the test.
+	*/
+	protected function tearDown(): void {
+		foreach ($this->created_section_ids as $section_id) {
+			$section = section::get_instance(self::$section_tipo);
+			$section->delete_record($section_id);
+		}
+		$this->created_section_ids = [];
+		parent::tearDown();
+	}
 
 
 
@@ -65,6 +78,7 @@ final class component_relation_common_test extends BaseTestCase {
 
 		$section_inst	= section::get_instance(self::$section_tipo);
 		$section_id		= (string)$section_inst->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -127,7 +141,7 @@ final class component_relation_common_test extends BaseTestCase {
 				. gettype($value->value)
 		);
 	}//end test_get_grid_value
-	
+
 
 
 	/**
@@ -138,6 +152,7 @@ final class component_relation_common_test extends BaseTestCase {
 
 		$section_inst	= section::get_instance(self::$section_tipo);
 		$section_id		= (string)$section_inst->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -298,6 +313,7 @@ final class component_relation_common_test extends BaseTestCase {
 
 		$section_inst	= section::get_instance(self::$section_tipo);
 		$section_id		= (string)$section_inst->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		$component = component_common::get_instance(
 			self::$model, // string model
@@ -311,10 +327,10 @@ final class component_relation_common_test extends BaseTestCase {
 		// Add some valid data to save
 		$locator = new locator();
 			$locator->set_section_tipo(self::$section_tipo);
-			$locator->set_section_id(102); 
+			$locator->set_section_id(102);
 			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 			$locator->set_from_component_tipo(self::$tipo);
-		
+
 		$component->add_locator_to_data($locator);
 
 		$value = $component->save();
@@ -774,7 +790,7 @@ final class component_relation_common_test extends BaseTestCase {
 
 		$method = new ReflectionMethod('component_relation_common', 'add_relation_search');
 		$method->setAccessible(true);
-		
+
 		$query_object = (object)[
 			'q' => [],
 			'path' => [],
@@ -807,7 +823,7 @@ final class component_relation_common_test extends BaseTestCase {
 			DEDALO_DATA_NOLAN, // string lang
 			self::$section_tipo // string section_tipo
 		);
-		
+
 		$ddo = new dd_object();
 
 		$value = $component->get_diffusion_data($ddo);
@@ -828,7 +844,7 @@ final class component_relation_common_test extends BaseTestCase {
 
 		$method = new ReflectionMethod('component_relation_common', 'resolve_component_data_recursively');
 		$method->setAccessible(true);
-		
+
 		$locator = new locator();
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(1);
@@ -909,11 +925,11 @@ final class component_relation_common_test extends BaseTestCase {
 		);
 
 		// Initialize with empty array to ensure it returns array, so get_calculation_data can proceed (or return false if empty)
-		// But to avoid recursion error on null options, we must pass options. 
+		// But to avoid recursion error on null options, we must pass options.
 		// If get_data is empty, it returns false (bool), which is not array but valid per return type 'mixed'.
 		// We set data to empty to test that path first.
 		$component->set_data([]);
-		
+
 		$options = (object)[
 			'ddo_map' => [
 				(object)[

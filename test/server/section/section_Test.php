@@ -6,13 +6,24 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 final class section_test extends BaseTestCase {
 
-
+	private array $created_section_ids = [];
 
 	public static $model		= 'section';
 	public static $tipo			= 'test3';
 	public static $section_tipo	= 'test3';
 
-
+	/**
+	* TEARDOWN
+	* Delete any section records created during the test.
+	*/
+	protected function tearDown(): void {
+		foreach ($this->created_section_ids as $section_id) {
+			$section = section::get_instance(self::$section_tipo);
+			$section->delete_record($section_id);
+		}
+		$this->created_section_ids = [];
+		parent::tearDown();
+	}
 
 	/**
 	* TEST_USER_LOGIN
@@ -111,6 +122,7 @@ final class section_test extends BaseTestCase {
 		);
 
 		$result = $section->create_record();
+		$this->created_section_ids[] = $result;
 
 		$this->assertTrue(
 			gettype($result)==='integer' ,
@@ -422,6 +434,7 @@ final class section_test extends BaseTestCase {
 
 		// Create a test record
 		$section_id = $section->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		// Get the section_record
 		$section_record = section_record::get_instance($section_tipo, $section_id);
@@ -454,6 +467,7 @@ final class section_test extends BaseTestCase {
 
 		// Create a test record
 		$section_id = $section->create_record();
+		$this->created_section_ids[] = $section_id;
 
 		// Get the section_record
 		$section_record = section_record::get_instance($section_tipo, $section_id);

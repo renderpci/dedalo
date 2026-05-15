@@ -333,8 +333,6 @@ final class dd_api_Test extends BaseTestCase {
 			// expected running with errors
 			$this->assertTrue( !empty($_ENV['DEDALO_LAST_ERROR']) );
 
-		// reset session
-		$_SESSION = [];
 	}//end test_start
 
 

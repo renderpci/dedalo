@@ -114,6 +114,18 @@ final class SEC_session_test extends BaseTestCase {
 	}
 
 	/**
+	* TEARDOWN
+	* Clean up CSRF and server state to prevent leakage to other tests.
+	*/
+	protected function tearDown(): void {
+		unset(
+			$_SESSION['dedalo']['csrf_token'],
+			$_SERVER['HTTP_X_DEDALO_CSRF_TOKEN']
+		);
+		parent::tearDown();
+	}
+
+	/**
 	* §9.1b: the `BACKGROUND_RUNNABLE` allowlist on `area_maintenance`
 	* must include the JS-confirmed CLI callers and exclude unrelated
 	* helpers (e.g. `register_tools` runs synchronously, never via

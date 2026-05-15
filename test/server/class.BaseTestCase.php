@@ -115,13 +115,12 @@ class BaseTestCase extends TestCase
 
 		$user_id = TEST_USER_ID; // Defined in bootstrap
 
-		$result = login::is_logged();
-		if ($result===false) {
+		$current_user_id = logged_user_id();
+		if ($current_user_id !== $user_id) {
 			login_test::force_login($user_id);
-			$result = login::is_logged();
 		}
 
-		return $result;
+		return login::is_logged();
 	}//end user_login
 
 

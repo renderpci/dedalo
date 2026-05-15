@@ -278,4 +278,15 @@ final class SecurityAudit_Test extends BaseTestCase {
         $_SESSION['dedalo']['auth']['is_developer'] = false;
         security::clean_cache();
     }
+
+    /**
+     * TEARDOWN
+     * Restore the standard test user after each test to prevent
+     * session/user leakage to other test classes.
+     */
+    protected function tearDown(): void {
+        login_test::force_login(TEST_USER_ID);
+        security::clean_cache();
+        parent::tearDown();
+    }
 }
