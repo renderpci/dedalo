@@ -267,22 +267,14 @@ final class dd_utils_api {
 			if (!empty($sqo)) {
 
 				// search exec
-					$search	= search::get_instance($sqo);
-					$db_result = $search->search();
+				$search	= search::get_instance($sqo);
+				$db_result = $search->search();
 
-				// SQL string query decorator
-					$sql_query = $search->get_sql_query();
+				// SQL string query with placeholders
+				$sql_query_unresolved = clean_sql( $search->get_sql_query() );
 
-					$ar_lines = explode(PHP_EOL, $sql_query);
-					$ar_final = array_map(function($line){
-						$line = trim($line);
-						// if (strpos($line, '--')===0) {
-						// 	$line = '<span class="notes">'.$line.'</span>';
-						// }
-						return $line;
-					}, $ar_lines);
-					$sql_query = implode(PHP_EOL, $ar_final);
-					// $sql_query = '<pre>'.$sql_query.'</pre>';
+				// sql_query_resolved (uses `debug_prepared_statement()` to substitute `$1`, `$2`, etc. placeholders)
+				$sql_query_resolved = $search->get_sql_query_resolved();
 
 				// db records as array
 				$db_data_array = $db_result->fetch_all();
@@ -291,7 +283,8 @@ final class dd_utils_api {
 				$ar_section_id = array_map(fn($el) => $el->section_id ?? null, $db_data_array);
 
 				$response->result			= true;
-				$response->msg				= $sql_query;
+				$response->msg				= $sql_query_resolved;
+				$response->sql				= $sql_query_unresolved;
 				$response->ar_section_id	= array_values(array_unique($ar_section_id));
 				$response->db_data			= $db_data_array;
 			}
