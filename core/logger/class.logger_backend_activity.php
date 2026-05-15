@@ -104,6 +104,17 @@ class logger_backend_activity extends logger_backend {
 	// Maximum queue size before forced flush (prevents memory bloat)
 	private const int MAX_QUEUE_SIZE = 100;
 
+	/**
+	 * Section tipos excluded from activity tracking.
+	 *
+	 * @var array $excluded_section_tipos
+	 */
+	public static array $excluded_section_tipos = [
+		DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655 - temporal search presets (automatic saved search configuration)
+		DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15 - time machine section (internal virtual section)
+		USER_ACTIVITY_SECTION_TIPO, // dd1521 - User activity (automatic sumatory of user actions by day)
+	];
+
 
 
 	/**
@@ -360,6 +371,11 @@ class logger_backend_activity extends logger_backend {
 
 		// disable log
 		if(logger_backend_activity::$enable_log===false) {
+			return;
+		}
+
+		// skip Activity for excluded section_tipos (volatile/utility sections)
+		if (in_array($tipo_where, self::$excluded_section_tipos, true)) {
 			return;
 		}
 
