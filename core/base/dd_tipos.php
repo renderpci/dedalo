@@ -237,6 +237,16 @@ define('DEDALO_SECTION_INFO_INVERSE_RELATIONS',			'dd1596');
 // REQUEST_CONFIG_PRESETS_SECTION_TIPO (Layout map)
 define('DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO',	'dd1244');
 
+// tipo of daily statistics sections
+define('DEDALO_DAILY_STATS_SECTION_TIPO',	'dd70');
+
+// section user activity stat
+define('USER_ACTIVITY_SECTION_TIPO',		'dd1521');
+define('USER_ACTIVITY_USER_TIPO',			'dd1522');
+define('USER_ACTIVITY_TYPE_TIPO',			'dd1531');
+define('USER_ACTIVITY_DATE_TIPO',			'dd1530');
+define('USER_ACTIVITY_TOTALS_TIPO',			'dd1523');
+
 // ontology section tipos
 define('ONTOLOGY_SECTION_TIPOS', [
 	'section_tipo'	=> 'dd1500',
