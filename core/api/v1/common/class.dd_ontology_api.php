@@ -190,8 +190,6 @@ final class dd_ontology_api {
 				continue;
 			}
 
-			dump($section_tipo, ' section_tipo------------>>');
-
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 			if (in_array($section_real_tipo, $resolved_tipos)) {
 				continue;
