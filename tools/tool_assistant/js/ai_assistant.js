@@ -971,6 +971,36 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_match_section_label(label, glossary) {
+
+		if (!this._ontology_index) {
+			this._ontology_index = this._build_ontology_index(glossary || [])
+		}
+
+		const key = ai_assistant._normalize_label(label)
+		if (!key) return []
+
+		const exact = this._ontology_index.get(key)
+		if (exact && exact.length) return this._unique_matches(exact)
+
+		const singular = key.endsWith('s') ? key.substring(0, key.length - 1) : null
+		if (singular) {
+			const singular_matches = this._ontology_index.get(singular)
+			if (singular_matches && singular_matches.length) return this._unique_matches(singular_matches)
+		}
+
+		const matches = []
+		this._ontology_index.forEach(function(items, item_key) {
+			if (item_key.indexOf(key) !== -1 || key.indexOf(item_key) !== -1) {
+				matches.push(...items)
+			}
+		})
+
+		return this._unique_matches(matches)
+	}//end _match_section_label
+
+
+
 
 
 
