@@ -785,6 +785,51 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * BUILD_GLOSSARY_SECTION_DESCRIPTOR
+	 * Builds a section descriptor with portal-aware component descriptors.
+	 *
+	 * @param string $section_tipo Section tipo
+	 * @return object|null Section descriptor with components
+	 */
+	private static function build_glossary_section_descriptor(string $section_tipo) : ?object {
+
+		$ontology_node	= ontology_node::get_instance($section_tipo);
+		$data			= $ontology_node->get_data();
+
+		if (empty($data)) {
+			return null;
+		}
+
+		$descriptor = new stdClass();
+			$descriptor->section_tipo	= $section_tipo;
+			$descriptor->term			= $data->term ?? null;
+			$descriptor->tld			= $data->tld ?? null;
+
+		$component_tipos = section::get_ar_children_tipo_by_model_name_in_section(
+			$section_tipo,
+			['component_'],
+			true,
+			true,
+			true,
+			false
+		);
+
+		$components = [];
+		foreach ($component_tipos as $component_tipo) {
+			$component_descriptor = self::build_component_descriptor($component_tipo);
+			if ($component_descriptor !== null) {
+				$components[] = $component_descriptor;
+			}
+		}
+
+		$descriptor->components = $components;
+
+		return $descriptor;
+	}//end build_glossary_section_descriptor
+
+
+
 
 
 }//end dd_ontology_api
