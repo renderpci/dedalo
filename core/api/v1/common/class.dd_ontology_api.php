@@ -614,4 +614,85 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * EXTRACT_PORTAL_TARGETS
+	 * Extracts target section tipos and terms from a portal component's
+	 * ontology properties (source.request_config.sqo.section_tipo).
+	 *
+	 * @param string $tipo Portal component tipo
+	 * @return array ['tipos' => string[], 'terms' => object[]]
+	 */
+	private static function extract_portal_targets(string $tipo) : array {
+
+		$tipos = [];
+		$terms = [];
+
+		$ontology_node	= ontology_node::get_instance($tipo);
+		$properties		= $ontology_node->get_properties();
+
+		if (empty($properties)) {
+			return ['tipos' => $tipos, 'terms' => $terms];
+		}
+
+		$source = $properties->source ?? null;
+		if (empty($source)) {
+			return ['tipos' => $tipos, 'terms' => $terms];
+		}
+
+		$request_config = $source->request_config ?? [];
+		if (!is_array($request_config)) {
+			return ['tipos' => $tipos, 'terms' => $terms];
+		}
+
+		foreach ($request_config as $config_item) {
+			$sqo = $config_item->sqo ?? null;
+			if (empty($sqo)) {
+				continue;
+			}
+
+			$ar_section_tipo = $config_item->sqo->section_tipo ?? [];
+			if (!is_array($ar_section_tipo)) {
+				$ar_section_tipo = [$ar_section_tipo];
+			}
+
+			foreach ($ar_section_tipo as $target_entry) {
+				$target_tipo = null;
+
+				// V6 format: {value: ["rsc197"], source: "section"}
+				if (is_object($target_entry) && isset($target_entry->value)) {
+					$values = $target_entry->value;
+					if (is_array($values)) {
+						foreach ($values as $v) {
+							$target_tipo = $v;
+						}
+					} else {
+						$target_tipo = $values;
+					}
+				}
+				// Direct string
+				elseif (is_string($target_entry)) {
+					$target_tipo = $target_entry;
+				}
+				// DDO format (already resolved): {tipo: "rsc197", ...}
+				elseif (is_object($target_entry) && isset($target_entry->tipo)) {
+					$target_tipo = $target_entry->tipo;
+				}
+
+				if ($target_tipo !== null && !in_array($target_tipo, $tipos)) {
+					$tipos[]			= $target_tipo;
+					$target_term		= ontology_node::get_term_by_tipo($target_tipo);
+					$terms[]			= (object)[
+						'tipo'	=> $target_tipo,
+						'term'	=> $target_term
+					];
+				}
+			}
+		}
+
+		return ['tipos' => $tipos, 'terms' => $terms];
+	}//end extract_portal_targets
+
+
+
+
 }//end dd_ontology_api
