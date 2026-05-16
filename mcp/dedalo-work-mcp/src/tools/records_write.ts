@@ -16,7 +16,8 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 	registerTool(server, {
 		name: 'dedalo_create_record',
 		description:
-			'Create a new record in the given `section_tipo`. Returns the new section_id.',
+			'Create a new record in the given `section_tipo`. Returns the new section_id.\n' +
+			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` (e.g. "Mint"→numisdata6) or `dedalo_resolve_ontology`.',
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Create record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
@@ -29,7 +30,8 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 	registerTool(server, {
 		name: 'dedalo_duplicate_record',
 		description:
-			'Create a copy of an existing record including all component values. Returns the new section_id.',
+			'Create a copy of an existing record including all component values. Returns the new section_id.\n' +
+			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
 		annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Duplicate record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
@@ -43,10 +45,16 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 	registerTool(server, {
 		name: 'dedalo_save_component',
 		description:
-			'Save a value to a specific component within a record. The `value` shape depends on the component type (text, locator, dato, ...). Inspect with `dedalo_get_element_context` first when in doubt.',
+			'Save a value to a specific component within a record. The `value` shape depends on the component type.\n' +
+			'**Resolve both `section_tipo` and `tipo` first** via `dedalo_ontology_glossary` (mode="section") then `dedalo_get_section_elements_context`.\n\n' +
+			'Value formats:\n' +
+			'- Text (component_input_text, component_text_area): plain string\n' +
+			'- Portal (component_portal): array of locators e.g. [{"section_tipo":"rsc197","section_id":"7"}]\n' +
+			'- Select (component_select): array of locator objects\n' +
+			'- Date (component_date): date string in component format',
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Save component' },
 		inputSchema: z.object({
-			tipo: TipoSchema.describe('Component tipo to save.'),
+			tipo: TipoSchema.describe('Component tipo to save. Resolve via `dedalo_ontology_glossary` (mode="section").'),
 			section_tipo: TipoSchema,
 			section_id: SectionIdSchema,
 			lang: OptionalLangSchema,
@@ -59,7 +67,8 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 	registerTool(server, {
 		name: 'dedalo_delete_record',
 		description:
-			'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.',
+			'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.\n' +
+			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Delete record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
