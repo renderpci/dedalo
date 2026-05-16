@@ -1430,7 +1430,11 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
     }
     function shutdown() {
         logger.info('Shutting down dedalo-work-mcp...');
-        server.close()
+        const closeTasks = [
+            ...Array.from(httpServers.values()).map((server) => server.close()),
+            ...(stdioServer ? [stdioServer.close()] : []),
+        ];
+        Promise.all(closeTasks)
             .then(() => {
             logger.info('Server closed');
             process.exit(0);
@@ -1479,11 +1483,9 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
                 autoLogin: true,
             });
             limiter = config.rateLimit ? new mcp_common_4.TokenBucketRateLimiter(config.rateLimit) : null;
-            server = server_js_1.createWorkServer({
-                client,
-                logger,
-                limiter,
-            });
+            stdioServer = null;
+            httpServers = new Map();
+            httpTransports = new Map();
             // Periodically evict stale rate-limiter buckets to prevent memory leaks.
             if (limiter) {
                 const CLEANUP_INTERVAL_MS = 60000;
