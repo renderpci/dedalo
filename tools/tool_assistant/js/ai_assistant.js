@@ -392,6 +392,39 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_build_few_shot_messages() {
+
+		return [
+			{
+				role	: 'user',
+				content	: 'How many records are in Oral History?'
+			},
+			{
+				role		: 'assistant',
+				content		: null,
+				tool_calls	: [{
+					id			: 'fewshot_0',
+					type		: 'function',
+					function	: {
+						name		: 'dedalo_count_records',
+						arguments	: { section_tipo: 'oh1' }
+					}
+				}]
+			},
+			{
+				role			: 'tool',
+				tool_call_id	: 'fewshot_0',
+				content			: JSON.stringify({ total: 42 })
+			},
+			{
+				role	: 'assistant',
+				content	: 'There are 42 records in the Oral History section.'
+			}
+		]
+	}//end _build_few_shot_messages
+
+
+
 	_build_tools_for_model() {
 
 		if (!this._mcp_tools.length) return []
