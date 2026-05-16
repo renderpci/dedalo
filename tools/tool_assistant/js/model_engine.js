@@ -262,7 +262,7 @@ export const model_engine = class model_engine {
 
 
 
-	async _do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token) {
+	async _do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const tokenizer		= this._processor.tokenizer || this._processor
 		const stream		= this._create_streamer(tokenizer, on_token, on_think_token)
@@ -298,7 +298,7 @@ export const model_engine = class model_engine {
 		const decoded		= tokenizer.decode(new_ids[0], { skip_special_tokens: true })
 
 		return this._build_result(stream.get_text(), { generated_text: decoded, raw_output: output_ids })
-	}//end _do_generate_qwen35
+	}//end _do_generate_direct
 
 
 
