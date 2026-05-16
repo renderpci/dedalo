@@ -214,13 +214,25 @@ export const model_engine = class model_engine {
 			'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0'
 		)
 
-		this._is_qwen35 = false
+		this._TextStreamer	= transformers.TextStreamer
+		this._transformers	= transformers
 
-		this._pipeline = await transformers.pipeline(
-			'text-generation',
-			this._model_id,
-			{ device: fb_device, dtype: fb_dtype }
-		)
+		if (this._model_type === 'pipeline') {
+			this._pipeline = await transformers.pipeline(
+				'text-generation',
+				this._model_id,
+				{ device: fb_device, dtype: fb_dtype }
+			)
+		} else {
+			const model_class_name	= model_engine._MODEL_CLASS_MAP[this._model_type]
+			const ModelClass		= transformers[model_class_name]
+			const dtype_config		= model_engine._build_dtype_config(this._model_type, fb_dtype)
+			this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
+			this._model = await ModelClass.from_pretrained(this._model_id, {
+				device	: fb_device,
+				dtype	: dtype_config
+			})
+		}
 		this._device	= fb_device
 		this._loaded	= true
 	}//end _reload_as_wasm
