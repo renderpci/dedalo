@@ -896,6 +896,32 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	async _get_ontology_glossary() {
+
+		if (this._ontology_glossary) return this._ontology_glossary
+		if (this._ontology_loading) return await this._ontology_loading
+
+		this._ontology_loading = this._mcp_client.tools_call('dedalo_ontology_glossary', {
+			mode: 'sections'
+		}).then((tool_result) => {
+			const structured = this._extract_tool_structured_content(tool_result)
+			const data = structured && structured.data ? structured.data : structured
+			const result = data && data.result ? data.result : data
+			this._ontology_glossary = Array.isArray(result) ? result : []
+			this._ontology_index = this._build_ontology_index(this._ontology_glossary)
+			this._ontology_loading = null
+			return this._ontology_glossary
+		}).catch((err) => {
+			this._ontology_loading = null
+			throw err
+		})
+
+		return await this._ontology_loading
+	}//end _get_ontology_glossary
+
+
+
+
 
 	_persist() {
 		if (!this._thread_id) return
