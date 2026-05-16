@@ -830,6 +830,42 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * GLOSSARY_PATH
+	 * Resolves a relational path and returns annotated metadata for each hop.
+	 *
+	 * @param array|null $path Array of tipo strings
+	 * @return object Response with resolved path
+	 */
+	private static function glossary_path(?array $path) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. glossary_path request failed';
+			$response->errors	= [];
+
+		if (empty($path) || !is_array($path) || count($path) < 2) {
+			$response->msg		= 'Error. Path must be an array with at least 2 tipos';
+			$response->errors[]	= 'invalid_path';
+			return $response;
+		}
+
+		$resolved = self::resolve_path_hops($path);
+		if ($resolved === null) {
+			$response->msg		= 'Error. Failed to resolve path';
+			$response->errors[]	= 'path_resolution_failed';
+			return $response;
+		}
+
+		$response->result	= $resolved;
+		$response->msg		= 'OK. glossary_path request done successfully';
+
+		return $response;
+	}//end glossary_path
+
+
+
+
 
 
 }//end dd_ontology_api
