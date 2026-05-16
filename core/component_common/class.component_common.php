@@ -3145,7 +3145,7 @@ abstract class component_common extends common {
 			$data = $this->get_data();
 
 			// if the ddo provides a data_slice property, use it to slice the data
-			if(isset($ddo->data_slice)){
+			if(isset($ddo->data_slice) && !empty($data)) {
 				$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
 			}
 
