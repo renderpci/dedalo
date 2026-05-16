@@ -1017,6 +1017,30 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	static _extract_term_labels(term) {
+
+		const labels = []
+
+		if (typeof term === 'string') {
+			labels.push(term)
+		} else if (Array.isArray(term)) {
+			for (const item of term) {
+				labels.push(...ai_assistant._extract_term_labels(item))
+			}
+		} else if (term && typeof term === 'object') {
+			const values = Object.values(term)
+			for (const value of values) {
+				labels.push(...ai_assistant._extract_term_labels(value))
+			}
+		}
+
+		return labels.filter(function(label) {
+			return typeof label === 'string' && label.trim().length > 0
+		})
+	}//end _extract_term_labels
+
+
+
 
 
 	_persist() {
