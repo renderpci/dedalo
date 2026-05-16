@@ -921,6 +921,34 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_extract_tool_structured_content(tool_result) {
+
+		const result = tool_result
+			&& tool_result.data
+			&& tool_result.data.result
+			? tool_result.data.result
+			: null
+
+		if (result && result.structuredContent) {
+			return result.structuredContent
+		}
+
+		const content = result && Array.isArray(result.content)
+			? result.content
+			: null
+
+		if (content && content[0] && typeof content[0].text === 'string') {
+			try {
+				return JSON.parse(content[0].text)
+			} catch(e) {}
+		}
+
+		return null
+	}//end _extract_tool_structured_content
+
+
+
+
 
 
 	_persist() {
