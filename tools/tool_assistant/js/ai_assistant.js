@@ -948,6 +948,29 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_build_ontology_index(glossary) {
+
+		const index = new Map()
+
+		for (const section of glossary) {
+			if (!section || !section.section_tipo) continue
+			const labels = ai_assistant._extract_term_labels(section.term)
+			for (const label of labels) {
+				const key = ai_assistant._normalize_label(label)
+				if (!key) continue
+				if (!index.has(key)) index.set(key, [])
+				index.get(key).push({
+					section_tipo	: section.section_tipo,
+					label			: label
+				})
+			}
+		}
+
+		return index
+	}//end _build_ontology_index
+
+
+
 
 
 
