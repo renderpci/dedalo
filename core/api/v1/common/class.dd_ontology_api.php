@@ -865,6 +865,103 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * RESOLVE_PATH_HOPS
+	 * Walks a path array and annotates each hop with ontology metadata.
+	 *
+	 * Validates that portal hops have matching targets for the next hop.
+	 * Returns null if any hop is invalid.
+	 *
+	 * @param array $path Array of tipo strings
+	 * @return object|null Resolved path or null on failure
+	 */
+	private static function resolve_path_hops(array $path) : ?object {
+
+		$hops = [];
+
+		foreach ($path as $index => $tipo) {
+			if (!ontology_utils::check_tipo_is_valid($tipo)) {
+				return null;
+			}
+
+			$node		= ontology_node::get_instance($tipo);
+			$data		= $node->get_data();
+
+			if (empty($data)) {
+				return null;
+			}
+
+			$model = $data->model ?? '';
+
+			$hop = new stdClass();
+				$hop->tipo		= $tipo;
+				$hop->model		= $model;
+				$hop->term		= $data->term ?? null;
+
+			// Determine if this is a portal hop
+			$is_portal = str_starts_with($model, 'component_portal')
+				|| str_starts_with($model, 'component_dataframe')
+				|| str_starts_with($model, 'component_filter');
+
+			if ($is_portal) {
+				$hop->is_portal = true;
+				$ar_target = self::extract_portal_targets($tipo);
+				$hop->target_section_tipo = $ar_target['tipos'];
+
+				// Validate: next hop should be one of the target sections
+				$next_index = $index + 1;
+				if ($next_index < count($path)) {
+					$next_tipo = $path[$next_index];
+					if (!in_array($next_tipo, $ar_target['tipos'])) {
+						// Not a direct target — may still be valid if next is a component
+						// within the target section
+						$next_node = ontology_node::get_instance($next_tipo);
+						$next_model = $next_node->get_model();
+						if ($next_model !== 'section') {
+							// Check if next component's parent section is a target
+							$next_parent = $next_node->get_parent();
+							$next_parent_real = section::get_section_real_tipo_static($next_parent);
+							if (!in_array($next_parent_real, $ar_target['tipos'])) {
+								return null;
+							}
+						}
+					}
+				}
+			} else {
+				$hop->is_portal = false;
+
+				// For section hops, extract all component children (first level only)
+				if ($model === 'section') {
+					$hop->section_tipo = $tipo;
+				}
+			}
+
+			// For the leaf (last element), add column type info
+			$next_index = $index + 1;
+			if ($next_index >= count($path) && str_starts_with($model, 'component_')) {
+				$hop->column_type = self::get_component_column_type($model);
+			}
+
+			$hops[] = $hop;
+		}
+
+		$result = new stdClass();
+			$result->path		= $hops;
+			$result->hop_count	= count($hops);
+
+		// Add leaf info
+		$leaf = end($hops);
+		if ($leaf !== false) {
+			$result->leaf_tipo		= $leaf->tipo;
+			$result->leaf_model		= $leaf->model;
+			$result->leaf_column_type	= $leaf->column_type ?? null;
+		}
+
+		return $result;
+	}//end resolve_path_hops
+
+
+
 
 
 
