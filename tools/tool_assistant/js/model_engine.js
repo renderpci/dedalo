@@ -462,7 +462,10 @@ export const model_engine = class model_engine {
 		} else if (full_text.indexOf('<think>') !== -1) {
 			full_text = ''
 		}
-		full_text = full_text.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim()
+		full_text = full_text
+			.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
+			.replace(/(?:^|\s)call\s*:\s*[a-zA-Z0-9_]+\s*\{[\s\S]*?\}/g, '')
+			.trim()
 
 		if (!full_text) {
 			const generated = Array.isArray(raw_result)
@@ -533,6 +536,20 @@ export const model_engine = class model_engine {
 				} catch(e) {
 					// skip malformed JSON
 				}
+			}
+
+			const inline_call_regex = /(?:^|\s)call\s*:\s*([a-zA-Z0-9_]+)\s*(\{[\s\S]*?\})/g
+			while ((match = inline_call_regex.exec(text)) !== null) {
+				const name = match[1]
+				const args = model_engine._parse_relaxed_arguments(match[2])
+				tool_calls.push({
+					id			: 'call_' + tool_calls.length,
+					type		: 'function',
+					function	: {
+						name		: name,
+						arguments	: JSON.stringify(args)
+					}
+				})
 			}
 
 		return tool_calls.length > 0 ? tool_calls : null
