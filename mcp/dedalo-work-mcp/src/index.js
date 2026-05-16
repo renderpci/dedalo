@@ -1384,6 +1384,18 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
             return false;
         return allowlist.includes(origin);
     }
+    async function isInitializeRequest(req) {
+        if (req.method !== 'POST')
+            return false;
+        try {
+            const body = await req.clone().json();
+            const messages = Array.isArray(body) ? body : [body];
+            return messages.some((message) => message && message.method === 'initialize');
+        }
+        catch (_a) {
+            return false;
+        }
+    }
     async function main() {
         // Prime CSRF before any tool call so the first request succeeds.
         try {
@@ -1394,10 +1406,6 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
             logger.warn({ err: err.message }, 'CSRF bootstrap failed; will retry on first call');
         }
         if (useHttp) {
-            const transport = new webStandardStreamableHttp_js_1.WebStandardStreamableHTTPServerTransport({
-                sessionIdGenerator: () => crypto.randomUUID(),
-            });
-            await server.connect(transport);
             const { port, host, allowedOrigins } = config.http;
             Bun.serve({
                 port,
@@ -1416,7 +1424,47 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
                     if (req.method === 'OPTIONS') {
                         return new Response(null, { status: 204, headers: corsHeaders });
                     }
-                    return transport.handleRequest(req);
+                    const sessionId = req.headers.get('mcp-session-id');
+                    let transport = sessionId ? httpTransports.get(sessionId) : undefined;
+                    if (!transport && await isInitializeRequest(req)) {
+                        let newTransport;
+                        let sessionServer = null;
+                        newTransport = new webStandardStreamableHttp_js_1.WebStandardStreamableHTTPServerTransport({
+                            sessionIdGenerator: () => crypto.randomUUID(),
+                            onsessioninitialized: (newSessionId) => {
+                                httpTransports.set(newSessionId, newTransport);
+                                if (sessionServer) {
+                                    httpServers.set(newSessionId, sessionServer);
+                                }
+                            },
+                        });
+                        newTransport.onclose = () => {
+                            const closedSessionId = newTransport.sessionId;
+                            if (closedSessionId) {
+                                httpTransports.delete(closedSessionId);
+                                httpServers.delete(closedSessionId);
+                            }
+                        };
+                        sessionServer = server_js_1.createWorkServer({
+                            client,
+                            logger,
+                            limiter,
+                        });
+                        await sessionServer.connect(newTransport);
+                        transport = newTransport;
+                    }
+                    if (!transport) {
+                        return new Response(JSON.stringify({
+                            jsonrpc: '2.0',
+                            error: {
+                                code: -32000,
+                                message: 'Bad Request: No valid MCP session ID provided',
+                            },
+                            id: null,
+                        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+                    }
+                    const response = await transport.handleRequest(req);
+                    return response;
                 },
                 websocket: { open: () => { }, close: () => { }, message: () => { } },
             });
@@ -1424,7 +1472,12 @@ System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelco
         }
         else {
             const transport = new stdio_js_1.StdioServerTransport();
-            await server.connect(transport);
+            stdioServer = server_js_1.createWorkServer({
+                client,
+                logger,
+                limiter,
+            });
+            await stdioServer.connect(transport);
             logger.info('dedalo-work-mcp started on stdio');
         }
     }
