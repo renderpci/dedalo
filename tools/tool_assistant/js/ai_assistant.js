@@ -471,6 +471,24 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	static _tool_description(tool) {
+
+		const description = tool.description || ''
+		const full_description_tools = [
+			'dedalo_ontology_glossary',
+			'dedalo_resolve_ontology',
+			'dedalo_resolve_path',
+			'dedalo_create_record',
+			'dedalo_save_component',
+			'dedalo_search_records'
+		]
+		const limit = full_description_tools.indexOf(tool.name) !== -1 ? 1200 : 350
+
+		return description.substring(0, limit)
+	}//end _tool_description
+
+
+
 	/**
 	* _SANITIZE_SCHEMA
 	* Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen and
