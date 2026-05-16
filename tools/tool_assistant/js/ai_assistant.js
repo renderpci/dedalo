@@ -875,6 +875,27 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	static _find_label_in_text(text, label) {
+
+		let index = text.indexOf(label)
+
+		while (index !== -1) {
+			const before = index === 0 ? ' ' : text.charAt(index - 1)
+			const after_index = index + label.length
+			const after = after_index >= text.length ? ' ' : text.charAt(after_index)
+
+			if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
+				return index
+			}
+
+			index = text.indexOf(label, index + 1)
+		}
+
+		return -1
+	}//end _find_label_in_text
+
+
+
 
 	_persist() {
 		if (!this._thread_id) return
