@@ -1041,6 +1041,18 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	static _normalize_label(label) {
+
+		return String(label || '')
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase()
+			.replace(/[_\-]+/g, ' ')
+			.replace(/[^a-z0-9 ]+/g, '')
+			.replace(/\s+/g, ' ')
+			.trim()
+	}//end _normalize_label
+
 
 
 	_persist() {
