@@ -359,6 +359,66 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * RESOLVE_PATH
+	 * Resolves a relational path through the ontology, returning annotated
+	 * metadata for each hop.
+	 *
+	 * This is the primary tool for understanding cross-section relationships.
+	 * Given a path like ["oh1","oh24","rsc197","rsc85"], returns:
+	 * - oh1  → section "Oral History"
+	 * - oh24 → portal "Informant" targeting rsc197
+	 * - rsc197 → section "Person"
+	 * - rsc85 → component "Name" (component_input_text, column: string)
+	 *
+	 * @param object $rqo Request query object
+	 *   {
+	 *     "action": "resolve_path",
+	 *     "dd_api": "dd_ontology_api",
+	 *     "source": {
+	 *       "path": ["oh1","oh24","rsc197","rsc85"]
+	 *     }
+	 *   }
+	 * @return object $response
+	 */
+	public static function resolve_path(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. resolve_path request failed';
+			$response->errors	= [];
+
+		$source	= $rqo->source ?? new stdClass();
+		$path	= $source->path ?? null;
+
+		if (empty($path) || !is_array($path)) {
+			$response->msg		= 'Error. Missing or invalid source.path parameter (array of tipos required)';
+			$response->errors[]	= 'missing_path';
+			return $response;
+		}
+
+		if (count($path) < 2) {
+			$response->msg		= 'Error. Path must contain at least 2 elementos';
+			$response->errors[]	= 'path_too_short';
+			return $response;
+		}
+
+		$result = self::resolve_path_hops($path);
+
+		if ($result === null) {
+			$response->msg		= 'Error. Failed to resolve path';
+			$response->errors[]	= 'path_resolution_failed';
+			return $response;
+		}
+
+		$response->result	= $result;
+		$response->msg		= 'OK. resolve_path request done successfully';
+
+		return $response;
+	}//end resolve_path
+
+
+
 	// ─────────────────────────────────────────────────────────────────────
 	// Private helpers
 	// ─────────────────────────────────────────────────────────────────────
