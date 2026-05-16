@@ -750,6 +750,41 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * GLOSSARY_SECTION
+	 * Returns a section's full component tree with portal metadata.
+	 *
+	 * @param string|null $section_tipo Section tipo to resolve
+	 * @return object Response with section descriptor
+	 */
+	private static function glossary_section(?string $section_tipo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. glossary_section request failed';
+			$response->errors	= [];
+
+		if (empty($section_tipo) || !is_string($section_tipo)) {
+			$response->msg		= 'Error. Missing source.section_tipo parameter';
+			$response->errors[]	= 'missing_section_tipo';
+			return $response;
+		}
+
+		$section_descriptor = self::build_glossary_section_descriptor($section_tipo);
+		if ($section_descriptor === null) {
+			$response->msg		= 'Error. Section not found: ' . $section_tipo;
+			$response->errors[]	= 'section_not_found';
+			return $response;
+		}
+
+		$response->result	= $section_descriptor;
+		$response->msg		= 'OK. glossary_section request done successfully';
+
+		return $response;
+	}//end glossary_section
+
+
+
 
 
 }//end dd_ontology_api
