@@ -575,6 +575,41 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* _NORMALIZE_MESSAGES_FOR_MODEL
+	* Converts tool_call function arguments from JSON strings to objects.
+	* The Qwen3.5 chat template applies |items to tool_call.arguments,
+	* expecting a dict — a JSON string causes "Unknown StringValue filter: items".
+	* This must be called before passing messages to apply_chat_template.
+	* @param array messages
+	* @return array Normalized messages (shallow copy where needed)
+	*/
+	static _normalize_messages_for_model(messages) {
+
+		return messages.map(function(msg) {
+			if (msg.tool_calls && Array.isArray(msg.tool_calls)) {
+				const patched_calls = msg.tool_calls.map(function(tc) {
+					if (tc.function && typeof tc.function.arguments === 'string') {
+						try {
+							return Object.assign({}, tc, {
+								function: Object.assign({}, tc.function, {
+									arguments: JSON.parse(tc.function.arguments)
+								})
+							})
+						} catch(e) {
+							return tc
+						}
+					}
+					return tc
+				})
+				return Object.assign({}, msg, { tool_calls: patched_calls })
+			}
+			return msg
+		})
+	}//end _normalize_messages_for_model
+
+
+
 	async _handle_user_message(message) {
 
 		const self = this
