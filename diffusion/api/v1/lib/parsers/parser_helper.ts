@@ -18,17 +18,30 @@ import type { data_item, parser_options } from '../types';
 export function get_first(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
+	
+	const lang_seen = new Set<string>();
 	const result: data_item[] = [];
 
 	for (const item of data) {
-		const val = item.value;
-		const final_val = (Array.isArray(val) && val.length > 0) 
-            ? val[0] 
-            : val;
-		result.push({
-			...item,
-			value: final_val
-		});
+		const lang = item.lang ?? '__nolan__';
+		if (!lang_seen.has(lang)) {
+			lang_seen.add(lang);
+			
+			const val = item.value;
+			const final_val = (Array.isArray(val) && val.length > 0) 
+				? val[0] 
+				: val;
+				
+			result.push({
+				...item,
+				value: final_val
+			});
+		}
+	}
+
+	return result.length > 0 ? result : null;
+}
+
 	}
 
 	return result.length > 0 ? result : null;
