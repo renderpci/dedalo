@@ -687,6 +687,7 @@ function apply_parser_chain(
 
 	const state = new Map<string, any[]>();
 	let last_unmapped_result: any = data;
+	let last_parser_options: Record<string, any> = {};
 
 	for (const parser_def of chain) {
 		if (!parser_def.fn) continue;
@@ -718,12 +719,13 @@ function apply_parser_chain(
 					}
 				}
 				
-				// Re-integrate any original data items that were NOT mapped into state
+				// Re-integrate any original data items with a named id that were NOT mapped into state.
+				// Null-id items (e.g. parent locator entries like rsc139) are intentionally excluded:
+				// they were already present in the full `data` array fed to each parser step and
+				// re-adding them here causes parsers like text_format to see spurious extra values.
 				if (Array.isArray(data)) {
 					for (const d_orig of data) {
 						if (d_orig && d_orig.id !== null && !state.has(d_orig.id)) {
-							combined.push(d_orig);
-						} else if (d_orig && d_orig.id === null) {
 							combined.push(d_orig);
 						}
 					}
@@ -758,6 +760,7 @@ function apply_parser_chain(
 			continue;
 		}
 
+		last_parser_options = parser_def.options ?? {};
 		if (parser_def.id) {
 			state.set(parser_def.id, Array.isArray(result) ? result : [result]);
 		} else {
@@ -782,12 +785,11 @@ function apply_parser_chain(
 			}
 		}
 		
-		// Re-integrate any original data items that were NOT mapped into state
+		// Re-integrate any original data items with a named id that were NOT mapped into state.
+		// Null-id items are excluded for the same reason as the mid-chain block above.
 		if (Array.isArray(data)) {
 			for (const d_orig of data) {
 				if (d_orig && d_orig.id !== null && !state.has(d_orig.id)) {
-					combined.push(d_orig);
-				} else if (d_orig && d_orig.id === null) {
 					combined.push(d_orig);
 				}
 			}
@@ -813,7 +815,17 @@ function apply_parser_chain(
 				typeof item.value[0] === 'string'
 		);
 		if (has_array_values) {
-			if (columns && columns.length > 0 && output_format !== 'json') {
+			// Only run the column-aware merge when EVERY column has a corresponding output
+			// item. After a formatter like text_format, the output has only one item whose
+			// tipo is the first input item's tipo (e.g. rsc85). The remaining columns
+			// (e.g. rsc86) are absent — merge() would produce empty slots and trailing
+			// separators. Requiring full coverage ensures we only merge raw per-column data.
+			const column_tipos = columns ? new Set(columns.map((c: any) => c.tipo)) : null;
+			const output_tipo_set = new Set(last_unmapped_result.map((item: any) => item?.tipo).filter(Boolean));
+			const all_columns_covered = column_tipos
+				? [...column_tipos].every(t => output_tipo_set.has(t))
+				: false;
+			if (columns && columns.length > 0 && output_format !== 'json' && all_columns_covered) {
 				// Column-aware merge — preserves position and empty slots (string output only).
 				// For json output, values flow through as-is so the fan-out can JSON.stringify them.
 				const merge_opts: Record<string, any> = { columns, merge: 'string' };
@@ -846,7 +858,7 @@ function apply_parser_chain(
 						lang:  lk === '__nolan__' ? null : lk,
 						value: output_format === 'json'
 							? all_vals
-							: all_vals.join(' | '),
+							: all_vals.join((last_parser_options.records_separator as string) ?? ' | '),
 					});
 				}
 				last_unmapped_result = collapsed;
