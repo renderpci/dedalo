@@ -1338,10 +1338,135 @@ System.register("tools/index", ["tools/discovery", "tools/records_read", "tools/
         }
     };
 });
-System.register("server", ["@modelcontextprotocol/sdk/server/mcp.js", "tools/index"], function (exports_19, context_19) {
+System.register("resources/ontology", ["@modelcontextprotocol/sdk/server/mcp.js", "tools/_shared/rqo"], function (exports_19, context_19) {
     "use strict";
-    var mcp_js_1, index_js_1;
+    var mcp_js_1, rqo_js_12;
     var __moduleName = context_19 && context_19.id;
+    /**
+     * Ontology resources — expose Dédalo's ontology as MCP resources.
+     *
+     * Resources let the LLM proactively fetch the ontology map at session
+     * start, without needing explicit tool calls. This builds the mental
+     * map of sections, components, and portal relationships upfront.
+     */
+    function registerOntologyResources(server, client) {
+        // ── Static resource: sections glossary ─────────────────────────────
+        // Returns all sections with multilingual terms in one call.
+        // URI: dedalo://ontology/sections
+        server.registerResource('ontology-sections', 'dedalo://ontology/sections', {
+            description: 'Complete glossary of all Dédalo sections: human-readable names mapped to tipo identifiers. ' +
+                'Terms in all available languages. Fetch this at session start to build your ontology map.',
+            mimeType: 'application/json',
+        }, (async () => {
+            const result = await client.call(rqo_js_12.rqo({
+                action: 'get_glossary',
+                dd_api: 'dd_ontology_api',
+                source: { mode: 'sections' },
+            }));
+            return {
+                contents: [{
+                        uri: 'dedalo://ontology/sections',
+                        text: JSON.stringify(result, null, 2),
+                        mimeType: 'application/json',
+                    }],
+            };
+        }));
+        // ── Template resource: per-section component detail ────────────────
+        // Returns one section's component tree with portal metadata.
+        // URI pattern: dedalo://ontology/sections/{section_tipo}
+        server.registerResource('ontology-section-detail', new mcp_js_1.ResourceTemplate('dedalo://ontology/sections/{section_tipo}', {
+            list: async () => {
+                var _a;
+                const result = await client.call(rqo_js_12.rqo({
+                    action: 'get_glossary',
+                    dd_api: 'dd_ontology_api',
+                    source: { mode: 'sections' },
+                }));
+                const sections = (_a = result === null || result === void 0 ? void 0 : result.result) !== null && _a !== void 0 ? _a : [];
+                return {
+                    resources: sections.map((s) => ({
+                        uri: `dedalo://ontology/sections/${s.section_tipo}`,
+                        name: s.section_tipo,
+                        description: typeof s.term === 'object'
+                            ? Object.values(s.term).join(' / ')
+                            : s.term,
+                        mimeType: 'application/json',
+                    })),
+                };
+            },
+            complete: {
+                section_tipo: async (value) => {
+                    var _a;
+                    const result = await client.call(rqo_js_12.rqo({
+                        action: 'resolve_term',
+                        dd_api: 'dd_ontology_api',
+                        source: { text: value, mode: 'fuzzy', model: 'section', limit: 20 },
+                    }));
+                    const nodes = (_a = result === null || result === void 0 ? void 0 : result.result) !== null && _a !== void 0 ? _a : [];
+                    return nodes.map((n) => n.tipo);
+                },
+            },
+        }), {
+            description: 'Full component tree for a specific Dédalo section, including portal metadata (is_portal, target_section_tipo). ' +
+                'Use this to discover which components a section has and which portals link to other sections.',
+            mimeType: 'application/json',
+        }, (async (uri, variables) => {
+            const section_tipo = variables.section_tipo;
+            const result = await client.call(rqo_js_12.rqo({
+                action: 'get_glossary',
+                dd_api: 'dd_ontology_api',
+                source: { mode: 'section', section_tipo },
+            }));
+            return {
+                contents: [{
+                        uri: uri.href,
+                        text: JSON.stringify(result, null, 2),
+                        mimeType: 'application/json',
+                    }],
+            };
+        }));
+    }
+    exports_19("registerOntologyResources", registerOntologyResources);
+    return {
+        setters: [
+            function (mcp_js_1_1) {
+                mcp_js_1 = mcp_js_1_1;
+            },
+            function (rqo_js_12_1) {
+                rqo_js_12 = rqo_js_12_1;
+            }
+        ],
+        execute: function () {
+        }
+    };
+});
+System.register("resources/index", ["resources/ontology"], function (exports_20, context_20) {
+    "use strict";
+    var ontology_js_1;
+    var __moduleName = context_20 && context_20.id;
+    /**
+     * Register all MCP resources for dedalo-work-mcp.
+     * Resources expose Dédalo's ontology as readable MCP resources
+     * that the LLM can proactively fetch.
+     */
+    function registerAllResources(server, client) {
+        ontology_js_1.registerOntologyResources(server, client);
+    }
+    exports_20("registerAllResources", registerAllResources);
+    return {
+        setters: [
+            function (ontology_js_1_1) {
+                ontology_js_1 = ontology_js_1_1;
+            }
+        ],
+        execute: function () {
+        }
+    };
+});
+System.register("server", ["@modelcontextprotocol/sdk/server/mcp.js", "tools/index", "resources/index"], function (exports_21, context_21) {
+    "use strict";
+    var mcp_js_2, index_js_1, index_js_2;
+    var __moduleName = context_21 && context_21.id;
     /**
      * Create the dedalo-work-mcp server with every tool registered.
      *
@@ -1350,28 +1475,32 @@ System.register("server", ["@modelcontextprotocol/sdk/server/mcp.js", "tools/ind
      */
     function createWorkServer(config) {
         const { client, logger, limiter } = config;
-        const server = new mcp_js_1.McpServer({ name: 'dedalo-work-mcp', version: '1.0.0' }, { capabilities: { tools: {} } });
+        const server = new mcp_js_2.McpServer({ name: 'dedalo-work-mcp', version: '1.0.0' }, { capabilities: { tools: {}, resources: {} } });
+        index_js_2.registerAllResources(server, client);
         index_js_1.registerAllTools(server, client, { logger, limiter: limiter !== null && limiter !== void 0 ? limiter : null });
         return server;
     }
-    exports_19("createWorkServer", createWorkServer);
+    exports_21("createWorkServer", createWorkServer);
     return {
         setters: [
-            function (mcp_js_1_1) {
-                mcp_js_1 = mcp_js_1_1;
+            function (mcp_js_2_1) {
+                mcp_js_2 = mcp_js_2_1;
             },
             function (index_js_1_1) {
                 index_js_1 = index_js_1_1;
+            },
+            function (index_js_2_1) {
+                index_js_2 = index_js_2_1;
             }
         ],
         execute: function () {
         }
     };
 });
-System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", "pino", "@dedalo/mcp-common", "config", "server"], function (exports_20, context_20) {
+System.register("index", ["@modelcontextprotocol/sdk/server/stdio.js", "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", "pino", "@dedalo/mcp-common", "config", "server"], function (exports_22, context_22) {
     "use strict";
-    var _a, stdio_js_1, webStandardStreamableHttp_js_1, pino_1, mcp_common_4, config_js_1, server_js_1, useHttp, logger, config, client, limiter, server;
-    var __moduleName = context_20 && context_20.id;
+    var _a, stdio_js_1, webStandardStreamableHttp_js_1, pino_1, mcp_common_4, config_js_1, server_js_1, useHttp, logger, config, client, limiter, stdioServer, httpServers, httpTransports;
+    var __moduleName = context_22 && context_22.id;
     /**
      * Validate an incoming HTTP Origin against the allowlist.
      * No allowlist + no Origin header → permit (typical for non-browser clients).
