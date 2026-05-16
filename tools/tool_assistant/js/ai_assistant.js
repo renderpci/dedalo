@@ -1001,6 +1001,21 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_unique_matches(matches) {
+
+		const seen = new Set()
+		const unique = []
+
+		for (const item of matches) {
+			if (!item || !item.section_tipo || seen.has(item.section_tipo)) continue
+			seen.add(item.section_tipo)
+			unique.push(item)
+		}
+
+		return unique
+	}//end _unique_matches
+
+
 
 
 
