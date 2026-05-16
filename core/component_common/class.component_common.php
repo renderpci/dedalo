@@ -3241,119 +3241,159 @@ abstract class component_common extends common {
 			return $this->permissions;
 		}
 
-		if ($this->mode==='search') {
+		// Delegate to the static resolver for all special cases that
+		// do not require $this (search mode, own-user, TM mode, IRI, etc.).
+			$this->permissions = self::resolve_component_read_permission(
+				$this->section_tipo,
+				$this->tipo,
+				isset($this->section_id) ? (int)$this->section_id : null,
+				$this->mode
+			);
 
-			if ( $this->section_tipo===DEDALO_THESAURUS_SECTION_TIPO ) {
-
-				$this->permissions = 2; // Allow all users to search in thesaurus
-
-			}elseif ( true===in_array($this->tipo, section::get_metadata_definition_tipos()) ) {
-
-				$this->permissions = 2; // Allow all users to search with section info components
-
-			}elseif ( strpos((string)$this->section_id, 'search') === 0 ){
-
-				$this->permissions = 2;
-
-			}else{
-
-				$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
+		// Instance-only override: TM notes owner upgrade.
+		// resolve_component_read_permission() returns 1 (read) for all
+		// TM notes; the creator of the note gets write (2). This check
+		// requires $this->get_my_section_record() which is not available
+		// statically, so it lives here as a post-delegation override.
+			if ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				$section_record = $this->get_my_section_record();
+				if (logged_user_id()===$section_record->get_created_by_user_id()) {
+					$this->permissions = 2;
+				}
 			}
-
-		}else{
-
-			// permissions
-				$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
-
-			// special cases
-				switch (true) {
-
-					// dedalo_section_users_tipo
-					case ($this->section_tipo===DEDALO_SECTION_USERS_TIPO):
-						// logged user id
-							$user_id = logged_user_id();
-
-						// his own section
-							if($this->section_id==$user_id) {
-
-								switch (true) {
-
-									// Admin General. Former component_security_administrator. Always read only for self user
-									case ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) :
-										$this->permissions = 1;
-										break;
-
-									// check profile
-									// check developer
-									// check if the section is the user_id section and remove write permissions
-									// the user can not set more permissions to itself
-									case (  in_array($this->tipo, [
-												DEDALO_USER_PROFILE_TIPO, // profile selector
-												DEDALO_USER_DEVELOPER_TIPO, // developer radio button
-												DEDALO_USER_NAME_TIPO,  // username input_text
-												'dd330' // section_id
-											]) && security::is_global_admin($user_id)===false) :
-										$this->permissions = 1;
-										break;
-
-									// Allow user edit self data name, email, password and image (used by tool_user_admin)
-									case (  in_array($this->tipo, [
-												DEDALO_FULL_USER_NAME_TIPO,
-												DEDALO_USER_EMAIL_TIPO,
-												DEDALO_USER_PASSWORD_TIPO,
-												DEDALO_USER_IMAGE_TIPO
-											]) ) :
-										$this->permissions = 2;
-										break;
-
-									default :
-										// Nothing to change
-										break;
-								}
-							}//end if($this->section_id==$user_id)
-						break;
-
-					// time machine notes case (rsc832)
-					case ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
-
-						// his own section
-							$section_record = $this->get_my_section_record();
-
-							$this->permissions = (logged_user_id()===$section_record->get_created_by_user_id())
-								? 2
-								: 1;
-						break;
-
-					// SEC-024 (§9.4 follow-up): TM bookkeeping components.
-					// When the component lives in the time-machine bookkeeping
-					// section (`dd15`) and is being rendered in tm mode, no
-					// real user has direct schema permissions on `dd15` (it is
-					// not project-assigned). Granting read here is safe because:
-					//   1. Reaching this point requires the caller to have
-					//      already passed the per-record permission gate on
-					//      the *origin* section (see sections_json.php tm path).
-					//   2. The TM rows are constrained by `filter_by_locators`
-					//      to the specific (section_tipo, section_id) the user
-					//      is already viewing — no cross-record exposure.
-					//   3. Write/revert flows go through `tool_time_machine`
-					//      which has its own per-record gate (see
-					//      tool_time_machine::apply_value /
-					//      bulk_revert_process).
-					case ($this->mode==='tm'
-						&& $this->section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO):
-						$this->permissions = 1; // read-only schema render
-						break;
-
-					// IRI dataframe case. Allow users access to component_iri dataframe (is generic).
-					case ($this->tipo==='dd560'):
-						$this->permissions = 2;
-						break;
-				}//end switch (true) - special cases
-		}
-
 
 		return $this->permissions;
 	}//end get_component_permissions
+
+
+
+	/**
+	* RESOLVE_COMPONENT_READ_PERMISSION
+	* Single source of truth for component permission special cases.
+	* Used by both get_component_permissions() (instance method) and
+	* dd_core_api::build_json_rows (pre-hoc / post-hoc gates).
+	*
+	* Handles all special-case grants and downgrades that
+	* common::get_permissions() does not cover:
+	*  - Search mode: thesaurus, metadata tipos, search section_ids
+	*  - Own-user access: security_admin (downgrade to 1), profile/dev (1),
+	*    self-data (email, password, image, full_name → 2)
+	*  - TM notes: minimum read (1); owner upgrade to 2 is done in
+	*    get_component_permissions() via get_my_section_record()
+	*  - TM mode on dd15: read-only (1)
+	*  - IRI dataframe dd560: always writable (2)
+	*
+	* (!) All component special cases MUST be added here, NOT in
+	*     get_component_permissions() directly. The instance method only
+	*     contains overrides that require $this (e.g. get_my_section_record).
+	*
+	* @param string $section_tipo
+	* @param string $tipo
+	* @param int|null $section_id
+	* @param string $mode
+	* @return int Permissions value (0=none, 1=read, 2=write)
+	*/
+	public static function resolve_component_read_permission(
+		string $section_tipo,
+		string $tipo,
+		?int $section_id,
+		string $mode
+	) : int {
+
+		// Base permission from generic check
+			$permissions = common::get_permissions($section_tipo, $tipo);
+
+		// Search mode special cases
+			if ($mode==='search') {
+
+				if ($section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
+					return 2; // Allow all users to search in thesaurus
+				}
+
+				if (in_array($tipo, section::get_metadata_definition_tipos(), true)) {
+					return 2; // Allow all users to search with section info components
+				}
+
+				if ($section_id !== null && strpos((string)$section_id, 'search') === 0) {
+					return 2;
+				}
+
+				return $permissions;
+			}
+
+		// Non-search mode: evaluate all special cases even when generic
+		// check returns >= 1, because some cases DOWNGRADE permissions
+		// (e.g. DEDALO_SECURITY_ADMINISTRATOR_TIPO forces 1 regardless).
+
+		// DEDALO_SECTION_USERS_TIPO: own user record
+			if ($section_tipo===DEDALO_SECTION_USERS_TIPO) {
+
+				$user_id = logged_user_id();
+				if (!empty($user_id) && $section_id !== null && (int)$section_id === (int)$user_id) {
+
+					// Admin General. Former component_security_administrator.
+					// Always read-only for self user (downgrade from any value)
+						if ($tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) {
+							return 1;
+						}
+
+					// Profile / developer / username / section_id: read-only
+					// for non-global-admins (downgrade to prevent self-elevation)
+						if (in_array($tipo, [
+							DEDALO_USER_PROFILE_TIPO,
+							DEDALO_USER_DEVELOPER_TIPO,
+							DEDALO_USER_NAME_TIPO,
+							'dd330' // section_id
+						], true) && security::is_global_admin($user_id)===false) {
+							return 1;
+						}
+
+					// Editable self-data (used by tool_user_admin)
+						if (in_array($tipo, [
+							DEDALO_FULL_USER_NAME_TIPO,
+							DEDALO_USER_EMAIL_TIPO,
+							DEDALO_USER_PASSWORD_TIPO,
+							DEDALO_USER_IMAGE_TIPO
+						], true)) {
+							return 2;
+						}
+					}
+				}
+
+		// Time machine notes: minimum read (1) for all users.
+		// Owner upgrade to 2 is handled by get_component_permissions()
+		// via get_my_section_record() — not available statically.
+			if ($section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				return 1;
+			}
+
+		// SEC-024 (§9.4 follow-up): TM bookkeeping components.
+		// When the component lives in the time-machine bookkeeping
+		// section (`dd15`) and is being rendered in tm mode, no
+		// real user has direct schema permissions on `dd15` (it is
+		// not project-assigned). Granting read here is safe because:
+		//   1. Reaching this point requires the caller to have
+		//      already passed the per-record permission gate on
+		//      the *origin* section (see sections_json.php tm path).
+		//   2. The TM rows are constrained by `filter_by_locators`
+		//      to the specific (section_tipo, section_id) the user
+		//      is already viewing — no cross-record exposure.
+		//   3. Write/revert flows go through `tool_time_machine`
+		//      which has its own per-record gate (see
+		//      tool_time_machine::apply_value /
+		//      bulk_revert_process).
+			if ($mode==='tm' && $section_tipo===DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				return 1; // read-only schema render
+			}
+
+		// IRI dataframe (dd560): always writable
+			if ($tipo==='dd560') {
+				return 2;
+			}
+
+		// No special case matched; return generic check result
+			return $permissions;
+	}//end resolve_component_read_permission
 
 
 
