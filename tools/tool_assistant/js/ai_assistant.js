@@ -55,6 +55,9 @@ export const ai_assistant = class ai_assistant {
 		this._abort_controller	= null
 		this._is_generating		= false
 		this._context			= {}
+		this._ontology_glossary	= null
+		this._ontology_index		= null
+		this._ontology_loading	= null
 		this._event_tokens		= []
 		this._thread_id			= null
 
@@ -431,8 +434,10 @@ export const ai_assistant = class ai_assistant {
 
 		const allowed_tools = [
 			'dedalo_get_environment',
+			'dedalo_ontology_glossary',
 			'dedalo_list_sections',
-			'dedalo_resolve_ontology	',
+			'dedalo_resolve_ontology',
+			'dedalo_resolve_path',
 			'dedalo_get_section_elements_context',
 			'dedalo_read_record',
 			'dedalo_search_records',
@@ -458,7 +463,7 @@ export const ai_assistant = class ai_assistant {
 				type		: 'function',
 				function	: {
 					name		: tool.name,
-					description	: (tool.description || '').substring(0, 200),
+					description	: ai_assistant._tool_description(tool),
 					parameters	: ai_assistant._sanitize_schema(raw)
 				}
 			}
@@ -638,7 +643,9 @@ export const ai_assistant = class ai_assistant {
 		const max_iterations	= 5
 		let iteration			= 0
 
-		const system_prompt	= self._build_system_prompt()
+		const ontology_context = await self._build_ontology_context_for_message(message)
+
+		const system_prompt	= self._build_system_prompt() + (ontology_context ? '\n\n' + ontology_context : '')
 		const tools			= self._build_tools_for_model()
 
 		try {
@@ -649,10 +656,17 @@ export const ai_assistant = class ai_assistant {
 					throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
 				}
 
-				const messages = [
+				const few_shot = (iteration === 1 && tools.length > 0)
+					? self._build_few_shot_messages()
+					: []
+
+				const raw_messages = [
 					{ role: 'system', content: system_prompt },
+					...few_shot,
 					...self._conversation
 				]
+
+				const messages = ai_assistant._normalize_messages_for_model(raw_messages)
 
 				let stream_started = false
 				const stream_callback = (token_text) => {
