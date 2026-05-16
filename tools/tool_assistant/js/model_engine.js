@@ -162,9 +162,9 @@ export const model_engine = class model_engine {
 
 	async generate(options={}) {
 
-		const is_ready = this._is_qwen35
-			? (this._model && this._processor)
-			: this._pipeline
+		const is_ready = this._model_type === 'pipeline'
+			? !!this._pipeline
+			: !!(this._model && this._processor)
 		if (!is_ready) {
 			throw new Error('Model not loaded. Call load() first.')
 		}
@@ -176,26 +176,42 @@ export const model_engine = class model_engine {
 		const on_think_token	= options.on_think_token || (() => {})
 
 		try {
-			if (this._is_qwen35) {
-				return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token)
+			if (this._model_type === 'pipeline') {
+				return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 			}
-			return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
+			return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
 		} catch (err) {
-			if (this._device === 'webgpu' && err.message && err.message.indexOf('bad_alloc') !== -1) {
-				console.warn('[model_engine] WebGPU OOM during inference, falling back to WASM')
+			if (this._device === 'webgpu' && model_engine._is_retryable_backend_error(err)) {
+				console.warn('[model_engine] WebGPU inference failed, falling back to WASM:', err.message)
 				try {
 					await this._reload_as_wasm()
-					if (this._is_qwen35) {
-						return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token, on_think_token)
+					if (this._model_type === 'pipeline') {
+						return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 					}
-					return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
+					return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
 				} catch (wasm_err) {
-					throw new Error('Model too large for browser memory (WebGPU and WASM both failed). Use a smaller model like Qwen3-0.6B-ONNX.')
+					throw new Error('Model backend failed on WebGPU and fallback device. Use a smaller model or switch device. Last error: ' + wasm_err.message)
 				}
 			}
 			throw err
 		}
 	}//end generate
+
+
+
+	static _is_retryable_backend_error(err) {
+
+		const message = err && err.message
+			? err.message
+			: String(err || '')
+
+		return message.indexOf('bad_alloc') !== -1
+			|| message.indexOf('unaligned accesses') !== -1
+			|| message.indexOf('device lost') !== -1
+			|| message.indexOf('GPU') !== -1
+			|| message.indexOf('allocate memory') !== -1
+			|| message.indexOf('buffer mapping') !== -1
+	}//end _is_retryable_backend_error
 
 
 
