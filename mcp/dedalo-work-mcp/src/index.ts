@@ -55,6 +55,18 @@ function isOriginAllowed(origin: string | null, allowlist: string[]): boolean {
 	return allowlist.includes(origin);
 }
 
+async function isInitializeRequest(req: Request): Promise<boolean> {
+	if (req.method !== 'POST') return false;
+
+	try {
+		const body = await req.clone().json();
+		const messages = Array.isArray(body) ? body : [body];
+		return messages.some((message) => message && message.method === 'initialize');
+	} catch {
+		return false;
+	}
+}
+
 async function main(): Promise<void> {
 
 	// Prime CSRF before any tool call so the first request succeeds.
