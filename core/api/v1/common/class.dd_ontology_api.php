@@ -575,4 +575,43 @@ final class dd_ontology_api {
 	}//end build_section_descriptor
 
 
+
+	/**
+	 * BUILD_COMPONENT_DESCRIPTOR
+	 * Builds a component descriptor with portal metadata when applicable.
+	 *
+	 * For portal components, adds:
+	 * - is_portal: true
+	 * - target_section_tipo: array of target section tipos
+	 * - target_section_term: array of {tipo, term} for each target
+	 *
+	 * @param string $component_tipo Component ontology tipo
+	 * @return object|null Component descriptor or null if not found
+	 */
+	private static function build_component_descriptor(string $component_tipo) : ?object {
+
+		$descriptor = self::build_node_descriptor($component_tipo);
+		if ($descriptor === null) {
+			return null;
+		}
+
+		$model = $descriptor->model ?? '';
+		$is_portal = str_starts_with($model, 'component_portal')
+			|| str_starts_with($model, 'component_dataframe')
+			|| str_starts_with($model, 'component_filter');
+
+		if ($is_portal) {
+			$descriptor->is_portal = true;
+			$ar_target = self::extract_portal_targets($component_tipo);
+			$descriptor->target_section_tipo = $ar_target['tipos'];
+			$descriptor->target_section_term = $ar_target['terms'];
+		} else {
+			$descriptor->is_portal = false;
+		}
+
+		return $descriptor;
+	}//end build_component_descriptor
+
+
+
 }//end dd_ontology_api
