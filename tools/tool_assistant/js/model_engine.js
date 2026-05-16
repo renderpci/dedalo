@@ -67,58 +67,52 @@ export const model_engine = class model_engine {
 
 
 
-	async _load_qwen35(transformers, device, dtype, on_progress) {
+	async _load_direct(transformers, device, dtype, on_progress) {
 
-		const dtype_config = {
-			embed_tokens			: dtype,
-			decoder_model_merged	: dtype
+		const model_class_name	= model_engine._MODEL_CLASS_MAP[this._model_type]
+		const ModelClass		= transformers[model_class_name]
+
+		if (!ModelClass) {
+			throw new Error('Unknown model class "' + model_class_name + '" for model_type "' + this._model_type + '"')
 		}
 
-		console.log('[model_engine] loading Qwen3.5 with dtype config:', JSON.stringify(dtype_config))
+		const dtype_config = model_engine._build_dtype_config(this._model_type, dtype)
+
+		console.log('[model_engine] loading', this._model_type, 'with model class', model_class_name, 'dtype:', JSON.stringify(dtype_config))
+
+		const progress_cb = (progress) => {
+			if (progress.status === 'progress' && progress.progress !== undefined) {
+				on_progress(progress.progress)
+			}
+			if (progress.status === 'done') {
+				on_progress(100)
+			}
+		}
 
 		try {
 			this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
-			this._model = await transformers.Qwen3_5ForConditionalGeneration.from_pretrained(
-				this._model_id,
-				{
-					device		: device,
-					dtype		: dtype_config,
-					progress_callback: (progress) => {
-						if (progress.status === 'progress' && progress.progress !== undefined) {
-							on_progress(progress.progress)
-						}
-						if (progress.status === 'done') {
-							on_progress(100)
-						}
-					}
-				}
-			)
+			this._model = await ModelClass.from_pretrained(this._model_id, {
+				device				: device,
+				dtype				: dtype_config,
+				progress_callback	: progress_cb
+			})
 			return device
 		} catch (load_err) {
 			if (device === 'webgpu') {
-				console.warn('[model_engine] Qwen3.5 WebGPU failed, retrying with WASM:', load_err.message)
+				console.warn('[model_engine]', this._model_type, 'WebGPU failed, retrying with WASM:', load_err.message)
+				const wasm_dtype = model_engine._build_dtype_config(this._model_type, 'q4')
 				this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
-				this._model = await transformers.Qwen3_5ForConditionalGeneration.from_pretrained(
-					this._model_id,
-					{
-						device		: 'wasm',
-						dtype		: { embed_tokens: 'q4', decoder_model_merged: 'q4' },
-						progress_callback: (progress) => {
-							if (progress.status === 'progress' && progress.progress !== undefined) {
-								on_progress(progress.progress)
-							}
-							if (progress.status === 'done') {
-								on_progress(100)
-							}
-						}
-					}
-				)
+				this._model = await ModelClass.from_pretrained(this._model_id, {
+					device				: 'wasm',
+					dtype				: wasm_dtype,
+					progress_callback	: progress_cb
+				})
 				return 'wasm'
 			} else {
 				throw load_err
 			}
 		}
-	}//end _load_qwen35
+	}//end _load_direct
 
 
 
