@@ -540,6 +540,44 @@ export const model_engine = class model_engine {
 
 
 
+	static _parse_relaxed_arguments(raw_arguments) {
+
+		if (!raw_arguments || typeof raw_arguments !== 'string') {
+			return {}
+		}
+
+		try {
+			return JSON.parse(raw_arguments)
+		} catch(e) {}
+
+		const source = raw_arguments.trim().replace(/^\{|\}$/g, '')
+		const args = {}
+		const parts = source.split(/\s*,\s*/)
+
+		for (const part of parts) {
+			if (!part) continue
+			const separator = part.indexOf(':')
+			if (separator === -1) continue
+
+			const key = part.substring(0, separator).trim().replace(/^['"]|['"]$/g, '')
+			let value = part.substring(separator + 1).trim().replace(/^['"]|['"]$/g, '')
+
+			if (!key) continue
+			if (value === 'true') {
+				value = true
+			} else if (value === 'false') {
+				value = false
+			} else if (value === 'null') {
+				value = null
+			}
+			args[key] = value
+		}
+
+		return args
+	}//end _parse_relaxed_arguments
+
+
+
 	unload() {
 		this._pipeline	= null
 		this._model		= null
