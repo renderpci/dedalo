@@ -1,25 +1,50 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_DATA_OBJECT
-* Defines object with normalized properties and checks
-* Represents each of Ontology diffusion nodes used to 
-* parse and resolve for publication output as XML, RDF, SQL, etc. 
+* Normalized data container for a single ontology diffusion node.
+*
+* Diffusion nodes are the leaf elements of a diffusion template tree
+* defined in the ontology. Each node maps one component (or calculated
+* field) to a publication-ready key/value pair. This class stores the
+* resolved value together with the metadata required by exporters
+* (XML, RDF, SQL, JSON, etc.) to format and label the output correctly.
+*
+* The object is typically built in one of two ways:
+* 1. Hydration from a plain object passed to the constructor.
+* 2. Wrapping by diffusion_chain_processor->wrap_into_diffusion_data_object(),
+*    which injects additional metadata (label, term, model, diffusion_tipo).
+*
+* Property groups:
+* - Main values     : tipo, lang, value, id — the core payload every exporter needs.
+* - Additional values: diffusion_tipo, label, term, model — contextual metadata
+*   added by the chain processor to help exporters resolve labels and structure.
 */
 class diffusion_data_object extends stdClass {
 
 
 
-	// properties
+	// ------ properties ------
+	// main values
 		// tipo		: string e.g. 'rsc636'
 		// lang		: string e.g. 'lg-spa'
-		// value	: mixed e.g. 'Raspa' | [{"title": "Dédalo web", "uri":"https://dedalo.dev"}]
+		// value	: mixed  e.g. 'Raspa' | [{"title": "Dédalo web", "uri":"https://dedalo.dev"}]
 		// id		: string e.g. 'a'
-		// diffusion_tipo : string e.g. 'rsc636'
-		
+	// additional values (used by diffusion_chain_processor->wrap_into_diffusion_data_object)
+		// diffusion_tipo 	: string e.g. 'rsc636'
+		// label			: string e.g. 'Audiovisual'
+		// term				: string e.g. 'Audiovisual'
+		// model			: string e.g. 'component_input_text'
+
+	// errors array to collect validation errors
+	public array $errors = [];
+
 
 
 	/**
 	* __CONSTRUCT
+	* Hydrates the object from a plain object, routing known keys to their
+	* matching setters. Unknown keys and non-object input are logged as errors.
+	*
 	* @param object|null $data = null
 	* @return void
 	*/
@@ -30,7 +55,7 @@ class diffusion_data_object extends stdClass {
 			return;
 		}
 
-		// Nothing to do on construct (for now)
+		// Reject non-object input with an error log and optional backtrace dump
 		if (!is_object($data)) {
 
 			$msg = " wrong data format. object expected. Given type: ".gettype($data);
@@ -46,7 +71,7 @@ class diffusion_data_object extends stdClass {
 			$this->errors[] = $msg;
 			return;
 		}
-		
+
 		// set all properties
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
@@ -57,10 +82,10 @@ class diffusion_data_object extends stdClass {
 					$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
 				}
 
-			}else{
+			} else {
 
 				debug_log(__METHOD__
-					.' Ignored received property: "'.$key.'"" not defined as set method.'. PHP_EOL
+					.' Ignored received property: "'.$key.'" not defined as set method.'. PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
@@ -71,12 +96,18 @@ class diffusion_data_object extends stdClass {
 
 
 
+	// ------ main values ------
+
+
+
 	/**
 	* SET_TIPO
+	* Stores the ontology tipo of the diffusion node.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_tipo( ?string $value ) : bool  {
+	public function set_tipo( ?string $value ) : bool {
 
 		$this->tipo = $value;
 
@@ -87,8 +118,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_TIPO
-	* Return property value
-	* @return string|null $this->tipo
+	* @return string|null
 	*/
 	public function get_tipo() : ?string {
 
@@ -98,37 +128,13 @@ class diffusion_data_object extends stdClass {
 
 
 	/**
-	* SET_DIFFUSION_TIPO
-	* @param string|null $value
-	* @return bool
-	*/
-	public function set_diffusion_tipo( ?string $value ) : bool  {
-
-		$this->diffusion_tipo = $value;
-
-		return true;
-	}//end set_diffusion_tipo
-
-
-
-	/**
-	* GET_DIFFUSION_TIPO
-	* Return property value
-	* @return string|null $this->diffusion_tipo
-	*/
-	public function get_diffusion_tipo() : ?string {
-
-		return $this->diffusion_tipo ?? null;
-	}//end get_diffusion_tipo
-
-
-
-	/**
 	* SET_LANG
+	* Stores the language code for multilingual values.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_lang( ?string $value ) : bool  {
+	public function set_lang( ?string $value ) : bool {
 
 		$this->lang = $value;
 
@@ -139,8 +145,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_LANG
-	* Return property value
-	* @return string|null $this->lang
+	* @return string|null
 	*/
 	public function get_lang() : ?string {
 
@@ -151,11 +156,13 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* SET_VALUE
+	* Stores the resolved value of the diffusion node.
+	*
 	* @param mixed $value
-	* 	Could be array, string, object, null, etc.
+	*  Could be array, string, object, null, etc.
 	* @return bool
 	*/
-	public function set_value(mixed $value) : bool  {
+	public function set_value(mixed $value) : bool {
 
 		$this->value = $value;
 
@@ -166,9 +173,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_VALUE
-	* Return property value
-	* @return mixed $this->value
-	* 	array|string|object|null etc.
+	* @return mixed
 	*/
 	public function get_value() : mixed {
 
@@ -179,10 +184,12 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* SET_ID
+	* Stores the node identifier.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_id( ?string $value ) : bool  {
+	public function set_id( ?string $value ) : bool {
 
 		$this->id = $value;
 
@@ -193,8 +200,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_ID
-	* Return property value
-	* @return string|null $this->id
+	* @return string|null
 	*/
 	public function get_id() : ?string {
 
@@ -203,65 +209,46 @@ class diffusion_data_object extends stdClass {
 
 
 
+	// ------ additional values ------
+	// Used by diffusion_chain_processor->wrap_into_diffusion_data_object
+
+
+
 	/**
-	* SET_SECTION_ID
+	* SET_DIFFUSION_TIPO
+	* Stores the diffusion-specific tipo mapping this node to the diffusion ontology.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_section_id( string|int|null $value ) : bool  {
+	public function set_diffusion_tipo( ?string $value ) : bool {
 
-		$this->section_id = $value;
-
-		return true;
-	}//end set_section_id
-
-
-
-	/**
-	* GET_SECTION_ID
-	* Return property value
-	* @return string|null $this->id
-	*/
-	public function get_section_id() : string|int|null {
-
-		return $this->section_id ?? null;
-	}//end get_section_id
-
-
-
-	/**
-	* SET_KEY
-	* @param string|null $value
-	* @return bool
-	*/
-	public function set_key( ?string $value ) : bool  {
-
-		$this->key = $value;
+		$this->diffusion_tipo = $value;
 
 		return true;
-	}//end set_key
+	}//end set_diffusion_tipo
 
 
 
 	/**
-	* GET_KEY
-	* Return property value
-	* @return string|null $this->key
+	* GET_DIFFUSION_TIPO
+	* @return string|null
 	*/
-	public function get_key() : ?string {
+	public function get_diffusion_tipo() : ?string {
 
-		return $this->key ?? null;
-	}//end get_key
-
+		return $this->diffusion_tipo ?? null;
+	}//end get_diffusion_tipo
 
 
 
 	/**
 	* SET_LABEL
+	* Stores the human-readable label of the diffusion node.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_label( ?string $value ) : bool  {
+	public function set_label( ?string $value ) : bool {
 
 		$this->label = $value;
 
@@ -272,8 +259,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_LABEL
-	* Return property value
-	* @return string|null $this->label
+	* @return string|null
 	*/
 	public function get_label() : ?string {
 
@@ -281,41 +267,14 @@ class diffusion_data_object extends stdClass {
 	}//end get_label
 
 
-
-
-	/**
-	* SET_MODEL
-	* @param string|null $value
-	* @return bool
-	*/
-	public function set_model( ?string $value ) : bool  {
-
-		$this->model = $value;
-
-		return true;
-	}//end set_model
-
-
-
-	/**
-	* GET_MODEL
-	* Return property value
-	* @return string|null $this->model
-	*/
-	public function get_model() : ?string {
-
-		return $this->model ?? null;
-	}//end get_model
-
-
-
-
 	/**
 	* SET_TERM
+	* Stores the thesaurus term of the diffusion node.
+	*
 	* @param string|null $value
 	* @return bool
 	*/
-	public function set_term( ?string $value ) : bool  {
+	public function set_term( ?string $value ) : bool {
 
 		$this->term = $value;
 
@@ -326,8 +285,7 @@ class diffusion_data_object extends stdClass {
 
 	/**
 	* GET_TERM
-	* Return property value
-	* @return string|null $this->term
+	* @return string|null
 	*/
 	public function get_term() : ?string {
 
@@ -336,25 +294,30 @@ class diffusion_data_object extends stdClass {
 
 
 
+	/**
+	* SET_MODEL
+	* Stores the model name used to resolve this diffusion node.
+	*
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_model( ?string $value ) : bool {
+
+		$this->model = $value;
+
+		return true;
+	}//end set_model
+
+
 
 	/**
-	* GET METHODS
-	* By accessors. When property exits, return property value,
-	* else return null
-	* @param string $name
-	* @return mixed
+	* GET_MODEL
+	* @return string|null
 	*/
-	final public function __get( string $name ) {
+	public function get_model() : ?string {
 
-		if (isset($this->{$name})) {
-			return $this->{$name};
-		}		
-
-		return null;
-	}
-	final public function __set( string $name, $value ) {
-		$this->{$name} = $value;
-	}
+		return $this->model ?? null;
+	}//end get_model
 
 
 
