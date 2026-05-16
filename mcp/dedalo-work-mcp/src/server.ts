@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type TokenBucketRateLimiter, type WorkClient } from '@dedalo/mcp-common';
 import type { Logger } from 'pino';
 import { registerAllTools } from './tools/index.js';
+import { registerAllResources } from './resources/index.js';
 
 export interface WorkServerConfig {
 	client: WorkClient;
@@ -20,9 +21,10 @@ export function createWorkServer(config: WorkServerConfig): McpServer {
 
 	const server = new McpServer(
 		{ name: 'dedalo-work-mcp', version: '1.0.0' },
-		{ capabilities: { tools: {} } }
+		{ capabilities: { tools: {}, resources: {} } }
 	);
 
+	registerAllResources(server, client);
 	registerAllTools(server, client, { logger, limiter: limiter ?? null });
 
 	return server;
