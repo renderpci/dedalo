@@ -567,4 +567,32 @@ export const model_engine = class model_engine {
 
 
 
+	// ── Static helpers ────────────────────────────────────────────────
+
+	static _MODEL_CLASS_MAP = {
+		qwen35	: 'Qwen3_5ForConditionalGeneration',
+		gemma4	: 'Gemma4ForConditionalGeneration'
+	}
+
+	static _detect_model_type(model_id) {
+		if (model_id.indexOf('Qwen3.5') !== -1 || model_id.indexOf('Qwen3_5') !== -1) return 'qwen35'
+		if (model_id.indexOf('Gemma4') !== -1 || model_id.indexOf('gemma-4') !== -1) return 'gemma4'
+		return 'pipeline'
+	}
+
+	static _build_dtype_config(model_type, dtype) {
+		if (model_type === 'gemma4') {
+			return {
+				embed_tokens			: dtype,
+				vision_encoder			: 'fp16',
+				decoder_model_merged	: dtype
+			}
+		}
+		// qwen35 and future direct-model families
+		return {
+			embed_tokens			: dtype,
+			decoder_model_merged	: dtype
+		}
+	}
+
 }//end model_engine class
