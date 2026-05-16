@@ -420,8 +420,8 @@
               "client": true,
               "value": [
                 {
-                  "model_id": "onnx-community/Qwen3.5-0.8B-ONNX",
-                  "label": "Qwen3.5 0.8B",
+                  "model_id": "onnx-community/Qwen3.5-4B-ONNX-OPT",
+                  "label": "Qwen3.5 4B",
                   "dtype": "q4f16",
                   "device": "webgpu",
                   "fallback_device": "wasm",
@@ -440,18 +440,6 @@
                   "thinking": "none",
                   "thinking_options": ["none"],
                   "client": true
-                },
-                {
-                  "model_id": "onnx-community/Qwen3-0.6B-ONNX",
-                  "label": "Qwen3 0.6B",
-                  "dtype": "q4",
-                  "device": "webgpu",
-                  "fallback_device": "wasm",
-                  "max_new_tokens": 2048,
-                  "thinking": "none",
-                  "thinking_options": ["none", "low", "high"],
-                  "client": true,
-                  "default":true
                 }
               ]
             }
