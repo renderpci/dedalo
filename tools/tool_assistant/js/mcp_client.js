@@ -22,6 +22,7 @@ export const mcp_client = class mcp_client {
 		this._request_id	= 0
 		this._initialized	= false
 		this._capabilities	= null
+		this._session_id	= this._read_session_id()
 	}//end constructor
 
 
@@ -98,16 +99,29 @@ export const mcp_client = class mcp_client {
 			envelope.id = this._request_id
 		}
 
+		const body = {
+			action	: 'mcp_proxy',
+			dd_api	: 'dd_mcp_api',
+			options	: envelope
+		}
+
+		if (this._session_id && method !== 'initialize') {
+			body.mcp_session_id = this._session_id
+		}
+
 		const api_response = await data_manager.request({
 			body	: {
-				action	: 'mcp_proxy',
-				dd_api	: 'dd_mcp_api',
-				options	: envelope
+				...body
 			}
 		})
 
 		if (api_response.result === false) {
 			throw new Error(api_response.msg || 'MCP proxy request failed')
+		}
+
+		if (api_response.mcp_session_id) {
+			this._session_id = api_response.mcp_session_id
+			this._write_session_id(this._session_id)
 		}
 
 		const mcp_response = api_response.data || {}
@@ -120,6 +134,26 @@ export const mcp_client = class mcp_client {
 
 		return api_response
 	}//end _send_request
+
+
+
+	_read_session_id() {
+
+		try {
+			return window.sessionStorage.getItem('dedalo_mcp_session_id')
+		} catch(e) {
+			return null
+		}
+	}//end _read_session_id
+
+
+
+	_write_session_id(session_id) {
+
+		try {
+			window.sessionStorage.setItem('dedalo_mcp_session_id', session_id)
+		} catch(e) {}
+	}//end _write_session_id
 
 
 
