@@ -248,6 +248,7 @@
 		border-radius: 100%;
 		position: relative;
 		text-align: center;
+		contain: layout paint; // isolate layout and paint calculations
 
 		// load the user image or the Dédalo icon
 		&:after {
@@ -273,15 +274,17 @@
 			color: @color_white;
 			text-shadow: 0 0 0.5em @color_black;
 			line-height: 160px;
+			font-variant-numeric: tabular-nums; // keep text width stable
 		}
 
-		#svg circle {
+		svg circle {
 		  stroke-dashoffset: 0;
 		  stroke: @color_grey_7;
 		  stroke-width: 1em;
 		}
-		#svg #bar {
+		svg .bar {
 			stroke: @color_orange_dedalo;
+			will-change: stroke-dashoffset; // hint browser about animation
 		}
 	}// end cont
 
@@ -305,6 +308,7 @@
 			transform: unset;
 			opacity: 0;
 			transition: opacity 0.8s ease-in-out;
+			will-change: opacity; // hardware accelerate opacity transition
 		}
 
 		&.active {

@@ -290,9 +290,9 @@ login.quit = async function() {
 						for (const registration of registrations) {
 							const unregistered = await registration.unregister();
 							console.log('Unregistered serviceWorker:', unregistered);
-							// Delete the cache associated with the service worker
-							await caches.delete('dedalo_files');
 						}
+						// Delete the cache once after all service workers are unregistered
+						await caches.delete('dedalo_files');
 
 					} catch (error) {
 						console.error('ServiceWorker unregistration failed:', error);
@@ -370,38 +370,32 @@ login.prototype.action_dispatch = async function(api_response) {
 					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
 				if (bg_image) {
 					// force preload background image
-					await (()=>{
-						return new Promise(function(resolve, reject){
-							const img = document.createElement('img')
-							img.addEventListener('load', function() {
-								img.remove()
-								resolve(true)
-							})
-							img.addEventListener('error', function() {
-								reject(false)
-							})
-							requestAnimationFrame(()=>{
-								img.src = bg_image
-							})
+					const image_loaded = await new Promise(function(resolve){
+						const img = document.createElement('img')
+						img.addEventListener('load', function() {
+							img.remove()
+							resolve(true)
 						})
-						.catch((error) => {
+						img.addEventListener('error', function() {
 							console.error('Error loading image:', bg_image);
-							console.error(error);
-						});
-					})();
-					// CSS
-					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+							img.remove()
+							resolve(false)
+						})
+						requestAnimationFrame(()=>{
+							img.src = bg_image
+						})
+					});
+					// CSS (only set if image preloaded successfully)
+					if (image_loaded) {
+						self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+					}
 					if (user_id===-1 && is_development_server===true && self.node) {
 						self.node.classList.add('raspa_loading')
 					}
 					// wait for some extra time to allow CSS transitions to be completed
-					await (()=>{
-						return new Promise(function(resolve){
-							setTimeout(function(){
-								resolve(true)
-							}, 160) // 160
-						})
-					})();
+					await new Promise(function(resolve){
+						setTimeout(resolve, 160)
+					});
 				}
 
 			// load_finish. Redirects to the proper page after the login
@@ -431,7 +425,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						);
 					}else{
 						// non defined user default_section case
-						window.location.reload(false);
+						window.location.reload();
 					}
 
 				}//end load_finish
@@ -567,17 +561,12 @@ export const run_service_worker = async (options) => {
 			);
 
 			// debug info about registration status
-			switch (registration.installing) {
-				case true:
-					console.log('Service worker installing');
-					break;
-				case false:
-					if (registration.waiting) {
-						console.log('Service worker installed');
-					} else if (registration.active) {
-						console.log('Service worker active');
-					}
-					break;
+			if (registration.installing) {
+				console.log('Service worker installing');
+			} else if (registration.waiting) {
+				console.log('Service worker installed');
+			} else if (registration.active) {
+				console.log('Service worker active');
 			}
 
 			// serviceWorker is ready. Post message 'update_files' to
@@ -625,7 +614,7 @@ export const run_worker_cache = (options) => {
 		on_message
 	} = options
 
-	// crate a new worker
+	// create a new worker
 	const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
 		type : 'module'
 	});

@@ -306,7 +306,7 @@ final class search_test extends BaseTestCase {
 
 		// 7. Test search with component_input_text filter
 		// Create new record
-		$result = matrix_db_manager::create(
+		$test_section_id = matrix_db_manager::create(
 			$this->table,
 			$this->section_tipo,
 			(object)[
@@ -344,7 +344,7 @@ final class search_test extends BaseTestCase {
 		];
 		$search_obj_filtered = search::get_instance($search_query_object_filtered);
 		$db_result = $search_obj_filtered->search();
-dump($db_result->fetch_all(),	'db_result +++++++++++++++++++++++++++++++++++++++++ ');
+
 		$this->assertTrue(
 			$db_result instanceof db_result || $db_result === false,
 			'Expected filtered search() to return db_result or false'
@@ -354,6 +354,10 @@ dump($db_result->fetch_all(),	'db_result +++++++++++++++++++++++++++++++++++++++
 			'Expected filtered search() to return db_result with at least one record, found: '.$db_result->row_count()
 		);
 
+		// Clean up created test record
+		if (!empty($test_section_id)) {
+			matrix_db_manager::delete($this->table, $this->section_tipo, $test_section_id);
+		}
 
 	}//end test_search
 

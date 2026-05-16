@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, SHOW_DEBUG */
+/* global get_label, page_globals, SHOW_DEBUG, DEVELOPMENT_SERVER */
 /*eslint no-undef: "error"*/
 
 
@@ -140,7 +140,7 @@ const get_content_data = function(self) {
 				// refresh the window to force read DEDALO_MAINTENANCE_MODE in server side
 				setTimeout(function(){
 					// Refresh the page and bypass the cache
-					location.reload(true);
+					location.reload();
 				}, 3000)
 				return ui.create_dom_element({
 					element_type	: 'div',
@@ -181,12 +181,12 @@ const get_content_data = function(self) {
 		auth_input.autocomplete= 'current-password'
 
 	// development server. Value is set in environment as global var (set in server config file)
-		if (DEVELOPMENT_SERVER) {
+		if (typeof DEVELOPMENT_SERVER !== 'undefined' && DEVELOPMENT_SERVER) {
 
 			// set self.use_service_worker as false by default
 			self.use_service_worker = false;
 
-			const dev_server_options = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'h4',
 				class_name		: 'dev_server_options',
 				inner_html		: 'Developer server options',
@@ -222,8 +222,10 @@ const get_content_data = function(self) {
 		const dedalo_entity =  info_data.find(el => el.type === 'dedalo_entity')
 		if(dedalo_entity && dedalo_entity.value === 'dedalo_demo'){
 			const dedalo_demo_user = info_data.find(el => el.type === 'demo_user')
-			user_input.value = dedalo_demo_user.value.user || ''
-			auth_input.value = dedalo_demo_user.value.pw || ''
+			if (dedalo_demo_user && dedalo_demo_user.value) {
+				user_input.value = dedalo_demo_user.value.user || ''
+				auth_input.value = dedalo_demo_user.value.pw || ''
+			}
 		}
 
 	// button submit
@@ -281,6 +283,7 @@ const get_content_data = function(self) {
 				button_enter_loading.classList.remove('hide')
 				button_enter.classList.add('white')
 				button_enter.blur()
+				saml_container.classList.add('hide')
 
 			// login : data_manager API call
 				const api_response = await self.login({
@@ -302,6 +305,7 @@ const get_content_data = function(self) {
 					button_enter_label.classList.remove('hide')
 					button_enter_loading.classList.add('hide')
 					button_enter.classList.remove('white')
+					saml_container.classList.remove('hide')
 
 				}else{
 
@@ -415,15 +419,17 @@ const get_content_data = function(self) {
 		}
 
 	// saml
+		const saml_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'saml_container hide',
+			parent			: fragment
+		})
+		// saml render
 		if (self.saml) {
-			const saml_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'saml_container',
-				parent			: fragment
-			})
 			self.saml.render()
 			.then(function(saml_wrapper){
 				saml_container.appendChild(saml_wrapper)
+				saml_container.classList.remove('hide')
 			})
 		}
 
@@ -569,75 +575,105 @@ const validate_browser = function() {
 
 /**
 * RENDER_FILES_LOADER
-* Creates the files loader nodes
+* Creates the files loader nodes with a circular SVG progress indicator.
+* The returned container exposes an `update(data)` method to advance the
+* progress bar from worker messages.
 * @see login.action_dispatch
 * @return HTMLElement cont
 */
 export const render_files_loader = function() {
 
+	const SVG_NS	= 'http://www.w3.org/2000/svg';
+	const RADIUS	= 90;
+	const CST		= Math.PI * (RADIUS * 2); // circumference ≈ 565.49
+
 	// cont
 		const cont = ui.create_dom_element({
 			element_type	: 'div',
-			id				: 'cont',
-			class_name		: 'cont',
+			class_name		: 'cont files_loader',
 			dataset			: {
 				pct : 'Loading..'
 			}
 		})
 
-	// svg circle
-		const svg_string = `
-		<svg id="svg" width="200" height="200" viewPort="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg">
-			<circle r="90" cx="100" cy="100" fill="transparent" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
-			<circle id="bar" class="hide" r="90" cx="100" cy="100" fill="transparent" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
-		</svg>`
+	// svg circle — built with createElementNS to avoid DOMParser overhead
+	// and silent XML parse-error risk
+		const svg = document.createElementNS(SVG_NS, 'svg');
+		svg.setAttribute('width', '200');
+		svg.setAttribute('height', '200');
+		svg.setAttribute('viewBox', '0 0 200 200');
 
-		const parser	= new DOMParser();
-		const svg		= parser.parseFromString(svg_string, 'image/svg+xml').firstElementChild;
-		cont.appendChild( svg )
+		const circle_attrs = {
+			r	: String(RADIUS),
+			cx	: '100',
+			cy	: '100',
+			fill				: 'transparent',
+			'stroke-dasharray'	: String(CST),
+			'stroke-dashoffset'	: '0'
+		};
 
-	// update. receive worker messages data
-		let loaded = 0
-		cont.update = function( data ) {
-
-			const total_files	= data.total_files
-			const rate			= data.status==='loading'
-				? 100/total_files
-				: 0
-
-			// update loaded
-			loaded = rate + loaded
-			if (loaded>99) {
-				loaded = 100
-			}
-
-			// animate
-			requestAnimationFrame(()=>{
-				animate_circle(loaded)
-			})
+		// background circle
+		const bg_circle = document.createElementNS(SVG_NS, 'circle');
+		for (const [k, v] of Object.entries(circle_attrs)) {
+			bg_circle.setAttribute(k, v);
 		}
+		svg.appendChild(bg_circle);
+
+		// progress bar circle
+		const bar_circle = document.createElementNS(SVG_NS, 'circle');
+		for (const [k, v] of Object.entries(circle_attrs)) {
+			bar_circle.setAttribute(k, v);
+		}
+		bar_circle.classList.add('bar', 'hide');
+		svg.appendChild(bar_circle);
+
+		cont.appendChild(svg);
 
 	// bar_circle animation
-		const bar_circle		= svg.querySelector('#bar')
-		const radio				= parseFloat(bar_circle.getAttribute('r'));
-		const cst				= Math.PI*(radio*2);
-		const animate_circle	= (value) => {
+		let bar_revealed = false
+		let current_val = null
+		const animate_circle = (value) => {
 
-			if (value>0 && bar_circle.classList.contains('hide')) {
+			// reveal bar on first positive value
+			if (!bar_revealed && value > 0) {
 				bar_circle.classList.remove('hide')
+				bar_revealed = true
 			}
 
-			const val = (value > 100)
-				? 100
-				: Math.abs(parseInt(value))
+			const val = Math.min(Math.round(value), 100)
 
-			const offset = ((100-val)/100)*cst
+			// skip DOM updates if percentage hasn't changed
+			if (val === current_val) return
+
+			const offset = ((100 - val) / 100) * CST
 
 			// change circle stroke offset
 			bar_circle.style.strokeDashoffset = offset
 
 			// updates number as 50%
 			cont.dataset.pct = val + '%'
+
+			current_val = val
+		}
+
+	// update. receive worker messages data
+		let loaded = 0
+		let raf_id = null
+		cont.update = function( data ) {
+
+			const total_files	= data.total_files
+			const rate			= data.status==='loading'
+				? 100 / total_files
+				: 0
+
+			// update loaded (clamp to 100)
+			loaded = Math.min(rate + loaded, 100)
+
+			// animate - prevent rAF queuing
+			if (raf_id) cancelAnimationFrame(raf_id)
+			raf_id = requestAnimationFrame(() => {
+				animate_circle(loaded)
+			})
 		}
 
 	// loader_label

@@ -11,15 +11,20 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 */
 final class request_config_Test extends BaseTestCase {
 
-
-
 	// Test configuration
 	public static $section_model		= 'section';
 	public static $section_tipo			= 'test3';
 	public static $component_model		= 'component_portal';
 	public static $component_tipo		= 'test80';
 
-
+	/**
+	* SETUP
+	* Clear request config static cache to prevent cross-test pollution.
+	*/
+	protected function setUp(): void {
+		parent::setUp();
+		common::$resolved_request_properties_parsed = [];
+	}
 
 	/**
 	* BUILD_SECTION_INSTANCE

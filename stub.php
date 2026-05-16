@@ -269,8 +269,15 @@ if (!function_exists('pg_fetch_assoc')) {
 	function pg_fetch_assoc(){ return []; }
 }
 if (!function_exists('pg_fetch_object')) {
-	function pg_fetch_object(){ return new stdClass(); }
+	function pg_fetch_object(object $result){ return new stdClass(); }
 }
+if (!function_exists('pg_free_result')) {
+	function pg_free_result(object $result){ } : void
+}
+if (!function_exists('pg_last_error')) {
+	function pg_last_error(){ return new stdClass(); }
+}
+
 class ImageMagick {
 	public static function get_date_time_original(string $file_path): ?object {}
 	public static function get_imagemagick_pdfinfo_path(): string {}

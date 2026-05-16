@@ -328,7 +328,7 @@ trait utils {
 	/**
 	* GET_SQL_QUERY
 	* Returns the final sql query stored in the search object.
-	* The value is set by the metho 'get_sql_queryparse_sql_query'
+	* The value is set by the method 'get_sql_queryparse_sql_query'
 	* @see search->get_sql_queryparse_sql_query()
 	* @return string $sql_query
 	*/
@@ -336,6 +336,30 @@ trait utils {
 
 		return $this->sql_query;
 	}//end get_sql_query
+
+
+
+	/**
+	* GET_SQL_QUERY_RESOLVED
+	* Resolves the prepared SQL query by replacing placeholders with actual values.
+	* Uses `debug_prepared_statement()` to substitute `$1`, `$2`, etc. placeholders
+	* in `$this->sql_query` with the corresponding parameter values from `$this->params`,
+	* properly escaping string values via `pg_escape_literal()` using the DB connection.
+	* Intended for debugging and logging purposes only.
+	*
+	* @return string $sql_query_debug The resolved SQL query with interpolated values
+	*/
+	public function get_sql_query_resolved() : string {
+
+		$conn = DBi::_getConnection();
+		$sql_query_debug = debug_prepared_statement(
+			$this->sql_query,
+			array_keys($this->params),
+			$conn
+		);
+
+		return $sql_query_debug;
+	}//end get_sql_query_resolved
 
 
 

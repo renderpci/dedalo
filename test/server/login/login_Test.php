@@ -15,10 +15,11 @@ final class login_test extends BaseTestCase {
 
 
 
-	protected function setUp(): void   {
+	protected function setUp(): void {
+		parent::setUp();
 		// Clean session before each test
-		if (isset($_SESSION['dedalo'])) {
-			unset($_SESSION['dedalo']);
+		if (isset($_SESSION['dedalo']['auth'])) {
+			unset($_SESSION['dedalo']['auth']);
 		}
 	}
 
@@ -145,7 +146,7 @@ final class login_test extends BaseTestCase {
 
 		// Force login for testing
 		login_Test::force_login($user_id);
-		
+
 		// Verify login state
 		$this->assertTrue(login::is_logged(), 'User should be logged in after force_login');
 		$this->assertEquals($user_id, logged_user_id(), 'Logged user ID should match');
@@ -293,12 +294,12 @@ final class login_test extends BaseTestCase {
 
 		// Use reflection to test private methods
 		$reflection = new ReflectionClass('login');
-		
+
 		// Test get_auth_cookie_name method
 		$method = $reflection->getMethod('get_auth_cookie_name');
 		$method->setAccessible(true);
 		$cookie_name = $method->invoke(null);
-		
+
 		$this->assertIsString($cookie_name, 'Cookie name should be a string');
 		$this->assertEquals(128, strlen($cookie_name), 'SHA512 hash should be 128 characters');
 		$this->assertMatchesRegularExpression('/^[a-f0-9]+$/', $cookie_name, 'Cookie name should be hex string');
@@ -307,7 +308,7 @@ final class login_test extends BaseTestCase {
 		$method = $reflection->getMethod('get_auth_cookie_value');
 		$method->setAccessible(true);
 		$cookie_value = $method->invoke(null);
-		
+
 		$this->assertIsString($cookie_value, 'Cookie value should be a string');
 		$this->assertEquals(128, strlen($cookie_value), 'SHA512 hash should be 128 characters');
 		$this->assertMatchesRegularExpression('/^[a-f0-9]+$/', $cookie_value, 'Cookie value should be hex string');
@@ -459,7 +460,7 @@ final class login_test extends BaseTestCase {
 		$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
 			? DEDALO_MAINTENANCE_MODE_CUSTOM
 			: DEDALO_MAINTENANCE_MODE;
-		
+
 		if (!$maintenance_mode) {
 			$this->markTestSkipped('Maintenance mode is not enabled');
 			return;
@@ -472,7 +473,7 @@ final class login_test extends BaseTestCase {
 		];
 		$response = login::Login($options);
 		$this->assertFalse($response->result, 'Non-root users should not login in maintenance mode');
-		$this->assertStringContains('maintenance', strtolower($response->msg), 'Should mention maintenance in error message');
+		$this->assertStringContainsString('maintenance', strtolower($response->msg), 'Should mention maintenance in error message');
 	}
 
 

@@ -3,16 +3,16 @@
 * CLASS DIFFUSION_SECTION_STATS
 * Manages user activity methods
 */
+// moved to dd tipos
+// // tipo of daily statistics sections
+// 	define('DEDALO_DAILY_STATS_SECTION_TIPO',	'dd70');
 
-// tipo of daily statistics sections
-	define('DEDALO_DAILY_STATS_SECTION_TIPO',	'dd70');
-
-// section user activity stat
-	define('USER_ACTIVITY_SECTION_TIPO',		'dd1521');
-	define('USER_ACTIVITY_USER_TIPO',			'dd1522');
-	define('USER_ACTIVITY_TYPE_TIPO',			'dd1531');
-	define('USER_ACTIVITY_DATE_TIPO',			'dd1530');
-	define('USER_ACTIVITY_TOTALS_TIPO',			'dd1523');
+// // section user activity stat
+// 	define('USER_ACTIVITY_SECTION_TIPO',		'dd1521');
+// 	define('USER_ACTIVITY_USER_TIPO',			'dd1522');
+// 	define('USER_ACTIVITY_TYPE_TIPO',			'dd1531');
+// 	define('USER_ACTIVITY_DATE_TIPO',			'dd1530');
+// 	define('USER_ACTIVITY_TOTALS_TIPO',			'dd1523');
 
 
 

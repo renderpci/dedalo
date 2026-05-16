@@ -13,7 +13,36 @@ final class section_record_test extends BaseTestCase {
 	public $section_tipo = 'test65';
 	public $section_id = 1;
 
+	private static int $baseline_section_id = 0;
 
+	/**
+	* SETUP_BEFORE_CLASS
+	* Store baseline max section_id to allow cleanup after all tests.
+	*/
+	public static function setUpBeforeClass(): void {
+		parent::setUpBeforeClass();
+		$conn = DBi::_getConnection();
+		$result = pg_query_params(
+			$conn,
+			'SELECT COALESCE(MAX(section_id), 0) FROM matrix_test WHERE section_tipo = $1',
+			['test65']
+		);
+		self::$baseline_section_id = (int) pg_fetch_result($result, 0, 0);
+	}
+
+	/**
+	* TEARDOWN_AFTER_CLASS
+	* Delete all records created during these tests.
+	*/
+	public static function tearDownAfterClass(): void {
+		$conn = DBi::_getConnection();
+		pg_query_params(
+			$conn,
+			'DELETE FROM matrix_test WHERE section_tipo = $1 AND section_id > $2',
+			['test65', self::$baseline_section_id]
+		);
+		parent::tearDownAfterClass();
+	}
 
 	/**
 	* GET_COUNTER_VALUE

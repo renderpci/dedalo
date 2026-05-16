@@ -52,8 +52,9 @@ class tm_record {
 		 * @var array $excluded_section_tipos
 		 */
 		public static array $excluded_section_tipos = [
-			DEDALO_TEMP_PRESET_SECTION_TIPO,	// dd655 - temporal search presets
-			DEDALO_TIME_MACHINE_SECTION_TIPO	// dd15 - time machine section
+			DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655 - temporal search presets (automatic saved search configuration)
+			DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15 - time machine section (internal virtual section)
+			USER_ACTIVITY_SECTION_TIPO, // dd1521 - User activity (automatic sumatory of user actions by day)
 		];
 
 

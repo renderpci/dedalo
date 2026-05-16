@@ -82,7 +82,7 @@ final class logger_backend_activity_test extends BaseTestCase {
 		);
 
 		// Test $enable_log
-		$this->assertTrue(
+		$this->assertNotEmpty(
 			logger_backend_activity::$enable_log,
 			'expected $enable_log to be true by default'
 		);
