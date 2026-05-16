@@ -74,7 +74,7 @@ class DDModal extends HTMLElement {
 		return `
 		<style>
 			:host {
-				color-scheme: light dark;
+				// color-scheme: normal;
 			}
 
 			.modal {
