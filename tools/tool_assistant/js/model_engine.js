@@ -22,6 +22,8 @@ export const model_engine = class model_engine {
 		this._loaded	= false
 		// per-model fallback: same model_id reloaded on `fallback_device` (e.g. wasm)
 		this._fallback_device = config.fallback_device || 'wasm'
+		// detect model family: 'pipeline' (default), 'qwen35', or 'gemma4'
+		this._model_type = model_engine._detect_model_type(this._model_id)
 	}//end constructor
 
 
@@ -51,14 +53,11 @@ export const model_engine = class model_engine {
 		this._TextStreamer = transformers.TextStreamer
 		this._transformers = transformers
 
-		// detect Qwen3.5 models (use AutoProcessor + direct model API)
-		this._is_qwen35 = this._model_id.indexOf('Qwen3.5') !== -1
-
 		let actual_device = device
-		if (this._is_qwen35) {
-			actual_device = await this._load_qwen35(transformers, device, dtype, on_progress)
-		} else {
+		if (this._model_type === 'pipeline') {
 			actual_device = await this._load_pipeline(transformers, device, dtype, on_progress)
+		} else {
+			actual_device = await this._load_direct(transformers, device, dtype, on_progress)
 		}
 
 		this._device	= actual_device
