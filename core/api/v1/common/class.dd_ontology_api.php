@@ -32,7 +32,9 @@ final class dd_ontology_api {
 		'resolve_term',
 		'resolve_section',
 		'get_node',
-		'search'
+		'search',
+		'get_glossary',
+		'resolve_path'
 	];
 
 
@@ -962,6 +964,57 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * GET_COMPONENT_COLUMN_TYPE
+	 * Maps a component model to its data column type in the matrix table.
+	 *
+	 * @param string $model Component model name
+	 * @return string Column type (string, relation, date, geo, number, media, misc)
+	 */
+	private static function get_component_column_type(string $model) : string {
+
+		return match (true) {
+			str_starts_with($model, 'component_input_text'),
+			str_starts_with($model, 'component_text_area'),
+			str_starts_with($model, 'component_email'),
+			str_starts_with($model, 'component_password') => 'string',
+
+			str_starts_with($model, 'component_portal'),
+			str_starts_with($model, 'component_select'),
+			str_starts_with($model, 'component_select_lang'),
+			str_starts_with($model, 'component_radio_button'),
+			str_starts_with($model, 'component_check_box'),
+			str_starts_with($model, 'component_autocomplete_hi'),
+			str_starts_with($model, 'component_dataframe'),
+			str_starts_with($model, 'component_publication'),
+			str_starts_with($model, 'component_external'),
+			str_starts_with($model, 'component_filter'),
+			str_starts_with($model, 'component_filter_master'),
+			str_starts_with($model, 'component_relation_children'),
+			str_starts_with($model, 'component_relation_index'),
+			str_starts_with($model, 'component_relation_model'),
+			str_starts_with($model, 'component_relation_parent'),
+			str_starts_with($model, 'component_relation_related') => 'relation',
+
+			str_starts_with($model, 'component_date') => 'date',
+
+			str_starts_with($model, 'component_geolocation') => 'geo',
+
+			str_starts_with($model, 'component_number') => 'number',
+
+			str_starts_with($model, 'component_av'),
+			str_starts_with($model, 'component_image'),
+			str_starts_with($model, 'component_3d'),
+			str_starts_with($model, 'component_pdf'),
+			str_starts_with($model, 'component_svg') => 'media',
+
+			str_starts_with($model, 'component_iri') => 'iri',
+
+			str_starts_with($model, 'component_section_id') => 'section_id',
+
+			default => 'misc'
+		};
+	}//end get_component_column_type
 
 
 
