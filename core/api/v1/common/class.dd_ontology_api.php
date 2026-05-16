@@ -360,6 +360,62 @@ final class dd_ontology_api {
 
 
 	/**
+	 * GET_GLOSSARY
+	 * Returns a lightweight, multilingual glossary of the ontology for LLM consumption.
+	 *
+	 * Supports three modes:
+	 * - 'sections' (default): Returns all section tipos with their multilingual terms.
+	 *   Compact one-call dictionary for the LLM to build its mental map.
+	 *
+	 * - 'section': Returns a single section's full component tree, with portal
+	 *   metadata (is_portal, target_section_tipo, target_section_term) so the
+	 *   LLM can discover cross-section relationships.
+	 *
+	 * - 'path': Resolves a relational path (e.g. ["oh1","oh24","rsc197","rsc85"])
+	 *   and returns annotated metadata for each hop.
+	 *
+	 * @param object $rqo Request query object
+	 *   {
+	 *     "action": "get_glossary",
+	 *     "dd_api": "dd_ontology_api",
+	 *     "source": {
+	 *       "mode": "sections"|"section"|"path",   // optional, default "sections"
+	 *       "section_tipo": "oh1",                  // required for mode="section"
+	 *       "path": ["oh1","oh24","rsc197","rsc85"] // required for mode="path"
+	 *       "lang": "lg-eng"                        // optional
+	 *     }
+	 *   }
+	 * @return object $response
+	 */
+	public static function get_glossary(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. get_glossary request failed';
+			$response->errors	= [];
+
+		$source			= $rqo->source ?? new stdClass();
+		$mode			= $source->mode ?? 'sections';
+		$section_tipo	= $source->section_tipo ?? null;
+		$path			= $source->path ?? null;
+
+		switch ($mode) {
+			case 'sections':
+				return self::glossary_sections();
+			case 'section':
+				return self::glossary_section($section_tipo);
+			case 'path':
+				return self::glossary_path($path);
+			default:
+				$response->msg		= 'Error. Invalid mode: ' . $mode . '. Use "sections", "section", or "path"';
+				$response->errors[]	= 'invalid_mode';
+				return $response;
+		}
+	}//end get_glossary
+
+
+
+	/**
 	 * RESOLVE_PATH
 	 * Resolves a relational path through the ontology, returning annotated
 	 * metadata for each hop.
