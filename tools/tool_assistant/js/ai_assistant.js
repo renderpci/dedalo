@@ -768,6 +768,61 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	async _build_ontology_context_for_message(message) {
+
+		try {
+			const glossary = await this._get_ontology_glossary()
+			const mentions = this._resolve_ontology_mentions(message, glossary)
+			if (!mentions.length) return null
+
+			const resolved = []
+			const ambiguous = []
+
+			for (const mention of mentions) {
+				if (mention.matches.length === 1) {
+					const match = mention.matches[0]
+					resolved.push('"' + mention.label + '" => section_tipo "' + match.section_tipo + '" (' + match.label + ')')
+				} else if (mention.matches.length > 1) {
+					ambiguous.push('"' + mention.label + '": ' + mention.matches.slice(0, 5).map(function(item) {
+						return item.label + ' => ' + item.section_tipo
+					}).join('; '))
+				}
+			}
+
+			if (!resolved.length && !ambiguous.length) return null
+
+			const lines = [
+				'Ontology pre-resolution context:',
+				'- The following human ontology terms were detected in the user message.',
+				'- Use resolved `section_tipo` values directly when selecting/calling tools.',
+				'- Do not ask the user for a tipo when a unique resolved value is available.'
+			]
+
+			if (resolved.length) {
+				lines.push('Resolved section terms:')
+				for (const item of resolved) {
+					lines.push('- ' + item)
+				}
+			}
+
+			if (ambiguous.length) {
+				lines.push('Ambiguous section terms:')
+				for (const item of ambiguous) {
+					lines.push('- ' + item)
+				}
+				lines.push('For ambiguous terms, ask the user to choose one candidate before making data changes.')
+			}
+
+			return lines.join('\n')
+		} catch (err) {
+			console.warn('[ai_assistant] ontology pre-resolution failed:', err)
+			return 'Ontology pre-resolution failed: ' + err.message + '. Use `dedalo_ontology_glossary` or `dedalo_resolve_ontology` before any data tool.'
+		}
+	}//end _build_ontology_context_for_message
+
+
+
+
 	_persist() {
 		if (!this._thread_id) return
 		this._store.save(this._thread_id, this._conversation)
