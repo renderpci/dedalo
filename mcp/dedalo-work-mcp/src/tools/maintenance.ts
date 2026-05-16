@@ -13,15 +13,6 @@ import { TipoSchema } from './_shared/schemas.js';
  */
 export function registerMaintenanceTools(server: McpServer, client: WorkClient, ctx: ToolContext): void {
 	registerTool(server, {
-		name: 'dedalo_maintenance_widget_value',
-		description: 'Get the current value/state of a maintenance widget without executing anything.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Maintenance widget value' },
-		inputSchema: z.object({ widget_name: z.string().min(1).describe('Maintenance widget name.') }),
-		handler: async ({ widget_name }) =>
-			client.call(rqo({ action: 'get_widget_value', dd_api: 'dd_area_maintenance_api', source: { tipo: widget_name } })),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_maintenance_widget_run',
 		description: 'Execute a maintenance widget action (statistics, cleanup, recalculation, ...).',
 		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Maintenance widget run' },
@@ -67,29 +58,4 @@ export function registerMaintenanceTools(server: McpServer, client: WorkClient, 
 			),
 	}, ctx);
 
-	registerTool(server, {
-		name: 'dedalo_maintenance_list_schema_changes',
-		description: 'List pending simple schema-change files awaiting application.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List schema changes' },
-		inputSchema: z.object({}),
-		handler: async () => client.call(rqo({ action: 'get_simple_schema_changes_files', dd_api: 'dd_area_maintenance_api' })),
-	}, ctx);
-
-	registerTool(server, {
-		name: 'dedalo_maintenance_apply_schema_changes',
-		description: 'Apply pending simple schema-change files. Highly destructive — review with `dedalo_maintenance_list_schema_changes` first.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Apply schema changes' },
-		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).optional() }),
-		handler: async ({ options }) =>
-			client.call(rqo({ action: 'parse_simple_schema_changes_files', dd_api: 'dd_area_maintenance_api', options, prevent_lock: false })),
-	}, ctx);
-
-	registerTool(server, {
-		name: 'dedalo_maintenance_lock_components_actions',
-		description: 'Lock or unlock component actions globally during maintenance windows.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Lock component actions' },
-		inputSchema: z.object({ action: z.enum(['lock', 'unlock']).describe('Whether to lock or unlock component actions.') }),
-		handler: async ({ action }) =>
-			client.call(rqo({ action: 'lock_components_actions', dd_api: 'dd_area_maintenance_api', options: { action }, prevent_lock: false })),
-	}, ctx);
 }
