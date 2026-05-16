@@ -345,7 +345,7 @@ System.register("tools/_shared/schemas", ["zod", "@dedalo/mcp-common"], function
                 .string()
                 .min(1)
                 .regex(/^[a-zA-Z0-9_]+$/, 'tipo must match [a-zA-Z0-9_]+')
-                .describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Discover via `dedalo_list_sections` or `dedalo_get_ontology_info`.'));
+                .describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.'));
             /** Dédalo language code. `lg-eng`, `lg-spa`, `lg-nolan` (no-language), etc. */
             exports_6("LangSchema", LangSchema = zod_2.z
                 .string()
@@ -401,25 +401,16 @@ System.register("tools/discovery", ["zod", "tools/_shared/register", "tools/_sha
         }, ctx);
         register_js_1.registerTool(server, {
             name: 'dedalo_list_sections',
-            description: 'List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.',
+            description: 'List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.\n' +
+                'For a compact multilingual glossary with portal metadata, prefer `dedalo_ontology_glossary` (mode="sections").',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List sections' },
             inputSchema: zod_3.z.object({ lang: schemas_js_1.OptionalLangSchema }),
             handler: async ({ lang }) => client.call(rqo_js_1.rqo({ action: 'get_ontology_info', source: { model: 'section', lang } })),
         }, ctx);
         register_js_1.registerTool(server, {
-            name: 'dedalo_get_ontology_info',
-            description: 'Query ontology metadata for a specific tipo or model. Returns structure, relationships and configuration. Provide `tipo` for a specific element or `model` to query all elements of that model.',
-            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get ontology info' },
-            inputSchema: zod_3.z.object({
-                tipo: schemas_js_1.TipoSchema.optional().describe('Specific tipo to query.'),
-                model: zod_3.z.string().optional().describe('Model name (e.g. `section`, `component_text_area`, `component_portal`).'),
-                lang: schemas_js_1.OptionalLangSchema,
-            }),
-            handler: async (a) => client.call(rqo_js_1.rqo({ action: 'get_ontology_info', source: a })),
-        }, ctx);
-        register_js_1.registerTool(server, {
             name: 'dedalo_get_section_elements_context',
-            description: 'Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.',
+            description: 'Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.\n' +
+                'For a lightweight component overview with portal metadata, prefer `dedalo_ontology_glossary` (mode="section").',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get section elements context' },
             inputSchema: zod_3.z.object({
                 section_tipo: schemas_js_1.TipoSchema,
@@ -458,6 +449,96 @@ System.register("tools/discovery", ["zod", "tools/_shared/register", "tools/_sha
             }),
             handler: async (a) => client.call(rqo_js_1.rqo({ action: 'start', source: a })),
         }, ctx);
+        register_js_1.registerTool(server, {
+            name: 'dedalo_resolve_ontology',
+            description: 'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' +
+                'Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. ' +
+                'Returns the section tipo, labels, model, and full component tree. ' +
+                'This is the primary tool for discovering what fields/components a section contains from a human-readable name.',
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve ontology term' },
+            inputSchema: zod_3.z.object({
+                text: zod_3.z.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
+                lang: schemas_js_1.OptionalLangSchema,
+                search_mode: zod_3.z.enum(['exact', 'fuzzy']).default('fuzzy').describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).'),
+            }),
+            handler: async ({ text, lang, search_mode }) => client.call(rqo_js_1.rqo({
+                action: 'resolve_section',
+                dd_api: 'dd_ontology_api',
+                source: { text, lang, mode: search_mode },
+            })),
+        }, ctx);
+        register_js_1.registerTool(server, {
+            name: 'dedalo_search_ontology',
+            description: 'Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). ' +
+                'Returns matching ontology nodes with their metadata. ' +
+                'Use this to find all sections, components of a specific model, or nodes within a TLD namespace.',
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search ontology' },
+            inputSchema: zod_3.z.object({
+                model: zod_3.z.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
+                parent: schemas_js_1.TipoSchema.optional().describe('Filter by parent tipo.'),
+                tld: zod_3.z.string().optional().describe('Filter by TLD/namespace (e.g. "oh", "dd", "tch").'),
+                is_model: zod_3.z.boolean().optional().describe('Filter by whether node is a model definition.'),
+                is_translatable: zod_3.z.boolean().optional().describe('Filter by whether node is translatable.'),
+                limit: zod_3.z.number().int().min(1).max(500).optional().describe('Max results to return (default 100).'),
+            }),
+            handler: async (a) => client.call(rqo_js_1.rqo({
+                action: 'search',
+                dd_api: 'dd_ontology_api',
+                source: a,
+            })),
+        }, ctx);
+        register_js_1.registerTool(server, {
+            name: 'dedalo_ontology_glossary',
+            description: 'Get the ontology glossary: a map of human-readable names to Dédalo tipo identifiers with portal relationship metadata. ' +
+                'THIS IS THE PRIMARY TOOL for resolving natural language to Dédalo tipos.\n\n' +
+                'mode="sections": Returns ALL sections as a compact name→tipo dictionary (e.g. "Mint"→numisdata6, "Oral History"→oh1). ' +
+                'Call once per session to build your mental map.\n\n' +
+                'mode="section": Returns one section\'s full component tree WITH portal metadata. ' +
+                'Portal components include is_portal=true and target_section_tipo showing where they link. ' +
+                'Example: oh1 "Oral History" has oh24 "Informant" (portal→rsc197 "Person").\n\n' +
+                'mode="path": Resolves a relational path like ["oh1","oh24","rsc197","rsc85"] and returns ' +
+                'annotated metadata for each hop: section→portal→target section→leaf component.\n\n' +
+                'ALWAYS use this before any tool requiring section_tipo or tipo parameters. ' +
+                'Terms are returned in all available languages.',
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Ontology glossary' },
+            inputSchema: zod_3.z.object({
+                mode: zod_3.z.enum(['sections', 'section', 'path']).default('sections')
+                    .describe('"sections" = all sections map. "section" = one section\'s components. "path" = resolve relational path.'),
+                section_tipo: schemas_js_1.TipoSchema.optional()
+                    .describe('Required when mode="section". The section to inspect.'),
+                path: zod_3.z.array(schemas_js_1.TipoSchema).min(2).optional()
+                    .describe('Required when mode="path". Array of tipos forming the relational path (e.g. ["oh1","oh24","rsc197","rsc85"]).'),
+                lang: schemas_js_1.OptionalLangSchema,
+            }),
+            handler: async ({ mode, section_tipo, path, lang }) => client.call(rqo_js_1.rqo({
+                action: 'get_glossary',
+                dd_api: 'dd_ontology_api',
+                source: { mode, section_tipo, path, lang },
+            })),
+        }, ctx);
+        register_js_1.registerTool(server, {
+            name: 'dedalo_resolve_path',
+            description: 'Resolve a relational path through the Dédalo ontology. Use this to understand cross-section relationships ' +
+                'and navigate from a section through portal components to related sections.\n\n' +
+                'Example: path=["oh1","oh24","rsc197","rsc85"] means:\n' +
+                '  oh1 (Oral History) → oh24 (Informant portal) → rsc197 (Person) → rsc85 (Name)\n\n' +
+                'Returns annotated metadata for each hop: tipo, model, term, is_portal, target_section_tipo. ' +
+                'The leaf hop includes column_type (string, relation, date, geo, number, media) so you know ' +
+                'what data format to expect.\n\n' +
+                'Use after `dedalo_ontology_glossary` to drill into portal relationships discovered in the component tree.',
+            annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve relational path' },
+            inputSchema: zod_3.z.object({
+                path: zod_3.z.array(schemas_js_1.TipoSchema).min(2)
+                    .describe('Array of tipos forming the relational path. Must start with a section tipo, ' +
+                    'followed by portal components and their target sections, ending at the leaf component.'),
+                lang: schemas_js_1.OptionalLangSchema,
+            }),
+            handler: async ({ path, lang }) => client.call(rqo_js_1.rqo({
+                action: 'resolve_path',
+                dd_api: 'dd_ontology_api',
+                source: { path, lang },
+            })),
+        }, ctx);
     }
     exports_7("registerDiscoveryTools", registerDiscoveryTools);
     return {
@@ -493,7 +574,9 @@ System.register("tools/records_read", ["zod", "@dedalo/mcp-common", "tools/_shar
     function registerRecordsReadTools(server, client, ctx) {
         register_js_2.registerTool(server, {
             name: 'dedalo_read_record',
-            description: 'Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.',
+            description: 'Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.\n' +
+                'Portal components return locators (section_tipo+section_id) not the linked data. To read the linked record, call this tool again with the locator\'s section_tipo and section_id.',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read record' },
             inputSchema: zod_4.z.object({
                 section_tipo: schemas_js_2.TipoSchema,
@@ -511,10 +594,19 @@ System.register("tools/records_read", ["zod", "@dedalo/mcp-common", "tools/_shar
         }, ctx);
         register_js_2.registerTool(server, {
             name: 'dedalo_search_records',
-            description: 'Search records using the SQO (Search Query Object) DSL. Supports pagination, AND/OR filter trees, ordering, and full-count totals. Provide either `filter` (typed) or `raw_sqo` (escape hatch).\n\nExample filter:\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```',
+            description: 'Search records using the SQO (Search Query Object) DSL. Supports pagination, AND/OR filter trees, ordering, and full-count totals.\n' +
+                '**Resolve `section_tipo` and component `tipo`s first** via `dedalo_ontology_glossary`.\n\n' +
+                'Simplified single-section filter (`filter` parameter):\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```\n\n' +
+                'Cross-section filter via portal traversal (use `raw_sqo` for multi-hop paths):\n```json\n' +
+                '{ "filter": { "$and": [{ "q": "Picasso", "path": [\n' +
+                '  { "section_tipo": "oh1", "component_tipo": "oh24" },\n' +
+                '  { "section_tipo": "rsc197", "component_tipo": "rsc85" }\n' +
+                '] }] } }\n```\n\n' +
+                'Use `dedalo_ontology_glossary` (mode="section") to discover portal components and their target_section_tipo, ' +
+                'or `dedalo_resolve_path` to validate the relational path before searching.',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search records' },
             inputSchema: zod_4.z.object({
-                section_tipo: zod_4.z.union([schemas_js_2.TipoSchema, zod_4.z.array(schemas_js_2.TipoSchema).min(1)]).describe('Single section_tipo or array for cross-section search.'),
+                section_tipo: zod_4.z.union([schemas_js_2.TipoSchema, zod_4.z.array(schemas_js_2.TipoSchema).min(1)]).describe('Single section_tipo or array for cross-section search. Resolve via `dedalo_ontology_glossary`.'),
                 lang: schemas_js_2.OptionalLangSchema,
                 limit: schemas_js_2.PaginationSchema.shape.limit,
                 offset: schemas_js_2.PaginationSchema.shape.offset,
@@ -547,7 +639,8 @@ System.register("tools/records_read", ["zod", "@dedalo/mcp-common", "tools/_shar
         }, ctx);
         register_js_2.registerTool(server, {
             name: 'dedalo_read_raw',
-            description: 'Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.',
+            description: 'Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read raw' },
             inputSchema: zod_4.z.object({
                 section_tipo: schemas_js_2.TipoSchema,
@@ -570,7 +663,8 @@ System.register("tools/records_read", ["zod", "@dedalo/mcp-common", "tools/_shar
         }, ctx);
         register_js_2.registerTool(server, {
             name: 'dedalo_count_records',
-            description: 'Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.',
+            description: 'Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Count records' },
             inputSchema: zod_4.z.object({
                 section_tipo: schemas_js_2.TipoSchema,
@@ -586,7 +680,8 @@ System.register("tools/records_read", ["zod", "@dedalo/mcp-common", "tools/_shar
         }, ctx);
         register_js_2.registerTool(server, {
             name: 'dedalo_get_indexation_grid',
-            description: 'Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.',
+            description: 'Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get indexation grid' },
             inputSchema: zod_4.z.object({
                 section_tipo: schemas_js_2.TipoSchema,
@@ -636,7 +731,8 @@ System.register("tools/records_write", ["zod", "tools/_shared/register", "tools/
     function registerRecordsWriteTools(server, client, ctx) {
         register_js_3.registerTool(server, {
             name: 'dedalo_create_record',
-            description: 'Create a new record in the given `section_tipo`. Returns the new section_id.',
+            description: 'Create a new record in the given `section_tipo`. Returns the new section_id.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` (e.g. "Mint"→numisdata6) or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Create record' },
             inputSchema: zod_5.z.object({
                 section_tipo: schemas_js_3.TipoSchema,
@@ -646,7 +742,8 @@ System.register("tools/records_write", ["zod", "tools/_shared/register", "tools/
         }, ctx);
         register_js_3.registerTool(server, {
             name: 'dedalo_duplicate_record',
-            description: 'Create a copy of an existing record including all component values. Returns the new section_id.',
+            description: 'Create a copy of an existing record including all component values. Returns the new section_id.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Duplicate record' },
             inputSchema: zod_5.z.object({
                 section_tipo: schemas_js_3.TipoSchema,
@@ -657,10 +754,16 @@ System.register("tools/records_write", ["zod", "tools/_shared/register", "tools/
         }, ctx);
         register_js_3.registerTool(server, {
             name: 'dedalo_save_component',
-            description: 'Save a value to a specific component within a record. The `value` shape depends on the component type (text, locator, dato, ...). Inspect with `dedalo_get_element_context` first when in doubt.',
+            description: 'Save a value to a specific component within a record. The `value` shape depends on the component type.\n' +
+                '**Resolve both `section_tipo` and `tipo` first** via `dedalo_ontology_glossary` (mode="section") then `dedalo_get_section_elements_context`.\n\n' +
+                'Value formats:\n' +
+                '- Text (component_input_text, component_text_area): plain string\n' +
+                '- Portal (component_portal): array of locators e.g. [{"section_tipo":"rsc197","section_id":"7"}]\n' +
+                '- Select (component_select): array of locator objects\n' +
+                '- Date (component_date): date string in component format',
             annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Save component' },
             inputSchema: zod_5.z.object({
-                tipo: schemas_js_3.TipoSchema.describe('Component tipo to save.'),
+                tipo: schemas_js_3.TipoSchema.describe('Component tipo to save. Resolve via `dedalo_ontology_glossary` (mode="section").'),
                 section_tipo: schemas_js_3.TipoSchema,
                 section_id: schemas_js_3.SectionIdSchema,
                 lang: schemas_js_3.OptionalLangSchema,
@@ -670,7 +773,8 @@ System.register("tools/records_write", ["zod", "tools/_shared/register", "tools/
         }, ctx);
         register_js_3.registerTool(server, {
             name: 'dedalo_delete_record',
-            description: 'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.',
+            description: 'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.\n' +
+                '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
             annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Delete record' },
             inputSchema: zod_5.z.object({
                 section_tipo: schemas_js_3.TipoSchema,
@@ -712,7 +816,7 @@ System.register("tools/components", ["zod", "tools/_shared/register", "tools/_sh
      */
     function registerComponentTools(server, client, ctx) {
         const baseRecord = {
-            tipo: schemas_js_4.TipoSchema.describe('Component tipo to operate on.'),
+            tipo: schemas_js_4.TipoSchema.describe('Component tipo to operate on. Resolve via `dedalo_ontology_glossary` (mode="section") or `dedalo_get_section_elements_context`.'),
             section_tipo: schemas_js_4.TipoSchema,
             section_id: schemas_js_4.SectionIdSchema,
             lang: schemas_js_4.OptionalLangSchema,
@@ -720,7 +824,8 @@ System.register("tools/components", ["zod", "tools/_shared/register", "tools/_sh
         // ── Portal ───────────────────────────────────────────────────────────
         register_js_4.registerTool(server, {
             name: 'dedalo_portal_delete_locator',
-            description: 'Remove a locator from a portal component, detaching the linked record.',
+            description: 'Remove a locator from a portal component, detaching the linked record.\n' +
+                'Use `dedalo_ontology_glossary` (mode="section") to identify portal components and their target sections.',
             annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Portal: delete locator' },
             inputSchema: zod_6.z.object({ ...baseRecord, locator: schemas_js_4.LocatorSchema }),
             handler: async ({ tipo, section_tipo, section_id, lang, locator }) => client.call(rqo_js_4.rqo({ action: 'delete_locator', dd_api: 'dd_component_portal_api', source: { tipo, section_tipo, section_id, lang }, options: { locator }, prevent_lock: false })),
