@@ -52,7 +52,8 @@ interface iri_value {
  * @example
  *   const data = [
  *     { value: [{ iri: "https://dedalo.dev", title: "Official Dédalo web" },
- *               { iri: "https://other.es",   title: "other" }] }
+ *               { iri: "https://other.es",   title: "other" }] 
+ * 		}
  *   ];
  *   flat(data, {});
  *   // → [{ value: "Official Dédalo web, https://dedalo.dev | other, https://other.es" }]
