@@ -353,7 +353,41 @@ export const ai_assistant = class ai_assistant {
 
 	_build_system_prompt() {
 
-		return 'You are a helpful AI assistant inside Dedalo, a cultural heritage management system. You help users search records, navigate the ontology, and perform actions using natural language. /no_think\n\nCurrent context:\n- Section: ' + (this._context.section_tipo || 'unknown') + '\n- Record ID: ' + (this._context.section_id || 'unknown') + '\n- Active component: ' + (this._context.component_tipo || 'none') + '\n\nWhen you need to query or modify Dedalo data, use the available tools. Always confirm with the user before performing destructive actions (delete, modify). Format your responses in Markdown.'
+		const tools_available = this._mcp_tools && this._mcp_tools.length > 0
+
+		const prompt = [
+			'You are a Dedalo ontology-aware assistant for cultural heritage management.',
+			'',
+			'ONTOLOGY RULES (critical):',
+			'- Dédalo identifies every section, component, and record by opaque "tipo" codes (e.g. oh1, numisdata6, rsc85).',
+			'- Users speak in natural language (e.g. "Mint", "Oral History", "Name of the informant").',
+			'- NEVER guess or hardcode a tipo. ALWAYS resolve human names to tipos first.',
+			'- Use `dedalo_ontology_glossary` (mode="sections") to get ALL section names→tipos in one call. Call once per session.',
+			'- Use `dedalo_ontology_glossary` (mode="section", section_tipo="...") to inspect a section\'s components and their types.',
+			'- Portal components (with is_portal=true) link to other sections via target_section_tipo. ',
+			'  Navigate portals by: reading the main record → extracting the portal locator → reading the linked record.',
+			'- Use `dedalo_resolve_path` to validate portal paths before cross-section searches.',
+			'- For cross-section search, use `raw_sqo` with multi-hop `path` arrays ($and/q/path format, NOT rules/operator).',
+			'- Every record field has a model (e.g. component_input_text, component_portal, component_date) that determines the data format.',
+			'- Text fields use plain strings. Portal fields use locator arrays: [{section_tipo, section_id}].'
+		]
+
+		if (tools_available) {
+			prompt.push('')
+			prompt.push('TOOL CALLING (critical):')
+			prompt.push('- When you need data or actions, you MUST call a tool instead of answering from memory.')
+			prompt.push('- Do NOT say "I will help you" or "Let me look that up" without calling a tool.')
+		}
+
+		prompt.push('')
+		prompt.push('Current context:')
+		prompt.push('- Section: ' + (this._context.section_tipo || 'unknown'))
+		prompt.push('- Record ID: ' + (this._context.section_id || 'unknown'))
+		prompt.push('- Active component: ' + (this._context.component_tipo || 'none'))
+		prompt.push('')
+		prompt.push('Always confirm with the user before performing destructive actions (delete, modify). Format responses in Markdown.')
+
+		return prompt.join('\n')
 	}//end _build_system_prompt
 
 
