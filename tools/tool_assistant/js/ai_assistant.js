@@ -822,6 +822,59 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	_resolve_ontology_mentions(message, glossary) {
+
+		if (!message || typeof message !== 'string') return []
+
+		if (!this._ontology_index) {
+			this._ontology_index = this._build_ontology_index(glossary || [])
+		}
+
+		const text = ai_assistant._normalize_label(message)
+		if (!text) return []
+
+		const mentions = []
+		const occupied = []
+		const labels = Array.from(this._ontology_index.keys())
+			.filter(function(label) {
+				return label.length >= 3
+			})
+			.sort(function(a, b) {
+				return b.length - a.length
+			})
+
+		for (const label of labels) {
+			const index = ai_assistant._find_label_in_text(text, label)
+			if (index === -1) continue
+
+			const end = index + label.length
+			const overlaps = occupied.some(function(range) {
+				return index < range.end && end > range.start
+			})
+			if (overlaps) continue
+
+			const matches = this._unique_matches(this._ontology_index.get(label) || [])
+			if (!matches.length) continue
+
+			mentions.push({
+				label	: label,
+				matches	: matches
+			})
+			occupied.push({
+				start	: index,
+				end		: end
+			})
+
+			if (mentions.length >= 8) {
+				break
+			}
+		}
+
+		return mentions
+	}//end _resolve_ontology_mentions
+
+
+
 
 	_persist() {
 		if (!this._thread_id) return
