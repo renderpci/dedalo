@@ -16,7 +16,7 @@ export const TipoSchema = z
 	.string()
 	.min(1)
 	.regex(/^[a-zA-Z0-9_]+$/, 'tipo must match [a-zA-Z0-9_]+')
-	.describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Discover via `dedalo_list_sections` or `dedalo_get_ontology_info`.');
+	.describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.');
 
 /** Dédalo language code. `lg-eng`, `lg-spa`, `lg-nolan` (no-language), etc. */
 export const LangSchema = z
