@@ -694,5 +694,62 @@ final class dd_ontology_api {
 
 
 
+	/**
+	 * GLOSSARY_SECTIONS
+	 * Returns the compact sections glossary (all sections with multilingual terms).
+	 *
+	 * @return object Response with sections array
+	 */
+	private static function glossary_sections() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. glossary_sections request failed';
+			$response->errors	= [];
+
+		$tipos = dd_ontology_db_manager::search(['model' => 'section'], true, 500);
+
+		if ($tipos === false) {
+			$response->msg		= 'Error. Database search failed';
+			$response->errors[]	= 'db_search_failed';
+			return $response;
+		}
+
+		$sections = [];
+		foreach ($tipos as $tipo) {
+			$node = ontology_node::get_instance($tipo);
+			$data = $node->get_data();
+
+			if (empty($data)) {
+				continue;
+			}
+
+			$model = $data->model ?? null;
+			if ($model !== 'section') {
+				continue;
+			}
+
+			$term = $data->term ?? null;
+			if (empty($term)) {
+				continue;
+			}
+
+			$entry = new stdClass();
+				$entry->section_tipo	= $tipo;
+				$entry->term			= $term;
+				$entry->tld				= $data->tld ?? null;
+
+			$sections[] = $entry;
+		}
+
+		$response->result	= $sections;
+		$response->msg		= 'OK. glossary_sections request done successfully';
+
+		return $response;
+	}//end glossary_sections
+
+
+
+
 
 }//end dd_ontology_api
