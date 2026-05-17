@@ -607,7 +607,51 @@ export const ai_assistant = class ai_assistant {
 	* leaves are coerced to `{ type: 'string' }`.
 	* @param object schema
 	* @return object
+	/**
+	* _MINIMIZE_SCHEMA
+	* Shrinks a JSON schema for tool declarations.
+	* Keeps parameter names, types, and required at the top level.
+	* Nested objects also preserve their property names + types so the
+	* LLM can construct valid filters and sub-objects.
+	* Descriptions, enums, and item schemas beyond one nesting level are dropped.
+	* @param object schema
+	* @param number depth current nesting depth (0 = top level)
+	* @return object
 	*/
+	static _minimize_schema(schema, depth) {
+
+		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+			return { type: 'string' }
+		}
+
+		const max_depth = 2
+		const allowed_types = ['string', 'number', 'integer', 'boolean', 'object', 'array']
+		let t = (typeof schema.type === 'string' && allowed_types.indexOf(schema.type) !== -1)
+			? schema.type
+			: (schema.properties ? 'object' : (schema.items ? 'array' : 'string'))
+
+		const out = { type: t }
+
+		if (depth === 0 && Array.isArray(schema.required) && schema.required.length > 0) {
+			out.required = schema.required.filter(function(r) { return typeof r === 'string' })
+		}
+
+		if (t === 'object' && depth < max_depth && schema.properties && typeof schema.properties === 'object') {
+			out.properties = {}
+			const keys = Object.keys(schema.properties)
+			for (let i = 0; i < keys.length; i++) {
+				out.properties[keys[i]] = ai_assistant._minimize_schema(schema.properties[keys[i]], depth + 1)
+			}
+		}
+
+		if (t === 'array' && depth < max_depth && schema.items && typeof schema.items === 'object') {
+			out.items = ai_assistant._minimize_schema(schema.items, depth + 1)
+		}
+
+		return out
+	}//end _minimize_schema
+
+
 	static _sanitize_schema(schema) {
 
 		// non-mapping → safe default
