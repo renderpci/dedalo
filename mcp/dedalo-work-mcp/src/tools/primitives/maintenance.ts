@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkClient } from '@dedalo/mcp-common';
-import { registerTool, type ToolContext } from './_shared/register.js';
-import { rqo } from './_shared/rqo.js';
-import { TipoSchema } from './_shared/schemas.js';
+import { registerTool, type ToolContext } from '../_shared/register.js';
+import { rqo } from '../_shared/rqo.js';
+import { TipoSchema } from '../_shared/schemas.js';
 
 /**
  * Maintenance area tools (`dd_area_maintenance_api`).
@@ -15,7 +15,7 @@ export function registerMaintenanceTools(server: McpServer, client: WorkClient, 
 	registerTool(server, {
 		name: 'dedalo_maintenance_widget_run',
 		description: 'Execute a maintenance widget action (statistics, cleanup, recalculation, ...).',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Maintenance widget run' },
+		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Maintenance widget run' },
 		inputSchema: z.object({
 			widget_name: z.string().min(1),
 			options: z.record(z.string(), z.unknown()).optional(),
@@ -28,7 +28,7 @@ export function registerMaintenanceTools(server: McpServer, client: WorkClient, 
 		name: 'dedalo_maintenance_class_run',
 		description:
 			'Execute a maintenance class request (advanced). Class names: `area_thesaurus`, `tool_update_data`, etc. Requires global-admin profile in Dédalo.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Maintenance class run' },
+		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Maintenance class run' },
 		inputSchema: z.object({
 			class_name: z.string().min(1).describe('Maintenance class identifier.'),
 			options: z.record(z.string(), z.unknown()).optional(),
@@ -40,7 +40,7 @@ export function registerMaintenanceTools(server: McpServer, client: WorkClient, 
 	registerTool(server, {
 		name: 'dedalo_maintenance_modify_counter',
 		description: 'Modify a section counter (auto-increment for new section_ids). Use with care.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Modify counter' },
+		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Modify counter' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			counter: z.number().int().min(0).describe('New counter value.'),

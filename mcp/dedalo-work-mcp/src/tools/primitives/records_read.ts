@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SqoBuilder, type WorkClient } from '@dedalo/mcp-common';
-import { registerTool, type ToolContext } from './_shared/register.js';
-import { rqo, type RqoOptions } from './_shared/rqo.js';
+import { registerTool, type ToolContext } from '../_shared/register.js';
+import { rqo, type RqoOptions } from '../_shared/rqo.js';
 import {
 	TipoSchema,
 	OptionalLangSchema,
@@ -10,8 +10,8 @@ import {
 	PaginationSchema,
 	FilterSchema,
 	OrderClauseSchema,
-} from './_shared/schemas.js';
-import { buildPagination } from './_shared/output.js';
+} from '../_shared/schemas.js';
+import { buildPagination } from '../_shared/output.js';
 
 /**
  * Read-only record tools (search, read, count, indexation).
@@ -27,7 +27,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 			'Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.\n' +
 			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.\n' +
 			'Portal components return locators (section_tipo+section_id) not the linked data. To read the linked record, call this tool again with the locator\'s section_tipo and section_id.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read record' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			section_id: SectionIdSchema,
@@ -58,7 +58,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 			'] }] } }\n```\n\n' +
 			'Use `dedalo_ontology_glossary` (mode="section") to discover portal components and their target_section_tipo, ' +
 			'or `dedalo_resolve_path` to validate the relational path before searching.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search records' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search records' },
 		inputSchema: z.object({
 			section_tipo: z.union([TipoSchema, z.array(TipoSchema).min(1)]).describe('Single section_tipo or array for cross-section search. Resolve via `dedalo_ontology_glossary`.'),
 			lang: OptionalLangSchema,
@@ -95,7 +95,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 		description:
 			'Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.\n' +
 			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read raw' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Read raw' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			lang: OptionalLangSchema,
@@ -120,7 +120,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 		description:
 			'Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.\n' +
 			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Count records' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Count records' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			filter: FilterSchema.optional(),
@@ -137,7 +137,7 @@ export function registerRecordsReadTools(server: McpServer, client: WorkClient, 
 		description:
 			'Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.\n' +
 			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get indexation grid' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get indexation grid' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			section_id: SectionIdSchema,
