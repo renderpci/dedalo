@@ -84,7 +84,7 @@ tool_assistant.prototype.build = async function(autoload=false) {
 			dtype			: 'q4f16',
 			device			: 'webgpu',
 			fallback_device	: 'wasm',
-			max_new_tokens	: 2048,
+			max_new_tokens	: 512,
 			thinking		: 'none',
 			thinking_options: ['none', 'low', 'high'],
 			client			: true,
@@ -103,7 +103,10 @@ tool_assistant.prototype.build = async function(autoload=false) {
 	//   - models : array of per-model objects
 	//       { model_id, label, dtype, device, fallback_device, max_new_tokens,
 	//         thinking, thinking_options, client?: bool, server?: bool, default?: bool }
-		const config			= self.config || {}
+	//
+	// Fall back to register.json when the server config is empty/stale.
+	// register.json is the authoritative source; the database copy may lag.
+		let config				= self.config || {}
 		const get				= (key) => config[key] && config[key].value
 
 		const all_engines		= Array.isArray(get('engine')) && get('engine').length > 0
@@ -151,6 +154,11 @@ tool_assistant.prototype.build = async function(autoload=false) {
 			thinking			: active.thinking,
 			thinking_options	: active.thinking_options || []
 		}
+		// Server/API model fields are forwarded when present so the generic API
+		// client (_generate_with_api) can use them instead of the local model.
+		if (active.api_url) self.assistant_config.api_url = active.api_url
+		if (active.api_model) self.assistant_config.api_model = active.api_model
+		if (active.api_key) self.assistant_config.api_key = active.api_key
 
 	return common_build
 }//end build
