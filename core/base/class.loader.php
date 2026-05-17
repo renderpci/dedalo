@@ -112,12 +112,14 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_ontology_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_mcp_api.php';
+include DEDALO_CORE_PATH . '/api/v1/common/class.dd_agent_api.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
 // Shared
 include DEDALO_SHARED_PATH . '/class.TR.php';
 include DEDALO_SHARED_PATH . '/class.OptimizeTC.php';
 include DEDALO_SHARED_PATH . '/class.subtitles.php';
+include DEDALO_SHARED_PATH . '/agent/class.agent_view_builder.php';
 
 
 

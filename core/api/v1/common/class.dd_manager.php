@@ -246,6 +246,7 @@ final class dd_manager {
 				'dd_area_maintenance_api',
 				'dd_utils_api',
 				'dd_ontology_api',
+				'dd_agent_api',
 				'dd_diffusion_api',
 				'dd_tools_api',
 				'dd_ts_api',
