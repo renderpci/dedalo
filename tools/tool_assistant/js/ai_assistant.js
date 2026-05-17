@@ -454,6 +454,119 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
+	* _EXTRACT_TOOL_RESULT
+	* MCP proxy responses wrap the real payload in {result:{content:[{type:'text',text:'...'}]}}.
+	* This extracts the inner text, strips noisy wrapper fields, and produces
+	* tool-specific compact summaries that stay under the token budget.
+	* @param object tool_result Raw MCP tool result
+	* @param string tool_name Tool name (e.g. 'dedalo_describe_section')
+	* @return string
+	*/
+	static _extract_tool_result(tool_result, tool_name) {
+
+		if (!tool_result || typeof tool_result !== 'object') {
+			return String(tool_result || '')
+		}
+
+		// Dig into the MCP proxy wrapper: result.content[0].text
+		let payload = tool_result
+		if (tool_result.result && typeof tool_result.result === 'object') {
+			const content = tool_result.result.content
+			if (Array.isArray(content) && content.length > 0 && content[0].text) {
+				try {
+					payload = JSON.parse(content[0].text)
+				} catch(e) {
+					payload = content[0].text
+				}
+			} else {
+				payload = tool_result.result
+			}
+		}
+
+		// Normalize: payload may be the parsed object or a raw string
+		let data = payload
+		if (typeof payload === 'string') {
+			try { data = JSON.parse(payload) } catch(e) { data = payload }
+		}
+		if (!data || typeof data !== 'object') {
+			return String(data).substring(0, 800)
+		}
+
+		// Strip wrapper noise
+		delete data.csrf_token
+		delete data.debug
+		delete data.dedalo_last_error
+		const inner = (data.data && typeof data.data === 'object' && data.data.result !== undefined)
+			? data.data.result
+			: data.result !== undefined ? data.result : data
+
+		// Tool-specific compact summaries
+		tool_name = tool_name || ''
+		if (tool_name.indexOf('describe_section') !== -1 && inner && inner.fields) {
+			const fields = Array.isArray(inner.fields) ? inner.fields : []
+			const lines = fields.slice(0, 40).map(function(f) {
+				return f.label + ' (' + f.type + ')'
+			})
+			return 'Section: ' + (inner.section_label || inner.section_tipo || '') + '. Fields: ' + lines.join(', ')
+		}
+		if (tool_name.indexOf('get_record') !== -1 && inner && typeof inner === 'object') {
+			const fields = (inner.fields && typeof inner.fields === 'object') ? inner.fields : inner
+			const pairs = Object.keys(fields).slice(0, 20).map(function(k) {
+				const val = fields[k]
+				const str = Array.isArray(val) ? val.map(function(v) { return v.label || v.ref || JSON.stringify(v) }).join(', ')
+					: String(val)
+				return k + ': ' + str.substring(0, 80)
+			})
+			return (inner.section_label || '') + ' #' + (inner.section_id || '') + ' — ' + pairs.join(' | ')
+		}
+		if (tool_name.indexOf('search_records_view') !== -1) {
+			let records = null
+			let count = null
+			if (Array.isArray(inner)) {
+				records = inner
+				count = inner.length
+			} else if (inner && typeof inner === 'object') {
+				if (Array.isArray(inner.records)) {
+					records = inner.records
+					const pagination_total = (inner.pagination && typeof inner.pagination === 'object')
+						? inner.pagination.total
+						: undefined
+					count = (pagination_total !== undefined) ? pagination_total : inner.records.length
+				} else if (inner.total !== undefined || inner.count !== undefined) {
+					count = (inner.total !== undefined) ? inner.total : inner.count
+				}
+			}
+			if (count !== null) {
+				const preview = records
+					? records.slice(0, 3).map(function(r, i) {
+						return '#' + (i + 1) + ': ' + JSON.stringify(r).substring(0, 120)
+					}).join(' | ')
+					: ''
+				return 'Found ' + count + ' records. ' + preview
+			}
+		}
+		if (tool_name.indexOf('count_records') !== -1 && inner && typeof inner === 'object') {
+			const total = (inner.total !== undefined) ? inner.total : null
+			if (total !== null) {
+				return 'Total: ' + total + ' records in ' + (inner.section_label || inner.section_tipo || 'section') + '.'
+			}
+		}
+		if (tool_name.indexOf('set_field') !== -1 && inner && typeof inner === 'object') {
+			return 'Updated. ' + JSON.stringify(inner).substring(0, 600)
+		}
+
+		// Fallback: compact JSON, no mid-string truncation
+		const json = JSON.stringify(inner)
+		if (json.length <= 1500) return json
+		// If too long, return a summary instead of broken JSON
+		const keys = Object.keys(inner).slice(0, 10)
+		return 'Keys: ' + keys.join(', ') + '. ' + json.substring(0, 1200) + '...[truncated]'
+	}//end _extract_tool_result
+
+
+
+
+	/**
 	* _SANITIZE_SCHEMA
 	* Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen and
 	* Gemma chat templates can consume. Gemma 4's template applies the Jinja
