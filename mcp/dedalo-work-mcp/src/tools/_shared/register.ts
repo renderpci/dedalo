@@ -27,6 +27,8 @@ export interface ToolAnnotations {
 	idempotentHint?: boolean;
 	openWorldHint?: boolean;
 	title?: string;
+	/** Tier tag: 'primitive' = wide low-level surface, 'agent' = stable LLM-friendly verbs. */
+	tier?: 'primitive' | 'agent';
 }
 
 /** Shared context threaded into every handler. */
