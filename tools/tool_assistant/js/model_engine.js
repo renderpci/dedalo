@@ -32,6 +32,15 @@ export const model_engine = class model_engine {
 
 		const on_progress = options.on_progress || (() => {})
 
+		// Server/API models have no local weights to load.
+		// Mark as loaded so the assistant can route generation to the API.
+		if (this._config.api_url) {
+			console.log('[model_engine] server model configured, skipping local load:', this._model_id)
+			this._device = 'server'
+			this._loaded = true
+			return
+		}
+
 		let device = this._device
 		if (device === 'webgpu' && !navigator.gpu) {
 			console.warn('[model_engine] WebGPU not available, falling back to WASM')
@@ -164,7 +173,7 @@ export const model_engine = class model_engine {
 
 		const messages			= options.messages || []
 		const tools				= options.tools || []
-		const max_new_tokens	= options.max_new_tokens || this._config.max_new_tokens || 2048
+		const max_new_tokens	= options.max_new_tokens || this._config.max_new_tokens || 512
 		const on_token			= options.on_token || (() => {})
 		const on_think_token	= options.on_think_token || (() => {})
 
@@ -174,16 +183,28 @@ export const model_engine = class model_engine {
 			}
 			return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
 		} catch (err) {
-			if (this._device === 'webgpu' && model_engine._is_retryable_backend_error(err)) {
-				console.warn('[model_engine] WebGPU inference failed, falling back to WASM:', err.message)
-				try {
-					await this._reload_as_wasm()
-					if (this._model_type === 'pipeline') {
-						return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
+			// Any error on WebGPU may have left the device in a bad state.
+			// Unload so the next generation starts fresh instead of re-using
+			// potentially invalid buffers.
+			if (this._device === 'webgpu') {
+				console.warn('[model_engine] WebGPU inference failed, unloading:', err.message)
+				await this.unload()
+				if (model_engine._is_retryable_backend_error(err)) {
+					console.warn('[model_engine] Retrying on fallback device (WASM)')
+					try {
+						await this._reload_as_wasm()
+						if (this._model_type === 'pipeline') {
+							return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
+						}
+						return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
+					} catch (wasm_err) {
+						throw new Error(
+							'Model backend failed on WebGPU and fallback device. ' +
+							'Original error: ' + err.message + '. ' +
+							'Fallback error: ' + wasm_err.message + '. ' +
+							'Use a smaller model or switch device in settings.'
+						)
 					}
-					return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
-				} catch (wasm_err) {
-					throw new Error('Model backend failed on WebGPU and fallback device. Use a smaller model or switch device. Last error: ' + wasm_err.message)
 				}
 			}
 			throw err
@@ -198,12 +219,16 @@ export const model_engine = class model_engine {
 			? err.message
 			: String(err || '')
 
-		return message.indexOf('bad_alloc') !== -1
+		// Only retry on errors that indicate a transient device issue.
+		// "device lost" → GPU process crashed / timed out; reloading on CPU/WASM
+		//                  can recover because the weights are re-fetched.
+		// "unaligned accesses" → known WASM/CPU alignment bug; switching device helps.
+		// "invalid due to a previous error" → WebGPU buffer corrupted by a prior
+		//    failed operation (often silent OOM). A fresh WASM context recovers.
+		// Everything else (OOM, bad_alloc, etc.) is fatal.
+		return message.indexOf('device lost') !== -1
 			|| message.indexOf('unaligned accesses') !== -1
-			|| message.indexOf('device lost') !== -1
-			|| message.indexOf('GPU') !== -1
-			|| message.indexOf('allocate memory') !== -1
-			|| message.indexOf('buffer mapping') !== -1
+			|| message.indexOf('invalid due to a previous error') !== -1
 	}//end _is_retryable_backend_error
 
 
@@ -214,10 +239,22 @@ export const model_engine = class model_engine {
 		const fb_device = this._fallback_device || 'wasm'
 		const fb_dtype = fb_device === 'wasm' ? 'q4' : (this._config.dtype || 'q4f16')
 		console.log('[model_engine] reloading on fallback device:', fb_device, 'model:', this._model_id)
+
+		// dispose old model before allocating a second copy; otherwise WebGPU
+		// buffers + WASM heap compete for the same memory and we get bad_alloc.
+		if (this._pipeline && typeof this._pipeline.dispose === 'function') {
+			try { await this._pipeline.dispose() } catch(e) {}
+		}
+		if (this._model && typeof this._model.dispose === 'function') {
+			try { await this._model.dispose() } catch(e) {}
+		}
 		this._pipeline	= null
 		this._model		= null
 		this._processor	= null
 		this._loaded	= false
+
+		// yield to GC so the browser can reclaim WebGPU buffers
+		await new Promise(function(resolve) { setTimeout(resolve, 0) })
 
 		const transformers = await import(
 			'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0'
@@ -616,11 +653,19 @@ export const model_engine = class model_engine {
 
 
 
-	unload() {
+	async unload() {
+		if (this._pipeline && typeof this._pipeline.dispose === 'function') {
+			try { await this._pipeline.dispose() } catch(e) {}
+		}
+		if (this._model && typeof this._model.dispose === 'function') {
+			try { await this._model.dispose() } catch(e) {}
+		}
 		this._pipeline	= null
 		this._model		= null
 		this._processor	= null
 		this._loaded	= false
+		// yield to GC so the browser can reclaim GPU buffers
+		await new Promise(function(resolve) { setTimeout(resolve, 0) })
 	}//end unload
 
 
