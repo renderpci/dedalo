@@ -223,7 +223,7 @@ export const ai_assistant = class ai_assistant {
 			dtype			: this._config.dtype,
 			device			: this._config.device,
 			fallback_device	: this._config.fallback_device || 'wasm',
-			max_new_tokens	: this._config.max_new_tokens || 2048,
+			max_new_tokens	: this._config.max_new_tokens || 512,
 			thinking		: this._config.thinking || 'none',
 			thinking_options: this._config.thinking_options || ['none']
 		}]
@@ -257,7 +257,7 @@ export const ai_assistant = class ai_assistant {
 				this._config.dtype				= next.dtype || 'q4f16'
 				this._config.device				= next.device || 'webgpu'
 				this._config.fallback_device	= next.fallback_device || 'wasm'
-				this._config.max_new_tokens		= next.max_new_tokens || 2048
+				this._config.max_new_tokens		= next.max_new_tokens || 512
 				this._config.thinking			= next.thinking || 'none'
 				this._config.thinking_options	= Array.isArray(next.thinking_options) ? next.thinking_options : ['none']
 			} else {
@@ -354,41 +354,37 @@ export const ai_assistant = class ai_assistant {
 
 
 
-	_build_system_prompt() {
-
-		const tools_available = this._mcp_tools && this._mcp_tools.length > 0
+	_build_system_prompt(tools_enabled) {
 
 		const prompt = [
-			'You are a Dedalo ontology-aware assistant for cultural heritage management.',
-			'',
-			'ONTOLOGY RULES (critical):',
-			'- Dédalo identifies every section, component, and record by opaque "tipo" codes (e.g. oh1, numisdata6, rsc85).',
-			'- Users speak in natural language (e.g. "Mint", "Oral History", "Name of the informant").',
-			'- NEVER guess or hardcode a tipo. ALWAYS resolve human names to tipos first.',
-			'- Use `dedalo_ontology_glossary` (mode="sections") to get ALL section names→tipos in one call. Call once per session.',
-			'- Use `dedalo_ontology_glossary` (mode="section", section_tipo="...") to inspect a section\'s components and their types.',
-			'- Portal components (with is_portal=true) link to other sections via target_section_tipo. ',
-			'  Navigate portals by: reading the main record → extracting the portal locator → reading the linked record.',
-			'- Use `dedalo_resolve_path` to validate portal paths before cross-section searches.',
-			'- For cross-section search, use `raw_sqo` with multi-hop `path` arrays ($and/q/path format, NOT rules/operator).',
-			'- Every record field has a model (e.g. component_input_text, component_portal, component_date) that determines the data format.',
-			'- Text fields use plain strings. Portal fields use locator arrays: [{section_tipo, section_id}].'
+			'You are a Dédalo assistant.',
+			'Current context: Section=' + (this._context.section_tipo || '?') +
+				' Record=' + (this._context.section_id || '?') +
+				' Component=' + (this._context.component_tipo || 'none') + '.'
 		]
 
-		if (tools_available) {
-			prompt.push('')
-			prompt.push('TOOL CALLING (critical):')
-			prompt.push('- When you need data or actions, you MUST call a tool instead of answering from memory.')
-			prompt.push('- Do NOT say "I will help you" or "Let me look that up" without calling a tool.')
+		if (tools_enabled) {
+			prompt.push(
+				'You have Dédalo tools. Use them directly — do NOT explain what you will do, just call the tool.',
+				'',
+				'describe_section: discover field labels for a section. Accepts section name or tipo.',
+				'get_record: read one record. Accepts section name or tipo.',
+				'search_records_view: search records with label-based filters. Accepts section name or tipo.',
+				'count_records_view: count records. Accepts section name or tipo.',
+				'set_field: write a value. Accepts section name or tipo; field labels are case/accent-insensitive.',
+				'',
+				'For WRITE tasks: call set_field directly. You do NOT need describe_section first.',
+				'For READ tasks on a NEW section: call describe_section first, then get_record or search_records_view.',
+				'For "how many": call count_records_view.',
+				'Confirm before destructive actions. Reply in Markdown.'
+			)
+		} else {
+			prompt.push(
+				'Your ONLY task is to answer the user in plain text using the tool results already in the conversation.',
+				'DO NOT use call: syntax. DO NOT call any tools.',
+				'Output a natural language answer in Markdown.'
+			)
 		}
-
-		prompt.push('')
-		prompt.push('Current context:')
-		prompt.push('- Section: ' + (this._context.section_tipo || 'unknown'))
-		prompt.push('- Record ID: ' + (this._context.section_id || 'unknown'))
-		prompt.push('- Active component: ' + (this._context.component_tipo || 'none'))
-		prompt.push('')
-		prompt.push('Always confirm with the user before performing destructive actions (delete, modify). Format responses in Markdown.')
 
 		return prompt.join('\n')
 	}//end _build_system_prompt
@@ -397,33 +393,7 @@ export const ai_assistant = class ai_assistant {
 
 	_build_few_shot_messages() {
 
-		return [
-			{
-				role	: 'user',
-				content	: 'How many records are in Oral History?'
-			},
-			{
-				role		: 'assistant',
-				content		: null,
-				tool_calls	: [{
-					id			: 'fewshot_0',
-					type		: 'function',
-					function	: {
-						name		: 'dedalo_count_records',
-						arguments	: { section_tipo: 'oh1' }
-					}
-				}]
-			},
-			{
-				role			: 'tool',
-				tool_call_id	: 'fewshot_0',
-				content			: JSON.stringify({ total: 42 })
-			},
-			{
-				role	: 'assistant',
-				content	: 'There are 42 records in the Oral History section.'
-			}
-		]
+		return []
 	}//end _build_few_shot_messages
 
 
@@ -432,24 +402,18 @@ export const ai_assistant = class ai_assistant {
 
 		if (!this._mcp_tools.length) return []
 
-		const allowed_tools = [
-			'dedalo_get_environment',
+		// Tag-driven selection: agent tier tools are always available;
+		// primitive discovery tools are included as fallback when agent
+		// tools for section listing are absent.
+		const primitive_discovery_fallback = [
 			'dedalo_ontology_glossary',
-			'dedalo_list_sections',
-			'dedalo_resolve_ontology',
-			'dedalo_resolve_path',
-			'dedalo_get_section_elements_context',
-			'dedalo_read_record',
-			'dedalo_search_records',
-			'dedalo_count_records',
-			'dedalo_create_record',
-			'dedalo_save_component',
-			'dedalo_delete_record',
-			'dedalo_start'
+			'dedalo_list_sections'
 		]
 
 		const sanitized_tools = this._mcp_tools.filter(function(tool) {
-			return allowed_tools.indexOf(tool.name) !== -1
+			if (tool.annotations && tool.annotations.tier === 'agent') return true
+			if (primitive_discovery_fallback.indexOf(tool.name) !== -1) return true
+			return false
 		}).map(function(tool) {
 			// force the top-level parameters schema to be an object even if the
 			// tool exposes an empty / non-object inputSchema
@@ -464,7 +428,10 @@ export const ai_assistant = class ai_assistant {
 				function	: {
 					name		: tool.name,
 					description	: ai_assistant._tool_description(tool),
-					parameters	: ai_assistant._sanitize_schema(raw)
+					parameters	: ai_assistant._minimize_schema(
+						ai_assistant._sanitize_schema(raw),
+						0
+					)
 				}
 			}
 		})
@@ -479,17 +446,9 @@ export const ai_assistant = class ai_assistant {
 	static _tool_description(tool) {
 
 		const description = tool.description || ''
-		const full_description_tools = [
-			'dedalo_ontology_glossary',
-			'dedalo_resolve_ontology',
-			'dedalo_resolve_path',
-			'dedalo_create_record',
-			'dedalo_save_component',
-			'dedalo_search_records'
-		]
-		const limit = full_description_tools.indexOf(tool.name) !== -1 ? 1200 : 350
-
-		return description.substring(0, limit)
+		// Cap every description at 200 chars. At 34 tools, even 350 chars each
+		// blows the context window; 200 keeps the total tool schema under control.
+		return description.substring(0, 200)
 	}//end _tool_description
 
 
