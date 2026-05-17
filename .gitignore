@@ -42,6 +42,7 @@ test
 !/test
 !/core/widgets/test
 !/mcp/dedalo-work-mcp/test
+!/diffusion/api/v1/test
 *.cache
 .idea
 certs
