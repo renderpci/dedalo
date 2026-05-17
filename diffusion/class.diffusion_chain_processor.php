@@ -183,9 +183,7 @@ class diffusion_chain_processor {
 		$properties = $diffusion_node->get_properties();
 		$publishable = $properties->is_publishable ?? null;
 
-		if (defined('SHOW_DEBUG') && SHOW_DEBUG) {
-			echo "   DEBUG process_relation_component: diffusion_tipo = $diffusion_tipo, publishable = " . var_export($publishable, true) . "\n";
-		}
+
 
 		// Reset value on temporary container to accumulate validated/resolved items later
 		$new_diffusion_data = $diffusion_data;
@@ -209,10 +207,6 @@ class diffusion_chain_processor {
 			// Check publishability of the LINKED section (not the parent section).
 			// $publishable (from diffusion node properties) overrides the live check.
 			$current_is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
-
-			if (defined('SHOW_DEBUG') && SHOW_DEBUG) {
-				echo "     DEBUG locator loop: locator = {$locator->section_tipo}_{$locator->section_id}, current_is_publishable = " . var_export($current_is_publishable, true) . "\n";
-			}
 
 			// If the parent is not publishable, skip the true locators
 			// This is because the parent is not publishable, so the true locators should not changed
