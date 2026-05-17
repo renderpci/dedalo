@@ -41,6 +41,7 @@ des
 test
 !/test
 !/core/widgets/test
+!/mcp/dedalo-work-mcp/test
 *.cache
 .idea
 certs
