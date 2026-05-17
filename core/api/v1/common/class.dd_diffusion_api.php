@@ -37,6 +37,11 @@ class dd_diffusion_api {
 		 */
 		public static array $datum_unresolved = [];
 
+		/**
+		 * @var array Stores publishable override states for locators.
+		 */
+		public static array $publishable_overrides = [];
+
 
 
 	/**
@@ -84,6 +89,7 @@ class dd_diffusion_api {
 			diffusion_activity_logger::reset_cache();
 			self::$datum = [];
 			self::$datum_unresolved = [];
+			self::$publishable_overrides = [];
 
 			// 1. Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
 			$diffusion_element_tipo = $options->diffusion_element_tipo
@@ -520,7 +526,8 @@ class dd_diffusion_api {
 			// set the locator as used
 			diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
 
-			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
+			$override = self::$publishable_overrides["{$locator->section_tipo}_{$locator->section_id}"] ?? null;
+			$is_publishable = $publishable ?? $override ?? diffusion_utils::is_publishable($locator);
 
 			// Build fields keyed by diffusion_tipo
 			$fields = new stdClass();

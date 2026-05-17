@@ -218,6 +218,9 @@ class diffusion_chain_processor {
 			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
 			if ($level > 0 && !empty($target_diffusion_tipo) && $element_model !== 'relation_list') {				
 				$target_level = $level - 1;
+				if ($current_is_publishable === true) {
+					dd_diffusion_api::$publishable_overrides["{$locator->section_tipo}_{$locator->section_id}"] = true;
+				}
 				dd_diffusion_api::$datum_unresolved["$target_level:$target_diffusion_tipo"][] = $locator;
 			}
 
