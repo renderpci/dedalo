@@ -565,6 +565,34 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* _NORMALIZE_TOOL_ARGS
+	* Fix common LLM output mismatches before sending to MCP.
+	* Maps ISO-style language codes (e.g. "en", "es") to Dédalo lg-xxx form.
+	* @param string tool_name
+	* @param object args
+	* @return object
+	*/
+	static _normalize_tool_args(tool_name, args) {
+		if (!args || typeof args !== 'object') return args
+		const out = Object.assign({}, args)
+		if (typeof out.lang === 'string') {
+			const v = out.lang.trim().toLowerCase()
+			if (!v.startsWith('lg-')) {
+				const iso2to3 = {
+					'en': 'eng', 'es': 'spa', 'fr': 'fra', 'de': 'deu',
+					'it': 'ita', 'pt': 'por', 'ca': 'cat', 'gl': 'glg',
+					'eu': 'eus', 'nl': 'nld', 'ru': 'rus', 'ja': 'jpn',
+					'zh': 'zho', 'ar': 'ara', 'hi': 'hin', 'ko': 'kor'
+				}
+				const code = iso2to3[v] || v
+				out.lang = 'lg-' + code
+			}
+		}
+		return out
+	}//end _normalize_tool_args
+
+
 
 	/**
 	* _SANITIZE_SCHEMA
