@@ -759,6 +759,159 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* _GENERATE_WITH_API
+	* Streams generation through a generic OpenAI-compatible HTTP API.
+	* Works with any endpoint that follows the /v1/chat/completions streaming
+	* protocol: Ollama, OpenAI, vLLM, localAI, etc.
+	*
+	* @param array messages OpenAI-format message list
+	* @param array tools Tool declarations in OpenAI format
+	* @param number max_new_tokens
+	* @param function on_token Stream callback for text tokens
+	* @param function on_think_token Stream callback for thinking tokens (ignored for API)
+	* @param AbortSignal signal
+	* @return object {full_text, streamed_text, raw_result}
+	*/
+	async _generate_with_api(messages, tools, max_new_tokens, on_token, on_think_token, signal) {
+
+		const url = this._config.api_url
+		if (!url) {
+			throw new Error('api_url not configured')
+		}
+
+		const api_key = this._config.api_key || null
+		const model = this._config.api_model || 'default'
+
+		const body = {
+			model		: model,
+			messages	: messages,
+			stream		: true,
+			max_tokens	: max_new_tokens,
+			temperature	: 0.7
+		}
+		if (tools && tools.length > 0) {
+			body.tools = tools
+		}
+
+		const headers = {
+			'Content-Type': 'application/json'
+		}
+		if (api_key) {
+			headers['Authorization'] = 'Bearer ' + api_key
+		}
+
+		const response = await fetch(url, {
+			method	: 'POST',
+			headers	: headers,
+			body	: JSON.stringify(body),
+			signal	: signal
+		})
+
+		if (!response.ok) {
+			const text = await response.text().catch(function() { return '' })
+			throw new Error('API HTTP ' + response.status + ': ' + text.substring(0, 500))
+		}
+
+		const reader	= response.body.getReader()
+		const decoder	= new TextDecoder()
+		let text		= ''
+		let buffer		= ''
+		const tool_calls_acc = []
+		let done		= false
+
+		while (!done) {
+			const read_result = await reader.read()
+			if (read_result.done) break
+			buffer += decoder.decode(read_result.value, { stream: true })
+
+			// SSE events are separated by double-newline
+			const events = buffer.split('\n\n')
+			buffer = events.pop() || ''
+
+			for (let e = 0; e < events.length; e++) {
+				const lines = events[e].split('\n')
+				for (let l = 0; l < lines.length; l++) {
+					const line = lines[l]
+					if (!line.startsWith('data: ')) continue
+					const data = line.substring(6).trim()
+					if (data === '[DONE]') {
+						done = true
+						break
+					}
+					if (!data) continue
+
+					try {
+						const chunk = JSON.parse(data)
+						
+						const delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta
+						if (!delta) continue
+
+						if (delta.content) {
+							text += delta.content
+							on_token(delta.content)
+						}
+
+						if (delta.tool_calls) {
+							for (let i = 0; i < delta.tool_calls.length; i++) {
+								const tc = delta.tool_calls[i]
+								const idx = tc.index !== undefined ? tc.index : i
+								if (!tool_calls_acc[idx]) {
+									tool_calls_acc[idx] = {
+										id		: tc.id || ('call_' + idx),
+										type	: 'function',
+										function: { name: '', arguments: '' }
+									}
+								}
+								if (tc.function) {
+									if (tc.function.name) {
+										tool_calls_acc[idx].function.name += tc.function.name
+									}
+									if (tc.function.arguments !== undefined) {
+										tool_calls_acc[idx].function.arguments += tc.function.arguments
+									}
+								}
+							}
+						}
+					} catch (parse_err) {
+						// malformed SSE chunk, skip
+					}
+				}
+			}
+		}
+
+		// Assemble final tool_calls array
+		const tool_calls = tool_calls_acc
+			.filter(function(tc) { return tc && tc.function.name })
+			.map(function(tc) {
+				return {
+					id		: tc.id,
+					type	: tc.type,
+					function: {
+						name		: tc.function.name,
+						arguments	: tc.function.arguments
+					}
+				}
+			})
+
+		// raw_result shape compatible with model_engine.parse_tool_calls path (1)
+		const raw_result = {
+			generated_text: [{
+				role		: 'assistant',
+				content		: text,
+				tool_calls	: tool_calls.length > 0 ? tool_calls : undefined
+			}]
+		}
+
+		return {
+			full_text	: text,
+			streamed_text: text,
+			raw_result	: raw_result
+		}
+	}//end _generate_with_api
+
+
+
 	async _handle_user_message(message) {
 
 		const self = this
@@ -788,9 +941,7 @@ export const ai_assistant = class ai_assistant {
 		let iteration			= 0
 
 		const ontology_context = await self._build_ontology_context_for_message(message)
-
-		const system_prompt	= self._build_system_prompt() + (ontology_context ? '\n\n' + ontology_context : '')
-		const tools			= self._build_tools_for_model()
+		const tools				= self._build_tools_for_model()
 
 		try {
 			while (iteration < max_iterations) {
@@ -800,17 +951,35 @@ export const ai_assistant = class ai_assistant {
 					throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
 				}
 
-				const few_shot = (iteration === 1 && tools.length > 0)
+				// Rebuild system prompt each iteration: tools enabled on first two
+				// turns to allow describe_section → search_records_view chains.
+				const tools_enabled = iteration <= 2 && tools.length > 0
+				const system_prompt = self._build_system_prompt(tools_enabled)
+					+ (ontology_context ? '\n\n' + ontology_context : '')
+
+				// Truncate conversation to last 10 messages to prevent KV cache from
+				// growing unbounded with large tool results. 10 messages ≈ 3–4
+				// tool-answer pairs which is enough for describe→search→get→answer.
+				const trimmed_conversation = self._conversation.slice(-10)
+
+				const few_shot = tools_enabled
 					? self._build_few_shot_messages()
 					: []
 
 				const raw_messages = [
 					{ role: 'system', content: system_prompt },
 					...few_shot,
-					...self._conversation
+					...trimmed_conversation
 				]
 
-				const messages = ai_assistant._normalize_messages_for_model(raw_messages)
+				// On answer-only turns, append an explicit instruction so the model
+				// knows its task is to answer, not to call more tools.
+				if (!tools_enabled) {
+					raw_messages.push({
+						role	: 'user',
+						content	: 'Please answer my previous question based on the tool result provided above. Do not call any tools.'
+					})
+				}
 
 				let stream_started = false
 				const stream_callback = (token_text) => {
@@ -825,16 +994,45 @@ export const ai_assistant = class ai_assistant {
 					self._chat_render.append_thinking_token(token_text)
 				}
 
-				const generation_result = await self._model_engine.generate({
-					messages		: messages,
-					tools			: tools,
-					max_new_tokens	: self._config.max_new_tokens || 2048,
-					signal			: self._abort_controller.signal,
-					on_token		: stream_callback,
-					on_think_token	: think_stream_callback
-				})
+				// Only expose tools on the first iteration. Once a tool has been called
+				// and its result added to the conversation, the model should answer.
+				const tools_for_this_turn = iteration === 1 ? tools : []
 
-				const tool_calls = self._model_engine.parse_tool_calls(generation_result)
+				// Tool-calling turns may need more tokens for complex reasoning;
+				// answer-only turns are capped at 256 to reduce KV cache pressure.
+				const max_new_tokens = tools_for_this_turn.length > 0
+					? (self._config.max_new_tokens || 512)
+					: 256
+
+				// Branch: use external API when a server model is configured;
+				// otherwise use the local WebGPU/WASM model.
+				// When api_url is present ALL turns go through the API; selecting a
+				// local model keeps chat on-device as before.
+				const use_api = !!self._config.api_url
+				const generation_result = use_api
+					? await self._generate_with_api(
+						raw_messages,
+						tools_for_this_turn,
+						max_new_tokens,
+						stream_callback,
+						think_stream_callback,
+						self._abort_controller.signal
+					)
+					: await self._model_engine.generate({
+						messages		: ai_assistant._normalize_messages_for_model(raw_messages),
+						tools			: tools_for_this_turn,
+						max_new_tokens	: max_new_tokens,
+						signal			: self._abort_controller.signal,
+						on_token		: stream_callback,
+						on_think_token	: think_stream_callback
+					})
+
+				// Only parse tool calls when tools were declared for this turn.
+				// On iteration 2+ tools are cleared; any 'call:...' text the model
+				// produces must be treated as regular text, not a tool call.
+				const tool_calls = tools_for_this_turn.length > 0
+					? self._model_engine.parse_tool_calls(generation_result)
+					: []
 
 				if (tool_calls && tool_calls.length > 0) {
 
@@ -852,11 +1050,13 @@ export const ai_assistant = class ai_assistant {
 							if (typeof args_obj === 'string') args_obj = JSON.parse(args_obj)
 						} catch(e) {}
 
+						args_obj = ai_assistant._normalize_tool_args(tool_call.function.name, args_obj)
+
 						const indicator = self._chat_render.add_tool_call(
 							tool_call.function.name, 'calling', args_obj, null
 						)
 
-						const destructive_tools = ['dedalo_delete_record', 'dedalo_save_component']
+						const destructive_tools = ['dedalo_delete_record', 'dedalo_set_field']
 						if (destructive_tools.indexOf(tool_call.function.name) >= 0) {
 							const confirmed = await self._chat_render.confirm_action(
 								t('confirm_action', 'Confirm action') + ': ' + tool_call.function.name
@@ -875,12 +1075,14 @@ export const ai_assistant = class ai_assistant {
 						try {
 							const tool_result = await self._mcp_client.tools_call(
 								tool_call.function.name,
-								tool_call.function.arguments
+								args_obj
 							)
-							const result_payload = (tool_result && tool_result.result && tool_result.result.content) || tool_result
-							const result_text = JSON.stringify(result_payload)
+							const result_text = ai_assistant._extract_tool_result(
+								tool_result,
+								tool_call.function.name
+							)
 
-							self._chat_render.update_tool_call(indicator, 'done', result_payload)
+							self._chat_render.update_tool_call(indicator, 'done', tool_result)
 
 							self._conversation.push({
 								role			: 'tool',
@@ -949,29 +1151,14 @@ export const ai_assistant = class ai_assistant {
 
 			if (!resolved.length && !ambiguous.length) return null
 
-			const lines = [
-				'Ontology pre-resolution context:',
-				'- The following human ontology terms were detected in the user message.',
-				'- Use resolved `section_tipo` values directly when selecting/calling tools.',
-				'- Do not ask the user for a tipo when a unique resolved value is available.'
-			]
-
+			const parts = []
 			if (resolved.length) {
-				lines.push('Resolved section terms:')
-				for (const item of resolved) {
-					lines.push('- ' + item)
-				}
+				parts.push('Resolved: ' + resolved.join('; '))
 			}
-
 			if (ambiguous.length) {
-				lines.push('Ambiguous section terms:')
-				for (const item of ambiguous) {
-					lines.push('- ' + item)
-				}
-				lines.push('For ambiguous terms, ask the user to choose one candidate before making data changes.')
+				parts.push('Ambiguous: ' + ambiguous.join('; '))
 			}
-
-			return lines.join('\n')
+			return parts.length ? parts.join('. ') + '.' : null
 		} catch (err) {
 			console.warn('[ai_assistant] ontology pre-resolution failed:', err)
 			return 'Ontology pre-resolution failed: ' + err.message + '. Use `dedalo_ontology_glossary` or `dedalo_resolve_ontology` before any data tool.'
