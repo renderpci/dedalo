@@ -455,19 +455,21 @@ async function run_background_rdf_diffusion(
 				const records        = datum_group.data ?? [];
 
 				for (const record of records) {
-					const entries = record.entries?.[diffusion_tipo] ?? [];
-					for (const entry of entries) {
-						if (entry.file_url) {
-							all_file_entries.push({ file_url: entry.file_url });
-							// Derive filesystem path from URL
-							const media_url_with_subpath = DEDALO_MEDIA_URL + sub_path;
-							const rel  = entry.file_url.startsWith(media_url_with_subpath)
-								? entry.file_url.slice(media_url_with_subpath.length)
-								: path.basename(entry.file_url);
-							all_file_urls.push(path.join(DEDALO_MEDIA_PATH + sub_path, rel));
-						}
-						if (entry.value && typeof entry.value === 'string') {
-							raw_xml_parts.push(entry.value);
+					const groups = record.fields?.[diffusion_tipo] ?? [];
+					for (const group of groups) {
+						for (const entry of group.entries ?? []) {
+							if (entry.file_url) {
+								all_file_entries.push({ file_url: entry.file_url });
+								// Derive filesystem path from URL
+								const media_url_with_subpath = DEDALO_MEDIA_URL + sub_path;
+								const rel  = entry.file_url.startsWith(media_url_with_subpath)
+									? entry.file_url.slice(media_url_with_subpath.length)
+									: path.basename(entry.file_url);
+								all_file_urls.push(path.join(DEDALO_MEDIA_PATH + sub_path, rel));
+							}
+							if (entry.value && typeof entry.value === 'string') {
+								raw_xml_parts.push(entry.value);
+							}
 						}
 					}
 					global_counter++;
