@@ -411,13 +411,18 @@
                   {
                     "name": "local",
                     "type": "browser",
-                    "label": "Local transcriber"
+                    "label": "Local engine",
+                     "client": true
+                  },
+                   {
+                    "name": "Server",
+                    "type": "server",
+                    "label": "Server engine"
                   }
                 ],
                 "client": true
               },
             "models": {
-              "client": true,
               "value": [
                 {
                   "model_id": "onnx-community/Qwen3.5-4B-ONNX-OPT",
@@ -440,8 +445,29 @@
                   "thinking": "none",
                   "thinking_options": ["none"],
                   "client": true
+                },
+                {
+                  "api_url": "http://127.0.0.1:1234/v1/chat/completions",
+                  "api_model": "qwen3.6-35b-a3b-mlx",
+                  "model_id": "server/qwen3.6-35b-a3b-mlx",
+                  "label": "Qwen 3.6 35B A3B MLX",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none"],
+                  "server": true
+                },
+                 {
+                  "api_url": "http://127.0.0.1:11434/v1/chat/completions",
+                  "api_model": "gemma4:e4b",
+                  "model_id": "server/gemma4:e4b",
+                  "label": "Gemma 4 E4B",
+                  "max_new_tokens": 2048,
+                  "thinking": "none",
+                  "thinking_options": ["none"],
+                  "server": true
                 }
-              ]
+              ],
+              "client": true
             }
           }
         ]
