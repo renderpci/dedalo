@@ -297,6 +297,15 @@ tool_export.prototype.get_export_grid = async function(options) {
 						self.dd_grid = dd_grid;
 						first_chunk = false;
 						resolve(dd_grid);
+
+						// Pause the stream processing until the grid is mounted in the DOM.
+						// This prevents a race condition where rows are added to dd_grid.data
+						// and rendered by both dd_grid.render() and _append_row_to_grid_ui().
+						let wait_cycles = 0;
+						while((!self.dd_grid.node || !document.body.contains(self.dd_grid.node)) && wait_cycles < 100) {
+							await new Promise(r => setTimeout(r, 50));
+							wait_cycles++;
+						}
 					} else {
 						// Subsequent chunks are rows
 						if (self.dd_grid) {
