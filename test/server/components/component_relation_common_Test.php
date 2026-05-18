@@ -676,6 +676,28 @@ final class component_relation_common_test extends BaseTestCase {
 			'expected type array : ' . PHP_EOL
 				. gettype($value->result)
 		);
+
+		// v7 format: locator objects have section_id, section_tipo, from_component_tipo (NOT 'value')
+		$this->assertTrue(
+			is_object($value->result[0]),
+			'expected first result item to be object (locator)'
+		);
+		$this->assertTrue(
+			property_exists($value->result[0], 'section_id'),
+			'expected locator to have "section_id" property'
+		);
+		$this->assertTrue(
+			property_exists($value->result[0], 'section_tipo'),
+			'expected locator to have "section_tipo" property'
+		);
+		$this->assertTrue(
+			property_exists($value->result[0], 'from_component_tipo'),
+			'expected locator to have "from_component_tipo" property'
+		);
+		$this->assertFalse(
+			property_exists($value->result[0], 'value'),
+			'expected locator to NOT have "value" property (locators use section_id/section_tipo)'
+		);
 	}//end test_conform_import_data
 
 
