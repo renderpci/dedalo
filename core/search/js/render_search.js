@@ -408,6 +408,11 @@ render_search.prototype.render_search_buttons = function(){
 			self.exec_search()
 		}
 		max_input.addEventListener('change', change_handler)
+		// focus event
+		const focus_handler = (e) => {
+		   max_input.select();
+		}
+		max_input.addEventListener('focus', focus_handler)
 		// set node pointer
 		self.max_input = max_input
 
@@ -454,21 +459,6 @@ render_search.prototype.render_search_buttons = function(){
 			self.reset()
 		}
 		reset_button.addEventListener('mousedown', reset_mousedown_handler)
-
-	// Show all
-		const show_all_fn = (e) => {
-			e.stopPropagation()
-			self.show_all(show_all_button)
-			// Close search div
-			toggle_search_panel(self) // toggle to open from default state close
-		}
-		const show_all_button = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button show_all',
-			inner_html		: get_label.show_all || 'Show all',
-			parent			: reset_group
-		})
-		show_all_button.addEventListener('mousedown', show_all_fn)
 
 	// Submit button
 		const submit_fn = (e) => {
@@ -756,8 +746,12 @@ render_search.prototype.build_search_component = async function(options) {
 			const down_btn	= el.querySelector('.button.down')
 			const has_prev	= el.previousElementSibling && el.previousElementSibling.classList.contains('search_component')
 			const has_next	= el.nextElementSibling && el.nextElementSibling.classList.contains('search_component')
-			up_btn.classList.toggle('disabled', !has_prev)
-			down_btn.classList.toggle('disabled', !has_next)
+			if (up_btn) {
+				up_btn.classList.toggle('disabled', !has_prev)
+			}
+			if (down_btn) {
+				down_btn.classList.toggle('disabled', !has_next)
+			}
 		}
 
 	// set initial button state
