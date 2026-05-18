@@ -137,6 +137,13 @@ class ontology_utils {
 			return false;
 		}
 
+		// is model
+		$ontology_node = ontology_node::get_instance($tipo);
+		$is_model = $ontology_node->get_is_model();
+		if ($is_model === true) {
+			return true;
+		}
+
 		// try to resolve model. If empty, the tipo do not exists in dd_ontology
 		$model = ontology_node::get_model_by_tipo( $tipo, true );
 		if (empty($model)) {
