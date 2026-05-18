@@ -29,6 +29,7 @@ final class dd_core_api {
 		'get_indexation_grid',
 		'get_environment',
 		'get_ontology_info',
+		'get_activity_metric',
 		'test'
 	];
 
