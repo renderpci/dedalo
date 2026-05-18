@@ -135,6 +135,24 @@ Also you can check the ontology [here](https://dedalo.dev/ontology).
 
 In general Dédalo import a [stringify](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify) [JSON](https://www.json.org/json-en.html) for every data. But, for create a useful and easy import process, is possible use a string representation formats of data.
 
+### Internal stored format (v7)
+
+Dédalo v7 stores component data as **arrays of objects** with specific properties depending on the component type. This differs from v6 which stored plain string/number arrays.
+
+| Component type | Stored format | Key property |
+| --- | --- | --- |
+| `component_input_text` | `[{"value":"Hello","lang":"lg-eng","id":1}]` | `value` |
+| `component_text_area` | `[{"value":"<p>Hello</p>","lang":"lg-eng","id":1}]` | `value` |
+| `component_email` | `[{"value":"a@b.com","lang":"lg-nolan","id":1}]` | `value` |
+| `component_number` | `[{"value":5.87,"lang":"lg-nolan","id":1}]` | `value` |
+| `component_date` | `[{"start":{"year":2023,"month":10,"day":26},"id":1,"lang":"lg-nolan"}]` | `start`/`end` |
+| `component_iri` | `[{"iri":"https://dedalo.dev","id":1,"lang":"lg-nolan"}]` | `iri` |
+| Relation components | `[{"section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191","type":"dd151"}]` | `section_id`/`section_tipo` |
+
+!!! note "value property vs native properties"
+
+    Text, email, and number components use the `value` property to store their data. Date components use `start`/`end`, IRI components use `iri`, and relation components use `section_id`/`section_tipo`. The `id` and `lang` properties are auto-assigned by the import process and should not be included in the import CSV data.
+
 ---
 
 ### Plain text
@@ -143,8 +161,8 @@ By default import model use the JSON format of his data, an object with lang pro
 
 ```json
 {
-    "lg-spa" : ["mi dato para importar", "Otro dato"],
-    "lg-eng" : ["my import data", "Other data to import"]
+    "lg-spa" : [{"value":"mi dato para importar"}, {"value":"Otro dato"}],
+    "lg-eng" : [{"value":"my import data"}, {"value":"Other data to import"}]
 }
 ```
 
@@ -154,14 +172,18 @@ The table to import
 
 | section_id    | oh14 |
 | ------------  | ---- |
-| 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
+| 1             | {"lg-spa": \[{"value":"mi dato para importar"},{"value":"Otro dato"}]} |
 
 Will be encoded in CSV format as:
 
 ```text
 section_id;rsc86
-1;"{""lg-spa"":[""mi dato para importar"",""Otro dato""]}"
+1;"{""lg-spa":[{""value"":""mi dato para importar""},{""value"":""Otro dato""}]}"
 ```
+
+!!! note "v7 format"
+
+    In v7, each data item is an object with a `value` property. The `id` and `lang` properties are auto-assigned by the import process. You can also use the v6-style plain string arrays `["mi dato"]` — the import process will normalize them into v7 objects automatically.
 
 #### Alternative formats to import text
 
@@ -171,13 +193,17 @@ section_id;rsc86
     ["mi dato para importar", "Otro dato"]
     ```
 
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data. Each string will be automatically wrapped into a v7 object with `value` property.
 
     Example:
 
     section_id | oh14
     --- | ---
     1 | \["mi dato para importar","Otro dato"]
+
+!!! note "v7 format"
+
+    In v7, each text item is stored as an object with a `value` property. You can also use the v6-style plain string arrays `["mi dato"]` — the import process will normalize them into v7 objects automatically.
 
 2. Plain text
 
@@ -197,8 +223,8 @@ section_id;rsc86
 
     ```json
     {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["my imported data", "Other data"]
+        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
+        "lg-eng" : [{"value":"my imported data", "lang":"lg-eng", "id":1}, {"value":"Other data", "lang":"lg-eng", "id":2}]
     }
     ```
 
@@ -206,8 +232,8 @@ section_id;rsc86
 
     ```json
     {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["new data to import"]
+        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
+        "lg-eng" : [{"value":"new data to import", "lang":"lg-eng", "id":1}]
     }
     ```
 
@@ -373,8 +399,8 @@ By default import model use the JSON format of his data, an object with lang pro
 
 ```json
 {
-    "lg-cat" : ["<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"],
-    "lg-eng" : ["<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"]
+    "lg-cat" : [{"value":"<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"}],
+    "lg-eng" : [{"value":"<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"}]
 }
 ```
 
@@ -384,13 +410,13 @@ The table to import
 
 | section_id    | numisdata18 |
 | ------------  | ---- |
-| 1             | `{"lg-cat": ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]}` |
+| 1             | `{"lg-cat": [{"value":"<p>El meu text per <strong>importar</strong></p>"},{"value":"<p>Altra dada</p>"}]}` |
 
 Will be encoded in CSV format as:
 
 ```text
 section_id;numisdata18
-1;"{""lg-cat"": [""<p>El meu text per <strong>importar</strong></p>"",""<p>Altra dada</p>""]}"
+1;"{""lg-cat"": [{""value"":""<p>El meu text per <strong>importar</strong></p>""},{""value"":""<p>Altra dada</p>""}]}"
 ```
 
 #### Alternative formats to import formated text
@@ -401,13 +427,17 @@ section_id;numisdata18
     ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]
     ```
 
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data.
+    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data. Each string will be automatically wrapped into a v7 object with `value` property.
 
     Example:
 
     section_id | oh14
     --- | ---
     1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
+
+!!! note "v7 format"
+
+    In v7, each formatted text item is stored as an object with a `value` property. You can also use the v6-style plain string arrays `["<p>text</p>"]` — the import process will normalize them into v7 objects automatically.
 
 2. Formatted text
 
@@ -427,8 +457,8 @@ section_id;numisdata18
 
     ```json
     {
-        "lg-cat" : ["<p>la meva dada importada</p>", "<p>Altra dada</p>"],
-        "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
+        "lg-cat" : [{"value":"<p>la meva dada importada</p>", "lang":"lg-cat", "id":1}, {"value":"<p>Altra dada</p>", "lang":"lg-cat", "id":2}],
+        "lg-eng" : [{"value":"<p>my imported data</p>", "lang":"lg-eng", "id":1}, {"value":"<p>Other data</p>", "lang":"lg-eng", "id":2}]
     }
     ```
 
@@ -436,8 +466,8 @@ section_id;numisdata18
 
     ```json
     {
-        "lg-cat" : ["<p>Nou text per <strong>importar</strong></p>"],
-        "lg-eng" : ["<p>my imported data</p>", "<p>Other data</p>"]
+        "lg-cat" : [{"value":"<p>Nou text per <strong>importar</strong></p>", "lang":"lg-cat", "id":1}],
+        "lg-eng" : [{"value":"<p>my imported data</p>", "lang":"lg-eng", "id":1}, {"value":"<p>Other data</p>", "lang":"lg-eng", "id":2}]
     }
     ```
 
@@ -461,8 +491,8 @@ section_id;numisdata18
 
     ```json
     {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["my imported data", "Other data"]
+        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
+        "lg-eng" : [{"value":"my imported data", "lang":"lg-eng", "id":1}, {"value":"Other data", "lang":"lg-eng", "id":2}]
     }
     ```
 
@@ -470,8 +500,8 @@ section_id;numisdata18
 
     ```json
     {
-        "lg-spa" : ["mi dato importado", "Otro dato"],
-        "lg-eng" : ["new data to import"]
+        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
+        "lg-eng" : [{"value":"new data to import", "lang":"lg-eng", "id":1}]
     }
     ```
 
@@ -484,7 +514,7 @@ section_id;numisdata18
 By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of values.
 
 ```json
-[104,-75.35]
+[{"value":104},{"value":-75.35}]
 ```
 
 Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
@@ -493,14 +523,18 @@ The table to import
 
 | section_id    | numisdata133     |
 | ------------  | ---------------- |
-| 1             | \[104,-75.35]    |
+| 1             | \[{"value":104},{"value":-75.35}]    |
 
 Will be encoded in CSV format as:
 
 ```text
 section_id;rsc86
-1;[104,-75.35]
+1;[{""value"":104},{""value"":-75.35}]
 ```
+
+!!! note "v7 format"
+
+    In v7, each number is stored as an object with a `value` property. You can also use the v6-style plain number arrays `[104,-75.35]` — the import process will normalize them into v7 objects automatically.
 
 #### Alternative formats to import numbers
 
@@ -522,7 +556,7 @@ section_id;rsc86
 
     ```json
     {
-        "lg-nolan" : [104,-75.35]
+        "lg-nolan" : [{"value":104, "lang":"lg-nolan", "id":1},{"value":-75.35, "lang":"lg-nolan", "id":2}]
     }
     ```
 
@@ -530,7 +564,7 @@ section_id;rsc86
 
     ```json
     {
-        "lg-nolan" : [33.85]
+        "lg-nolan" : [{"value":33.85, "lang":"lg-nolan", "id":1}]
     }
     ```
 
