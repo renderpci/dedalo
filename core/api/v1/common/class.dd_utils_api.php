@@ -2358,7 +2358,7 @@ final class dd_utils_api {
 		$mime_types = array(
 			[
 				'mime'		=> 'text/plain',
-				'extension'	=> ['txt','glsl']
+				'extension'	=> ['txt','glsl','csv']
 			],
 			[
 				'mime'		=> 'text/html',
@@ -2366,7 +2366,11 @@ final class dd_utils_api {
 			],
 			[
 				'mime'		=> 'text/css',
-				'extension'	=> ['css','csv']
+				'extension'	=> ['css']
+			],
+			[
+				'mime'		=> 'text/csv',
+				'extension'	=> ['csv']
 			],
 			// application/javascript removed: prevents script injection via uploaded .js files
 			[
