@@ -2729,6 +2729,17 @@ class ontology {
 				return null;
 			}
 
+		// Model protection: Prevent overwriting ontology models (e.g., 'area', 'component_input_text')
+		// Models are abstract definitions that should not have local overrides.
+		// Construct the tipo from tld+section_id and verify if this node is a model.
+			$tld  = get_tld_from_tipo($section_tipo);
+			$tipo = $tld . $section_id;
+			$ontology_node = ontology_node::get_instance( $tipo );
+			$is_model = $ontology_node->get_is_model();
+			if ($is_model === true) {
+				return null;
+			}
+
 		// node locator
 			$locator = new locator();
 				$locator->set_section_tipo( $section_tipo );
