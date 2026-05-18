@@ -165,9 +165,9 @@ class sections extends common {
 	/**
 	* GET_DATA
 	* Get records from database using current sqo (search_query_object)
-	* @return db_result $db_result
+	* @return db_result|false $db_result
 	*/
-	public function get_data() : db_result {
+	public function get_data() : db_result|false {
 
 		// already calculated case
 		if (isset($this->data)) {
@@ -177,6 +177,12 @@ class sections extends common {
 		// search
 		$search		= search::get_instance($this->search_query_object);
 		$db_result	= $search->search();
+
+		// safety check: search can return false on error (e.g. invalid SQL for TM mode)
+		if ($db_result === false) {
+			debug_log(__METHOD__ . " search returned false for sqo: " . json_encode($this->search_query_object), logger::ERROR);
+			return false;
+		}
 
 		// fix db_result ar_records as data
 		$this->data = $db_result;
