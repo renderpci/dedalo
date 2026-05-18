@@ -358,17 +358,19 @@ export function parents(data: data_item[] | null, options: parser_options): data
 						let term_str = '';
 						if (Array.isArray(node.term) && node.term.length > 0) {
 							// 1. exact lang
-							const term_obj = node.term.find((t: any) => t.lang === lang);
-							if (term_obj) {
-								term_str = term_obj.value;
+							const exact_lang_objs = node.term.filter((t: any) => t.lang === lang);
+							if (exact_lang_objs.length > 0) {
+								term_str = exact_lang_objs.map((t: any) => t.value).join(' | ');
 							} else {
 								// 2. main_lang fallback
-								const main_term_obj = main_lang ? node.term.find((t: any) => t.lang === main_lang) : null;
-								if (main_term_obj) {
-									term_str = main_term_obj.value;
+								const main_lang_objs = main_lang ? node.term.filter((t: any) => t.lang === main_lang) : [];
+								if (main_lang_objs.length > 0) {
+									term_str = main_lang_objs.map((t: any) => t.value).join(' | ');
 								} else {
-									// 3. first available
-									term_str = node.term[0].value;
+									// 3. first available language group
+									const first_lang = node.term[0].lang;
+									const first_lang_objs = node.term.filter((t: any) => t.lang === first_lang);
+									term_str = first_lang_objs.map((t: any) => t.value).join(' | ');
 								}
 							}
 						}

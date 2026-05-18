@@ -1658,7 +1658,7 @@ class component_relation_common extends component_common {
 	*
 	* @return array|null Pack dictionary list item definitions of structure:
 	*	- section_id (int): item descriptive locator structure.
-	*	- section_tipo (string): layout item descriptive locator structure layout.
+	*	- section_tipo (string): layout item descriptive locator structure layout. 
 	*	- term (string|null): descriptive term primary identifying labels descriptive.
 	*	- typology (string|null): supporting descriptive typology identifiers reference string.
 	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
