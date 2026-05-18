@@ -27,8 +27,14 @@
 	>.content_data {
 
 		.components_container {
-			display: flex;
-			flex-wrap: wrap;
+			display: grid;
+			align-content: stretch;
+			grid-template-columns: repeat(10, 1fr);
+			padding-top: 1rem;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				display: block;
+			}
 
 			.disabled_component {
 				opacity: 0.6;
@@ -36,70 +42,61 @@
 				pointer-events: none;
 			}
 
-			// wrapper section record
-			.section_record {
+			.component_column {
+				display: contents;
+			}
 
-				>.content_data{
-					display: grid;
-					align-content: stretch;
-					grid-template-columns: repeat(10, 1fr);
+			.wrapper_component {
+				margin-top: 0rem;
 
-					@media screen and (max-width: @width_break_point_0) { // 1024px
-						display: block;
-					}
+				&.disabled_component:after {
+					content: unset;
+				}
 
-					.wrapper_component {
-						margin-top: 0rem;
+				// section_id
+				&.dd330 {
+					grid-row: 1;
+					opacity: 1;
+				}
 
-						&.disabled_component:after {
-							content: unset;
-						}
+				// username
+				&.dd132 {
+					display: block;
+					grid-column: span 2;
+					opacity: 0.8;
+				}
 
-						// section_id
-						&.dd330{
-							grid-row: 1;
-							opacity: 1;
-						}
+				// select (Admin general)
+				&.dd1725 {
+					grid-column: span 3;
+					opacity: 0.8;
+				}
 
-						// username
-						&.dd132 {
-							display: block;
-							grid-column: span 2;
-							opacity: 0.8;
-						}
-
-						// select (Admin general)
-						&.dd1725 {
-							grid-column: span 3;
-							opacity: 0.8;
-						}
-
-						// full name
-						&.dd452 {
-							grid-row: 2;
-							grid-column: span 3;
-							background-color: @color_hilite_2;
-						}
-						// password
-						&.dd133 {
-							grid-row: 2;
-							grid-column: span 3;
-							background-color: @color_hilite_2;
-						}
-						// email
-						&.dd134 {
-							grid-row: 3;
-							grid-column: span 6;
-							background-color: @color_hilite_2;
-						}
-						// image
-						&.dd522{
-							grid-row: 1 / span 4;
-							grid-column: span 4;
-						}
-					}
+				// full name
+				&.dd452 {
+					grid-row: 2;
+					grid-column: span 3;
+					background-color: @color_hilite_2;
+				}
+				// password
+				&.dd133 {
+					grid-row: 2;
+					grid-column: span 3;
+					background-color: @color_hilite_2;
+				}
+				// email
+				&.dd134 {
+					grid-row: 3;
+					grid-column: span 6;
+					background-color: @color_hilite_2;
+				}
+				// image
+				&.dd522{
+					grid-row: 1 / span 4;
+					grid-column: span 4;
 				}
 			}
+
 		}
 
 	}//end content_data
