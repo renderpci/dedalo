@@ -146,7 +146,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 		return new Promise(function(resolve){
 
 			data_manager.request({
-				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+				url	: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
 				body : rqo
 			})
 			.then(function(response){

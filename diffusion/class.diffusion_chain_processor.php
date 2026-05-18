@@ -460,7 +460,8 @@ class diffusion_chain_processor {
 					$ar_results[] = new diffusion_data_object((object)[
 						'tipo'  => $ddo->tipo,
 						'lang'  => null,
-						'value' => $item
+						'value' => $item,
+						// missing id from ddo->id review this ???
 					]);
 				}
 			}

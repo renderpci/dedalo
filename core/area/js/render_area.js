@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
+	import {build_dashboard} from '../../area_common/js/dashboard.js'
 
 
 
@@ -105,7 +106,10 @@ render_area.prototype.list = async function(options={render_level:'full'}) {
 
 /**
 * CONTENT_DATA
-* Render content data DOM node
+* Render content data DOM node.
+* When the server payload includes `dashboard` data (provided by area_common::get_dashboard_data),
+* the shared dashboard renderer (D3 charts + KPI cards) is injected. Otherwise an empty node is
+* returned to preserve current behaviour.
 * @param object self
 * 	area instance
 * @return HTMLElement content_data
@@ -115,6 +119,13 @@ const get_content_data = function(self) {
 	// content_data
 	const content_data = document.createElement('div')
 		  content_data.classList.add('content_data', self.type)
+
+	// dashboard. Injected when the area JSON controller returned dashboard data.
+	const dashboard_data = self.data && self.data.dashboard
+	if (dashboard_data) {
+		const dashboard_node = build_dashboard(self, dashboard_data)
+		content_data.appendChild(dashboard_node)
+	}
 
 
 	return content_data

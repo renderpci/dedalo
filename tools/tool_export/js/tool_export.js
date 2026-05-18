@@ -50,6 +50,10 @@ export const tool_export = function () {
 	]);
 	// media_components_in_data. Array of media components in data (used to export media)
 	this.media_components_in_data = [];
+
+	// section elements. Left list of available section components to export
+	this.section_elements = []
+	this.section_elements_components_exclude = ['component_password']
 }//end tool_export
 
 
@@ -148,7 +152,11 @@ tool_export.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// nothing to do here
+		// components_list. Prepare section component list [left] for render
+		self.section_elements = await self.get_section_elements_context({
+			section_tipo			: self.target_section_tipo,
+			ar_components_exclude	: self.section_elements_components_exclude
+		})
 
 	} catch (error) {
 		self.error = error

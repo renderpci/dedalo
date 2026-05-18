@@ -109,10 +109,6 @@ class tool_upload extends tool_common {
 				return $response;
 			}
 
-		// SEC-024 (§9.2): WRITE gate. process_uploaded_file moves the staged
-		// upload onto the destination component and triggers post-processing.
-		// Caller must have write (>=2) on (section_tipo, tipo).
-			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
 		// SEC-024 (§9.4): per-record gate.
 			if (!empty($section_id)) {
 				security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
@@ -126,7 +122,7 @@ class tool_upload extends tool_common {
 					// logger activity. Note that this log is here because generic service_upload
 					// is not capable to know if the uploaded file is the last one in a chunked file scenario
 						// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
-						$file_data_encoded	= json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+						$file_data_encoded = json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 						if ($file_data_encoded === false) {
 							debug_log(__METHOD__ . ' Failed to encode file_data to JSON', logger::WARNING);
 							$safe_file_data = 'encoding_failed';
@@ -168,6 +164,11 @@ class tool_upload extends tool_common {
 							$section_tipo
 						);
 
+					// SEC-024 (§9.2): WRITE gate. process_uploaded_file moves the staged
+					// upload onto the destination component and triggers post-processing.
+					// Caller must have write (>=2) on (component).
+						security::assert_component_permission($component, 2);
+
 					// fix current component target quality (defines the destination directory for the file, like 'original')
 						$component->set_quality($quality);
 
@@ -192,7 +193,6 @@ class tool_upload extends tool_common {
 						$response->msg		= empty($response->errors)
 							? 'OK. File processed successfully'
 							: 'Warning. File processed with errors';
-
 					break;
 
 				default:

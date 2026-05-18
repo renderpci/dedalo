@@ -14,9 +14,9 @@
 	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	// import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
-	// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
+	// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.9.0'
 	// - rollup -c
-	// import * as d3 from '../../../lib/d3/d3-7.8.5/dist/d3.min.js'
+	// import * as d3 from '../../../lib/d3/d3-7.9.0/dist/d3.min.js'
 	import {
 		get_d3_data
 	} from './render_solved_section.js'
@@ -232,10 +232,10 @@ const get_graph = async function(options) {
 				}
 
 				// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
-				// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
+				// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.9.0'
 				// - rollup -c
 
-				import('../../../lib/d3/d3-7.8.5/dist/d3.min.js')
+				import('../../../lib/d3/d3-7.9.0/dist/d3.min.js')
 				.then(async function(module){
 
 					if(self.node) {

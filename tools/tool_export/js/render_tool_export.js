@@ -91,8 +91,8 @@ const get_content_data_edit = async function(self) {
 			section_tipo			: self.target_section_tipo,
 			target_div				: components_list_container,
 			path					: [],
-			section_elements		: section_elements,
-			ar_components_exclude	: ar_components_exclude
+			section_elements		: self.section_elements,
+			ar_components_exclude	: self.section_elements_components_exclude
 		})
 
 	// user_selection_list (right side)

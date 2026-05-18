@@ -3314,8 +3314,9 @@ abstract class component_common extends common {
 					return 2; // Allow all users to search with section info components
 				}
 
-				if ($section_id !== null && strpos((string)$section_id, 'search') === 0) {
-					return 2;
+				// legacy 'search_10' is not supported since var $section_id becomes int|null type only
+				if ($section_id === 0) {
+					return 2; // Needed to allow autocomplete save in search mode
 				}
 
 				return $permissions;

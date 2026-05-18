@@ -1842,20 +1842,50 @@ final class dd_core_api {
 			// the real read target. Their access is governed instead by the per-
 			// `sqo->section_tipo[]` gate immediately below — same model the `count`
 			// action uses (see dd_core_api::count).
-			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
+			//
+			// Component models use `component_common::resolve_component_read_permission()`
+			// instead of the generic `common::get_permissions()` because components have
+			// special-case rules (own-user access, TM mode, search mode, etc.) that the
+			// generic check does not handle — see get_component_permissions().
+			$is_service_model	= is_string($model) && str_starts_with($model, 'service_');
+			$is_component_model	= is_string($model) && str_starts_with($model, 'component_');
 			if (
 				!empty($section_tipo)
 				&& !empty($tipo)
 				&& $model !== 'menu'
 				&& !$is_service_model
-				&& common::get_permissions($section_tipo, $tipo) < 1
+			) {
+				// Resolve only when section_tipo/tipo are confirmed non-empty strings.
+				// Component models use resolve_component_read_permission() to honour
+				// special-case grants (own-user, TM mode, search mode, etc.) that
+				// common::get_permissions() does not handle. $section_id is cast to
+				// ?int because JSON-decoded values may arrive as strings.
+				$read_permission = $is_component_model
+					? component_common::resolve_component_read_permission(
+						$section_tipo,
+						$tipo,
+						isset($section_id) ? (int)$section_id : null,
+						$mode
+					)
+					: common::get_permissions($section_tipo, $tipo);
+			}
+			if (
+				!empty($section_tipo)
+				&& !empty($tipo)
+				&& $model !== 'menu'
+				&& !$is_service_model
+				&& isset($read_permission)
+				&& $read_permission < 1
 			) {
 				debug_log(__METHOD__
 					. ' Denied read: insufficient permissions' . PHP_EOL
 					. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
 					. ' tipo: ' . to_string($tipo) . PHP_EOL
-					. ' model: ' . to_string($model)
+					. ' model: ' . to_string($model) . PHP_EOL
+					. ' read_permission: ' . to_string($read_permission) . PHP_EOL
+					. ' rqo: ' .to_string($rqo)
 					, logger::ERROR
 				);
 				$response->msg		= 'Error. Insufficient permissions to read ('.$section_tipo.' / '.$tipo.')';
@@ -2307,8 +2337,23 @@ final class dd_core_api {
 			// $element->get_model(): for action='search' the element is a
 			// `sections` instance whose model is 'sections', not the service
 			// label. Same check the pre-hoc gate uses.
-			$is_service_model = is_string($model) && str_starts_with($model, 'service_');
-			$permissions	= common::get_permissions($section_tipo, $tipo);
+			//
+			// Component models use resolve_component_read_permission() to stay
+			// consistent with the pre-hoc gate — otherwise the post-hoc gate
+			// would wipe data that the pre-hoc gate correctly allowed through
+			// component special cases (own-user, TM mode, search mode, etc.).
+			$is_service_model	= is_string($model) && str_starts_with($model, 'service_');
+			$is_component_model	= is_string($model) && str_starts_with($model, 'component_');
+			$permissions = (!empty($section_tipo) && !empty($tipo))
+				? ($is_component_model
+					? component_common::resolve_component_read_permission(
+						$section_tipo,
+						$tipo,
+						isset($section_id) ? (int)$section_id : null,
+						$mode
+					)
+					: common::get_permissions($section_tipo, $tipo))
+				: 1; // nothing to gate when section_tipo/tipo are absent
 			if (
 				!empty($result->data)
 				&& $permissions < 1
@@ -3100,6 +3145,59 @@ final class dd_core_api {
 				logged_user_id() // int
 			);
 	}//end log_activity
+
+
+
+	/**
+	* GET_ACTIVITY_METRIC
+	* On-demand activity metric for the dashboard timeline graph.
+	* Called by the client when the user selects a time range larger than
+	* the default 1-month pre-loaded data.
+	*
+	* RQO sample:
+	* {
+	*   "action": "get_activity_metric",
+	*   "options": {
+	*     "area_tipo": "oh1",
+	*     "range_days": 90
+	*   }
+	* }
+	*
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_activity_metric(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		$options		= $rqo->options ?? new stdClass();
+		$area_tipo		= $options->area_tipo ?? null;
+		$range_days		= $options->range_days ?? 30;
+
+		if (empty($area_tipo) || !is_string($area_tipo)) {
+			$response->msg = 'Error: area_tipo is required';
+			$response->errors[] = 'empty area_tipo';
+			return $response;
+		}
+		if (!is_int($range_days) || $range_days < 1) {
+			$range_days = 30;
+		}
+		// Cap at 1 year to prevent unmanageable queries
+		if ($range_days > 365) {
+			$range_days = 365;
+		}
+
+		$data = area_common::get_activity_metric($area_tipo, $range_days);
+
+		$response->result	= true;
+		$response->msg		= 'OK';
+		$response->data		= $data;
+
+		return $response;
+	}//end get_activity_metric
 
 
 

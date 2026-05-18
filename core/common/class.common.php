@@ -3157,19 +3157,22 @@ abstract class common {
 			];
 
 		// common section info
-			$ar_elements = ontology_node::get_ar_tipo_by_model_and_relation(
-				DEDALO_SECTION_INFO_SECTION_GROUP,
-				'component',
-				'children',
-				false // bool search_exact
-			);
 			$first_section_tipo = $ar_section_tipo[0] ?? null;
 			if (empty($first_section_tipo)) {
 				return [];
 			}
-			$section_info_elements = $first_section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO
-				? []
-				: [DEDALO_SECTION_INFO_SECTION_GROUP, ...$ar_elements];
+
+			if ($first_section_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO) {
+				$section_info_elements = [];
+			}else{
+				$section_info_tipos = ontology_node::get_ar_tipo_by_model_and_relation(
+					DEDALO_SECTION_INFO_SECTION_GROUP,
+					'component',
+					'children',
+					false // bool search_exact
+				);
+				$section_info_elements = [DEDALO_SECTION_INFO_SECTION_GROUP, ...$section_info_tipos];
+			}
 
 		// Manage multiple sections
 		// section_tipo can be an array of section_tipo. To prevent duplicates, check and group similar sections (like es1, co1, ..)
@@ -3495,6 +3498,11 @@ abstract class common {
 					// time machine case
 						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_children') {
 							// skip tool for component_relation_children because it has no data
+							continue;
+						}
+
+					// dd15 section case. Only tool_export is allowed for time machine section
+						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
 							continue;
 						}
 

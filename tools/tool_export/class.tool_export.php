@@ -679,17 +679,53 @@ class tool_export extends tool_common {
 		$ar_row_count	= [];
 		$ar_columns_obj	= [];
 
+		// time machine mode check
+		// matrix_time_machine rows have section_tipo = data section (e.g. mdcat2949), not the TM section (dd15).
+		// DDO paths reference dd15 as section_tipo, so matching against row->section_tipo always fails.
+		$is_tm = ($this->sqo->mode ?? null) === 'tm';
+
 		if (!isset(self::$locator)) {
 			self::$locator = new locator();
 		}
-		self::$locator->set_section_tipo($row->section_tipo);
-		self::$locator->set_section_id($row->section_id);
+
+		if ($is_tm) {
+			// TM: use the export section_tipo (dd15) and the TM row id as section_id
+			self::$locator->set_section_tipo($this->section_tipo);
+			self::$locator->set_section_id((int)$row->id);
+
+			// Populate the section_record cache for dd15 + row->id.
+			// tm_record::get_section_record() transforms TM flat columns into component-formatted data
+			// and stores it in the section_record cache, so components can read their data normally.
+			$tm_record = tm_record::get_instance((int)$row->id);
+			$tm_record->get_section_record();
+		}else{
+			self::$locator->set_section_tipo($row->section_tipo);
+			self::$locator->set_section_id($row->section_id);
+		}
 
 		foreach ($ar_ddo as $current_ddo) {
 			// children_ddo. get only the ddo that are children of the section top_tipo
 			// the other ddo are sub components that will be injected to the portal as request_config->show
 			$first_path	= $current_ddo->path[0];
 			$ddo		= ($first_path->section_tipo===self::$locator->section_tipo) ? $first_path : null;
+
+			// skip if ddo is not a direct child of the row's section_tipo.
+			if ($ddo === null) {
+				// Notify once.
+				static $ddo_null_logged = false;
+				if (!$ddo_null_logged) {
+					debug_log(__METHOD__
+					   .' Ignored empty ddo from first path' . PHP_EOL
+					   .' first_path: ' . to_string($first_path) . PHP_EOL
+					   .' row: ' . to_string($row) . PHP_EOL
+					   .' self::$locator: ' . to_string(self::$locator) . PHP_EOL
+					   .' current_ddo: ' . to_string($current_ddo)
+					   , logger::WARNING
+					);
+					$ddo_null_logged = true;
+				}
+				continue;
+			}
 
 			// component. Create the component to get the value of the column
 				$component_tipo = $ddo->component_tipo;
@@ -703,11 +739,13 @@ class tool_export extends tool_common {
 				$current_lang    = self::$ontology_cache[$component_tipo]->lang;
 				$component_model = self::$ontology_cache[$component_tipo]->model;
 
+				$component_mode = $is_tm ? 'tm' : 'edit';
+
 				$current_component	= component_common::get_instance(
 					$component_model, // string model
 					$ddo->component_tipo, // string tipo
 					self::$locator->section_id, // string|int|null section_id
-					'edit', // string mode
+					$component_mode, // string mode
 					$current_lang, // string lang
 					self::$locator->section_tipo, // string section_tipo
 					false // bool cache
@@ -752,8 +790,13 @@ class tool_export extends tool_common {
 					$current_component->request_config = [$request_config];
 
 					// inject the locator as data for the component
-					$component_data = $row->relation->{$ddo->component_tipo} ?? null;
-					$current_component->set_data($component_data);
+					if ($is_tm) {
+						// TM rows don't have a 'relation' property; data is already in the section_record cache
+						// populated by tm_record::get_section_record() above.
+					}else{
+						$component_data = $row->relation->{$ddo->component_tipo} ?? null;
+						$current_component->set_data($component_data);
+					}
 				}
 
 			// get component_value add

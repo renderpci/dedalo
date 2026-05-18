@@ -13,6 +13,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 	$tipo			= $this->get_tipo();
 	$permissions	= common::get_permissions($tipo, $tipo);
 	$mode			= $this->get_mode();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 
@@ -36,11 +37,28 @@ if (!isset($this)) { http_response_code(404); exit; }
 	$data = [];
 	if($options->get_data===true && $permissions>0){
 
-		// value
-			$value = []; // $this->get_data_items();
+		// Dashboard payload (basic metrics by descendant section).
+		// Opt-out per-area via ontology properties: { "dashboard": { "disabled": true } }
+		// Custom metric list via:                   { "dashboard": { "metrics": ["total", ...] } }
+		$ar_metric_names	= null;
+		$dashboard_disabled	= false;
+		if (isset($properties->dashboard) && is_object($properties->dashboard)) {
+			$dashboard_disabled = ($properties->dashboard->disabled ?? false) === true;
+			if (!empty($properties->dashboard->metrics) && is_array($properties->dashboard->metrics)) {
+				$ar_metric_names = $properties->dashboard->metrics;
+			}
+		}
 
-		// subdata add
-			 $data = $value;
+		$item = new stdClass();
+			$item->tipo			= $tipo;
+			$item->section_tipo	= $tipo; // areas: tipo === section_tipo
+			$item->section_id	= null;
+
+		if ($dashboard_disabled === false) {
+			$item->dashboard = $this->get_dashboard_data($ar_metric_names);
+		}
+
+		$data[] = $item;
 
 	}// end if $permissions > 0
 

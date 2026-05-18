@@ -60,7 +60,7 @@ class search_tm extends search {
 	public function build_sql_query_order_default() : void {
 
 		// default order
-		$string_query = 'id DESC';
+		$string_query = 'timestamp DESC';
 		if (!in_array($string_query, $this->sql_obj->order_default)) {
 			$this->sql_obj->order_default[] = $string_query;
 		}

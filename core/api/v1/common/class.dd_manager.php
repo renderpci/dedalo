@@ -369,7 +369,7 @@ final class dd_manager {
 					}
 				}
 				try {
-					$response			= $dd_api::{$rqo->action}( $rqo );
+					$response = $dd_api::{$rqo->action}( $rqo );
 				} catch (permission_exception $e) {
 					// SEC: a security::assert_* gate inside the API method denied the request.
 					// Convert to a uniform response so callers always see the same shape.

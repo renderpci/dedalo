@@ -24,7 +24,7 @@ shipped as pre-built bundles inside `lib/`:
 | xlsx (SheetJS) | `lib/xlsx/` | see `lib/xlsx/xlsx.js` header | <https://github.com/SheetJS/sheetjs/releases> |
 | pdfjs | `lib/pdfjs/` | see `lib/pdfjs/UPGRADE_SEC-097.md` | <https://github.com/mozilla/pdf.js/releases> |
 | Leaflet | `lib/leaflet/` | see `lib/leaflet/dist/leaflet-src.js` header | <https://github.com/Leaflet/Leaflet/releases> |
-| d3 | `lib/d3/d3-7.8.5/` | `7.8.5` (pinned in folder name) | <https://github.com/d3/d3/releases> |
+| d3 | `lib/d3/d3-7.9.0/` | `7.9.0` (pinned in folder name) | <https://github.com/d3/d3/releases> |
 | Three.js | `lib/threejs/` | see `lib/threejs/build/three.module.js` header | <https://github.com/mrdoob/three.js/releases> |
 | JSONEditor | `lib/jsoneditor/` | see `lib/jsoneditor/dist/standalone.js` header | <https://github.com/josdejong/jsoneditor/releases> |
 | Flatpickr | `lib/flatpickr/` | see `lib/flatpickr/dist/flatpickr.js` header | <https://github.com/flatpickr/flatpickr/releases> |

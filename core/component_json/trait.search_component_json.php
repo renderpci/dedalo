@@ -25,7 +25,7 @@ trait search_component_json {
 
         // 2. Handle Query Splitting (if applicable)
         if (($query_object->q_split ?? false) === true && !search::is_literal($q)) {
-            
+
             // Pre-process q for splitting (join operators and wildcards)
             $q_proc = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
             $q_proc = preg_replace('/\s+(\*)/', '$1', $q_proc);
@@ -53,9 +53,9 @@ trait search_component_json {
     * Extracts and normalizes the search query value (q) from the input object.
     */
     protected static function extract_normalized_json_q(object $query_object) : string|false {
-        
-        $q_raw = isset($query_object->q) && is_array($query_object->q) 
-            ? $query_object->q[0] 
+
+        $q_raw = isset($query_object->q) && is_array($query_object->q)
+            ? $query_object->q[0]
             : ($query_object->q ?? null);
 
         if ((empty($q_raw) || (is_object($q_raw) && empty($q_raw->value))) && empty($query_object->q_operator)) {
@@ -74,7 +74,7 @@ trait search_component_json {
     * Validates the path and collects necessary metadata for SQL generation.
     */
     protected static function get_json_search_context(object $query_object) : object|false {
-        
+
         if (empty($query_object->path) || !is_array($query_object->path)) {
             debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
             return false;
@@ -82,18 +82,42 @@ trait search_component_json {
 
         $path_end       = end($query_object->path);
         $component_tipo = $path_end->component_tipo;
-        
+
         $ctx = new stdClass();
         $ctx->component_tipo = $component_tipo;
         $ctx->column         = section_record_data::get_column_name(get_called_class());
         $ctx->table_alias    = $query_object->table_alias;
         $ctx->table          = $query_object->table;
         $ctx->q_operator     = $query_object->q_operator ?? null;
-        
+
+        // Time machine case: matrix_time_machine stores component data in 'data' column
+        // as a flat JSONB array [{id:1, value:"..."}], not keyed by component tipo
+        if ($ctx->table === 'matrix_time_machine') {
+            $ctx->column         = 'data';
+            $ctx->component_tipo = null; // flat array, no component tipo key
+        }
+
         // Set defaults on query_object
 		$query_object->type = 'jsonb';
 
         return $ctx;
+    }
+
+
+
+    /**
+    * BUILD_JSON_PATH_PREFIX
+    * Builds the JSONB path prefix for SQL queries.
+    * Regular sections: $.component_tipo (e.g. $.dd1574)
+    * Time machine (matrix_time_machine): $ (flat array, no component tipo key)
+    * @param object $ctx
+    * @return string
+    */
+    protected static function build_json_path_prefix(object $ctx) : string {
+
+        return ($ctx->component_tipo !== null)
+            ? '$.' . $ctx->component_tipo
+            : '$';
     }
 
 
@@ -153,7 +177,11 @@ trait search_component_json {
         $query_object->sentence  = "({$ctx->table_alias}.{$ctx->column} IS NULL" . PHP_EOL;
         $query_object->sentence .= "OR NOT EXISTS (" . PHP_EOL;
         $query_object->sentence .= " SELECT 1" . PHP_EOL;
-        $query_object->sentence .= " FROM jsonb_array_elements({$ctx->table_alias}.{$ctx->column}->'{$ctx->component_tipo}') AS elem" . PHP_EOL;
+        $query_object->sentence .= " FROM jsonb_array_elements({$ctx->table_alias}.{$ctx->column}";
+        if ($ctx->component_tipo !== null) {
+            $query_object->sentence .= "->'{$ctx->component_tipo}'";
+        }
+        $query_object->sentence .= ") AS elem" . PHP_EOL;
         $query_object->sentence .= " WHERE elem->>'value' IS NOT NULL" . PHP_EOL;
         $query_object->sentence .= " AND elem->>'value' != ''" . PHP_EOL;
         $query_object->sentence .= " )" . PHP_EOL;
@@ -171,8 +199,9 @@ trait search_component_json {
 	* What it returns: Records that have at least one valid entry in the JSON array.
     */
     protected static function resolve_json_not_empty_value_sql(object $query_object, object $ctx) : object {
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "({$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath)";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*]"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*]"];
         return $query_object;
     }
 
@@ -187,8 +216,9 @@ trait search_component_json {
     */
     protected static function resolve_json_different_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean = str_replace('!=', '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "NOT ({$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath)";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
         return $query_object;
     }
 
@@ -203,8 +233,9 @@ trait search_component_json {
     */
     protected static function resolve_json_exactly_equal_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean = str_replace('==', '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value ? (@ == \"{$q_clean}\")"];       
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value ? (@ == \"{$q_clean}\")"];
         return $query_object;
     }
 
@@ -219,8 +250,9 @@ trait search_component_json {
     */
     protected static function resolve_json_not_contain_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean = str_replace('-', '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "NOT ({$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath)";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
         return $query_object;
     }
 
@@ -235,8 +267,9 @@ trait search_component_json {
     */
     protected static function resolve_json_ends_with_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean  = str_replace('*', '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}$\" flag \"i\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value.** ? (@ like_regex \"{$q_clean}$\" flag \"i\")"];
         return $query_object;
     }
 
@@ -251,8 +284,9 @@ trait search_component_json {
     */
     protected static function resolve_json_begins_with_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean  = str_replace('*', '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value.** ? (@ like_regex \"^{$q_clean}\" flag \"i\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value.** ? (@ like_regex \"^{$q_clean}\" flag \"i\")"];
         return $query_object;
     }
 
@@ -267,8 +301,9 @@ trait search_component_json {
     */
     protected static function resolve_json_literal_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean  = str_replace("'", '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value ? (@ == \"{$q_clean}\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value ? (@ == \"{$q_clean}\")"];
         return $query_object;
     }
 
@@ -285,7 +320,8 @@ trait search_component_json {
         $query_object->duplicated = true;
         $query_object->unaccent   = true;
 
-        $json_path = "$.{$ctx->component_tipo}[*]";
+        $path_prefix = self::build_json_path_prefix($ctx);
+        $json_path = "{$path_prefix}[*]";
 
         $query_object->sentence = "({$ctx->table_alias}.{$ctx->column} @? '{$json_path}') AND EXISTS (" . PHP_EOL .
             " SELECT 1" . PHP_EOL .
@@ -293,8 +329,7 @@ trait search_component_json {
             "  jsonb_path_query(m2.{$ctx->column}, '{$json_path}') AS m2_elem," . PHP_EOL .
             "  jsonb_path_query({$ctx->table_alias}.{$ctx->column}, '{$json_path}') AS m1_elem" . PHP_EOL .
             "  WHERE m2.{$ctx->column} @? '{$json_path}'" . PHP_EOL .
-            "   AND m2.section_id != {$ctx->table_alias}.section_id" . PHP_EOL .
-            "   AND m2.section_tipo = {$ctx->table_alias}.section_tipo" . PHP_EOL .
+            "   AND m2.id != {$ctx->table_alias}.id" . PHP_EOL .
             "   AND m2_elem->>'value' = m1_elem->>'value'" . PHP_EOL .
             " )";
         return $query_object;
@@ -311,8 +346,9 @@ trait search_component_json {
     */
     protected static function resolve_json_contains_sql(object $query_object, string $q_json_path, object $ctx) : object {
         $q_clean = str_replace(['+', '*', '='], '', $q_json_path);
+        $path_prefix = self::build_json_path_prefix($ctx);
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} @? (_Q1_)::jsonpath";
-        $query_object->params   = ['_Q1_' => "$.{$ctx->component_tipo}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
+        $query_object->params   = ['_Q1_' => "{$path_prefix}[*].value.** ? (@ like_regex \"{$q_clean}\" flag \"i\")"];
         return $query_object;
     }
 
