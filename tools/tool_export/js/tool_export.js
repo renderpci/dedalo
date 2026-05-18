@@ -305,11 +305,23 @@ tool_export.prototype.get_export_grid = async function(options) {
 						self.dd_grid = dd_grid;
 						first_chunk = false;
 						resolve(dd_grid);
+
+						// Pause the stream processing until the grid is mounted in the DOM.
+						// This prevents a race condition where rows are added to dd_grid.data
+						// and rendered by both dd_grid.render() and _append_row_to_grid_ui().
+						let wait_cycles = 0;
+						while((!self.dd_grid.node || !document.body.contains(self.dd_grid.node)) && wait_cycles < 100) {
+							await new Promise(r => setTimeout(r, 50));
+							wait_cycles++;
+						}
 					} else {
 						// Subsequent chunks are rows
 						if (self.dd_grid) {
 							// Append row to data
 							self.dd_grid.data.push(chunk_data);
+
+							// Update header columns dynamically
+							self._update_header_columns(chunk_data);
 
 							rows_processed++;
 							if (self.progress_ui && self.total_records) {
@@ -378,6 +390,114 @@ tool_export.prototype._init_grid_with_data = async function(data, view, show_tip
 
 	return dd_grid;
 }
+
+
+
+/**
+* _UPDATE_HEADER_COLUMNS
+* Dynamically updates the header (data[0]) with any new columns found in the row.
+* Required for breakdown exports where portals can dynamically expand the number of columns.
+*/
+tool_export.prototype._update_header_columns = function(row_data) {
+	const self = this;
+	if (!self.dd_grid || !self.dd_grid.data || self.dd_grid.data.length === 0) return;
+
+	const header = self.dd_grid.data[0];
+	if (!header || !header.value || !Array.isArray(header.value)) return;
+
+	let dom_updated = false;
+
+	if (Array.isArray(row_data.value)) {
+		// Iterate through all cells in the row
+		for (const cell of row_data.value) {
+			if (Array.isArray(cell.ar_columns_obj)) {
+				for (const col_obj of cell.ar_columns_obj) {
+					
+					// Check if col_obj.id is already in header
+					let found = false;
+					for (const header_cell of header.value) {
+						if (header_cell.ar_columns_obj && header_cell.ar_columns_obj.id === col_obj.id) {
+							found = true;
+							break;
+						}
+					}
+
+					if (!found) {
+						// Create a new header cell
+						const new_header_cell = {
+							type: 'column',
+							cell_type: 'header',
+							ar_columns_obj: col_obj,
+							render_label: true,
+							class_list: 'caption section'
+						};
+						
+						// Find correct insert position
+						let insert_index = header.value.length;
+						const parts = (col_obj.id || '').split('|');
+						if (parts.length > 1) {
+							// Find the last column with the same group
+							for (let i = 0; i < header.value.length; i++) {
+								if (header.value[i].ar_columns_obj && header.value[i].ar_columns_obj.group === col_obj.group) {
+									insert_index = i + 1;
+								}
+							}
+						}
+
+						// Insert into header data
+						header.value.splice(insert_index, 0, new_header_cell);
+						dom_updated = true;
+
+						// Update DOM if table is already rendered
+						if (self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
+							const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
+							if (table && table.tagName === 'TABLE') {
+								const thead = table.querySelector('thead');
+								if (thead) {
+									const tr = thead.querySelector('tr');
+									if (tr) {
+										// We need to render the TH and insert it
+										const th = document.createElement('th');
+										th.className = 'caption section';
+										th.innerHTML = col_obj.label || '';
+										
+										// Insert into correct position in TR
+										const ths = tr.querySelectorAll('th');
+										if (insert_index < ths.length) {
+											tr.insertBefore(th, ths[insert_index]);
+										} else {
+											tr.appendChild(th);
+										}
+
+										// Also, ALL existing TRs in TBODY need an empty TD at this index!
+										const tbody = table.querySelector('tbody');
+										if (tbody) {
+											const trs = tbody.querySelectorAll('tr');
+											for (const body_tr of trs) {
+												const td = document.createElement('td');
+												const tds = body_tr.querySelectorAll('td');
+												if (insert_index < tds.length) {
+													body_tr.insertBefore(td, tds[insert_index]);
+												} else {
+													body_tr.appendChild(td);
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (dom_updated) {
+		// Update header column count
+		header.column_count = header.value.length;
+	}
+};//end _update_header_columns
 
 
 

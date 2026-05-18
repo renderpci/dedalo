@@ -213,6 +213,22 @@ class component_input_text extends component_string_common {
 				// try to JSON decode (null on not decode)
 				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
+				// Normalize: ensure array items are objects with 'value' property (v7 format)
+				if (is_array($data_from_json)) {
+					$normalized = [];
+					foreach ($data_from_json as $val) {
+						if (!is_object($val)) {
+							$normalized[] = (object)['value' => $val];
+						}else if (!property_exists($val, 'value') && !property_exists($val, 'section_id')) {
+							// Object without 'value' property and not a locator: wrap it
+							$normalized[] = (object)['value' => $val];
+						}else{
+							$normalized[] = $val;
+						}
+					}
+					$data_from_json = $normalized;
+				}
+
 				$response->result	= $data_from_json;
 				$response->msg		= 'OK';
 
@@ -231,8 +247,10 @@ class component_input_text extends component_string_common {
 				($begins_two !== '["' && $ends_one !== ']') ||
 				($begins_one !== '[' && $ends_two !== '"]')
 				){
+				// Wrap plain string into v7 format: [(object)['value' => $import_value]]
+				// set_data_lang() requires object items; plain strings would be silently dropped
 				$value = !empty($import_value) || $import_value==='0'
-					? [$import_value]
+					? [(object)['value' => $import_value]]
 					: null;
 			}else{
 				// import value seems to be a JSON malformed.

@@ -926,6 +926,35 @@ final class component_date_test extends BaseTestCase {
 			'expected empty errors : ' . PHP_EOL
 				. to_string($response->errors)
 		);
+
+		// v7 format: date objects have 'start' property, NOT 'value'
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'expected first result item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'start'),
+			'expected date object to have "start" property'
+		);
+		$this->assertFalse(
+			property_exists($response->result[0], 'value'),
+			'expected date object to NOT have "value" property (dates use start/end)'
+		);
+		$this->assertEquals(
+			2023,
+			$response->result[0]->start->year,
+			'expected start year to be 2023'
+		);
+		$this->assertEquals(
+			12,
+			$response->result[0]->start->month,
+			'expected start month to be 12'
+		);
+		$this->assertEquals(
+			17,
+			$response->result[0]->start->day,
+			'expected start day to be 17'
+		);
 	}//end test_conform_import_data
 
 

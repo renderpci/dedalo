@@ -279,63 +279,26 @@ class tool_export extends tool_common {
 		$ar_ddo_map	= $this->ar_ddo_map;
 		$db_result	= $this->get_records();
 
-		$start_pass1 = microtime(true);
-		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 started", logger::DEBUG);
-
-		// First pass: Process records JUST to collect unique columns.
-		// OPTIMIZATION: We only need to call get_grid_value when we suspect total columns might change (e.g. portals)
+		// Get base columns from the first row only. 
+		// The client will dynamically expand the columns as new data arrives.
 		$ar_columns_obj	= [];
 		$ar_columns_index = [];
-		$max_portal_counts = [];
 
 		$total_count = $db_result->row_count();
-		foreach ($db_result as $row_index => $row) {
-			$needs_full_process = empty($ar_columns_obj); // Always process first row
-
-			// Quick check for portal count increases without full instantiation
-			if (!$needs_full_process) {
-				foreach ($ar_ddo_map as $current_ddo) {
-					$tipo = $current_ddo->path[0]->component_tipo;
-					$data = $row->relation->{$tipo} ?? null;
-					if (is_array($data)) {
-						$count = count($data);
-						if ($count > ($max_portal_counts[$tipo] ?? 0)) {
-							$max_portal_counts[$tipo] = $count;
-							$needs_full_process = true;
-						}
-					}
+		$first_row = $db_result->fetch_one();
+		if ($first_row) {
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $first_row);
+			foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
+				if (!isset($ar_columns_index[$current_column_obj->id])) {
+					$ar_columns_obj[] = $current_column_obj;
+					$ar_columns_index[$current_column_obj->id] = true;
 				}
 			}
-
-			if ($needs_full_process) {
-				$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
-				foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
-					if (!isset($ar_columns_index[$current_column_obj->id])) {
-						$ar_columns_obj[] = $current_column_obj;
-						$ar_columns_index[$current_column_obj->id] = true;
-					}
-				}
-				unset($ar_row_value);
-			}
-
-			if ($row_index % 100 === 0) {
-				// Clear internal caches to prevent memory growth during discovery
-				if (class_exists('section_record_instances_cache')) section_record_instances_cache::clear();
-				if (class_exists('component_instances_cache')) component_instances_cache::clear();
-				gc_collect_cycles();
-
-				if (SHOW_DEBUG) {
-					$mem = round(memory_get_usage() / 1024 / 1024, 2);
-					debug_log(__METHOD__ . " Pass 1 progress: $row_index / $total_count | Mem: $mem MB", logger::DEBUG);
-				}
-			}
-			unset($row);
+			// Reset database cursor to the beginning
+			$db_result->seek(0);
 		}
 
-		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 finished in " . round(microtime(true) - $start_pass1, 3) . "s", logger::DEBUG);
-
-		// Reset database cursor to the beginning
-		$db_result->seek(0);
+		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 removed (optimized to client-side)", logger::DEBUG);
 
 		// Calculate header labels
 		$ar_section_columns_count = sizeof($ar_columns_obj);
@@ -420,6 +383,50 @@ class tool_export extends tool_common {
 			unset($row);
 		}
 	}//end stream_export_grid
+
+
+
+	/**
+	 * GET_NESTED_ARRAY_COUNTS
+	 * Recursively extract the maximum length of any array found in the data structure.
+	 * Returns an array of max lengths indexed by structural path.
+	 * 
+	 * @param mixed $data The data to inspect (array, object, or scalar)
+	 * @param string $path The structural path prefix
+	 * @return array Array of max lengths e.g., ['numisdata163' => 1, 'numisdata163[].rsc139' => 2]
+	 */
+	protected function get_nested_array_counts(mixed $data, string $path = '') : array {
+		$counts = [];
+		if (is_array($data)) {
+			// Track the length of this array
+			$counts[$path] = count($data);
+			// Inspect all elements
+			foreach ($data as $item) {
+				if (is_array($item) || is_object($item)) {
+					// Use '[]' to represent any array element index generically
+					$sub_counts = $this->get_nested_array_counts($item, $path . '[]');
+					foreach ($sub_counts as $k => $v) {
+						if (!isset($counts[$k]) || $v > $counts[$k]) {
+							$counts[$k] = $v;
+						}
+					}
+				}
+			}
+		} elseif (is_object($data)) {
+			// Inspect all properties
+			foreach ($data as $key => $value) {
+				if (is_array($value) || is_object($value)) {
+					$sub_counts = $this->get_nested_array_counts($value, $path . '.' . $key);
+					foreach ($sub_counts as $k => $v) {
+						if (!isset($counts[$k]) || $v > $counts[$k]) {
+							$counts[$k] = $v;
+						}
+					}
+				}
+			}
+		}
+		return $counts;
+	}//end get_nested_array_counts
 
 
 

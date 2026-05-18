@@ -416,18 +416,22 @@ final class component_input_text_test extends BaseTestCase {
 			is_object($response),
 			'expected response to be an object'
 		);
+		// v7 format: plain strings are wrapped into objects with 'value' property
 		$this->assertTrue(
-			$response->result === ["Hello World"],
-			'expected result to be ["Hello World"], got: ' . to_string($response->result)
+			is_array($response->result) && is_object($response->result[0]) && $response->result[0]->value === "Hello World",
+			'expected result to be [(object)["value"=>"Hello World"]], got: ' . to_string($response->result)
 		);
 
 		// 2 - JSON case
 		$import_value = '["Hello", "World"]';
 		$response     = $component->conform_import_data($import_value, $column_name);
 
+		// v7 format: JSON array items are normalized to objects with 'value' property
 		$this->assertTrue(
-			$response->result === ["Hello", "World"],
-			'expected result to be ["Hello", "World"], got: ' . to_string($response->result)
+			is_array($response->result) && count($response->result)===2
+			&& is_object($response->result[0]) && $response->result[0]->value === "Hello"
+			&& is_object($response->result[1]) && $response->result[1]->value === "World",
+			'expected result to be [(object)["value"=>"Hello"], (object)["value"=>"World"]], got: ' . to_string($response->result)
 		);
 
 		// 3 - Malformed JSON case

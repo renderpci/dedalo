@@ -1854,6 +1854,8 @@ class component_text_area extends component_string_common {
 
 		// $normalize_value function to be used in any case, $import_value is an object, array or string
 		// values need to be HTML compatible with ck-editor
+		// Returns array of objects with 'value' property (v7 format) instead of plain strings
+		// to prevent silent data loss in set_data_lang() which skips non-object items
 			$normalize_value = function(array $import_value) : array {
 
 				$value = [];
@@ -1878,7 +1880,8 @@ class component_text_area extends component_string_common {
 					// replace the return \n or windows \r to <p>
 					$text_value = preg_replace('/(\r\n|\r|\n)/', '</p><p>', $text_value);
 
-					$value[] = $text_value;
+					// Wrap into v7 format object with 'value' property
+					$value[] = (object)['value' => $text_value];
 				}
 
 				return $value;
@@ -1893,15 +1896,42 @@ class component_text_area extends component_string_common {
 				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
 				if(is_array($data_from_json)){
-					$value = $normalize_value($data_from_json);
+					// Normalize: ensure all items are v7 objects with 'value' property
+					$normalized = [];
+					foreach ($data_from_json as $val) {
+						if (is_object($val) && property_exists($val, 'value')) {
+							// Already v7 format, normalize the text value inside
+							$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
+							$normalized[] = $val;
+						}else if (is_object($val)) {
+							// Object without 'value' (e.g. locator), pass through
+							$normalized[] = $val;
+						}else{
+							// Plain string, wrap into v7 format
+							$wrapped = $normalize_value([$val]);
+							$normalized = [...$normalized, ...$wrapped];
+						}
+					}
+					$data_from_json = $normalized;
 				}else if (is_object($data_from_json)) {
 					foreach ($data_from_json as $key => $current_values) {
 						$ar_values = is_array($current_values)
 							? $current_values
 							: [$current_values];
 
-						$value = $normalize_value($ar_values);
-						$data_from_json->$key = $value ;
+						$normalized = [];
+						foreach ($ar_values as $val) {
+							if (is_object($val) && property_exists($val, 'value')) {
+								$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
+								$normalized[] = $val;
+							}else if (is_object($val)) {
+								$normalized[] = $val;
+							}else{
+								$wrapped = $normalize_value([$val]);
+								$normalized = [...$normalized, ...$wrapped];
+							}
+						}
+						$data_from_json->$key = $normalized;
 					}
 				}
 

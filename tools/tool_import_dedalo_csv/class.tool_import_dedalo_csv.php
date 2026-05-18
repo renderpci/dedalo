@@ -834,8 +834,9 @@ class tool_import_dedalo_csv extends tool_common {
 								foreach ($conformed_value as $v_key => $v_value) {
 
 									if (strpos($v_key, 'lg-')===0) {
-										$component->set_lang( $v_key );
-										$component->set_data( $v_value );
+										// Use set_data_lang() instead of set_data() to ensure 'lang' property
+										// is assigned on all data items (including pre-existing objects from conform_import_data)
+										$component->set_data_lang( $v_value, $v_key );
 										$component->import_save();
 									}else{
 										debug_log(__METHOD__

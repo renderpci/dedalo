@@ -995,4 +995,562 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_conform_import_data_input_text_v7_format
+	* Verify component_input_text::conform_import_data() produces v7-compliant data
+	* Plain strings must be wrapped into objects with 'value' property
+	* @return void
+	*/
+	public function test_conform_import_data_input_text_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain string → must return [(object)['value' => 'Hello']]
+		$response = $component->conform_import_data('Hello', 'test52');
+		$this->assertTrue(
+			$response->result !== null,
+			'Expected non-null result for plain string input'
+		);
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain string input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+		$this->assertEquals(
+			'Hello',
+			$response->result[0]->value,
+			'Expected value property to match input string'
+		);
+
+		// Case 2: JSON array of strings → must normalize to objects with 'value' property
+		$response = $component->conform_import_data('["Hello","World"]', 'test52');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON array input'
+		);
+		$this->assertEquals(
+			2,
+			count($response->result),
+			'Expected 2 items in result'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+		$this->assertEquals(
+			'Hello',
+			$response->result[0]->value,
+			'Expected first value to be "Hello"'
+		);
+		$this->assertEquals(
+			'World',
+			$response->result[1]->value,
+			'Expected second value to be "World"'
+		);
+
+		// Case 3: empty string → must return null
+		$response = $component->conform_import_data('', 'test52');
+		$this->assertNull(
+			$response->result,
+			'Expected null result for empty string input'
+		);
+	}//end test_conform_import_data_input_text_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_text_area_v7_format
+	* Verify component_text_area::conform_import_data() produces v7-compliant data
+	* Plain strings must be wrapped into objects with 'value' property and HTML normalized
+	* @return void
+	*/
+	public function test_conform_import_data_text_area_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_text_area',
+			'test17',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain string → must return [(object)['value' => '<p>Hello</p>']]
+		$response = $component->conform_import_data('Hello', 'test17');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain string input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+		$this->assertTrue(
+			strpos($response->result[0]->value, '<p>') === 0,
+			'Expected value to be wrapped in <p> tags'
+		);
+
+		// Case 2: JSON array of strings → must normalize to objects with 'value' property
+		$response = $component->conform_import_data('["Hello","World"]', 'test17');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON array input'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+	}//end test_conform_import_data_text_area_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_email_v7_format
+	* Verify component_email::conform_import_data() produces v7-compliant data
+	* Plain strings must be wrapped into objects with 'value' property
+	* @return void
+	*/
+	public function test_conform_import_data_email_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_email',
+			'test208',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain string email → must return [(object)['value' => 'test@example.com']]
+		$response = $component->conform_import_data('test@example.com', 'test208');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain string input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+		$this->assertEquals(
+			'test@example.com',
+			$response->result[0]->value,
+			'Expected value property to match input email'
+		);
+
+		// Case 2: JSON array of strings → must normalize to objects with 'value' property
+		$response = $component->conform_import_data('["a@b.com","c@d.com"]', 'test208');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON array input'
+		);
+		$this->assertEquals(
+			2,
+			count($response->result),
+			'Expected 2 items in result'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+	}//end test_conform_import_data_email_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_number_v7_format
+	* Verify component_number::conform_import_data() produces v7-compliant data
+	* Plain numbers must be wrapped into objects with 'value' property
+	* @return void
+	*/
+	public function test_conform_import_data_number_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_number',
+			'test211',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain number string → must return [(object)['value' => 5.87]]
+		$response = $component->conform_import_data('5.87', 'test211');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain number input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+		$this->assertEquals(
+			5.87,
+			$response->result[0]->value,
+			'Expected value property to match input number'
+		);
+
+		// Case 2: JSON array of numbers → must normalize to objects with 'value' property
+		$response = $component->conform_import_data('[9.76, 10]', 'test211');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON array input'
+		);
+		$this->assertEquals(
+			2,
+			count($response->result),
+			'Expected 2 items in result'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'value'),
+			'Expected first item to have "value" property (v7 format)'
+		);
+	}//end test_conform_import_data_number_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_set_data_lang_compatibility
+	* Verify that conform_import_data() results are compatible with set_data_lang()
+	* set_data_lang() skips non-object items, so all items must be objects
+	* @return void
+	*/
+	public function test_conform_import_data_set_data_lang_compatibility() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'edit',
+			DEDALO_DATA_LANG,
+			'test3'
+		);
+
+		// Get conformed data from a plain string
+		$response = $component->conform_import_data('Hello', 'test52');
+		$conformed_value = $response->result;
+
+		// Verify all items are objects (required by set_data_lang)
+		if (is_array($conformed_value)) {
+			foreach ($conformed_value as $key => $item) {
+				$this->assertTrue(
+					is_object($item),
+					"Expected item $key to be object for set_data_lang() compatibility"
+				);
+			}
+		}
+
+		// Verify set_data_lang() doesn't silently drop items
+		$component->set_data_lang($conformed_value, DEDALO_DATA_LANG);
+		$saved_data = $component->get_data();
+		$this->assertTrue(
+			!empty($saved_data),
+			'Expected data to be saved (not silently dropped by set_data_lang)'
+		);
+		$this->assertTrue(
+			is_object($saved_data[0]),
+			'Expected saved data item to be object'
+		);
+		$this->assertTrue(
+			property_exists($saved_data[0], 'value'),
+			'Expected saved data item to have "value" property'
+		);
+		$this->assertTrue(
+			property_exists($saved_data[0], 'lang'),
+			'Expected saved data item to have "lang" property'
+		);
+		$this->assertEquals(
+			'Hello',
+			$saved_data[0]->value,
+			'Expected saved value to match input'
+		);
+		$this->assertEquals(
+			DEDALO_DATA_LANG,
+			$saved_data[0]->lang,
+			'Expected saved lang to match DEDALO_DATA_LANG'
+		);
+	}//end test_conform_import_data_set_data_lang_compatibility
+
+
+
+	/**
+	* TEST_conform_import_data_date_v7_format
+	* Verify component_date::conform_import_data() produces v7-compliant data
+	* Date objects use 'start'/'end' properties (NO 'value' property)
+	* @return void
+	*/
+	public function test_conform_import_data_date_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_date',
+			'test145',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain string date → must return array of objects with 'start' property
+		$response = $component->conform_import_data('2023/10/26', 'test145');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain date string input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'start'),
+			'Expected first item to have "start" property (date v7 format)'
+		);
+		$this->assertFalse(
+			property_exists($response->result[0], 'value'),
+			'Expected date item to NOT have "value" property (dates use start/end)'
+		);
+		$this->assertEquals(
+			2023,
+			$response->result[0]->start->year,
+			'Expected start year to be 2023'
+		);
+
+		// Case 2: JSON date → must return array of date objects
+		$response = $component->conform_import_data('[{"start":{"year":2023,"month":10,"day":26}}]', 'test145');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON date input'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'start'),
+			'Expected first item to have "start" property'
+		);
+
+		// Case 3: range date → must have start and end
+		$response = $component->conform_import_data('2023/10/26<>2023/10/27', 'test145');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for range date input'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'start'),
+			'Expected range date to have "start" property'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'end'),
+			'Expected range date to have "end" property'
+		);
+
+		// Case 4: multi-value date → must return 2 items
+		$response = $component->conform_import_data('2023/10/26|1853/02/18', 'test145');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for multi-value date input'
+		);
+		$this->assertEquals(
+			2,
+			count($response->result),
+			'Expected 2 items for multi-value date'
+		);
+	}//end test_conform_import_data_date_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_iri_v7_format
+	* Verify component_iri::conform_import_data() produces v7-compliant data
+	* IRI objects use 'iri' property (NO 'value' property)
+	* @return void
+	*/
+	public function test_conform_import_data_iri_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_iri',
+			'test140',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: plain URL string → must return array of objects with 'iri' property
+		$response = $component->conform_import_data('https://dedalo.dev', 'test140');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for plain URL input'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (v7 format)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'iri'),
+			'Expected first item to have "iri" property (IRI v7 format)'
+		);
+		$this->assertFalse(
+			property_exists($response->result[0], 'value'),
+			'Expected IRI item to NOT have "value" property (IRIs use iri)'
+		);
+		$this->assertEquals(
+			'https://dedalo.dev',
+			$response->result[0]->iri,
+			'Expected iri property to match input URL'
+		);
+
+		// Case 2: JSON object → must return array with iri property
+		$response = $component->conform_import_data('{"iri":"https://dedalo.dev"}', 'test140');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON object input'
+		);
+		$this->assertEquals(
+			'https://dedalo.dev',
+			$response->result[0]->iri,
+			'Expected iri property to match input'
+		);
+
+		// Case 3: JSON translatable → must return object with lg-* keys
+		$response = $component->conform_import_data('{"lg-spa":[{"iri":"https://es.wikipedia.org"}]}', 'test140');
+		$this->assertTrue(
+			is_object($response->result),
+			'Expected object result for translatable IRI input'
+		);
+		$this->assertTrue(
+			property_exists($response->result, 'lg-spa'),
+			'Expected result to have "lg-spa" key'
+		);
+		$this->assertEquals(
+			'https://es.wikipedia.org',
+			$response->result->{'lg-spa'}[0]->iri,
+			'Expected lg-spa IRI to match input'
+		);
+
+		// Case 4: multiple values with separator
+		$response = $component->conform_import_data('https://dedalo.dev | https://dedalo.dev/docs', 'test140');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for multi-value IRI input'
+		);
+		$this->assertEquals(
+			2,
+			count($response->result),
+			'Expected 2 items for multi-value IRI'
+		);
+		$this->assertEquals(
+			'https://dedalo.dev',
+			$response->result[0]->iri,
+			'Expected first iri to match'
+		);
+	}//end test_conform_import_data_iri_v7_format
+
+
+
+	/**
+	* TEST_conform_import_data_relation_common_v7_format
+	* Verify component_relation_common::conform_import_data() produces v7-compliant data
+	* Relation objects are locators with section_id, section_tipo, from_component_tipo (NO 'value' property)
+	* @return void
+	*/
+	public function test_conform_import_data_relation_common_v7_format() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_relation_index',
+			'test25',
+			1,
+			'edit',
+			DEDALO_DATA_NOLAN,
+			'test3'
+		);
+
+		// Case 1: comma-separated IDs with target section_tipo in column name
+		$response = $component->conform_import_data('1,4,6', 'test25_test3');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for comma-separated IDs input'
+		);
+		$this->assertEquals(
+			3,
+			count($response->result),
+			'Expected 3 locators for 3 IDs'
+		);
+		$this->assertTrue(
+			is_object($response->result[0]),
+			'Expected first item to be object (locator)'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'section_id'),
+			'Expected locator to have "section_id" property'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'section_tipo'),
+			'Expected locator to have "section_tipo" property'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'from_component_tipo'),
+			'Expected locator to have "from_component_tipo" property'
+		);
+		$this->assertFalse(
+			property_exists($response->result[0], 'value'),
+			'Expected locator to NOT have "value" property'
+		);
+
+		// Case 2: JSON locator array
+		$response = $component->conform_import_data('[{"section_id":"2","section_tipo":"test3"}]', 'test25');
+		$this->assertTrue(
+			is_array($response->result),
+			'Expected array result for JSON locator input'
+		);
+		$this->assertTrue(
+			property_exists($response->result[0], 'section_id'),
+			'Expected locator to have "section_id" property'
+		);
+		$this->assertEquals(
+			'2',
+			$response->result[0]->section_id,
+			'Expected section_id to match input'
+		);
+	}//end test_conform_import_data_relation_common_v7_format
+
+
+
 }//end class tool_import_dedalo_csv_Test
