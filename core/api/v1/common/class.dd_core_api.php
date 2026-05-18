@@ -1855,8 +1855,11 @@ final class dd_core_api {
 					. ' Denied read: insufficient permissions' . PHP_EOL
 					. ' user_id: ' . to_string(logged_user_id()) . PHP_EOL
 					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' section_id: ' . to_string($section_id) . PHP_EOL
 					. ' tipo: ' . to_string($tipo) . PHP_EOL
-					. ' model: ' . to_string($model)
+					. ' model: ' . to_string($model) . PHP_EOL
+					. ' read_permission: ' . to_string($read_permission) . PHP_EOL
+					. ' ddo_source: ' .to_string($ddo_source)
 					, logger::ERROR
 				);
 				$response->msg		= 'Error. Insufficient permissions to read ('.$section_tipo.' / '.$tipo.')';

@@ -7,12 +7,12 @@
 * ORDER FLOW ARCHITECTURE:
 * ========================
 * The order system uses a dual-array approach to handle both custom and default ordering:
-* 
+*
 * 1. `sql_obj->order` - Custom user-defined order from SQO
 *    - Populated by `build_sql_query_order()` when `sqo->order` is set
 *    - Contains component-based sorting with proper JOIN handling
 *    - Used in outer window query for final result ordering
-* 
+*
 * 2. `sql_obj->order_default` - Fallback default order
 *    - Populated by `build_sql_query_order_default()` (always called)
 *    - Defaults to `section_id ASC` (or DESC for activity sections)
@@ -32,7 +32,7 @@
 * The system uses a window/subquery pattern:
 *   - Inner query: Uses `order_default` for DISTINCT ON consistency
 *   - Outer query: Uses `order` (custom) or `order_default` (fallback) for final sorting
-* 
+*
 * This dual-level ordering ensures:
 *   - DISTINCT ON works correctly (requires matching ORDER BY)
 *   - Custom sorting is applied to final results

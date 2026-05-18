@@ -126,7 +126,7 @@ class tool_upload extends tool_common {
 					// logger activity. Note that this log is here because generic service_upload
 					// is not capable to know if the uploaded file is the last one in a chunked file scenario
 						// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
-						$file_data_encoded	= json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+						$file_data_encoded = json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 						if ($file_data_encoded === false) {
 							debug_log(__METHOD__ . ' Failed to encode file_data to JSON', logger::WARNING);
 							$safe_file_data = 'encoding_failed';
@@ -192,7 +192,6 @@ class tool_upload extends tool_common {
 						$response->msg		= empty($response->errors)
 							? 'OK. File processed successfully'
 							: 'Warning. File processed with errors';
-
 					break;
 
 				default:
