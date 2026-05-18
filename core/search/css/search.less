@@ -302,7 +302,7 @@
 						// max_group
 						>.max_group {
 							align-items: center;
-							background-color: @color_white;
+							background-color: var(--color_white);
 							position: relative;
 							border-radius: 4px;
 							overflow: hidden;
@@ -318,6 +318,8 @@
 							}
 
 							input.max_input {
+								background-color: transparent;
+								color: var(--color_black);
 								border: none;
 								width: 100%;
 								text-align: center;
@@ -325,9 +327,8 @@
 								padding-top: 2em;
 								padding-bottom: 0.33rem;
 								// flex: 1 1 auto;
-
 								flex: 0;
-								min-height: 5rem;
+								min-height: 5.4rem;
 							}
 
 							.children_recursive_label {
