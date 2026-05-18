@@ -2093,11 +2093,6 @@ class ontology {
 			return $response;
 		}
 
-		// active_elements: current active main sections
-		$active_tld = array_map( function($el) {
-			return $el->tld;
-		}, self::get_active_elements() );
-
 		$processed_count = 0;
 		foreach ($db_result as $current_record) {
 
@@ -2112,7 +2107,8 @@ class ontology {
 
 				// if current ontology is not active (is not in the active tld list)
 				// all tld records must be deleted from 'dd_ontology' table
-				if ( !in_array($tld, $active_tld) ) {
+				$is_active_tld = ontology_utils::check_active_tld($tld);
+				if ( $is_active_tld === false ) {
 
 					// remove any other things than tld.
 						$safe_tld = safe_tld( (string)$tld );
