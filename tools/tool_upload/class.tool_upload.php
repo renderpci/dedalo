@@ -109,10 +109,6 @@ class tool_upload extends tool_common {
 				return $response;
 			}
 
-		// SEC-024 (§9.2): WRITE gate. process_uploaded_file moves the staged
-		// upload onto the destination component and triggers post-processing.
-		// Caller must have write (>=2) on (section_tipo, tipo).
-			security::assert_tipo_permission($section_tipo, $tipo, 2, __METHOD__);
 		// SEC-024 (§9.4): per-record gate.
 			if (!empty($section_id)) {
 				security::assert_record_in_user_scope($section_tipo, (int)$section_id, __METHOD__);
@@ -167,6 +163,11 @@ class tool_upload extends tool_common {
 							DEDALO_DATA_NOLAN,
 							$section_tipo
 						);
+
+					// SEC-024 (§9.2): WRITE gate. process_uploaded_file moves the staged
+					// upload onto the destination component and triggers post-processing.
+					// Caller must have write (>=2) on (component).
+						security::assert_component_permission($component, 2);
 
 					// fix current component target quality (defines the destination directory for the file, like 'original')
 						$component->set_quality($quality);
