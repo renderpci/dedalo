@@ -70,21 +70,22 @@ const get_content_data = async function(self) {
 			parent 			: fragment
 		})
 
-	// section
-		ui.load_item_with_spinner({
-			container	: components_container,
-			label		: 'User',
-			style : {
-				height : '458px'
-			},
-			callback	: async function() {
-				// section load
-				await self.user_section.build(true)
-				const section_node = await self.user_section.render()
+	// build every component as a loadable item
+		const ddo_map = self.get_ddo_map()
 
-				return section_node
-			}
-		})
+		// Create columns first to maintain order
+		const columns = ddo_map.map(() => ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'component_column',
+			parent 			: components_container
+		}))
+
+		// Load and render components in parallel
+		await Promise.all(ddo_map.map(async (ddo, index) => {
+			const component_instance = await self.get_component(ddo)
+			const component_node = await component_instance.render()
+			columns[index].appendChild(component_node)
+		}))
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)

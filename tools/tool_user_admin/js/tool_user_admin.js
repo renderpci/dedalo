@@ -94,9 +94,6 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 				throw('Tool not allowed. dedalo_entity "dedalo_demo" cannot change user dedalo configuration')
 			}
 
-		// specific actions.. like fix main_element for convenience
-			self.user_section = await self.build_user_section()
-
 	} catch (error) {
 		self.error = error
 		console.error(error)
@@ -105,6 +102,48 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
+
+
+/**
+* GET_COMPONENT
+* @param object component_ddo
+* @return object component_instance
+*/
+tool_user_admin.prototype.get_component = async function(ddo) {
+
+	const self = this
+
+	// section_id
+	const section_id = page_globals.user_id
+
+	// section_tipo
+	const section_tipo = 'dd128'
+
+	// lang
+	const lang = page_globals.dedalo_data_lang
+
+	// instance_options (clone context and edit)
+		const instance_options = {
+			model				: ddo.model,
+			mode				: ddo.mode,
+			tipo				: ddo.tipo,
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			lang				: lang,
+			properties			: ddo.properties,
+			caller				: self // set current tool as component caller (to check if component is inside tool or not)
+		}
+
+	// get instance and init
+		const component_instance = await get_instance(instance_options)
+
+	// build
+		await component_instance.build(true)
+
+
+	return component_instance
+}//end get_component
 
 
 
